@@ -1,3 +1,5 @@
+#ifndef AWS_CRT_PYTHON_IO_H
+#define AWS_CRT_PYTHON_IO_H
 /*
  * Copyright 2010-2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
@@ -12,8 +14,21 @@
  * express or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
+
+/**
+ * This file includes definitions for common aws-c-io functions.
+ */
+
 #include "module.h"
 
-extern const char *s_capsule_context_elg;
+/**
+ * Name string for event_loop_group capsules.
+ */
+extern const char *s_capsule_name_elg;
 
+/**
+ * Create a new event_loop_group to be managed by a Python Capsule.
+ */
 PyObject *io_new_event_loop_group(PyObject *self, PyObject *args);
+
+#endif /* AWS_CRT_PYTHON_IO_H */

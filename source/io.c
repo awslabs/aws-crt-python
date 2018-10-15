@@ -16,13 +16,13 @@
 
 #include <aws/io/event_loop.h>
 
-const char *s_capsule_context_elg = "aws_event_loop_group";
+const char *s_capsule_name_elg = "aws_event_loop_group";
 
 static void s_elg_destructor(PyObject *elg_capsule) {
 
     assert(PyCapsule_CheckExact(elg_capsule));
 
-    struct aws_event_loop_group *elg = PyCapsule_GetPointer(elg_capsule, s_capsule_context_elg);
+    struct aws_event_loop_group *elg = PyCapsule_GetPointer(elg_capsule, s_capsule_name_elg);
     assert(elg);
 
     aws_event_loop_group_clean_up(elg);
@@ -46,5 +46,5 @@ PyObject *io_new_event_loop_group(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    return PyCapsule_New(elg, s_capsule_context_elg, s_elg_destructor);
+    return PyCapsule_New(elg, s_capsule_name_elg, s_elg_destructor);
 }
