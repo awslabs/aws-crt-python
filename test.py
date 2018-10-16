@@ -19,8 +19,8 @@ def iot_on_message(client, userdata, message):
 def iot_on_disconnect():
     print("iot disconnected")
 
-# client = iot.AWSIoTMQTTClient
-client = MQTTLib.AWSIoTMQTTClient
+client = iot.AWSIoTMQTTClient
+# client = MQTTLib.AWSIoTMQTTClient
 
 iot_client = client("coldens iot client")
 iot_client.onOnline = iot_on_connect

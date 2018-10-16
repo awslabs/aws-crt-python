@@ -2,9 +2,22 @@ import setuptools
 import os
 import sys
 
+from distutils.ccompiler import get_default_compiler
+compiler_type = get_default_compiler()
+
+cflags = []
+ldflags = []
+
+if compiler_type == 'msvc':
+    pass
+else:
+    cflags += ['-O0', '-fsanitize=address']
+
 if sys.platform == 'darwin':
-    os.environ['LDFLAGS'] = '-framework Security'
-    os.environ['CFLAGS'] = '-fsanitize=address -g'
+    ldflags += ['-framework Security']
+
+os.environ['CFLAGS'] = ' '.join(cflags)
+os.environ['LDFLAGS'] = ' '.join(ldflags)
 
 _aws_crt_python = setuptools.Extension(
     '_aws_crt_python',
@@ -17,7 +30,6 @@ _aws_crt_python = setuptools.Extension(
     library_dirs = ['/usr/local/lib', os.getenv('AWS_C_INSTALL') + '/lib'],
     libraries = ['aws-c-common', 'aws-c-io', 'aws-c-mqtt'],
     sources = ['source/module.c', 'source/io.c', 'source/mqtt.c'],
-    extra_compile_args=['-O0'],
 )
 
 setuptools.setup(

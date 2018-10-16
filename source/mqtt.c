@@ -32,6 +32,10 @@
 
 const char *s_capsule_name_mqtt_client_connection = "aws_mqtt_client_connection";
 
+/*******************************************************************************
+ * New Connection
+ ******************************************************************************/
+
 struct mqtt_python_connection {
     struct aws_socket_options socket_options;
     struct aws_mqtt_client client;
@@ -64,11 +68,14 @@ static void s_on_connect_failed(struct aws_mqtt_client_connection *connection, i
 
     struct mqtt_python_connection *py_connection = user_data;
 
-    PyGILState_STATE state = PyGILState_Ensure();
-    PyObject *result = PyObject_CallFunction(py_connection->on_disconnect, "(I)", error_code);
-    Py_XDECREF(result);
-    Py_DECREF(py_connection->on_disconnect);
-    PyGILState_Release(state);
+    if (py_connection->on_disconnect) {
+        PyGILState_STATE state = PyGILState_Ensure();
+
+        PyObject *result = PyObject_CallFunction(py_connection->on_disconnect, "(I)", error_code);
+        Py_XDECREF(result);
+
+        PyGILState_Release(state);
+    }
 }
 
 static void s_on_connect(
@@ -81,12 +88,15 @@ static void s_on_connect(
 
     struct mqtt_python_connection *py_connection = user_data;
 
-    PyGILState_STATE state = PyGILState_Ensure();
-    PyObject *result =
-        PyObject_CallFunction(py_connection->on_connect, "(IN)", return_code, PyBool_FromLong(session_present));
-    Py_XDECREF(result);
-    Py_DECREF(py_connection->on_connect);
-    PyGILState_Release(state);
+    if (py_connection->on_connect) {
+        PyGILState_STATE state = PyGILState_Ensure();
+
+        PyObject *result =
+            PyObject_CallFunction(py_connection->on_connect, "(IN)", return_code, PyBool_FromLong(session_present));
+        Py_XDECREF(result);
+
+        PyGILState_Release(state);
+    }
 }
 
 static void s_on_disconnect(struct aws_mqtt_client_connection *connection, int error_code, void *user_data) {
@@ -95,11 +105,14 @@ static void s_on_disconnect(struct aws_mqtt_client_connection *connection, int e
 
     struct mqtt_python_connection *py_connection = user_data;
 
-    PyGILState_STATE state = PyGILState_Ensure();
-    PyObject *result = PyObject_CallFunction(py_connection->on_disconnect, "(I)", error_code);
-    Py_XDECREF(result);
-    Py_DECREF(py_connection->on_disconnect);
-    PyGILState_Release(state);
+    if (py_connection->on_disconnect) {
+        PyGILState_STATE state = PyGILState_Ensure();
+
+        PyObject *result = PyObject_CallFunction(py_connection->on_disconnect, "(I)", error_code);
+        Py_XDECREF(result);
+
+        PyGILState_Release(state);
+    }
 }
 
 PyObject *mqtt_new_connection(PyObject *self, PyObject *args) {
@@ -123,7 +136,7 @@ PyObject *mqtt_new_connection(PyObject *self, PyObject *args) {
 
     if (!PyArg_ParseTuple(
             args,
-            "Os#Hssszs#HOO",
+            "Os#Hsszzs#HOO",
             &elg_capsule,
             &server_name,
             &server_name_len,
@@ -152,23 +165,21 @@ PyObject *mqtt_new_connection(PyObject *self, PyObject *args) {
     }
     struct aws_event_loop_group *elg = PyCapsule_GetPointer(elg_capsule, s_capsule_name_elg);
 
-    if (!on_connect || !PyCallable_Check(on_connect)) {
-        PyErr_SetNone(PyExc_ValueError);
-        return NULL;
+    if (on_connect && PyCallable_Check(on_connect)) {
+        Py_INCREF(on_connect);
+        connection->on_connect = on_connect;
     }
-    Py_INCREF(on_connect);
-    connection->on_connect = on_connect;
 
-    if (!on_disconnect || !PyCallable_Check(on_disconnect)) {
-        PyErr_SetNone(PyExc_ValueError);
-        return NULL;
+    if (on_disconnect && PyCallable_Check(on_disconnect)) {
+        Py_INCREF(on_disconnect);
+        connection->on_disconnect = on_disconnect;
     }
-    Py_INCREF(on_disconnect);
-    connection->on_disconnect = on_disconnect;
 
     struct aws_tls_ctx_options tls_ctx_opt;
     aws_tls_ctx_options_init_client_mtls(&tls_ctx_opt, cert_path, key_path);
-    aws_tls_ctx_options_override_default_trust_store(&tls_ctx_opt, NULL, ca_path);
+    if (ca_path) {
+        aws_tls_ctx_options_override_default_trust_store(&tls_ctx_opt, NULL, ca_path);
+    }
     if (alpn_protocol) {
         aws_tls_ctx_options_set_alpn_list(&tls_ctx_opt, alpn_protocol);
     }
@@ -201,6 +212,10 @@ PyObject *mqtt_new_connection(PyObject *self, PyObject *args) {
 
     return PyCapsule_New(connection, s_capsule_name_mqtt_client_connection, s_mqtt_python_connection_destructor);
 }
+
+/*******************************************************************************
+ * Publish
+ ******************************************************************************/
 
 struct publish_complete_userdata {
     Py_buffer payload;
@@ -288,6 +303,10 @@ PyObject *mqtt_publish(PyObject *self, PyObject *args) {
 
     Py_RETURN_NONE;
 }
+
+/*******************************************************************************
+ * Callback
+ ******************************************************************************/
 
 static void s_subscribe_callback(
     struct aws_mqtt_client_connection *connection,
@@ -379,11 +398,15 @@ PyObject *mqtt_subscribe(PyObject *self, PyObject *args) {
     return PyBool_FromAwsResult(result);
 }
 
+/*******************************************************************************
+ * Unsubscribe
+ ******************************************************************************/
+
 PyObject *mqtt_unsubscribe(PyObject *self, PyObject *args) {
     (void)self;
 
     PyObject *impl_capsule = NULL;
-    const char *topic;
+    const char *topic = NULL;
     Py_ssize_t topic_len = 0;
     PyObject *unsuback_callback = NULL;
 
@@ -411,6 +434,10 @@ PyObject *mqtt_unsubscribe(PyObject *self, PyObject *args) {
 
     return PyBool_FromAwsResult(result);
 }
+
+/*******************************************************************************
+ * Disconnect
+ ******************************************************************************/
 
 PyObject *mqtt_disconnect(PyObject *self, PyObject *args) {
     (void)self;
