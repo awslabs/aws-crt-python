@@ -78,7 +78,7 @@ static PyMethodDef s_module_methods[] = {
 };
 
 static const char s_module_name[] = "_aws_crt_python";
-PyDoc_STRVAR(s_module_doc, "This is a sick-ass python module");
+PyDoc_STRVAR(s_module_doc, "C extension for binding AWS implementations of MQTT, HTTP, and friends");
 
 /*******************************************************************************
  * Module Init
