@@ -19,6 +19,13 @@ import threading
 DROP_OLDEST = 0
 DROP_NEWEST = 1
 
+class Message(object):
+    __slots__ = ['topic', 'payload']
+
+    def __init__(self, topic, payload):
+        self.topic = topic
+        self.payload = payload
+
 class Will(object):
     def __init__(self, topic, payload, qos, retain):
         self._topic = topic
@@ -725,7 +732,7 @@ class AWSIoTMQTTClient(object):
             nonlocal done
             done.set()
 
-        self._client.subscribe(topic, QoS, lambda message: callback(None, None, message), _suback_callback)
+        self._client.subscribe(topic, QoS, lambda topic, payload: callback(None, None, Message(topic, payload)), _suback_callback)
 
         done.wait()
 

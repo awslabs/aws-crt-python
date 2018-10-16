@@ -19,20 +19,13 @@ def _default_on_disconnect(return_code):
     pass
 
 class EventLoopGroup(object):
-    __slots__ = ('_internal_elg')
+    __slots__ = ['_internal_elg']
 
     def __init__(self, num_threads):
         self._internal_elg = _aws_crt_python.io_new_event_loop_group(num_threads)
 
-class Message(object):
-    __slots__ = ('topic', 'payload')
-
-    def __init__(self, topic, payload):
-        self.topic = topic
-        self.payload = payload
-
 class Client(object):
-    __slots__ = ('_internal_connection', 'elg', 'client_id',)
+    __slots__ = ['_internal_connection', 'elg', 'client_id']
 
     def __init__(self, event_loop_group, client_id):
 
@@ -69,10 +62,7 @@ class Client(object):
         return _aws_crt_python.mqtt_disconnect(self._internal_connection)
 
     def subscribe(self, topic, qos, callback, suback_callback=None):
-        def _subscribe_callback(topic, payload):
-            callback(Message(topic, payload))
-
-        return _aws_crt_python.mqtt_subscribe(self._internal_connection, topic, qos, _subscribe_callback, suback_callback)
+        return _aws_crt_python.mqtt_subscribe(self._internal_connection, topic, qos, callback, suback_callback)
 
     def unsubscribe(self, topic, unsuback_callback=None):
         return _aws_crt_python.mqtt_unsubscribe(self._internal_connection, topic, unsuback_callback)
