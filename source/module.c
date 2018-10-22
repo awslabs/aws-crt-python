@@ -65,6 +65,7 @@ struct aws_allocator *mqtt_get_python_allocator(void) {
 
 static PyMethodDef s_module_methods[] = {
     /* IO */
+    {"io_is_alpn_available", io_is_alpn_available, METH_NOARGS, NULL},
     {"io_new_event_loop_group", io_new_event_loop_group, METH_VARARGS, NULL},
 
     /* MQTT */
@@ -85,9 +86,9 @@ PyDoc_STRVAR(s_module_doc, "C extension for binding AWS implementations of MQTT,
  ******************************************************************************/
 
 #if PY_MAJOR_VERSION == 3
-#   define INIT_FN PyInit__aws_crt_python
+#    define INIT_FN PyInit__aws_crt_python
 #elif PY_MAJOR_VERSION == 2
-#   define INIT_FN init_aws_crt_python
+#    define INIT_FN init_aws_crt_python
 #endif /* PY_MAJOR_VERSION */
 
 PyMODINIT_FUNC INIT_FN(void) {

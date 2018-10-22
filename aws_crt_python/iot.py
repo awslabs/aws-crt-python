@@ -11,7 +11,7 @@
 # express or implied. See the License for the specific language governing
 # permissions and limitations under the License.
 
-import aws_crt_python.mqtt
+from aws_crt_python import io, mqtt
 
 import sys
 import threading
@@ -90,9 +90,9 @@ class AWSIoTMQTTClient(object):
         self._useWebsocket = useWebsocket
         self._alpnProtocol = None
 
-        self._elg = aws_crt_python.mqtt.EventLoopGroup(1)
+        self._elg = io.EventLoopGroup(1)
 
-        self._client = aws_crt_python.mqtt.Client(self._elg, clientID)
+        self._client = mqtt.Client(self._elg, clientID)
 
     # Configuration APIs
     def configureLastWill(self, topic, payload, QoS, retain=False):

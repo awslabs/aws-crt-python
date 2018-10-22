@@ -15,8 +15,17 @@
 #include "io.h"
 
 #include <aws/io/event_loop.h>
+#include <aws/io/tls_channel_handler.h>
 
 const char *s_capsule_name_elg = "aws_event_loop_group";
+
+PyObject *io_is_alpn_available(PyObject *self, PyObject *args) {
+
+    (void)self;
+    (void)args;
+
+    return PyBool_FromLong(aws_tls_is_alpn_available());
+}
 
 static void s_elg_destructor(PyObject *elg_capsule) {
 
