@@ -19,8 +19,17 @@ def _default_on_connect(return_code, session_present):
 def _default_on_disconnect(return_code):
     pass
 
+class Will(object):
+    __slots__ = ['topic', 'qos', 'payload', 'retain']
+
+    def __init__(self, topic, qos, payload, retain):
+        self.topic = topic
+        self.qos = qos
+        self.payload = payload
+        self.retain = retain
+
 class Client(object):
-    __slots__ = ['_internal_connection', 'elg', 'client_id']
+    __slots__ = ['_internal_connection', 'elg', 'client_id', 'username', 'password', 'will']
 
     def __init__(self, event_loop_group, client_id):
 
@@ -28,6 +37,10 @@ class Client(object):
 
         self.elg = event_loop_group
         self.client_id = client_id
+
+        self.username = None
+        self.password = None
+        self.will = None
 
     def connect(self,
             host_name, port,
@@ -52,6 +65,19 @@ class Client(object):
             on_connect,
             on_disconnect,
             )
+
+        if self.will:
+            _aws_crt_python.mqtt_set_will(self._internal_connection, self.will.topic, self.will.payload, self.will.qos, self.will.retain)
+
+        if self.username:
+            _aws_crt_python.mqtt_set_login(self._internal_connection, self.username, self.password)
+
+    def set_will(self, topic, QoS, payload, retain=False):
+        self.will = Will(topic, QoS, payload, retain)
+
+    def set_login(self, username, password=None):
+        self.username = username
+        self.password = password
 
     def disconnect(self):
         return _aws_crt_python.mqtt_disconnect(self._internal_connection)

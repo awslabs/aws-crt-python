@@ -70,6 +70,8 @@ static PyMethodDef s_module_methods[] = {
 
     /* MQTT */
     {"mqtt_new_connection", mqtt_new_connection, METH_VARARGS, NULL},
+    {"mqtt_set_will", mqtt_set_will, METH_VARARGS, NULL},
+    {"mqtt_set_login", mqtt_set_login, METH_VARARGS, NULL},
     {"mqtt_publish", mqtt_publish, METH_VARARGS, NULL},
     {"mqtt_subscribe", mqtt_subscribe, METH_VARARGS, NULL},
     {"mqtt_unsubscribe", mqtt_unsubscribe, METH_VARARGS, NULL},

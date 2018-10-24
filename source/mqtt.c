@@ -214,6 +214,84 @@ PyObject *mqtt_new_connection(PyObject *self, PyObject *args) {
 }
 
 /*******************************************************************************
+ * Configuration
+ ******************************************************************************/
+
+PyObject *mqtt_set_will(PyObject *self, PyObject *args) {
+    (void)self;
+
+    PyObject *impl_capsule = NULL;
+    const char *topic;
+    Py_ssize_t topic_len;
+    const char *payload;
+    Py_ssize_t payload_len;
+    uint8_t qos_val = AWS_MQTT_QOS_AT_MOST_ONCE;
+    PyObject *retain = NULL;
+
+    if (!PyArg_ParseTuple(
+            args, "Os#s#bO", &impl_capsule, &topic, &topic_len, &payload, &payload_len, &qos_val, &retain)) {
+        return NULL;
+    }
+
+    if (!impl_capsule || !PyCapsule_CheckExact(impl_capsule)) {
+        PyErr_SetNone(PyExc_TypeError);
+        return NULL;
+    }
+
+    struct mqtt_python_connection *connection =
+        PyCapsule_GetPointer(impl_capsule, s_capsule_name_mqtt_client_connection);
+
+    if (qos_val > 3) {
+        PyErr_SetNone(PyExc_ValueError);
+        return NULL;
+    }
+
+    struct aws_byte_cursor topic_cursor = aws_byte_cursor_from_array(topic, topic_len);
+    enum aws_mqtt_qos qos = (enum aws_mqtt_qos)qos_val;
+    struct aws_byte_cursor payload_cursor = aws_byte_cursor_from_array(payload, payload_len);
+
+    aws_mqtt_client_connection_set_will(connection->connection, &topic_cursor, qos, retain == Py_True, &payload_cursor);
+
+    Py_RETURN_NONE;
+}
+
+PyObject *mqtt_set_login(PyObject *self, PyObject *args) {
+    (void)self;
+
+    PyObject *impl_capsule = NULL;
+    const char *username;
+    Py_ssize_t username_len;
+    const char *password;
+    Py_ssize_t password_len;
+
+    if (!PyArg_ParseTuple(
+            args, "Os#z#", &impl_capsule, &username, &username_len, &password, &password_len)) {
+        return NULL;
+    }
+
+    if (!impl_capsule || !PyCapsule_CheckExact(impl_capsule)) {
+        PyErr_SetNone(PyExc_TypeError);
+        return NULL;
+    }
+
+    struct mqtt_python_connection *connection =
+        PyCapsule_GetPointer(impl_capsule, s_capsule_name_mqtt_client_connection);
+
+    struct aws_byte_cursor username_cursor = aws_byte_cursor_from_array(username, username_len);
+
+    struct aws_byte_cursor password_cursor;
+    struct aws_byte_cursor *password_cursor_ptr = NULL;
+    if (password) {
+        password_cursor = aws_byte_cursor_from_array(password, password_len);
+        password_cursor_ptr = &password_cursor;
+    }
+
+    aws_mqtt_client_connection_set_login(connection->connection, &username_cursor, password_cursor_ptr);
+
+    Py_RETURN_NONE;
+}
+
+/*******************************************************************************
  * Publish
  ******************************************************************************/
 
