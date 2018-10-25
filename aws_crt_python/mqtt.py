@@ -64,4 +64,3 @@ class Client(object):
 
     def publish(self, topic, payload, qos, retain=False, puback_callback=None):
         _aws_crt_python.mqtt_publish(self._internal_connection, topic, payload, qos, retain, puback_callback)
-
