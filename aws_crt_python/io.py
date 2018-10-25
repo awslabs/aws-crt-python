@@ -11,4 +11,13 @@
 # express or implied. See the License for the specific language governing
 # permissions and limitations under the License.
 
-__all__ = ['io', 'mqtt', 'iot']
+import _aws_crt_python
+
+def is_alpn_available():
+    return _aws_crt_python.io_is_alpn_available()
+
+class EventLoopGroup(object):
+    __slots__ = ['_internal_elg']
+
+    def __init__(self, num_threads):
+        self._internal_elg = _aws_crt_python.io_new_event_loop_group(num_threads)

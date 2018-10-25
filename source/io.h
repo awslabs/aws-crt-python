@@ -27,6 +27,11 @@
 extern const char *s_capsule_name_elg;
 
 /**
+ * Returns True if ALPN is available, False if it is not.
+ */
+PyObject *io_is_alpn_available(PyObject *self, PyObject *args);
+
+/**
  * Create a new event_loop_group to be managed by a Python Capsule.
  */
 PyObject *io_new_event_loop_group(PyObject *self, PyObject *args);

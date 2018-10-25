@@ -1,4 +1,4 @@
-from aws_crt_python import mqtt, iot
+from aws_crt_python import io, mqtt, iot
 from AWSIoTPythonSDK import MQTTLib
 import time, threading
 from timeit import default_timer as timer
@@ -22,10 +22,15 @@ def iot_on_disconnect():
 client = iot.AWSIoTMQTTClient
 # client = MQTTLib.AWSIoTMQTTClient
 
+if io.is_alpn_available():
+    port = 443
+else:
+    port = 8883
+
 iot_client = client("coldens iot client")
 iot_client.onOnline = iot_on_connect
 iot_client.onOffline = iot_on_disconnect
-iot_client.configureEndpoint("a1ba5f1mpna9k5-ats.iot.us-east-1.amazonaws.com", 8883)
+iot_client.configureEndpoint("a1ba5f1mpna9k5-ats.iot.us-east-1.amazonaws.com", port)
 iot_client.configureCredentials("AmazonRootCA1.pem", "9f0631f03a-private.pem.key", "9f0631f03a-certificate.pem.crt")
 
 print("connecting...")

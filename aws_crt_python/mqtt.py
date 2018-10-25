@@ -12,24 +12,19 @@
 # permissions and limitations under the License.
 
 import _aws_crt_python
+import aws_crt_python.io
 
 def _default_on_connect(return_code, session_present):
     pass
 def _default_on_disconnect(return_code):
     pass
 
-class EventLoopGroup(object):
-    __slots__ = ['_internal_elg']
-
-    def __init__(self, num_threads):
-        self._internal_elg = _aws_crt_python.io_new_event_loop_group(num_threads)
-
 class Client(object):
     __slots__ = ['_internal_connection', 'elg', 'client_id']
 
     def __init__(self, event_loop_group, client_id):
 
-        assert isinstance(event_loop_group, EventLoopGroup)
+        assert isinstance(event_loop_group, aws_crt_python.io.EventLoopGroup)
 
         self.elg = event_loop_group
         self.client_id = client_id
@@ -69,4 +64,3 @@ class Client(object):
 
     def publish(self, topic, payload, qos, retain=False, puback_callback=None):
         _aws_crt_python.mqtt_publish(self._internal_connection, topic, payload, qos, retain, puback_callback)
-
