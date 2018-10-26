@@ -32,6 +32,7 @@ iot_client.onOnline = iot_on_connect
 iot_client.onOffline = iot_on_disconnect
 iot_client.configureEndpoint("a1ba5f1mpna9k5-ats.iot.us-east-1.amazonaws.com", port)
 iot_client.configureCredentials("AmazonRootCA1.pem", "9f0631f03a-private.pem.key", "9f0631f03a-certificate.pem.crt")
+iot_client.configureLastWill("a", "The test device has gone offline", 1)
 
 print("connecting...")
 iot_client.connect()

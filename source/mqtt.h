@@ -29,6 +29,8 @@
 extern const char *s_capsule_name_mqtt_client_connection;
 
 PyObject *mqtt_new_connection(PyObject *self, PyObject *args);
+PyObject *mqtt_set_will(PyObject *self, PyObject *args);
+PyObject *mqtt_set_login(PyObject *self, PyObject *args);
 PyObject *mqtt_publish(PyObject *self, PyObject *args);
 PyObject *mqtt_subscribe(PyObject *self, PyObject *args);
 PyObject *mqtt_unsubscribe(PyObject *self, PyObject *args);

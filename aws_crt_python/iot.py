@@ -26,13 +26,6 @@ class Message(object):
         self.topic = topic
         self.payload = payload
 
-class Will(object):
-    def __init__(self, topic, payload, qos, retain):
-        self._topic = topic
-        self._payload = payload
-        self._qos = qos
-        self._retain = retain
-
 class AWSIoTMQTTClient(object):
 
     def __init__(self, clientID, useWebsocket=False, cleanSession=True):
@@ -120,7 +113,7 @@ class AWSIoTMQTTClient(object):
         None
 
         """
-        self._will = Will(topic, payload, QoS, retain)
+        self._client.set_will(topic, QoS, payload, retain)
 
     def clearLastWill(self):
         """
@@ -143,7 +136,7 @@ class AWSIoTMQTTClient(object):
         None
 
         """
-        self._will = None
+        raise NotImplementedError()
 
     def configureEndpoint(self, hostName, portNumber):
         """
@@ -408,8 +401,7 @@ class AWSIoTMQTTClient(object):
         None
 
         """
-        self._username = username
-        self._password = password
+        self._client.set_login(username, password)
 
     def enableMetricsCollection(self):
         """
