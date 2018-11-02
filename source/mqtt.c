@@ -59,7 +59,7 @@ static void s_mqtt_python_connection_destructor(PyObject *connection_capsule) {
     aws_mqtt_client_connection_disconnect(connection->connection);
     aws_mqtt_client_clean_up(&connection->client);
 
-    aws_mem_release(mqtt_get_python_allocator(), connection);
+    aws_mem_release(aws_crt_python_get_allocator(), connection);
 }
 
 static void s_on_connect_failed(struct aws_mqtt_client_connection *connection, int error_code, void *user_data) {
@@ -118,7 +118,7 @@ static void s_on_disconnect(struct aws_mqtt_client_connection *connection, int e
 PyObject *mqtt_new_connection(PyObject *self, PyObject *args) {
     (void)self;
 
-    struct aws_allocator *allocator = mqtt_get_python_allocator();
+    struct aws_allocator *allocator = aws_crt_python_get_allocator();
 
     PyObject *elg_capsule = NULL;
     const char *server_name = NULL;
@@ -316,7 +316,7 @@ static void s_publish_complete(struct aws_mqtt_client_connection *connection, vo
         }
 
         PyBuffer_Release(&metadata->payload);
-        aws_mem_release(mqtt_get_python_allocator(), metadata);
+        aws_mem_release(aws_crt_python_get_allocator(), metadata);
     }
 }
 
@@ -362,7 +362,7 @@ PyObject *mqtt_publish(PyObject *self, PyObject *args) {
 
     /* Heap allocate payload so that it may persist */
     if (payload_stack.len > 0 || puback_callback) {
-        metadata = aws_mem_acquire(mqtt_get_python_allocator(), sizeof(struct publish_complete_userdata));
+        metadata = aws_mem_acquire(aws_crt_python_get_allocator(), sizeof(struct publish_complete_userdata));
         if (!metadata) {
             return PyErr_NoMemory();
         }

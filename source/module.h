@@ -33,6 +33,6 @@
 #define PyString_FromAwsByteCursor(cursor) PyString_FromStringAndSize((const char *)(cursor)->ptr, (cursor)->len)
 
 /* Allocator that calls into PyObject_[Malloc|Free|Realloc] */
-struct aws_allocator *mqtt_get_python_allocator(void);
+struct aws_allocator *aws_crt_python_get_allocator(void);
 
 #endif /* AWS_CRT_PYTHON_MODULE_H */

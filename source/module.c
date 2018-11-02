@@ -49,7 +49,7 @@ static void *s_python_realloc(struct aws_allocator *allocator, void *ptr, size_t
     return memory;
 }
 
-struct aws_allocator *mqtt_get_python_allocator(void) {
+struct aws_allocator *aws_crt_python_get_allocator(void) {
     static struct aws_allocator python_allocator = {
         .mem_acquire = s_python_malloc,
         .mem_release = s_python_free,

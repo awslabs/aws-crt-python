@@ -33,7 +33,7 @@ _aws_crt_python = setuptools.Extension(
 )
 
 setuptools.setup(
-    name="aws_mqtt_python",
+    name="aws_crt",
     version="0.0.1",
     author="Example Author",
     author_email="author@example.com",

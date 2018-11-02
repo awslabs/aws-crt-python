@@ -12,7 +12,7 @@
 # permissions and limitations under the License.
 
 import _aws_crt_python
-import aws_crt_python.io
+import aws_crt.io
 
 def _default_on_connect(return_code, session_present):
     pass
@@ -33,7 +33,7 @@ class Client(object):
 
     def __init__(self, event_loop_group, client_id):
 
-        assert isinstance(event_loop_group, aws_crt_python.io.EventLoopGroup)
+        assert isinstance(event_loop_group, aws_crt.io.EventLoopGroup)
 
         self.elg = event_loop_group
         self.client_id = client_id

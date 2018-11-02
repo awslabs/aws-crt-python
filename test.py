@@ -1,4 +1,4 @@
-from aws_crt_python import io, mqtt, iot
+from aws_crt import io, mqtt, iot
 from AWSIoTPythonSDK import MQTTLib
 import time, threading
 from timeit import default_timer as timer

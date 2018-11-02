@@ -41,7 +41,7 @@ static void s_elg_destructor(PyObject *elg_capsule) {
 PyObject *io_new_event_loop_group(PyObject *self, PyObject *args) {
     (void)self;
 
-    struct aws_allocator *allocator = mqtt_get_python_allocator();
+    struct aws_allocator *allocator = aws_crt_python_get_allocator();
 
     uint16_t num_threads = 0;
 
