@@ -21,8 +21,6 @@
 
 #include "module.h"
 
-#include <aws/mqtt/mqtt.h>
-
 /**
  * Name string for client_connection capsules.
  */

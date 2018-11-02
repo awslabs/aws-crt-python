@@ -15,6 +15,8 @@
 #include "mqtt.h"
 #include "io.h"
 
+#include <aws/mqtt/client.h>
+
 #include <aws/io/channel.h>
 #include <aws/io/channel_bootstrap.h>
 #include <aws/io/event_loop.h>
@@ -336,7 +338,7 @@ struct publish_complete_userdata {
     PyObject *callback;
 };
 
-static void s_publish_complete(struct aws_mqtt_client_connection *connection, void *userdata) {
+static void s_publish_complete(struct aws_mqtt_client_connection *connection, uint16_t packet_id, void *userdata) {
 
     struct publish_complete_userdata *metadata = userdata;
     if (metadata) {
@@ -345,7 +347,7 @@ static void s_publish_complete(struct aws_mqtt_client_connection *connection, vo
 
             PyGILState_STATE state = PyGILState_Ensure();
 
-            PyObject_CallFunction(metadata->callback, NULL);
+            PyObject_CallFunction(metadata->callback, "(H)", packet_id);
             Py_DECREF(metadata->callback);
 
             PyGILState_Release(state);
@@ -450,7 +452,7 @@ static void s_subscribe_callback(
     PyGILState_Release(state);
 }
 
-static void s_suback_callback(struct aws_mqtt_client_connection *connection, void *userdata) {
+static void s_suback_callback(struct aws_mqtt_client_connection *connection, uint16_t packet_id, void *userdata) {
     (void)connection;
     PyObject *callback = userdata;
 
@@ -458,7 +460,7 @@ static void s_suback_callback(struct aws_mqtt_client_connection *connection, voi
 
         PyGILState_STATE state = PyGILState_Ensure();
 
-        PyObject_CallFunction(callback, NULL);
+        PyObject_CallFunction(callback, "(H)", packet_id);
         Py_DECREF(callback);
 
         PyGILState_Release(state);

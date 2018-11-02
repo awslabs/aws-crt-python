@@ -16,6 +16,9 @@
 #include "io.h"
 #include "mqtt.h"
 
+#include <aws/io/io.h>
+#include <aws/mqtt/mqtt.h>
+
 void PyErr_SetAwsLastError(void) {
     PyErr_AwsLastError();
 }
