@@ -32,6 +32,12 @@
 #define PyBool_FromAwsResult(result) PyBool_FromLong((result) == AWS_OP_SUCCESS)
 #define PyString_FromAwsByteCursor(cursor) PyString_FromStringAndSize((const char *)(cursor)->ptr, (cursor)->len)
 
+/* Set current thread's error indicator based on aws_last_error() */
+void PyErr_SetAwsLastError(void);
+
+/* Set current thread's error indicator based on aws_last_error() and returns NULL */
+PyObject *PyErr_AwsLastError(void);
+
 /* Allocator that calls into PyObject_[Malloc|Free|Realloc] */
 struct aws_allocator *aws_crt_python_get_allocator(void);
 
