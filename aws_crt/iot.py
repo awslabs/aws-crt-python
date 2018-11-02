@@ -641,7 +641,7 @@ class AWSIoTMQTTClient(object):
         """
         done = threading.Event()
 
-        def _puback_callback():
+        def _puback_callback(packet_id):
             nonlocal done
             done.set()
 
@@ -720,7 +720,7 @@ class AWSIoTMQTTClient(object):
         """
         done = threading.Event()
 
-        def _suback_callback():
+        def _suback_callback(packet_id):
             nonlocal done
             done.set()
 
@@ -791,7 +791,7 @@ class AWSIoTMQTTClient(object):
         """
         done = threading.Event()
 
-        def _unsuback_callback():
+        def _unsuback_callback(packet_id):
             nonlocal done
             done.set()
 

@@ -50,9 +50,13 @@ PyObject *io_new_event_loop_group(PyObject *self, PyObject *args) {
     }
 
     struct aws_event_loop_group *elg = aws_mem_acquire(allocator, sizeof(struct aws_event_loop_group));
+    if (!elg) {
+        return PyErr_AwsLastError();
+    }
 
     if (aws_event_loop_group_default_init(elg, allocator, num_threads)) {
-        return NULL;
+        aws_mem_release(allocator, elg);
+        return PyErr_AwsLastError();
     }
 
     return PyCapsule_New(elg, s_capsule_name_elg, s_elg_destructor);

@@ -16,6 +16,19 @@
 #include "io.h"
 #include "mqtt.h"
 
+#include <aws/io/io.h>
+#include <aws/mqtt/mqtt.h>
+
+void PyErr_SetAwsLastError(void) {
+    PyErr_AwsLastError();
+}
+
+PyObject *PyErr_AwsLastError(void) {
+    int err = aws_last_error();
+    const char *msg = aws_error_str(err);
+    return PyErr_Format(PyExc_RuntimeError, "%d: %s", err, msg);
+}
+
 /*******************************************************************************
  * Allocator
  ******************************************************************************/
@@ -108,6 +121,10 @@ PyMODINIT_FUNC INIT_FN(void) {
     PyObject *m = Py_InitModule3(s_module_name, s_module_methods, s_module_doc);
     (void)m;
 #endif /* PY_MAJOR_VERSION */
+
+    aws_load_error_strings();
+    aws_io_load_error_strings();
+    aws_mqtt_load_error_strings();
 
 #if PY_MAJOR_VERSION == 3
     return m;
