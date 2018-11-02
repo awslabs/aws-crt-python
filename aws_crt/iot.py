@@ -11,7 +11,7 @@
 # express or implied. See the License for the specific language governing
 # permissions and limitations under the License.
 
-from aws_crt_python import io, mqtt
+from aws_crt import io, mqtt
 
 import sys
 import threading
