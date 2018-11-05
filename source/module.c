@@ -33,43 +33,8 @@ PyObject *PyErr_AwsLastError(void) {
  * Allocator
  ******************************************************************************/
 
-static void *s_python_malloc(struct aws_allocator *allocator, size_t size) {
-    (void)allocator;
-
-    PyGILState_STATE state = PyGILState_Ensure();
-    void *memory = PyObject_Malloc(size);
-    PyGILState_Release(state);
-
-    return memory;
-}
-
-static void s_python_free(struct aws_allocator *allocator, void *ptr) {
-    (void)allocator;
-
-    PyGILState_STATE state = PyGILState_Ensure();
-    PyObject_Free(ptr);
-    PyGILState_Release(state);
-}
-
-static void *s_python_realloc(struct aws_allocator *allocator, void *ptr, size_t oldsize, size_t newsize) {
-    (void)allocator;
-    (void)oldsize;
-
-    PyGILState_STATE state = PyGILState_Ensure();
-    void *memory = PyObject_Realloc(ptr, newsize);
-    PyGILState_Release(state);
-
-    return memory;
-}
-
 struct aws_allocator *aws_crt_python_get_allocator(void) {
-    static struct aws_allocator python_allocator = {
-        .mem_acquire = s_python_malloc,
-        .mem_release = s_python_free,
-        .mem_realloc = s_python_realloc,
-    };
-
-    return &python_allocator;
+    return aws_default_allocator();
 }
 
 /*******************************************************************************
