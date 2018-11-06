@@ -12,7 +12,8 @@
  * express or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
-#include "mqtt.h"
+#include "mqtt_client_connection.h"
+
 #include "io.h"
 
 #include <aws/mqtt/client.h>
@@ -117,7 +118,7 @@ static void s_on_disconnect(struct aws_mqtt_client_connection *connection, int e
     }
 }
 
-PyObject *mqtt_new_connection(PyObject *self, PyObject *args) {
+PyObject *mqtt_client_connection_new(PyObject *self, PyObject *args) {
     (void)self;
 
     struct aws_allocator *allocator = aws_crt_python_get_allocator();
@@ -249,7 +250,7 @@ error:
  * Configuration
  ******************************************************************************/
 
-PyObject *mqtt_set_will(PyObject *self, PyObject *args) {
+PyObject *mqtt_client_connection_set_will(PyObject *self, PyObject *args) {
     (void)self;
 
     PyObject *impl_capsule = NULL;
@@ -291,7 +292,7 @@ PyObject *mqtt_set_will(PyObject *self, PyObject *args) {
     Py_RETURN_NONE;
 }
 
-PyObject *mqtt_set_login(PyObject *self, PyObject *args) {
+PyObject *mqtt_client_connection_set_login(PyObject *self, PyObject *args) {
     (void)self;
 
     PyObject *impl_capsule = NULL;
@@ -358,7 +359,7 @@ static void s_publish_complete(struct aws_mqtt_client_connection *connection, ui
     }
 }
 
-PyObject *mqtt_publish(PyObject *self, PyObject *args) {
+PyObject *mqtt_client_connection_publish(PyObject *self, PyObject *args) {
     (void)self;
 
     PyObject *impl_capsule = NULL;
@@ -467,7 +468,7 @@ static void s_suback_callback(struct aws_mqtt_client_connection *connection, uin
     }
 }
 
-PyObject *mqtt_subscribe(PyObject *self, PyObject *args) {
+PyObject *mqtt_client_connection_subscribe(PyObject *self, PyObject *args) {
     (void)self;
 
     PyObject *impl_capsule = NULL;
@@ -526,7 +527,7 @@ PyObject *mqtt_subscribe(PyObject *self, PyObject *args) {
  * Unsubscribe
  ******************************************************************************/
 
-PyObject *mqtt_unsubscribe(PyObject *self, PyObject *args) {
+PyObject *mqtt_client_connection_unsubscribe(PyObject *self, PyObject *args) {
     (void)self;
 
     PyObject *impl_capsule = NULL;
@@ -567,7 +568,7 @@ PyObject *mqtt_unsubscribe(PyObject *self, PyObject *args) {
  * Disconnect
  ******************************************************************************/
 
-PyObject *mqtt_disconnect(PyObject *self, PyObject *args) {
+PyObject *mqtt_client_connection_disconnect(PyObject *self, PyObject *args) {
     (void)self;
 
     PyObject *impl_capsule = NULL;
