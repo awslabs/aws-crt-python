@@ -39,6 +39,8 @@ PyObject *mqtt_client_new(PyObject *self, PyObject *args) {
 
     struct aws_allocator *allocator = aws_crt_python_get_allocator();
 
+    struct mqtt_python_client *py_client = NULL;
+
     PyObject *elg_capsule = NULL;
 
     if (!PyArg_ParseTuple(
@@ -56,7 +58,7 @@ PyObject *mqtt_client_new(PyObject *self, PyObject *args) {
         goto error;
     }
 
-    struct mqtt_python_client *py_client = aws_mem_acquire(allocator, sizeof(struct mqtt_python_client));
+    py_client = aws_mem_acquire(allocator, sizeof(struct mqtt_python_client));
     if (!py_client) {
         PyErr_SetAwsLastError();
         goto error;
