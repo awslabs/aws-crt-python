@@ -14,6 +14,7 @@
  */
 #include "module.h"
 #include "io.h"
+#include "mqtt_client.h"
 #include "mqtt_client_connection.h"
 
 #include <aws/io/io.h>
@@ -47,6 +48,7 @@ static PyMethodDef s_module_methods[] = {
     {"io_new_event_loop_group", io_new_event_loop_group, METH_VARARGS, NULL},
 
     /* MQTT Client */
+    {"mqtt_client_new", mqtt_client_new, METH_VARARGS, NULL},
 
     /* MQTT Client Connection */
     {"mqtt_client_connection_new", mqtt_client_connection_new, METH_VARARGS, NULL},

@@ -85,7 +85,8 @@ class AWSIoTMQTTClient(object):
 
         self._elg = io.EventLoopGroup(1)
 
-        self._client = mqtt.Client(self._elg, clientID)
+        self._client = mqtt.Client(self._elg)
+        self._connection = self._client.createConnection(clientID)
 
     # Configuration APIs
     def configureLastWill(self, topic, payload, QoS, retain=False):
@@ -113,7 +114,7 @@ class AWSIoTMQTTClient(object):
         None
 
         """
-        self._client.set_will(topic, QoS, payload, retain)
+        self._connection.set_will(topic, QoS, payload, retain)
 
     def clearLastWill(self):
         """
@@ -401,7 +402,7 @@ class AWSIoTMQTTClient(object):
         None
 
         """
-        self._client.set_login(username, password)
+        self._connection.set_login(username, password)
 
     def enableMetricsCollection(self):
         """
@@ -487,7 +488,7 @@ class AWSIoTMQTTClient(object):
         def _onDisconnectWrapper(return_code):
             self.onOffline()
 
-        self._client.connect(
+        self._connection.connect(
             host_name=self._hostName,
             port=self._portNumber,
             ca_path=self._caPath,
@@ -539,7 +540,7 @@ class AWSIoTMQTTClient(object):
         def _onDisconnectWrapper(return_code):
             self.onOffline()
 
-        self._client.connect(
+        self._connection.connect(
             host_name=self._hostName,
             port=self._portNumber,
             ca_path=self._caPath,
@@ -582,7 +583,7 @@ class AWSIoTMQTTClient(object):
             done.set()
         self.onOffline = new_onOffline
 
-        self._client.disconnect()
+        self._connection.disconnect()
 
         done.wait()
 
@@ -609,7 +610,7 @@ class AWSIoTMQTTClient(object):
         Disconnect request packet id, for tracking purpose in the corresponding callback.
 
         """
-        return self._client.disconnect()
+        return self._connection.disconnect()
 
     def publish(self, topic, payload, QoS):
         """
@@ -646,7 +647,7 @@ class AWSIoTMQTTClient(object):
             done.set()
 
         # Disable retain for publish by now
-        self._client.publish(topic, payload, QoS, False, _puback_callback)
+        self._connection.publish(topic, payload, QoS, False, _puback_callback)
 
         done.wait()
 
@@ -684,7 +685,7 @@ class AWSIoTMQTTClient(object):
         Publish request packet id, for tracking purpose in the corresponding callback.
 
         """
-        self._client.publish(topic, payload, QoS, False, ackCallback)
+        self._connection.publish(topic, payload, QoS, False, ackCallback)
 
     def subscribe(self, topic, QoS, callback):
         """
@@ -724,7 +725,7 @@ class AWSIoTMQTTClient(object):
             nonlocal done
             done.set()
 
-        self._client.subscribe(topic, QoS, lambda topic, payload: callback(None, None, Message(topic, payload)), _suback_callback)
+        self._connection.subscribe(topic, QoS, lambda topic, payload: callback(None, None, Message(topic, payload)), _suback_callback)
 
         done.wait()
 
@@ -766,7 +767,7 @@ class AWSIoTMQTTClient(object):
         Subscribe request packet id, for tracking purpose in the corresponding callback.
 
         """
-        return self._client.subscribe(topic, QoS, lambda message: messageCallback(None, None, message), ackCallback)
+        return self._connection.subscribe(topic, QoS, lambda message: messageCallback(None, None, message), ackCallback)
 
     def unsubscribe(self, topic):
         """
@@ -795,7 +796,7 @@ class AWSIoTMQTTClient(object):
             nonlocal done
             done.set()
 
-        self._client.unsubscribe(topic, _unsuback_callback)
+        self._connection.unsubscribe(topic, _unsuback_callback)
 
         done.wait()
 
@@ -825,7 +826,7 @@ class AWSIoTMQTTClient(object):
         Unsubscribe request packet id, for tracking purpose in the corresponding callback.
 
         """
-        return self._client.unsubscribe(topic, ackCallback)
+        return self._connection.unsubscribe(topic, ackCallback)
 
     def onOnline(self):
         """

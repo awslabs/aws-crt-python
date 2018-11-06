@@ -12,7 +12,7 @@
 # permissions and limitations under the License.
 
 import _aws_crt_python
-import aws_crt.io
+from aws_crt.io import EventLoopGroup
 
 def _default_on_connect(return_code, session_present):
     pass
@@ -29,13 +29,31 @@ class Will(object):
         self.retain = retain
 
 class Client(object):
-    __slots__ = ['_internal_connection', 'elg', 'client_id', 'username', 'password', 'will']
+    __slots__ = ['_internal_client', 'elg']
 
-    def __init__(self, event_loop_group, client_id):
+    def __init__(self, elg):
+        if isinstance(elg, EventLoopGroup):
+            self.elg = elg
+        else:
+            # Construct an event loop group with the argument givens
+            self.elg = EventLoopGroup(elg)
 
-        assert isinstance(event_loop_group, aws_crt.io.EventLoopGroup)
+        self._internal_client = _aws_crt_python.mqtt_client_new(self.elg._internal_elg)
 
-        self.elg = event_loop_group
+    def createConnection(self, client_id):
+        """
+        Spawns a new connection.
+        """
+        return Connection(self, client_id)
+
+class Connection(object):
+    __slots__ = ['_internal_connection', 'client', 'client_id', 'username', 'password', 'will']
+
+    def __init__(self, client, client_id):
+
+        assert isinstance(client, Client)
+
+        self.client = client
         self.client_id = client_id
 
         self.username = None
@@ -53,7 +71,7 @@ class Client(object):
         assert use_websocket == False
 
         self._internal_connection = _aws_crt_python.mqtt_client_connection_new(
-            self.elg._internal_elg,
+            self.client._internal_client,
             host_name,
             port,
             ca_path,
