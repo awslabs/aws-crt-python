@@ -1,5 +1,5 @@
-#ifndef AWS_CRT_PYTHON_MQTT_H
-#define AWS_CRT_PYTHON_MQTT_H
+#ifndef AWS_CRT_PYTHON_MQTT_CLIENT_CONNECTION_H
+#define AWS_CRT_PYTHON_MQTT_CLIENT_CONNECTION_H
 /*
  * Copyright 2010-2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
@@ -21,17 +21,15 @@
 
 #include "module.h"
 
-/**
- * Name string for client_connection capsules.
- */
+/** Name string for client_connection capsules. */
 extern const char *s_capsule_name_mqtt_client_connection;
 
-PyObject *mqtt_new_connection(PyObject *self, PyObject *args);
-PyObject *mqtt_set_will(PyObject *self, PyObject *args);
-PyObject *mqtt_set_login(PyObject *self, PyObject *args);
-PyObject *mqtt_publish(PyObject *self, PyObject *args);
-PyObject *mqtt_subscribe(PyObject *self, PyObject *args);
-PyObject *mqtt_unsubscribe(PyObject *self, PyObject *args);
-PyObject *mqtt_disconnect(PyObject *self, PyObject *args);
+PyObject *mqtt_client_connection_new(PyObject *self, PyObject *args);
+PyObject *mqtt_client_connection_set_will(PyObject *self, PyObject *args);
+PyObject *mqtt_client_connection_set_login(PyObject *self, PyObject *args);
+PyObject *mqtt_client_connection_publish(PyObject *self, PyObject *args);
+PyObject *mqtt_client_connection_subscribe(PyObject *self, PyObject *args);
+PyObject *mqtt_client_connection_unsubscribe(PyObject *self, PyObject *args);
+PyObject *mqtt_client_connection_disconnect(PyObject *self, PyObject *args);
 
-#endif /* AWS_CRT_PYTHON_MQTT_H */
+#endif /* AWS_CRT_PYTHON_MQTT_CLIENT_CONNECTION_H */

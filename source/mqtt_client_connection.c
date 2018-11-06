@@ -12,8 +12,9 @@
  * express or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
-#include "mqtt.h"
-#include "io.h"
+#include "mqtt_client_connection.h"
+
+#include "mqtt_client.h"
 
 #include <aws/mqtt/client.h>
 
@@ -40,7 +41,7 @@ const char *s_capsule_name_mqtt_client_connection = "aws_mqtt_client_connection"
 
 struct mqtt_python_connection {
     struct aws_socket_options socket_options;
-    struct aws_mqtt_client client;
+    struct mqtt_python_client *py_client;
     struct aws_mqtt_client_connection *connection;
 
     PyObject *on_connect;
@@ -59,7 +60,6 @@ static void s_mqtt_python_connection_destructor(PyObject *connection_capsule) {
     Py_XDECREF(connection->on_disconnect);
 
     aws_mqtt_client_connection_disconnect(connection->connection);
-    aws_mqtt_client_clean_up(&connection->client);
 
     aws_mem_release(aws_crt_python_get_allocator(), connection);
 }
@@ -117,16 +117,15 @@ static void s_on_disconnect(struct aws_mqtt_client_connection *connection, int e
     }
 }
 
-PyObject *mqtt_new_connection(PyObject *self, PyObject *args) {
+PyObject *mqtt_client_connection_new(PyObject *self, PyObject *args) {
     (void)self;
 
     struct aws_allocator *allocator = aws_crt_python_get_allocator();
 
     /* If anything goes wrong in this function: goto error */
-    struct mqtt_python_connection *connection = NULL;
-    bool client_initialized = false;
+    struct mqtt_python_connection *py_connection = NULL;
 
-    PyObject *elg_capsule = NULL;
+    PyObject *client_capsule = NULL;
     const char *server_name = NULL;
     Py_ssize_t server_name_len = 0;
     uint16_t port_number = 0;
@@ -143,7 +142,7 @@ PyObject *mqtt_new_connection(PyObject *self, PyObject *args) {
     if (!PyArg_ParseTuple(
             args,
             "Os#Hsszzs#HOO",
-            &elg_capsule,
+            &client_capsule,
             &server_name,
             &server_name_len,
             &port_number,
@@ -159,27 +158,30 @@ PyObject *mqtt_new_connection(PyObject *self, PyObject *args) {
         goto error;
     }
 
-    connection = aws_mem_acquire(allocator, sizeof(struct mqtt_python_connection));
-    if (!connection) {
+    py_connection = aws_mem_acquire(allocator, sizeof(struct mqtt_python_connection));
+    if (!py_connection) {
         PyErr_SetAwsLastError();
         goto error;
     }
-    AWS_ZERO_STRUCT(*connection);
+    AWS_ZERO_STRUCT(*py_connection);
 
-    if (!elg_capsule || !PyCapsule_CheckExact(elg_capsule)) {
+    if (!client_capsule || !PyCapsule_CheckExact(client_capsule)) {
         PyErr_SetNone(PyExc_ValueError);
         goto error;
     }
-    struct aws_event_loop_group *elg = PyCapsule_GetPointer(elg_capsule, s_capsule_name_elg);
+    py_connection->py_client = PyCapsule_GetPointer(client_capsule, s_capsule_name_mqtt_client);
+    if (!py_connection->py_client) {
+        goto error;
+    }
 
     if (on_connect && PyCallable_Check(on_connect)) {
         Py_INCREF(on_connect);
-        connection->on_connect = on_connect;
+        py_connection->on_connect = on_connect;
     }
 
     if (on_disconnect && PyCallable_Check(on_disconnect)) {
         Py_INCREF(on_disconnect);
-        connection->on_disconnect = on_disconnect;
+        py_connection->on_disconnect = on_disconnect;
     }
 
     struct aws_tls_ctx_options tls_ctx_opt;
@@ -191,55 +193,43 @@ PyObject *mqtt_new_connection(PyObject *self, PyObject *args) {
         aws_tls_ctx_options_set_alpn_list(&tls_ctx_opt, alpn_protocol);
     }
 
-    AWS_ZERO_STRUCT(connection->socket_options);
-    connection->socket_options.connect_timeout_ms = 3000;
-    connection->socket_options.type = AWS_SOCKET_STREAM;
-    connection->socket_options.domain = AWS_SOCKET_IPV4;
+    AWS_ZERO_STRUCT(py_connection->socket_options);
+    py_connection->socket_options.connect_timeout_ms = 3000;
+    py_connection->socket_options.type = AWS_SOCKET_STREAM;
+    py_connection->socket_options.domain = AWS_SOCKET_IPV4;
 
     struct aws_mqtt_client_connection_callbacks callbacks;
     AWS_ZERO_STRUCT(callbacks);
     callbacks.on_connection_failed = s_on_connect_failed;
     callbacks.on_connack = s_on_connect;
     callbacks.on_disconnect = s_on_disconnect;
-    callbacks.user_data = connection;
-
-    int err = aws_mqtt_client_init(&connection->client, allocator, elg);
-    if (err) {
-        PyErr_SetAwsLastError();
-        goto error;
-    }
-    client_initialized = true;
+    callbacks.user_data = py_connection;
 
     struct aws_byte_cursor server_name_cur = aws_byte_cursor_from_array(server_name, server_name_len);
 
-    connection->connection = aws_mqtt_client_connection_new(
-        &connection->client, callbacks, &server_name_cur, port_number, &connection->socket_options, &tls_ctx_opt);
+    py_connection->connection = aws_mqtt_client_connection_new(
+        &py_connection->py_client->native_client, callbacks, &server_name_cur, port_number, &py_connection->socket_options, &tls_ctx_opt);
 
-    if (!connection->connection) {
+    if (!py_connection->connection) {
         PyErr_SetAwsLastError();
         goto error;
     }
 
     struct aws_byte_cursor client_id_cur = aws_byte_cursor_from_array(client_id, client_id_len);
-    err = aws_mqtt_client_connection_connect(connection->connection, &client_id_cur, true, keep_alive_time);
-    if (err) {
+    if (aws_mqtt_client_connection_connect(py_connection->connection, &client_id_cur, true, keep_alive_time)) {
         PyErr_SetAwsLastError();
         goto error;
     }
 
-    return PyCapsule_New(connection, s_capsule_name_mqtt_client_connection, s_mqtt_python_connection_destructor);
+    return PyCapsule_New(py_connection, s_capsule_name_mqtt_client_connection, s_mqtt_python_connection_destructor);
 
 error:
-    if (connection) {
-        if (connection->connection) {
-            aws_mem_release(allocator, connection->connection); /* TODO: need aws_mqtt_client_connection_destroy() */
+    if (py_connection) {
+        if (py_connection->connection) {
+            aws_mem_release(allocator, py_connection->connection); /* TODO: need aws_mqtt_client_connection_destroy() */
         }
 
-        if (client_initialized) {
-            aws_mqtt_client_clean_up(&connection->client);
-        }
-
-        aws_mem_release(allocator, connection);
+        aws_mem_release(allocator, py_connection);
     }
 
     return NULL;
@@ -249,7 +239,7 @@ error:
  * Configuration
  ******************************************************************************/
 
-PyObject *mqtt_set_will(PyObject *self, PyObject *args) {
+PyObject *mqtt_client_connection_set_will(PyObject *self, PyObject *args) {
     (void)self;
 
     PyObject *impl_capsule = NULL;
@@ -291,7 +281,7 @@ PyObject *mqtt_set_will(PyObject *self, PyObject *args) {
     Py_RETURN_NONE;
 }
 
-PyObject *mqtt_set_login(PyObject *self, PyObject *args) {
+PyObject *mqtt_client_connection_set_login(PyObject *self, PyObject *args) {
     (void)self;
 
     PyObject *impl_capsule = NULL;
@@ -358,7 +348,7 @@ static void s_publish_complete(struct aws_mqtt_client_connection *connection, ui
     }
 }
 
-PyObject *mqtt_publish(PyObject *self, PyObject *args) {
+PyObject *mqtt_client_connection_publish(PyObject *self, PyObject *args) {
     (void)self;
 
     PyObject *impl_capsule = NULL;
@@ -467,7 +457,7 @@ static void s_suback_callback(struct aws_mqtt_client_connection *connection, uin
     }
 }
 
-PyObject *mqtt_subscribe(PyObject *self, PyObject *args) {
+PyObject *mqtt_client_connection_subscribe(PyObject *self, PyObject *args) {
     (void)self;
 
     PyObject *impl_capsule = NULL;
@@ -526,7 +516,7 @@ PyObject *mqtt_subscribe(PyObject *self, PyObject *args) {
  * Unsubscribe
  ******************************************************************************/
 
-PyObject *mqtt_unsubscribe(PyObject *self, PyObject *args) {
+PyObject *mqtt_client_connection_unsubscribe(PyObject *self, PyObject *args) {
     (void)self;
 
     PyObject *impl_capsule = NULL;
@@ -567,7 +557,7 @@ PyObject *mqtt_unsubscribe(PyObject *self, PyObject *args) {
  * Disconnect
  ******************************************************************************/
 
-PyObject *mqtt_disconnect(PyObject *self, PyObject *args) {
+PyObject *mqtt_client_connection_disconnect(PyObject *self, PyObject *args) {
     (void)self;
 
     PyObject *impl_capsule = NULL;

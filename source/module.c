@@ -14,7 +14,8 @@
  */
 #include "module.h"
 #include "io.h"
-#include "mqtt.h"
+#include "mqtt_client.h"
+#include "mqtt_client_connection.h"
 
 #include <aws/io/io.h>
 #include <aws/mqtt/mqtt.h>
@@ -46,14 +47,17 @@ static PyMethodDef s_module_methods[] = {
     {"io_is_alpn_available", io_is_alpn_available, METH_NOARGS, NULL},
     {"io_new_event_loop_group", io_new_event_loop_group, METH_VARARGS, NULL},
 
-    /* MQTT */
-    {"mqtt_new_connection", mqtt_new_connection, METH_VARARGS, NULL},
-    {"mqtt_set_will", mqtt_set_will, METH_VARARGS, NULL},
-    {"mqtt_set_login", mqtt_set_login, METH_VARARGS, NULL},
-    {"mqtt_publish", mqtt_publish, METH_VARARGS, NULL},
-    {"mqtt_subscribe", mqtt_subscribe, METH_VARARGS, NULL},
-    {"mqtt_unsubscribe", mqtt_unsubscribe, METH_VARARGS, NULL},
-    {"mqtt_disconnect", mqtt_disconnect, METH_VARARGS, NULL},
+    /* MQTT Client */
+    {"mqtt_client_new", mqtt_client_new, METH_VARARGS, NULL},
+
+    /* MQTT Client Connection */
+    {"mqtt_client_connection_new", mqtt_client_connection_new, METH_VARARGS, NULL},
+    {"mqtt_client_connection_set_will", mqtt_client_connection_set_will, METH_VARARGS, NULL},
+    {"mqtt_client_connection_set_login", mqtt_client_connection_set_login, METH_VARARGS, NULL},
+    {"mqtt_client_connection_publish", mqtt_client_connection_publish, METH_VARARGS, NULL},
+    {"mqtt_client_connection_subscribe", mqtt_client_connection_subscribe, METH_VARARGS, NULL},
+    {"mqtt_client_connection_unsubscribe", mqtt_client_connection_unsubscribe, METH_VARARGS, NULL},
+    {"mqtt_client_connection_disconnect", mqtt_client_connection_disconnect, METH_VARARGS, NULL},
 
     {NULL, NULL, 0, NULL},
 };
