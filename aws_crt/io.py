@@ -21,3 +21,12 @@ class EventLoopGroup(object):
 
     def __init__(self, num_threads):
         self._internal_elg = _aws_crt_python.io_new_event_loop_group(num_threads)
+
+class ClientBootstrap(object):
+    __slots__ = ['elg', '_internal_bootstrap']
+
+    def __init__(self, elg):
+        assert isinstance(elg, EventLoopGroup)
+
+        self.elg = elg
+        self._internal_bootstrap = _aws_crt_python.io_new_client_bootstrap(self.elg._internal_elg)

@@ -24,7 +24,7 @@
 /**
  * Name string for event_loop_group capsules.
  */
-extern const char *s_capsule_name_elg;
+extern const char *s_capsule_name_client_bootstrap;
 
 /**
  * Returns True if ALPN is available, False if it is not.
@@ -35,5 +35,10 @@ PyObject *io_is_alpn_available(PyObject *self, PyObject *args);
  * Create a new event_loop_group to be managed by a Python Capsule.
  */
 PyObject *io_new_event_loop_group(PyObject *self, PyObject *args);
+
+/**
+ * Create a new client_bootstrap to be managed by a Python Capsule.
+ */
+PyObject *io_new_client_bootstrap(PyObject *self, PyObject *args);
 
 #endif /* AWS_CRT_PYTHON_IO_H */

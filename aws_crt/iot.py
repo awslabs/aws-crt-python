@@ -84,8 +84,9 @@ class AWSIoTMQTTClient(object):
         self._alpnProtocol = None
 
         self._elg = io.EventLoopGroup(1)
+        self._bootstrap = io.ClientBootstrap(self._elg)
 
-        self._client = mqtt.Client(self._elg)
+        self._client = mqtt.Client(self._bootstrap)
         self._connection = self._client.createConnection(clientID)
 
     # Configuration APIs

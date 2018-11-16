@@ -41,6 +41,7 @@ const char *s_capsule_name_mqtt_client_connection = "aws_mqtt_client_connection"
 
 struct mqtt_python_connection {
     struct aws_socket_options socket_options;
+    struct aws_tls_connection_options tls_options;
     struct mqtt_python_client *py_client;
     struct aws_mqtt_client_connection *connection;
 
@@ -60,6 +61,8 @@ static void s_mqtt_python_connection_destructor(PyObject *connection_capsule) {
     Py_XDECREF(connection->on_disconnect);
 
     aws_mqtt_client_connection_disconnect(connection->connection);
+
+    aws_tls_ctx_destroy(connection->tls_options.ctx);
 
     aws_mem_release(aws_crt_python_get_allocator(), connection);
 }
@@ -192,6 +195,9 @@ PyObject *mqtt_client_connection_new(PyObject *self, PyObject *args) {
     if (alpn_protocol) {
         aws_tls_ctx_options_set_alpn_list(&tls_ctx_opt, alpn_protocol);
     }
+    struct aws_tls_ctx *tls_ctx = aws_tls_client_ctx_new(allocator, &tls_ctx_opt);
+    aws_tls_connection_options_init_from_ctx(&py_connection->tls_options, tls_ctx);
+    aws_tls_connection_options_set_server_name(&py_connection->tls_options, server_name);
 
     AWS_ZERO_STRUCT(py_connection->socket_options);
     py_connection->socket_options.connect_timeout_ms = 3000;
@@ -208,7 +214,7 @@ PyObject *mqtt_client_connection_new(PyObject *self, PyObject *args) {
     struct aws_byte_cursor server_name_cur = aws_byte_cursor_from_array(server_name, server_name_len);
 
     py_connection->connection = aws_mqtt_client_connection_new(
-        &py_connection->py_client->native_client, callbacks, &server_name_cur, port_number, &py_connection->socket_options, &tls_ctx_opt);
+        &py_connection->py_client->native_client, callbacks, &server_name_cur, port_number, &py_connection->socket_options, &py_connection->tls_options);
 
     if (!py_connection->connection) {
         PyErr_SetAwsLastError();

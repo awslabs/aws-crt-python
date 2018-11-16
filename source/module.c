@@ -46,6 +46,7 @@ static PyMethodDef s_module_methods[] = {
     /* IO */
     {"io_is_alpn_available", io_is_alpn_available, METH_NOARGS, NULL},
     {"io_new_event_loop_group", io_new_event_loop_group, METH_VARARGS, NULL},
+    {"io_new_client_bootstrap", io_new_client_bootstrap, METH_VARARGS, NULL},
 
     /* MQTT Client */
     {"mqtt_client_new", mqtt_client_new, METH_VARARGS, NULL},

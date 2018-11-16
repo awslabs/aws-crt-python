@@ -41,20 +41,20 @@ PyObject *mqtt_client_new(PyObject *self, PyObject *args) {
 
     struct mqtt_python_client *py_client = NULL;
 
-    PyObject *elg_capsule = NULL;
+    PyObject *bootstrap_capsule = NULL;
 
     if (!PyArg_ParseTuple(
             args,
             "O",
-            &elg_capsule)) {
+            &bootstrap_capsule)) {
         goto error;
     }
-    if (!elg_capsule || !PyCapsule_CheckExact(elg_capsule)) {
+    if (!bootstrap_capsule || !PyCapsule_CheckExact(bootstrap_capsule)) {
         PyErr_SetNone(PyExc_ValueError);
         goto error;
     }
-    struct aws_event_loop_group *elg = PyCapsule_GetPointer(elg_capsule, s_capsule_name_elg);
-    if (!elg) {
+    struct aws_client_bootstrap *bootstrap = PyCapsule_GetPointer(bootstrap_capsule, s_capsule_name_client_bootstrap);
+    if (!bootstrap) {
         goto error;
     }
 
@@ -65,7 +65,7 @@ PyObject *mqtt_client_new(PyObject *self, PyObject *args) {
     }
     AWS_ZERO_STRUCT(*py_client);
 
-    if (aws_mqtt_client_init(&py_client->native_client, allocator, elg)) {
+    if (aws_mqtt_client_init(&py_client->native_client, allocator, bootstrap)) {
         PyErr_SetAwsLastError();
         goto error;
     }

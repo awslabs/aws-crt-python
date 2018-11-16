@@ -29,16 +29,13 @@ class Will(object):
         self.retain = retain
 
 class Client(object):
-    __slots__ = ['_internal_client', 'elg']
+    __slots__ = ['_internal_client', 'bootstrap']
 
-    def __init__(self, elg):
-        if isinstance(elg, EventLoopGroup):
-            self.elg = elg
-        else:
-            # Construct an event loop group with the argument givens
-            self.elg = EventLoopGroup(elg)
+    def __init__(self, bootstrap):
+        assert isinstance(bootstrap, EventLoopGroup)
 
-        self._internal_client = _aws_crt_python.mqtt_client_new(self.elg._internal_elg)
+        self.bootstrap = bootstrap
+        self._internal_client = _aws_crt_python.mqtt_client_new(self.bootstrap._internal_bootstrap)
 
     def createConnection(self, client_id):
         """
