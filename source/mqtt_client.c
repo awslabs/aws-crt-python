@@ -32,7 +32,7 @@ static void s_mqtt_python_client_destructor(PyObject *client_capsule) {
 
     aws_mqtt_client_clean_up(&py_client->native_client);
 
-    aws_mem_release(aws_crt_python_get_allocator(), py_client);
+    aws_mem_release(py_client->native_client.allocator, py_client);
 }
 
 PyObject *mqtt_client_new(PyObject *self, PyObject *args) {

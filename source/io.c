@@ -55,6 +55,7 @@ PyObject *io_new_event_loop_group(PyObject *self, PyObject *args) {
     if (!elg) {
         return PyErr_AwsLastError();
     }
+    AWS_ZERO_STRUCT(*elg);
 
     if (aws_event_loop_group_default_init(elg, allocator, num_threads)) {
         aws_mem_release(allocator, elg);
