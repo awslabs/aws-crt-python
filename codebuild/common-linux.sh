@@ -25,9 +25,9 @@ cd ../
 
 mkdir install
 
-install_library s2n 98225d7
+install_library s2n
 install_library aws-c-common
-install_library aws-c-io tls-s2n
+install_library aws-c-io
 install_library aws-c-mqtt
 
 cd aws-crt-python

@@ -4,7 +4,7 @@ set CMAKE_ARGS=%*
 mkdir install
 
 CALL :install_library aws-c-common
-CALL :install_library aws-c-io tls-s2n
+CALL :install_library aws-c-io
 CALL :install_library aws-c-mqtt
 
 cd aws-crt-python
