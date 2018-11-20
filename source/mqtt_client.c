@@ -26,8 +26,7 @@ static void s_mqtt_python_client_destructor(PyObject *client_capsule) {
 
     assert(PyCapsule_CheckExact(client_capsule));
 
-    struct mqtt_python_client *py_client =
-        PyCapsule_GetPointer(client_capsule, s_capsule_name_mqtt_client);
+    struct mqtt_python_client *py_client = PyCapsule_GetPointer(client_capsule, s_capsule_name_mqtt_client);
     assert(py_client);
 
     aws_mqtt_client_clean_up(&py_client->native_client);
@@ -43,10 +42,7 @@ PyObject *aws_py_mqtt_client_new(PyObject *self, PyObject *args) {
 
     PyObject *bootstrap_capsule = NULL;
 
-    if (!PyArg_ParseTuple(
-            args,
-            "O",
-            &bootstrap_capsule)) {
+    if (!PyArg_ParseTuple(args, "O", &bootstrap_capsule)) {
         goto error;
     }
     if (!bootstrap_capsule || !PyCapsule_CheckExact(bootstrap_capsule)) {

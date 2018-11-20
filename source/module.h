@@ -25,7 +25,7 @@
 #include <aws/common/common.h>
 
 #if PY_MAJOR_VERSION >= 3
-#define PyString_FromStringAndSize PyUnicode_FromStringAndSize
+#    define PyString_FromStringAndSize PyUnicode_FromStringAndSize
 #endif /* PY_MAJOR_VERSION */
 
 /* AWS Specific Helpers */

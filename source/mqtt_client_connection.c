@@ -223,7 +223,12 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
     struct aws_byte_cursor server_name_cur = aws_byte_cursor_from_array(server_name, server_name_len);
 
     py_connection->connection = aws_mqtt_client_connection_new(
-        &py_connection->py_client->native_client, callbacks, &server_name_cur, port_number, &py_connection->socket_options, &py_connection->tls_options);
+        &py_connection->py_client->native_client,
+        callbacks,
+        &server_name_cur,
+        port_number,
+        &py_connection->socket_options,
+        &py_connection->tls_options);
 
     if (!py_connection->connection) {
         PyErr_SetAwsLastError();
