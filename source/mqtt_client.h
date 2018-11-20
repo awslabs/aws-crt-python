@@ -26,6 +26,6 @@ struct mqtt_python_client {
     struct aws_mqtt_client native_client;
 };
 
-PyObject *mqtt_client_new(PyObject *self, PyObject *args);
+PyObject *aws_py_mqtt_client_new(PyObject *self, PyObject *args);
 
 #endif /* AWS_CRT_PYTHON_MQTT_CLIENT_H */

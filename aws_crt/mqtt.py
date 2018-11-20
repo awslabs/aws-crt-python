@@ -29,16 +29,13 @@ class Will(object):
         self.retain = retain
 
 class Client(object):
-    __slots__ = ['_internal_client', 'elg']
+    __slots__ = ['_internal_client', 'bootstrap']
 
-    def __init__(self, elg):
-        if isinstance(elg, EventLoopGroup):
-            self.elg = elg
-        else:
-            # Construct an event loop group with the argument givens
-            self.elg = EventLoopGroup(elg)
+    def __init__(self, bootstrap):
+        assert isinstance(bootstrap, EventLoopGroup)
 
-        self._internal_client = _aws_crt_python.mqtt_client_new(self.elg._internal_elg)
+        self.bootstrap = bootstrap
+        self._internal_client = _aws_crt_python.aws_py_mqtt_client_new(self.bootstrap._internal_bootstrap)
 
     def createConnection(self, client_id):
         """
@@ -70,7 +67,7 @@ class Connection(object):
 
         assert use_websocket == False
 
-        self._internal_connection = _aws_crt_python.mqtt_client_connection_new(
+        self._internal_connection = _aws_crt_python.aws_py_mqtt_client_connection_new(
             self.client._internal_client,
             host_name,
             port,
@@ -85,10 +82,10 @@ class Connection(object):
             )
 
         if self.will:
-            _aws_crt_python.mqtt_client_connection_set_will(self._internal_connection, self.will.topic, self.will.payload, self.will.qos, self.will.retain)
+            _aws_crt_python.aws_py_mqtt_client_connection_set_will(self._internal_connection, self.will.topic, self.will.payload, self.will.qos, self.will.retain)
 
         if self.username:
-            _aws_crt_python.mqtt_client_connection_set_login(self._internal_connection, self.username, self.password)
+            _aws_crt_python.aws_py_mqtt_client_connection_set_login(self._internal_connection, self.username, self.password)
 
     def set_will(self, topic, QoS, payload, retain=False):
         self.will = Will(topic, QoS, payload, retain)
@@ -98,13 +95,13 @@ class Connection(object):
         self.password = password
 
     def disconnect(self):
-        return _aws_crt_python.mqtt_client_connection_disconnect(self._internal_connection)
+        return _aws_crt_python.aws_py_mqtt_client_connection_disconnect(self._internal_connection)
 
     def subscribe(self, topic, qos, callback, suback_callback=None):
-        return _aws_crt_python.mqtt_client_connection_subscribe(self._internal_connection, topic, qos, callback, suback_callback)
+        return _aws_crt_python.aws_py_mqtt_client_connection_subscribe(self._internal_connection, topic, qos, callback, suback_callback)
 
     def unsubscribe(self, topic, unsuback_callback=None):
-        return _aws_crt_python.mqtt_client_connection_unsubscribe(self._internal_connection, topic, unsuback_callback)
+        return _aws_crt_python.aws_py_mqtt_client_connection_unsubscribe(self._internal_connection, topic, unsuback_callback)
 
     def publish(self, topic, payload, qos, retain=False, puback_callback=None):
-        _aws_crt_python.mqtt_client_connection_publish(self._internal_connection, topic, payload, qos, retain, puback_callback)
+        _aws_crt_python.aws_py_mqtt_client_connection_publish(self._internal_connection, topic, payload, qos, retain, puback_callback)
