@@ -21,7 +21,7 @@
 const char *s_capsule_name_client_bootstrap = "aws_client_bootstrap";
 static const char *s_capsule_name_elg = "aws_event_loop_group";
 
-PyObject *io_is_alpn_available(PyObject *self, PyObject *args) {
+PyObject *aws_py_is_alpn_available(PyObject *self, PyObject *args) {
 
     (void)self;
     (void)args;
@@ -40,7 +40,7 @@ static void s_elg_destructor(PyObject *elg_capsule) {
     aws_mem_release(elg->allocator, elg);
 }
 
-PyObject *io_new_event_loop_group(PyObject *self, PyObject *args) {
+PyObject *aws_py_io_new_event_loop_group(PyObject *self, PyObject *args) {
     (void)self;
 
     struct aws_allocator *allocator = aws_crt_python_get_allocator();
@@ -76,7 +76,7 @@ static void s_client_bootstrap_destructor(PyObject *bootstrap_capsule) {
     aws_mem_release(bootstrap->allocator, bootstrap);
 }
 
-PyObject *io_new_client_bootstrap(PyObject *self, PyObject *args) {
+PyObject *aws_py_io_new_client_bootstrap(PyObject *self, PyObject *args) {
     (void)self;
 
     struct aws_allocator *allocator = aws_crt_python_get_allocator();

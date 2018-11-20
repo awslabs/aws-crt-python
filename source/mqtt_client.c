@@ -35,7 +35,7 @@ static void s_mqtt_python_client_destructor(PyObject *client_capsule) {
     aws_mem_release(py_client->native_client.allocator, py_client);
 }
 
-PyObject *mqtt_client_new(PyObject *self, PyObject *args) {
+PyObject *aws_py_mqtt_client_new(PyObject *self, PyObject *args) {
 
     struct aws_allocator *allocator = aws_crt_python_get_allocator();
 

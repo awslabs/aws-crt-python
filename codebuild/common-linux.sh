@@ -15,7 +15,7 @@ function install_library {
     mkdir build
     cd build
 
-    cmake -DCMAKE_INSTALL_PREFIX=../../install -DENABLE_SANITIZERS=ON $CMAKE_ARGS ../
+    cmake -DCMAKE_INSTALL_PREFIX=$AWS_C_INSTALL -DENABLE_SANITIZERS=ON $CMAKE_ARGS ../
     make install
 
     cd ../..
@@ -23,7 +23,8 @@ function install_library {
 
 cd ../
 
-mkdir install
+mkdir -p install
+export AWS_C_INSTALL=`pwd`/install
 
 install_library s2n
 install_library aws-c-common
@@ -31,14 +32,5 @@ install_library aws-c-io
 install_library aws-c-mqtt
 
 cd aws-crt-python
-mkdir build
-cd build
-cmake -DCMAKE_INSTALL_PREFIX=../../install -DENABLE_SANITIZERS=ON $CMAKE_ARGS ../
 
-make
-
-LSAN_OPTIONS=verbosity=1:log_threads=1 ctest --output-on-failure
-
-cd ..
-
-./cppcheck.sh ../install/include
+python3 setup.py build

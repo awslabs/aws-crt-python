@@ -43,7 +43,6 @@ setuptools.setup(
     author="Example Author",
     author_email="author@example.com",
     description="A common runtime for AWS Python projects",
-    long_description_content_type="text/markdown",
     url="https://github.com/awslabs/aws-crt-python",
     packages=setuptools.find_packages(),
     classifiers=[
