@@ -40,7 +40,7 @@ static void s_elg_destructor(PyObject *elg_capsule) {
     aws_mem_release(elg->allocator, elg);
 }
 
-PyObject *aws_py_io_new_event_loop_group(PyObject *self, PyObject *args) {
+PyObject *aws_py_io_event_loop_group_new(PyObject *self, PyObject *args) {
     (void)self;
 
     struct aws_allocator *allocator = aws_crt_python_get_allocator();
@@ -76,7 +76,7 @@ static void s_client_bootstrap_destructor(PyObject *bootstrap_capsule) {
     aws_mem_release(bootstrap->allocator, bootstrap);
 }
 
-PyObject *aws_py_io_new_client_bootstrap(PyObject *self, PyObject *args) {
+PyObject *aws_py_io_client_bootstrap_new(PyObject *self, PyObject *args) {
     (void)self;
 
     struct aws_allocator *allocator = aws_crt_python_get_allocator();
