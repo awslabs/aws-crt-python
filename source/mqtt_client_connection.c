@@ -104,20 +104,29 @@ static void s_on_connect(
     }
 }
 
-static void s_on_disconnect(struct aws_mqtt_client_connection *connection, int error_code, void *user_data) {
+static bool s_on_disconnect(struct aws_mqtt_client_connection *connection, int error_code, void *user_data) {
 
     (void)connection;
 
     struct mqtt_python_connection *py_connection = user_data;
 
+    bool should_reconnect = true;
+
     if (py_connection->on_disconnect) {
         PyGILState_STATE state = PyGILState_Ensure();
 
         PyObject *result = PyObject_CallFunction(py_connection->on_disconnect, "(I)", error_code);
-        Py_XDECREF(result);
+        if (result) {
+            if (result != Py_None) {
+                should_reconnect = PyObject_IsTrue(result);
+            }
+            Py_DECREF(result);
+        }
 
         PyGILState_Release(state);
     }
+
+    return should_reconnect;
 }
 
 PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
