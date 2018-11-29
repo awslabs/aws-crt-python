@@ -462,6 +462,16 @@ static void s_subscribe_callback(
     PyGILState_Release(state);
 }
 
+static void s_callback_cleanup(void *userdata) {
+    PyObject *callback = userdata;
+
+    PyGILState_STATE state = PyGILState_Ensure();
+
+    Py_DECREF(callback);
+
+    PyGILState_Release(state);
+}
+
 static void s_suback_callback(struct aws_mqtt_client_connection *connection, uint16_t packet_id, void *userdata) {
     (void)connection;
     PyObject *callback = userdata;
@@ -508,7 +518,7 @@ PyObject *aws_py_mqtt_client_connection_subscribe(PyObject *self, PyObject *args
         suback_callback = NULL;
     }
 
-    struct mqtt_python_connection *connection =
+    struct mqtt_python_connection *py_connection =
         PyCapsule_GetPointer(impl_capsule, s_capsule_name_mqtt_client_connection);
 
     if (qos_val > 3) {
@@ -517,11 +527,12 @@ PyObject *aws_py_mqtt_client_connection_subscribe(PyObject *self, PyObject *args
 
     struct aws_byte_cursor topic_filter = aws_byte_cursor_from_array(topic, topic_len);
     uint16_t msg_id = aws_mqtt_client_connection_subscribe(
-        connection->connection,
+        py_connection->connection,
         &topic_filter,
         qos_val,
         s_subscribe_callback,
         callback,
+        s_callback_cleanup,
         s_suback_callback,
         suback_callback);
 

@@ -12,7 +12,7 @@
 # permissions and limitations under the License.
 
 import _aws_crt_python
-from aws_crt.io import EventLoopGroup
+from aws_crt.io import ClientBootstrap
 
 def _default_on_connect(return_code, session_present):
     pass
@@ -32,7 +32,7 @@ class Client(object):
     __slots__ = ['_internal_client', 'bootstrap']
 
     def __init__(self, bootstrap):
-        assert isinstance(bootstrap, EventLoopGroup)
+        assert isinstance(bootstrap, ClientBootstrap)
 
         self.bootstrap = bootstrap
         self._internal_client = _aws_crt_python.aws_py_mqtt_client_new(self.bootstrap._internal_bootstrap)
