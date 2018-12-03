@@ -28,7 +28,7 @@ _aws_crt_python = setuptools.Extension(
     ],
     include_dirs = ['/usr/local/include', os.getenv('AWS_C_INSTALL') + '/include'],
     library_dirs = ['/usr/local/lib', os.getenv('AWS_C_INSTALL') + '/lib'],
-    libraries = ['aws-c-common', 'aws-c-io', 'aws-c-mqtt'],
+    libraries = ['aws-c-mqtt', 'aws-c-io', 'aws-c-common', 's2n', 'crypto'],
     sources = [
         'source/module.c',
         'source/io.c',

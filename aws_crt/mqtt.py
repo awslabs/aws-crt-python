@@ -29,12 +29,14 @@ class Will(object):
         self.retain = retain
 
 class Client(object):
-    __slots__ = ['_internal_client', 'bootstrap']
+    __slots__ = ['_internal_client', 'bootstrap', 'tls_ctx']
 
-    def __init__(self, bootstrap):
+    def __init__(self, bootstrap, tls_ctx = None):
         assert isinstance(bootstrap, ClientBootstrap)
+        assert tls_ctx is None or isinstance(cls_ctx, ClientTlsContext)
 
         self.bootstrap = bootstrap
+        self.tls_ctx = tls_ctx
         self._internal_client = _aws_crt_python.aws_py_mqtt_client_new(self.bootstrap._internal_bootstrap)
 
     def createConnection(self, client_id):
@@ -59,7 +61,6 @@ class Connection(object):
 
     def connect(self,
             host_name, port,
-            ca_path, key_path, certificate_path,
             on_connect=_default_on_connect,
             on_disconnect=_default_on_disconnect,
             use_websocket=False, alpn=None,
@@ -67,14 +68,16 @@ class Connection(object):
 
         assert use_websocket == False
 
+        tls_ctx_cap = None
+
+        if self.client.tls_ctx:
+            tls_ctx_cap = self.client.tls_ctx._internal_tls_ctx
+
         self._internal_connection = _aws_crt_python.aws_py_mqtt_client_connection_new(
             self.client._internal_client,
+            tls_ctx_cap,
             host_name,
             port,
-            ca_path,
-            key_path,
-            certificate_path,
-            alpn,
             self.client_id,
             keep_alive,
             on_connect,

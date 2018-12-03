@@ -85,6 +85,7 @@ class AWSIoTMQTTClient(object):
 
         self._elg = io.EventLoopGroup(1)
         self._bootstrap = io.ClientBootstrap(self._elg)
+        self._tls_ctx_options = io.TlsContextOptions()
 
         self._client = mqtt.Client(self._bootstrap)
         self._connection = self._client.createConnection(clientID)
@@ -170,7 +171,7 @@ class AWSIoTMQTTClient(object):
         self._portNumber = portNumber
 
         if portNumber == 443 and not self._useWebsocket:
-            self._alpnProtocol = "x-amzn-mqtt-ca"
+            self._tls_ctx_options.alpn_list = "x-amzn-mqtt-ca"
 
     def configureIAMCredentials(self, AWSAccessKeyID, AWSSecretAccessKey, AWSSessionToken=""):
         """
@@ -230,9 +231,9 @@ class AWSIoTMQTTClient(object):
         None
 
         """
-        self._caPath = CAFilePath
-        self._keyPath = KeyPath
-        self._certPath = CertificatePath
+        self._tls_ctx_options.ca_file = CAFilePath
+        self._tls_ctx_options.private_key_path = KeyPath
+        self._tls_ctx_options.certificate_path = CertificatePath
 
     def configureAutoReconnectBackoffTime(self, baseReconnectQuietTimeSecond, maxReconnectQuietTimeSecond, stableConnectionTimeSecond):
         """
@@ -489,6 +490,8 @@ class AWSIoTMQTTClient(object):
         def _onDisconnectWrapper(return_code):
             self.onOffline()
 
+        self._client.tls_ctx = io.ClientTlsContext(self._tls_ctx_options)
+
         self._connection.connect(
             host_name=self._hostName,
             port=self._portNumber,
@@ -722,7 +725,7 @@ class AWSIoTMQTTClient(object):
         """
         done = threading.Event()
 
-        def _suback_callback(packet_id):
+        def _suback_callback(packet_id, topic, qos):
             nonlocal done
             done.set()
 
@@ -768,7 +771,11 @@ class AWSIoTMQTTClient(object):
         Subscribe request packet id, for tracking purpose in the corresponding callback.
 
         """
-        return self._connection.subscribe(topic, QoS, lambda message: messageCallback(None, None, message), ackCallback)
+
+        def _suback_callback(packet_id, topic, qos):
+            ackCallback(packet_id, qos)
+
+        return self._connection.subscribe(topic, QoS, lambda message: messageCallback(None, None, message), _suback_callback)
 
     def unsubscribe(self, topic):
         """
