@@ -52,8 +52,8 @@ class TlsContextOptions(object):
 
     def override_default_trust_store(self, ca_path, ca_file):
 
-        assert isinstance(ca_path, str)
-        assert isinstance(ca_file, str)
+        assert isinstance(ca_path, str) or ca_path is None
+        assert isinstance(ca_file, str) or ca_file is None
 
         self.ca_path = ca_path
         self.ca_file = ca_file

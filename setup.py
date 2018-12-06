@@ -11,7 +11,7 @@ ldflags = []
 if compiler_type == 'msvc':
     pass
 else:
-    cflags += ['-O0', '-fsanitize=address']
+    cflags += ['-O0', '-Wextra', '-Werror', '-fsanitize=address']
 
 if sys.platform == 'darwin':
     ldflags += ['-framework Security']

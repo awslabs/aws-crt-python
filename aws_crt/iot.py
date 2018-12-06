@@ -495,9 +495,6 @@ class AWSIoTMQTTClient(object):
         self._connection.connect(
             host_name=self._hostName,
             port=self._portNumber,
-            ca_path=self._caPath,
-            key_path=self._keyPath,
-            certificate_path=self._certPath,
             alpn=self._alpnProtocol,
             keep_alive=keepAliveIntervalSecond,
             on_connect=_onConnectWrapper,
@@ -729,7 +726,10 @@ class AWSIoTMQTTClient(object):
             nonlocal done
             done.set()
 
-        self._connection.subscribe(topic, QoS, lambda topic, payload: callback(None, None, Message(topic, payload)), _suback_callback)
+        def _sub_callback(topic, payload):
+            callback(None, None, Message(topic, payload))
+
+        self._connection.subscribe(topic, QoS, _sub_callback, _suback_callback)
 
         done.wait()
 
@@ -775,7 +775,11 @@ class AWSIoTMQTTClient(object):
         def _suback_callback(packet_id, topic, qos):
             ackCallback(packet_id, qos)
 
-        return self._connection.subscribe(topic, QoS, lambda message: messageCallback(None, None, message), _suback_callback)
+        def _sub_callback(topic, payload):
+            print("GOT DAM DATA")
+            messageCallback(None, None, Message(topic, payload))
+
+        return self._connection.subscribe(topic, QoS, _sub_callback, _suback_callback)
 
     def unsubscribe(self, topic):
         """

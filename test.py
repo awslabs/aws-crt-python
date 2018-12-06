@@ -3,18 +3,18 @@ from AWSIoTPythonSDK import MQTTLib
 import time, threading
 from timeit import default_timer as timer
 
-messages_recieved = 0
-messages_recieved_cv = threading.Condition()
+messages_received = 0
+messages_received_cv = threading.Condition()
 
 def iot_on_connect():
     print("iot connected")
 
 def iot_on_message(client, userdata, message):
-    global messages_recieved
+    global messages_received
 
-    with messages_recieved_cv:
-        messages_recieved += 1
-        messages_recieved_cv.notify()
+    with messages_received_cv:
+        messages_received += 1
+        messages_received_cv.notify()
 
 def iot_on_disconnect():
     print("iot disconnected")
@@ -49,12 +49,13 @@ num_publishes = 100
 for i in range(0, num_publishes):
     # Publish data to the mqtt client
     iot_client.publishAsync("a", "REQUEST", 1)
+    time.sleep(1/1000)
 
 end_publish = timer()
 
-with messages_recieved_cv:
-    while messages_recieved < num_publishes:
-        messages_recieved_cv.wait()
+with messages_received_cv:
+    while messages_received < num_publishes:
+        messages_received_cv.wait()
 
 pubacks_gotten = timer()
 

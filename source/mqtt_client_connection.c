@@ -14,8 +14,8 @@
  */
 #include "mqtt_client_connection.h"
 
-#include "mqtt_client.h"
 #include "io.h"
+#include "mqtt_client.h"
 
 #include <aws/mqtt/client.h>
 
@@ -344,7 +344,13 @@ struct publish_complete_userdata {
     PyObject *callback;
 };
 
-static void s_publish_complete(struct aws_mqtt_client_connection *connection, uint16_t packet_id, void *userdata) {
+static void s_publish_complete(
+    struct aws_mqtt_client_connection *connection,
+    uint16_t packet_id,
+    int error_code,
+    void *userdata) {
+    (void)connection;
+    (void)error_code;
 
     struct publish_complete_userdata *metadata = userdata;
     if (metadata) {
@@ -431,7 +437,7 @@ PyObject *aws_py_mqtt_client_connection_publish(PyObject *self, PyObject *args) 
 }
 
 /*******************************************************************************
- * Callback
+ * Subscribe
  ******************************************************************************/
 
 static void s_subscribe_callback(
@@ -473,9 +479,12 @@ static void s_suback_callback(
     uint16_t packet_id,
     const struct aws_byte_cursor *topic,
     enum aws_mqtt_qos qos,
+    int error_code,
     void *userdata) {
 
     (void)connection;
+    (void)error_code;
+
     PyObject *callback = userdata;
 
     if (callback) {
@@ -485,8 +494,13 @@ static void s_suback_callback(
         const char *topic_str = (const char *)topic->ptr;
         Py_ssize_t topic_len = topic->len;
 
-        PyObject_CallFunction(callback, "(Hs#L)", packet_id, topic_str, topic_len, qos);
-        Py_DECREF(callback);
+        PyObject *result = PyObject_CallFunction(callback, "(Hs#L)", packet_id, topic_str, topic_len, qos);
+        if (!result) {
+            PyErr_WriteUnraisable(PyErr_Occurred());
+            abort();
+        } else {
+            Py_DECREF(callback);
+        }
 
         PyGILState_Release(state);
     }
@@ -552,8 +566,14 @@ PyObject *aws_py_mqtt_client_connection_subscribe(PyObject *self, PyObject *args
  * Unsubscribe
  ******************************************************************************/
 
-static void s_unsuback_callback(struct aws_mqtt_client_connection *connection, uint16_t packet_id, void *userdata) {
+static void s_unsuback_callback(
+    struct aws_mqtt_client_connection *connection,
+    uint16_t packet_id,
+    int error_code,
+    void *userdata) {
     (void)connection;
+    (void)error_code;
+
     PyObject *callback = userdata;
 
     if (callback) {

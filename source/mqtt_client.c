@@ -36,6 +36,7 @@ static void s_mqtt_python_client_destructor(PyObject *client_capsule) {
 }
 
 PyObject *aws_py_mqtt_client_new(PyObject *self, PyObject *args) {
+    (void)self;
 
     struct aws_allocator *allocator = aws_crt_python_get_allocator();
 
