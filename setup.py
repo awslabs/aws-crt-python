@@ -11,13 +11,16 @@ ldflags = []
 if compiler_type == 'msvc':
     pass
 else:
-    cflags += ['-O0', '-Wextra', '-Werror', '-fsanitize=address']
+    cflags += ['-O0', '-Wextra', '-Werror']
 
 if sys.platform == 'darwin':
     ldflags += ['-framework Security']
 
 os.environ['CFLAGS'] = ' '.join(cflags)
 os.environ['LDFLAGS'] = ' '.join(ldflags)
+
+aws_c_libs = ['aws-c-mqtt', 'aws-c-io', 'aws-c-common']
+aws_c_objects = ['{}/lib/lib{}.a'.format(os.getenv('AWS_C_INSTALL'), lib) for lib in aws_c_libs]
 
 _aws_crt_python = setuptools.Extension(
     '_aws_crt_python',
@@ -28,13 +31,14 @@ _aws_crt_python = setuptools.Extension(
     ],
     include_dirs = ['/usr/local/include', os.getenv('AWS_C_INSTALL') + '/include'],
     library_dirs = ['/usr/local/lib', os.getenv('AWS_C_INSTALL') + '/lib'],
-    libraries = ['aws-c-mqtt', 'aws-c-io', 'aws-c-common', 's2n', 'crypto'],
+    # libraries=['aws-c-mqtt', 'aws-c-io', 'aws-c-common'],
     sources = [
         'source/module.c',
         'source/io.c',
         'source/mqtt_client.c',
         'source/mqtt_client_connection.c',
     ],
+    extra_objects = aws_c_objects
 )
 
 setuptools.setup(
