@@ -3,5 +3,6 @@ version: 0.2
 phases:
   build:
     commands:
+      - set PYTHON_PACKAGE=python3
       - .\codebuild\common-windows.bat -G "Visual Studio 14 2015 Win64"
 
