@@ -6,6 +6,8 @@ set -e
 
 CMAKE_ARGS="$@"
 
+brew install python3
+
 function install_library {
     git clone https://github.com/awslabs/$1.git
     cd $1
