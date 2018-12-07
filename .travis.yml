@@ -8,5 +8,10 @@ osx_image:
   - xcode10.1
 compiler: clang
 
+addons:
+  homebrew:
+    packages:
+      - python3
+
 script:
   - ./codebuild/common-macos.sh -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
