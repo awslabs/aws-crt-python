@@ -5,9 +5,7 @@ phases:
     commands:
       - sudo dpkg --add-architecture i386
       - sudo apt-get update -y
-      - sudo apt-get install gcc gcc-multilib cmake3 cppcheck -y
-      # python deps
-      - sudo apt-get install zlib1g-dev:i386 zlib1g:i386 libffi-dev:i386 -y
+      - sudo apt-get install gcc gcc-multilib cmake3 cppcheck zlib1g-dev:i386 libffi-dev:i386 -y
       - ls /usr/bin | grep gcc
       - ls /usr/local/bin | grep gcc
       - gcc --version
