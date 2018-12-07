@@ -8,11 +8,12 @@ phases:
       - sudo apt-get install gcc gcc-multilib cmake3 cppcheck -y
       - curl -LO https://www.python.org/ftp/python/3.7.1/Python-3.7.1.tgz
       - tar -xzf Python-3.7.1.tgz
+      - export PYTHON_HOME=`pwd`/python3_x86
       - cd Python-3.7.1
-      - CFLAGS=-m32 LDFLAGS=-m32 ./configure --prefix=../python3_x86
+      - CFLAGS=-m32 LDFLAGS=-m32 ./configure --prefix=$PYTHON_HOME
       - make -j 12
       - make install
-      - export PATH=../python3_x86/bin:$PATH
+      - export PATH=$PYTHON_HOME/bin:$PATH
       - which python3
       - python3 -mplatform -c "print(platform.architecture())"
       - which python3.4
