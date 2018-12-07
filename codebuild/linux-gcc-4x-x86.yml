@@ -6,7 +6,10 @@ phases:
       - sudo dpkg --add-architecture i386
       - sudo apt-get update -y
       - sudo apt-get purge python3 -y
+      - which python3
+      - python3 -mplatform -c "print(platform.architecture())"
       - sudo apt-get install gcc gcc-multilib cmake3 cppcheck python3:i386 python3-dev:i386 python3-setuptools -y
+      - which python3
       - python3 -mplatform -c "print(platform.architecture())"
       # Build OpenSSL from source
       - mkdir libcrypto-build
