@@ -26,6 +26,8 @@ cache:
 before_install:
   - test -d /usr/local/opt/openssl/lib  || { rmdir /usr/local/opt/openssl; brew install openssl; }
   - test -x `which python3` || { brew install python3; }
+  - curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+  - python3 get-pip.py
 
 script:
   - ./codebuild/common-macos.sh -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
