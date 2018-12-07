@@ -1,0 +1,12 @@
+sudo: true
+language: c
+
+os: osx
+osx_image:
+  - xcode8
+  - xcode9.2
+  - xcode10.1
+compiler: clang
+
+script:
+  - ./codebuild/common-macos.sh -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
