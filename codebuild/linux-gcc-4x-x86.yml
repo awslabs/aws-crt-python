@@ -11,7 +11,7 @@ phases:
       - tar -xzf Python-3.7.1.tgz
       - export PYTHON_HOME=`pwd`/python3_x86
       - cd Python-3.7.1
-      - CC=gcc CFLAGS=-m32 LDFLAGS=-m32 ./configure --prefix=$PYTHON_HOME
+      - CC=gcc CFLAGS=-m32 LDFLAGS=-m32 ./configure --prefix=$PYTHON_HOME || cat config.log
       - make -j 12
       - make install
       - export PATH=$PYTHON_HOME/bin:$PATH
