@@ -166,7 +166,12 @@ PyObject *aws_py_io_client_tls_ctx_new(PyObject *self, PyObject *args) {
 
     ctx_options.minimum_tls_version = min_tls_version;
 
-#define CHECK_AND_ASSIGN(field) do { if (field) { ctx_options.field = field; } } while (false)
+#define CHECK_AND_ASSIGN(field)                                                                                        \
+    do {                                                                                                               \
+        if (field) {                                                                                                   \
+            ctx_options.field = field;                                                                                 \
+        }                                                                                                              \
+    } while (false)
 
     CHECK_AND_ASSIGN(ca_file);
     CHECK_AND_ASSIGN(ca_path);
