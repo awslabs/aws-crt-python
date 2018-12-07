@@ -18,7 +18,8 @@ phases:
         no-bf no-ripemd no-dsa no-ssl2 no-ssl3 no-capieng     \
         -DSSL_FORBID_ENULL -DOPENSSL_NO_DTLS1 -DOPENSSL_NO_HEARTBEATS   \
         --prefix=`pwd`/../../../install/
-      - make -j 12 install
+      - make -j 12 
+      - make install
       - cd ../../
   pre_build:
     commands:
