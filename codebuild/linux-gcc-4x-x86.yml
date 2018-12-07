@@ -24,7 +24,7 @@ phases:
         -DSSL_FORBID_ENULL -DOPENSSL_NO_DTLS1 -DOPENSSL_NO_HEARTBEATS   \
         --prefix=`pwd`/../../../install/
       - make -j 12 
-      - make install
+      - make install > /dev/null
       - cd ../../
   pre_build:
     commands:
