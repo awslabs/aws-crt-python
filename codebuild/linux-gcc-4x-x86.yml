@@ -6,10 +6,10 @@ phases:
       - sudo dpkg --add-architecture i386
       - sudo apt-get update -y
       - sudo apt-get install gcc gcc-multilib cmake3 cppcheck -y
-      - curl -L0 https://www.python.org/ftp/python/3.7.1/Python-3.7.1.tgz
+      - curl -LO https://www.python.org/ftp/python/3.7.1/Python-3.7.1.tgz
       - tar -xzf Python-3.7.1.tgz
       - pushd Python-3.7.1
-      - ./configure --prefix=../python3_x86
+      - CFLAGS=-m32 LDFLAGS=-m32 ./configure --prefix=../python3_x86
       - make -j 12
       - make install
       - export PATH=../python3_x86/bin:$PATH
