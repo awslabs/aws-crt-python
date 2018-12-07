@@ -7,6 +7,7 @@ set -e
 CMAKE_ARGS="$@"
 
 # need setuptools in order to build the extension
+find / -name pip3 2>&1 | grep pip3
 pip3 install --upgrade setuptools
 
 function install_library {

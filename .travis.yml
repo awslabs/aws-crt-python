@@ -14,5 +14,18 @@ addons:
       - python3
     update: true
 
+cache:
+  directories:
+    - /usr/local/Cellar/openssl
+    - /usr/local/opt/openssl
+    - /usr/local/Cellar/sqlite
+    - /usr/local/opt/sqlite
+    - /usr/local/Cellar/python/3.7.1
+    - /usr/local/opt/python
+
+before_install:
+  - test -d /usr/local/opt/openssl/lib  || { rmdir /usr/local/opt/openssl; brew install openssl; }
+  - test -x `which python3` || { brew install python3; }
+
 script:
   - ./codebuild/common-macos.sh -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
