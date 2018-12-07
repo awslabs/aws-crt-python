@@ -7,7 +7,7 @@ set -e
 CMAKE_ARGS="$@"
 
 # need setuptools in order to build the extension
-python3 -m pip install --upgrade setuptools
+pip3 install --upgrade setuptools
 
 function install_library {
     git clone https://github.com/awslabs/$1.git
