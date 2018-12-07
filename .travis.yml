@@ -12,6 +12,7 @@ addons:
   homebrew:
     packages:
       - python3
+    update: true
 
 script:
   - ./codebuild/common-macos.sh -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
