@@ -1,6 +1,6 @@
 import setuptools
 import os
-import path from os
+from os import path
 import sys
 
 from distutils.ccompiler import get_default_compiler
