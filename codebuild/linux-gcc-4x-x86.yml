@@ -5,7 +5,8 @@ phases:
     commands:
       - sudo dpkg --add-architecture i386
       - sudo apt-get update -y
-      - sudo apt-get install gcc gcc-multilib cmake3 cppcheck zlib1g-dev:i386 zlib1g:i386 -y
+      - sudo apt-get install gcc gcc-multilib cmake3 cppcheck -y
+      - sudo apt-get install zlib1g-dev:i386 zlib1g:i386 libffi-dev:i386
       - curl -LO https://www.python.org/ftp/python/3.7.1/Python-3.7.1.tgz
       - tar -xzf Python-3.7.1.tgz
       - export PYTHON_HOME=`pwd`/python3_x86
