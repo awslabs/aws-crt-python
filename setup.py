@@ -24,8 +24,24 @@ else:
 if sys.platform == 'linux':
     include_dirs = ['/usr/local/include'] + include_dirs
     library_dirs = ['/usr/local/lib'] + library_dirs
+    try:
+        cflags = [os.environ['CFLAGS']]
+    except:
+        pass
+    try:
+        ldflags = [os.environ['LDFLAGS']]
+    except:
+        pass
 
 if sys.platform == 'darwin':
+    try:
+        cflags = [os.environ['CFLAGS']]
+    except:
+        pass
+    try:
+        ldflags = [os.environ['LDFLAGS']]
+    except:
+        pass
     ldflags += ['-framework Security']
     include_dirs = ['/usr/local/include'] + include_dirs
     library_dirs = ['/usr/local/lib'] + library_dirs
