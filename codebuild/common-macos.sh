@@ -6,8 +6,24 @@ set -e
 
 CMAKE_ARGS="$@"
 
+pushd ./packages
+if [! -d /usr/local/opt/openssl ]; then
+    brew install --build-bottle openssl
+    brew bottle --json openssl
+    brew uninstall openssl
+fi
+brew install openssl*bottle*.tar.gz
+
+if [ ! -x `which python3` ]; then
+    brew install --build-bottle python3
+    brew bottle --json python3
+    brew uninstall python3
+fi
+brew install python3*bottle*.tar.gz
+popd
+
 # need setuptools in order to build the extension
-pip3 install --upgrade setuptools
+#pip3 install --upgrade setuptools
 
 function install_library {
     git clone https://github.com/awslabs/$1.git

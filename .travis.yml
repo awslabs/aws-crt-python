@@ -16,12 +16,7 @@ addons:
 
 cache:
   directories:
-    - /usr/local/Cellar/openssl
-    - /usr/local/opt/openssl
-    - /usr/local/Cellar/sqlite
-    - /usr/local/opt/sqlite
-    - /usr/local/Cellar/python/3.7.1
-    - /usr/local/opt/python
+    - ./packages
 
 before_install:
   - test -d /usr/local/opt/openssl/lib  || { rmdir /usr/local/opt/openssl; brew install openssl; }
