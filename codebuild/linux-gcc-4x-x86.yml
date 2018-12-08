@@ -13,7 +13,7 @@ phases:
       - cd Python-3.7.1
       - CFLAGS=-m32 LDFLAGS=-m32 ./configure --prefix=$PYTHON_HOME || cat config.log
       - make -j 12
-      - make install MANDIR=/dev/null
+      - make install
       - export PATH=$PYTHON_HOME/bin:$PATH
       - cd ..
       # Build OpenSSL from source
@@ -29,7 +29,7 @@ phases:
         -DSSL_FORBID_ENULL -DOPENSSL_NO_DTLS1 -DOPENSSL_NO_HEARTBEATS   \
         --prefix=`pwd`/../../../install/
       - make -j 12 
-      - make install MANDIR=/dev/null
+      - make install
       - cd ../../
   pre_build:
     commands:
