@@ -355,17 +355,17 @@ static void s_publish_complete(
     struct publish_complete_userdata *metadata = userdata;
     if (metadata) {
 
-        if (metadata->callback) {
+        PyGILState_STATE state = PyGILState_Ensure();
 
-            PyGILState_STATE state = PyGILState_Ensure();
+        if (metadata->callback) {
 
             PyObject_CallFunction(metadata->callback, "(H)", packet_id);
             Py_DECREF(metadata->callback);
-
-            PyGILState_Release(state);
         }
-
         PyBuffer_Release(&metadata->payload);
+
+        PyGILState_Release(state);
+
         aws_mem_release(aws_crt_python_get_allocator(), metadata);
     }
 }
@@ -622,6 +622,35 @@ PyObject *aws_py_mqtt_client_connection_unsubscribe(PyObject *self, PyObject *ar
     }
 
     return PyLong_FromUnsignedLong(msg_id);
+}
+
+/*******************************************************************************
+ * Ping
+ ******************************************************************************/
+
+PyObject *aws_py_mqtt_client_connection_ping(PyObject *self, PyObject *args) {
+    (void)self;
+
+    PyObject *impl_capsule = NULL;
+
+    if (!PyArg_ParseTuple(args, "O", &impl_capsule)) {
+        return NULL;
+    }
+
+    if (!impl_capsule || !PyCapsule_CheckExact(impl_capsule)) {
+        PyErr_SetNone(PyExc_TypeError);
+        return NULL;
+    }
+
+    struct mqtt_python_connection *connection =
+        PyCapsule_GetPointer(impl_capsule, s_capsule_name_mqtt_client_connection);
+
+    int err = aws_mqtt_client_connection_ping(connection->connection);
+    if (err) {
+        return PyErr_AwsLastError();
+    }
+
+    Py_RETURN_NONE;
 }
 
 /*******************************************************************************

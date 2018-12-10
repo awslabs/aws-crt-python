@@ -108,3 +108,6 @@ class Connection(object):
 
     def publish(self, topic, payload, qos, retain=False, puback_callback=None):
         _aws_crt_python.aws_py_mqtt_client_connection_publish(self._internal_connection, topic, payload, qos, retain, puback_callback)
+
+    def ping(self):
+        _aws_crt_python.aws_py_mqtt_client_connection_ping(self._internal_connection)

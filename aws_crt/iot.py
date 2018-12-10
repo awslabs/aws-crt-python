@@ -490,7 +490,8 @@ class AWSIoTMQTTClient(object):
         def _onDisconnectWrapper(return_code):
             self.onOffline()
 
-        self._client.tls_ctx = io.ClientTlsContext(self._tls_ctx_options)
+        if self._tls_ctx_options.ca_file:
+            self._client.tls_ctx = io.ClientTlsContext(self._tls_ctx_options)
 
         self._connection.connect(
             host_name=self._hostName,
@@ -544,9 +545,6 @@ class AWSIoTMQTTClient(object):
         self._connection.connect(
             host_name=self._hostName,
             port=self._portNumber,
-            ca_path=self._caPath,
-            key_path=self._keyPath,
-            certificate_path=self._certPath,
             alpn=self._alpnProtocol,
             keep_alive=keepAliveIntervalSecond,
             on_connect=_onConnectWrapper,
