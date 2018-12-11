@@ -4,6 +4,7 @@
 # ./build-deps.sh
 #   -c, --clean - remove any cached CMake config before building
 #   -i, --install <path> - sets the CMAKE_INSTALL_PREFIX, the root where the deps will be install
+#   -l, --local - Tells the script to look for local dependency source trees in the same parent as this repo
 #   <all other args> - will be passed to cmake as-is
 
 # everything is relative to the directory this script is in
@@ -23,10 +24,9 @@ function install_dep {
     local dep=$1
     local commit_or_branch=$2
 
-    if [ $prefer_local_deps -ne 0 ]; then
-        if [ -d $home_dir/../$dep ]; then
-            pushd $home_dir/../$dep
-        fi
+    # if the local deps are preferred and the local dep exists, use it
+    if [ $prefer_local_deps -ne 0 ] && [ -d "$home_dir/../$dep" ]; then
+        pushd $home_dir/../$dep
     else # git clone the repo and build it
         pushd $deps_dir
         if [ -d $dep ]; then
