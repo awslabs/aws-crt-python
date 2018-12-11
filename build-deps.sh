@@ -27,6 +27,7 @@ function install_dep {
     # if the local deps are preferred and the local dep exists, use it
     if [ $prefer_local_deps -ne 0 ] && [ -d "$home_dir/../$dep" ]; then
         pushd $home_dir/../$dep
+        echo "Using local repo: $home_dir/../$dep branch:" `git branch | grep \* | cut -d ' ' -f2` "commit: " `git rev-parse HEAD`
     else # git clone the repo and build it
         pushd $deps_dir
         if [ -d $dep ]; then
@@ -40,6 +41,7 @@ function install_dep {
         if [ -n "$commit_or_branch" ]; then
             git checkout $commit_or_branch
         fi
+        echo "Using git repo: $dep branch:" `git branch | grep \* | cut -d ' ' -f2` "commit: " `git rev-parse HEAD`
     fi
 
     mkdir -p dep-build
