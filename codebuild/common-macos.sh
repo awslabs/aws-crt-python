@@ -18,14 +18,18 @@ if [ ! -x /usr/local/opt/openssl/bin/openssl ]; then
     brew bottle --json openssl
     brew uninstall openssl
 fi
-brew install openssl*bottle*.tar.gz
+if [ -e openssl*bottle*.tar.gz ]; then
+    brew install openssl*bottle*.tar.gz
+fi
 
 if [ ! -x `which python3` ]; then
     brew install --build-bottle python3
     brew bottle --json python3
     brew uninstall python3
 fi
-brew install python3*bottle*.tar.gz
+if [ -e python3*bottle*.tar.gz ]; then
+    brew install python3*bottle*.tar.gz
+fi
 popd
 
 function install_library {
