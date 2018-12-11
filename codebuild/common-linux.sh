@@ -23,7 +23,7 @@ function install_library {
 
 export AWS_C_INSTALL=`pwd`/build/deps/install
 
-# If TRAVIS_OS_NAME is OSX, skip this step (will resolve to empty string on CodeBuild)
+# Linux needs s2n
 sudo apt-get install libssl-dev -y
 install_library s2n 7c9069618e68214802ac7fbf45705d5f8b53135f
 
