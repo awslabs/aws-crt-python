@@ -29,13 +29,14 @@ if [ ! -e sqlite*bottle*.tar.gz ]; then
 fi
 brew install sqlite*bottle*.tar.gz
 
-if [ ! -e python3*bottle*.tar.gz ]; then
-    brew uninstall python --ignore-dependencies
+# must always uninstall python2 if it's there
+brew uninstall python --ignore-dependencies
+if [ ! -e python*bottle*.tar.gz ]; then
     brew install --build-bottle python3
     brew bottle --json python3
     brew uninstall python3 --ignore-dependencies
 fi
-brew install python3*bottle*.tar.gz
+brew install python*bottle*.tar.gz
 popd
 
 # build dependencies
