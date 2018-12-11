@@ -23,13 +23,12 @@ function install_dep {
     local dep=$1
     local commit_or_branch=$2
 
-    pushd $home_dir
-
     if [ $prefer_local_deps -ne 0 ]; then
-        if [ -d ../$dep ]; then
-            cd ../$dep
+        if [ -d $home_dir/../$dep ]; then
+            pushd $home_dir/../$dep
         fi
     else # git clone the repo and build it
+        pushd $deps_dir
         if [ -d $dep ]; then
             cd $dep
             git pull --rebase
@@ -80,7 +79,7 @@ do
 done
 
 if [ $clean ]; then
-    rm -r $deps_dir
+    rm -rf $deps_dir
 fi
 mkdir -p $deps_dir
 
