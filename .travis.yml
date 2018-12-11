@@ -13,7 +13,7 @@ addons:
   homebrew:
     update: true
     packages:
-      - ninja-build
+      - ninja
 
 cache:
   directories:
