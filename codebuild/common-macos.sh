@@ -6,8 +6,12 @@ set -e
 
 CMAKE_ARGS="$@"
 
+# ensure each required package is installed, if not, make a bottle for brew in ./packages
+# so it will be cached for future runs. If the cache is ever blown away, this will update
+# the packages as well
+# If the bottles are already in ./packages, then just install them
 pushd ./packages
-if [! -d /usr/local/opt/openssl ]; then
+if [ ! -d /usr/local/opt/openssl ]; then
     brew install --build-bottle openssl
     brew bottle --json openssl
     brew uninstall openssl
