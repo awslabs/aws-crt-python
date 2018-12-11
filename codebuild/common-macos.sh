@@ -21,6 +21,14 @@ if [ ! -e openssl*bottle*.tar.gz ]; then
 fi
 brew install openssl*bottle*.tar.gz
 
+if [ ! -e sqlite*bottle*.tar.gz ]; then
+    brew uninstall sqlite --ignore-dependencies
+    brew install --build-bottle sqlite
+    brew bottle --json sqlite
+    brew uninstall sqlite --ignore-dependencies
+fi
+brew install sqlite*bottle*.tar.gz
+
 if [ ! -e python3*bottle*.tar.gz ]; then
     brew uninstall python --ignore-dependencies
     brew install --build-bottle python3
