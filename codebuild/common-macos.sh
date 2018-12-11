@@ -3,7 +3,7 @@
 # Until CodeBuild supports macOS, this script is just used by Travis.
 
 set -e
-set -o trace
+set -x
 
 CMAKE_ARGS="$@"
 
