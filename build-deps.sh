@@ -6,17 +6,52 @@
 #   -i, --install <path> - sets the CMAKE_INSTALL_PREFIX, the root where the deps will be install
 #   <all other args> - will be passed to cmake as-is
 
-# assumes that the dependency git repos are cloned in the parent
-# folder, next to this project
-deps=(aws-c-common aws-c-io aws-c-mqtt)
-
 # everything is relative to the directory this script is in
 home_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 
 # where to have cmake put its binaries
 deps_dir=$home_dir/build/deps
-
+# where deps will be installed
 install_prefix=$deps_dir/install
+# whether or not to look for local sources for deps, they should be in
+# the same parent directory as this repo
+prefer_local_deps=0
+
+cmake_args=""
+
+function install_dep {
+    local dep=$1
+    local commit_or_branch=$2
+
+    pushd $home_dir
+
+    if [ $prefer_local_deps -ne 0 ]; then
+        if [ -d ../$dep ]; then
+            cd ../$dep
+        fi
+    else # git clone the repo and build it
+        if [ -d $dep ]; then
+            cd $dep
+            git pull --rebase
+        else
+            git clone https://github.com/awslabs/$dep.git
+            cd $dep
+        fi
+
+        if [ -n "$commit_or_branch" ]; then
+            git checkout $commit_or_branch
+        fi
+    fi
+
+    mkdir -p dep-build
+    cd dep-build
+
+    cmake -GNinja $cmake_args -DCMAKE_INSTALL_PREFIX=$install_prefix ..
+    cmake --build . --target all
+    cmake --build . --target install
+
+    popd
+}
 
 cmake_args=()
 while [[ $# -gt 0 ]]
@@ -33,6 +68,10 @@ do
         shift
         shift
         ;;
+        -l|--local|--prefer-local)
+        prefer_local_deps=1
+        shift
+        ;;
         *)    # everything else
         cmake_args="$cmake_args $arg" # unknown args are passed to cmake
         shift
@@ -45,17 +84,6 @@ if [ $clean ]; then
 fi
 mkdir -p $deps_dir
 
-for dep in ${deps[@]}; do
-    # build
-    src_dir=$home_dir/../$dep
-    dep_dir=$deps_dir/$dep
-    mkdir -p $dep_dir
-    pushd $dep_dir
-
-    echo "cmake -GNinja $cmake_args -DCMAKE_INSTALL_PREFIX=$install_prefix $src_dir"
-    cmake -GNinja $cmake_args -DCMAKE_INSTALL_PREFIX=$install_prefix $src_dir
-    cmake --build . --target all
-    cmake --build . --target install
-
-    popd
-done
+install_dep aws-c-common
+install_dep aws-c-io
+install_dep aws-c-mqtt
