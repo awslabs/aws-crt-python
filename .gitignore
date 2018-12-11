@@ -533,3 +533,6 @@ ASALocalRun/
 *.key
 *.pem
 *.crt
+
+# deps from build-deps.sh
+deps/
