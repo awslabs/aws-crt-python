@@ -21,7 +21,6 @@ if [ ! -e openssl*bottle*.tar.gz ]; then
 fi
 brew install openssl*bottle*.tar.gz
 
-brew 
 if [ ! -e python3*bottle*.tar.gz ]; then
     brew uninstall python --ignore-dependencies
     brew install --build-bottle python3
