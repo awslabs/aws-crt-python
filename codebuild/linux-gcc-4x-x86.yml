@@ -39,7 +39,6 @@ phases:
       - echo Build started on `date`
       - export CFLAGS=-m32
       - ./codebuild/common-linux.sh -DCMAKE_C_FLAGS="-m32" -DCMAKE_LIBRARY_ARCHITECTURE=i386-linux-gnu
-      - ./format-check.sh
   post_build:
     commands:
       - echo Build completed on `date`
