@@ -12,6 +12,7 @@ CMAKE_ARGS="$@"
 # the packages as well
 # If the bottles are already in ./packages, then just install them
 pushd ./packages
+# existing openssl is out of date and must be replaced to install python3
 brew uninstall --ignore-dependencies openssl
 if [ ! -e openssl*bottle*.tar.gz ]; then
     brew install --build-bottle openssl
@@ -28,32 +29,9 @@ fi
 brew install python3*bottle*.tar.gz
 popd
 
-function install_library {
-    git clone https://github.com/awslabs/$1.git
-    cd $1
+# build dependencies
+./build-deps.sh
+export AWS_C_INSTALL=`pwd`/build/deps/install
 
-    if [ -n "$2" ]; then
-        git checkout $2
-    fi
-
-    mkdir build
-    cd build
-
-    cmake -DCMAKE_INSTALL_PREFIX=$AWS_C_INSTALL -DENABLE_SANITIZERS=ON $CMAKE_ARGS ../
-    make install
-
-    cd ../..
-}
-
-cd ../
-
-mkdir install
-export AWS_C_INSTALL=`pwd`/install
-
-install_library aws-c-common
-install_library aws-c-io
-install_library aws-c-mqtt
-
-cd aws-crt-python
-
+# build python3 extension
 python3 setup.py build
