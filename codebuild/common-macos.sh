@@ -25,7 +25,7 @@ if [ ! -e python3*bottle*.tar.gz ]; then
     brew uninstall python --ignore-dependencies
     brew install --build-bottle python3
     brew bottle --json python3
-    brew uninstall python3
+    brew uninstall python3 --ignore-dependencies
 fi
 brew install python3*bottle*.tar.gz
 popd
