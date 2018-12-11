@@ -12,6 +12,8 @@ compiler: clang
 addons:
   homebrew:
     update: true
+    packages:
+      - ninja-build
 
 cache:
   directories:
