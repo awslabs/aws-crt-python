@@ -39,7 +39,7 @@ class Client(object):
 
     def __init__(self, bootstrap, tls_ctx = None):
         assert isinstance(bootstrap, ClientBootstrap)
-        assert tls_ctx is None or isinstance(cls_ctx, ClientTlsContext)
+        assert tls_ctx is None or isinstance(tls_ctx, io.ClientTlsContext)
 
         self.bootstrap = bootstrap
         self.tls_ctx = tls_ctx
@@ -55,20 +55,20 @@ class Connection(object):
         self.client = client
         self.client_id = client_id
 
-        self.will = None
-
     def connect(self,
             host_name, port,
             on_connect=_default_on_connect,
             on_disconnect=_default_on_disconnect,
             use_websocket=False, alpn=None,
             clean_session=True, keep_alive=0,
+            will=None,
             username=None, password=None):
 
         assert use_websocket == False
 
-        tls_ctx_cap = None
+        assert will is None or isinstance(will, Will)
 
+        tls_ctx_cap = None
         if self.client.tls_ctx:
             tls_ctx_cap = self.client.tls_ctx._internal_tls_ctx
 
@@ -81,16 +81,10 @@ class Connection(object):
             keep_alive,
             on_connect,
             on_disconnect,
+            will,
+            username,
+            password,
             )
-
-        if self.will:
-            _aws_crt_python.aws_py_mqtt_client_connection_set_will(self._internal_connection, self.will.topic, self.will.payload, self.will.qos, self.will.retain)
-
-        if username:
-            _aws_crt_python.aws_py_mqtt_client_connection_set_login(self._internal_connection, username, password)
-
-    def set_will(self, topic, QoS, payload, retain=False):
-        self.will = Will(topic, QoS, payload, retain)
 
     def disconnect(self):
         return _aws_crt_python.aws_py_mqtt_client_connection_disconnect(self._internal_connection)

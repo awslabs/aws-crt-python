@@ -56,8 +56,6 @@ static PyMethodDef s_module_methods[] = {
 
     /* MQTT Client Connection */
     {"aws_py_mqtt_client_connection_new", aws_py_mqtt_client_connection_new, METH_VARARGS, NULL},
-    {"aws_py_mqtt_client_connection_set_will", aws_py_mqtt_client_connection_set_will, METH_VARARGS, NULL},
-    {"aws_py_mqtt_client_connection_set_login", aws_py_mqtt_client_connection_set_login, METH_VARARGS, NULL},
     {"aws_py_mqtt_client_connection_publish", aws_py_mqtt_client_connection_publish, METH_VARARGS, NULL},
     {"aws_py_mqtt_client_connection_subscribe", aws_py_mqtt_client_connection_subscribe, METH_VARARGS, NULL},
     {"aws_py_mqtt_client_connection_unsubscribe", aws_py_mqtt_client_connection_unsubscribe, METH_VARARGS, NULL},

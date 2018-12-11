@@ -45,7 +45,7 @@ print("publishing...")
 
 begin_publish = timer()
 
-num_publishes = 100
+num_publishes = 50
 for i in range(0, num_publishes):
     # Publish data to the mqtt client
     iot_client.publishAsync("a", "REQUEST", mqtt.QoS.AtLeastOnce)

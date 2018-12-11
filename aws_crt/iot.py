@@ -83,6 +83,9 @@ class AWSIoTMQTTClient(object):
         self._useWebsocket = useWebsocket
         self._alpnProtocol = None
 
+        self._username = None
+        self._password = None
+
         self._elg = io.EventLoopGroup(1)
         self._bootstrap = io.ClientBootstrap(self._elg)
         self._tls_ctx_options = io.TlsContextOptions()
@@ -116,7 +119,7 @@ class AWSIoTMQTTClient(object):
         None
 
         """
-        self._connection.set_will(topic, QoS, payload, retain)
+        self._will = mqtt.Will(topic, QoS, payload, retain)
 
     def clearLastWill(self):
         """
@@ -139,7 +142,7 @@ class AWSIoTMQTTClient(object):
         None
 
         """
-        raise NotImplementedError()
+        self._will = None
 
     def configureEndpoint(self, hostName, portNumber):
         """
@@ -404,7 +407,8 @@ class AWSIoTMQTTClient(object):
         None
 
         """
-        self._connection.set_login(username, password)
+        self._username = username
+        self._password = password
 
     def enableMetricsCollection(self):
         """
@@ -500,6 +504,9 @@ class AWSIoTMQTTClient(object):
             keep_alive=keepAliveIntervalSecond,
             on_connect=_onConnectWrapper,
             on_disconnect=_onDisconnectWrapper,
+            will=self._will,
+            username=self._username,
+            password=self._password,
         )
 
         connected.wait()

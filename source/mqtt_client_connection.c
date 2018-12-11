@@ -149,10 +149,15 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
     uint16_t keep_alive_time = 0;
     PyObject *on_connect = NULL;
     PyObject *on_disconnect = NULL;
+    PyObject *will = NULL;
+    const char *username = NULL;
+    Py_ssize_t username_len = 0;
+    const char *password = NULL;
+    Py_ssize_t password_len = 0;
 
     if (!PyArg_ParseTuple(
             args,
-            "OOs#Hs#HOO",
+            "OOs#Hs#HOOOz#z#",
             &client_capsule,
             &tls_ctx_capsule,
             &server_name,
@@ -162,7 +167,12 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
             &client_id_len,
             &keep_alive_time,
             &on_connect,
-            &on_disconnect)) {
+            &on_disconnect,
+            &will,
+            &username,
+            &username_len,
+            &password,
+            &password_len)) {
         goto error;
     }
 
@@ -231,6 +241,40 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
         goto error;
     }
 
+    if (will) {
+        PyObject *py_topic = PyObject_GetAttrString(will, "topic");
+        assert(py_topic && PyBytes_Check(py_topic));
+        struct aws_byte_cursor topic = aws_byte_cursor_from_pystring(py_topic);
+
+        PyObject *py_qos = PyObject_GetAttrString(will, "qos");
+        assert(py_qos && PyLong_Check(py_qos));
+        enum aws_mqtt_qos qos = (enum aws_mqtt_qos)PyLong_AsUnsignedLong(py_qos);
+
+        PyObject *py_payload = PyObject_GetAttrString(will, "payload");
+        assert(py_payload && PyBytes_Check(py_payload));
+        struct aws_byte_cursor payload = aws_byte_cursor_from_pystring(py_payload);
+
+        PyObject *py_retain = PyObject_GetAttrString(will, "retain");
+        assert(py_retain && PyBool_Check(py_retain));
+        bool retain = py_retain == Py_True;
+
+        aws_mqtt_client_connection_set_will(py_connection->connection, &topic, qos, retain, &payload);
+    }
+
+    if (username) {
+        struct aws_byte_cursor username_cur = aws_byte_cursor_from_array(username, username_len);
+
+        struct aws_byte_cursor password_cur;
+        struct aws_byte_cursor *password_cur_ptr = NULL;
+        if (password) {
+            password_cur.ptr = (uint8_t *)password;
+            password_cur.len = password_len;
+            password_cur_ptr = &password_cur;
+        }
+
+        aws_mqtt_client_connection_set_login(py_connection->connection, &username_cur, password_cur_ptr);
+    }
+
     struct aws_byte_cursor client_id_cur = aws_byte_cursor_from_array(client_id, client_id_len);
     if (aws_mqtt_client_connection_connect(py_connection->connection, &client_id_cur, true, keep_alive_time)) {
         PyErr_SetAwsLastError();
@@ -249,90 +293,6 @@ error:
     }
 
     return NULL;
-}
-
-/*******************************************************************************
- * Configuration
- ******************************************************************************/
-
-PyObject *aws_py_mqtt_client_connection_set_will(PyObject *self, PyObject *args) {
-    (void)self;
-
-    PyObject *impl_capsule = NULL;
-    const char *topic;
-    Py_ssize_t topic_len;
-    const char *payload;
-    Py_ssize_t payload_len;
-    uint8_t qos_val = AWS_MQTT_QOS_AT_MOST_ONCE;
-    PyObject *retain = NULL;
-
-    if (!PyArg_ParseTuple(
-            args, "Os#s#bO", &impl_capsule, &topic, &topic_len, &payload, &payload_len, &qos_val, &retain)) {
-        return NULL;
-    }
-
-    if (!impl_capsule || !PyCapsule_CheckExact(impl_capsule)) {
-        PyErr_SetNone(PyExc_TypeError);
-        return NULL;
-    }
-
-    struct mqtt_python_connection *connection =
-        PyCapsule_GetPointer(impl_capsule, s_capsule_name_mqtt_client_connection);
-
-    if (qos_val > 3) {
-        PyErr_SetNone(PyExc_ValueError);
-        return NULL;
-    }
-
-    struct aws_byte_cursor topic_cursor = aws_byte_cursor_from_array(topic, topic_len);
-    enum aws_mqtt_qos qos = (enum aws_mqtt_qos)qos_val;
-    struct aws_byte_cursor payload_cursor = aws_byte_cursor_from_array(payload, payload_len);
-
-    int err = aws_mqtt_client_connection_set_will(
-        connection->connection, &topic_cursor, qos, retain == Py_True, &payload_cursor);
-    if (err) {
-        return PyErr_AwsLastError();
-    }
-
-    Py_RETURN_NONE;
-}
-
-PyObject *aws_py_mqtt_client_connection_set_login(PyObject *self, PyObject *args) {
-    (void)self;
-
-    PyObject *impl_capsule = NULL;
-    const char *username;
-    Py_ssize_t username_len;
-    const char *password;
-    Py_ssize_t password_len;
-
-    if (!PyArg_ParseTuple(args, "Os#z#", &impl_capsule, &username, &username_len, &password, &password_len)) {
-        return NULL;
-    }
-
-    if (!impl_capsule || !PyCapsule_CheckExact(impl_capsule)) {
-        PyErr_SetNone(PyExc_TypeError);
-        return NULL;
-    }
-
-    struct mqtt_python_connection *connection =
-        PyCapsule_GetPointer(impl_capsule, s_capsule_name_mqtt_client_connection);
-
-    struct aws_byte_cursor username_cursor = aws_byte_cursor_from_array(username, username_len);
-
-    struct aws_byte_cursor password_cursor;
-    struct aws_byte_cursor *password_cursor_ptr = NULL;
-    if (password) {
-        password_cursor = aws_byte_cursor_from_array(password, password_len);
-        password_cursor_ptr = &password_cursor;
-    }
-
-    int err = aws_mqtt_client_connection_set_login(connection->connection, &username_cursor, password_cursor_ptr);
-    if (err) {
-        return PyErr_AwsLastError();
-    }
-
-    Py_RETURN_NONE;
 }
 
 /*******************************************************************************

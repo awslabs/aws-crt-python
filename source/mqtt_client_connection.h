@@ -25,8 +25,6 @@
 extern const char *s_capsule_name_mqtt_client_connection;
 
 PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args);
-PyObject *aws_py_mqtt_client_connection_set_will(PyObject *self, PyObject *args);
-PyObject *aws_py_mqtt_client_connection_set_login(PyObject *self, PyObject *args);
 PyObject *aws_py_mqtt_client_connection_publish(PyObject *self, PyObject *args);
 PyObject *aws_py_mqtt_client_connection_subscribe(PyObject *self, PyObject *args);
 PyObject *aws_py_mqtt_client_connection_unsubscribe(PyObject *self, PyObject *args);
