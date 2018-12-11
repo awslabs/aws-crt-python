@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -e
+set -x
 
 CMAKE_ARGS="$@"
 
