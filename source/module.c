@@ -18,6 +18,8 @@
 #include "mqtt_client_connection.h"
 
 #include <aws/io/io.h>
+#include <aws/io/tls_channel_handler.h>
+
 #include <aws/mqtt/mqtt.h>
 
 void PyErr_SetAwsLastError(void) {
@@ -47,17 +49,17 @@ static PyMethodDef s_module_methods[] = {
     {"aws_py_is_alpn_available", aws_py_is_alpn_available, METH_NOARGS, NULL},
     {"aws_py_io_event_loop_group_new", aws_py_io_event_loop_group_new, METH_VARARGS, NULL},
     {"aws_py_io_client_bootstrap_new", aws_py_io_client_bootstrap_new, METH_VARARGS, NULL},
+    {"aws_py_io_client_tls_ctx_new", aws_py_io_client_tls_ctx_new, METH_VARARGS, NULL},
 
     /* MQTT Client */
     {"aws_py_mqtt_client_new", aws_py_mqtt_client_new, METH_VARARGS, NULL},
 
     /* MQTT Client Connection */
     {"aws_py_mqtt_client_connection_new", aws_py_mqtt_client_connection_new, METH_VARARGS, NULL},
-    {"aws_py_mqtt_client_connection_set_will", aws_py_mqtt_client_connection_set_will, METH_VARARGS, NULL},
-    {"aws_py_mqtt_client_connection_set_login", aws_py_mqtt_client_connection_set_login, METH_VARARGS, NULL},
     {"aws_py_mqtt_client_connection_publish", aws_py_mqtt_client_connection_publish, METH_VARARGS, NULL},
     {"aws_py_mqtt_client_connection_subscribe", aws_py_mqtt_client_connection_subscribe, METH_VARARGS, NULL},
     {"aws_py_mqtt_client_connection_unsubscribe", aws_py_mqtt_client_connection_unsubscribe, METH_VARARGS, NULL},
+    {"aws_py_mqtt_client_connection_ping", aws_py_mqtt_client_connection_ping, METH_VARARGS, NULL},
     {"aws_py_mqtt_client_connection_disconnect", aws_py_mqtt_client_connection_disconnect, METH_VARARGS, NULL},
 
     {NULL, NULL, 0, NULL},
@@ -76,6 +78,12 @@ PyDoc_STRVAR(s_module_doc, "C extension for binding AWS implementations of MQTT,
 #    define INIT_FN init_aws_crt_python
 #endif /* PY_MAJOR_VERSION */
 
+static void s_module_free(void *userdata) {
+    (void)userdata;
+
+    aws_tls_clean_up_static_state();
+}
+
 PyMODINIT_FUNC INIT_FN(void) {
 
 #if PY_MAJOR_VERSION == 3
@@ -85,6 +93,10 @@ PyMODINIT_FUNC INIT_FN(void) {
         s_module_doc,
         -1, /* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */
         s_module_methods,
+        NULL,
+        NULL,
+        NULL,
+        s_module_free,
     };
     PyObject *m = PyModule_Create(&s_module_def);
 #elif PY_MAJOR_VERSION == 2
@@ -95,6 +107,8 @@ PyMODINIT_FUNC INIT_FN(void) {
     aws_load_error_strings();
     aws_io_load_error_strings();
     aws_mqtt_load_error_strings();
+
+    aws_tls_init_static_state(aws_crt_python_get_allocator());
 
 #if PY_MAJOR_VERSION == 3
     return m;

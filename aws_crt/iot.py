@@ -83,11 +83,15 @@ class AWSIoTMQTTClient(object):
         self._useWebsocket = useWebsocket
         self._alpnProtocol = None
 
+        self._username = None
+        self._password = None
+
         self._elg = io.EventLoopGroup(1)
         self._bootstrap = io.ClientBootstrap(self._elg)
+        self._tls_ctx_options = io.TlsContextOptions()
 
         self._client = mqtt.Client(self._bootstrap)
-        self._connection = self._client.createConnection(clientID)
+        self._connection = mqtt.Connection(self._client, clientID)
 
     # Configuration APIs
     def configureLastWill(self, topic, payload, QoS, retain=False):
@@ -115,7 +119,7 @@ class AWSIoTMQTTClient(object):
         None
 
         """
-        self._connection.set_will(topic, QoS, payload, retain)
+        self._will = mqtt.Will(topic, QoS, payload, retain)
 
     def clearLastWill(self):
         """
@@ -138,7 +142,7 @@ class AWSIoTMQTTClient(object):
         None
 
         """
-        raise NotImplementedError()
+        self._will = None
 
     def configureEndpoint(self, hostName, portNumber):
         """
@@ -170,7 +174,7 @@ class AWSIoTMQTTClient(object):
         self._portNumber = portNumber
 
         if portNumber == 443 and not self._useWebsocket:
-            self._alpnProtocol = "x-amzn-mqtt-ca"
+            self._tls_ctx_options.alpn_list = "x-amzn-mqtt-ca"
 
     def configureIAMCredentials(self, AWSAccessKeyID, AWSSecretAccessKey, AWSSessionToken=""):
         """
@@ -230,9 +234,9 @@ class AWSIoTMQTTClient(object):
         None
 
         """
-        self._caPath = CAFilePath
-        self._keyPath = KeyPath
-        self._certPath = CertificatePath
+        self._tls_ctx_options.ca_file = CAFilePath
+        self._tls_ctx_options.private_key_path = KeyPath
+        self._tls_ctx_options.certificate_path = CertificatePath
 
     def configureAutoReconnectBackoffTime(self, baseReconnectQuietTimeSecond, maxReconnectQuietTimeSecond, stableConnectionTimeSecond):
         """
@@ -403,7 +407,8 @@ class AWSIoTMQTTClient(object):
         None
 
         """
-        self._connection.set_login(username, password)
+        self._username = username
+        self._password = password
 
     def enableMetricsCollection(self):
         """
@@ -489,16 +494,19 @@ class AWSIoTMQTTClient(object):
         def _onDisconnectWrapper(return_code):
             self.onOffline()
 
+        if self._tls_ctx_options.ca_file:
+            self._client.tls_ctx = io.ClientTlsContext(self._tls_ctx_options)
+
         self._connection.connect(
             host_name=self._hostName,
             port=self._portNumber,
-            ca_path=self._caPath,
-            key_path=self._keyPath,
-            certificate_path=self._certPath,
             alpn=self._alpnProtocol,
             keep_alive=keepAliveIntervalSecond,
             on_connect=_onConnectWrapper,
             on_disconnect=_onDisconnectWrapper,
+            will=self._will,
+            username=self._username,
+            password=self._password,
         )
 
         connected.wait()
@@ -544,9 +552,6 @@ class AWSIoTMQTTClient(object):
         self._connection.connect(
             host_name=self._hostName,
             port=self._portNumber,
-            ca_path=self._caPath,
-            key_path=self._keyPath,
-            certificate_path=self._certPath,
             alpn=self._alpnProtocol,
             keep_alive=keepAliveIntervalSecond,
             on_connect=_onConnectWrapper,
@@ -722,11 +727,14 @@ class AWSIoTMQTTClient(object):
         """
         done = threading.Event()
 
-        def _suback_callback(packet_id):
+        def _suback_callback(packet_id, topic, qos):
             nonlocal done
             done.set()
 
-        self._connection.subscribe(topic, QoS, lambda topic, payload: callback(None, None, Message(topic, payload)), _suback_callback)
+        def _sub_callback(topic, payload):
+            callback(None, None, Message(topic, payload))
+
+        self._connection.subscribe(topic, QoS, _sub_callback, _suback_callback)
 
         done.wait()
 
@@ -768,7 +776,15 @@ class AWSIoTMQTTClient(object):
         Subscribe request packet id, for tracking purpose in the corresponding callback.
 
         """
-        return self._connection.subscribe(topic, QoS, lambda message: messageCallback(None, None, message), ackCallback)
+
+        def _suback_callback(packet_id, topic, qos):
+            ackCallback(packet_id, qos)
+
+        def _sub_callback(topic, payload):
+            print("GOT DAM DATA")
+            messageCallback(None, None, Message(topic, payload))
+
+        return self._connection.subscribe(topic, QoS, _sub_callback, _suback_callback)
 
     def unsubscribe(self, topic):
         """

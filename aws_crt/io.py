@@ -30,3 +30,72 @@ class ClientBootstrap(object):
 
         self.elg = elg
         self._internal_bootstrap = _aws_crt_python.aws_py_io_client_bootstrap_new(self.elg._internal_elg)
+
+TlsVersion = type('TlsVersion', (), dict(
+    SSLv3 = 0,
+    TLSV1 = 1,
+    TLSV1_1 = 2,
+    TLSV1_2 = 3,
+    TLSV1_3 = 4,
+    Default = 128,
+))
+
+class TlsContextOptions(object):
+    __slots__ = ['min_tls_ver', 'ca_file', 'ca_path', 'alpn_list', 'certificate_path', 'private_key_path', 'pkcs12_path', 'pkcs12_password', 'verify_peer']
+
+    def __init__(self):
+
+        for slot in self.__slots__:
+            setattr(self, slot, None)
+
+        self.min_tls_ver = TlsVersion.Default
+
+    def override_default_trust_store(self, ca_path, ca_file):
+
+        assert isinstance(ca_path, str) or ca_path is None
+        assert isinstance(ca_file, str) or ca_file is None
+
+        self.ca_path = ca_path
+        self.ca_file = ca_file
+
+    @classmethod
+    def create_with_mtls(clazz, cert_path, pk_path):
+
+        assert isinstance(cert_path, str)
+        assert isinstance(pk_path, str)
+
+        opt = TlsContextOptions()
+        opt.certificate_path = cert_path
+        opt.private_key_path = pk_path
+        return opt
+
+    @classmethod
+    def create_with_mtls_pkcs12(clazz, pkcs12_path, pkcs12_password):
+
+        assert isinstance(pkcs12_path, str)
+        assert isinstance(pkcs12_password, str)
+
+        opt = TlsContextOptions()
+        opt.pkcs12_path = pkcs12_path
+        opt.pkcs12_password = pkcs12_password
+        return opt
+
+class ClientTlsContext(object):
+    __slots__ = ['options', '_internal_tls_ctx']
+
+    def __init__(self, options):
+        assert isinstance(options, TlsContextOptions)
+
+        self.options = options
+        self._internal_tls_ctx = _aws_crt_python.aws_py_io_client_tls_ctx_new(
+            options.min_tls_ver,
+            options.ca_file,
+            options.ca_path,
+            options.alpn_list,
+            options.certificate_path,
+            options.private_key_path,
+            options.pkcs12_path,
+            options.pkcs12_password,
+            options.verify_peer,
+        )
+

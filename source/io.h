@@ -27,6 +27,11 @@
 extern const char *s_capsule_name_client_bootstrap;
 
 /**
+ * Name string for tls_ctx capsules.
+ */
+extern const char *s_capsule_name_tls_ctx;
+
+/**
  * Returns True if ALPN is available, False if it is not.
  */
 PyObject *aws_py_is_alpn_available(PyObject *self, PyObject *args);
@@ -40,5 +45,10 @@ PyObject *aws_py_io_event_loop_group_new(PyObject *self, PyObject *args);
  * Create a new client_bootstrap to be managed by a Python Capsule.
  */
 PyObject *aws_py_io_client_bootstrap_new(PyObject *self, PyObject *args);
+
+/**
+ * Create a new tls_ctx to be managed by a Python Capsule.
+ */
+PyObject *aws_py_io_client_tls_ctx_new(PyObject *self, PyObject *args);
 
 #endif /* AWS_CRT_PYTHON_IO_H */

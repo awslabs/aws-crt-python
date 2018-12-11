@@ -32,6 +32,9 @@
 #define PyBool_FromAwsResult(result) PyBool_FromLong((result) == AWS_OP_SUCCESS)
 #define PyString_FromAwsByteCursor(cursor) PyString_FromStringAndSize((const char *)(cursor)->ptr, (cursor)->len)
 
+#define aws_byte_cursor_from_pystring(py_str)                                                                          \
+    aws_byte_cursor_from_array(PyBytes_AsString(py_str), PyBytes_Size(py_str));
+
 /* Set current thread's error indicator based on aws_last_error() */
 void PyErr_SetAwsLastError(void);
 

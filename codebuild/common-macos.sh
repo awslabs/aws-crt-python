@@ -3,35 +3,36 @@
 # Until CodeBuild supports macOS, this script is just used by Travis.
 
 set -e
+set -x
 
 CMAKE_ARGS="$@"
 
-function install_library {
-    git clone https://github.com/awslabs/$1.git
-    cd $1
-
-    if [ -n "$2" ]; then
-        git checkout $2
+# ensure each required package is installed, if not, make a bottle for brew in ./packages
+# so it will be cached for future runs. If the cache is ever blown away, this will update
+# the packages as well
+# If the bottles are already in ./packages, then just install them
+function install_from_brew {
+    pushd ./packages
+    # usually the existing package is too old for one of the others, so uninstall
+    # and reinstall from the cache
+    brew uninstall --ignore-dependencies $1
+    if [ ! -e $1*bottle*.tar.gz ]; then
+        brew install --build-bottle $1
+        brew bottle --json $1
+        brew uninstall --ignore-dependencies $1
     fi
-
-    mkdir build
-    cd build
-
-    cmake -DCMAKE_INSTALL_PREFIX=$AWS_C_INSTALL -DENABLE_SANITIZERS=ON $CMAKE_ARGS ../
-    make install
-
-    cd ../..
+    brew install $1*bottle*tar.gz
+    popd
 }
 
-cd ../
+install_from_brew openssl
+install_from_brew gdbm
+install_from_brew sqlite
+install_from_brew python
 
-mkdir install
-export AWS_C_INSTALL=`pwd`/install
+# build dependencies
+./build-deps.sh
+export AWS_C_INSTALL=`pwd`/build/deps/install
 
-install_library aws-c-common
-install_library aws-c-io
-install_library aws-c-mqtt
-
-cd aws-crt-python
-
+# build python3 extension
 python3 setup.py build
