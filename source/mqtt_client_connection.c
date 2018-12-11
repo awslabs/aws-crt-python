@@ -545,7 +545,7 @@ PyObject *aws_py_mqtt_client_connection_subscribe(PyObject *self, PyObject *args
     }
 
     struct aws_byte_cursor topic_filter = aws_byte_cursor_from_array(topic, topic_len);
-    uint16_t msg_id = aws_mqtt_client_connection_subscribe_single(
+    uint16_t msg_id = aws_mqtt_client_connection_subscribe(
         py_connection->connection,
         &topic_filter,
         qos_val,

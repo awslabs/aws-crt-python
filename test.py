@@ -39,7 +39,7 @@ iot_client.connect()
 
 # MQTT subscribes
 print("subscribing...")
-iot_client.subscribe("a", 1, iot_on_message)
+iot_client.subscribe("a", mqtt.QoS.AtLeastOnce, iot_on_message)
 
 print("publishing...")
 
@@ -48,7 +48,7 @@ begin_publish = timer()
 num_publishes = 100
 for i in range(0, num_publishes):
     # Publish data to the mqtt client
-    iot_client.publishAsync("a", "REQUEST", 1)
+    iot_client.publishAsync("a", "REQUEST", mqtt.QoS.AtLeastOnce)
     time.sleep(1/1000)
 
 end_publish = timer()

@@ -19,6 +19,12 @@ def _default_on_connect(return_code, session_present):
 def _default_on_disconnect(return_code):
     pass
 
+QoS = type('QoS', (), dict(
+    AtMostOnce = 0,
+    AtLeastOnce = 1,
+    ExactlyOnce = 2,
+))
+
 class Will(object):
     __slots__ = ['topic', 'qos', 'payload', 'retain']
 
