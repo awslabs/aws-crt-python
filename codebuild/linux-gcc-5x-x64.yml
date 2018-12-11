@@ -13,6 +13,7 @@ phases:
     commands:
       - echo Build started on `date`
       - ./codebuild/common-linux.sh
+      - ./format-check.sh
   post_build:
     commands:
       - echo Build completed on `date`
