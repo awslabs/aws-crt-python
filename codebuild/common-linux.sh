@@ -18,7 +18,6 @@ function install_library {
 
     cmake -DCMAKE_INSTALL_PREFIX=$AWS_C_INSTALL $CMAKE_ARGS ../
     make install
-
     popd
 }
 
