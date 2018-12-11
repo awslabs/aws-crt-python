@@ -1,0 +1,23 @@
+sudo: true
+language: c
+
+os: osx
+osx_image:
+  - xcode8
+  - xcode9.2
+  - xcode10.1
+compiler: clang
+
+# use the addon to do the update of homebrew, or else ruby versions get confused
+addons:
+  homebrew:
+    update: true
+    packages:
+      - ninja
+
+cache:
+  directories:
+    - ./packages
+
+script:
+  - ./codebuild/common-macos.sh -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
