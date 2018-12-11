@@ -3,6 +3,7 @@
 # Until CodeBuild supports macOS, this script is just used by Travis.
 
 set -e
+set -o trace
 
 CMAKE_ARGS="$@"
 
@@ -11,7 +12,7 @@ CMAKE_ARGS="$@"
 # the packages as well
 # If the bottles are already in ./packages, then just install them
 pushd ./packages
-ls -la
+ls -la /usr/local/opt/openssl/bin
 if [ ! -x /usr/local/opt/openssl/bin/openssl ]; then
     brew install --build-bottle openssl
     brew bottle --json openssl
