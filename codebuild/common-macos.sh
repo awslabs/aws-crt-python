@@ -17,7 +17,7 @@ brew uninstall --ignore-dependencies openssl
 if [ ! -e openssl*bottle*.tar.gz ]; then
     brew install --build-bottle openssl
     brew bottle --json openssl
-    brew uninstall openssl
+    brew uninstall openssl --ignore-dependencies
 fi
 brew install openssl*bottle*.tar.gz
 
