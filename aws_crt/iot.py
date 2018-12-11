@@ -88,7 +88,7 @@ class AWSIoTMQTTClient(object):
         self._tls_ctx_options = io.TlsContextOptions()
 
         self._client = mqtt.Client(self._bootstrap)
-        self._connection = self._client.createConnection(clientID)
+        self._connection = mqtt.Connection(self._client, clientID)
 
     # Configuration APIs
     def configureLastWill(self, topic, payload, QoS, retain=False):
