@@ -11,7 +11,8 @@ CMAKE_ARGS="$@"
 # the packages as well
 # If the bottles are already in ./packages, then just install them
 pushd ./packages
-if [ ! -d /usr/local/opt/openssl ]; then
+ls -la
+if [ ! -x /usr/local/opt/openssl/bin/openssl ]; then
     brew install --build-bottle openssl
     brew bottle --json openssl
     brew uninstall openssl
