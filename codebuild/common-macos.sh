@@ -12,7 +12,7 @@ CMAKE_ARGS="$@"
 # the packages as well
 # If the bottles are already in ./packages, then just install them
 pushd ./packages
-pwd
+brew uninstall --ignore-dependencies openssl
 if [ ! -e openssl*bottle*.tar.gz ]; then
     brew install --build-bottle openssl
     brew bottle --json openssl
