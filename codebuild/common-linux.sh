@@ -12,10 +12,10 @@ function install_library {
         git checkout $2
     fi
 
-    mkdir build
-    cd build
+    mkdir dep-build
+    cd dep-build
 
-    cmake -DCMAKE_INSTALL_PREFIX=$AWS_C_INSTALL -DENABLE_SANITIZERS=ON $CMAKE_ARGS ../
+    cmake -DCMAKE_INSTALL_PREFIX=$AWS_C_INSTALL $CMAKE_ARGS ../
     make install
 
     popd
