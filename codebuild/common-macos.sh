@@ -12,24 +12,20 @@ CMAKE_ARGS="$@"
 # the packages as well
 # If the bottles are already in ./packages, then just install them
 pushd ./packages
-ls -la /usr/local/opt/openssl/bin
-if [ ! -x /usr/local/opt/openssl/bin/openssl ]; then
+pwd
+if [ ! -e openssl*bottle*.tar.gz ]; then
     brew install --build-bottle openssl
     brew bottle --json openssl
     brew uninstall openssl
 fi
-if [ -e openssl*bottle*.tar.gz ]; then
-    brew install openssl*bottle*.tar.gz
-fi
+brew install openssl*bottle*.tar.gz
 
-if [ ! -x `which python3` ]; then
+if [ ! -e python3*bottle*.tar.gz ]; then
     brew install --build-bottle python3
     brew bottle --json python3
     brew uninstall python3
 fi
-if [ -e python3*bottle*.tar.gz ]; then
-    brew install python3*bottle*.tar.gz
-fi
+brew install python3*bottle*.tar.gz
 popd
 
 function install_library {
