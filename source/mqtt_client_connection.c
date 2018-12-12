@@ -243,7 +243,7 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
 
     if (will) {
         PyObject *py_topic = PyObject_GetAttrString(will, "topic");
-        assert(py_topic && PyBytes_Check(py_topic));
+        assert(py_topic);
         struct aws_byte_cursor topic = aws_byte_cursor_from_pystring(py_topic);
 
         PyObject *py_qos = PyObject_GetAttrString(will, "qos");
@@ -251,7 +251,7 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
         enum aws_mqtt_qos qos = (enum aws_mqtt_qos)PyLong_AsUnsignedLong(py_qos);
 
         PyObject *py_payload = PyObject_GetAttrString(will, "payload");
-        assert(py_payload && PyBytes_Check(py_payload));
+        assert(py_payload);
         struct aws_byte_cursor payload = aws_byte_cursor_from_pystring(py_payload);
 
         PyObject *py_retain = PyObject_GetAttrString(will, "retain");
