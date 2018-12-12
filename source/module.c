@@ -22,6 +22,17 @@
 
 #include <aws/mqtt/mqtt.h>
 
+struct aws_byte_cursor aws_byte_cursor_from_pystring(PyObject *str) {
+    if (PyBytes_CheckExact(str)) {
+        return aws_byte_cursor_from_array(PyBytes_AsString(str), PyBytes_Size(str));
+    }
+    if (PyUnicode_CheckExact(str)) {
+        return aws_byte_cursor_from_array(PyUnicode_DATA(str), PyUnicode_GET_LENGTH(str));
+    }
+
+    return aws_byte_cursor_from_array(NULL, 0);
+}
+
 void PyErr_SetAwsLastError(void) {
     PyErr_AwsLastError();
 }

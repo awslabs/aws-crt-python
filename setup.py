@@ -24,6 +24,7 @@ else:
 if sys.platform == 'linux':
     include_dirs = ['/usr/local/include'] + include_dirs
     library_dirs = ['/usr/local/lib'] + library_dirs
+    libraries += ['s2n', 'crypto']
     try:
         cflags = [os.environ['CFLAGS']]
     except:
