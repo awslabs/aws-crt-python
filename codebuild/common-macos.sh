@@ -31,7 +31,7 @@ install_from_brew sqlite
 install_from_brew python
 
 # build dependencies
-./build-deps.sh
+./build-deps.sh $CMAKE_ARGS
 export AWS_C_INSTALL=`pwd`/build/deps/install
 
 # build python3 extension
