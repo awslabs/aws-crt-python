@@ -7,6 +7,9 @@
 #   -l, --local - Tells the script to look for local dependency source trees in the same parent as this repo
 #   <all other args> - will be passed to cmake as-is
 
+set -e
+set -x
+
 # everything is relative to the directory this script is in
 home_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 

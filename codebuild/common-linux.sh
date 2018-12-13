@@ -26,6 +26,6 @@ export AWS_C_INSTALL=`pwd`/build/deps/install
 # Linux needs s2n
 install_library s2n 7c9069618e68214802ac7fbf45705d5f8b53135f
 
-./build-deps.sh
+./build-deps.sh $CMAKE_ARGS
 
 python3 setup.py build
