@@ -1,71 +1,150 @@
-from aws_crt import io, mqtt, iot
-from AWSIoTPythonSDK import MQTTLib
-import time, threading
-from timeit import default_timer as timer
+# Copyright 2010-2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License").
+# You may not use this file except in compliance with the License.
+# A copy of the License is located at
+#
+#  http://aws.amazon.com/apache2.0
+#
+# or in the "license" file accompanying this file. This file is distributed
+# on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+# express or implied. See the License for the specific language governing
+# permissions and limitations under the License.
 
-messages_received = 0
-messages_received_cv = threading.Condition()
+import argparse
+from aws_crt import io, mqtt
+import threading
+import uuid
 
-def iot_on_connect():
-    print("iot connected")
+TIMEOUT = 5 # seconds given to each step of the test before giving up
+UNIQUE_ID = str(uuid.uuid4()) # prevent simultaneously-running tests from interfering with each other
+CLIENT_ID = 'test_pubsub_' + UNIQUE_ID
+TOPIC = 'test/pubsub/' + UNIQUE_ID
+MESSAGE = 'test message ' + UNIQUE_ID
 
-def iot_on_message(client, userdata, message):
-    global messages_received
+parser = argparse.ArgumentParser()
+parser.add_argument('--endpoint', required=True, help="Connect to this endpoint (aka host-name)")
+parser.add_argument('--port', help="Override default connection port")
+parser.add_argument('--cert', help="File path to your client certificate, in PEM format")
+parser.add_argument('--key', help="File path to your private key, in PEM format")
+parser.add_argument('--root-ca', help="File path to root certificate authority, in PEM format")
 
-    with messages_received_cv:
-        messages_received += 1
-        messages_received_cv.notify()
+connect_results = {}
+connect_event = threading.Event()
+def on_connect(return_code, session_present):
+    connect_results.update(locals())
+    connect_event.set()
 
-def iot_on_disconnect():
-    print("iot disconnected")
+disconnect_results = {}
+disconnect_event = threading.Event()
+def on_disconnect(return_code):
+    disconnect_results.update(locals())
+    disconnect_event.set()
+    return False
 
-client = iot.AWSIoTMQTTClient
-# client = MQTTLib.AWSIoTMQTTClient
+receive_results = {}
+receive_event = threading.Event()
+def on_receive_message(topic, message):
+    receive_results.update(locals())
+    receive_event.set()
 
-if io.is_alpn_available():
+subscribe_results = {}
+subscribe_event = threading.Event()
+def on_subscribe(packet_id, topic, qos):
+    subscribe_results.update(locals())
+    subscribe_event.set()
+
+unsubscribe_results = {}
+unsubscribe_event = threading.Event()
+def on_unsubscribe(packet_id):
+    unsubscribe_results.update(locals())
+    unsubscribe_event.set()
+
+publish_results = {}
+publish_event = threading.Event()
+def on_publish(packet_id):
+    publish_results.update(locals())
+    publish_event.set()
+
+# Run
+args = parser.parse_args()
+event_loop_group = io.EventLoopGroup(1)
+client_bootstrap = io.ClientBootstrap(event_loop_group)
+
+if args.cert or args.key or args.root_ca:
+    if args.cert:
+        assert(args.key)
+        tls_options = io.TlsContextOptions.create_with_mtls(args.cert, args.key)
+    else:
+        tls_options = io.TlsContextOptions()
+
+    if args.root_ca:
+        tls_options.override_default_trust_store(ca_path=None, ca_file=args.root_ca)
+
+if args.port:
+    port = args.port
+elif io.is_alpn_available():
     port = 443
+    if tls_options:
+        tls_options.alpn_list='x-amzn-mqtt-ca'
 else:
     port = 8883
 
-iot_client = client("coldens iot client")
-iot_client.onOnline = iot_on_connect
-iot_client.onOffline = iot_on_disconnect
-iot_client.configureEndpoint("a1ba5f1mpna9k5-ats.iot.us-east-1.amazonaws.com", port)
-iot_client.configureCredentials("AmazonRootCA1.pem", "iot-private.pem.key", "iot-certificate.pem.crt")
-iot_client.configureLastWill("a", "The test device has gone offline", 1)
+tls_context = io.ClientTlsContext(tls_options) if tls_options else None
+mqtt_client = mqtt.Client(client_bootstrap, tls_context)
+mqtt_connection = mqtt.Connection(mqtt_client, CLIENT_ID)
 
-print("connecting...")
-iot_client.connect()
+# Connect
+print("Connecting to: {}:{}".format(args.endpoint, port))
+mqtt_connection.connect(
+    host_name=args.endpoint,
+    port=port,
+    on_connect=on_connect,
+    on_disconnect=on_disconnect)
+assert(connect_event.wait(TIMEOUT))
+assert(connect_results['return_code'] == 0)
+assert(connect_results['session_present'] == False)
 
-# MQTT subscribes
-print("subscribing...")
-iot_client.subscribe("a", mqtt.QoS.AtLeastOnce, iot_on_message)
+# Subscribe
+print("Subscribing to:", TOPIC)
+qos = mqtt.QoS.AtLeastOnce
+subscribe_packet_id = mqtt_connection.subscribe(
+    topic=TOPIC,
+    qos=qos,
+    callback=on_receive_message,
+    suback_callback=on_subscribe)
+assert(subscribe_event.wait(TIMEOUT))
+assert(subscribe_results['packet_id'] == subscribe_packet_id)
+assert(subscribe_results['topic'] == TOPIC)
+assert(subscribe_results['qos'] == qos)
 
-print("publishing...")
+# Publish
+print("Publishing to '{}': {}".format(TOPIC, MESSAGE))
+publish_packet_id = mqtt_connection.publish(
+    topic=TOPIC,
+    payload=MESSAGE,
+    qos=mqtt.QoS.AtLeastOnce,
+    puback_callback=on_publish)
+assert(publish_event.wait(TIMEOUT))
+assert(publish_results['packet_id'] == publish_packet_id)
 
-begin_publish = timer()
+# Receive Message
+print("Waiting to receive messsage")
+assert(receive_event.wait(TIMEOUT))
+assert(receive_results['topic'] == TOPIC)
+assert(receive_results['message'] == MESSAGE)
 
-num_publishes = 50
-for i in range(0, num_publishes):
-    # Publish data to the mqtt client
-    iot_client.publishAsync("a", "REQUEST", mqtt.QoS.AtLeastOnce)
-    time.sleep(1/1000)
+# Unsubscribe
+print("Unsubscribing from topic")
+unsubscribe_packet_id = mqtt_connection.unsubscribe(TOPIC, on_unsubscribe)
+assert(unsubscribe_event.wait(TIMEOUT))
+assert(unsubscribe_results['packet_id'] == unsubscribe_packet_id)
 
-end_publish = timer()
+# Disconnect
+print("Disconnecting")
+mqtt_connection.disconnect()
+assert(disconnect_event.wait(TIMEOUT))
+assert(disconnect_results['return_code'] == 0)
 
-with messages_received_cv:
-    while messages_received < num_publishes:
-        messages_received_cv.wait()
-
-pubacks_gotten = timer()
-
-print("unsubscribing...")
-iot_client.unsubscribe("a")
-
-print("disconnecting...")
-
-iot_client.disconnect()
-
-print("Publish time: {}\nTotal time: {}".format(end_publish - begin_publish, pubacks_gotten - begin_publish))
-
-print("exiting...")
+# Done
+print("Test Success")
