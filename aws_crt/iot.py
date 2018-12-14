@@ -492,7 +492,7 @@ class AWSIoTMQTTClient(object):
             connected.set()
 
         def _onDisconnectWrapper(return_code):
-            self.onOffline()
+            return self.onOffline()
 
         if self._tls_ctx_options.ca_file:
             self._client.tls_ctx = io.ClientTlsContext(self._tls_ctx_options)
@@ -585,8 +585,9 @@ class AWSIoTMQTTClient(object):
         old_onOffline = self.onOffline
         def new_onOffline():
             nonlocal done
-            old_onOffline()
+            result = old_onOffline()
             done.set()
+            return result
         self.onOffline = new_onOffline
 
         self._connection.disconnect()
@@ -893,7 +894,7 @@ class AWSIoTMQTTClient(object):
         None
 
         """
-        pass
+        return False
 
     def onMessage(self, message):
         """
