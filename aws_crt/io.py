@@ -59,7 +59,7 @@ class TlsContextOptions(object):
         self.ca_file = ca_file
 
     @classmethod
-    def create_with_mtls(clazz, cert_path, pk_path):
+    def create_client_with_mtls(clazz, cert_path, pk_path):
 
         assert isinstance(cert_path, str)
         assert isinstance(pk_path, str)
@@ -67,10 +67,11 @@ class TlsContextOptions(object):
         opt = TlsContextOptions()
         opt.certificate_path = cert_path
         opt.private_key_path = pk_path
+        opt.verify_peer = True
         return opt
 
     @classmethod
-    def create_with_mtls_pkcs12(clazz, pkcs12_path, pkcs12_password):
+    def create_client_with_mtls_pkcs12(clazz, pkcs12_path, pkcs12_password):
 
         assert isinstance(pkcs12_path, str)
         assert isinstance(pkcs12_password, str)
@@ -78,6 +79,31 @@ class TlsContextOptions(object):
         opt = TlsContextOptions()
         opt.pkcs12_path = pkcs12_path
         opt.pkcs12_password = pkcs12_password
+        opt.verify_peer = True
+        return opt
+
+    @classmethod
+    def create_server_with_mtls(clazz, cert_path, pk_path):
+
+        assert isinstance(cert_path, str)
+        assert isinstance(pk_path, str)
+
+        opt = TlsContextOptions()
+        opt.certificate_path = cert_path
+        opt.private_key_path = pk_path
+        opt.verify_peer = False
+        return opt
+
+    @classmethod
+    def create_server_with_mtls_pkcs12(clazz, pkcs12_path, pkcs12_password):
+
+        assert isinstance(pkcs12_path, str)
+        assert isinstance(pkcs12_password, str)
+
+        opt = TlsContextOptions()
+        opt.pkcs12_path = pkcs12_path
+        opt.pkcs12_password = pkcs12_password
+        opt.verify_peer = False
         return opt
 
 class ClientTlsContext(object):
