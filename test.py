@@ -92,10 +92,11 @@ else:
 
 tls_context = io.ClientTlsContext(tls_options) if tls_options else None
 mqtt_client = mqtt.Client(client_bootstrap, tls_context)
+
 mqtt_connection = mqtt.Connection(mqtt_client, CLIENT_ID)
 
 # Connect
-print("Connecting to: {}:{}".format(args.endpoint, port))
+print("Connecting to {}:{} with client-id:{}".format(args.endpoint, port, CLIENT_ID))
 mqtt_connection.connect(
     host_name=args.endpoint,
     port=port,
