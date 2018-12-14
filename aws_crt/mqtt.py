@@ -17,7 +17,7 @@ from aws_crt.io import ClientBootstrap
 def _default_on_connect(return_code, session_present):
     pass
 def _default_on_disconnect(return_code):
-    pass
+    return False
 
 QoS = type('QoS', (), dict(
     AtMostOnce = 0,
