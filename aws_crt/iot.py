@@ -88,7 +88,7 @@ class AWSIoTMQTTClient(object):
 
         self._elg = io.EventLoopGroup(1)
         self._bootstrap = io.ClientBootstrap(self._elg)
-        self._tls_ctx_options = io.TlsContextOptions()
+        self._tls_ctx_options = None
 
         self._client = mqtt.Client(self._bootstrap)
         self._connection = mqtt.Connection(self._client, clientID)
@@ -173,9 +173,6 @@ class AWSIoTMQTTClient(object):
         self._hostName = hostName
         self._portNumber = portNumber
 
-        if portNumber == 443 and not self._useWebsocket:
-            self._tls_ctx_options.alpn_list = "x-amzn-mqtt-ca"
-
     def configureIAMCredentials(self, AWSAccessKeyID, AWSSecretAccessKey, AWSSessionToken=""):
         """
         **Description**
@@ -234,9 +231,8 @@ class AWSIoTMQTTClient(object):
         None
 
         """
+        self._tls_ctx_options = io.TlsContextOptions.create_client_with_mtls(CertificatePath, KeyPath)
         self._tls_ctx_options.ca_file = CAFilePath
-        self._tls_ctx_options.private_key_path = KeyPath
-        self._tls_ctx_options.certificate_path = CertificatePath
 
     def configureAutoReconnectBackoffTime(self, baseReconnectQuietTimeSecond, maxReconnectQuietTimeSecond, stableConnectionTimeSecond):
         """
@@ -494,7 +490,10 @@ class AWSIoTMQTTClient(object):
         def _onDisconnectWrapper(return_code):
             return self.onOffline()
 
-        if self._tls_ctx_options.ca_file:
+        if self._tls_ctx_options:
+            if self._portNumber == 443 and not self._useWebsocket:
+                self._tls_ctx_options.alpn_list = "x-amzn-mqtt-ca"
+
             self._client.tls_ctx = io.ClientTlsContext(self._tls_ctx_options)
 
         self._connection.connect(
