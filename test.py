@@ -74,7 +74,7 @@ client_bootstrap = io.ClientBootstrap(event_loop_group)
 if args.cert or args.key or args.root_ca:
     if args.cert:
         assert(args.key)
-        tls_options = io.TlsContextOptions.create_with_mtls(args.cert, args.key)
+        tls_options = io.TlsContextOptions.create_client_with_mtls(args.cert, args.key)
     else:
         tls_options = io.TlsContextOptions()
 
