@@ -46,7 +46,7 @@ class Client(object):
         self._internal_client = _aws_crt_python.aws_py_mqtt_client_new(self.bootstrap._internal_bootstrap)
 
 class Connection(object):
-    __slots__ = ['_internal_connection', 'client', 'client_id', 'will']
+    __slots__ = ['_internal_connection']
 
     def __init__(self, client, client_id,
             host_name, port,
