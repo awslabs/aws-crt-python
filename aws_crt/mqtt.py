@@ -48,14 +48,7 @@ class Client(object):
 class Connection(object):
     __slots__ = ['_internal_connection', 'client', 'client_id', 'will']
 
-    def __init__(self, client, client_id):
-
-        assert isinstance(client, Client)
-
-        self.client = client
-        self.client_id = client_id
-
-    def connect(self,
+    def __init__(self, client, client_id,
             host_name, port,
             on_connect=_default_on_connect,
             on_disconnect=_default_on_disconnect,
@@ -64,20 +57,21 @@ class Connection(object):
             will=None,
             username=None, password=None):
 
-        assert use_websocket == False
-
+        assert isinstance(client, Client)
         assert will is None or isinstance(will, Will)
 
+        assert use_websocket == False
+
         tls_ctx_cap = None
-        if self.client.tls_ctx:
-            tls_ctx_cap = self.client.tls_ctx._internal_tls_ctx
+        if client.tls_ctx:
+            tls_ctx_cap = client.tls_ctx._internal_tls_ctx
 
         self._internal_connection = _aws_crt_python.aws_py_mqtt_client_connection_new(
-            self.client._internal_client,
+            client._internal_client,
             tls_ctx_cap,
             host_name,
             port,
-            self.client_id,
+            client_id,
             keep_alive,
             on_connect,
             on_disconnect,
