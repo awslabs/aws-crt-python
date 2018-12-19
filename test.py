@@ -95,20 +95,13 @@ mqtt_client = mqtt.Client(client_bootstrap, tls_context)
 
 mqtt_connection = mqtt.Connection(mqtt_client, CLIENT_ID)
 
-will = mqtt.Will(
-    topic="test/will",
-    qos=mqtt.QoS.AtLeastOnce,
-    payload="Client '{}' has gone offline".format(CLIENT_ID),
-    retain=False)
-
 # Connect
 print("Connecting to {}:{} with client-id:{}".format(args.endpoint, port, CLIENT_ID))
 mqtt_connection.connect(
     host_name=args.endpoint,
     port=port,
     on_connect=on_connect,
-    on_disconnect=on_disconnect,
-    will=will)
+    on_disconnect=on_disconnect)
 assert(connect_event.wait(TIMEOUT))
 assert(connect_results['return_code'] == 0)
 assert(connect_results['session_present'] == False)

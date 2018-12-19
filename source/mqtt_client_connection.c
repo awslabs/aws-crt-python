@@ -241,7 +241,7 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
         goto error;
     }
 
-    if (will) {
+    if (will && will != Py_None) {
         PyObject *py_topic = PyObject_GetAttrString(will, "topic");
         assert(py_topic);
         struct aws_byte_cursor topic = aws_byte_cursor_from_pystring(py_topic);
