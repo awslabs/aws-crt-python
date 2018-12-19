@@ -12,7 +12,7 @@
 # permissions and limitations under the License.
 
 import _aws_crt_python
-from aws_crt.io import ClientBootstrap
+from aws_crt.io import ClientBootstrap, ClientTlsContext
 
 def _default_on_connect(return_code, session_present):
     pass
@@ -39,7 +39,7 @@ class Client(object):
 
     def __init__(self, bootstrap, tls_ctx = None):
         assert isinstance(bootstrap, ClientBootstrap)
-        assert tls_ctx is None or isinstance(tls_ctx, io.ClientTlsContext)
+        assert tls_ctx is None or isinstance(tls_ctx, ClientTlsContext)
 
         self.bootstrap = bootstrap
         self.tls_ctx = tls_ctx
@@ -87,7 +87,7 @@ class Connection(object):
             )
 
     def disconnect(self):
-        return _aws_crt_python.aws_py_mqtt_client_connection_disconnect(self._internal_connection)
+        _aws_crt_python.aws_py_mqtt_client_connection_disconnect(self._internal_connection)
 
     def subscribe(self, topic, qos, callback, suback_callback=None):
         return _aws_crt_python.aws_py_mqtt_client_connection_subscribe(self._internal_connection, topic, qos, callback, suback_callback)
@@ -96,7 +96,7 @@ class Connection(object):
         return _aws_crt_python.aws_py_mqtt_client_connection_unsubscribe(self._internal_connection, topic, unsuback_callback)
 
     def publish(self, topic, payload, qos, retain=False, puback_callback=None):
-        _aws_crt_python.aws_py_mqtt_client_connection_publish(self._internal_connection, topic, payload, qos, retain, puback_callback)
+        return _aws_crt_python.aws_py_mqtt_client_connection_publish(self._internal_connection, topic, payload, qos, retain, puback_callback)
 
     def ping(self):
         _aws_crt_python.aws_py_mqtt_client_connection_ping(self._internal_connection)
