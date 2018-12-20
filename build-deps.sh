@@ -88,6 +88,12 @@ if [ $clean ]; then
 fi
 mkdir -p $deps_dir
 
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    echo "Using native SSL/TLS providers."
+else
+    echo "Using s2n for SSL/TLS."
+    install_dep s2n
+fi
 install_dep aws-c-common
 install_dep aws-c-io
 install_dep aws-c-mqtt
