@@ -74,11 +74,7 @@ static void s_client_bootstrap_destructor(PyObject *bootstrap_capsule) {
 
     struct aws_client_bootstrap *bootstrap = PyCapsule_GetPointer(bootstrap_capsule, s_capsule_name_client_bootstrap);
     assert(bootstrap);
-
-    struct aws_allocator *allocator = bootstrap->allocator;
-
-    aws_client_bootstrap_clean_up(bootstrap);
-    aws_mem_release(allocator, bootstrap);
+    aws_client_bootstrap_destroy(bootstrap);
 }
 
 PyObject *aws_py_io_client_bootstrap_new(PyObject *self, PyObject *args) {
@@ -92,33 +88,22 @@ PyObject *aws_py_io_client_bootstrap_new(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    struct aws_client_bootstrap *bootstrap = aws_mem_acquire(allocator, sizeof(struct aws_client_bootstrap));
-    if (!bootstrap) {
-        return PyErr_AwsLastError();
-    }
-
     if (!elg_capsule || !PyCapsule_CheckExact(elg_capsule)) {
         PyErr_SetNone(PyExc_ValueError);
-        goto error;
+        return NULL;
     }
     struct aws_event_loop_group *elg = PyCapsule_GetPointer(elg_capsule, s_capsule_name_elg);
     if (!elg) {
-        goto error;
+        return NULL;
     }
 
-    if (aws_client_bootstrap_init(bootstrap, allocator, elg, NULL, NULL)) {
+    struct aws_client_bootstrap *bootstrap = aws_client_bootstrap_new(allocator, elg, NULL, NULL);
+    if (!bootstrap) {
         PyErr_SetAwsLastError();
-        goto error;
+        return NULL;
     }
 
     return PyCapsule_New(bootstrap, s_capsule_name_client_bootstrap, s_client_bootstrap_destructor);
-
-error:
-    if (bootstrap) {
-        aws_mem_release(allocator, bootstrap);
-    }
-
-    return NULL;
 }
 
 static void s_tls_ctx_destructor(PyObject *tls_ctx_capsule) {
