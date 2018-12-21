@@ -300,6 +300,7 @@ error:
  ******************************************************************************/
 
 struct publish_complete_userdata {
+    Py_buffer topic;
     Py_buffer payload;
     PyObject *callback;
 };
@@ -313,29 +314,29 @@ static void s_publish_complete(
     (void)error_code;
 
     struct publish_complete_userdata *metadata = userdata;
-    if (metadata) {
+    assert(metadata);
 
-        PyGILState_STATE state = PyGILState_Ensure();
+    PyGILState_STATE state = PyGILState_Ensure();
 
-        if (metadata->callback) {
-
-            PyObject_CallFunction(metadata->callback, "(H)", packet_id);
-            Py_DECREF(metadata->callback);
-        }
-        PyBuffer_Release(&metadata->payload);
-
-        PyGILState_Release(state);
-
-        aws_mem_release(aws_crt_python_get_allocator(), metadata);
+    if (metadata->callback) {
+        PyObject_CallFunction(metadata->callback, "(H)", packet_id);
+        Py_DECREF(metadata->callback);
     }
+
+    PyBuffer_Release(&metadata->topic);
+    PyBuffer_Release(&metadata->payload);
+
+    PyGILState_Release(state);
+
+    aws_mem_release(aws_crt_python_get_allocator(), metadata);
 }
 
 PyObject *aws_py_mqtt_client_connection_publish(PyObject *self, PyObject *args) {
     (void)self;
 
     PyObject *impl_capsule = NULL;
-    const char *topic;
-    Py_ssize_t topic_len;
+    Py_buffer topic_stack;
+    AWS_ZERO_STRUCT(topic_stack);
     Py_buffer payload_stack;
     AWS_ZERO_STRUCT(payload_stack);
     uint8_t qos_val = AWS_MQTT_QOS_AT_MOST_ONCE;
@@ -343,7 +344,7 @@ PyObject *aws_py_mqtt_client_connection_publish(PyObject *self, PyObject *args) 
     PyObject *puback_callback = NULL;
 
     if (!PyArg_ParseTuple(
-            args, "Os#s*bOO", &impl_capsule, &topic, &topic_len, &payload_stack, &qos_val, &retain, &puback_callback)) {
+            args, "Os*s*bOO", &impl_capsule, &topic_stack, &payload_stack, &qos_val, &retain, &puback_callback)) {
         return NULL;
     }
 
@@ -367,23 +368,22 @@ PyObject *aws_py_mqtt_client_connection_publish(PyObject *self, PyObject *args) 
 
     struct publish_complete_userdata *metadata = NULL;
 
-    struct aws_byte_cursor payload_cursor;
-    AWS_ZERO_STRUCT(payload_cursor);
-
     /* Heap allocate payload so that it may persist */
-    if (payload_stack.len > 0 || puback_callback) {
-        metadata = aws_mem_acquire(aws_crt_python_get_allocator(), sizeof(struct publish_complete_userdata));
-        if (!metadata) {
-            return PyErr_AwsLastError();
-        }
-
-        memcpy(&metadata->payload, &payload_stack, sizeof(Py_buffer));
-        metadata->callback = puback_callback;
-
-        payload_cursor = aws_byte_cursor_from_array(metadata->payload.buf, metadata->payload.len);
+    metadata = aws_mem_acquire(aws_crt_python_get_allocator(), sizeof(struct publish_complete_userdata));
+    if (!metadata) {
+        return PyErr_AwsLastError();
     }
 
-    struct aws_byte_cursor topic_cursor = aws_byte_cursor_from_array(topic, topic_len);
+    metadata->topic = topic_stack;
+    metadata->payload = payload_stack;
+    metadata->callback = puback_callback;
+
+    struct aws_byte_cursor topic_cursor;
+    topic_cursor = aws_byte_cursor_from_array(metadata->topic.buf, metadata->topic.len);
+
+    struct aws_byte_cursor payload_cursor;
+    payload_cursor = aws_byte_cursor_from_array(metadata->payload.buf, metadata->payload.len);
+
     enum aws_mqtt_qos qos = (enum aws_mqtt_qos)qos_val;
 
     uint16_t msg_id = aws_mqtt_client_connection_publish(
