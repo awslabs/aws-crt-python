@@ -12,7 +12,12 @@ if not os.path.exists(build_dir):
     os.mkdir(build_dir)
 
 os.chdir(build_dir)
-dep_install_path = os.getenv('AWS_C_INSTALL')
+
+dep_install_path = ''
+
+if 'AWS_C_INSTALL' in os.environ:
+    dep_install_path = os.getenv('AWS_C_INSTALL')
+
 common_dir = os.path.join(current_dir, 'aws-c-common')
 s2n_dir = os.path.join(current_dir, 's2n')
 io_dir = os.path.join(current_dir, 'aws-c-io')

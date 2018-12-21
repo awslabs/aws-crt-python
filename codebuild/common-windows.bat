@@ -8,6 +8,6 @@ call RefreshEnv.cmd
 git submodule update --init --recursive
 set AWS_C_INSTALL=%cd%\build\deps\install
 
-python3 setup.py build
+py setup.py build
 
 exit /b %errorlevel%
