@@ -1,0 +1,12 @@
+[submodule "aws-c-common"]
+	path = aws-c-common
+	url = git://github.com/awslabs/aws-c-common.git
+[submodule "aws-c-io"]
+	path = aws-c-io
+	url = git://github.com/awslabs/aws-c-io.git
+[submodule "aws-c-mqtt"]
+	path = aws-c-mqtt
+	url = git://github.com/awslabs/aws-c-mqtt.git
+[submodule "s2n"]
+	path = s2n
+	url = git://github.com/awslabs/s2n

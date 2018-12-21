@@ -1,7 +1,77 @@
 import setuptools
 import os
+import subprocess
 from os import path
 import sys
+
+current_dir = os.path.dirname(os.path.realpath(__file__))
+
+build_dir = os.path.join(current_dir, 'deps_build')
+
+if not os.path.exists(build_dir):
+    os.mkdir(build_dir)
+
+os.chdir(build_dir)
+dep_install_path = os.getenv('AWS_C_INSTALL')
+common_dir = os.path.join(current_dir, 'aws-c-common')
+s2n_dir = os.path.join(current_dir, 's2n')
+io_dir = os.path.join(current_dir, 'aws-c-io')
+mqtt_dir = os.path.join(current_dir, 'aws-c-mqtt')
+common_cmake_args = ['cmake', '-G', 'Ninja', '-DCMAKE_INSTALL_PREFIX={}'.format(dep_install_path), '-DBUILD_SHARED_LIBS=ON', common_dir]
+s2n_cmake_args = ['cmake', '-G', 'Ninja', '-DCMAKE_INSTALL_PREFIX={}'.format(dep_install_path), '-DBUILD_SHARED_LIBS=ON', s2n_dir]
+io_cmake_args = ['cmake', '-G', 'Ninja', '-DCMAKE_INSTALL_PREFIX={}'.format(dep_install_path), '-DBUILD_SHARED_LIBS=ON', io_dir]
+mqtt_cmake_args = ['cmake', '-G', 'Ninja', '-DCMAKE_INSTALL_PREFIX={}'.format(dep_install_path), '-DBUILD_SHARED_LIBS=ON', mqtt_dir]
+build_cmd = ['cmake', '--build', './', '--target', 'install']
+
+common_build_dir = os.path.join(build_dir, 'aws-c-common')
+s2n_build_dir = os.path.join(build_dir, 's2n')
+io_build_dir = os.path.join(build_dir, 'aws-c-io')
+mqtt_build_dir = os.path.join(build_dir, 'aws-c-mqtt')
+
+if sys.platform.startswith('win'):
+    shell = True
+else:
+    shell = False
+
+if not os.path.exists(common_build_dir):
+    os.mkdir(common_build_dir)
+os.chdir(common_build_dir)
+
+ret_code = subprocess.check_call(common_cmake_args, stderr=subprocess.STDOUT, shell=shell)
+ret_code = subprocess.check_call(build_cmd, stderr=subprocess.STDOUT, shell=shell)
+
+os.chdir(build_dir)
+
+if not os.path.exists(s2n_build_dir):
+    os.mkdir(s2n_build_dir)
+
+os.chdir(s2n_build_dir)
+
+if sys.platform != 'darwin' and sys.platform != 'windows': 
+    ret_code = subprocess.check_call(s2n_cmake_args, stderr=subprocess.STDOUT, shell=shell)
+    ret_code = subprocess.check_call(build_cmd, stderr=subprocess.STDOUT, shell=shell)
+
+os.chdir(build_dir)
+
+if not os.path.exists(io_build_dir):
+    os.mkdir(io_build_dir)
+
+os.chdir(io_build_dir)
+
+ret_code = subprocess.check_call(io_cmake_args, stderr=subprocess.STDOUT, shell=shell)
+ret_code = subprocess.check_call(build_cmd, stderr=subprocess.STDOUT, shell=shell)
+
+os.chdir(build_dir)
+
+if not os.path.exists(mqtt_build_dir):
+    os.mkdir(mqtt_build_dir)
+
+os.chdir(mqtt_build_dir)
+
+ret_code = subprocess.check_call(mqtt_cmake_args, stderr=subprocess.STDOUT, shell=shell)
+ret_code = subprocess.check_call(build_cmd, stderr=subprocess.STDOUT, shell=shell)
+ 
+os.chdir(current_dir)
 
 from distutils.ccompiler import get_default_compiler
 compiler_type = get_default_compiler()
