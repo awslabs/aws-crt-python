@@ -13,7 +13,7 @@ if not os.path.exists(build_dir):
 
 os.chdir(build_dir)
 
-dep_install_path = ''
+dep_install_path = os.path.join(os.getcwd(), 'install')
 
 if 'AWS_C_INSTALL' in os.environ:
     dep_install_path = os.getenv('AWS_C_INSTALL')
