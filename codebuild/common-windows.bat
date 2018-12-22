@@ -5,32 +5,10 @@ set CMAKE_ARGS=%*
 choco install %PYTHON_PACKAGE% -y
 call RefreshEnv.cmd
 
+git submodule update --init --recursive
 mkdir build\deps\install
 set AWS_C_INSTALL=%cd%\build\deps\install
 
-CALL :install_library aws-c-common
-CALL :install_library aws-c-io
-CALL :install_library aws-c-mqtt
+py setup.py build
 
-python3 setup.py build
-
-goto :EOF
-
-:install_library
-pushd build\deps
-git clone https://github.com/awslabs/%~1.git
-cd %~1
-
-if [%~2] == [] GOTO do_build
-git checkout %~2
-
-:do_build
-cmake %CMAKE_ARGS% -DCMAKE_BUILD_TYPE="Release" -DCMAKE_INSTALL_PREFIX=%AWS_C_INSTALL% ../ || goto error
-cmake --build . --config Release || goto error
-cmake --build . --target INSTALL || goto error
-popd
-exit /b %errorlevel%
-
-:error
-echo Failed with error #%errorlevel%.
 exit /b %errorlevel%
