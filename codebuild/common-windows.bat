@@ -6,6 +6,7 @@ choco install %PYTHON_PACKAGE% -y
 call RefreshEnv.cmd
 
 git submodule update --init --recursive
+mkdir build\deps\install
 set AWS_C_INSTALL=%cd%\build\deps\install
 
 py setup.py build
