@@ -22,12 +22,22 @@
 
 #include <aws/mqtt/mqtt.h>
 
+#if PY_MAJOR_VERSION == 3
+#    define INIT_FN PyInit__aws_crt_python
+#    define UNICODE_GET_BYTES_FN PyUnicode_DATA
+#    define UNICODE_GET_BYTE_LEN_FN PyUnicode_GET_LENGTH
+#elif PY_MAJOR_VERSION == 2
+#    define INIT_FN init_aws_crt_python
+#    define UNICODE_GET_BYTES_FN PyUnicode_AS_DATA
+#    define UNICODE_GET_BYTE_LEN_FN PyUnicode_GET_DATA_SIZE
+#endif /* PY_MAJOR_VERSION */
+
 struct aws_byte_cursor aws_byte_cursor_from_pystring(PyObject *str) {
     if (PyBytes_CheckExact(str)) {
         return aws_byte_cursor_from_array(PyBytes_AsString(str), PyBytes_Size(str));
     }
     if (PyUnicode_CheckExact(str)) {
-        return aws_byte_cursor_from_array(PyUnicode_DATA(str), PyUnicode_GET_LENGTH(str));
+        return aws_byte_cursor_from_array(UNICODE_GET_BYTES_FN(str), UNICODE_GET_BYTE_LEN_FN(str));
     }
 
     return aws_byte_cursor_from_array(NULL, 0);
@@ -82,18 +92,13 @@ PyDoc_STRVAR(s_module_doc, "C extension for binding AWS implementations of MQTT,
 /*******************************************************************************
  * Module Init
  ******************************************************************************/
-
 #if PY_MAJOR_VERSION == 3
-#    define INIT_FN PyInit__aws_crt_python
-#elif PY_MAJOR_VERSION == 2
-#    define INIT_FN init_aws_crt_python
-#endif /* PY_MAJOR_VERSION */
-
 static void s_module_free(void *userdata) {
     (void)userdata;
 
     aws_tls_clean_up_static_state();
 }
+#endif /* PY_MAJOR_VERSION == 3 */
 
 PyMODINIT_FUNC INIT_FN(void) {
 
