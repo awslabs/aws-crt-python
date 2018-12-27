@@ -86,9 +86,9 @@ aws_c_libs = ['aws-c-mqtt', 'aws-c-io', 'aws-c-common']
 cflags = []
 ldflags = []
 
-include_dirs = [path.join(os.getenv('AWS_C_INSTALL'), 'include')]
+include_dirs = [path.join(dep_install_path, 'include')]
 libraries = aws_c_libs
-library_dirs = [path.join(os.getenv('AWS_C_INSTALL'), 'lib')]
+library_dirs = [path.join(dep_install_path, 'lib')]
 extra_objects = []
 
 if compiler_type == 'msvc':
@@ -135,8 +135,8 @@ _aws_crt_python = setuptools.Extension(
         ('MAJOR_VERSION', '1'),
         ('MINOR_VERSION', '0'),
     ],
-    include_dirs = ['/usr/local/include', os.getenv('AWS_C_INSTALL') + '/include'],
-    library_dirs = ['/usr/local/lib', os.getenv('AWS_C_INSTALL') + '/lib'],
+    include_dirs = ['/usr/local/include', dep_install_path + '/include'],
+    library_dirs = ['/usr/local/lib', dep_install_path + '/lib'],
     libraries = libraries,
     sources = [
         'source/module.c',
