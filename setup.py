@@ -53,7 +53,7 @@ def determine_generator_string():
                 vs_version_gen_str = trimmed_out.split('[')[0].strip()       
         
         if vs_version_gen_str == None:
-            print('CMake does not recongize an installed version of visual studio on your system.')
+            print('CMake does not recognize an installed version of visual studio on your system.')
             exit(1)
             
         if is_64bit():
@@ -89,7 +89,7 @@ common_cmake_args = ['cmake', generator_string, cross_compile_string, '-DVERSION
 s2n_cmake_args = ['cmake', generator_string, cross_compile_string, '-DCMAKE_INSTALL_PREFIX={}'.format(dep_install_path), '-DBUILD_SHARED_LIBS=OFF', s2n_dir]
 io_cmake_args = ['cmake', generator_string, cross_compile_string, '-DVERSION_LIBS=OFF', '-DCMAKE_INSTALL_PREFIX={}'.format(dep_install_path), '-DBUILD_SHARED_LIBS=OFF', io_dir]
 mqtt_cmake_args = ['cmake', generator_string, cross_compile_string, '-DVERSION_LIBS=OFF', '-DCMAKE_INSTALL_PREFIX={}'.format(dep_install_path), '-DBUILD_SHARED_LIBS=OFF', mqtt_dir]
-build_cmd = ['cmake', '--build', './', '--target', 'install']
+build_cmd = ['cmake', '--build', './', '--config', 'release', '--target', 'install']
 
 common_build_dir = os.path.join(build_dir, 'aws-c-common')
 s2n_build_dir = os.path.join(build_dir, 's2n')
