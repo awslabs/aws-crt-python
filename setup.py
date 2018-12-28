@@ -4,19 +4,19 @@ import subprocess
 import platform
 from os import path
 import sys
-
-def is_32bit():
-    return platform.architecture()[0] == '32bit'
     
 def is_64bit():
-    return platform.architecture()[0] == '64bit'    
+    return is_64bits = sys.maxsize > 2**32    
+
+def is_32bit():
+    return !is_64bit()
 
 def is_arm ():
     return platform.machine().startswith('arm')
 
 def determine_cross_compile_string():
     host_arch = platform.machine()
-    if (host_arch == 'AMD64' or host_arg == 'x86_64') and is_32bit() and sys.platform != 'win32':
+    if (host_arch == 'AMD64' or host_arch == 'x86_64') and is_32bit() and sys.platform != 'win32':
         return 'CMAKE_C_FLAGS=-m32'
  
     return ''        
@@ -82,10 +82,10 @@ common_dir = os.path.join(current_dir, 'aws-c-common')
 s2n_dir = os.path.join(current_dir, 's2n')
 io_dir = os.path.join(current_dir, 'aws-c-io')
 mqtt_dir = os.path.join(current_dir, 'aws-c-mqtt')
-common_cmake_args = ['cmake', generator_string, cross_compile_string, '-DCMAKE_INSTALL_PREFIX={}'.format(dep_install_path), '-DBUILD_SHARED_LIBS=ON', common_dir]
-s2n_cmake_args = ['cmake', generator_string, cross_compile_string, '-DCMAKE_INSTALL_PREFIX={}'.format(dep_install_path), '-DBUILD_SHARED_LIBS=ON', s2n_dir]
-io_cmake_args = ['cmake', generator_string, cross_compile_string, '-DCMAKE_INSTALL_PREFIX={}'.format(dep_install_path), '-DBUILD_SHARED_LIBS=ON', io_dir]
-mqtt_cmake_args = ['cmake', generator_string, cross_compile_string, '-DCMAKE_INSTALL_PREFIX={}'.format(dep_install_path), '-DBUILD_SHARED_LIBS=ON', mqtt_dir]
+common_cmake_args = ['cmake', generator_string, cross_compile_string, '-DVERSION_LIBS=OFF', '-DCMAKE_INSTALL_PREFIX={}'.format(dep_install_path), '-DBUILD_SHARED_LIBS=OFF', common_dir]
+s2n_cmake_args = ['cmake', generator_string, cross_compile_string, '-DCMAKE_INSTALL_PREFIX={}'.format(dep_install_path), '-DBUILD_SHARED_LIBS=OFF', s2n_dir]
+io_cmake_args = ['cmake', generator_string, cross_compile_string, '-DVERSION_LIBS=OFF', '-DCMAKE_INSTALL_PREFIX={}'.format(dep_install_path), '-DBUILD_SHARED_LIBS=OFF', io_dir]
+mqtt_cmake_args = ['cmake', generator_string, cross_compile_string, '-DVERSION_LIBS=OFF', '-DCMAKE_INSTALL_PREFIX={}'.format(dep_install_path), '-DBUILD_SHARED_LIBS=OFF', mqtt_dir]
 build_cmd = ['cmake', '--build', './', '--target', 'install']
 
 common_build_dir = os.path.join(build_dir, 'aws-c-common')
@@ -147,36 +147,18 @@ cflags = []
 ldflags = []
 
 include_dirs = [path.join(dep_install_path, 'include')]
-libraries = aws_c_libs
+libraries = list(aws_c_libs)
 library_dirs = [path.join(dep_install_path, 'lib')]
 extra_objects = []
 
 if compiler_type == 'msvc':
-    pass 
+    pass
 else:
     cflags += ['-O0', '-Wextra', '-Werror']
 
 if sys.platform == 'win32':
-    extra_objects = [
-        '{}/lib/{}.dll'.format(dep_install_path, lib) for lib in aws_c_libs]
-
-if sys.platform == 'linux':
-    include_dirs = ['/usr/local/include'] + include_dirs
-    library_dirs = ['/usr/local/lib'] + library_dirs
-    libraries += ['s2n', 'crypto']
-    extra_objects = [
-        '{}/lib/lib{}.so'.format(dep_install_path, lib) for lib in aws_c_libs]
-    
-    try:
-        cflags = [os.environ['CFLAGS']]
-    except:
-        pass
-    try:
-        ldflags = [os.environ['LDFLAGS']]
-    except:
-        pass
-
-if sys.platform == 'darwin':
+    pass
+elif sys.platform == 'darwin':
     try:
         cflags = [os.environ['CFLAGS']]
     except:
@@ -189,8 +171,20 @@ if sys.platform == 'darwin':
     include_dirs = ['/usr/local/include'] + include_dirs
     library_dirs = ['/usr/local/lib'] + library_dirs
     extra_objects = [
-        '{}/lib/lib{}.dylib'.format(dep_install_path, lib) for lib in aws_c_libs]
-    libraries = []
+        '{}/lib/lib{}.a'.format(dep_install_path, lib) for lib in aws_c_libs]
+else:
+    include_dirs = ['/usr/local/include'] + include_dirs
+    library_dirs = ['/usr/local/lib'] + library_dirs
+    libraries += ['s2n', 'crypto']
+    aws_c_libs += ['s2n']
+    try:
+        cflags = [os.environ['CFLAGS']]
+    except:
+        pass
+    try:
+        ldflags = [os.environ['LDFLAGS']]
+    except:
+        pass
 
 os.environ['CFLAGS'] = ' '.join(cflags)
 os.environ['LDFLAGS'] = ' '.join(ldflags)
@@ -229,5 +223,5 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     ext_modules = [_aws_crt_python],
-    data_files = [('', extra_objects)]
-)        
+)
+        
