@@ -6,10 +6,13 @@ from os import path
 import sys
     
 def is_64bit():
-    return is_64bits = sys.maxsize > 2**32    
+    if sys.maxsize > 2**32:
+        return True
+
+    return False
 
 def is_32bit():
-    return !is_64bit()
+    return is_64bit() == False
 
 def is_arm ():
     return platform.machine().startswith('arm')
@@ -157,7 +160,8 @@ else:
     cflags += ['-O0', '-Wextra', '-Werror']
 
 if sys.platform == 'win32':
-    pass
+    #the windows apis being used under the hood. Since we're static linking we have to follow the entire chain down
+    libraries += ['Secur32', 'Crypt32', 'Advapi32', 'BCrypt', 'Kernel32', 'Ws2_32']
 elif sys.platform == 'darwin':
     try:
         cflags = [os.environ['CFLAGS']]
