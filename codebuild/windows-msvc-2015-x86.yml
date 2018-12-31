@@ -3,6 +3,5 @@ version: 0.2
 phases:
   build:
     commands:
-      - setx PYTHON_PACKAGE python3-x86_32 /m
-      - .\codebuild\common-windows.bat -G "Visual Studio 14 2015"
+      - .\codebuild\common-windows.bat python3-x86_32
 

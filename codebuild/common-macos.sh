@@ -6,7 +6,7 @@ set -e
 set -x
 
 CMAKE_ARGS="$@"
-install_from_brew openssl
+install_from_brew openssl@1.1
 install_from_brew gdbm
 install_from_brew sqlite
 install_from_brew python
