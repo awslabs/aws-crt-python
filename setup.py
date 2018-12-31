@@ -47,7 +47,7 @@ def determine_generator_string():
                 vs_version = '16.0'
             elif os.path.exists('C:\\Program Files (x86)\\Microsoft Visual Studio\\2017'):
                 vs_version = '15.0'
-            elif os.path.exists('C:\\Program Files (x86)\\Microsoft Visual Studio 14'):
+            elif os.path.exists('C:\\Program Files (x86)\\Microsoft Visual Studio 14.0'):
                 vs_version = '14.0'
             else:
                 print('No version of MSVC compiler could be found!')
