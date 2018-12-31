@@ -1,6 +1,7 @@
 import setuptools
 import os
 import subprocess
+from subprocess import CalledProcessError
 import platform
 from os import path
 import sys
@@ -27,8 +28,14 @@ def determine_cross_compile_string():
 def determine_generator_string():
     if sys.platform == 'win32':
         vswhere_args = ['%ProgramFiles(x86)%\\Microsoft Visual Studio\\Installer\\vswhere.exe', '-legacy', '-latest', '-property', 'installationVersion']
-        vswhere_output = subprocess.check_output(vswhere_args, shell=True)
         
+        vswhere_output = None
+
+        try:
+            vswhere_output = subprocess.check_output(vswhere_args, shell=True)
+        except CalledProcessError as ex:
+            print('VSWhere not found, going to try and probe the file system instead.')
+            
         vs_version = None
         
         if vswhere_output != None:
