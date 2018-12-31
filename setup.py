@@ -38,7 +38,7 @@ def determine_generator_string():
                 print('found installed version of Visual Studio 2017')
             elif os.path.exists('C:\\Program Files (x86)\\Microsoft Visual Studio 14.0'):
                 vs_version = '14.0'
-                print('founed installed version of Visual Studio 2015')
+                print('found installed version of Visual Studio 2015')
             else:
                 print('Making an attempt at calling vswhere')
                 vswhere_args = ['%ProgramFiles(x86)%\\Microsoft Visual Studio\\Installer\\vswhere.exe', '-legacy', '-latest', '-property', 'installationVersion']
@@ -67,6 +67,7 @@ def determine_generator_string():
         for out in cmake_help_output.splitlines():
             trimmed_out = out.decode('utf-8').strip()
             if 'Visual Studio' in trimmed_out and vs_major_version in trimmed_out:
+                print('Considering generator {}'.format(trimmed_out))
                 vs_version_gen_str = trimmed_out.split('[')[0].strip()       
         
         if vs_version_gen_str == None:
