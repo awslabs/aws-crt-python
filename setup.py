@@ -53,7 +53,8 @@ def determine_generator_string():
                 if vswhere_output != None:
                     for out in vswhere_output.split():
                         vs_version = out.decode('utf-8')
-                        print('considering candidate {0}'.format(vs_version))
+                        print('selected candidate {0}'.format(vs_version))
+                        break 
                 else:
                     print('No MSVC compiler could be found!')
                     exit(1)
