@@ -1,6 +1,7 @@
 import setuptools
 import os
 import subprocess
+from subprocess import CalledProcessError
 import platform
 from os import path
 import sys
@@ -26,20 +27,35 @@ def determine_cross_compile_string():
     
 def determine_generator_string():
     if sys.platform == 'win32':
-        vswhere_args = ['%ProgramFiles(x86)%\\Microsoft Visual Studio\\Installer\\vswhere.exe', '-legacy', '-latest', '-property', 'installationVersion']
-        vswhere_output = subprocess.check_output(vswhere_args, shell=True)
-        
         vs_version = None
-        
-        if vswhere_output != None:
-            for out in vswhere_output.split():
-                vs_version = out.decode('utf-8')
-
+        prog_x86_path = os.getenv('PROGRAMFILES(x86)')
         if vs_version == None:
-            print('No version of MSVC compiler could be found!')
-            exit(1)
+            if os.path.exists(prog_x86_path + '\\Microsoft Visual Studio\\2019'):
+                vs_version = '16.0'
+                print('found installed version of Visual Studio 2019')
+            elif os.path.exists(prog_x86_path + '\\Microsoft Visual Studio\\2017'):
+                vs_version = '15.0'
+                print('found installed version of Visual Studio 2017')
+            elif os.path.exists(prog_x86_path + '\\Microsoft Visual Studio 14.0'):
+                vs_version = '14.0'
+                print('found installed version of Visual Studio 2015')
+            else:
+                print('Making an attempt at calling vswhere')
+                vswhere_args = ['%ProgramFiles(x86)%\\Microsoft Visual Studio\\Installer\\vswhere.exe', '-legacy', '-latest', '-property', 'installationVersion']
+                vswhere_output = None
 
-        print('found MSVC compiler version: {}'.format(vs_version))
+                try:
+                    vswhere_output = subprocess.check_output(vswhere_args, shell=True)
+                except CalledProcessError as ex:
+                    print('No version of MSVC compiler could be found!')
+                    exit(1)       
+ 
+                if vswhere_output != None:
+                    for out in vswhere_output.split():
+                        vs_version = out.decode('utf-8')
+                else:
+                    print('No MSVC compiler could be found!')
+                    exit(1)
         
         vs_major_version = vs_version.split('.')[0]
 
@@ -50,8 +66,10 @@ def determine_generator_string():
         for out in cmake_help_output.splitlines():
             trimmed_out = out.decode('utf-8').strip()
             if 'Visual Studio' in trimmed_out and vs_major_version in trimmed_out:
+                print('selecting generator {}'.format(trimmed_out))
                 vs_version_gen_str = trimmed_out.split('[')[0].strip()       
-        
+                break
+
         if vs_version_gen_str == None:
             print('CMake does not recognize an installed version of visual studio on your system.')
             exit(1)
