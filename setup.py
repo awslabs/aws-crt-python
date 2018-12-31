@@ -53,8 +53,6 @@ def determine_generator_string():
                 if vswhere_output != None:
                     for out in vswhere_output.split():
                         vs_version = out.decode('utf-8')
-                        print('selected candidate {0}'.format(vs_version))
-                        break 
                 else:
                     print('No MSVC compiler could be found!')
                     exit(1)
@@ -68,9 +66,10 @@ def determine_generator_string():
         for out in cmake_help_output.splitlines():
             trimmed_out = out.decode('utf-8').strip()
             if 'Visual Studio' in trimmed_out and vs_major_version in trimmed_out:
-                print('Considering generator {}'.format(trimmed_out))
+                print('selecting generator {}'.format(trimmed_out))
                 vs_version_gen_str = trimmed_out.split('[')[0].strip()       
-        
+                break
+
         if vs_version_gen_str == None:
             print('CMake does not recognize an installed version of visual studio on your system.')
             exit(1)
