@@ -32,11 +32,15 @@ def determine_generator_string():
         if vs_version == None:
             if os.path.exists('C:\\Program Files (x86)\\Microsoft Visual Studio\\2019'):
                 vs_version = '16.0'
+                print('found installed version of Visual Studio 2019')
             elif os.path.exists('C:\\Program Files (x86)\\Microsoft Visual Studio\\2017'):
                 vs_version = '15.0'
+                print('found installed version of Visual Studio 2017')
             elif os.path.exists('C:\\Program Files (x86)\\Microsoft Visual Studio 14.0'):
                 vs_version = '14.0'
+                print('founed installed version of Visual Studio 2015')
             else:
+                print('Making an attempt at calling vswhere')
                 vswhere_args = ['%ProgramFiles(x86)%\\Microsoft Visual Studio\\Installer\\vswhere.exe', '-legacy', '-latest', '-property', 'installationVersion']
                 vswhere_output = None
 
@@ -49,6 +53,7 @@ def determine_generator_string():
                 if vswhere_output != None:
                     for out in vswhere_output.split():
                         vs_version = out.decode('utf-8')
+                        print('considering candidate {0}'.format(vs_version)
                 else:
                     print('No MSVC compiler could be found!')
                     exit(1)
