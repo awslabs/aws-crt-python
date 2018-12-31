@@ -28,15 +28,15 @@ def determine_cross_compile_string():
 def determine_generator_string():
     if sys.platform == 'win32':
         vs_version = None
-
+        prog_x86_path = os.getenv('PROGRAMFILES(x86)')
         if vs_version == None:
-            if os.path.exists('C:\\Program Files (x86)\\Microsoft Visual Studio\\2019'):
+            if os.path.exists(prog_x86_path + '\\Microsoft Visual Studio\\2019'):
                 vs_version = '16.0'
                 print('found installed version of Visual Studio 2019')
-            elif os.path.exists('C:\\Program Files (x86)\\Microsoft Visual Studio\\2017'):
+            elif os.path.exists(prog_x86_path + '\\Microsoft Visual Studio\\2017'):
                 vs_version = '15.0'
                 print('found installed version of Visual Studio 2017')
-            elif os.path.exists('C:\\Program Files (x86)\\Microsoft Visual Studio 14.0'):
+            elif os.path.exists(prog_x86_path + '\\Microsoft Visual Studio 14.0'):
                 vs_version = '14.0'
                 print('found installed version of Visual Studio 2015')
             else:
