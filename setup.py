@@ -43,11 +43,16 @@ def determine_generator_string():
                 vs_version = out.decode('utf-8')
 
         if vs_version == None:
-            print('No version of MSVC compiler could be found!')
-            exit(1)
-
-        print('found MSVC compiler version: {}'.format(vs_version))
-        
+            if os.path.exists('C:\\Program Files (x86)\\Microsoft Visual Studio\\2019'):
+                vs_version = '16.0'
+            elif os.path.exists('C:\\Program Files (x86)\\Microsoft Visual Studio\\2017'):
+                vs_version = '15.0'
+            elif os.path.exists('C:\\Program Files (x86)\\Microsoft Visual Studio 14'):
+                vs_version = '14.0'
+            else:
+                print('No version of MSVC compiler could be found!')
+                exit(1)       
+ 
         vs_major_version = vs_version.split('.')[0]
 
         cmake_list_gen_args = ['cmake', '--help']
