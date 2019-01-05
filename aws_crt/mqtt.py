@@ -14,10 +14,10 @@
 import _aws_crt_python
 from aws_crt.io import ClientBootstrap, ClientTlsContext
 
-def _default_on_connect(return_code, session_present):
+def _default_on_connect(error_code, return_code, session_present):
     pass
-def _default_on_disconnect(return_code):
-    return False
+def _default_on_disconnect():
+    pass
 
 QoS = type('QoS', (), dict(
     AtMostOnce = 0,
@@ -51,7 +51,6 @@ class Connection(object):
     def __init__(self, client, client_id,
             host_name, port,
             on_connect=_default_on_connect,
-            on_disconnect=_default_on_disconnect,
             use_websocket=False, alpn=None,
             clean_session=True, keep_alive=0,
             will=None,
@@ -74,14 +73,13 @@ class Connection(object):
             client_id,
             keep_alive,
             on_connect,
-            on_disconnect,
             will,
             username,
             password,
             )
 
-    def disconnect(self):
-        _aws_crt_python.aws_py_mqtt_client_connection_disconnect(self._internal_connection)
+    def disconnect(self, on_disconnect=None):
+        _aws_crt_python.aws_py_mqtt_client_connection_disconnect(self._internal_connection, on_disconnect)
 
     def subscribe(self, topic, qos, callback, suback_callback=None):
         return _aws_crt_python.aws_py_mqtt_client_connection_subscribe(self._internal_connection, topic, qos, callback, suback_callback)

@@ -31,13 +31,13 @@ parser.add_argument('--root-ca', help="File path to root certificate authority, 
 
 connect_results = {}
 connect_event = threading.Event()
-def on_connect(return_code, session_present):
+def on_connect(error_code, return_code, session_present):
     connect_results.update(locals())
     connect_event.set()
 
 disconnect_results = {}
 disconnect_event = threading.Event()
-def on_disconnect(return_code):
+def on_disconnect():
     disconnect_results.update(locals())
     disconnect_event.set()
     return False
@@ -100,9 +100,9 @@ mqtt_connection = mqtt.Connection(
     client_id=CLIENT_ID,
     host_name=args.endpoint,
     port=port,
-    on_connect=on_connect,
-    on_disconnect=on_disconnect)
+    on_connect=on_connect)
 assert(connect_event.wait(TIMEOUT))
+assert(connect_results['error_code'] == 0)
 assert(connect_results['return_code'] == 0)
 assert(connect_results['session_present'] == False)
 
@@ -143,9 +143,8 @@ assert(unsubscribe_results['packet_id'] == unsubscribe_packet_id)
 
 # Disconnect
 print("Disconnecting")
-mqtt_connection.disconnect()
+mqtt_connection.disconnect(on_disconnect)
 assert(disconnect_event.wait(TIMEOUT))
-assert(disconnect_results['return_code'] == 0)
 
 # Done
 print("Test Success")
