@@ -35,6 +35,12 @@ def on_connect(error_code, return_code, session_present):
     connect_results.update(locals())
     connect_event.set()
 
+def on_connection_interrupted(error_code):
+    print("Connection has been interrupted with error code", error_code)
+
+def on_connection_resumed(return_code, session_present):
+    print("Connection has been resumed with return code", return_code, "and session present:", session_present)
+
 disconnect_results = {}
 disconnect_event = threading.Event()
 def on_disconnect():
@@ -100,7 +106,9 @@ mqtt_connection = mqtt.Connection(
     client_id=CLIENT_ID,
     host_name=args.endpoint,
     port=port,
-    on_connect=on_connect)
+    on_connect=on_connect,
+    on_connection_interrupted=on_connection_interrupted,
+    on_connection_resumed=on_connection_resumed)
 assert(connect_event.wait(TIMEOUT))
 assert(connect_results['error_code'] == 0)
 assert(connect_results['return_code'] == 0)

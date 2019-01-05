@@ -14,11 +14,6 @@
 import _aws_crt_python
 from aws_crt.io import ClientBootstrap, ClientTlsContext
 
-def _default_on_connect(error_code, return_code, session_present):
-    pass
-def _default_on_disconnect():
-    pass
-
 QoS = type('QoS', (), dict(
     AtMostOnce = 0,
     AtLeastOnce = 1,
@@ -50,7 +45,9 @@ class Connection(object):
 
     def __init__(self, client, client_id,
             host_name, port,
-            on_connect=_default_on_connect,
+            on_connect=None,
+            on_connection_interrupted=None,
+            on_connection_resumed=None,
             use_websocket=False, alpn=None,
             clean_session=True, keep_alive=0,
             will=None,
@@ -73,6 +70,8 @@ class Connection(object):
             client_id,
             keep_alive,
             on_connect,
+            on_connection_interrupted,
+            on_connection_resumed,
             will,
             username,
             password,
