@@ -103,12 +103,14 @@ mqtt_client = mqtt.Client(client_bootstrap, tls_context)
 print("Connecting to {}:{} with client-id:{}".format(args.endpoint, port, CLIENT_ID))
 mqtt_connection = mqtt.Connection(
     client=mqtt_client,
+    on_connection_interrupted=on_connection_interrupted,
+    on_connection_resumed=on_connection_resumed)
+
+mqtt_connection.connect(
     client_id=CLIENT_ID,
     host_name=args.endpoint,
     port=port,
-    on_connect=on_connect,
-    on_connection_interrupted=on_connection_interrupted,
-    on_connection_resumed=on_connection_resumed)
+    on_connect=on_connect)
 assert(connect_event.wait(TIMEOUT))
 assert(connect_results['error_code'] == 0)
 assert(connect_results['return_code'] == 0)
@@ -116,7 +118,7 @@ assert(connect_results['session_present'] == False)
 
 # Subscribe
 print("Subscribing to:", TOPIC)
-qos = mqtt.QoS.AtLeastOnce
+qos = mqtt.QoS.AT_LEAST_ONCE
 subscribe_packet_id = mqtt_connection.subscribe(
     topic=TOPIC,
     qos=qos,
@@ -132,7 +134,7 @@ print("Publishing to '{}': {}".format(TOPIC, MESSAGE))
 publish_packet_id = mqtt_connection.publish(
     topic=TOPIC,
     payload=MESSAGE,
-    qos=mqtt.QoS.AtLeastOnce,
+    qos=mqtt.QoS.AT_LEAST_ONCE,
     puback_callback=on_publish)
 assert(publish_event.wait(TIMEOUT))
 assert(publish_results['packet_id'] == publish_packet_id)
