@@ -12,6 +12,7 @@
 # permissions and limitations under the License.
 
 import _aws_crt_python
+from concurrent.futures import Future
 from enum import IntEnum
 from aws_crt.io import ClientBootstrap, ClientTlsContext
 
@@ -28,6 +29,15 @@ class ConnectReturnCode(IntEnum):
     SERVER_UNAVAILABLE = 3
     BAD_USERNAME_OR_PASSWORD = 4
     NOT_AUTHORIZED = 5
+
+class OperationError(Exception):
+    __slots__ = ('packet_id')
+
+class ConnectionRejectedError(Exception):
+    __slots__ = ('return_code')
+
+class SubscriptionRejectedError(Exception):
+    __slots__ = ('packet_id')
 
 class Will(object):
     __slots__ = ('topic', 'qos', 'payload', 'retain')
@@ -75,44 +85,122 @@ class Connection(object):
             clean_session=True, keep_alive=0,
             will=None,
             username=None, password=None,
-            connect_timeout_sec=5.0,
-            on_connect=None):
+            connect_timeout_sec=5.0):
 
-        assert will is None or isinstance(will, Will)
+        future = Future()
 
-        assert use_websocket == False
+        def on_connect(error_code, return_code, session_present):
+            if error_code == 0 and return_code == 0:
+                future.set_result(dict(session_present=session_present))
+            else:
+                future.set_exception(Exception("Somethin's fukt"))
 
-        tls_ctx_cap = None
-        if self.client.tls_ctx:
-            tls_ctx_cap = self.client.tls_ctx._internal_tls_ctx
+        try:
+            assert will is None or isinstance(will, Will)
+            assert use_websocket == False
 
-        _aws_crt_python.aws_py_mqtt_client_connection_connect(
-            self._internal_connection,
-            client_id,
-            host_name,
-            port,
-            tls_ctx_cap,
-            keep_alive,
-            will,
-            username,
-            password,
-            on_connect,
-            )
+            tls_ctx_cap = None
+            if self.client.tls_ctx:
+                tls_ctx_cap = self.client.tls_ctx._internal_tls_ctx
 
-    def reconnect(self, on_connect):
-        _aws_crt_python.aws_py_mqtt_client_connection_connect(self._internal_connection)
+            _aws_crt_python.aws_py_mqtt_client_connection_connect(
+                self._internal_connection,
+                client_id,
+                host_name,
+                port,
+                tls_ctx_cap,
+                keep_alive,
+                will,
+                username,
+                password,
+                on_connect,
+                )
 
-    def disconnect(self, on_disconnect=None):
-        _aws_crt_python.aws_py_mqtt_client_connection_disconnect(self._internal_connection, on_disconnect)
+        except Exception as e:
+            future.set_exception(e)
 
-    def subscribe(self, topic, qos, callback, suback_callback=None):
-        return _aws_crt_python.aws_py_mqtt_client_connection_subscribe(self._internal_connection, topic, qos.value, callback, suback_callback)
+        return future
 
-    def unsubscribe(self, topic, unsuback_callback=None):
-        return _aws_crt_python.aws_py_mqtt_client_connection_unsubscribe(self._internal_connection, topic, unsuback_callback)
+    def reconnect(self):
+        future = Future()
 
-    def publish(self, topic, payload, qos, retain=False, puback_callback=None):
-        return _aws_crt_python.aws_py_mqtt_client_connection_publish(self._internal_connection, topic, payload, qos, retain, puback_callback)
+        def on_connect(error_code, return_code, session_present):
+            if error_code == 0 and return_code == 0:
+                future.set_result(session_present)
+            else:
+                future.set_exception(Exception("Somethin's fukt"))
+
+        try:
+            _aws_crt_python.aws_py_mqtt_client_connection_reconnect(self._internal_connection, on_connect)
+        except Exception as e:
+            future.set_exception(e)
+
+        return future
+
+    def disconnect(self):
+
+        future = Future()
+
+        def on_disconnect():
+            future.set_result(None)
+
+        try:
+            _aws_crt_python.aws_py_mqtt_client_connection_disconnect(self._internal_connection, on_disconnect)
+        except Exception as e:
+            future.set_exception(e)
+
+        return future
+
+    def subscribe(self, topic, qos, callback):
+        future = Future()
+        packet_id = 0
+
+        def suback(packet_id, topic, qos):
+            future.set_result(dict(
+                packet_id=packet_id,
+                topic=topic,
+                qos=QoS(qos),
+            ))
+
+        try:
+            packet_id = _aws_crt_python.aws_py_mqtt_client_connection_subscribe(self._internal_connection, topic, qos.value, callback, suback)
+        except Exception as e:
+            future.set_exception(e)
+
+        return future, packet_id
+
+    def unsubscribe(self, topic):
+        future = Future()
+        packet_id = 0
+
+        def unsuback(packet_id):
+            future.set_result(dict(
+                packet_id=packet_id
+            ))
+
+        try:
+            packet_id = _aws_crt_python.aws_py_mqtt_client_connection_unsubscribe(self._internal_connection, topic, unsuback)
+
+        except Exception as e:
+            future.set_exception(e)
+
+        return future, packet_id
+
+    def publish(self, topic, payload, qos, retain=False):
+        future = Future()
+        packet_id = 0
+
+        def puback(packet_id):
+            future.set_result(dict(
+                packet_id=packet_id
+            ))
+
+        try:
+            packet_id = _aws_crt_python.aws_py_mqtt_client_connection_publish(self._internal_connection, topic, payload, qos, retain, puback)
+        except Exception as e:
+            future.set_exception(e)
+
+        return future, packet_id
 
     def ping(self):
         _aws_crt_python.aws_py_mqtt_client_connection_ping(self._internal_connection)
