@@ -30,15 +30,6 @@ class ConnectReturnCode(IntEnum):
     BAD_USERNAME_OR_PASSWORD = 4
     NOT_AUTHORIZED = 5
 
-class OperationError(Exception):
-    __slots__ = ('packet_id')
-
-class ConnectionRejectedError(Exception):
-    __slots__ = ('return_code')
-
-class SubscriptionRejectedError(Exception):
-    __slots__ = ('packet_id')
-
 class Will(object):
     __slots__ = ('topic', 'qos', 'payload', 'retain')
 
