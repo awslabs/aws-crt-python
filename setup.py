@@ -109,7 +109,14 @@ def build_dependency(lib_name, pass_dversion_libs=True):
         os.mkdir(lib_build_dir)
     os.chdir(lib_build_dir)
 
-    cmake_args = ['cmake', generator_string, cross_compile_string, '-DCMAKE_INSTALL_PREFIX={}'.format(dep_install_path), '-DBUILD_SHARED_LIBS=OFF']
+    cmake_args = [
+        'cmake',
+        generator_string,
+        cross_compile_string,
+        '-DCMAKE_PREFIX_PATH={}'.format(dep_install_path),
+        '-DCMAKE_INSTALL_PREFIX={}'.format(dep_install_path),
+        '-DBUILD_SHARED_LIBS=OFF',
+    ]
     if pass_dversion_libs:
         cmake_args.append('-DVERSION_LIBS=OFF')
     cmake_args.append(lib_source_dir)
@@ -211,6 +218,10 @@ setuptools.setup(
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: OS Independent",
+    ],
+    install_requires=[
+        'enum34 ; python_version<"3.4"',
+        'futures ; python_version<"3.2"',
     ],
     ext_modules = [_aws_crt_python],
 )

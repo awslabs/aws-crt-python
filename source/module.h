@@ -32,6 +32,9 @@
 #define PyBool_FromAwsResult(result) PyBool_FromLong((result) == AWS_OP_SUCCESS)
 #define PyString_FromAwsByteCursor(cursor) PyString_FromStringAndSize((const char *)(cursor)->ptr, (cursor)->len)
 
+int PyIntEnum_Check(PyObject *int_enum_obj);
+long PyIntEnum_AsLong(PyObject *int_enum_obj);
+
 struct aws_byte_cursor aws_byte_cursor_from_pystring(PyObject *str);
 
 /* Set current thread's error indicator based on aws_last_error() */

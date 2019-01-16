@@ -43,6 +43,22 @@ struct aws_byte_cursor aws_byte_cursor_from_pystring(PyObject *str) {
     return aws_byte_cursor_from_array(NULL, 0);
 }
 
+int PyIntEnum_Check(PyObject *int_enum_obj) {
+#if PY_MAJOR_VERSION == 2
+    return PyInt_Check(int_enum_obj);
+#else
+    return PyLong_Check(int_enum_obj);
+#endif
+}
+
+long PyIntEnum_AsLong(PyObject *int_enum_obj) {
+#if PY_MAJOR_VERSION == 2
+    return PyInt_AsLong(int_enum_obj);
+#else
+    return PyLong_AsLong(int_enum_obj);
+#endif
+}
+
 void PyErr_SetAwsLastError(void) {
     PyErr_AwsLastError();
 }
@@ -77,6 +93,8 @@ static PyMethodDef s_module_methods[] = {
 
     /* MQTT Client Connection */
     {"aws_py_mqtt_client_connection_new", aws_py_mqtt_client_connection_new, METH_VARARGS, NULL},
+    {"aws_py_mqtt_client_connection_connect", aws_py_mqtt_client_connection_connect, METH_VARARGS, NULL},
+    {"aws_py_mqtt_client_connection_reconnect", aws_py_mqtt_client_connection_reconnect, METH_VARARGS, NULL},
     {"aws_py_mqtt_client_connection_publish", aws_py_mqtt_client_connection_publish, METH_VARARGS, NULL},
     {"aws_py_mqtt_client_connection_subscribe", aws_py_mqtt_client_connection_subscribe, METH_VARARGS, NULL},
     {"aws_py_mqtt_client_connection_unsubscribe", aws_py_mqtt_client_connection_unsubscribe, METH_VARARGS, NULL},
