@@ -6,7 +6,7 @@ phases:
       - sudo add-apt-repository ppa:ubuntu-toolchain-r/test
       - sudo apt-get update -y
       - sudo apt-get install gcc-6 cmake3 cppcheck python3 python3-dev ninja-build libssl-dev -y -f --force-yes
-      - pip install --upgrade setuptools
+      - pip3 install --upgrade setuptools
   pre_build:
     commands:
       - export CC=gcc-6

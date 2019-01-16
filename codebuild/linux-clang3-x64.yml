@@ -6,7 +6,7 @@ phases:
       - sudo apt-get update -y
       - sudo apt-get update
       - sudo apt-get install clang-3.9 cmake3 cppcheck clang-tidy-3.9 python3 python3-dev ninja-build libssl-dev -y
-      - pip install --upgrade setuptools
+      - pip3 install --upgrade setuptools
   pre_build:
     commands:
       - export CC=clang-3.9
