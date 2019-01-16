@@ -219,10 +219,10 @@ setuptools.setup(
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: OS Independent",
     ],
-    extras_require={
-        ':python_version<"3.4"': ['enum34'],
-        ':python_version<"3.2"': ['futures'],
-    },
+    install_requires=[
+        'enum34 ; python_version<"3.4"',
+        'futures ; python_version<"3.2"',
+    ],
     ext_modules = [_aws_crt_python],
 )
 

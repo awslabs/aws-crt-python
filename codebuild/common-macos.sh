@@ -27,7 +27,6 @@ function install_from_brew {
 
 install_from_brew openssl
 install_from_brew gdbm
-install_from_brew sqlite
 install_from_brew python
 
 git submodule update --init --recursive
