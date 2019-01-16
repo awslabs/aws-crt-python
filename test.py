@@ -26,7 +26,7 @@ MESSAGE = 'test message ' + UNIQUE_ID
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--endpoint', required=True, help="Connect to this endpoint (aka host-name)")
-parser.add_argument('--port', help="Override default connection port")
+parser.add_argument('--port', type=int, help="Override default connection port")
 parser.add_argument('--cert', help="File path to your client certificate, in PEM format")
 parser.add_argument('--key', help="File path to your private key, in PEM format")
 parser.add_argument('--root-ca', help="File path to root certificate authority, in PEM format")
@@ -48,6 +48,7 @@ args = parser.parse_args()
 event_loop_group = io.EventLoopGroup(1)
 client_bootstrap = io.ClientBootstrap(event_loop_group)
 
+tls_options = None
 if args.cert or args.key or args.root_ca:
     if args.cert:
         assert(args.key)

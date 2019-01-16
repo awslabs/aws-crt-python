@@ -43,6 +43,22 @@ struct aws_byte_cursor aws_byte_cursor_from_pystring(PyObject *str) {
     return aws_byte_cursor_from_array(NULL, 0);
 }
 
+int PyIntEnum_Check(PyObject *int_enum_obj) {
+#if PY_MAJOR_VERSION == 2
+    return PyInt_Check(int_enum_obj);
+#else
+    return PyLong_Check(int_enum_obj);
+#endif
+}
+
+long PyIntEnum_AsLong(PyObject *int_enum_obj) {
+#if PY_MAJOR_VERSION == 2
+    return PyInt_AsLong(int_enum_obj);
+#else
+    return PyLong_AsLong(int_enum_obj);
+#endif
+}
+
 void PyErr_SetAwsLastError(void) {
     PyErr_AwsLastError();
 }

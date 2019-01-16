@@ -33,11 +33,11 @@ class ClientBootstrap(object):
         self._internal_bootstrap = _aws_crt_python.aws_py_io_client_bootstrap_new(self.elg._internal_elg)
 
 class TlsVersion(IntEnum):
-    SSL_V3 = 0
-    TLS_V1 = 1
-    TLS_V1_1 = 2
-    TLS_V1_2 = 3
-    TLS_V1_3 = 4
+    SSLv3 = 0
+    TLSv1 = 1
+    TLSv1_1 = 2
+    TLSv1_2 = 3
+    TLSv1_3 = 4
     DEFAULT = 128
 
 class TlsContextOptions(object):

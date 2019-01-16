@@ -59,6 +59,10 @@ class Connection(object):
             on_connection_resumed=None,
             reconnect_min_timeout_sec=5.0,
             reconnect_max_timeout_sec=60.0):
+        """
+        on_connection_interrupted: optional callback, with signature (error_code)
+        on_connection_resumed: optional callback, with signature (error_code, session_present)
+        """
 
         assert isinstance(client, Client)
         self.client = client
@@ -84,7 +88,7 @@ class Connection(object):
             if error_code == 0 and return_code == 0:
                 future.set_result(dict(session_present=session_present))
             else:
-                future.set_exception(Exception("Somethin's fukt"))
+                future.set_exception(Exception("Error during connect."))
 
         try:
             assert will is None or isinstance(will, Will)
@@ -117,9 +121,9 @@ class Connection(object):
 
         def on_connect(error_code, return_code, session_present):
             if error_code == 0 and return_code == 0:
-                future.set_result(session_present)
+                future.set_result(dict(session_present=session_present))
             else:
-                future.set_exception(Exception("Somethin's fukt"))
+                future.set_exception(Exception("Error during reconnect"))
 
         try:
             _aws_crt_python.aws_py_mqtt_client_connection_reconnect(self._internal_connection, on_connect)
@@ -133,7 +137,7 @@ class Connection(object):
         future = Future()
 
         def on_disconnect():
-            future.set_result(None)
+            future.set_result(dict())
 
         try:
             _aws_crt_python.aws_py_mqtt_client_connection_disconnect(self._internal_connection, on_disconnect)
@@ -143,6 +147,9 @@ class Connection(object):
         return future
 
     def subscribe(self, topic, qos, callback):
+        """
+        callback: callback with signature (topic, message)
+        """
         future = Future()
         packet_id = 0
 
@@ -187,7 +194,7 @@ class Connection(object):
             ))
 
         try:
-            packet_id = _aws_crt_python.aws_py_mqtt_client_connection_publish(self._internal_connection, topic, payload, qos, retain, puback)
+            packet_id = _aws_crt_python.aws_py_mqtt_client_connection_publish(self._internal_connection, topic, payload, qos.value, retain, puback)
         except Exception as e:
             future.set_exception(e)
 
