@@ -1,0 +1,19 @@
+version: 0.2
+#this build spec assumes the manylinux1 x86 image for pypi
+#additional packages we installed: cmake 3.5, libcrypto 1.1.0j, gcc 4.8.4
+phases:
+  install:
+    commands:
+  pre_build:
+    commands:
+      - export CC=gcc
+  build:
+    commands:
+      - echo Build started on `date`
+      - git submodule update --init
+      - /opt/python/cp35-cp35m/bin/python setup.py sdist bdist_wheel
+      - /opt/python/cp27-cp27m/bin/python setup.py sdist bdist_wheel
+  post_build:
+    commands:
+      - echo Build completed on `date`
+

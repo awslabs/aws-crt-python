@@ -93,15 +93,19 @@ if not os.path.exists(build_dir):
     os.mkdir(build_dir)
 os.chdir(build_dir)
 
+lib_dir = 'lib'
 dep_install_path = os.path.join(build_dir, 'install')
 if 'AWS_C_INSTALL' in os.environ:
     dep_install_path = os.getenv('AWS_C_INSTALL')
+    if os.path.exists(os.path.join(dep_install_path, 'lib64')):
+        lib_dir = 'lib64'
 
-def build_dependency(lib_name, pass_dversion_libs=True):
+def build_dependency(lib_name):
     lib_source_dir = os.path.join(current_dir, lib_name)
-
+    global lib_dir
     # Skip library if it wasn't pulled
     if not os.path.exists(os.path.join(lib_source_dir, 'CMakeLists.txt')):
+        lib_dir = 'lib'
         return
 
     lib_build_dir = os.path.join(build_dir, lib_name)
@@ -116,9 +120,9 @@ def build_dependency(lib_name, pass_dversion_libs=True):
         '-DCMAKE_PREFIX_PATH={}'.format(dep_install_path),
         '-DCMAKE_INSTALL_PREFIX={}'.format(dep_install_path),
         '-DBUILD_SHARED_LIBS=OFF',
+        '-DCMAKE_INSTALL_LIBDIR={}'.format(lib_dir),
     ]
-    if pass_dversion_libs:
-        cmake_args.append('-DVERSION_LIBS=OFF')
+
     cmake_args.append(lib_source_dir)
     build_cmd = ['cmake', '--build', './', '--config', 'release', '--target', 'install']
 
@@ -126,9 +130,10 @@ def build_dependency(lib_name, pass_dversion_libs=True):
     ret_code = subprocess.check_call(build_cmd, stderr=subprocess.STDOUT, shell=shell)
 
     os.chdir(build_dir)
+    return ret_code
 
 if sys.platform != 'darwin' and sys.platform != 'win32':
-    build_dependency('s2n', pass_dversion_libs=False)
+    build_dependency('s2n')
 build_dependency('aws-c-common')
 build_dependency('aws-c-io')
 build_dependency('aws-c-mqtt')
@@ -145,7 +150,7 @@ ldflags = []
 
 include_dirs = [path.join(dep_install_path, 'include')]
 libraries = list(aws_c_libs)
-library_dirs = [path.join(dep_install_path, 'lib')]
+library_dirs = [path.join(dep_install_path, lib_dir)]
 extra_objects = []
 
 if compiler_type == 'msvc':
@@ -167,11 +172,11 @@ elif sys.platform == 'darwin':
         pass
     ldflags += ['-framework Security']
     include_dirs = ['/usr/local/include'] + include_dirs
-    library_dirs = ['/usr/local/lib'] + library_dirs
-    extra_objects = ['{}/lib/lib{}.a'.format(dep_install_path, lib) for lib in aws_c_libs]
+    library_dirs = ['/usr/local/' + lib_dir] + library_dirs
+    extra_objects = ['{}/{}/lib{}.a'.format(dep_install_path, lib_dir, lib) for lib in aws_c_libs]
 else:
     include_dirs = ['/usr/local/include'] + include_dirs
-    library_dirs = ['/usr/local/lib'] + library_dirs
+    library_dirs = ['/usr/local/' + lib_dir] + library_dirs
     libraries += ['s2n', 'crypto']
     aws_c_libs += ['s2n']
     try:
@@ -194,7 +199,7 @@ _aws_crt_python = setuptools.Extension(
         ('MINOR_VERSION', '0'),
     ],
     include_dirs = ['/usr/local/include', dep_install_path + '/include'],
-    library_dirs = ['/usr/local/lib', dep_install_path + '/lib'],
+    library_dirs = ['/usr/local/' + lib_dir, dep_install_path + '/' + lib_dir],
     libraries = libraries,
     sources = [
         'source/module.c',
