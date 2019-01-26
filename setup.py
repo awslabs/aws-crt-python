@@ -121,6 +121,7 @@ def build_dependency(lib_name):
         '-DCMAKE_INSTALL_PREFIX={}'.format(dep_install_path),
         '-DBUILD_SHARED_LIBS=OFF',
         '-DCMAKE_INSTALL_LIBDIR={}'.format(lib_dir),
+        '-DCMAKE_BUILD_TYPE=Release',
     ]
 
     cmake_args.append(lib_source_dir)
@@ -156,7 +157,7 @@ extra_objects = []
 if compiler_type == 'msvc':
     pass
 else:
-    cflags += ['-O0', '-Wextra', '-Werror']
+    cflags += ['-O3', '-Wextra', '-Werror']
 
 if sys.platform == 'win32':
     #the windows apis being used under the hood. Since we're static linking we have to follow the entire chain down
@@ -212,7 +213,7 @@ _aws_crt_python = setuptools.Extension(
 
 setuptools.setup(
     name="aws_crt",
-    version="0.0.1",
+    version="0.2.2",
     author="Amazon Web Services, Inc",
     author_email="author@example.com",
     description="A common runtime for AWS Python projects",
