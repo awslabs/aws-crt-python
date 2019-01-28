@@ -1,0 +1,18 @@
+version: 0.2
+#this build spec assumes the ubuntu 14.04 trusty image
+phases:
+  install:
+    commands:
+      - sudo apt-get update -y
+      - sudo apt-get install python3 python3-pip -y
+      - pip3 install --upgrade setuptools
+  pre_build:
+    commands:
+  build:
+    commands:
+      - echo Build started on `date`
+      - ./continous-delivery/test-version-exists
+  post_build:
+    commands:
+      - echo Build completed on `date`
+

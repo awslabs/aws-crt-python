@@ -1,0 +1,31 @@
+version: 0.2
+#this build spec assumes the manylinux1 image for pypi
+#additional packages we installed: cmake 3.5, libcrypto 1.1.0j, gcc 4.8.4
+phases:
+  install:
+    commands:
+  pre_build:
+    commands:
+      - export CC=gcc
+  build:
+    commands:
+      - echo Build started on `date`
+      - git submodule update --init
+      - /opt/python/cp34-cp34m/bin/python setup.py sdist bdist_wheel
+      - auditwheel --plat manylinux1_x86_64 dist/aws_crt-*cp34-cp34m-linux_x86_64.whl
+      - /opt/python/cp35-cp35m/bin/python setup.py sdist bdist_wheel
+      - auditwheel --plat manylinux1_x86_64 dist/aws_crt-*cp35-cp35m-linux_x86_64.whl
+      - /opt/python/cp36-cp36m/bin/python setup.py sdist bdist_wheel
+      - auditwheel --plat manylinux1_x86_64 dist/aws_crt-*cp36-cp36m-linux_x86_64.whl
+      - /opt/python/cp37-cp37m/bin/python setup.py sdist bdist_wheel
+      - auditwheel --plat manylinux1_x86_64 dist/aws_crt-*cp37-cp37m-linux_x86_64.whl
+      - /opt/python/cp27-cp27m/bin/python setup.py sdist bdist_wheel
+      - auditwheel --plat manylinux1_x86_64 dist/aws_crt-*cp27-cp27m-linux_x86_64.whl
+      - /opt/python/cp27-cp27mu/bin/python setup.py sdist bdist_wheel
+      - auditwheel --plat manylinux1_x86_64 dist/aws_crt-*cp27-cp27mu-linux_x86_64.whl
+      - cp -r wheelhouse manylinux1_x86_64
+      - cp dist/*.tar.gz manylinux1_x86_64/
+  post_build:
+    commands:
+      - echo Build completed on `date`
+

@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -e
+#force a failure if there's no tag
+git describe --abbrev=0
+#now get the tag
+CURRENT_TAG_VERSION=$(git describe --abbrev=0)
+RESULT = pip install -vvv aws-crt=$CURRENT_TAG_VERSION
+if [$RESULT -eq 0]; then
+    echo "$CURRENT_TAG_VERSION currently does not exist in pypi, allowing pipeline to continue."
+    exit 0
+
+echo "$CURRENT_TAG_VERSION is already in pypi, cut a new tag if you want to upload another version."
+exit 1
+
