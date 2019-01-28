@@ -1,0 +1,22 @@
+graft source
+graft aws-c-common
+graft aws-c-io
+graft s2n
+graft aws-c-mqtt
+global-exclude .git* 
+global-exclude .travis*
+recursive-exclude **/codebuild *
+recursive-exclude .git *
+recursive-exclude **/.git *
+recursive-exclude **/.github *
+prune s2n/.travis
+prune s2n/tests/fuzz/corpus
+prune s2n/tests/ctverif
+prune s2n/tests/pems
+prune s2n/tests/saw 
+prune s2n/tests/sidetrail
+prune s2n/tests/integration/trust-store
+prune s2n/tests/integration/data
+prune aws-c-io/docs
+prune aws-c-common/.cbmc-batch
+
