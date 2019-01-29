@@ -4,8 +4,7 @@ set -e
 git describe --abbrev=0
 #now get the tag
 CURRENT_TAG_VERSION=$(git describe --abbrev=0)
-RESULT = pip install -vvv aws-crt=$CURRENT_TAG_VERSION
-if [$RESULT -eq 0]; then
+if [pip install -vvv aws-crt=$CURRENT_TAG_VERSION -eq 0]; then
     echo "$CURRENT_TAG_VERSION currently does not exist in pypi, allowing pipeline to continue."
     exit 0
 
