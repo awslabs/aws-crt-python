@@ -10,7 +10,7 @@ phases:
   build:
     commands:
       - echo Build started on `date`
-      - git submodule update --init
+      - cd aws-crt-python 
       - /opt/python/cp34-cp34m/bin/python setup.py sdist bdist_wheel
       - auditwheel --plat manylinux1_i686 dist/aws_crt-*cp34-cp34m-linux_i686.whl
       - /opt/python/cp35-cp35m/bin/python setup.py sdist bdist_wheel

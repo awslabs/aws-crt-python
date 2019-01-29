@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
 set -e
-cd "$(dirname "$0")"
-cd ..
-pwd
 #force a failure if there's no tag
 git describe --abbrev=0
 #now get the tag
