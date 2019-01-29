@@ -1,0 +1,22 @@
+version: 0.2
+# this image assumes Ubuntu 14.04 base image
+phases:
+  install:
+    commands:
+      - sudo apt-get install python3 pip3 -y
+      - pip3 install --upgrade pip
+      - pip3 install --user twine setuptools wheel
+  pre_build:
+    commands:
+      - export CC=gcc
+  build:
+    commands:
+      - echo Build started on `date`
+      - ls -la
+      - cd aws-crt-python 
+      - python3 continuous-deployment/pullppypirc.py alpha
+      - twine upload -r testpypi ../dist/*
+  post_build:
+    commands:
+      - echo Build completed on `date`
+

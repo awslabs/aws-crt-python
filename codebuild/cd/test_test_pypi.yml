@@ -1,0 +1,22 @@
+version: 0.2
+# this image assumes Ubuntu 14.04 base image
+phases:
+  install:
+    commands:
+      - sudo apt-get install python3 pip3 -y
+      - pip3 install --upgrade pip
+  pre_build:
+    commands:
+      - export CC=gcc
+  build:
+    commands:
+      - echo Build started on `date`
+      - ls -la
+      - cd aws-crt-python 
+      - CURRENT_TAG_VERSION=$(git describe --abbrev=0)
+      - pip3 install --user aws_crt==$CURRENT_TAG_VERSION
+      - python3 continuous-delivery/test-pip-install.py
+  post_build:
+    commands:
+      - echo Build completed on `date`
+
