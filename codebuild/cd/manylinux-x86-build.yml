@@ -29,7 +29,9 @@ phases:
       - echo Build completed on `date`
 
 artifacts:
-   type: zip
-   files:
-     - 'manylinux1_x86/**/*'
+  secondary-artifacts:
+    manylinux1_x86:
+        base-directory: aws-crt-python/manylinux1_x86
+        files:
+          - **/* 
 ~                               
