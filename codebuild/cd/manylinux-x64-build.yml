@@ -29,3 +29,7 @@ phases:
     commands:
       - echo Build completed on `date`
 
+artifacts:
+   type: zip
+   files:
+     - 'manylinux1_x86_64/**/*' 
