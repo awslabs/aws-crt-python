@@ -14,7 +14,7 @@ phases:
       - ls -la
       - cd aws-crt-python 
       - CURRENT_TAG_VERSION=$(git describe --abbrev=0)
-      - pip3 install --user aws_crt==$CURRENT_TAG_VERSION
+      - pip3 install -i https://testpypi.python.org/simple --user aws-crt==$CURRENT_TAG_VERSION
       - python3 continuous-delivery/test-pip-install.py
   post_build:
     commands:
