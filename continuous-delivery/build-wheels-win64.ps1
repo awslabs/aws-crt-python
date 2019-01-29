@@ -1,3 +1,4 @@
+Set-PSDebug -Trace 1
 "C:\\Python27\\python.exe" setup.py sdist bdist_wheel
 "C:\\Python27\\pythonw.exe" setup.py sdist bdist_wheel
 "C:\\Python33\\python.exe" setup.py sdist bdist_wheel
