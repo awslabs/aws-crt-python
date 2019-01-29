@@ -11,6 +11,7 @@ phases:
   build:
     commands:
       - echo Build started on `date`
+      - ls -la
       - bash ./continuous-delivery/test-version-exists
   post_build:
     commands:
