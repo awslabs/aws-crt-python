@@ -33,5 +33,5 @@ artifacts:
     manylinux1_x86:
       base-directory: aws-crt-python/manylinux1_x86
       files:
-        - **/* 
+        - '**/*' 
 ~                               
