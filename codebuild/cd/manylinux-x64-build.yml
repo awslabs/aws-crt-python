@@ -32,6 +32,6 @@ phases:
 artifacts:
   secondary-artifacts:
     manylinux1_x86_64:
-        base-directory: aws-crt-python/manylinux1_x86_64
-    	files:
-     	  - **/* 
+      base-directory: aws-crt-python/manylinux1_x86_64
+      files:
+        - **/* 
