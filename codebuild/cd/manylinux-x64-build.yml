@@ -30,5 +30,6 @@ phases:
       - echo Build completed on `date`
 
 artifacts:
+  discard-paths: yes
   files:
     - 'aws-crt-python/manylinux1_x86_64/*' 
