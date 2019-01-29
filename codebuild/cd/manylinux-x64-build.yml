@@ -23,13 +23,12 @@ phases:
       - auditwheel repair --plat manylinux1_x86_64 dist/aws_crt-*cp27-cp27m-linux_x86_64.whl
       - /opt/python/cp27-cp27mu/bin/python setup.py sdist bdist_wheel
       - auditwheel repair --plat manylinux1_x86_64 dist/aws_crt-*cp27-cp27mu-linux_x86_64.whl
-      - cp -r wheelhouse manylinux1_x86_64
-      - cp dist/*.tar.gz manylinux1_x86_64/
+      - cp -r wheelhouse ../dist
+      - cp dist/*.tar.gz ../dist/
   post_build:
     commands:
       - echo Build completed on `date`
 
 artifacts:
-  discard-paths: yes
   files:
-    - 'aws-crt-python/manylinux1_x86_64/*' 
+    - 'dist/*' 
