@@ -154,8 +154,8 @@ extra_objects = []
 
 if compiler_type == 'msvc':
      #if this is old python, we need to statically link in the VS2015 CRT
-    if sys.version_info[0] <= 3 or sys.version_info[1] <= 4:
-        cflags += ['-DNO_STDBOOL=1', '-DNO_STDINT=1']
+    if sys.version_info[0] == 2 or (sys.version_info[0] == 3 and sys.version_info[1] <= 4):
+        cflags += ['-DNO_STDBOOL=1', '-DNO_STDINT=1', '/MT']
 else:
     cflags += ['-O3', '-Wextra', '-Werror']
 
