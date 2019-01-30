@@ -22,7 +22,6 @@ def determine_cross_compile_string():
     host_arch = platform.machine()
     if (host_arch == 'AMD64' or host_arch == 'x86_64') and is_32bit() and sys.platform != 'win32':
         return 'CMAKE_C_FLAGS=-m32'
-
     return ''
 
 def determine_generator_string():
@@ -123,7 +122,6 @@ def build_dependency(lib_name):
         '-DCMAKE_INSTALL_LIBDIR={}'.format(lib_dir),
         '-DCMAKE_BUILD_TYPE=Release',
     ]
-
     cmake_args.append(lib_source_dir)
     build_cmd = ['cmake', '--build', './', '--config', 'release', '--target', 'install']
 
@@ -155,7 +153,9 @@ library_dirs = [path.join(dep_install_path, lib_dir)]
 extra_objects = []
 
 if compiler_type == 'msvc':
-    pass
+     #if this is old python, we need to statically link in the VS2015 CRT
+    sys.version_info.major <= 3 && sys.version_info.minor <= 4:
+    cflags += ['-DNO_STDBOOL=1' '-DNO_STDINT=1']
 else:
     cflags += ['-O3', '-Wextra', '-Werror']
 
