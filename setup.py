@@ -153,9 +153,11 @@ library_dirs = [path.join(dep_install_path, lib_dir)]
 extra_objects = []
 
 if compiler_type == 'msvc':
-     #if this is old python, we need to statically link in the VS2015 CRT
+     #if this is old python, we need to statically link in the VS2015 CRT, the invoking script
+     # already overrode the compiler environment variables so that a decent compiler is used
+     # and this is C so it shouldn't really matter.
     if sys.version_info[0] == 2 or (sys.version_info[0] == 3 and sys.version_info[1] <= 4):
-        cflags += ['-DNO_STDBOOL=1', '-DNO_STDINT=1', '/MT']
+        cflags += ['/MT']
 else:
     cflags += ['-O3', '-Wextra', '-Werror']
 
