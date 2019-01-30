@@ -20,7 +20,7 @@ phases:
       - cp -r $CODEBUILD_SRC_DIR_manylinux1_x86/dist/* dist/
       - ls -la dist/ 
       - cd aws-crt-python 
-      - python3 continuous-delivery/pullppypirc.py alpha
+      - python3 continuous-delivery/pull-pypirc.py alpha
       - python3 -m twine upload -r testpypi ../dist/*
   post_build:
     commands:
