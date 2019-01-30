@@ -6,7 +6,7 @@ phases:
       - sudo apt-get update -y
       - sudo apt-get install python3 python3-pip -y
       - python3 -m pip install --user --upgrade pip
-      - python3 -m pip install --user twine setuptools wheel boto3 PyOpenSSL
+      - python3 -m pip install --user --upgrade twine setuptools wheel boto3 PyOpenSSL six
   pre_build:
     commands:
       - export CC=gcc
