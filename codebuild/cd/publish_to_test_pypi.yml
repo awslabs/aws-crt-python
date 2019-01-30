@@ -3,6 +3,7 @@ version: 0.2
 phases:
   install:
     commands:
+      - sudo apt-get update -y
       - sudo apt-get install python3 python3-pip -y
       - python3 -m pip install --user --upgrade pip
       - python3 -m pip install --user twine setuptools wheel
