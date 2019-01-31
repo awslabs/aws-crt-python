@@ -1,0 +1,28 @@
+version: 0.2
+# this image assumes Ubuntu 14.04 base image
+phases:
+  install:
+    commands:
+      - sudo apt-get update -y
+      - sudo apt-get install python3 python3-pip -y
+      - python3 -m pip install --user --upgrade pip
+      - python3 -m pip install --user --upgrade twine setuptools wheel boto3 PyOpenSSL six
+  pre_build:
+    commands:
+      - export CC=gcc
+  build:
+    commands:
+      - echo Build started on `date`
+      - mkdir dist
+      - cp -r $CODEBUILD_SRC_DIR_aws_crt_python_win64/* dist/
+      - cp -r $CODEBUILD_SRC_DIR_aws_crt_python_win32/* dist/
+      - cp -r $CODEBUILD_SRC_DIR_manylinux1_x86_64/dist/* dist/
+      - cp -r $CODEBUILD_SRC_DIR_manylinux1_x86/dist/* dist/
+      - ls -la dist/ 
+      - cd aws-crt-python 
+      - python3 continuous-delivery/pull-pypirc.py alpha
+      - python3 -m twine upload -r testpypi ../dist/*
+  post_build:
+    commands:
+      - echo Build completed on `date`
+
