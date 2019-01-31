@@ -1,4 +1,4 @@
-FOR /F %%A in ('git describe --abbrev=0') do md set CURRENT_VERSION=%%A || goto error
+FOR /F %%A in ('git describe --abbrev=0') do set CURRENT_VERSION=%%A || goto error
 
 "C:\Program Files\Python37\python.exe" -m pip install -i https://testpypi.python.org/simple --user aws-crt==%CURRENT_VERSION% || goto error
 "C:\Program Files\Python37\python.exe" continuous-delivery\test-pip-install.py || goto error
