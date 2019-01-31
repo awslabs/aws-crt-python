@@ -21,7 +21,7 @@ def is_arm ():
 def determine_cross_compile_string():
     host_arch = platform.machine()
     if (host_arch == 'AMD64' or host_arch == 'x86_64') and is_32bit() and sys.platform != 'win32':
-        return 'CMAKE_C_FLAGS=-m32'
+        return '-DCMAKE_C_FLAGS=-m32'
     return ''
 
 def determine_generator_string():
@@ -156,8 +156,10 @@ if compiler_type == 'msvc':
      #if this is old python, we need to statically link in the VS2015 CRT, the invoking script
      # already overrode the compiler environment variables so that a decent compiler is used
      # and this is C so it shouldn't really matter.
-    if sys.version_info[0] == 2 or (sys.version_info[0] == 3 and sys.version_info[1] <= 4):
-        cflags += ['/MT']
+     # actually, I couldn't get this to work, leave it here commented out for future brave souls
+    #if sys.version_info[0] == 2 or (sys.version_info[0] == 3 and sys.version_info[1] <= 4):
+    #    cflags += ['/MT']
+    pass
 else:
     cflags += ['-O3', '-Wextra', '-Werror']
 
@@ -210,7 +212,8 @@ _aws_crt_python = setuptools.Extension(
         'source/mqtt_client.c',
         'source/mqtt_client_connection.c',
     ],
-    extra_objects = extra_objects
+    extra_objects = extra_objects,
+    extra_compile_args = cflags,
 )
 
 setuptools.setup(
