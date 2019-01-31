@@ -218,7 +218,7 @@ _aws_crt_python = setuptools.Extension(
 
 setuptools.setup(
     name="aws_crt",
-    version="0.2.2",
+    version="0.2.3",
     author="Amazon Web Services, Inc",
     author_email="author@example.com",
     description="A common runtime for AWS Python projects",
