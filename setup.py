@@ -136,13 +136,14 @@ if sys.platform != 'darwin' and sys.platform != 'win32':
 build_dependency('aws-c-common')
 build_dependency('aws-c-io')
 build_dependency('aws-c-mqtt')
+build_dependency('aws-c-cal')
 
 os.chdir(current_dir)
 
 from distutils.ccompiler import get_default_compiler
 compiler_type = get_default_compiler()
 
-aws_c_libs = ['aws-c-mqtt', 'aws-c-io', 'aws-c-common']
+aws_c_libs = ['aws-c-mqtt', 'aws-c-io', 'aws-c-common', 'aws-c-cal']
 
 cflags = []
 ldflags = []
@@ -211,16 +212,17 @@ _aws_crt_python = setuptools.Extension(
         'source/io.c',
         'source/mqtt_client.c',
         'source/mqtt_client_connection.c',
+        'source/crypto.c',
     ],
     extra_objects = extra_objects,
     extra_compile_args = cflags,
 )
 
 setuptools.setup(
-    name="aws_crt",
-    version="0.2.3",
+    name="awscrt",
+    version="0.2.4",
     author="Amazon Web Services, Inc",
-    author_email="author@example.com",
+    author_email="aws-sdk-common-runtime@amazon.com",
     description="A common runtime for AWS Python projects",
     url="https://github.com/awslabs/aws-crt-python",
     packages=setuptools.find_packages(),

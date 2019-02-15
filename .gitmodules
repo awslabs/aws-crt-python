@@ -10,3 +10,6 @@
 [submodule "s2n"]
 	path = s2n
 	url = git://github.com/awslabs/s2n
+[submodule "aws-c-cal"]
+	path = aws-c-cal
+	url = git://github.com/awslabs/aws-c-cal.git

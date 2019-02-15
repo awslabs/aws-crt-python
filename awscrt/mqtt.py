@@ -14,7 +14,7 @@
 import _aws_crt_python
 from concurrent.futures import Future
 from enum import IntEnum
-from aws_crt.io import ClientBootstrap, ClientTlsContext
+from awscrt.io import ClientBootstrap, ClientTlsContext
 
 class QoS(IntEnum):
     """Quality of Service"""
