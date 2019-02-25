@@ -14,7 +14,7 @@ phases:
       - echo Build started on `date`
       - cd aws-crt-python 
       - CURRENT_TAG_VERSION=$(git describe --abbrev=0)
-      - python3 -m pip install --user aws-crt==$CURRENT_TAG_VERSION
+      - python3 -m pip install --user awscrt==$CURRENT_TAG_VERSION
       - python3 continuous-delivery/test-pip-install.py
   post_build:
     commands:

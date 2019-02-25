@@ -11,7 +11,7 @@
 # express or implied. See the License for the specific language governing
 # permissions and limitations under the License.
 
-import aws_crt.io
+import awscrt.io
 
 print('if the next statement does not explode, the pip install was successful') 
-print('Is alpn supported? {}', aws_crt.io.is_alpn_available())
+print('Is alpn supported? {}', awscrt.io.is_alpn_available())
