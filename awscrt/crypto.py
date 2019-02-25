@@ -28,8 +28,9 @@ class Hash(object):
     def update(self, to_hash):
         _aws_crt_python.aws_py_hash_update(self._hash, to_hash)
 
-    def digest(self, truncateTo):
-        return _aws_crt_python.aws_py_hash_digest(self._hash, truncateTo)
+    def digest(self, truncate_to = 0):
+        tmp = _aws_crt_python.aws_py_hash_digest(self._hash, truncate_to)
+        return tmp
 
 class HMAC(object):
     def __init__(self, native_handle):
@@ -42,5 +43,5 @@ class HMAC(object):
     def update(self, to_hmac):
         _aws_crt_python.aws_py_hmac_update(self._hmac, to_hmac)
 
-    def digest(self, truncateTo):
-        return _aws_crt_python.aws_py_hmac_digest(self._hmac, truncateTo)
+    def digest(self, truncate_to = 0):
+        return _aws_crt_python.aws_py_hmac_digest(self._hmac, truncate_to)

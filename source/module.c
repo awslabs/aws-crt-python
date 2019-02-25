@@ -13,6 +13,7 @@
  * permissions and limitations under the License.
  */
 #include "module.h"
+#include "crypto.h"
 #include "io.h"
 #include "mqtt_client.h"
 #include "mqtt_client_connection.h"
@@ -100,6 +101,15 @@ static PyMethodDef s_module_methods[] = {
     {"aws_py_mqtt_client_connection_unsubscribe", aws_py_mqtt_client_connection_unsubscribe, METH_VARARGS, NULL},
     {"aws_py_mqtt_client_connection_ping", aws_py_mqtt_client_connection_ping, METH_VARARGS, NULL},
     {"aws_py_mqtt_client_connection_disconnect", aws_py_mqtt_client_connection_disconnect, METH_VARARGS, NULL},
+
+    /* Cryptographic primitives */
+    {"aws_py_md5_new", aws_py_md5_new, METH_NOARGS, NULL},
+    {"aws_py_sha256_new", aws_py_sha256_new, METH_NOARGS, NULL},
+    {"aws_py_hash_update", aws_py_hash_update, METH_VARARGS, NULL},
+    {"aws_py_hash_digest", aws_py_hash_digest, METH_VARARGS, NULL},
+    {"aws_py_sha256_hmac_new", aws_py_sha256_hmac_new, METH_VARARGS, NULL},
+    {"aws_py_hmac_update", aws_py_hash_update, METH_VARARGS, NULL},
+    {"aws_py_hmac_digest", aws_py_hash_digest, METH_VARARGS, NULL},
 
     {NULL, NULL, 0, NULL},
 };

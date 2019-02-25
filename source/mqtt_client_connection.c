@@ -574,7 +574,7 @@ static void s_subscribe_callback(
     PyObject *callback = user_data;
 
     PyObject *result =
-        PyObject_CallFunction(callback, "(NN)", PyString_FromAwsByteCursor(topic), PyString_FromAwsByteCursor(payload));
+        PyObject_CallFunction(callback, "(NN)", PyString_FromAwsByteCursor(topic), PyBytes_FromStringAndSize((const char *)payload->ptr, (Py_ssize_t)payload->len));
 
     if (!result) {
         PyErr_WriteUnraisable(PyErr_Occurred());
