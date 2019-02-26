@@ -3,6 +3,7 @@ graft aws-c-common
 graft aws-c-io
 graft s2n
 graft aws-c-mqtt
+graft aws-c-cal
 global-exclude .git* 
 global-exclude .travis*
 recursive-exclude **/codebuild *
