@@ -151,22 +151,19 @@ PyObject *aws_py_io_client_tls_ctx_new(PyObject *self, PyObject *args) {
 
     ctx_options.minimum_tls_version = min_tls_version;
 
-#define CHECK_AND_ASSIGN(field)                                                                                        \
-    do {                                                                                                               \
-        if (field) {                                                                                                   \
-            ctx_options.field = field;                                                                                 \
-        }                                                                                                              \
-    } while (false)
-
-    CHECK_AND_ASSIGN(ca_file);
-    CHECK_AND_ASSIGN(ca_path);
-    CHECK_AND_ASSIGN(alpn_list);
-    CHECK_AND_ASSIGN(certificate_path);
-    CHECK_AND_ASSIGN(private_key_path);
-    CHECK_AND_ASSIGN(pkcs12_path);
-    CHECK_AND_ASSIGN(pkcs12_password);
-
-#undef CHECK_AND_ASSIGN
+    if (ca_file || ca_path) {
+        aws_tls_ctx_options_override_default_trust_store_from_path(&ctx_options, ca_path, ca_file);
+    }
+    if (alpn_list) {
+        aws_tls_ctx_options_set_alpn_list(&ctx_options, alpn_list);
+    }
+    if (certificate_path && private_key_path) {
+        aws_tls_ctx_options_init_client_mtls_from_path(&ctx_options, allocator, certificate_path, private_key_path);
+    }
+    if (pkcs12_path && pkcs12_password) {
+        struct aws_byte_cursor password = aws_byte_cursor_from_c_str(pkcs12_password);
+        aws_tls_ctx_options_init_client_mtls_pkcs12_from_path(&ctx_options, allocator, pkcs12_path, &password);
+    }
 
     if (verify_peer != Py_None) {
         ctx_options.verify_peer = verify_peer == Py_True;
