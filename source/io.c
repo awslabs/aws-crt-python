@@ -148,6 +148,7 @@ PyObject *aws_py_io_client_tls_ctx_new(PyObject *self, PyObject *args) {
 
     struct aws_tls_ctx_options ctx_options;
     AWS_ZERO_STRUCT(ctx_options);
+    aws_tls_ctx_options_init_default_client(&ctx_options, allocator);
 
     ctx_options.minimum_tls_version = min_tls_version;
 
