@@ -4,10 +4,6 @@ version: 0.2
 phases:
   install:
     commands:
-      - lsb_release -a
-      - lsb_release -v
-      - lsb_release -i
-      
   pre_build:
     commands:
       - export CC=gcc
