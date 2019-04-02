@@ -148,7 +148,11 @@ PyObject *aws_py_io_client_tls_ctx_new(PyObject *self, PyObject *args) {
 
     struct aws_tls_ctx_options ctx_options;
     AWS_ZERO_STRUCT(ctx_options);
-    aws_tls_ctx_options_init_default_client(&ctx_options, allocator);
+    if (certificate_path && private_key_path) {
+        aws_tls_ctx_options_init_client_mtls_from_path(&ctx_options, allocator, certificate_path, private_key_path);
+    } else {
+        aws_tls_ctx_options_init_default_client(&ctx_options, allocator);
+    }
 
     ctx_options.minimum_tls_version = min_tls_version;
 
@@ -157,9 +161,6 @@ PyObject *aws_py_io_client_tls_ctx_new(PyObject *self, PyObject *args) {
     }
     if (alpn_list) {
         aws_tls_ctx_options_set_alpn_list(&ctx_options, alpn_list);
-    }
-    if (certificate_path && private_key_path) {
-        aws_tls_ctx_options_init_client_mtls_from_path(&ctx_options, allocator, certificate_path, private_key_path);
     }
 
 #ifdef __APPLE__
