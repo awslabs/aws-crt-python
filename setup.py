@@ -165,7 +165,7 @@ if compiler_type == 'msvc':
     #    cflags += ['/MT']
     pass
 else:
-    cflags += ['-O3', '-Wextra', '-Werror']
+    cflags += ['-O3', '-Wextra', '-Werror', '-Wno-ignored-optimization-argument']
 
 if sys.platform == 'win32':
     #the windows apis being used under the hood. Since we're static linking we have to follow the entire chain down
