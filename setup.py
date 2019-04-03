@@ -5,7 +5,6 @@ from subprocess import CalledProcessError
 import platform
 from os import path
 import sys
-import sysconfig
 
 def is_64bit():
     if sys.maxsize > 2**32:
@@ -146,10 +145,15 @@ compiler_type = get_default_compiler()
 
 aws_c_libs = ['aws-c-mqtt', 'aws-c-io', 'aws-c-common', 'aws-c-cal']
 
-# fetch the union of CFLAGS from env and system config
-cflags = sysconfig.get_config_var('CFLAGS').split()
-# and the union of LDFLAGS from env and system config
-ldflags = sysconfig.get_config_var('LDFLAGS').split()
+def get_from_env(key):
+    try:
+        return os.environ[key]
+    except:
+        return ""
+
+# fetch the CFLAGS/LDFLAGS from env
+cflags = get_from_env('CFLAGS').split()
+ldflags = get_from_env('LDFLAGS').split()
 
 include_dirs = [path.join(dep_install_path, 'include')]
 libraries = list(aws_c_libs)
@@ -165,7 +169,7 @@ if compiler_type == 'msvc':
     #    cflags += ['/MT']
     pass
 else:
-    cflags += ['-O3', '-Wextra', '-Werror', '-Wno-ignored-optimization-argument']
+    cflags += ['-O3', '-Wextra', '-Werror']
 
 if sys.platform == 'win32':
     #the windows apis being used under the hood. Since we're static linking we have to follow the entire chain down
