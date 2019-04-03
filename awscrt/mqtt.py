@@ -78,6 +78,7 @@ class Connection(object):
             host_name, port,
             use_websocket=False,
             clean_session=True, keep_alive=0,
+            ping_timeout=0,
             will=None,
             username=None, password=None,
             connect_timeout_sec=5.0):
@@ -88,7 +89,7 @@ class Connection(object):
             if error_code == 0 and return_code == 0:
                 future.set_result(dict(session_present=session_present))
             else:
-                future.set_exception(Exception("Error during connect."))
+                future.set_exception(Exception("Error during connect: err={} rc={}".format(error_code, return_code)))
 
         try:
             assert will is None or isinstance(will, Will)
@@ -105,6 +106,7 @@ class Connection(object):
                 port,
                 tls_ctx_cap,
                 keep_alive,
+                ping_timeout,
                 will,
                 username,
                 password,

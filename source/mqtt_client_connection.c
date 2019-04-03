@@ -258,6 +258,7 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
     uint16_t port_number = 0;
     PyObject *tls_ctx_capsule = NULL;
     uint16_t keep_alive_time = 0;
+    uint32_t ping_timeout = 0;
     PyObject *will = NULL;
     const char *username = NULL;
     Py_ssize_t username_len = 0;
@@ -267,7 +268,7 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
 
     if (!PyArg_ParseTuple(
             args,
-            "Os#s#HOHOz#z#O",
+            "Os#s#HOHIOz#z#O",
             &impl_capsule,
             &client_id,
             &client_id_len,
@@ -276,6 +277,7 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
             &port_number,
             &tls_ctx_capsule,
             &keep_alive_time,
+            &ping_timeout,
             &will,
             &username,
             &username_len,
@@ -303,7 +305,9 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
         }
 
         aws_tls_connection_options_init_from_ctx(&py_connection->tls_options, tls_ctx);
-        aws_tls_connection_options_set_server_name(&py_connection->tls_options, server_name);
+        struct aws_allocator *allocator = aws_crt_python_get_allocator();
+        struct aws_byte_cursor server_name_cur = aws_byte_cursor_from_c_str(server_name);
+        aws_tls_connection_options_set_server_name(&py_connection->tls_options, allocator, &server_name_cur);
     }
 
     AWS_ZERO_STRUCT(py_connection->socket_options);
@@ -381,17 +385,19 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
     }
 
     struct aws_byte_cursor client_id_cur = aws_byte_cursor_from_array(client_id, client_id_len);
-    if (aws_mqtt_client_connection_connect(
-            py_connection->connection,
-            &server_name_cur,
-            port_number,
-            &py_connection->socket_options,
-            tls_ctx ? &py_connection->tls_options : NULL,
-            &client_id_cur,
-            true,
-            keep_alive_time,
-            s_on_connect,
-            py_connection)) {
+    struct aws_mqtt_connection_options options = {
+        .host_name = server_name_cur,
+        .port = port_number,
+        .socket_options = &py_connection->socket_options,
+        .tls_options = tls_ctx ? &py_connection->tls_options : NULL,
+        .client_id = client_id_cur,
+        .keep_alive_time_secs = keep_alive_time,
+        .ping_timeout_ms = ping_timeout,
+        .on_connection_complete = s_on_connect,
+        .user_data = py_connection,
+        .clean_session = true
+    };
+    if (aws_mqtt_client_connection_connect(py_connection->connection, &options)) {
         Py_CLEAR(py_connection->on_connect);
         return PyErr_AwsLastError();
     }

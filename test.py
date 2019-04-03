@@ -109,7 +109,7 @@ assert(publish_results['packet_id'] == publish_packet_id)
 print("Waiting to receive messsage")
 assert(receive_event.wait(TIMEOUT))
 assert(receive_results['topic'] == TOPIC)
-assert(receive_results['message'] == MESSAGE)
+assert(receive_results['message'].decode() == MESSAGE)
 
 # Unsubscribe
 print("Unsubscribing from topic")
