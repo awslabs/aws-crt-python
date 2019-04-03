@@ -182,7 +182,6 @@ else:
     aws_c_libs += ['s2n']
 
 # ensure that the child linker process gets our flags
-#os.environ['CFLAGS'] = ' '.join(cflags)
 os.environ['LDFLAGS'] = ' '.join(ldflags)
 
 _aws_crt_python = setuptools.Extension(
