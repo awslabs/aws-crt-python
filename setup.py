@@ -145,8 +145,15 @@ compiler_type = get_default_compiler()
 
 aws_c_libs = ['aws-c-mqtt', 'aws-c-io', 'aws-c-common', 'aws-c-cal']
 
-cflags = []
-ldflags = []
+def get_from_env(key):
+    try:
+        return os.environ[key]
+    except:
+        return ""
+
+# fetch the CFLAGS/LDFLAGS from env
+cflags = get_from_env('CFLAGS').split()
+ldflags = get_from_env('LDFLAGS').split()
 
 include_dirs = [path.join(dep_install_path, 'include')]
 libraries = list(aws_c_libs)
@@ -168,14 +175,6 @@ if sys.platform == 'win32':
     #the windows apis being used under the hood. Since we're static linking we have to follow the entire chain down
     libraries += ['Secur32', 'Crypt32', 'Advapi32', 'BCrypt', 'Kernel32', 'Ws2_32']
 elif sys.platform == 'darwin':
-    try:
-        cflags = [os.environ['CFLAGS']]
-    except:
-        pass
-    try:
-        ldflags = [os.environ['LDFLAGS']]
-    except:
-        pass
     ldflags += ['-framework Security']
     include_dirs = ['/usr/local/include'] + include_dirs
     library_dirs = ['/usr/local/' + lib_dir] + library_dirs
@@ -185,16 +184,8 @@ else:
     library_dirs = ['/usr/local/' + lib_dir] + library_dirs
     libraries += ['s2n', 'crypto']
     aws_c_libs += ['s2n']
-    try:
-        cflags = [os.environ['CFLAGS']]
-    except:
-        pass
-    try:
-        ldflags = [os.environ['LDFLAGS']]
-    except:
-        pass
 
-os.environ['CFLAGS'] = ' '.join(cflags)
+# ensure that the child linker process gets our flags
 os.environ['LDFLAGS'] = ' '.join(ldflags)
 
 _aws_crt_python = setuptools.Extension(
