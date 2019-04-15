@@ -1,0 +1,21 @@
+version: 0.2
+#this build spec assumes the manylinux1 image for pypi
+#additional packages we installed: cmake 3.5, libcrypto 1.1.0j, gcc 4.8.4
+phases:
+  install:
+    commands:
+  pre_build:
+    commands:
+      - export CC=gcc
+  build:
+    commands:
+      - echo Build started on `date`
+      - cp -r $CODEBUILD_SRC_DIR_manylinux1_x86_64/dist/* dist/
+      - cp -r $CODEBUILD_SRC_DIR_manylinux1_x86/dist/* dist/
+  post_build:
+    commands:
+      - echo Build completed on `date`
+
+artifacts:
+  files:
+    - 'dist/*' 
