@@ -14,10 +14,9 @@ phases:
     commands:
       - echo Build started on `date`
       - mkdir dist
-      - cp -r $CODEBUILD_SRC_DIR_aws_crt_python_win64/* dist/
-      - cp -r $CODEBUILD_SRC_DIR_aws_crt_python_win32/* dist/
-      - cp -r $CODEBUILD_SRC_DIR_manylinux1_x86_64/dist/* dist/
-      - cp -r $CODEBUILD_SRC_DIR_manylinux1_x86/dist/* dist/
+      - cp -r $CODEBUILD_SRC_DIR_aws_crt_python_windows/* dist/
+      - cp -r $CODEBUILD_SRC_DIR_aws_crt_python_manylinux1/dist/* dist/
+      - cp -r $CODEBUILD_SRC_DIR_aws_crt_python_osx/* dist/
       - ls -la dist/ 
       - cd aws-crt-python 
       - python3 continuous-delivery/pull-pypirc.py prod
