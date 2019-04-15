@@ -10,6 +10,7 @@ phases:
   build:
     commands:
       - echo Build started on `date`
+      - mkdir dist
       - cp -r $CODEBUILD_SRC_DIR_manylinux1_x86_64/dist/* dist/
       - cp -r $CODEBUILD_SRC_DIR_manylinux1_x86/dist/* dist/
   post_build:
