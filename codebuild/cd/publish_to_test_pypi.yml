@@ -14,7 +14,7 @@ phases:
     commands:
       - echo Build started on `date`
       - mkdir dist
-      - cp -r $CODEBUILD_SRC_DIR_aws_crt_python_windows/* dist/
+      - cp -r $CODEBUILD_SRC_DIR_aws_crt_python_windows/dist/* dist/
       - cp -r $CODEBUILD_SRC_DIR_aws_crt_python_manylinux1/dist/* dist/
       - cp -r $CODEBUILD_SRC_DIR_aws_crt_python_osx/* dist/
       - ls -la dist/ 
