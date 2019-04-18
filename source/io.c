@@ -74,7 +74,7 @@ static void s_client_bootstrap_destructor(PyObject *bootstrap_capsule) {
 
     struct aws_client_bootstrap *bootstrap = PyCapsule_GetPointer(bootstrap_capsule, s_capsule_name_client_bootstrap);
     assert(bootstrap);
-    aws_client_bootstrap_destroy(bootstrap);
+    aws_client_bootstrap_release(bootstrap);
 }
 
 PyObject *aws_py_io_client_bootstrap_new(PyObject *self, PyObject *args) {
