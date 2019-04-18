@@ -41,12 +41,15 @@ class TlsVersion(IntEnum):
     DEFAULT = 128
 
 # force null termination at the end of buffer
+def byte_buf_null_terminate(buf):
+    if not buf.endswith(bytes([0])):
+        buf = buf + bytes([0])
+    return buf
+
 def byte_buf_from_file(filepath):
     with open(filepath, mode='rb') as fh:
         contents = fh.read()
-    if not contents.endswith(bytes([0])):
-        contents = contents + bytes([0])
-    return contents
+    return byte_buf_null_terminate(contents)    
 
 class TlsContextOptions(object):
     __slots__ = (
@@ -78,7 +81,7 @@ class TlsContextOptions(object):
     def override_default_trust_store(self, rootca_buffer):
         assert isinstance(rootca_buffer, bytes)
 
-        self.ca_buffer = rootca_buffer
+        self.ca_buffer = byte_buf_null_terminate(rootca_buffer)
 
     @staticmethod
     def create_client_with_mtls_from_path(cert_path, pk_path):
@@ -97,8 +100,8 @@ class TlsContextOptions(object):
         assert isinstance(key_buffer, bytes)
 
         opt = TlsContextOptions()
-        opt.certificate_buffer = cert_buffer
-        opt.private_key_buffer = key_buffer
+        opt.certificate_buffer = byte_buf_null_terminate(cert_buffer)
+        opt.private_key_buffer = byte_buf_null_terminate(key_buffer)
         opt.verify_peer = True
         return opt
 
@@ -131,8 +134,8 @@ class TlsContextOptions(object):
         assert isinstance(key_buffer, bytes)
 
         opt = TlsContextOptions()
-        opt.certificate_buffer = cert_buffer
-        opt.private_key_buffer = key_buffer
+        opt.certificate_buffer = byte_buf_null_terminate(cert_buffer)
+        opt.private_key_buffer = byte_buf_null_terminate(key_buffer)
         opt.verify_peer = False
         return opt
 
