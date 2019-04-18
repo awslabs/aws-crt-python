@@ -51,13 +51,13 @@ client_bootstrap = io.ClientBootstrap(event_loop_group)
 tls_options = None
 if args.cert or args.key or args.root_ca:
     if args.cert:
-        assert(args.key)
-        tls_options = io.TlsContextOptions.create_client_with_mtls(args.cert, args.key)
+        assert (args.key)
+        tls_options = io.TlsContextOptions.create_client_with_mtls_from_path(args.cert, args.key)
     else:
         tls_options = io.TlsContextOptions()
 
     if args.root_ca:
-        tls_options.override_default_trust_store(ca_path=None, ca_file=args.root_ca)
+        tls_options.override_default_trust_store_from_path(None, args.root_ca)
 
 if args.port:
     port = args.port

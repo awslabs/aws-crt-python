@@ -19,9 +19,12 @@
 #include "mqtt_client_connection.h"
 
 #include <aws/io/io.h>
+#include <aws/io/logging.h>
 #include <aws/io/tls_channel_handler.h>
 
 #include <aws/mqtt/mqtt.h>
+
+#undef AWS_PYTHON_ENABLE_LOGGING
 
 #if PY_MAJOR_VERSION == 3
 #    define INIT_FN PyInit__aws_crt_python
@@ -128,6 +131,10 @@ static void s_module_free(void *userdata) {
 }
 #endif /* PY_MAJOR_VERSION == 3 */
 
+#ifdef AWS_PYTHON_ENABLE_LOGGING
+static struct aws_logger s_logger;
+#endif
+
 PyMODINIT_FUNC INIT_FN(void) {
 
 #if PY_MAJOR_VERSION == 3
@@ -153,6 +160,15 @@ PyMODINIT_FUNC INIT_FN(void) {
     aws_mqtt_load_error_strings();
 
     aws_tls_init_static_state(aws_crt_python_get_allocator());
+
+#ifdef AWS_PYTHON_ENABLE_LOGGING
+    struct aws_logger_standard_options log_options = {
+        .level = AWS_LL_DEBUG,
+        .file = stdout
+    };
+    aws_logger_init_standard(&s_logger, aws_crt_python_get_allocator(), &log_options);
+    aws_logger_set(&s_logger);
+#endif
 
 #if PY_MAJOR_VERSION == 3
     return m;

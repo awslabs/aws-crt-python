@@ -40,8 +40,19 @@ class TlsVersion(IntEnum):
     TLSv1_3 = 4
     DEFAULT = 128
 
+# force null termination at the end of buffer
+def byte_buf_from_file(filepath):
+    with open(filepath, mode='rb') as fh:
+        contents = fh.read()
+    if not contents.endswith(bytes([0])):
+        contents = contents + bytes([0])
+    return contents
+
 class TlsContextOptions(object):
-    __slots__ = ('min_tls_ver', 'ca_file', 'ca_path', 'alpn_list', 'certificate_path', 'private_key_path', 'pkcs12_path', 'pkcs12_password', 'verify_peer')
+    __slots__ = (
+        'min_tls_ver', 'ca_path', 'ca_buffer', 'alpn_list',
+        'certificate_buffer', 'private_key_buffer',
+        'pkcs12_path', 'pkcs12_password', 'verify_peer')
 
     def __init__(self):
 
@@ -50,28 +61,49 @@ class TlsContextOptions(object):
 
         self.min_tls_ver = TlsVersion.DEFAULT
 
-    def override_default_trust_store(self, ca_path, ca_file):
+    @classmethod
+    def override_default_trust_store_from_path(self, ca_path, ca_file):
 
         assert isinstance(ca_path, str) or ca_path is None
         assert isinstance(ca_file, str) or ca_file is None
 
+        ca_buffer = None
+        if ca_file:
+            ca_buffer = byte_buf_from_file(ca_file)
+        
         self.ca_path = ca_path
-        self.ca_file = ca_file
+        self.override_default_trust_store(ca_buffer)
 
     @classmethod
-    def create_client_with_mtls(clazz, cert_path, pk_path):
+    def override_default_trust_store(self, rootca_buffer):
+        assert isinstance(rootca_buffer, bytes)
+
+        self.ca_buffer = rootca_buffer
+
+    @staticmethod
+    def create_client_with_mtls_from_path(cert_path, pk_path):
 
         assert isinstance(cert_path, str)
         assert isinstance(pk_path, str)
 
+        cert_buffer = byte_buf_from_file(cert_path)
+        key_buffer = byte_buf_from_file(pk_path)
+        
+        return TlsContextOptions.create_client_with_mtls(cert_buffer, key_buffer)
+
+    @staticmethod
+    def create_client_with_mtls(cert_buffer, key_buffer):
+        assert isinstance(cert_buffer, bytes)
+        assert isinstance(key_buffer, bytes)
+
         opt = TlsContextOptions()
-        opt.certificate_path = cert_path
-        opt.private_key_path = pk_path
+        opt.certificate_buffer = cert_buffer
+        opt.private_key_buffer = key_buffer
         opt.verify_peer = True
         return opt
 
-    @classmethod
-    def create_client_with_mtls_pkcs12(clazz, pkcs12_path, pkcs12_password):
+    @staticmethod
+    def create_client_with_mtls_pkcs12(pkcs12_path, pkcs12_password):
 
         assert isinstance(pkcs12_path, str)
         assert isinstance(pkcs12_password, str)
@@ -82,20 +114,30 @@ class TlsContextOptions(object):
         opt.verify_peer = True
         return opt
 
-    @classmethod
-    def create_server_with_mtls(clazz, cert_path, pk_path):
+    @staticmethod
+    def create_server_with_mtls_from_path(cert_path, pk_path):
 
         assert isinstance(cert_path, str)
         assert isinstance(pk_path, str)
 
+        cert_buffer = byte_buf_from_file(cert_path)
+        key_buffer = byte_buf_from_file(pk_path)
+        
+        return TlsContextOptions.create_server_with_mtls(cert_buffer, key_buffer)
+
+    @staticmethod
+    def create_server_with_mtls(cert_buffer, key_buffer):
+        assert isinstance(cert_buffer, bytes)
+        assert isinstance(key_buffer, bytes)
+
         opt = TlsContextOptions()
-        opt.certificate_path = cert_path
-        opt.private_key_path = pk_path
+        opt.certificate_buffer = cert_buffer
+        opt.private_key_buffer = key_buffer
         opt.verify_peer = False
         return opt
 
-    @classmethod
-    def create_server_with_mtls_pkcs12(clazz, pkcs12_path, pkcs12_password):
+    @staticmethod
+    def create_server_with_mtls_pkcs12(pkcs12_path, pkcs12_password):
 
         assert isinstance(pkcs12_path, str)
         assert isinstance(pkcs12_password, str)
@@ -115,11 +157,11 @@ class ClientTlsContext(object):
         self.options = options
         self._internal_tls_ctx = _aws_crt_python.aws_py_io_client_tls_ctx_new(
             options.min_tls_ver.value,
-            options.ca_file,
             options.ca_path,
+            options.ca_buffer,
             options.alpn_list,
-            options.certificate_path,
-            options.private_key_path,
+            options.certificate_buffer,
+            options.private_key_buffer,
             options.pkcs12_path,
             options.pkcs12_password,
             options.verify_peer,

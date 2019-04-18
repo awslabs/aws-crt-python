@@ -122,24 +122,30 @@ PyObject *aws_py_io_client_tls_ctx_new(PyObject *self, PyObject *args) {
     struct aws_allocator *allocator = aws_crt_python_get_allocator();
 
     int min_tls_version = AWS_IO_TLS_VER_SYS_DEFAULTS;
-    const char *ca_file = NULL;
     const char *ca_path = NULL;
+    const char *ca_buffer = NULL;
+    int ca_buffer_len = 0;
     const char *alpn_list = NULL;
-    const char *certificate_path = NULL;
-    const char *private_key_path = NULL;
+    const char *certificate_buffer = NULL;
+    int certificate_buffer_len = 0;
+    const char *private_key_buffer = NULL;
+    int private_key_buffer_len = 0;
     const char *pkcs12_path = NULL;
     const char *pkcs12_password = NULL;
     PyObject *verify_peer = NULL;
 
     if (!PyArg_ParseTuple(
             args,
-            "bzzzzzzzO",
+            "bzy#zy#y#zzO",
             &min_tls_version,
-            &ca_file,
             &ca_path,
+            &ca_buffer,
+            &ca_buffer_len,
             &alpn_list,
-            &certificate_path,
-            &private_key_path,
+            &certificate_buffer,
+            &certificate_buffer_len,
+            &private_key_buffer,
+            &private_key_buffer_len,
             &pkcs12_path,
             &pkcs12_password,
             &verify_peer)) {
@@ -148,17 +154,25 @@ PyObject *aws_py_io_client_tls_ctx_new(PyObject *self, PyObject *args) {
 
     struct aws_tls_ctx_options ctx_options;
     AWS_ZERO_STRUCT(ctx_options);
-    if (certificate_path && private_key_path) {
-        aws_tls_ctx_options_init_client_mtls_from_path(&ctx_options, allocator, certificate_path, private_key_path);
+    if (certificate_buffer && private_key_buffer && 
+        certificate_buffer_len > 0 && private_key_buffer_len > 0) {
+        struct aws_byte_cursor cert = aws_byte_cursor_from_array(certificate_buffer, certificate_buffer_len);
+        struct aws_byte_cursor key = aws_byte_cursor_from_array(private_key_buffer, private_key_buffer_len);
+        aws_tls_ctx_options_init_client_mtls(&ctx_options, allocator, &cert, &key);
     } else {
         aws_tls_ctx_options_init_default_client(&ctx_options, allocator);
     }
 
     ctx_options.minimum_tls_version = min_tls_version;
 
-    if (ca_file || ca_path) {
-        aws_tls_ctx_options_override_default_trust_store_from_path(&ctx_options, ca_path, ca_file);
+    if (ca_path) {
+        aws_tls_ctx_options_override_default_trust_store_from_path(&ctx_options, ca_path, NULL);
+    } 
+    if (ca_buffer && ca_buffer_len > 0) {
+        struct aws_byte_cursor ca = aws_byte_cursor_from_array(ca_buffer, ca_buffer_len);
+        aws_tls_ctx_options_override_default_trust_store(&ctx_options, &ca);
     }
+
     if (alpn_list) {
         aws_tls_ctx_options_set_alpn_list(&ctx_options, alpn_list);
     }
