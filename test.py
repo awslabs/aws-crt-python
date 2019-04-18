@@ -57,7 +57,9 @@ if args.cert or args.key or args.root_ca:
         tls_options = io.TlsContextOptions()
 
     if args.root_ca:
-        tls_options.override_default_trust_store_from_path(None, args.root_ca)
+        with open(args.root_ca, mode='rb') as ca:
+            rootca = ca.read()
+        tls_options.override_default_trust_store(rootca)
 
 if args.port:
     port = args.port
