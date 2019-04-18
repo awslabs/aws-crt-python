@@ -24,7 +24,7 @@
 
 #include <aws/mqtt/mqtt.h>
 
-#undef AWS_PYTHON_ENABLE_LOGGING
+#define AWS_PYTHON_ENABLE_LOGGING 1
 
 #if PY_MAJOR_VERSION == 3
 #    define INIT_FN PyInit__aws_crt_python
