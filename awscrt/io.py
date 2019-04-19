@@ -23,14 +23,32 @@ class EventLoopGroup(object):
     def __init__(self, num_threads):
         self._internal_elg = _aws_crt_python.aws_py_io_event_loop_group_new(num_threads)
 
-class ClientBootstrap(object):
-    __slots__ = ('elg', '_internal_bootstrap')
+class HostResolver(object):
+    __slots__ = ('elg', '_internal_host_resolver')
 
     def __init__(self, elg):
+        self.elg = elg
+
+class DefaultHostResolver(HostResolver):
+    __slots__ = ('elg', '_internal_host_resolver')
+
+    def __init__(self, elg, max_hosts=16):
+        super(DefaultHostResolver, self).__init__(elg)
+        self._internal_host_resolver = _aws_crt_python.aws_py_io_host_resolver_new_default(max_hosts, elg._internal_elg)
+
+class ClientBootstrap(object):
+    __slots__ = ('elg', 'host_resolver', '_internal_bootstrap')
+
+    def __init__(self, elg, host_resolver=None):
         assert isinstance(elg, EventLoopGroup)
+        assert isinstance(host_resolver, HostResolver) or host_resolver is None
+
+        if host_resolver is None:
+            host_resolver = DefaultHostResolver(elg)
 
         self.elg = elg
-        self._internal_bootstrap = _aws_crt_python.aws_py_io_client_bootstrap_new(self.elg._internal_elg)
+        self.host_resolver = host_resolver
+        self._internal_bootstrap = _aws_crt_python.aws_py_io_client_bootstrap_new(self.elg._internal_elg, host_resolver._internal_host_resolver)
 
 class TlsVersion(IntEnum):
     SSLv3 = 0
@@ -40,8 +58,22 @@ class TlsVersion(IntEnum):
     TLSv1_3 = 4
     DEFAULT = 128
 
+# force null termination at the end of buffer
+def byte_buf_null_terminate(buf):
+    if not buf.endswith(bytes([0])):
+        buf = buf + bytes([0])
+    return buf
+
+def byte_buf_from_file(filepath):
+    with open(filepath, mode='rb') as fh:
+        contents = fh.read()
+    return byte_buf_null_terminate(contents)    
+
 class TlsContextOptions(object):
-    __slots__ = ('min_tls_ver', 'ca_file', 'ca_path', 'alpn_list', 'certificate_path', 'private_key_path', 'pkcs12_path', 'pkcs12_password', 'verify_peer')
+    __slots__ = (
+        'min_tls_ver', 'ca_path', 'ca_buffer', 'alpn_list',
+        'certificate_buffer', 'private_key_buffer',
+        'pkcs12_path', 'pkcs12_password', 'verify_peer')
 
     def __init__(self):
 
@@ -50,28 +82,47 @@ class TlsContextOptions(object):
 
         self.min_tls_ver = TlsVersion.DEFAULT
 
-    def override_default_trust_store(self, ca_path, ca_file):
+    def override_default_trust_store_from_path(self, ca_path, ca_file):
 
         assert isinstance(ca_path, str) or ca_path is None
         assert isinstance(ca_file, str) or ca_file is None
 
+        ca_buffer = None
+        if ca_file:
+            ca_buffer = byte_buf_from_file(ca_file)
+        
         self.ca_path = ca_path
-        self.ca_file = ca_file
+        self.override_default_trust_store(ca_buffer)
 
-    @classmethod
-    def create_client_with_mtls(clazz, cert_path, pk_path):
+    def override_default_trust_store(self, rootca_buffer):
+        assert isinstance(rootca_buffer, bytes)
+
+        self.ca_buffer = byte_buf_null_terminate(rootca_buffer)
+
+    @staticmethod
+    def create_client_with_mtls_from_path(cert_path, pk_path):
 
         assert isinstance(cert_path, str)
         assert isinstance(pk_path, str)
 
+        cert_buffer = byte_buf_from_file(cert_path)
+        key_buffer = byte_buf_from_file(pk_path)
+        
+        return TlsContextOptions.create_client_with_mtls(cert_buffer, key_buffer)
+
+    @staticmethod
+    def create_client_with_mtls(cert_buffer, key_buffer):
+        assert isinstance(cert_buffer, bytes)
+        assert isinstance(key_buffer, bytes)
+
         opt = TlsContextOptions()
-        opt.certificate_path = cert_path
-        opt.private_key_path = pk_path
+        opt.certificate_buffer = byte_buf_null_terminate(cert_buffer)
+        opt.private_key_buffer = byte_buf_null_terminate(key_buffer)
         opt.verify_peer = True
         return opt
 
-    @classmethod
-    def create_client_with_mtls_pkcs12(clazz, pkcs12_path, pkcs12_password):
+    @staticmethod
+    def create_client_with_mtls_pkcs12(pkcs12_path, pkcs12_password):
 
         assert isinstance(pkcs12_path, str)
         assert isinstance(pkcs12_password, str)
@@ -82,20 +133,30 @@ class TlsContextOptions(object):
         opt.verify_peer = True
         return opt
 
-    @classmethod
-    def create_server_with_mtls(clazz, cert_path, pk_path):
+    @staticmethod
+    def create_server_with_mtls_from_path(cert_path, pk_path):
 
         assert isinstance(cert_path, str)
         assert isinstance(pk_path, str)
 
+        cert_buffer = byte_buf_from_file(cert_path)
+        key_buffer = byte_buf_from_file(pk_path)
+        
+        return TlsContextOptions.create_server_with_mtls(cert_buffer, key_buffer)
+
+    @staticmethod
+    def create_server_with_mtls(cert_buffer, key_buffer):
+        assert isinstance(cert_buffer, bytes)
+        assert isinstance(key_buffer, bytes)
+
         opt = TlsContextOptions()
-        opt.certificate_path = cert_path
-        opt.private_key_path = pk_path
+        opt.certificate_buffer = byte_buf_null_terminate(cert_buffer)
+        opt.private_key_buffer = byte_buf_null_terminate(key_buffer)
         opt.verify_peer = False
         return opt
 
-    @classmethod
-    def create_server_with_mtls_pkcs12(clazz, pkcs12_path, pkcs12_password):
+    @staticmethod
+    def create_server_with_mtls_pkcs12(pkcs12_path, pkcs12_password):
 
         assert isinstance(pkcs12_path, str)
         assert isinstance(pkcs12_password, str)
@@ -115,11 +176,11 @@ class ClientTlsContext(object):
         self.options = options
         self._internal_tls_ctx = _aws_crt_python.aws_py_io_client_tls_ctx_new(
             options.min_tls_ver.value,
-            options.ca_file,
             options.ca_path,
+            options.ca_buffer,
             options.alpn_list,
-            options.certificate_path,
-            options.private_key_path,
+            options.certificate_buffer,
+            options.private_key_buffer,
             options.pkcs12_path,
             options.pkcs12_password,
             options.verify_peer,
