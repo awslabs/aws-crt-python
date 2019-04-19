@@ -20,6 +20,7 @@
 
 const char *s_capsule_name_client_bootstrap = "aws_client_bootstrap";
 static const char *s_capsule_name_elg = "aws_event_loop_group";
+const char *s_capsule_name_host_resolver = "aws_host_resolver";
 const char *s_capsule_name_tls_ctx = "aws_client_tls_ctx";
 
 PyObject *aws_py_is_alpn_available(PyObject *self, PyObject *args) {
@@ -68,6 +69,41 @@ PyObject *aws_py_io_event_loop_group_new(PyObject *self, PyObject *args) {
     return PyCapsule_New(elg, s_capsule_name_elg, s_elg_destructor);
 }
 
+static void s_host_resolver_destructor(PyObject *host_resolver_capsule) {
+    assert(PyCapsule_CheckExact(host_resolver_capsule));
+
+    struct aws_host_resolver *host_resolver = PyCapsule_GetPointer(host_resolver_capsule, s_capsule_name_host_resolver);
+    assert(host_resolver);
+    aws_host_resolver_clean_up(host_resolver);
+    aws_mem_release(aws_crt_python_get_allocator(), host_resolver);
+}
+
+PyObject *aws_py_io_host_resolver_new_default(PyObject *self, PyObject *args) {
+    (void)self;
+
+    struct aws_allocator *allocator = aws_crt_python_get_allocator();
+
+    int max_hosts = 16;
+    PyObject *elg_capsule = NULL;
+    if (!PyArg_ParseTuple(args, "bO", &max_hosts, &elg_capsule)) {
+        return NULL;
+    }
+    if (!elg_capsule || !PyCapsule_CheckExact(elg_capsule)) {
+        PyErr_SetNone(PyExc_ValueError);
+        return NULL;
+    }
+
+    struct aws_event_loop_group *elg = PyCapsule_GetPointer(elg_capsule, s_capsule_name_elg);
+    struct aws_host_resolver *host_resolver = aws_mem_acquire(allocator, sizeof(struct aws_host_resolver));
+    if (aws_host_resolver_init_default(host_resolver, allocator, max_hosts, elg)) {
+        PyErr_SetAwsLastError();
+        aws_mem_release(allocator, host_resolver);
+        return NULL;
+    }
+
+    return PyCapsule_New(host_resolver, s_capsule_name_host_resolver, s_host_resolver_destructor);
+}
+
 static void s_client_bootstrap_destructor(PyObject *bootstrap_capsule) {
 
     assert(PyCapsule_CheckExact(bootstrap_capsule));
@@ -83,8 +119,9 @@ PyObject *aws_py_io_client_bootstrap_new(PyObject *self, PyObject *args) {
     struct aws_allocator *allocator = aws_crt_python_get_allocator();
 
     PyObject *elg_capsule = NULL;
+    PyObject *host_resolver_capsule = NULL;
 
-    if (!PyArg_ParseTuple(args, "O", &elg_capsule)) {
+    if (!PyArg_ParseTuple(args, "OO", &elg_capsule, &host_resolver_capsule)) {
         return NULL;
     }
 
@@ -97,7 +134,13 @@ PyObject *aws_py_io_client_bootstrap_new(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    struct aws_client_bootstrap *bootstrap = aws_client_bootstrap_new(allocator, elg, NULL, NULL);
+    if (!host_resolver_capsule || !PyCapsule_CheckExact(host_resolver_capsule)) {
+        PyErr_SetNone(PyExc_ValueError);
+        return NULL;
+    }
+    struct aws_host_resolver *host_resolver = PyCapsule_GetPointer(host_resolver_capsule, s_capsule_name_host_resolver);
+
+    struct aws_client_bootstrap *bootstrap = aws_client_bootstrap_new(allocator, elg, host_resolver, NULL);
     if (!bootstrap) {
         PyErr_SetAwsLastError();
         return NULL;
@@ -124,12 +167,12 @@ PyObject *aws_py_io_client_tls_ctx_new(PyObject *self, PyObject *args) {
     int min_tls_version = AWS_IO_TLS_VER_SYS_DEFAULTS;
     const char *ca_path = NULL;
     const char *ca_buffer = NULL;
-    int ca_buffer_len = 0;
+    Py_ssize_t ca_buffer_len = 0;
     const char *alpn_list = NULL;
     const char *certificate_buffer = NULL;
-    int certificate_buffer_len = 0;
+    Py_ssize_t certificate_buffer_len = 0;
     const char *private_key_buffer = NULL;
-    int private_key_buffer_len = 0;
+    Py_ssize_t private_key_buffer_len = 0;
     const char *pkcs12_path = NULL;
     const char *pkcs12_password = NULL;
     PyObject *verify_peer = NULL;

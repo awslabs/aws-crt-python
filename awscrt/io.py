@@ -23,14 +23,28 @@ class EventLoopGroup(object):
     def __init__(self, num_threads):
         self._internal_elg = _aws_crt_python.aws_py_io_event_loop_group_new(num_threads)
 
+class HostResolver(object):
+    __slots__ = ('elg', '_internal_host_resolver')
+
+    def __init__(self, elg):
+        self.elg = elg
+
+class DefaultHostResolver(HostResolver):
+    __slots__ = ('elg', '_internal_host_resolver')
+
+    def __init__(self, elg, max_hosts=16):
+        super(DefaultHostResolver, self).__init__(elg)
+        self._internal_host_resolver = _aws_crt_python.aws_py_io_host_resolver_new_default(max_hosts, elg._internal_elg)
+
 class ClientBootstrap(object):
     __slots__ = ('elg', '_internal_bootstrap')
 
-    def __init__(self, elg):
+    def __init__(self, elg, host_resolver):
         assert isinstance(elg, EventLoopGroup)
+        assert isinstance(host_resolver, HostResolver)
 
         self.elg = elg
-        self._internal_bootstrap = _aws_crt_python.aws_py_io_client_bootstrap_new(self.elg._internal_elg)
+        self._internal_bootstrap = _aws_crt_python.aws_py_io_client_bootstrap_new(self.elg._internal_elg, host_resolver._internal_host_resolver)
 
 class TlsVersion(IntEnum):
     SSLv3 = 0

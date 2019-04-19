@@ -89,6 +89,7 @@ static PyMethodDef s_module_methods[] = {
     /* IO */
     {"aws_py_is_alpn_available", aws_py_is_alpn_available, METH_NOARGS, NULL},
     {"aws_py_io_event_loop_group_new", aws_py_io_event_loop_group_new, METH_VARARGS, NULL},
+    {"aws_py_io_host_resolver_new_default", aws_py_io_host_resolver_new_default, METH_VARARGS, NULL},
     {"aws_py_io_client_bootstrap_new", aws_py_io_client_bootstrap_new, METH_VARARGS, NULL},
     {"aws_py_io_client_tls_ctx_new", aws_py_io_client_tls_ctx_new, METH_VARARGS, NULL},
 
