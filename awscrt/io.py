@@ -78,7 +78,6 @@ class TlsContextOptions(object):
 
         self.min_tls_ver = TlsVersion.DEFAULT
 
-    @classmethod
     def override_default_trust_store_from_path(self, ca_path, ca_file):
 
         assert isinstance(ca_path, str) or ca_path is None
@@ -91,7 +90,6 @@ class TlsContextOptions(object):
         self.ca_path = ca_path
         self.override_default_trust_store(ca_buffer)
 
-    @classmethod
     def override_default_trust_store(self, rootca_buffer):
         assert isinstance(rootca_buffer, bytes)
 
