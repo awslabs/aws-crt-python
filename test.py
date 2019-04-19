@@ -46,8 +46,7 @@ def on_receive_message(topic, message):
 # Run
 args = parser.parse_args()
 event_loop_group = io.EventLoopGroup(1)
-host_resolver = io.DefaultHostResolver(event_loop_group)
-client_bootstrap = io.ClientBootstrap(event_loop_group, host_resolver)
+client_bootstrap = io.ClientBootstrap(event_loop_group)
 
 tls_options = None
 if args.cert or args.key or args.root_ca:

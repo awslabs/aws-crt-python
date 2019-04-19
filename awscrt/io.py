@@ -37,13 +37,17 @@ class DefaultHostResolver(HostResolver):
         self._internal_host_resolver = _aws_crt_python.aws_py_io_host_resolver_new_default(max_hosts, elg._internal_elg)
 
 class ClientBootstrap(object):
-    __slots__ = ('elg', '_internal_bootstrap')
+    __slots__ = ('elg', 'host_resolver', '_internal_bootstrap')
 
-    def __init__(self, elg, host_resolver):
+    def __init__(self, elg, host_resolver=None):
         assert isinstance(elg, EventLoopGroup)
-        assert isinstance(host_resolver, HostResolver)
+        assert isinstance(host_resolver, HostResolver) or host_resolver is None
+
+        if host_resolver is None:
+            host_resolver = DefaultHostResolver(elg)
 
         self.elg = elg
+        self.host_resolver = host_resolver
         self._internal_bootstrap = _aws_crt_python.aws_py_io_client_bootstrap_new(self.elg._internal_elg, host_resolver._internal_host_resolver)
 
 class TlsVersion(IntEnum):
