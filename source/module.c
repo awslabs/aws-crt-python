@@ -24,7 +24,8 @@
 
 #include <aws/mqtt/mqtt.h>
 
-#define AWS_PYTHON_ENABLE_LOGGING 1
+/* define this to get logging from the CRT libs */
+#undef AWS_PYTHON_ENABLE_LOGGING
 
 #if PY_MAJOR_VERSION == 3
 #    define INIT_FN PyInit__aws_crt_python
