@@ -116,6 +116,11 @@ static PyMethodDef s_module_methods[] = {
     {"aws_py_hmac_update", aws_py_hash_update, METH_VARARGS, NULL},
     {"aws_py_hmac_digest", aws_py_hash_digest, METH_VARARGS, NULL},
 
+    /* HTTP client */
+    {"aws_py_http_client_connection_create", aws_py_http_client_connection_create, METH_VARARGS, NULL},
+    {"aws_py_http_client_connection_close", aws_py_http_client_connection_close, METH_VARARGS, NULL},
+    {"aws_py_http_client_connection_is_open", aws_py_http_client_connection_is_open, METH_VARARGS, NULL},
+
     {NULL, NULL, 0, NULL},
 };
 

@@ -50,14 +50,6 @@ class ClientBootstrap(object):
         self.host_resolver = host_resolver
         self._internal_bootstrap = _aws_crt_python.aws_py_io_client_bootstrap_new(self.elg._internal_elg, host_resolver._internal_host_resolver)
 
-class TlsVersion(IntEnum):
-    SSLv3 = 0
-    TLSv1 = 1
-    TLSv1_1 = 2
-    TLSv1_2 = 3
-    TLSv1_3 = 4
-    DEFAULT = 128
-
 # force null termination at the end of buffer
 def byte_buf_null_terminate(buf):
     if not buf.endswith(bytes([0])):
@@ -67,7 +59,42 @@ def byte_buf_null_terminate(buf):
 def byte_buf_from_file(filepath):
     with open(filepath, mode='rb') as fh:
         contents = fh.read()
-    return byte_buf_null_terminate(contents)    
+    return byte_buf_null_terminate(contents)
+
+class SocketDomain(IntEnum):
+    IPv4 = 0
+    IPv6 = 1
+    Local = 2
+
+class SocketType(IntEnum):
+    Stream = 0
+    DGram = 1
+
+class SocketOptions(object):
+    __slots__ = (
+        'domain', 'type', 'connect_timeout_ms', 'keep_alive',
+        'keep_alive_timeout_secs', 'keep_alive_interval_secs', 'keep_alive_max_probes'
+    )
+
+    def __init__(self):
+        for slot in self.__slots__:
+            setattr(self, slot, None)
+
+        self.domain = SocketDomain.IPv6
+        self.type = SocketType.Stream
+        self.connect_timeout_ms = 3000
+        self.keep_alive = False
+        self.keep_alive_interval_secs = 0
+        self.keep_alive_timeout_secs = 0
+        self.keep_alive_max_probes = 0
+
+class TlsVersion(IntEnum):
+    SSLv3 = 0
+    TLSv1 = 1
+    TLSv1_1 = 2
+    TLSv1_2 = 3
+    TLSv1_3 = 4
+    DEFAULT = 128
 
 class TlsContextOptions(object):
     __slots__ = (

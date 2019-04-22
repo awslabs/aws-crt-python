@@ -13,3 +13,6 @@
 [submodule "aws-c-cal"]
 	path = aws-c-cal
 	url = git://github.com/awslabs/aws-c-cal.git
+[submodule "aws-c-http"]
+	path = aws-c-http
+	url = git://github.com/awslabs/aws-c-http
