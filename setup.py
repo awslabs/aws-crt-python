@@ -137,13 +137,14 @@ build_dependency('aws-c-common')
 build_dependency('aws-c-io')
 build_dependency('aws-c-mqtt')
 build_dependency('aws-c-cal')
+build_dependency('aws-c-http')
 
 os.chdir(current_dir)
 
 from distutils.ccompiler import get_default_compiler
 compiler_type = get_default_compiler()
 
-aws_c_libs = ['aws-c-mqtt', 'aws-c-io', 'aws-c-common', 'aws-c-cal']
+aws_c_libs = ['aws-c-mqtt', 'aws-c-io', 'aws-c-common', 'aws-c-cal', 'aws-c-http']
 
 def get_from_env(key):
     try:
@@ -203,6 +204,7 @@ _aws_crt_python = setuptools.Extension(
         'source/io.c',
         'source/mqtt_client.c',
         'source/mqtt_client_connection.c',
+        'source/http_client_connection.c',
         'source/crypto.c',
     ],
     extra_objects = extra_objects,
