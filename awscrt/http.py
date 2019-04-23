@@ -13,7 +13,7 @@
 
 import _aws_crt_python
 from concurrent.futures import Future
-from awscrt.io import ClientBootstrap, SocketOptions
+from awscrt.io import ClientBootstrap, TlsConnectionOptions, SocketOptions
 
 class HttpClientConnection(object):
     __slots__ = ('_bootstrap', '_tls_connection_options', '_on_connection_shutdown', '_native_handle')
@@ -54,7 +54,7 @@ class HttpClientConnection(object):
                                                                  host_name,
                                                                  port,
                                                                  socket_options,
-                                                                 tls_connection_options._internal_options)
+                                                                 tls_connection_options._internal_tls_conn_options)
 
         except Exception as e:
             future.set_exception(e)
