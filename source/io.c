@@ -22,6 +22,7 @@ const char *s_capsule_name_client_bootstrap = "aws_client_bootstrap";
 static const char *s_capsule_name_elg = "aws_event_loop_group";
 const char *s_capsule_name_host_resolver = "aws_host_resolver";
 const char *s_capsule_name_tls_ctx = "aws_client_tls_ctx";
+const char *s_capsule_name_tls_conn_options = "aws_tls_connection_options";
 
 PyObject *aws_py_is_alpn_available(PyObject *self, PyObject *args) {
 
@@ -175,11 +176,11 @@ PyObject *aws_py_io_client_tls_ctx_new(PyObject *self, PyObject *args) {
     Py_ssize_t private_key_buffer_len = 0;
     const char *pkcs12_path = NULL;
     const char *pkcs12_password = NULL;
-    PyObject *verify_peer = NULL;
+    bool verify_peer = NULL;
 
     if (!PyArg_ParseTuple(
             args,
-            "bzy#zy#y#zzO",
+            "bzz#zz#z#zzp",
             &min_tls_version,
             &ca_path,
             &ca_buffer,
@@ -226,10 +227,7 @@ PyObject *aws_py_io_client_tls_ctx_new(PyObject *self, PyObject *args) {
         aws_tls_ctx_options_init_client_mtls_pkcs12_from_path(&ctx_options, allocator, pkcs12_path, &password);
     }
 #endif
-
-    if (verify_peer != Py_None) {
-        ctx_options.verify_peer = verify_peer == Py_True;
-    }
+    ctx_options.verify_peer = verify_peer;
 
     struct aws_tls_ctx *tls_ctx = aws_tls_client_ctx_new(allocator, &ctx_options);
     if (!tls_ctx) {
@@ -237,4 +235,108 @@ PyObject *aws_py_io_client_tls_ctx_new(PyObject *self, PyObject *args) {
     }
 
     return PyCapsule_New(tls_ctx, s_capsule_name_tls_ctx, s_tls_ctx_destructor);
+}
+
+static void s_tls_connection_options_destructor(PyObject *tls_connection_options_capsule) {
+
+    struct aws_allocator *allocator = aws_crt_python_get_allocator();
+
+    assert(PyCapsule_CheckExact(tls_connection_options_capsule));
+
+    struct aws_tls_connection_options *tls_connection_options =
+            PyCapsule_GetPointer(tls_connection_options_capsule, s_capsule_name_tls_conn_options);
+    assert(tls_connection_options);
+
+    aws_tls_connection_options_clean_up(tls_connection_options);
+    aws_mem_release(allocator, tls_connection_options);
+}
+
+PyObject *aws_py_io_tls_connections_options_new_from_ctx(PyObject *self, PyObject *args) {
+    (void)self;
+
+    struct aws_allocator *allocator = aws_crt_python_get_allocator();
+    struct aws_tls_connection_options *conn_options = NULL;
+
+    PyObject *tls_ctx_capsule = NULL;
+
+    if (!PyArg_ParseTuple(
+            args,
+            "O",
+            &tls_ctx_capsule)) {
+        goto error;
+    }
+
+    assert(PyCapsule_CheckExact(tls_ctx_capsule));
+    struct aws_tls_ctx *ctx = PyCapsule_GetPointer(tls_ctx_capsule, s_capsule_name_tls_ctx);
+
+    conn_options = aws_mem_acquire(allocator, sizeof(struct aws_tls_connection_options));
+
+    aws_tls_connection_options_init_from_ctx(conn_options, ctx);
+
+    return PyCapsule_New(conn_options, s_capsule_name_tls_conn_options, s_tls_connection_options_destructor);
+
+error:
+    if (conn_options) {
+        aws_mem_release(allocator, conn_options);
+    }
+
+    return NULL;
+}
+
+PyObject *aws_py_io_tls_connection_options_set_alpn_list(PyObject *self, PyObject *args) {
+    (void)self;
+
+    struct aws_allocator *allocator = aws_crt_python_get_allocator();
+    PyObject *tls_conn_options_capsule = NULL;
+    const char *alpn_list = NULL;
+    Py_ssize_t alpn_list_len = 0;
+
+    if (!PyArg_ParseTuple(
+            args,
+            "Os#",
+            &tls_conn_options_capsule)) {
+        Py_RETURN_NONE;
+    }
+
+    assert(alpn_list);
+    assert(PyCapsule_CheckExact(tls_conn_options_capsule));
+    struct aws_tls_connection_options *connection_options = PyCapsule_GetPointer(tls_conn_options_capsule, s_capsule_name_tls_conn_options);
+
+    char alpn_list_cpy[129] = {0};
+    assert(alpn_list_len < sizeof(alpn_list_cpy));
+    memcpy(alpn_list_cpy, alpn_list, alpn_list_len);
+
+    if (aws_tls_connection_options_set_alpn_list(connection_options, allocator, alpn_list_cpy)) {
+        PyErr_SetAwsLastError();
+    }
+
+    Py_RETURN_NONE;
+}
+
+PyObject *aws_py_io_tls_connection_options_set_server_name(PyObject *self, PyObject *args) {
+    (void)self;
+
+    struct aws_allocator *allocator = aws_crt_python_get_allocator();
+    PyObject *tls_conn_options_capsule = NULL;
+    const char *server_name = NULL;
+    Py_ssize_t server_name_len = 0;
+
+    if (!PyArg_ParseTuple(
+            args,
+            "Os#",
+            &tls_conn_options_capsule)) {
+        Py_RETURN_NONE;
+    }
+
+    assert(server_name);
+    assert(PyCapsule_CheckExact(tls_conn_options_capsule));
+    struct aws_tls_connection_options *connection_options = PyCapsule_GetPointer(tls_conn_options_capsule, s_capsule_name_tls_conn_options);
+
+    struct aws_byte_cursor server_name_cur = aws_byte_cursor_from_array((const uint8_t *)server_name, (size_t)server_name_len);
+
+    if (aws_tls_connection_options_set_server_name(connection_options, allocator, &server_name_cur)) {
+        PyErr_SetAwsLastError();
+    }
+
+    Py_RETURN_NONE;
 }

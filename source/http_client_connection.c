@@ -57,8 +57,9 @@ static void s_on_client_connection_setup(
 
     struct py_http_connection *py_connection = user_data;
 
-    PyObject *result = NULL;
+    fprintf(stderr, "Completed connection with error %d\n", error_code);
     PyGILState_STATE state = PyGILState_Ensure();
+    PyObject *result = NULL;
     PyObject* capsule = NULL;
 
     if (!error_code) {
@@ -68,11 +69,15 @@ static void s_on_client_connection_setup(
     } else {
         aws_mem_release(py_connection->allocator, py_connection);
     }
+    fprintf(stderr, "Calling function\n");
 
     result = PyObject_CallFunction(py_connection->on_connection_setup, "(Oi)", capsule, error_code);
+    fprintf(stderr, "function called\n");
 
     Py_XDECREF(result);
     PyGILState_Release(state);
+    fprintf(stderr, "invoked callback and relaesed gil\n");
+
 }
 
 static void s_on_client_connection_shutdown(
@@ -192,7 +197,7 @@ PyObject *aws_py_http_client_connection_create(PyObject *self, PyObject *args) {
 
     if (!PyCallable_Check(on_connection_setup)) {
         PyErr_SetString(PyExc_TypeError, "on_connection_setup is invalid");
-        return NULL;
+        goto error;
     }
 
     Py_INCREF(on_connection_setup);
@@ -200,7 +205,7 @@ PyObject *aws_py_http_client_connection_create(PyObject *self, PyObject *args) {
 
     if (!PyCallable_Check(on_connection_shutdown)) {
         PyErr_SetString(PyExc_TypeError, "on_connection_shutdown is invalid");
-        return NULL;
+        goto error;
     }
 
     Py_INCREF(on_connection_shutdown);
@@ -240,7 +245,7 @@ error:
 }
 
 PyObject *aws_py_http_client_connection_close(PyObject *self, PyObject *args) {
-
+    (void)self;
     PyObject *http_impl = NULL;
 
     if (PyArg_ParseTuple(args, "O", &http_impl)) {
@@ -256,6 +261,7 @@ PyObject *aws_py_http_client_connection_close(PyObject *self, PyObject *args) {
 }
 
 PyObject *aws_py_http_client_connection_is_open(PyObject *self, PyObject *args) {
+    (void)self;
 
     PyObject *http_impl = NULL;
 

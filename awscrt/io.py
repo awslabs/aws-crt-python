@@ -108,6 +108,7 @@ class TlsContextOptions(object):
             setattr(self, slot, None)
 
         self.min_tls_ver = TlsVersion.DEFAULT
+        self.verify_peer = True
 
     def override_default_trust_store_from_path(self, ca_path, ca_file):
 
@@ -195,12 +196,10 @@ class TlsContextOptions(object):
         return opt
 
 class ClientTlsContext(object):
-    __slots__ = ('options', '_internal_tls_ctx')
 
     def __init__(self, options):
         assert isinstance(options, TlsContextOptions)
 
-        self.options = options
         self._internal_tls_ctx = _aws_crt_python.aws_py_io_client_tls_ctx_new(
             options.min_tls_ver.value,
             options.ca_path,
@@ -210,6 +209,23 @@ class ClientTlsContext(object):
             options.private_key_buffer,
             options.pkcs12_path,
             options.pkcs12_password,
-            options.verify_peer,
+            options.verify_peer
         )
+
+    def new_connection_options(self):
+        return TlsConnectionOptions(self)
+
+class TlsConnectionOptions(object):
+
+    def __init__(self, tls_ctx):
+        assert isinstance(tls_ctx, ClientTlsContext)
+
+        self._internal_tls_conn_options = _aws_crt_python.aws_py_io_tls_connections_options_new_from_ctx(tls_ctx._internal_tls_ctx)
+
+    def set_alpn_list(self, alpn_list):
+        _aws_crt_python.aws_py_io_tls_connection_options_set_alpn_list(self._internal_tls_conn_options, alpn_list)
+
+    def set_server_name(self, server_name):
+        _aws_crt_python.aws_py_io_tls_connection_options_set_server_name(self._internal_tls_conn_options, server_name)
+
 
