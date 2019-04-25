@@ -152,6 +152,7 @@ PyObject *aws_py_io_client_bootstrap_new(PyObject *self, PyObject *args) {
 
 static void s_tls_ctx_destructor(PyObject *tls_ctx_capsule) {
 
+    fprintf(stderr, "tls dtor called\n");
     assert(PyCapsule_CheckExact(tls_ctx_capsule));
 
     struct aws_tls_ctx *tls_ctx = PyCapsule_GetPointer(tls_ctx_capsule, s_capsule_name_tls_ctx);
@@ -176,11 +177,11 @@ PyObject *aws_py_io_client_tls_ctx_new(PyObject *self, PyObject *args) {
     Py_ssize_t private_key_buffer_len = 0;
     const char *pkcs12_path = NULL;
     const char *pkcs12_password = NULL;
-    bool verify_peer = NULL;
+    uint8_t verify_peer = false;
 
     if (!PyArg_ParseTuple(
             args,
-            "bzz#zz#z#zzp",
+            "bzz#zz#z#zzb",
             &min_tls_version,
             &ca_path,
             &ca_buffer,
@@ -227,9 +228,11 @@ PyObject *aws_py_io_client_tls_ctx_new(PyObject *self, PyObject *args) {
         aws_tls_ctx_options_init_client_mtls_pkcs12_from_path(&ctx_options, allocator, pkcs12_path, &password);
     }
 #endif
-    ctx_options.verify_peer = verify_peer;
+    ctx_options.verify_peer = (bool)verify_peer;
 
     struct aws_tls_ctx *tls_ctx = aws_tls_client_ctx_new(allocator, &ctx_options);
+    fprintf(stderr, "tls ctx new called\n");
+
     if (!tls_ctx) {
         return PyErr_AwsLastError();
     }
@@ -240,7 +243,7 @@ PyObject *aws_py_io_client_tls_ctx_new(PyObject *self, PyObject *args) {
 static void s_tls_connection_options_destructor(PyObject *tls_connection_options_capsule) {
 
     struct aws_allocator *allocator = aws_crt_python_get_allocator();
-
+    fprintf(stderr, "Connection options dtor");
     assert(PyCapsule_CheckExact(tls_connection_options_capsule));
 
     struct aws_tls_connection_options *tls_connection_options =

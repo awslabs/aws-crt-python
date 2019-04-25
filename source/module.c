@@ -135,17 +135,23 @@ PyDoc_STRVAR(s_module_doc, "C extension for binding AWS implementations of MQTT,
 /*******************************************************************************
  * Module Init
  ******************************************************************************/
+
+#ifdef AWS_PYTHON_ENABLE_LOGGING
+static struct aws_logger s_logger;
+#endif
+
 #if PY_MAJOR_VERSION == 3
 static void s_module_free(void *userdata) {
     (void)userdata;
 
     aws_tls_clean_up_static_state();
+#ifdef AWS_PYTHON_ENABLE_LOGGING
+    aws_logger_clean_up(&s_logger);
+#endif
+
 }
 #endif /* PY_MAJOR_VERSION == 3 */
 
-#ifdef AWS_PYTHON_ENABLE_LOGGING
-static struct aws_logger s_logger;
-#endif
 
 PyMODINIT_FUNC INIT_FN(void) {
 
@@ -171,18 +177,22 @@ PyMODINIT_FUNC INIT_FN(void) {
     aws_io_load_error_strings();
     aws_mqtt_load_error_strings();
 
-    aws_tls_init_static_state(aws_crt_python_get_allocator());
+    aws_io_load_log_subject_strings();
     aws_http_library_init(aws_crt_python_get_allocator());
 
 #ifdef AWS_PYTHON_ENABLE_LOGGING
     struct aws_logger_standard_options log_options = {
-        .level = AWS_LL_DEBUG,
+        .level = AWS_LL_TRACE,
         .file = stdout
     };
     aws_logger_init_standard(&s_logger, aws_crt_python_get_allocator(), &log_options);
     aws_logger_set(&s_logger);
 #endif
 
+    aws_tls_init_static_state(aws_crt_python_get_allocator());
+    if (!PyEval_ThreadsInitialized()) {
+        PyEval_InitThreads();
+    }
 #if PY_MAJOR_VERSION == 3
     return m;
 #endif /* PY_MAJOR_VERSION */

@@ -216,10 +216,11 @@ class ClientTlsContext(object):
         return TlsConnectionOptions(self)
 
 class TlsConnectionOptions(object):
-
+    __slots__ = ('tls_ctx', '_internal_tls_conn_options')
     def __init__(self, tls_ctx):
         assert isinstance(tls_ctx, ClientTlsContext)
 
+        self.tls_ctx = tls_ctx
         self._internal_tls_conn_options = _aws_crt_python.aws_py_io_tls_connections_options_new_from_ctx(tls_ctx._internal_tls_ctx)
 
     def set_alpn_list(self, alpn_list):
