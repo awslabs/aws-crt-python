@@ -34,6 +34,7 @@ static void s_http_client_connection_destructor(PyObject *http_connection_capsul
     struct py_http_connection *http_connection = PyCapsule_GetPointer(http_connection_capsule, s_capsule_name_http_client_connection);
     assert(http_connection);
 
+    fprintf(stderr, "http destructor called\n");
     http_connection->destructor_called = true;
     if (http_connection->connection) {
 
@@ -57,7 +58,6 @@ static void s_on_client_connection_setup(
 
     struct py_http_connection *py_connection = user_data;
 
-    fprintf(stderr, "Completed connection with error %d\n", error_code);
     PyGILState_STATE state = PyGILState_Ensure();
     PyObject *result = NULL;
     PyObject* capsule = NULL;
@@ -69,15 +69,13 @@ static void s_on_client_connection_setup(
     } else {
         aws_mem_release(py_connection->allocator, py_connection);
     }
-    fprintf(stderr, "Calling function\n");
 
-    result = PyObject_CallFunction(py_connection->on_connection_setup, "(Oi)", capsule, error_code);
-    fprintf(stderr, "function called\n");
+    result = PyObject_CallFunction(py_connection->on_connection_setup, "(Ni)", capsule, error_code);
 
+    Py_DECREF(py_connection->on_connection_setup);
     Py_XDECREF(result);
-    PyGILState_Release(state);
-    fprintf(stderr, "invoked callback and relaesed gil\n");
 
+    PyGILState_Release(state);
 }
 
 static void s_on_client_connection_shutdown(
@@ -85,16 +83,18 @@ static void s_on_client_connection_shutdown(
         int error_code,
         void *user_data) {
     (void)connection;
-
     struct py_http_connection *py_connection = user_data;
 
     PyGILState_STATE state = PyGILState_Ensure();
     py_connection->shutdown_called = true;
 
     if (!py_connection->destructor_called) {
-        PyObject *result = PyObject_CallFunction(py_connection->on_connection_shutdown, "(Oi)", py_connection->capsule,
-                                                 error_code);
+        fprintf(stderr, "invoking shutdown callback.");
+
+        PyObject *result = PyObject_CallFunction(py_connection->on_connection_shutdown, "(i)", error_code);
+        Py_DECREF(py_connection->on_connection_shutdown);
         Py_XDECREF(result);
+        fprintf(stderr, "finished shutdown callback.");
     } else {
         aws_mem_release(py_connection->allocator, py_connection);
     }
@@ -200,7 +200,7 @@ PyObject *aws_py_http_client_connection_create(PyObject *self, PyObject *args) {
         goto error;
     }
 
-    Py_INCREF(on_connection_setup);
+    Py_XINCREF(on_connection_setup);
     py_connection->on_connection_setup = on_connection_setup;
 
     if (!PyCallable_Check(on_connection_shutdown)) {
@@ -208,12 +208,10 @@ PyObject *aws_py_http_client_connection_create(PyObject *self, PyObject *args) {
         goto error;
     }
 
-    Py_INCREF(on_connection_shutdown);
+    Py_XINCREF(on_connection_shutdown);
     py_connection->on_connection_shutdown = on_connection_shutdown;
 
     py_connection->allocator = allocator;
-    py_connection->on_connection_setup = on_connection_setup;
-    py_connection->on_connection_shutdown = on_connection_shutdown;
 
     struct aws_http_client_connection_options options;
     AWS_ZERO_STRUCT(options);

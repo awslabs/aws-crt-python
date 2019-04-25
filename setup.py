@@ -170,7 +170,7 @@ if compiler_type == 'msvc':
     #    cflags += ['/MT']
     pass
 else:
-    cflags += ['-O3', '-Wextra', '-Werror']
+    cflags += ['-O3', '-Wextra', '-Werror', '-DAWS_PYTHON_ENABLE_LOGGING=1']
 
 if sys.platform == 'win32':
     #the windows apis being used under the hood. Since we're static linking we have to follow the entire chain down
@@ -213,7 +213,7 @@ _aws_crt_python = setuptools.Extension(
 
 setuptools.setup(
     name="awscrt",
-    version="v0.2.11",
+    version="v0.2.12",
     author="Amazon Web Services, Inc",
     author_email="aws-sdk-common-runtime@amazon.com",
     description="A common runtime for AWS Python projects",

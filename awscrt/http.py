@@ -24,6 +24,7 @@ class HttpClientConnection(object):
         self._bootstrap = bootstrap
         self._tls_connection_options = tls_connection_options
         self._on_connection_shutdown = on_connection_shutdown
+        self._native_handle = None
 
     @staticmethod
     def new_connection(bootstrap, host_name, port, socket_options, on_connection_shutdown, tls_connection_options):
@@ -37,20 +38,16 @@ class HttpClientConnection(object):
         connection = HttpClientConnection(bootstrap, on_connection_shutdown, tls_connection_options)
 
         def on_connection_setup_native_cb(native_handle, error_code):
-
             if error_code == 0:
                 connection._native_handle = native_handle
                 future.set_result(connection)
             else:
                 future.set_exception(Exception("Error during connect: err={}".format(error_code)))
 
-        def on_connection_shutdown_native_cb(native_handle, error_code):
-            connection._on_connection_shutdown(error_code)
-
         try:
             _aws_crt_python.aws_py_http_client_connection_create(bootstrap._internal_bootstrap,
                                                                  on_connection_setup_native_cb,
-                                                                 on_connection_shutdown_native_cb,
+                                                                 connection._on_connection_shutdown,
                                                                  host_name,
                                                                  port,
                                                                  socket_options,
@@ -62,9 +59,13 @@ class HttpClientConnection(object):
         return future
 
     def close(self):
-        _aws_crt_python.aws_py_http_client_connection_close(self._native_handle)
+        if self._native_handle is not None:
+            _aws_crt_python.aws_py_http_client_connection_close(self._native_handle)
 
     def is_open(self):
-        _aws_crt_python.aws_py_http_client_connection_is_open(self._native_handle)
+        if self._native_handle is not None:
+            return _aws_crt_python.aws_py_http_client_connection_is_open(self._native_handle)
+
+        return False
 
 
