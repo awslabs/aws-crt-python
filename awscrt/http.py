@@ -68,4 +68,45 @@ class HttpClientConnection(object):
 
         return False
 
+    def make_request(self, request):
+        future = Future()
+
+        def on_stream_completed(error_code):
+            if error_code == 0:
+                request.response_completed.set_result(error_code)
+            else:
+                request.response_completed.set_exception(Exception(error_code))
+
+        def on_incoming_headers_received(headers, response_code):
+            request.response_headers = headers
+            request.response_code = response_code
+            future.set_result(response_code)
+
+        try:
+            request._stream = _aws_crt_python.aws_py_http_client_connection_make_request(self._native_handle,
+                                                                                         request,
+                                                                                         on_stream_completed,
+                                                                                         on_incoming_headers_received)
+
+        except Exception as e:
+            future.set_exception(e)
+
+        return future
+
+
+class HttpRequest(object):
+    __slots__ = ('path_and_query', 'method', 'outgoing_headers', '_on_read_body', '_on_incoming_body', '_stream',
+                 'response_headers', 'response_code', 'response_completed')
+
+    def __init__(self, method, path_and_query, outgoing_headers, on_read_body, on_incoming_body):
+        self.path_and_query = path_and_query
+        self.method = method
+        self.outgoing_headers = outgoing_headers
+        self._on_read_body = on_read_body
+        self._on_incoming_body = on_incoming_body
+        self.response_completed = Future()
+        self._stream = None
+        self.response_headers = None
+        self.response_code = None
+
 
