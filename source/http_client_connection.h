@@ -24,7 +24,6 @@ extern const char *s_capsule_name_http_client_stream;
 PyObject *aws_py_http_client_connection_create(PyObject *self, PyObject *args);
 PyObject *aws_py_http_client_connection_close(PyObject *self, PyObject *args);
 PyObject *aws_py_http_client_connection_is_open(PyObject *self, PyObject *args);
-
-PyObject *aws_py_http_client_stream_new(PyObject *self, PyObject *args);
+PyObject *aws_py_http_client_connection_make_request(PyObject *self, PyObject *args);
 
 #endif /* AWS_CRT_PYTHON_HTTP_CLIENT_CONNECTION_H */
