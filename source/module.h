@@ -26,6 +26,9 @@
 
 #if PY_MAJOR_VERSION >= 3
 #    define PyString_FromStringAndSize PyUnicode_FromStringAndSize
+#    define BYTE_BUF_FORMAT_STR "y#"
+#else
+#    define BYTE_BUF_FORMAT_STR "s#"
 #endif /* PY_MAJOR_VERSION */
 
 /* AWS Specific Helpers */
