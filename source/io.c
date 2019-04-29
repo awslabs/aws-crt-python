@@ -108,7 +108,6 @@ PyObject *aws_py_io_host_resolver_new_default(PyObject *self, PyObject *args) {
 static void s_client_bootstrap_destructor(PyObject *bootstrap_capsule) {
 
     assert(PyCapsule_CheckExact(bootstrap_capsule));
-
     struct aws_client_bootstrap *bootstrap = PyCapsule_GetPointer(bootstrap_capsule, s_capsule_name_client_bootstrap);
     assert(bootstrap);
     aws_client_bootstrap_release(bootstrap);
@@ -152,7 +151,6 @@ PyObject *aws_py_io_client_bootstrap_new(PyObject *self, PyObject *args) {
 
 static void s_tls_ctx_destructor(PyObject *tls_ctx_capsule) {
 
-    fprintf(stderr, "tls dtor called\n");
     assert(PyCapsule_CheckExact(tls_ctx_capsule));
 
     struct aws_tls_ctx *tls_ctx = PyCapsule_GetPointer(tls_ctx_capsule, s_capsule_name_tls_ctx);
@@ -229,9 +227,7 @@ PyObject *aws_py_io_client_tls_ctx_new(PyObject *self, PyObject *args) {
     }
 #endif
     ctx_options.verify_peer = (bool)verify_peer;
-
     struct aws_tls_ctx *tls_ctx = aws_tls_client_ctx_new(allocator, &ctx_options);
-    fprintf(stderr, "tls ctx new called\n");
 
     if (!tls_ctx) {
         return PyErr_AwsLastError();
@@ -243,7 +239,6 @@ PyObject *aws_py_io_client_tls_ctx_new(PyObject *self, PyObject *args) {
 static void s_tls_connection_options_destructor(PyObject *tls_connection_options_capsule) {
 
     struct aws_allocator *allocator = aws_crt_python_get_allocator();
-    fprintf(stderr, "Connection options dtor");
     assert(PyCapsule_CheckExact(tls_connection_options_capsule));
 
     struct aws_tls_connection_options *tls_connection_options =
@@ -297,7 +292,7 @@ PyObject *aws_py_io_tls_connection_options_set_alpn_list(PyObject *self, PyObjec
     if (!PyArg_ParseTuple(
             args,
             "Os#",
-            &tls_conn_options_capsule)) {
+            &tls_conn_options_capsule, &alpn_list, &alpn_list_len)) {
         Py_RETURN_NONE;
     }
 
@@ -327,7 +322,8 @@ PyObject *aws_py_io_tls_connection_options_set_server_name(PyObject *self, PyObj
     if (!PyArg_ParseTuple(
             args,
             "Os#",
-            &tls_conn_options_capsule)) {
+            &tls_conn_options_capsule,
+            &server_name, &server_name_len)) {
         Py_RETURN_NONE;
     }
 

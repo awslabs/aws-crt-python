@@ -14,8 +14,10 @@
 import _aws_crt_python
 from enum import IntEnum
 
+
 def is_alpn_available():
     return _aws_crt_python.aws_py_is_alpn_available()
+
 
 class EventLoopGroup(object):
     __slots__ = ('_internal_elg')
@@ -23,11 +25,13 @@ class EventLoopGroup(object):
     def __init__(self, num_threads):
         self._internal_elg = _aws_crt_python.aws_py_io_event_loop_group_new(num_threads)
 
+
 class HostResolver(object):
     __slots__ = ('elg', '_internal_host_resolver')
 
     def __init__(self, elg):
         self.elg = elg
+
 
 class DefaultHostResolver(HostResolver):
     __slots__ = ('elg', '_internal_host_resolver')
@@ -35,6 +39,7 @@ class DefaultHostResolver(HostResolver):
     def __init__(self, elg, max_hosts=16):
         super(DefaultHostResolver, self).__init__(elg)
         self._internal_host_resolver = _aws_crt_python.aws_py_io_host_resolver_new_default(max_hosts, elg._internal_elg)
+
 
 class ClientBootstrap(object):
     __slots__ = ('elg', 'host_resolver', '_internal_bootstrap')
@@ -50,25 +55,28 @@ class ClientBootstrap(object):
         self.host_resolver = host_resolver
         self._internal_bootstrap = _aws_crt_python.aws_py_io_client_bootstrap_new(self.elg._internal_elg, host_resolver._internal_host_resolver)
 
+
 # force null termination at the end of buffer
 def byte_buf_null_terminate(buf):
-    if not buf.endswith(bytes([0])):
-        buf = buf + bytes([0])
     return buf
+
 
 def byte_buf_from_file(filepath):
     with open(filepath, mode='rb') as fh:
         contents = fh.read()
-    return byte_buf_null_terminate(contents)
+    return contents
+
 
 class SocketDomain(IntEnum):
     IPv4 = 0
     IPv6 = 1
     Local = 2
 
+
 class SocketType(IntEnum):
     Stream = 0
     DGram = 1
+
 
 class SocketOptions(object):
     __slots__ = (
@@ -88,6 +96,7 @@ class SocketOptions(object):
         self.keep_alive_timeout_secs = 0
         self.keep_alive_max_probes = 0
 
+
 class TlsVersion(IntEnum):
     SSLv3 = 0
     TLSv1 = 1
@@ -95,6 +104,7 @@ class TlsVersion(IntEnum):
     TLSv1_2 = 3
     TLSv1_3 = 4
     DEFAULT = 128
+
 
 class TlsContextOptions(object):
     __slots__ = (
@@ -135,7 +145,7 @@ class TlsContextOptions(object):
 
         cert_buffer = byte_buf_from_file(cert_path)
         key_buffer = byte_buf_from_file(pk_path)
-        
+
         return TlsContextOptions.create_client_with_mtls(cert_buffer, key_buffer)
 
     @staticmethod
@@ -146,6 +156,7 @@ class TlsContextOptions(object):
         opt = TlsContextOptions()
         opt.certificate_buffer = byte_buf_null_terminate(cert_buffer)
         opt.private_key_buffer = byte_buf_null_terminate(key_buffer)
+
         opt.verify_peer = True
         return opt
 
@@ -195,6 +206,7 @@ class TlsContextOptions(object):
         opt.verify_peer = False
         return opt
 
+
 class ClientTlsContext(object):
 
     def __init__(self, options):
@@ -215,8 +227,10 @@ class ClientTlsContext(object):
     def new_connection_options(self):
         return TlsConnectionOptions(self)
 
+
 class TlsConnectionOptions(object):
     __slots__ = ('tls_ctx', '_internal_tls_conn_options')
+
     def __init__(self, tls_ctx):
         assert isinstance(tls_ctx, ClientTlsContext)
 
