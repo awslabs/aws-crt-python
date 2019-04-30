@@ -14,6 +14,23 @@
 import _aws_crt_python
 from enum import IntEnum
 
+class LogLevel(IntEnum):
+    NoLogs = 0
+    Fatal = 1
+    Error = 2
+    Warn = 3
+    Info = 4
+    Debug = 5
+    Trace = 6
+
+class Logger(object):
+    __slots__ = ('_internal_logger')
+
+    def __init__(self, log_level, file_name):
+        assert log_level is not None
+        assert file_name is not None
+
+        self._internal_logger = _aws_crt_python.aws_py_io_init_logging(log_level, file_name)
 
 def is_alpn_available():
     return _aws_crt_python.aws_py_is_alpn_available()

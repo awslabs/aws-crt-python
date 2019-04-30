@@ -16,13 +16,18 @@
 
 #include <aws/io/channel_bootstrap.h>
 #include <aws/io/event_loop.h>
+#include <aws/io/logging.h>
 #include <aws/io/tls_channel_handler.h>
+
+#include <stdio.h>
+#include <string.h>
 
 const char *s_capsule_name_client_bootstrap = "aws_client_bootstrap";
 static const char *s_capsule_name_elg = "aws_event_loop_group";
 const char *s_capsule_name_host_resolver = "aws_host_resolver";
 const char *s_capsule_name_tls_ctx = "aws_client_tls_ctx";
 const char *s_capsule_name_tls_conn_options = "aws_tls_connection_options";
+const char *s_capsule_name_logger = "aws_logger";
 
 PyObject *aws_py_is_alpn_available(PyObject *self, PyObject *args) {
 
@@ -30,6 +35,65 @@ PyObject *aws_py_is_alpn_available(PyObject *self, PyObject *args) {
     (void)args;
 
     return PyBool_FromLong(aws_tls_is_alpn_available());
+}
+
+static void s_logger_destructor(PyObject *logger_capsule) {
+    struct aws_logger *logger = PyCapsule_GetPointer(logger_capsule, s_capsule_name_logger);
+    assert(logger);
+
+    struct aws_allocator *allocator = aws_crt_python_get_allocator();
+
+    aws_logger_clean_up(logger);
+    aws_mem_release(allocator, logger);
+}
+
+PyObject *aws_py_io_init_logging(PyObject *self, PyObject *args) {
+    (void)self;
+
+    struct aws_allocator *allocator = aws_crt_python_get_allocator();
+
+    int log_level = 0;
+    const char *file_path = NULL;
+    Py_ssize_t file_path_len = 0;
+
+    if (!PyArg_ParseTuple(
+            args,
+            "bs#",
+            &log_level,
+            &file_path,
+            &file_path_len)) {
+        PyErr_SetNone(PyExc_ValueError);
+        return NULL;
+    }
+
+    struct aws_logger *logger = aws_mem_acquire(allocator, sizeof(struct aws_logger));
+
+    if (!logger) {
+        return PyErr_AwsLastError();
+    }
+
+    struct aws_logger_standard_options log_options = {
+            .level = log_level,
+            .file = NULL,
+            .filename = NULL,
+    };
+
+    Py_ssize_t stdout_len = (Py_ssize_t)strlen("stdout");
+
+    Py_ssize_t cmp_len = file_path_len > stdout_len ? stdout_len : file_path_len;
+
+    if (!memcmp("stdout", file_path, (size_t)cmp_len)) {
+        log_options.file = stdout;
+    } else if (!memcmp("stderr", file_path, (size_t)cmp_len)) {
+        log_options.file = stderr;
+    } else {
+        log_options.filename = file_path;
+    }
+
+    aws_logger_init_standard(logger, allocator, &log_options);
+    aws_logger_set(logger);
+
+    return PyCapsule_New(logger, s_capsule_name_logger, s_logger_destructor);
 }
 
 static void s_elg_destructor(PyObject *elg_capsule) {

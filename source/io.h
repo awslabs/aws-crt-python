@@ -37,6 +37,16 @@ extern const char *s_capsule_name_tls_ctx;
 extern const char *s_capsule_name_tls_conn_options;
 
 /**
+ * Name String to logging capsules
+ */
+extern const char *s_capsule_name_logger;
+
+/**
+ * Returns a capsule for logging and starts the logging sub-system
+ */
+PyObject *aws_py_io_init_logging(PyObject *self, PyObject *args);
+
+/**
  * Returns True if ALPN is available, False if it is not.
  */
 PyObject *aws_py_is_alpn_available(PyObject *self, PyObject *args);
