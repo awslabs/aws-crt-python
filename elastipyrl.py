@@ -11,11 +11,18 @@
 # express or implied. See the License for the specific language governing
 # permissions and limitations under the License.
 import argparse
+import sys
 from awscrt import io, http
 try:
     from urllib.parse import urlparse
 except ImportError:
     from urlparse import urlparse
+
+
+def print_header_list(headers):
+    for key, value in headers.items():
+        print('{}: {}'.format(key, value))
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('url', help='URL to make request to. HTTPS is assumed unless port 80 is specified or HTTP is specified in the scheme.')
@@ -24,7 +31,7 @@ parser.add_argument('--capath', required=False, help='PATH: path to a directory 
 parser.add_argument('--cert', required=False, help='FILE: path to a PEM encoded certificate to use with mTLS')
 parser.add_argument('--key', required=False, help='FILE: Path to a PEM encoded private key that matches cert.')
 parser.add_argument('--connect_timeout', required=False, type=int, help='INT: time in milliseconds to wait for a connection.', default=3000)
-parser.add_argument('-H', '--header', required=False, help='INT: time in milliseconds to wait for a connection.')
+parser.add_argument('-H', '--header', required=False, help='LINE: line to send as a header in format [header-key]: [header-value]\n', nargs='*', action='append')
 parser.add_argument('-d', '--data', required=False, help='STRING: Data to POST or PUT.')
 parser.add_argument('--data_file', required=False, help='FILE: File to read from file and POST or PUT')
 parser.add_argument('-M', '--method', required=False, help='STRING: Http Method verb to use for the request', default='GET')
@@ -40,6 +47,36 @@ parser.add_argument('-v', '--verbose', required=False, help='ERROR|INFO|DEBUG|TR
 
 args = parser.parse_args()
 
+output = getattr(sys.stdout, 'buffer', sys.stdout)
+
+if args.output:
+    output = open(args.output, mode='wb')
+
+# setup the logger if user request logging
+logger = None
+
+if args.verbose:
+    log_level = io.LogLevel.NoLogs
+
+    if args.verbose == 'ERROR':
+        log_level = io.LogLevel.Error
+    elif args.verbose == 'INFO':
+        log_level = io.LogLevel.Info
+    elif args.verbose == 'DEBUG':
+        log_level = io.LogLevel.Debug
+    elif args.verbose == 'TRACE':
+        log_level = io.LogLevel.Trace
+    else:
+        print('{} unsupported value for the verbose option'.format(args.verbose))
+        exit(-1)
+
+    log_output = 'stderr'
+
+    if args.trace:
+        log_output = args.trace
+
+    logger = io.Logger(log_level, log_output)
+
 # an event loop group is needed for IO operations. Unless you're a server or a client doing hundreds of connections
 # you only want one of these.
 event_loop_group = io.EventLoopGroup(1)
@@ -50,15 +87,21 @@ client_bootstrap = io.ClientBootstrap(event_loop_group)
 
 url = urlparse(args.url)
 port = 443
-print(args)
+scheme = 'https'
+
+if url.scheme is not None and url.scheme == 'http':
+    scheme = 'http'
+
 if url.port is not None:
     port = url.port
+else:
+    if scheme == 'http':
+        port = 80
+
 
 tls_connection_options = None
 
-if url.scheme == 'http' or port == 80 or port == 8080:
-    pass
-else:
+if scheme == 'https':
     if args.cert is not None and args.key is not None:
         tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(args.cert, args.key)
     else:
@@ -89,14 +132,21 @@ if args.post:
 if args.head:
     method = 'HEAD'
 
+print_headers = args.include
+
 
 def on_connection_shutdown(err_code):
-    pass
+    print('connection close with error code {}'.format(err_code))
 
 
 def on_incoming_body(body_data):
-    print(body_data)
+    global print_headers
+    if print_headers:
+        print_headers = False
+        print('Response Code: {}'.format(request.response_code))
+        print_header_list(request.response_headers)
 
+    output.write(body_data)
 
 def on_outgoing_body(request_body_buf):
     return -1
@@ -105,12 +155,17 @@ def on_outgoing_body(request_body_buf):
 socket_options = io.SocketOptions()
 socket_options.connect_timeout_ms = args.connect_timeout
 
-connect_future = http.HttpClientConnection.new_connection(client_bootstrap, url.hostname, port, socket_options,
+hostname = url.hostname
+connect_future = http.HttpClientConnection.new_connection(client_bootstrap, hostname, port, socket_options,
                                                           on_connection_shutdown, tls_connection_options)
-
 connection = connect_future.result()
 
-outgoing_headers = {'host': url.hostname}
+outgoing_headers = {'host': hostname, 'user-agent': 'elastipyrl 1.0, Powered by the AWS Common Runtime.'}
+
+if args.header:
+    for i in args.header:
+        name_value_tuple = i[0].split(':')
+        outgoing_headers[name_value_tuple[0].strip()] = name_value_tuple[1].strip()
 
 uri_str = url.path
 
@@ -120,17 +175,18 @@ if uri_str is None or uri_str == '':
 if url.query is not None:
     uri_str += url.query
 
-print(uri_str)
 request = http.HttpRequest(method, uri_str, outgoing_headers, on_outgoing_body, on_incoming_body)
 
 response_start_future = connection.make_request(request)
 response_start = response_start_future.result()
 
-if args.include:
-    print(request.response_headers)
+if print_headers:
+    print_headers = False
+    print('Response Code: {}'.format(request.response_code))
+    print_header_list(request.response_headers)
 
 response_finished = request.response_completed.result()
-connection.close()
-
 request = None
 connection = None
+
+output.close()

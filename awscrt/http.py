@@ -26,6 +26,9 @@ class HttpClientConnection(object):
         assert tls_connection_options is None or isinstance(tls_connection_options, TlsConnectionOptions)
         assert on_connection_shutdown is not None
 
+        for slot in self.__slots__:
+            setattr(self, slot, None)
+
         self._bootstrap = bootstrap
         self._tls_connection_options = tls_connection_options
         self._on_connection_shutdown = on_connection_shutdown
@@ -57,13 +60,18 @@ class HttpClientConnection(object):
                 future.set_exception(Exception("Error during connect: err={}".format(error_code)))
 
         try:
+            if tls_connection_options:
+                internal_conn_options_handle = tls_connection_options._internal_tls_conn_options
+            else:
+                internal_conn_options_handle = None
+
             _aws_crt_python.aws_py_http_client_connection_create(bootstrap._internal_bootstrap,
                                                                  on_connection_setup_native_cb,
                                                                  connection._on_connection_shutdown,
                                                                  host_name,
                                                                  port,
                                                                  socket_options,
-                                                                 tls_connection_options._internal_tls_conn_options)
+                                                                 internal_conn_options_handle)
 
         except Exception as e:
             future.set_exception(e)

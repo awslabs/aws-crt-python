@@ -58,7 +58,6 @@ static void s_on_client_connection_setup(
         void *user_data) {
 
     struct py_http_connection *py_connection = user_data;
-
     PyGILState_STATE state = PyGILState_Ensure();
     PyObject *result = NULL;
     PyObject* capsule = NULL;
@@ -85,7 +84,6 @@ static void s_on_client_connection_shutdown(
         void *user_data) {
     (void)connection;
     struct py_http_connection *py_connection = user_data;
-
     py_connection->shutdown_called = true;
 
     if (!py_connection->destructor_called) {
@@ -120,6 +118,7 @@ PyObject *aws_py_http_client_connection_create(PyObject *self, PyObject *args) {
     if (!PyArg_ParseTuple(args, "OOOs#HOO", &bootstrap_capsule, &on_connection_setup,
             &on_connection_shutdown, &host_name, &host_name_len, &port_number,
             &py_socket_options, &tls_conn_options_capsule)) {
+        PyErr_SetNone(PyExc_ValueError);
         goto error;
     }
 
@@ -128,10 +127,11 @@ PyObject *aws_py_http_client_connection_create(PyObject *self, PyObject *args) {
         goto error;
     }
 
-    if (tls_conn_options_capsule && !PyCapsule_CheckExact(tls_conn_options_capsule)) {
+    if (tls_conn_options_capsule && tls_conn_options_capsule != Py_None && !PyCapsule_CheckExact(tls_conn_options_capsule)) {
         PyErr_SetNone(PyExc_ValueError);
         goto error;
     }
+
 
     if (!(host_name &&  py_socket_options && on_connection_setup && on_connection_shutdown)) {
         PyErr_SetNone(PyExc_ValueError);
@@ -140,12 +140,13 @@ PyObject *aws_py_http_client_connection_create(PyObject *self, PyObject *args) {
 
     struct aws_client_bootstrap *bootstrap = PyCapsule_GetPointer(bootstrap_capsule, s_capsule_name_client_bootstrap);
     if (!bootstrap) {
+        PyErr_SetNone(PyExc_ValueError);
         goto error;
     }
 
     struct aws_tls_connection_options *connection_options = NULL;
 
-    if (tls_conn_options_capsule) {
+    if (tls_conn_options_capsule != Py_None) {
         connection_options = PyCapsule_GetPointer(tls_conn_options_capsule, s_capsule_name_tls_conn_options);
     }
 
@@ -246,11 +247,14 @@ PyObject *aws_py_http_client_connection_close(PyObject *self, PyObject *args) {
     PyObject *http_impl = NULL;
 
     if (PyArg_ParseTuple(args, "O", &http_impl)) {
-        struct py_http_connection *http_connection = PyCapsule_GetPointer(http_impl, s_capsule_name_http_client_connection);
-        assert(http_connection);
+        if (http_impl) {
+            struct py_http_connection *http_connection = PyCapsule_GetPointer(http_impl,
+                                                                              s_capsule_name_http_client_connection);
+            assert(http_connection);
 
-        if (http_connection->connection) {
-            aws_http_connection_close(http_connection->connection);
+            if (http_connection->connection) {
+                aws_http_connection_close(http_connection->connection);
+            }
         }
     }
 
@@ -263,11 +267,14 @@ PyObject *aws_py_http_client_connection_is_open(PyObject *self, PyObject *args) 
     PyObject *http_impl = NULL;
 
     if (PyArg_ParseTuple(args, "O", &http_impl)) {
-        struct py_http_connection *http_connection = PyCapsule_GetPointer(http_impl, s_capsule_name_http_client_connection);
-        assert(http_connection);
+        if (http_impl) {
+            struct py_http_connection *http_connection = PyCapsule_GetPointer(http_impl,
+                                                                              s_capsule_name_http_client_connection);
+            assert(http_connection);
 
-        if (http_connection->connection && aws_http_connection_is_open(http_connection->connection)) {
-            Py_RETURN_TRUE;
+            if (http_connection->connection && aws_http_connection_is_open(http_connection->connection)) {
+                Py_RETURN_TRUE;
+            }
         }
     }
 
