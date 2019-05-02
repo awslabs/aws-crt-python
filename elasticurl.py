@@ -147,8 +147,9 @@ def on_incoming_body(body_data):
 
 
 written = 0
-
 data_len = 0
+data_file = None
+
 if args.data:
     data_bytes = args.data.encode(encoding='utf-8')
     data_len = len(data_bytes)
