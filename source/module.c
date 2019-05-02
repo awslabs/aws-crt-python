@@ -14,10 +14,10 @@
  */
 #include "module.h"
 #include "crypto.h"
+#include "http_client_connection.h"
 #include "io.h"
 #include "mqtt_client.h"
 #include "mqtt_client_connection.h"
-#include "http_client_connection.h"
 
 #include <aws/io/io.h>
 #include <aws/io/logging.h>
@@ -92,12 +92,21 @@ static PyMethodDef s_module_methods[] = {
     {"aws_py_io_host_resolver_new_default", aws_py_io_host_resolver_new_default, METH_VARARGS, NULL},
     {"aws_py_io_client_bootstrap_new", aws_py_io_client_bootstrap_new, METH_VARARGS, NULL},
     {"aws_py_io_client_tls_ctx_new", aws_py_io_client_tls_ctx_new, METH_VARARGS, NULL},
-    {"aws_py_io_tls_connections_options_new_from_ctx", aws_py_io_tls_connections_options_new_from_ctx, METH_VARARGS, NULL},
-    {"aws_py_io_tls_connection_options_set_alpn_list", aws_py_io_tls_connection_options_set_alpn_list, METH_VARARGS, NULL},
-    {"aws_py_io_tls_connection_options_set_server_name", aws_py_io_tls_connection_options_set_server_name, METH_VARARGS, NULL},
+    {"aws_py_io_tls_connections_options_new_from_ctx",
+     aws_py_io_tls_connections_options_new_from_ctx,
+     METH_VARARGS,
+     NULL},
+    {"aws_py_io_tls_connection_options_set_alpn_list",
+     aws_py_io_tls_connection_options_set_alpn_list,
+     METH_VARARGS,
+     NULL},
+    {"aws_py_io_tls_connection_options_set_server_name",
+     aws_py_io_tls_connection_options_set_server_name,
+     METH_VARARGS,
+     NULL},
     {"aws_py_io_init_logging", aws_py_io_init_logging, METH_VARARGS, NULL},
 
-        /* MQTT Client */
+    /* MQTT Client */
     {"aws_py_mqtt_client_new", aws_py_mqtt_client_new, METH_VARARGS, NULL},
 
     /* MQTT Client Connection */
@@ -142,7 +151,6 @@ static void s_module_free(void *userdata) {
     aws_tls_clean_up_static_state();
 }
 #endif /* PY_MAJOR_VERSION == 3 */
-
 
 PyMODINIT_FUNC INIT_FN(void) {
 

@@ -125,10 +125,11 @@ class HttpClientConnection(object):
 # of a URL. method is the http method (GET, PUT, etc...). outgoing_headers are the headers to send as part
 # of the request.
 #
-# on_read_body is invoked to read the body of the request. It takes a single parameter of type ByteBuf,
-# and you signal the end of the stream by returning -1; otherwise return the size of the data written into the buffer.
+# on_read_body is invoked to read the body of the request. It takes a single parameter of type MemoryView
+# (it's writable), and you signal the end of the stream by returning -1;
+# otherwise return the size of the data written into the buffer.
 #
-# on_incoming_body is invoked as the response body is received. It takes a single argument of type ByteBuf.
+# on_incoming_body is invoked as the response body is received. It takes a single argument of type bytes.
 class HttpRequest(object):
     __slots__ = ('path_and_query', 'method', 'outgoing_headers', '_on_read_body', '_on_incoming_body', '_stream',
                  'response_headers', 'response_code', 'response_completed')

@@ -23,6 +23,9 @@ class LogLevel(IntEnum):
     Debug = 5
     Trace = 6
 
+
+# initialize a logger. log_level is type LogLevel, and file_name is of type str.
+# To write to stdout, or stderr, simply pass 'stdout' or 'stderr' as strings. Otherwise, a file path is assumed.
 class Logger(object):
     __slots__ = ('_internal_logger')
 
@@ -31,6 +34,7 @@ class Logger(object):
         assert file_name is not None
 
         self._internal_logger = _aws_crt_python.aws_py_io_init_logging(log_level, file_name)
+
 
 def is_alpn_available():
     return _aws_crt_python.aws_py_is_alpn_available()

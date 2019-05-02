@@ -21,9 +21,22 @@
 extern const char *s_capsule_name_http_client_connection;
 extern const char *s_capsule_name_http_client_stream;
 
+/**
+ * Create a new connection. returns void. The on_setup callback will be invoked
+ * upon either success or failure of the connection.
+ */
 PyObject *aws_py_http_client_connection_create(PyObject *self, PyObject *args);
+/**
+ * Close the connection if it's open.
+ */
 PyObject *aws_py_http_client_connection_close(PyObject *self, PyObject *args);
+/**
+ * Returns True if connection is open and usable, False otherwise.
+ */
 PyObject *aws_py_http_client_connection_is_open(PyObject *self, PyObject *args);
+/**
+ * Initiates a request on connection.
+ */
 PyObject *aws_py_http_client_connection_make_request(PyObject *self, PyObject *args);
 
 #endif /* AWS_CRT_PYTHON_HTTP_CLIENT_CONNECTION_H */
