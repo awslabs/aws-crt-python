@@ -194,5 +194,5 @@ PyObject *aws_py_hmac_digest(PyObject *self, PyObject *args) {
         return PyErr_AwsLastError();
     }
 
-    return PyBytes_FromStringAndSize((const char *)output,  digest_buf.len);
+    return PyBytes_FromStringAndSize((const char *)output, digest_buf.len);
 }

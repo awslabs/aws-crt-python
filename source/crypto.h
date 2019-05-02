@@ -36,5 +36,4 @@ PyObject *aws_py_sha256_compute(PyObject *self, PyObject *args);
 PyObject *aws_py_md5_compute(PyObject *self, PyObject *args);
 PyObject *aws_py_sha256_hmac_compute(PyObject *self, PyObject *args);
 
-
 #endif /* AWS_CRT_PYTHON_CRYPTO_H */

@@ -12,6 +12,7 @@
 # permissions and limitations under the License.
 import argparse
 import sys
+import os
 from awscrt import io, http
 try:
     from urllib.parse import urlparse
@@ -135,20 +136,49 @@ if args.head:
 print_headers = args.include
 
 
+# invoked up on the connection closing
 def on_connection_shutdown(err_code):
     print('connection close with error code {}'.format(err_code))
 
 
+# invoked by the http request call as the response body is received in chunks
 def on_incoming_body(body_data):
-    global print_headers
-    if print_headers:
-        print_headers = False
-        print('Response Code: {}'.format(request.response_code))
-        print_header_list(request.response_headers)
-
     output.write(body_data)
 
-def on_outgoing_body(request_body_buf):
+
+written = 0
+
+data_len = 0
+if args.data:
+    data_bytes = args.data.encode(encoding='utf-8')
+    data_len = len(data_bytes)
+elif args.data_file:
+    data_len = os.stat(args.data_file).st_size
+    data_file = open(args.data_file, 'rb')
+
+
+# invoked by the http request call as the request body has a buffer that can be written to
+def on_outgoing_body(request_body_mv):
+    global written
+    global data_len
+
+    if written < data_len:
+        actually_written = 0
+        mv_len = len(request_body_mv)
+        cpy_len = data_len - written
+        if data_len > mv_len:
+            cpy_len = mv_len
+
+        if args.data is not None:
+            request_body_mv[0:cpy_len] = data_bytes[written:written + cpy_len]
+            actually_written = cpy_len
+
+        elif data_file is not None:
+            actually_written = data_file.readinto(request_body_mv[0:cpy_len])
+
+        written += actually_written
+        return actually_written
+
     return -1
 
 
@@ -160,7 +190,10 @@ connect_future = http.HttpClientConnection.new_connection(client_bootstrap, host
                                                           on_connection_shutdown, tls_connection_options)
 connection = connect_future.result()
 
-outgoing_headers = {'host': hostname, 'user-agent': 'elastipyrl 1.0, Powered by the AWS Common Runtime.'}
+outgoing_headers = {'host': hostname, 'user-agent': 'elasticurl.py 1.0, Powered by the AWS Common Runtime.'}
+
+if data_len != 0:
+    outgoing_headers['content-length'] = str(data_len)
 
 if args.header:
     for i in args.header:
@@ -177,16 +210,26 @@ if url.query is not None:
 
 request = http.HttpRequest(method, uri_str, outgoing_headers, on_outgoing_body, on_incoming_body)
 
+
+# invoked as soon as the response headers are received
+def response_received_cb(ftr):
+    if args.include:
+        print('Response Code: {}'.format(request.response_code))
+        print_header_list(request.response_headers)
+
+
+# make the request
 response_start_future = connection.make_request(request)
+response_start_future.add_done_callback(response_received_cb)
+
+# wait for response headers
 response_start = response_start_future.result()
 
-if print_headers:
-    print_headers = False
-    print('Response Code: {}'.format(request.response_code))
-    print_header_list(request.response_headers)
-
+# wait until the full response is finished
 response_finished = request.response_completed.result()
 request = None
 connection = None
 
+if data_file is not None:
+    data_file.close()
 output.close()

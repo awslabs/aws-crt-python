@@ -385,18 +385,16 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
     }
 
     struct aws_byte_cursor client_id_cur = aws_byte_cursor_from_array(client_id, client_id_len);
-    struct aws_mqtt_connection_options options = {
-        .host_name = server_name_cur,
-        .port = port_number,
-        .socket_options = &py_connection->socket_options,
-        .tls_options = tls_ctx ? &py_connection->tls_options : NULL,
-        .client_id = client_id_cur,
-        .keep_alive_time_secs = keep_alive_time,
-        .ping_timeout_ms = ping_timeout,
-        .on_connection_complete = s_on_connect,
-        .user_data = py_connection,
-        .clean_session = true
-    };
+    struct aws_mqtt_connection_options options = {.host_name = server_name_cur,
+                                                  .port = port_number,
+                                                  .socket_options = &py_connection->socket_options,
+                                                  .tls_options = tls_ctx ? &py_connection->tls_options : NULL,
+                                                  .client_id = client_id_cur,
+                                                  .keep_alive_time_secs = keep_alive_time,
+                                                  .ping_timeout_ms = ping_timeout,
+                                                  .on_connection_complete = s_on_connect,
+                                                  .user_data = py_connection,
+                                                  .clean_session = true};
     if (aws_mqtt_client_connection_connect(py_connection->connection, &options)) {
         Py_CLEAR(py_connection->on_connect);
         return PyErr_AwsLastError();
@@ -579,8 +577,11 @@ static void s_subscribe_callback(
 
     PyObject *callback = user_data;
 
-    PyObject *result =
-        PyObject_CallFunction(callback, "(NN)", PyString_FromAwsByteCursor(topic), PyBytes_FromStringAndSize((const char *)payload->ptr, (Py_ssize_t)payload->len));
+    PyObject *result = PyObject_CallFunction(
+        callback,
+        "(NN)",
+        PyString_FromAwsByteCursor(topic),
+        PyBytes_FromStringAndSize((const char *)payload->ptr, (Py_ssize_t)payload->len));
 
     if (!result) {
         PyErr_WriteUnraisable(PyErr_Occurred());
