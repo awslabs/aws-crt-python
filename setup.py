@@ -170,7 +170,7 @@ if compiler_type == 'msvc':
     #    cflags += ['/MT']
     pass
 else:
-    cflags += ['-O3', '-Wextra', '-Werror', '-DAWS_PYTHON_ENABLE_LOGGING=1']
+    cflags += ['-O3', '-Wextra', '-Werror', '-std=gnu99']
 
 if sys.platform == 'win32':
     #the windows apis being used under the hood. Since we're static linking we have to follow the entire chain down
