@@ -20,6 +20,8 @@
 #include <aws/http/request_response.h>
 #include <aws/io/socket.h>
 
+#include <memoryobject.h>
+
 const char *s_capsule_name_http_client_connection = "aws_http_client_connection";
 const char *s_capsule_name_http_client_stream = "aws_http_client_stream";
 
