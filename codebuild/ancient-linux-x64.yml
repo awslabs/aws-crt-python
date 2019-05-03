@@ -12,10 +12,10 @@ phases:
       - echo Build started on `date`
       - git submodule update --init
       - /opt/python/cp35-cp35m/bin/python setup.py build install
-      - /opt/python/cp27-cp27m/bin/python elasticurl.py -v ERROR -P -H "content-type: application/json" -i -d "{'test':'testval'}" http://httpbin.org/post
+      - /opt/python/cp27-cp27m/bin/python elasticurl.py -v ERROR -P -H "content-type:application/json" -i -d "{'test':'testval'}" http://httpbin.org/post
       - /opt/python/cp27-cp27m/bin/python elasticurl.py -v ERROR -i https://example.com
       - /opt/python/cp27-cp27m/bin/python setup.py build install
-      - /opt/python/cp27-cp27m/bin/python elasticurl.py -v ERROR -P -H "content-type: application/json" -i -d "{'test':'testval'}" http://httpbin.org/post
+      - /opt/python/cp27-cp27m/bin/python elasticurl.py -v ERROR -P -H "content-type:application/json" -i -d "{'test':'testval'}" http://httpbin.org/post
       - /opt/python/cp27-cp27m/bin/python elasticurl.py -v ERROR -i https://example.com
   post_build:
     commands:
