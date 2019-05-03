@@ -14,6 +14,7 @@
 import _aws_crt_python
 from enum import IntEnum
 
+
 class LogLevel(IntEnum):
     NoLogs = 0
     Fatal = 1
@@ -24,9 +25,11 @@ class LogLevel(IntEnum):
     Trace = 6
 
 
-# initialize a logger. log_level is type LogLevel, and file_name is of type str.
-# To write to stdout, or stderr, simply pass 'stdout' or 'stderr' as strings. Otherwise, a file path is assumed.
 class Logger(object):
+    """
+    initialize a logger. log_level is type LogLevel, and file_name is of type str.
+    To write to stdout, or stderr, simply pass 'stdout' or 'stderr' as strings. Otherwise, a file path is assumed.
+    """
     __slots__ = ('_internal_logger')
 
     def __init__(self, log_level, file_name):
@@ -77,8 +80,15 @@ class ClientBootstrap(object):
         self._internal_bootstrap = _aws_crt_python.aws_py_io_client_bootstrap_new(self.elg._internal_elg, host_resolver._internal_host_resolver)
 
 
-# force null termination at the end of buffer
+#
 def byte_buf_null_terminate(buf):
+    """
+    force null termination at the end of buffer
+    :param buf: buffer to null terminate
+    :return: null terminated buffer
+    """
+    if not buf.endswith(bytes([0])):
+        buf = buf + bytes([0])
     return buf
 
 
