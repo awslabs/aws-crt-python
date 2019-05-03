@@ -13,19 +13,27 @@
 
 import _aws_crt_python
 
+
 class Hash(object):
-    # don't call me, I'm private
+
     def __init__(self, native_handle):
+        """
+        don't call me, I'm private
+        """
         self._hash = native_handle
 
-    # Creates a new instance of Hash, using the sha256 algorithm
     @staticmethod
     def sha256_new():
+        """
+        Creates a new instance of Hash, using the sha256 algorithm
+        """
         return Hash(native_handle=_aws_crt_python.aws_py_sha256_new())
 
-    # Creates a new instance of Hash, using the md5 algorithm.
     @staticmethod
     def md5_new():
+        """
+        Creates a new instance of Hash, using the md5 algorithm.
+        """
         return Hash(native_handle=_aws_crt_python.aws_py_md5_new())
 
     def update(self, to_hash):
@@ -34,14 +42,19 @@ class Hash(object):
     def digest(self, truncate_to = 0):
         return _aws_crt_python.aws_py_hash_digest(self._hash, truncate_to)
 
+
 class HMAC(object):
-    # don't call me, I'm private
     def __init__(self, native_handle):
+        """
+        don't call me, I'm private
+        """
         self._hmac = native_handle
 
-    # Creates a new instance of HMAC, using SHA256 HMAC as the algorithm and secret_key as the secret
     @staticmethod
     def sha256_hmac_new(secret_key):
+        """
+        Creates a new instance of HMAC, using SHA256 HMAC as the algorithm and secret_key as the secret
+        """
         return HMAC(native_handle=_aws_crt_python.aws_py_sha256_hmac_new(secret_key))
 
     def update(self, to_hmac):

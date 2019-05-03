@@ -60,6 +60,8 @@ static void s_on_client_connection_setup(struct aws_http_connection *connection,
     PyObject *result = NULL;
     PyObject *capsule = NULL;
 
+    PyObject *on_conn_setup_cb = py_connection->on_connection_setup;
+
     if (!error_code) {
         py_connection->connection = connection;
         capsule =
@@ -69,9 +71,9 @@ static void s_on_client_connection_setup(struct aws_http_connection *connection,
         aws_mem_release(py_connection->allocator, py_connection);
     }
 
-    result = PyObject_CallFunction(py_connection->on_connection_setup, "(Ni)", capsule, error_code);
+    result = PyObject_CallFunction(on_conn_setup_cb, "(Ni)", capsule, error_code);
 
-    Py_DECREF(py_connection->on_connection_setup);
+    Py_DECREF(on_conn_setup_cb);
     Py_XDECREF(result);
 
     PyGILState_Release(state);
@@ -81,17 +83,18 @@ static void s_on_client_connection_shutdown(struct aws_http_connection *connecti
     (void)connection;
     struct py_http_connection *py_connection = user_data;
     py_connection->shutdown_called = true;
+    PyObject *on_conn_shutdown_cb = py_connection->on_connection_shutdown;
 
     if (!py_connection->destructor_called) {
         PyGILState_STATE state = PyGILState_Ensure();
-        PyObject *result = PyObject_CallFunction(py_connection->on_connection_shutdown, "(i)", error_code);
+        PyObject *result = PyObject_CallFunction(on_conn_shutdown_cb, "(i)", error_code);
         Py_XDECREF(result);
         PyGILState_Release(state);
     } else {
         aws_mem_release(py_connection->allocator, py_connection);
     }
 
-    Py_DECREF(py_connection->on_connection_shutdown);
+    Py_DECREF(on_conn_shutdown_cb);
 }
 
 PyObject *aws_py_http_client_connection_create(PyObject *self, PyObject *args) {
@@ -126,7 +129,7 @@ PyObject *aws_py_http_client_connection_create(PyObject *self, PyObject *args) {
     }
 
     if (!bootstrap_capsule || !PyCapsule_CheckExact(bootstrap_capsule)) {
-        PyErr_SetNone(PyExc_ValueError);
+        PyErr_SetString(PyExc_ValueError, "bootstrap is invalid");
         goto error;
     }
 
@@ -137,7 +140,7 @@ PyObject *aws_py_http_client_connection_create(PyObject *self, PyObject *args) {
     }
 
     if (!(host_name && py_socket_options && on_connection_setup && on_connection_shutdown)) {
-        PyErr_SetNone(PyExc_ValueError);
+        PyErr_SetString(PyExc_ValueError, "invalid arguments");
         goto error;
     }
 
@@ -306,20 +309,28 @@ static enum aws_http_outgoing_body_state s_stream_outgoing_body(
     PyGILState_STATE state = PyGILState_Ensure();
 
     PyObject *mv = aws_py_memory_view_from_byte_buffer(buf, PyBUF_WRITE);
-    PyObject *result = PyObject_CallFunction(stream->on_read_body, "(O)", mv);
-    long written = (long)PyLong_AsLong(result);
-    Py_XDECREF(result);
-    Py_XDECREF(mv);
-    PyGILState_Release(state);
 
-    enum aws_http_outgoing_body_state ret_state = AWS_HTTP_OUTGOING_BODY_DONE;
-
-    if (written >= 0) {
-        buf->len += written;
-        ret_state = AWS_HTTP_OUTGOING_BODY_IN_PROGRESS;
+    if (!mv) {
+        aws_http_connection_close(aws_http_stream_get_connection(stream->stream));
+        PyGILState_Release(state);
+        return AWS_HTTP_OUTGOING_BODY_DONE;
     }
 
-    return ret_state;
+    PyObject *result = PyObject_CallFunction(stream->on_read_body, "(O)", mv);
+    /* the return from python land is a tuple where the first argument is the body state
+     * and the second is the amount written */
+    PyObject *state_code = PyTuple_GetItem(result, 0);
+    enum aws_http_outgoing_body_state body_state = (enum aws_http_outgoing_body_state)PyIntEnum_AsLong(state_code);
+    PyObject *written_obj = PyTuple_GetItem(result, 1);
+    long written = (long)PyLong_AsLong(written_obj);
+    Py_XDECREF(result);
+    Py_XDECREF(mv);
+
+    PyGILState_Release(state);
+
+    buf->len += written;
+
+    return body_state;
 }
 
 static void s_on_incoming_response_headers(
@@ -343,15 +354,17 @@ static void s_on_incoming_response_headers(
 }
 
 static void s_on_incoming_header_block_done(struct aws_http_stream *internal_stream, bool has_body, void *user_data) {
-    (void)has_body;
 
     struct py_http_stream *stream = user_data;
 
     PyGILState_STATE state = PyGILState_Ensure();
     int response_code = 0;
     aws_http_stream_get_incoming_response_status(internal_stream, &response_code);
-    PyObject *result =
-        PyObject_CallFunction(stream->on_incoming_headers_received, "(Oi)", stream->received_headers, response_code);
+
+    PyObject *has_body_obj = has_body ? Py_True : Py_False;
+
+    PyObject *result = PyObject_CallFunction(
+        stream->on_incoming_headers_received, "(OiO)", stream->received_headers, response_code, has_body_obj);
     Py_XDECREF(result);
     Py_XDECREF(stream->received_headers);
     Py_DECREF(stream->on_incoming_headers_received);
@@ -435,14 +448,14 @@ PyObject *aws_py_http_client_connection_make_request(PyObject *self, PyObject *a
     }
 
     if (!http_connection_capsule || !PyCapsule_CheckExact(http_connection_capsule)) {
-        PyErr_SetNone(PyExc_ValueError);
+        PyErr_SetString(PyExc_ValueError, "http connection capsule is invalid");
         goto clean_up_stream;
     }
 
     py_connection = PyCapsule_GetPointer(http_connection_capsule, s_capsule_name_http_client_connection);
 
     if (!py_http_request || !on_stream_completed || !on_incoming_headers_received) {
-        PyErr_SetNone(PyExc_ValueError);
+        PyErr_SetString(PyExc_ValueError, "invalid arguments");
         goto clean_up_stream;
     }
 
@@ -458,7 +471,7 @@ PyObject *aws_py_http_client_connection_make_request(PyObject *self, PyObject *a
 
     PyObject *method_str = PyObject_GetAttrString(py_http_request, "method");
     if (!method_str) {
-        PyErr_SetNone(PyExc_ValueError);
+        PyErr_SetString(PyExc_ValueError, "http method is required");
         goto clean_up_stream;
     }
 
@@ -466,7 +479,7 @@ PyObject *aws_py_http_client_connection_make_request(PyObject *self, PyObject *a
 
     PyObject *uri_str = PyObject_GetAttrString(py_http_request, "path_and_query");
     if (!uri_str) {
-        PyErr_SetNone(PyExc_ValueError);
+        PyErr_SetString(PyExc_ValueError, "The URI path and query is required");
         goto clean_up_stream;
     }
 
@@ -474,7 +487,7 @@ PyObject *aws_py_http_client_connection_make_request(PyObject *self, PyObject *a
 
     PyObject *request_headers = PyObject_GetAttrString(py_http_request, "outgoing_headers");
     if (!request_headers) {
-        PyErr_SetNone(PyExc_ValueError);
+        PyErr_SetString(PyExc_ValueError, "outgoing headers is required");
         goto clean_up_stream;
     }
 
@@ -504,7 +517,7 @@ PyObject *aws_py_http_client_connection_make_request(PyObject *self, PyObject *a
 
     PyObject *on_read_body = PyObject_GetAttrString(py_http_request, "_on_read_body");
     if (!on_read_body) {
-        PyErr_SetNone(PyExc_ValueError);
+        PyErr_SetString(PyExc_ValueError, "the on_read_body callback is required");
         goto clean_up_headers;
     }
     stream->on_read_body = on_read_body;
@@ -512,7 +525,7 @@ PyObject *aws_py_http_client_connection_make_request(PyObject *self, PyObject *a
 
     PyObject *on_incoming_body = PyObject_GetAttrString(py_http_request, "_on_incoming_body");
     if (!on_incoming_body) {
-        PyErr_SetNone(PyExc_ValueError);
+        PyErr_SetString(PyExc_ValueError, "the on_incoming_body callback is required");
         goto clean_up_headers;
     }
 

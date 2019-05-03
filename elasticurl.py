@@ -163,8 +163,9 @@ def on_outgoing_body(request_body_mv):
     global written
     global data_len
 
+    actually_written = 0
+
     if written < data_len:
-        actually_written = 0
         mv_len = len(request_body_mv)
         cpy_len = data_len - written
         if data_len > mv_len:
@@ -178,9 +179,11 @@ def on_outgoing_body(request_body_mv):
             actually_written = data_file.readinto(request_body_mv[0:cpy_len])
 
         written += actually_written
-        return actually_written
 
-    return -1
+    if written == data_len:
+        return http.OutgoingHttpBodyState.Done, actually_written
+
+    return http.OutgoingHttpBodyState.InProgress, actually_written
 
 
 socket_options = io.SocketOptions()

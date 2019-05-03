@@ -78,12 +78,19 @@ PyObject *PyErr_AwsLastError(void) {
 
 PyObject *aws_py_memory_view_from_byte_buffer(struct aws_byte_buf *buf, int flags) {
 #if PY_MAJOR_VERSION == 3
-    return PyMemoryView_FromMemory((char *)(buf->buffer + buf->len), (Py_size_t)(buf->capacity - buf->len), PyBUF_WRITE);
+    return PyMemoryView_FromMemory((char *)(buf->buffer + buf->len), (Py_size_t)(buf->capacity - buf->len), flags);
 #else
+    Py_buffer py_buf;
+    Py_ssize_t size = buf->capacity - buf->len;
 
-#endif
+    int read_only = (flags & PyBUF_WRITE) != PyBUF_WRITE;
+    if (PyBuffer_FillInfo(&py_buf, NULL, (char *)(buf->buffer + buf->len), size, read_only, PyBUF_CONTIG)) {
+        return NULL;
+    }
+
+    return PyMemoryView_FromBuffer(&py_buf);
+#endif /* PY_MAJOR_VERSION */
 }
-
 
 /*******************************************************************************
  * Allocator
