@@ -19,12 +19,15 @@
 #include "mqtt_client.h"
 #include "mqtt_client_connection.h"
 
+#include <aws/common/byte_buf.h>
 #include <aws/io/io.h>
 #include <aws/io/logging.h>
 #include <aws/io/tls_channel_handler.h>
 
 #include <aws/http/http.h>
 #include <aws/mqtt/mqtt.h>
+
+#include <memoryobject.h>
 
 #if PY_MAJOR_VERSION == 3
 #    define INIT_FN PyInit__aws_crt_python
@@ -72,6 +75,15 @@ PyObject *PyErr_AwsLastError(void) {
     const char *msg = aws_error_str(err);
     return PyErr_Format(PyExc_RuntimeError, "%d: %s", err, msg);
 }
+
+PyObject *aws_py_memory_view_from_byte_buffer(struct aws_byte_buf *buf, int flags) {
+#if PY_MAJOR_VERSION == 3
+    return PyMemoryView_FromMemory((char *)(buf->buffer + buf->len), (Py_size_t)(buf->capacity - buf->len), PyBUF_WRITE);
+#else
+
+#endif
+}
+
 
 /*******************************************************************************
  * Allocator

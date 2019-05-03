@@ -24,6 +24,8 @@
 
 #include <aws/common/common.h>
 
+struct aws_byte_buf;
+
 #if PY_MAJOR_VERSION >= 3
 #    define PyString_FromStringAndSize PyUnicode_FromStringAndSize
 #    define BYTE_BUF_FORMAT_STR "y#"
@@ -45,6 +47,8 @@ void PyErr_SetAwsLastError(void);
 
 /* Set current thread's error indicator based on aws_last_error() and returns NULL */
 PyObject *PyErr_AwsLastError(void);
+
+PyObject *aws_py_memory_view_from_byte_buffer(struct aws_byte_buf *buf, int flags);
 
 /* Allocator that calls into PyObject_[Malloc|Free|Realloc] */
 struct aws_allocator *aws_crt_python_get_allocator(void);
