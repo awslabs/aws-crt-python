@@ -183,7 +183,7 @@ elif sys.platform == 'darwin':
 else:
     include_dirs = ['/usr/local/include'] + include_dirs
     library_dirs = ['/usr/local/' + lib_dir] + library_dirs
-    libraries += ['s2n', 'crypto']
+    libraries += ['s2n', 'crypto', 'rt']
     aws_c_libs += ['s2n']
 
 # ensure that the child linker process gets our flags
