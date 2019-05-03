@@ -10,5 +10,7 @@ mkdir build\deps\install
 set AWS_C_INSTALL=%cd%\build\deps\install
 
 python setup.py build
+python elasticurl.py -v ERROR -P -H "content-type: application/json" -i -d "{'test':'testval'}" http://httpbin.org/post
+python elasticurl.py -v ERROR -i https://example.com
 
 exit /b %errorlevel%
