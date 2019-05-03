@@ -85,16 +85,16 @@ static void s_on_client_connection_shutdown(struct aws_http_connection *connecti
     py_connection->shutdown_called = true;
     PyObject *on_conn_shutdown_cb = py_connection->on_connection_shutdown;
 
-    if (!py_connection->destructor_called) {
+    if (!py_connection->destructor_called && on_conn_shutdown_cb) {
         PyGILState_STATE state = PyGILState_Ensure();
         PyObject *result = PyObject_CallFunction(on_conn_shutdown_cb, "(i)", error_code);
         Py_XDECREF(result);
         PyGILState_Release(state);
-    } else {
+    } else if (py_connection->destructor_called) {
         aws_mem_release(py_connection->allocator, py_connection);
     }
 
-    Py_DECREF(on_conn_shutdown_cb);
+    Py_XDECREF(on_conn_shutdown_cb);
 }
 
 PyObject *aws_py_http_client_connection_create(PyObject *self, PyObject *args) {
@@ -144,18 +144,13 @@ PyObject *aws_py_http_client_connection_create(PyObject *self, PyObject *args) {
         goto error;
     }
 
-    if (!py_socket_options) {
+    if (!py_socket_options || py_socket_options == Py_None) {
         PyErr_SetString(PyExc_ValueError, "socket_options is a required argument");
         goto error;
     }
 
-    if (!on_connection_setup) {
+    if (!on_connection_setup || on_connection_setup == Py_None) {
         PyErr_SetString(PyExc_ValueError, "on_connection_setup callback is required");
-        goto error;
-    }
-
-    if (!on_connection_shutdown) {
-        PyErr_SetString(PyExc_ValueError, "on_connection_shutdown callback is required");
         goto error;
     }
 
@@ -224,13 +219,15 @@ PyObject *aws_py_http_client_connection_create(PyObject *self, PyObject *args) {
     Py_XINCREF(on_connection_setup);
     py_connection->on_connection_setup = on_connection_setup;
 
-    if (!PyCallable_Check(on_connection_shutdown)) {
-        PyErr_SetString(PyExc_TypeError, "on_connection_shutdown is invalid");
-        goto error;
+    py_connection->on_connection_shutdown = NULL;
+    if (on_connection_shutdown && on_connection_shutdown != Py_None) {
+        if (!PyCallable_Check(on_connection_shutdown)) {
+            PyErr_SetString(PyExc_TypeError, "on_connection_shutdown is invalid");
+            goto error;
+        }
+        Py_XINCREF(on_connection_shutdown);
+        py_connection->on_connection_shutdown = on_connection_shutdown;
     }
-
-    Py_XINCREF(on_connection_shutdown);
-    py_connection->on_connection_shutdown = on_connection_shutdown;
 
     py_connection->allocator = allocator;
 
@@ -541,27 +538,22 @@ PyObject *aws_py_http_client_connection_make_request(PyObject *self, PyObject *a
     }
 
     PyObject *on_read_body = PyObject_GetAttrString(py_http_request, "_on_read_body");
-    if (!on_read_body) {
-        PyErr_SetString(PyExc_ValueError, "the on_read_body callback is required");
-        goto clean_up_headers;
+    if (on_read_body && on_read_body != Py_None) {
+        stream->on_read_body = on_read_body;
+        Py_XINCREF(on_read_body);
+        request_options.stream_outgoing_body = s_stream_outgoing_body;
     }
-    stream->on_read_body = on_read_body;
-    Py_XINCREF(on_read_body);
 
     PyObject *on_incoming_body = PyObject_GetAttrString(py_http_request, "_on_incoming_body");
-    if (!on_incoming_body) {
-        PyErr_SetString(PyExc_ValueError, "the on_incoming_body callback is required");
-        goto clean_up_headers;
+    if (on_incoming_body && on_incoming_body != Py_None) {
+        stream->on_incoming_body = on_incoming_body;
+        Py_XINCREF(on_incoming_body);
+        request_options.on_response_body = s_on_incoming_response_body;
     }
 
-    stream->on_incoming_body = on_incoming_body;
-    Py_XINCREF(on_incoming_body);
-
     stream->received_headers = PyDict_New();
-    request_options.stream_outgoing_body = s_stream_outgoing_body;
     request_options.on_response_headers = s_on_incoming_response_headers;
     request_options.on_response_header_block_done = s_on_incoming_header_block_done;
-    request_options.on_response_body = s_on_incoming_response_body;
     request_options.on_complete = s_on_stream_complete;
     request_options.user_data = stream;
 

@@ -212,8 +212,6 @@ if uri_str is None or uri_str == '':
 if url.query is not None:
     uri_str += url.query
 
-request = http.HttpRequest(method, uri_str, outgoing_headers, on_outgoing_body, on_incoming_body)
-
 
 # invoked as soon as the response headers are received
 def response_received_cb(ftr):
@@ -223,14 +221,14 @@ def response_received_cb(ftr):
 
 
 # make the request
-response_start_future = connection.make_request(request)
-response_start_future.add_done_callback(response_received_cb)
+request = connection.make_request(method, uri_str, outgoing_headers, on_outgoing_body, on_incoming_body)
+request.response_headers_received.add_done_callback(response_received_cb)
 
 # wait for response headers
-response_start = response_start_future.result()
+response_start = request.response_headers_received.result(timeout=10)
 
 # wait until the full response is finished
-response_finished = request.response_completed.result()
+response_finished = request.response_completed.result(timeout=10)
 request = None
 connection = None
 

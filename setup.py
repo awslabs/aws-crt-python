@@ -191,15 +191,15 @@ os.environ['LDFLAGS'] = ' '.join(ldflags)
 
 _aws_crt_python = setuptools.Extension(
     '_aws_crt_python',
-    language = 'c',
-    define_macros = [
+    language='c',
+    define_macros=[
         ('MAJOR_VERSION', '1'),
         ('MINOR_VERSION', '0'),
     ],
-    include_dirs = ['/usr/local/include', dep_install_path + '/include'],
-    library_dirs = ['/usr/local/' + lib_dir, dep_install_path + '/' + lib_dir],
-    libraries = libraries,
-    sources = [
+    include_dirs=['/usr/local/include', dep_install_path + '/include'],
+    library_dirs=['/usr/local/' + lib_dir, dep_install_path + '/' + lib_dir],
+    libraries=libraries,
+    sources=[
         'source/module.c',
         'source/io.c',
         'source/mqtt_client.c',
@@ -207,13 +207,13 @@ _aws_crt_python = setuptools.Extension(
         'source/http_client_connection.c',
         'source/crypto.c',
     ],
-    extra_objects = extra_objects,
-    extra_compile_args = cflags,
+    extra_objects=extra_objects,
+    extra_compile_args=cflags,
 )
 
 setuptools.setup(
     name="awscrt",
-    version="v0.2.12",
+    version="v0.2.13",
     author="Amazon Web Services, Inc",
     author_email="aws-sdk-common-runtime@amazon.com",
     description="A common runtime for AWS Python projects",
