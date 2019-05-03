@@ -27,7 +27,6 @@ class HttpClientConnection(object):
     def __init__(self, bootstrap, on_connection_shutdown, tls_connection_options):
         assert isinstance(bootstrap, ClientBootstrap)
         assert tls_connection_options is None or isinstance(tls_connection_options, TlsConnectionOptions)
-        assert on_connection_shutdown is not None
 
         for slot in self.__slots__:
             setattr(self, slot, None)
@@ -38,7 +37,8 @@ class HttpClientConnection(object):
         self._native_handle = None
 
     @staticmethod
-    def new_connection(bootstrap, host_name, port, socket_options, on_connection_shutdown, tls_connection_options):
+    def new_connection(bootstrap, host_name, port, socket_options,
+                       on_connection_shutdown=None, tls_connection_options=None):
         """
         Initiates a new connection to host_name and port using socket_options and tls_connection_options if supplied.
         if tls_connection_options is None, then the connection will be attempted over plain-text.
@@ -52,7 +52,6 @@ class HttpClientConnection(object):
         assert host_name is not None
         assert port is not None
         assert socket_options is not None and isinstance(socket_options, SocketOptions)
-        assert on_connection_shutdown is not None
 
         future = Future()
         connection = HttpClientConnection(bootstrap, on_connection_shutdown, tls_connection_options)
@@ -65,7 +64,7 @@ class HttpClientConnection(object):
                 future.set_exception(Exception("Error during connect: err={}".format(error_code)))
 
         try:
-            if tls_connection_options:
+            if tls_connection_options is not None:
                 internal_conn_options_handle = tls_connection_options._internal_tls_conn_options
             else:
                 internal_conn_options_handle = None
@@ -100,14 +99,26 @@ class HttpClientConnection(object):
 
         return False
 
-    def make_request(self, request):
+    def make_request(self, method, uri_str, outgoing_headers, on_outgoing_body, on_incoming_body):
         """
-        Makes an Http request. When the headers from the response are received, the returned future will have a result.
+        path_and_query is the path and query portion
+        of a URL. method is the http method (GET, PUT, etc...). outgoing_headers are the headers to send as part
+        of the request.
+
+        on_read_body is invoked to read the body of the request. It takes a single parameter of type MemoryView
+        (it's writable), and you signal the end of the stream by returning OutgoingHttpBodyState.Done for the first tuple
+        argument. If you aren't done sending the body, the first tuple argument should be OutgoingHttpBodyState.InProgress
+        The second tuple argument is the size of the data written to the memoryview.
+
+        on_incoming_body is invoked as the response body is received. It takes a single argument of type bytes.
+
+        Makes an Http request. When the headers from the response are received, the returned
+        HttpRequest.response_headers_received future will have a result.
         and request.response_headers will be filled in, and request.response_code will be available.
         After this future completes, you can get the result of request.response_completed,
         for the remainder of the response.
         """
-        future = Future()
+        request = HttpRequest(method, uri_str, outgoing_headers, on_outgoing_body, on_incoming_body)
 
         def on_stream_completed(error_code):
             if error_code == 0:
@@ -119,7 +130,7 @@ class HttpClientConnection(object):
             request.response_headers = headers
             request.response_code = response_code
             request.has_response_body = has_body
-            future.set_result(response_code)
+            request.response_headers_received.set_result(response_code)
 
         try:
             request._stream = _aws_crt_python.aws_py_http_client_connection_make_request(self._native_handle,
@@ -128,9 +139,9 @@ class HttpClientConnection(object):
                                                                                          on_incoming_headers_received)
 
         except Exception as e:
-            future.set_exception(e)
+            request.response_headers_received.set_exception(e)
 
-        return future
+        return request
 
 
 class OutgoingHttpBodyState(IntEnum):
@@ -152,7 +163,8 @@ class HttpRequest(object):
     on_incoming_body is invoked as the response body is received. It takes a single argument of type bytes.
     """
     __slots__ = ('path_and_query', 'method', 'outgoing_headers', '_on_read_body', '_on_incoming_body', '_stream',
-                 'response_headers', 'response_code', 'has_response_body', 'response_completed')
+                 'response_headers', 'response_code', 'has_response_body', 'response_headers_received',
+                 'response_completed')
 
     def __init__(self, method, path_and_query, outgoing_headers, on_read_body, on_incoming_body):
         assert method is not None
@@ -168,6 +180,7 @@ class HttpRequest(object):
         self._on_read_body = on_read_body
         self._on_incoming_body = on_incoming_body
         self.response_completed = Future()
+        self.response_headers_received = Future()
         self._stream = None
         self.response_headers = None
         self.response_code = None
