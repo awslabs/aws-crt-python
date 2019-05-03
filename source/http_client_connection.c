@@ -20,8 +20,6 @@
 #include <aws/http/request_response.h>
 #include <aws/io/socket.h>
 
-#include <memoryobject.h>
-
 const char *s_capsule_name_http_client_connection = "aws_http_client_connection";
 const char *s_capsule_name_http_client_stream = "aws_http_client_stream";
 
@@ -307,9 +305,7 @@ static enum aws_http_outgoing_body_state s_stream_outgoing_body(
 
     PyGILState_STATE state = PyGILState_Ensure();
 
-    Py_ssize_t data_len = (Py_ssize_t)buf->capacity - buf->len;
-
-    PyObject *mv = PyMemoryView_FromMemory((char *)(buf->buffer + buf->len), data_len, PyBUF_WRITE);
+    PyObject *mv = aws_py_memory_view_from_byte_buffer(buf, PyBUF_WRITE);
     PyObject *result = PyObject_CallFunction(stream->on_read_body, "(O)", mv);
     long written = (long)PyLong_AsLong(result);
     Py_XDECREF(result);
