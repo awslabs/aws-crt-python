@@ -135,18 +135,33 @@ PyObject *aws_py_http_client_connection_create(PyObject *self, PyObject *args) {
 
     if (tls_conn_options_capsule && tls_conn_options_capsule != Py_None &&
         !PyCapsule_CheckExact(tls_conn_options_capsule)) {
-        PyErr_SetNone(PyExc_ValueError);
+        PyErr_SetString(PyExc_ValueError, "tls connection options is invalid");
         goto error;
     }
 
-    if (!(host_name && py_socket_options && on_connection_setup && on_connection_shutdown)) {
-        PyErr_SetString(PyExc_ValueError, "invalid arguments");
+    if (!host_name) {
+        PyErr_SetString(PyExc_ValueError, "host_name is a required argument");
+        goto error;
+    }
+
+    if (!py_socket_options) {
+        PyErr_SetString(PyExc_ValueError, "socket_options is a required argument");
+        goto error;
+    }
+
+    if (!on_connection_setup) {
+        PyErr_SetString(PyExc_ValueError, "on_connection_setup callback is required");
+        goto error;
+    }
+
+    if (!on_connection_shutdown) {
+        PyErr_SetString(PyExc_ValueError, "on_connection_shutdown callback is required");
         goto error;
     }
 
     struct aws_client_bootstrap *bootstrap = PyCapsule_GetPointer(bootstrap_capsule, s_capsule_name_client_bootstrap);
     if (!bootstrap) {
-        PyErr_SetNone(PyExc_ValueError);
+        PyErr_SetString(PyExc_ValueError, "the bootstrap capsule has an invalid pointer");
         goto error;
     }
 
@@ -454,8 +469,18 @@ PyObject *aws_py_http_client_connection_make_request(PyObject *self, PyObject *a
 
     py_connection = PyCapsule_GetPointer(http_connection_capsule, s_capsule_name_http_client_connection);
 
-    if (!py_http_request || !on_stream_completed || !on_incoming_headers_received) {
-        PyErr_SetString(PyExc_ValueError, "invalid arguments");
+    if (!py_http_request) {
+        PyErr_SetString(PyExc_ValueError, "the request argument is required");
+        goto clean_up_stream;
+    }
+
+    if (!on_stream_completed) {
+        PyErr_SetString(PyExc_ValueError, "on_stream_completed callback is required");
+        goto clean_up_stream;
+    }
+
+    if (!on_incoming_headers_received) {
+        PyErr_SetString(PyExc_ValueError, "on_incoming_headers_received callback is required");
         goto clean_up_stream;
     }
 

@@ -34,6 +34,6 @@ git submodule update --init --recursive
 export AWS_C_INSTALL=`pwd`/build/deps/install
 
 # build python3 extension
-python3 setup.py build
+python3 setup.py build install
 python3 elasticurl.py -v ERROR -P -H "content-type: application/json" -i -d "{'test':'testval'}" http://httpbin.org/post
 python3 elasticurl.py -v ERROR -i https://example.com
