@@ -118,7 +118,7 @@ class HttpClientConnection(object):
         After this future completes, you can get the result of request.response_completed,
         for the remainder of the response.
         """
-        request = HttpRequest(method, uri_str, outgoing_headers, on_outgoing_body, on_incoming_body)
+        request = HttpRequest(self, method, uri_str, outgoing_headers, on_outgoing_body, on_incoming_body)
 
         def on_stream_completed(error_code):
             if error_code == 0:
@@ -162,19 +162,21 @@ class HttpRequest(object):
 
     on_incoming_body is invoked as the response body is received. It takes a single argument of type bytes.
     """
-    __slots__ = ('path_and_query', 'method', 'outgoing_headers', '_on_read_body', '_on_incoming_body', '_stream',
+    __slots__ = ('_connection', 'path_and_query', 'method', 'outgoing_headers', '_on_read_body', '_on_incoming_body', '_stream',
                  'response_headers', 'response_code', 'has_response_body', 'response_headers_received',
                  'response_completed')
 
-    def __init__(self, method, path_and_query, outgoing_headers, on_read_body, on_incoming_body):
+    def __init__(self, connection, method, path_and_query, outgoing_headers, on_read_body, on_incoming_body):
         assert method is not None
         assert outgoing_headers is not None
+        assert connection is not None and isinstance(connection, HttpClientConnection)
 
         self.path_and_query = path_and_query
 
         if path_and_query is None:
             self.path_and_query = '/'
 
+        self._connection = connection
         self.method = method
         self.outgoing_headers = outgoing_headers
         self._on_read_body = on_read_body
