@@ -121,6 +121,8 @@ def build_dependency(lib_name):
         '-DBUILD_SHARED_LIBS=OFF',
         '-DCMAKE_INSTALL_LIBDIR={}'.format(lib_dir),
         '-DCMAKE_BUILD_TYPE=Release',
+        '-DUSE_S2N_PQ_CRYPTO=OFF',
+        '-DBUILD_TESTING=OFF',
     ]
     cmake_args.append(lib_source_dir)
     build_cmd = ['cmake', '--build', './', '--config', 'release', '--target', 'install']

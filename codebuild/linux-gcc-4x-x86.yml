@@ -29,7 +29,7 @@ phases:
         -DSSL_FORBID_ENULL -DOPENSSL_NO_DTLS1 -DOPENSSL_NO_HEARTBEATS   \
         --prefix=`pwd`/../../build/deps/install/
       - make -j 12 
-      - make install
+      - make install_sw
       - cd ../../
   pre_build:
     commands:
