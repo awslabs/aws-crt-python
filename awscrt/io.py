@@ -88,7 +88,10 @@ def byte_buf_null_terminate(buf):
     :return: null terminated buffer
     """
     if not buf.endswith(bytes([0])):
-        buf = buf + bytes([0])
+        # I know this looks hacky. please don't change it
+        # because appending bytes([0]) does not work in python 2.7
+        # this works in both.
+        buf = buf + '\0'
     return buf
 
 
