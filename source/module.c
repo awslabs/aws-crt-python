@@ -29,6 +29,53 @@
 
 #include <memoryobject.h>
 
+static struct aws_logger s_logger;
+static bool s_logger_init = false;
+
+PyObject *aws_py_io_init_logging(PyObject *self, PyObject *args) {
+    (void)self;
+
+    if (s_logger_init) {
+        Py_RETURN_NONE;
+    }
+
+    s_logger_init = true;
+
+    struct aws_allocator *allocator = aws_crt_python_get_allocator();
+
+    int log_level = 0;
+    const char *file_path = NULL;
+    Py_ssize_t file_path_len = 0;
+
+    if (!PyArg_ParseTuple(args, "bs#", &log_level, &file_path, &file_path_len)) {
+        PyErr_SetNone(PyExc_ValueError);
+        return NULL;
+    }
+
+    struct aws_logger_standard_options log_options = {
+        .level = log_level,
+        .file = NULL,
+        .filename = NULL,
+    };
+
+    Py_ssize_t stdout_len = (Py_ssize_t)strlen("stdout");
+
+    Py_ssize_t cmp_len = file_path_len > stdout_len ? stdout_len : file_path_len;
+
+    if (!memcmp("stdout", file_path, (size_t)cmp_len)) {
+        log_options.file = stdout;
+    } else if (!memcmp("stderr", file_path, (size_t)cmp_len)) {
+        log_options.file = stderr;
+    } else {
+        log_options.filename = file_path;
+    }
+
+    aws_logger_init_standard(&s_logger, allocator, &log_options);
+    aws_logger_set(&s_logger);
+
+    Py_RETURN_NONE;
+}
+
 #if PY_MAJOR_VERSION == 3
 #    define INIT_FN PyInit__aws_crt_python
 #    define UNICODE_GET_BYTES_FN PyUnicode_DATA
@@ -168,7 +215,12 @@ static void s_module_free(void *userdata) {
     (void)userdata;
 
     aws_tls_clean_up_static_state();
+
+    if (s_logger_init) {
+        aws_logger_clean_up(&s_logger);
+    }
 }
+
 #endif /* PY_MAJOR_VERSION == 3 */
 
 PyMODINIT_FUNC INIT_FN(void) {
