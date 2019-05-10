@@ -56,8 +56,6 @@ if args.cert or args.key or args.root_ca:
     if args.cert:
         assert args.key
         tls_options = io.TlsContextOptions.create_client_with_mtls_from_path(args.cert, args.key)
-        print(tls_options.certificate_buffer)
-        print(tls_options.private_key_buffer)
     else:
         tls_options = io.TlsContextOptions()
 

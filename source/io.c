@@ -205,19 +205,14 @@ PyObject *aws_py_io_client_tls_ctx_new(PyObject *self, PyObject *args) {
         
        /* adding the null terminator in python land screws up the byte buf apis. We never consider the null terminator
          * as part of the length, and this causes cert/key imports to fail. */
-        if (cert.ptr[cert.len - 1] == 0) {
-            cert.len -= 1;
-        }
-        size_t len = strlen((const char *)cert.ptr);
-        fprintf(stderr, "certificate strlen: %d, buf len %d, buf is \n%s", (int)len, (int)cert.len, (const char *)cert.ptr);
-
-        if (key.ptr[key.len - 1] == 0) {
-            key.len -= 1;
-        }
-        len = strlen((const char *)key.ptr);
-        fprintf(stderr, "key strlen: %d, buf len %d, buf is \n%s", (int)len, (int)key.len, (const char *)key.ptr);
-
         aws_tls_ctx_options_init_client_mtls(&ctx_options, allocator, &cert, &key);
+        if (ctx_options.certificate.buffer[cert.len - 1] == 0) {
+            ctx_options.certificate.len -= 1;
+        }
+
+        if (ctx_options.private_key.buffer[key.len - 1] == 0) {
+            ctx_options.private_key.len -= 1;
+        }
     } else {
         aws_tls_ctx_options_init_default_client(&ctx_options, allocator);
     }
@@ -229,11 +224,11 @@ PyObject *aws_py_io_client_tls_ctx_new(PyObject *self, PyObject *args) {
     }
     if (ca_buffer && ca_buffer_len > 0) {
         struct aws_byte_cursor ca = aws_byte_cursor_from_array(ca_buffer, ca_buffer_len);
-       
-        if (ca.ptr[ca.len - 1] == 0) {
-            ca.len -= 1;
-        }
+
         aws_tls_ctx_options_override_default_trust_store(&ctx_options, &ca);
+        if (ctx_options.ca_file.buffer[ca.len - 1] == 0) {
+            ctx_options.ca_file.len -= 1;
+        }
     }
 
     if (alpn_list) {
