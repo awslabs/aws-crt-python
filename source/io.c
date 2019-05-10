@@ -208,10 +208,15 @@ PyObject *aws_py_io_client_tls_ctx_new(PyObject *self, PyObject *args) {
         if (cert.ptr[cert.len - 1] == 0) {
             cert.len -= 1;
         }
+        size_t len = strlen((const char *)cert.ptr);
+        fprintf(stderr, "certificate strlen: %d, buf len %d, buf is \n%s", (int)len, (int)cert.len, (const char *)cert.ptr);
 
         if (key.ptr[key.len - 1] == 0) {
             key.len -= 1;
         }
+        len = strlen((const char *)key.ptr);
+        fprintf(stderr, "key strlen: %d, buf len %d, buf is \n%s", (int)len, (int)key.len, (const char *)key.ptr);
+
         aws_tls_ctx_options_init_client_mtls(&ctx_options, allocator, &cert, &key);
     } else {
         aws_tls_ctx_options_init_default_client(&ctx_options, allocator);
