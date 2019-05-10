@@ -21,10 +21,6 @@ cert=$(aws secretsmanager get-secret-value --secret-id "unit-test/certificate" -
 key=$(aws secretsmanager get-secret-value --secret-id "unit-test/privatekey" --query "SecretString" | cut -f2 -d":" | cut -f2 -d\") && echo -e "$key" > /tmp/privatekey.pem
 ENDPOINT=$(aws secretsmanager get-secret-value --secret-id "unit-test/endpoint" --query "SecretString" | cut -f2 -d":" | sed -e 's/[\\\"\}]//g')
 
-ls /tmp
-cat /tmp/certificate.pem
-cat /tmp/privatekey.pem
-
 python3 setup.py build install
 python3 elasticurl.py -v ERROR -P -H "content-type: application/json" -i -d "{'test':'testval'}" http://httpbin.org/post
 python3 elasticurl.py -v ERROR -i https://example.com
