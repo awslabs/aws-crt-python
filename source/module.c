@@ -219,6 +219,7 @@ static void s_module_free(void *userdata) {
     if (s_logger_init) {
         aws_logger_clean_up(&s_logger);
     }
+    aws_mqtt_library_clean_up();
 }
 
 #endif /* PY_MAJOR_VERSION == 3 */
@@ -245,12 +246,12 @@ PyMODINIT_FUNC INIT_FN(void) {
 
     aws_load_error_strings();
     aws_io_load_error_strings();
-    aws_mqtt_load_error_strings();
 
     aws_io_load_log_subject_strings();
-    aws_http_library_init(aws_crt_python_get_allocator());
-
     aws_tls_init_static_state(aws_crt_python_get_allocator());
+    aws_http_library_init(aws_crt_python_get_allocator());
+    aws_mqtt_library_init(aws_crt_python_get_allocator());
+
     if (!PyEval_ThreadsInitialized()) {
         PyEval_InitThreads();
     }
