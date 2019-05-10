@@ -54,7 +54,6 @@ if args.output:
     output = open(args.output, mode='wb')
 
 # setup the logger if user request logging
-logger = None
 
 if args.verbose:
     log_level = io.LogLevel.NoLogs
@@ -76,7 +75,7 @@ if args.verbose:
     if args.trace:
         log_output = args.trace
 
-    logger = io.Logger(log_level, log_output)
+    io.init_logging(log_level, log_output)
 
 # an event loop group is needed for IO operations. Unless you're a server or a client doing hundreds of connections
 # you only want one of these.

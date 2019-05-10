@@ -24,19 +24,15 @@ class LogLevel(IntEnum):
     Debug = 5
     Trace = 6
 
-
-class Logger(object):
+def init_logging(log_level, file_name):
     """
     initialize a logger. log_level is type LogLevel, and file_name is of type str.
     To write to stdout, or stderr, simply pass 'stdout' or 'stderr' as strings. Otherwise, a file path is assumed.
     """
-    __slots__ = ('_internal_logger')
+    assert log_level is not None
+    assert file_name is not None
 
-    def __init__(self, log_level, file_name):
-        assert log_level is not None
-        assert file_name is not None
-
-        self._internal_logger = _aws_crt_python.aws_py_io_init_logging(log_level, file_name)
+    _aws_crt_python.aws_py_io_init_logging(log_level, file_name)
 
 
 def is_alpn_available():
@@ -78,21 +74,6 @@ class ClientBootstrap(object):
         self.elg = elg
         self.host_resolver = host_resolver
         self._internal_bootstrap = _aws_crt_python.aws_py_io_client_bootstrap_new(self.elg._internal_elg, host_resolver._internal_host_resolver)
-
-
-#
-def byte_buf_null_terminate(buf):
-    """
-    force null termination at the end of buffer
-    :param buf: buffer to null terminate
-    :return: null terminated buffer
-    """
-    if not buf.endswith(bytes([0])):
-        # I know this looks hacky. please don't change it
-        # because appending bytes([0]) does not work in python 2.7
-        # this works in both.
-        buf = buf + b'\0'
-    return buf
 
 
 def byte_buf_from_file(filepath):
@@ -169,7 +150,7 @@ class TlsContextOptions(object):
     def override_default_trust_store(self, rootca_buffer):
         assert isinstance(rootca_buffer, bytes)
 
-        self.ca_buffer = byte_buf_null_terminate(rootca_buffer)
+        self.ca_buffer = rootca_buffer
 
     @staticmethod
     def create_client_with_mtls_from_path(cert_path, pk_path):
@@ -188,8 +169,8 @@ class TlsContextOptions(object):
         assert isinstance(key_buffer, bytes)
 
         opt = TlsContextOptions()
-        opt.certificate_buffer = byte_buf_null_terminate(cert_buffer)
-        opt.private_key_buffer = byte_buf_null_terminate(key_buffer)
+        opt.certificate_buffer = cert_buffer
+        opt.private_key_buffer = key_buffer
 
         opt.verify_peer = True
         return opt
@@ -207,7 +188,7 @@ class TlsContextOptions(object):
         return opt
 
     @staticmethod
-    def create_server_with_mtls_from_path(cert_path, pk_path):
+    def create_server_from_path(cert_path, pk_path):
 
         assert isinstance(cert_path, str)
         assert isinstance(pk_path, str)
@@ -218,18 +199,18 @@ class TlsContextOptions(object):
         return TlsContextOptions.create_server_with_mtls(cert_buffer, key_buffer)
 
     @staticmethod
-    def create_server_with_mtls(cert_buffer, key_buffer):
+    def create_server(cert_buffer, key_buffer):
         assert isinstance(cert_buffer, bytes)
         assert isinstance(key_buffer, bytes)
 
         opt = TlsContextOptions()
-        opt.certificate_buffer = byte_buf_null_terminate(cert_buffer)
-        opt.private_key_buffer = byte_buf_null_terminate(key_buffer)
+        opt.certificate_buffer = cert_buffer
+        opt.private_key_buffer = key_buffer
         opt.verify_peer = False
         return opt
 
     @staticmethod
-    def create_server_with_mtls_pkcs12(pkcs12_path, pkcs12_password):
+    def create_server_pkcs12(pkcs12_path, pkcs12_password):
 
         assert isinstance(pkcs12_path, str)
         assert isinstance(pkcs12_password, str)

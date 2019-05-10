@@ -621,8 +621,7 @@ static void s_suback_callback(
 
         const char *topic_str = (const char *)topic->ptr;
         Py_ssize_t topic_len = topic->len;
-
-        PyObject *result = PyObject_CallFunction(callback, "(Hs#L)", packet_id, topic_str, topic_len, qos);
+        PyObject *result = PyObject_CallFunction(callback, "(Hs#b)", packet_id, topic_str, topic_len, qos);
         if (!result) {
             PyErr_WriteUnraisable(PyErr_Occurred());
             abort();

@@ -15,6 +15,7 @@ from __future__ import print_function
 
 import argparse
 from awscrt import io, mqtt
+from awscrt.io import LogLevel
 import threading
 import uuid
 
@@ -30,6 +31,8 @@ parser.add_argument('--port', type=int, help="Override default connection port")
 parser.add_argument('--cert', help="File path to your client certificate, in PEM format")
 parser.add_argument('--key', help="File path to your private key, in PEM format")
 parser.add_argument('--root-ca', help="File path to root certificate authority, in PEM format")
+
+io.init_logging(LogLevel.Trace, 'stderr')
 
 def on_connection_interrupted(error_code):
     print("Connection has been interrupted with error code", error_code)
@@ -96,6 +99,7 @@ subscribe_future, subscribe_packet_id = mqtt_connection.subscribe(
 subscribe_results = subscribe_future.result(TIMEOUT)
 assert(subscribe_results['packet_id'] == subscribe_packet_id)
 assert(subscribe_results['topic'] == TOPIC)
+print(subscribe_results)
 assert(subscribe_results['qos'] == qos)
 
 # Publish
