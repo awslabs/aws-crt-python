@@ -99,6 +99,7 @@ subscribe_future, subscribe_packet_id = mqtt_connection.subscribe(
 subscribe_results = subscribe_future.result(TIMEOUT)
 assert(subscribe_results['packet_id'] == subscribe_packet_id)
 assert(subscribe_results['topic'] == TOPIC)
+print(subscribe_results)
 assert(subscribe_results['qos'] == qos)
 
 # Publish
