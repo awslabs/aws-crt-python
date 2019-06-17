@@ -147,7 +147,7 @@ os.chdir(current_dir)
 from distutils.ccompiler import get_default_compiler
 compiler_type = get_default_compiler()
 
-aws_c_libs = ['aws-c-mqtt', 'aws-c-io', 'aws-c-common', 'aws-c-cal', 'aws-c-compression', 'aws-c-http']
+aws_c_libs = ['aws-c-mqtt', 'aws-c-http', 'aws-c-io', 'aws-c-compression', 'aws-c-common', 'aws-c-cal']
 
 def get_from_env(key):
     try:
