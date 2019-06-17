@@ -139,6 +139,7 @@ build_dependency('aws-c-common')
 build_dependency('aws-c-io')
 build_dependency('aws-c-mqtt')
 build_dependency('aws-c-cal')
+build_dependency('aws-c-compression')
 build_dependency('aws-c-http')
 
 os.chdir(current_dir)
