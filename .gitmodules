@@ -16,3 +16,6 @@
 [submodule "aws-c-http"]
 	path = aws-c-http
 	url = git://github.com/awslabs/aws-c-http
+[submodule "aws-c-compression"]
+	path = aws-c-compression
+	url = git://github.com/awslabs/aws-c-compression
