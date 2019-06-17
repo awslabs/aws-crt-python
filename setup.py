@@ -139,6 +139,7 @@ build_dependency('aws-c-common')
 build_dependency('aws-c-io')
 build_dependency('aws-c-mqtt')
 build_dependency('aws-c-cal')
+build_dependency('aws-c-compression')
 build_dependency('aws-c-http')
 
 os.chdir(current_dir)
@@ -146,7 +147,7 @@ os.chdir(current_dir)
 from distutils.ccompiler import get_default_compiler
 compiler_type = get_default_compiler()
 
-aws_c_libs = ['aws-c-mqtt', 'aws-c-io', 'aws-c-common', 'aws-c-cal', 'aws-c-http']
+aws_c_libs = ['aws-c-mqtt', 'aws-c-http', 'aws-c-io', 'aws-c-compression', 'aws-c-cal', 'aws-c-common']
 
 def get_from_env(key):
     try:
