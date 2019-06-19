@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -ex
 #force a failure if there's no tag
 git describe --tags
 # now get the tag
@@ -12,7 +12,7 @@ if [ "$CURRENT_TAG" != "$CURRENT_TAG_VERSION" ]; then
     exit 1
 fi
 
-if pip install -vvv awscrt==$CURRENT_TAG_VERSION; then
+if pip install --no-cache-dir -vvv awscrt==$CURRENT_TAG_VERSION; then
     echo "$CURRENT_TAG_VERSION is already in pypi, cut a new tag if you want to upload another version."
     exit 1
 fi
