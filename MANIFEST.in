@@ -1,6 +1,7 @@
 graft source
 graft aws-c-common
 graft aws-c-io
+graft aws-c-compression
 graft s2n
 graft aws-c-mqtt
 graft aws-c-cal
