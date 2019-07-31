@@ -99,13 +99,14 @@ class HttpClientConnection(object):
 
         return False
 
-    def make_request(self, method, uri_str, outgoing_headers, on_outgoing_body, on_incoming_body):
+    def make_request(self, method, uri_str, outgoing_headers, outgoing_body, on_incoming_body):
         """
         path_and_query is the path and query portion
         of a URL. method is the http method (GET, PUT, etc...). outgoing_headers are the headers to send as part
         of the request.
 
-        on_read_body is invoked to read the body of the request. It takes a single parameter of type MemoryView
+        #TODO
+        outgoing_body is invoked to read the body of the request. It takes a single parameter of type MemoryView
         (it's writable), and you signal the end of the stream by returning OutgoingHttpBodyState.Done for the first tuple
         argument. If you aren't done sending the body, the first tuple argument should be OutgoingHttpBodyState.InProgress
         The second tuple argument is the size of the data written to the memoryview.
@@ -118,7 +119,7 @@ class HttpClientConnection(object):
         After this future completes, you can get the result of request.response_completed,
         for the remainder of the response.
         """
-        request = HttpRequest(self, method, uri_str, outgoing_headers, on_outgoing_body, on_incoming_body)
+        request = HttpRequest(self, method, uri_str, outgoing_headers, outgoing_body, on_incoming_body)
 
         def on_stream_completed(error_code):
             if error_code == 0:
@@ -143,33 +144,31 @@ class HttpClientConnection(object):
 
         return request
 
-
-class OutgoingHttpBodyState(IntEnum):
-    InProgress = 0
-    Done = 1
-
-
 class HttpRequest(object):
     """
     Represents an HttpRequest to pass to HttpClientConnection.make_request(). path_and_query is the path and query portion
     of a URL. method is the http method (GET, PUT, etc...). outgoing_headers are the headers to send as part
     of the request.
 
-    on_read_body is invoked to read the body of the request. It takes a single parameter of type MemoryView
+    #TODO WAT
+    outgoing_body is invoked to read the body of the request. It takes a single parameter of type MemoryView
     (it's writable), and you signal the end of the stream by returning OutgoingHttpBodyState.Done for the first tuple
     argument. If you aren't done sending the body, the first tuple argument should be OutgoingHttpBodyState.InProgress
     The second tuple argument is the size of the data written to the memoryview.
 
     on_incoming_body is invoked as the response body is received. It takes a single argument of type bytes.
     """
-    __slots__ = ('_connection', 'path_and_query', 'method', 'outgoing_headers', '_on_read_body', '_on_incoming_body', '_stream',
+    __slots__ = ('_connection', 'path_and_query', 'method', 'outgoing_headers', '_outgoing_body', '_on_incoming_body', '_stream',
                  'response_headers', 'response_code', 'has_response_body', 'response_headers_received',
                  'response_completed')
 
-    def __init__(self, connection, method, path_and_query, outgoing_headers, on_read_body, on_incoming_body):
+    def __init__(self, connection, method, path_and_query, outgoing_headers, outgoing_body, on_incoming_body):
+        import io
+
         assert method is not None
         assert outgoing_headers is not None
         assert connection is not None and isinstance(connection, HttpClientConnection)
+        assert not outgoing_body or isinstance(outgoing_body, io.IOBase)
 
         self.path_and_query = path_and_query
 
@@ -179,7 +178,7 @@ class HttpRequest(object):
         self._connection = connection
         self.method = method
         self.outgoing_headers = outgoing_headers
-        self._on_read_body = on_read_body
+        self._outgoing_body = outgoing_body
         self._on_incoming_body = on_incoming_body
         self.response_completed = Future()
         self.response_headers_received = Future()

@@ -201,6 +201,3 @@ class Connection(object):
             future.set_exception(e)
 
         return future, packet_id
-
-    def ping(self):
-        _aws_crt_python.aws_py_mqtt_client_connection_ping(self._internal_connection)

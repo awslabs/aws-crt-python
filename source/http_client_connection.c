@@ -19,6 +19,7 @@
 #include <aws/common/array_list.h>
 #include <aws/http/request_response.h>
 #include <aws/io/socket.h>
+#include <aws/io/stream.h>
 
 const char *s_capsule_name_http_client_connection = "aws_http_client_connection";
 const char *s_capsule_name_http_client_stream = "aws_http_client_stream";
@@ -302,50 +303,83 @@ PyObject *aws_py_http_client_connection_is_open(PyObject *self, PyObject *args) 
 struct py_http_stream {
     struct aws_allocator *allocator;
     struct aws_http_stream *stream;
+    struct aws_input_stream body_input_stream;
     PyObject *capsule;
     PyObject *on_stream_completed;
     PyObject *on_incoming_headers_received;
-    PyObject *on_read_body;
+    PyObject *outgoing_body;
     PyObject *on_incoming_body;
     PyObject *received_headers;
+    bool is_eos;
 };
 
-static enum aws_http_outgoing_body_state s_stream_outgoing_body(
-    struct aws_http_stream *internal_stream,
-    struct aws_byte_buf *buf,
-    void *user_data) {
-    (void)internal_stream;
+static int s_stream_read(struct aws_input_stream *stream, struct aws_byte_buf *dest, size_t *amount_read) {
+    struct py_http_stream *py_stream = stream->impl;
 
-    struct py_http_stream *stream = user_data;
+    int err = AWS_OP_SUCCESS;
 
     PyGILState_STATE state = PyGILState_Ensure();
 
-    PyObject *mv = aws_py_memory_view_from_byte_buffer(buf, PyBUF_WRITE);
+    PyObject *mv = aws_py_memory_view_from_byte_buffer(dest, PyBUF_WRITE);
 
     if (!mv) {
-        aws_http_connection_close(aws_http_stream_get_connection(stream->stream));
         PyGILState_Release(state);
-        return AWS_HTTP_OUTGOING_BODY_DONE;
+        return AWS_OP_ERR;
     }
 
-    PyObject *result = PyObject_CallFunction(stream->on_read_body, "(O)", mv);
-    /* the return from python land is a tuple where the first argument is the body state
-     * and the second is the amount written */
-    PyObject *state_code = PyTuple_GetItem(result, 0);
-    enum aws_http_outgoing_body_state body_state = (enum aws_http_outgoing_body_state)PyIntEnum_AsLong(state_code);
-    PyObject *written_obj = PyTuple_GetItem(result, 1);
-    long written = (long)PyLong_AsLong(written_obj);
+    PyObject *readinto = PyObject_GetAttrString(py_stream->outgoing_body, "readinto");
+    AWS_ASSERT(readinto);
+
+    PyObject *result = PyObject_CallFunction(readinto, "(O)", mv);
+
+    if (result && result != Py_None) {
+        if (!PyLong_Check(result)) {
+            /* Log that readinto must throw BlockingIOError, return None, or a number, and return error */
+            err = AWS_OP_ERR;
+        }
+        /* Number returned, successful read */
+        *amount_read = PyLong_AsSize_t(result);
+        Py_DECREF(result);
+
+        /* Returning 0 means we're at the end of the stream. */
+        if (*amount_read == 0) {
+            py_stream->is_eos = true;
+        } else {
+            dest->len += *amount_read;
+        }
+    } else {
+        /* No result or not a number, clear the exception flag (BufferedIOBase throws BlockingIOError if data is
+        unavailable), and return that 0 data was read. Try again later. */
+        *amount_read = 0;
+        PyErr_Clear();
+    }
+
     Py_XDECREF(result);
-    Py_XDECREF(mv);
+    Py_DECREF(mv);
 
     PyGILState_Release(state);
 
-    buf->len += written;
-
-    return body_state;
+    return err;
 }
 
-static void s_on_incoming_response_headers(
+static int s_stream_get_status(struct aws_input_stream *stream, struct aws_stream_status *status) {
+    struct py_http_stream *py_stream = stream->impl;
+
+    status->is_valid = true;
+    status->is_end_of_stream = py_stream->is_eos;
+
+    return AWS_OP_SUCCESS;
+}
+
+struct aws_input_stream_vtable s_py_stream_vtable = {
+    .seek = NULL,
+    .read = s_stream_read,
+    .get_status = s_stream_get_status,
+    .get_length = NULL,
+    .clean_up = NULL,
+};
+
+static int s_on_incoming_response_headers(
     struct aws_http_stream *internal_stream,
     const struct aws_http_header *header_array,
     size_t num_headers,
@@ -363,9 +397,11 @@ static void s_on_incoming_response_headers(
         PyDict_SetItem(stream->received_headers, key, value);
     }
     PyGILState_Release(state);
+
+    return AWS_OP_SUCCESS;
 }
 
-static void s_on_incoming_header_block_done(struct aws_http_stream *internal_stream, bool has_body, void *user_data) {
+static int s_on_incoming_header_block_done(struct aws_http_stream *internal_stream, bool has_body, void *user_data) {
 
     struct py_http_stream *stream = user_data;
 
@@ -381,15 +417,17 @@ static void s_on_incoming_header_block_done(struct aws_http_stream *internal_str
     Py_XDECREF(stream->received_headers);
     Py_DECREF(stream->on_incoming_headers_received);
     PyGILState_Release(state);
+
+    return AWS_OP_SUCCESS;
 }
 
-static void s_on_incoming_response_body(
+static int s_on_incoming_response_body(
     struct aws_http_stream *internal_stream,
     const struct aws_byte_cursor *data,
-    size_t *out_window_update_size,
     void *user_data) {
     (void)internal_stream;
-    (void)out_window_update_size;
+
+    int err = AWS_OP_SUCCESS;
 
     struct py_http_stream *stream = user_data;
 
@@ -400,9 +438,12 @@ static void s_on_incoming_response_body(
         PyObject_CallFunction(stream->on_incoming_body, "(" BYTE_BUF_FORMAT_STR ")", (const char *)data->ptr, data_len);
     if (!result) {
         PyErr_WriteUnraisable(PyErr_Occurred());
+        err = AWS_OP_ERR;
     }
     Py_XDECREF(result);
     PyGILState_Release(state);
+
+    return err;
 }
 
 static void s_on_stream_complete(struct aws_http_stream *internal_stream, int error_code, void *user_data) {
@@ -415,7 +456,7 @@ static void s_on_stream_complete(struct aws_http_stream *internal_stream, int er
     Py_XDECREF(result);
     Py_XDECREF(stream->on_stream_completed);
     Py_XDECREF(stream->on_incoming_body);
-    Py_XDECREF(stream->on_read_body);
+    Py_XDECREF(stream->outgoing_body);
 
     PyGILState_Release(state);
 }
@@ -439,9 +480,17 @@ PyObject *aws_py_http_client_connection_make_request(PyObject *self, PyObject *a
         PyErr_SetAwsLastError();
         return NULL;
     }
+    struct aws_http_message *request = aws_http_message_new_request(allocator);
+    if (!request) {
+        PyErr_SetAwsLastError();
+        return NULL;
+    }
 
     AWS_ZERO_STRUCT(*stream);
     stream->allocator = allocator;
+    stream->body_input_stream.allocator = allocator;
+    stream->body_input_stream.vtable = &s_py_stream_vtable;
+    stream->body_input_stream.impl = stream;
 
     PyObject *http_connection_capsule = NULL;
     PyObject *py_http_request = NULL;
@@ -490,22 +539,21 @@ PyObject *aws_py_http_client_connection_make_request(PyObject *self, PyObject *a
     AWS_ZERO_STRUCT(request_options);
     request_options.self_size = sizeof(request_options);
     request_options.client_connection = py_connection->connection;
+    request_options.request = request;
 
     PyObject *method_str = PyObject_GetAttrString(py_http_request, "method");
     if (!method_str) {
         PyErr_SetString(PyExc_ValueError, "http method is required");
         goto clean_up_stream;
     }
-
-    request_options.method = aws_byte_cursor_from_pystring(method_str);
+    aws_http_message_set_request_method(request, aws_byte_cursor_from_pystring(method_str));
 
     PyObject *uri_str = PyObject_GetAttrString(py_http_request, "path_and_query");
     if (!uri_str) {
         PyErr_SetString(PyExc_ValueError, "The URI path and query is required");
         goto clean_up_stream;
     }
-
-    request_options.uri = aws_byte_cursor_from_pystring(uri_str);
+    aws_http_message_set_request_path(request, aws_byte_cursor_from_pystring(uri_str));
 
     PyObject *request_headers = PyObject_GetAttrString(py_http_request, "outgoing_headers");
     if (!request_headers) {
@@ -514,14 +562,7 @@ PyObject *aws_py_http_client_connection_make_request(PyObject *self, PyObject *a
     }
 
     Py_ssize_t num_headers = PyDict_Size(request_headers);
-    struct aws_array_list headers;
-
     if (num_headers > 0) {
-        if (aws_array_list_init_dynamic(&headers, allocator, (size_t)num_headers, sizeof(struct aws_http_header))) {
-            PyErr_SetAwsLastError();
-            goto clean_up_headers;
-        }
-
         PyObject *key, *value;
         Py_ssize_t pos = 0;
 
@@ -530,18 +571,19 @@ PyObject *aws_py_http_client_connection_make_request(PyObject *self, PyObject *a
             http_header.name = aws_byte_cursor_from_pystring(key);
             http_header.value = aws_byte_cursor_from_pystring(value);
 
-            aws_array_list_push_back(&headers, &http_header);
+            aws_http_message_add_header(request, http_header);
         }
-
-        request_options.header_array = headers.data;
-        request_options.num_headers = (size_t)num_headers;
     }
 
-    PyObject *on_read_body = PyObject_GetAttrString(py_http_request, "_on_read_body");
-    if (on_read_body && on_read_body != Py_None) {
-        stream->on_read_body = on_read_body;
-        Py_XINCREF(on_read_body);
-        request_options.stream_outgoing_body = s_stream_outgoing_body;
+    PyObject *outgoing_body = PyObject_GetAttrString(py_http_request, "_outgoing_body");
+    if (outgoing_body && outgoing_body != Py_None) {
+        /* Check that the stream has a readinto method */
+        PyObject *readinto = PyObject_GetAttrString(outgoing_body, "readinto");
+        if (readinto && readinto != Py_None) {
+            stream->outgoing_body = outgoing_body;
+            Py_INCREF(outgoing_body);
+            aws_http_message_set_body_stream(request, &stream->body_input_stream);
+        }
     }
 
     PyObject *on_incoming_body = PyObject_GetAttrString(py_http_request, "_on_incoming_body");
@@ -558,19 +600,15 @@ PyObject *aws_py_http_client_connection_make_request(PyObject *self, PyObject *a
     request_options.user_data = stream;
 
     struct aws_http_stream *http_stream = aws_http_stream_new_client_request(&request_options);
-    aws_array_list_clean_up(&headers);
-
     if (!http_stream) {
-        goto clean_up_headers;
+        goto clean_up_stream;
     }
 
     stream->stream = http_stream;
     return PyCapsule_New(stream, s_capsule_name_http_client_stream, s_http_client_stream_destructor);
 
-clean_up_headers:
-    aws_array_list_clean_up(&headers);
-
 clean_up_stream:
+    aws_http_message_destroy(request);
     aws_mem_release(allocator, stream);
 
     return NULL;

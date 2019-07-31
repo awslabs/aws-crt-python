@@ -13,6 +13,7 @@
 import argparse
 import sys
 import os
+from io import BytesIO
 from awscrt import io, http
 try:
     from urllib.parse import urlparse
@@ -147,43 +148,17 @@ def on_incoming_body(body_data):
 
 written = 0
 data_len = 0
-data_file = None
+data_stream = None
 
 if args.data:
     data_bytes = args.data.encode(encoding='utf-8')
     data_len = len(data_bytes)
+    data_stream = BytesIO(data_bytes)
 elif args.data_file:
     data_len = os.stat(args.data_file).st_size
-    data_file = open(args.data_file, 'rb')
+    data_stream = open(args.data_file, 'rb')
 
-
-# invoked by the http request call as the request body has a buffer that can be written to
-def on_outgoing_body(request_body_mv):
-    global written
-    global data_len
-
-    actually_written = 0
-
-    if written < data_len:
-        mv_len = len(request_body_mv)
-        cpy_len = data_len - written
-        if data_len > mv_len:
-            cpy_len = mv_len
-
-        if args.data is not None:
-            request_body_mv[0:cpy_len] = data_bytes[written:written + cpy_len]
-            actually_written = cpy_len
-
-        elif data_file is not None:
-            actually_written = data_file.readinto(request_body_mv[0:cpy_len])
-
-        written += actually_written
-
-    if written == data_len:
-        return http.OutgoingHttpBodyState.Done, actually_written
-
-    return http.OutgoingHttpBodyState.InProgress, actually_written
-
+print("Sending {} bytes as body".format(data_len))
 
 socket_options = io.SocketOptions()
 socket_options.connect_timeout_ms = args.connect_timeout
@@ -220,7 +195,7 @@ def response_received_cb(ftr):
 
 
 # make the request
-request = connection.make_request(method, uri_str, outgoing_headers, on_outgoing_body, on_incoming_body)
+request = connection.make_request(method, uri_str, outgoing_headers, data_stream, on_incoming_body)
 request.response_headers_received.add_done_callback(response_received_cb)
 
 # wait for response headers
@@ -231,6 +206,6 @@ response_finished = request.response_completed.result(timeout=10)
 request = None
 connection = None
 
-if data_file is not None:
-    data_file.close()
+if data_stream is not None:
+    data_stream.close()
 output.close()
