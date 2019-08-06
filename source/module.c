@@ -201,9 +201,6 @@ static PyMethodDef s_module_methods[] = {
     {"aws_py_http_client_connection_is_open", aws_py_http_client_connection_is_open, METH_VARARGS, NULL},
     {"aws_py_http_client_connection_make_request", aws_py_http_client_connection_make_request, METH_VARARGS, NULL},
 
-    /* HTTP server */
-    {"aws_py_http_server_create", aws_py_http_server_create, METH_VARARGS, NULL},
-
     {NULL, NULL, 0, NULL},
 };
 
