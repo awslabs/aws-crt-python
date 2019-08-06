@@ -31,6 +31,13 @@ struct aws_byte_buf;
 #    define BYTE_BUF_FORMAT_STR "y#"
 #else
 #    define BYTE_BUF_FORMAT_STR "s#"
+#    if SIZE_MAX == UINT32_MAX
+#        define PyLong_AsSize_t PyLong_AsUnsignedLong
+#    elif SIZE_MAX == UINT64_MAX
+#        define PyLong_AsSize_t PyLong_AsUnsignedLongLong
+#    else
+#        error "Unsupported architecture"
+#    endif
 #endif /* PY_MAJOR_VERSION */
 
 /* AWS Specific Helpers */
