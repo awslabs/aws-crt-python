@@ -15,7 +15,6 @@
 #include "module.h"
 #include "crypto.h"
 #include "http_client_connection.h"
-#include "http_server.h"
 #include "io.h"
 #include "mqtt_client.h"
 #include "mqtt_client_connection.h"
