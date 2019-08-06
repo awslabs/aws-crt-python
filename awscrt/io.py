@@ -82,7 +82,7 @@ class ServerBoostrap(object):
         assert isinstance(elg, EventLoopGroup)
         
         self.elg = elg
-        self._internal_bootstrap = _aws_crt_python.aws_py_io_server_bootstap_new(self.elg._internal_elg)
+        self._internal_bootstrap = _aws_crt_python.aws_py_io_server_bootstrap_new(self.elg._internal_elg)
 
 def byte_buf_from_file(filepath):
     with open(filepath, mode='rb') as fh:

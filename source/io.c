@@ -123,6 +123,10 @@ PyObject *aws_py_io_server_bootstrap_new(PyObject *self, PyObject *args) {
 
     PyObject *elg_capsule = NULL;
 
+    if (!PyArg_ParseTuple(args, "OO", &elg_capsule)) {
+        return NULL;
+    }
+
     if (!elg_capsule || !PyCapsule_CheckExact(elg_capsule)) {
         PyErr_SetNone(PyExc_ValueError);
         return NULL;
@@ -132,7 +136,7 @@ PyObject *aws_py_io_server_bootstrap_new(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    struct aws_client_bootstrap *bootstrap = aws_server_bootstrap_new(allocator, elg);
+    struct aws_server_bootstrap *bootstrap = aws_server_bootstrap_new(allocator, elg);
     if (!bootstrap) {
         PyErr_SetAwsLastError();
         return NULL;
