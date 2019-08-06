@@ -22,6 +22,7 @@
 #include <string.h>
 
 const char *s_capsule_name_client_bootstrap = "aws_client_bootstrap";
+const char *s_capsule_name_server_bootstrap = "aws_server_bootstrap";
 static const char *s_capsule_name_elg = "aws_event_loop_group";
 const char *s_capsule_name_host_resolver = "aws_host_resolver";
 const char *s_capsule_name_tls_ctx = "aws_client_tls_ctx";
@@ -105,6 +106,39 @@ PyObject *aws_py_io_host_resolver_new_default(PyObject *self, PyObject *args) {
     }
 
     return PyCapsule_New(host_resolver, s_capsule_name_host_resolver, s_host_resolver_destructor);
+}
+
+static void s_server_bootstrap_destructor(PyObject *bootstrap_capsule) {
+
+    assert(PyCapsule_CheckExact(bootstrap_capsule));
+    struct aws_server_bootstrap *bootstrap = PyCapsule_GetPointer(bootstrap_capsule, s_capsule_name_server_bootstrap);
+    assert(bootstrap);
+    aws_server_bootstrap_release(bootstrap);
+}
+
+PyObject *aws_py_io_server_bootstrap_new(PyObject *self, PyObject *args) {
+    (void)self;
+
+    struct aws_allocator *allocator = aws_crt_python_get_allocator();
+
+    PyObject *elg_capsule = NULL;
+
+    if (!elg_capsule || !PyCapsule_CheckExact(elg_capsule)) {
+        PyErr_SetNone(PyExc_ValueError);
+        return NULL;
+    }
+    struct aws_event_loop_group *elg = PyCapsule_GetPointer(elg_capsule, s_capsule_name_elg);
+    if (!elg) {
+        return NULL;
+    }
+
+    struct aws_client_bootstrap *bootstrap = aws_server_bootstrap_new(allocator, elg);
+    if (!bootstrap) {
+        PyErr_SetAwsLastError();
+        return NULL;
+    }
+
+    return PyCapsule_New(bootstrap, s_capsule_name_server_bootstrap, s_server_bootstrap_destructor);
 }
 
 static void s_client_bootstrap_destructor(PyObject *bootstrap_capsule) {

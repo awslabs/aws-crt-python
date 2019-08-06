@@ -15,6 +15,7 @@
 #include "module.h"
 #include "crypto.h"
 #include "http_client_connection.h"
+#include "http_server.h"
 #include "io.h"
 #include "mqtt_client.h"
 #include "mqtt_client_connection.h"
@@ -157,6 +158,7 @@ static PyMethodDef s_module_methods[] = {
     {"aws_py_io_event_loop_group_new", aws_py_io_event_loop_group_new, METH_VARARGS, NULL},
     {"aws_py_io_host_resolver_new_default", aws_py_io_host_resolver_new_default, METH_VARARGS, NULL},
     {"aws_py_io_client_bootstrap_new", aws_py_io_client_bootstrap_new, METH_VARARGS, NULL},
+    {"aws_py_io_server_bootstrap_new", aws_py_io_server_bootstrap_new, METH_VARARGS, NULL},
     {"aws_py_io_client_tls_ctx_new", aws_py_io_client_tls_ctx_new, METH_VARARGS, NULL},
     {"aws_py_io_tls_connections_options_new_from_ctx",
      aws_py_io_tls_connections_options_new_from_ctx,
@@ -198,6 +200,9 @@ static PyMethodDef s_module_methods[] = {
     {"aws_py_http_client_connection_close", aws_py_http_client_connection_close, METH_VARARGS, NULL},
     {"aws_py_http_client_connection_is_open", aws_py_http_client_connection_is_open, METH_VARARGS, NULL},
     {"aws_py_http_client_connection_make_request", aws_py_http_client_connection_make_request, METH_VARARGS, NULL},
+
+    /* HTTP server */
+    {"aws_py_http_server_create", aws_py_http_server_create, METH_VARARGS, NULL},
 
     {NULL, NULL, 0, NULL},
 };

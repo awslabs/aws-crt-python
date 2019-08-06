@@ -22,9 +22,14 @@
 #include "module.h"
 
 /**
- * Name string for event_loop_group capsules.
+ * Name string for client event_loop_group capsules.
  */
 extern const char *s_capsule_name_client_bootstrap;
+
+/**
+ * Name string for server event_loop_group capsules.
+ */
+extern const char *s_capsule_name_server_bootstrap;
 
 /**
  * Name string for tls_ctx capsules.
@@ -65,6 +70,11 @@ PyObject *aws_py_io_host_resolver_new_default(PyObject *self, PyObject *args);
  * Create a new client_bootstrap to be managed by a Python Capsule.
  */
 PyObject *aws_py_io_client_bootstrap_new(PyObject *self, PyObject *args);
+
+/**
+ * Create a new server_bootstrap to be managed by a Python Capsule.
+ */
+PyObject *aws_py_io_server_bootstrap_new(PyObject *self, PyObject *args);
 
 /**
  * Create a new tls_ctx to be managed by a Python Capsule.
