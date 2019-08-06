@@ -313,7 +313,7 @@ struct py_http_stream {
     bool is_eos;
 };
 
-static int s_stream_read(struct aws_input_stream *stream, struct aws_byte_buf *dest, size_t *amount_read) {
+static int s_stream_read(struct aws_input_stream *stream, struct aws_byte_buf *dest) {
     struct py_http_stream *py_stream = stream->impl;
 
     int err = AWS_OP_SUCCESS;
@@ -338,19 +338,18 @@ static int s_stream_read(struct aws_input_stream *stream, struct aws_byte_buf *d
             err = AWS_OP_ERR;
         }
         /* Number returned, successful read */
-        *amount_read = PyLong_AsSize_t(result);
+        size_t amount_read = PyLong_AsSize_t(result);
         Py_DECREF(result);
 
         /* Returning 0 means we're at the end of the stream. */
-        if (*amount_read == 0) {
+        if (amount_read == 0) {
             py_stream->is_eos = true;
         } else {
-            dest->len += *amount_read;
+            dest->len += amount_read;
         }
     } else {
         /* No result or not a number, clear the exception flag (BufferedIOBase throws BlockingIOError if data is
         unavailable), and return that 0 data was read. Try again later. */
-        *amount_read = 0;
         PyErr_Clear();
     }
 
