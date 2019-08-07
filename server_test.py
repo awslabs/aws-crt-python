@@ -19,6 +19,7 @@ from awscrt import io, http
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-v', '--verbose', required=False, help='ERROR|INFO|DEBUG|TRACE: log level to configure. Default is none.')
+parser.add_argument('-t', '--trace', required=False, help='FILE: dumps logs to FILE instead of stderr.')
 
 args = parser.parse_args()
 # setup the logger if user request logging
@@ -50,4 +51,5 @@ if args.verbose:
 event_loop_group = io.EventLoopGroup(1)
 
 # server bootstrap init
-server_bootstrap = io.ServerBoostrap(event_loop_group)
+with io.ServerBoostrap(event_loop_group) as server_boostrap:
+    print('create server boostrap succeed')
