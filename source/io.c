@@ -123,7 +123,7 @@ PyObject *aws_py_io_server_bootstrap_new(PyObject *self, PyObject *args) {
 
     PyObject *elg_capsule = NULL;
 
-    if (!PyArg_ParseTuple(args, "OO", &elg_capsule)) {
+    if (!PyArg_ParseTuple(args, "O", &elg_capsule)) {
         return NULL;
     }
 
