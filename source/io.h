@@ -46,6 +46,21 @@ extern const char *s_capsule_name_tls_conn_options;
  */
 extern const char *s_capsule_name_logger;
 
+struct server_bootstrap{
+    struct aws_allocator *allocator;
+    struct aws_server_bootstrap *bootstrap;
+    PyObject *capsule;
+    PyObject *elg_capsule;
+};
+
+struct client_bootstrap{
+    struct aws_allocator *allocator;
+    struct aws_client_bootstrap *bootstrap;
+    PyObject *capsule;
+    PyObject *elg_capsule;
+};
+
+
 /**
  * Returns a capsule for logging and starts the logging sub-system
  */

@@ -30,6 +30,7 @@ struct py_http_connection {
     PyObject *capsule;
     PyObject *on_connection_setup;
     PyObject *on_connection_shutdown;
+    PyObject *bootstrap;
     bool destructor_called;
     bool shutdown_called;
 };
@@ -48,7 +49,10 @@ static void s_http_client_connection_destructor(PyObject *http_connection_capsul
         aws_http_connection_release(http_connection->connection);
         http_connection->connection = NULL;
     }
-
+    if(http_connection->bootstrap){
+        Py_DECREF(http_connection->bootstrap);
+        http_connection->bootstrap = NULL;
+    }
     if (http_connection->shutdown_called) {
         aws_mem_release(http_connection->allocator, http_connection);
     }
@@ -155,7 +159,8 @@ PyObject *aws_py_http_client_connection_create(PyObject *self, PyObject *args) {
         goto error;
     }
 
-    struct aws_client_bootstrap *bootstrap = PyCapsule_GetPointer(bootstrap_capsule, s_capsule_name_client_bootstrap);
+    struct client_bootstrap *native_bootstrap = PyCapsule_GetPointer(bootstrap_capsule, s_capsule_name_client_bootstrap);
+    struct aws_client_bootstrap *bootstrap = native_bootstrap->bootstrap;
     if (!bootstrap) {
         PyErr_SetString(PyExc_ValueError, "the bootstrap capsule has an invalid pointer");
         goto error;
@@ -173,6 +178,9 @@ PyObject *aws_py_http_client_connection_create(PyObject *self, PyObject *args) {
         goto error;
     }
     AWS_ZERO_STRUCT(*py_connection);
+
+    py_connection->bootstrap = bootstrap_capsule;
+    Py_INCREF(bootstrap_capsule);
 
     struct aws_socket_options socket_options;
     AWS_ZERO_STRUCT(socket_options);

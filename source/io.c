@@ -108,12 +108,15 @@ PyObject *aws_py_io_host_resolver_new_default(PyObject *self, PyObject *args) {
     return PyCapsule_New(host_resolver, s_capsule_name_host_resolver, s_host_resolver_destructor);
 }
 
+
 static void s_server_bootstrap_destructor(PyObject *bootstrap_capsule) {
 
     assert(PyCapsule_CheckExact(bootstrap_capsule));
-    struct aws_server_bootstrap *bootstrap = PyCapsule_GetPointer(bootstrap_capsule, s_capsule_name_server_bootstrap);
+    struct server_bootstrap *bootstrap = PyCapsule_GetPointer(bootstrap_capsule, s_capsule_name_server_bootstrap);
     assert(bootstrap);
-    aws_server_bootstrap_release(bootstrap);
+    Py_DECREF(bootstrap->elg_capsule);
+    aws_server_bootstrap_release(bootstrap->bootstrap);
+    aws_mem_release(bootstrap->allocator, bootstrap);
 }
 
 PyObject *aws_py_io_server_bootstrap_new(PyObject *self, PyObject *args) {
@@ -135,22 +138,31 @@ PyObject *aws_py_io_server_bootstrap_new(PyObject *self, PyObject *args) {
     if (!elg) {
         return NULL;
     }
-
+    struct server_bootstrap *server_bootstrap = aws_mem_acquire(allocator, sizeof(struct server_bootstrap));
+    server_bootstrap->allocator = allocator;
     struct aws_server_bootstrap *bootstrap = aws_server_bootstrap_new(allocator, elg);
+    server_bootstrap->bootstrap = bootstrap;
+
     if (!bootstrap) {
         PyErr_SetAwsLastError();
+        aws_mem_release(allocator, server_bootstrap);
         return NULL;
     }
-
-    return PyCapsule_New(bootstrap, s_capsule_name_server_bootstrap, s_server_bootstrap_destructor);
+    server_bootstrap->elg_capsule = elg_capsule;
+    Py_INCREF(elg_capsule);
+    server_bootstrap->capsule = PyCapsule_New(server_bootstrap, s_capsule_name_server_bootstrap, s_server_bootstrap_destructor);
+    return server_bootstrap->capsule;
 }
 
 static void s_client_bootstrap_destructor(PyObject *bootstrap_capsule) {
 
     assert(PyCapsule_CheckExact(bootstrap_capsule));
-    struct aws_client_bootstrap *bootstrap = PyCapsule_GetPointer(bootstrap_capsule, s_capsule_name_client_bootstrap);
+    
+    struct client_bootstrap *bootstrap = PyCapsule_GetPointer(bootstrap_capsule, s_capsule_name_client_bootstrap);
     assert(bootstrap);
-    aws_client_bootstrap_release(bootstrap);
+    Py_DECREF(bootstrap->elg_capsule);
+    aws_client_bootstrap_release(bootstrap->bootstrap);
+    aws_mem_release(bootstrap->allocator, bootstrap);
 }
 
 PyObject *aws_py_io_client_bootstrap_new(PyObject *self, PyObject *args) {
@@ -180,13 +192,20 @@ PyObject *aws_py_io_client_bootstrap_new(PyObject *self, PyObject *args) {
     }
     struct aws_host_resolver *host_resolver = PyCapsule_GetPointer(host_resolver_capsule, s_capsule_name_host_resolver);
 
+    struct client_bootstrap *client_bootstrap = aws_mem_acquire(allocator, sizeof(struct client_bootstrap));
+    client_bootstrap->allocator = allocator;
+
     struct aws_client_bootstrap *bootstrap = aws_client_bootstrap_new(allocator, elg, host_resolver, NULL);
     if (!bootstrap) {
         PyErr_SetAwsLastError();
+        aws_mem_release(allocator, client_bootstrap);
         return NULL;
     }
-
-    return PyCapsule_New(bootstrap, s_capsule_name_client_bootstrap, s_client_bootstrap_destructor);
+    client_bootstrap->bootstrap = bootstrap;
+    client_bootstrap->elg_capsule = elg_capsule;
+    Py_INCREF(elg_capsule);
+    client_bootstrap->capsule = PyCapsule_New(client_bootstrap, s_capsule_name_client_bootstrap, s_client_bootstrap_destructor);
+    return client_bootstrap->capsule;
 }
 
 static void s_tls_ctx_destructor(PyObject *tls_ctx_capsule) {

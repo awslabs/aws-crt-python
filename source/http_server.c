@@ -38,6 +38,7 @@ struct py_http_server {
     PyObject *capsule;
     PyObject *on_incoming_connection;
     PyObject *on_destroy_complete;
+    PyObject *bootstrap;
     bool destructor_called;
     bool destroy_called;
     bool destroy_complete;
@@ -79,6 +80,7 @@ static void s_http_server_destructor(PyObject *http_server_capsule) {
     }
     /* the incoming callback is not freed until now */
     Py_DECREF(py_server->on_incoming_connection);
+
     if (py_server->destroy_complete) {
         aws_mem_release(py_server->allocator, py_server);
     }
@@ -96,6 +98,8 @@ static void s_on_destroy_complete(void *user_data) {
     }else if (py_server->destructor_called){
         aws_mem_release(py_server->allocator, py_server);
     }
+    /* Release the bootstrap until the destroy complete */
+    Py_DECREF(py_server->bootstrap);
     Py_XDECREF(result);
     Py_XDECREF(py_server->capsule);
     PyGILState_Release(state);
@@ -105,6 +109,7 @@ static void s_http_server_connection_destructor(PyObject *http_server_conn_capsu
     struct py_http_server_connection *http_connection =
         PyCapsule_GetPointer(http_server_conn_capsule, s_capsule_name_http_server_connection);
     assert(http_connection);
+    Py_DECREF(http_connection->on_incoming_request);
     http_connection->destructor_called = true;
     if (http_connection->connection) {
 
@@ -136,17 +141,19 @@ static void s_on_incoming_connection(
 
     struct py_http_server_connection *py_connection = NULL;
     py_connection = aws_mem_acquire(py_server->allocator, sizeof(struct py_http_server_connection));
+    AWS_ZERO_STRUCT(*py_connection);
     py_connection->allocator = py_server->allocator;
     if (!error_code) {
         py_connection->connection = connection;
-        connection_capsule =
-            PyCapsule_New(py_connection, s_capsule_name_http_server_connection, s_http_server_connection_destructor);
+        connection_capsule = PyCapsule_New(py_connection, s_capsule_name_http_server_connection, s_http_server_connection_destructor);
+        Py_XINCREF(connection_capsule);
         py_connection->capsule = connection_capsule;
     } else {
         aws_mem_release(py_connection->allocator, py_connection);
     }
+    
     /* the callback will be fired multiple times, do not clean it up unless the server is gone */
-    result = PyObject_CallFunction(on_incoming_conn_cb, "(NNi)", py_server->capsule, connection_capsule, error_code);
+    result = PyObject_CallFunction(on_incoming_conn_cb, "(Ni)", py_connection->capsule, error_code);
     Py_XDECREF(result);
 
     PyGILState_Release(state);
@@ -208,7 +215,8 @@ PyObject *aws_py_http_server_create(PyObject *self, PyObject *args) {
         goto error;
     }
 
-    struct aws_server_bootstrap *bootstrap = PyCapsule_GetPointer(bootstrap_capsule, s_capsule_name_server_bootstrap);
+    struct server_bootstrap *native_bootstrap = PyCapsule_GetPointer(bootstrap_capsule, s_capsule_name_server_bootstrap);
+    struct aws_server_bootstrap *bootstrap = native_bootstrap->bootstrap;
     if (!bootstrap) {
         PyErr_SetString(PyExc_ValueError, "the bootstrap capsule has an invalid pointer");
         goto error;
@@ -272,6 +280,9 @@ PyObject *aws_py_http_server_create(PyObject *self, PyObject *args) {
 
     Py_XINCREF(on_incoming_connection);
     py_server->on_incoming_connection = on_incoming_connection;
+
+    py_server->bootstrap = bootstrap_capsule;
+    Py_INCREF(bootstrap_capsule);
 
     py_server->on_destroy_complete = NULL;
     if (on_destroy_complete && on_destroy_complete != Py_None) {
@@ -350,7 +361,6 @@ static struct aws_http_stream *s_on_incoming_request(struct aws_http_connection 
     struct py_http_stream *py_stream = PyCapsule_GetPointer(result, s_capsule_name_http_server_stream);
 
     /* release the ref count for the stream when the stream complete callback called */
-    Py_DECREF(on_incoming_req_cb);
     PyGILState_Release(state);
     return py_stream->stream;
 }
@@ -362,10 +372,13 @@ static void s_on_shutdown(struct aws_http_connection *connection, int error_code
     PyObject *result = NULL;
 
     PyObject *on_shutdown_cb = py_server_conn->on_shutdown;
-    result = PyObject_CallFunction(on_shutdown_cb, "(Ni)", py_server_conn->capsule, error_code);
+    if(on_shutdown_cb){
+        result = PyObject_CallFunction(on_shutdown_cb, "(Ni)", py_server_conn->capsule, error_code);
 
-    Py_DECREF(on_shutdown_cb);
+        Py_DECREF(on_shutdown_cb);
+    }
     Py_XDECREF(result);
+    Py_DECREF(py_server_conn->capsule);
     PyGILState_Release(state);
 }
 

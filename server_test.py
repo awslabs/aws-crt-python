@@ -15,10 +15,14 @@ import argparse
 import sys
 import os
 from io import BytesIO
+from concurrent.futures import Future
 from awscrt import io, http
+import random
 
+
+random.seed()
 parser = argparse.ArgumentParser()
-parser.add_argument('--host_name', required=False, help='String: The host name for the server. Default is \"local_host\"', default = "local_host")
+parser.add_argument('--host_name', required=False, help='String: The host name for the server. Default is \"local_host\"', default = str(random.random()))
 parser.add_argument('--port', required=False, help='Int: The port number for the server. Default is 0', default = 0)
 parser.add_argument('--tls', required=False, help='Bool: Create a tls server or a simple server. Default is false', default = False)
 parser.add_argument('--connect_timeout', required=False, type=int, help='INT: time in milliseconds to wait for a connection.', default=3000)
@@ -28,6 +32,8 @@ parser.add_argument('-o', '--output', required=False, help='FILE: dumps content-
 
 args = parser.parse_args()
 # setup the logger if user request logging
+
+output = getattr(sys.stdout, 'buffer', sys.stdout)
 
 if args.verbose:
     log_level = io.LogLevel.NoLogs
@@ -59,27 +65,68 @@ else:
     host_name = "testsock-{}.sock".format(args.host_name)
 port = args.port
 
+tls_connection_options = None
+
 # an event loop group is needed for IO operations. Unless you're a server or a client doing hundreds of connections
 # you only want one of these.
-event_loop_group = io.EventLoopGroup(1)
-
+server_event_loop_group = io.EventLoopGroup(1)
+client_event_loop_group = io.EventLoopGroup(1)
 # server bootstrap init
-server_boostrap = io.ServerBoostrap(event_loop_group)
+server_boostrap = io.ServerBoostrap(server_event_loop_group)
 
 socket_options = io.SocketOptions()
 socket_options.connect_timeout_ms = args.connect_timeout
 socket_options.domain = io.SocketDomain.Local
 
-def on_incoming_connection(server, connection, error_code):
-    print("fake on incoming connection!")
+def on_incoming_request(connection):
+    print("fake on incoming request")
+
+def on_server_conn_shutdown(connection, error_code):
+    print("shutdown server connection with error_code: {}".format(error_code))
+
+server_conn_future = Future()
+
+def on_incoming_connection(connection, error_code):
+    #configure the connection here!
+    
+    if(error_code):
+        print("server connection fail with error_code: {}".format(error_code))
+        #server_conn_future.set_exception(Exception("Error during connect: err={}".format(error_code)))
+        return "fake return"
+
+    server_connection = http.ServerConnection.new_server_connection(connection, on_incoming_request, on_server_conn_shutdown)
+    server_conn_future.set_result("fake on incoming connection!")
+    print(error_code)
+    return "fake return"
 
 def on_destroy_complete(server):
-    future.set_result("destroy completed!")
+    destroy_future.set_result("destroy completed!")
+    return "fake return"
 
 server = http.HttpServer.new_server(server_boostrap, host_name, port, socket_options, on_incoming_connection, on_destroy_complete)
+print("server setup completed!")
 
-future = http.HttpServer.release(server)
-print(future.result())
+# client bootstrap knows how to connect all the pieces. In this case it also has the default dns resolver
+# baked in.
+client_bootstrap = io.ClientBootstrap(client_event_loop_group)
+
+# invoked up on the connection closing
+def on_connection_shutdown(err_code):
+    print('connection close with error code {}'.format(err_code))
+
+# invoked by the http request call as the response body is received in chunks
+def on_incoming_body(body_data):
+    output.write(body_data) 
+
+connect_future = http.HttpClientConnection.new_connection(client_bootstrap, host_name, port, socket_options,
+                                                          on_connection_shutdown, tls_connection_options)
+connection = connect_future.result()
+
+
+print(server_conn_future.result())
+
+destroy_future = http.HttpServer.release(server)
+print(destroy_future.result())
 
 print("SUCCESS!")
 #delete the socket, cleanup

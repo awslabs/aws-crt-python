@@ -52,7 +52,8 @@ PyObject *aws_py_mqtt_client_new(PyObject *self, PyObject *args) {
         PyErr_SetNone(PyExc_ValueError);
         goto error;
     }
-    struct aws_client_bootstrap *bootstrap = PyCapsule_GetPointer(bootstrap_capsule, s_capsule_name_client_bootstrap);
+    struct client_bootstrap *native_bootstrap = PyCapsule_GetPointer(bootstrap_capsule, s_capsule_name_client_bootstrap);
+    struct aws_client_bootstrap *bootstrap = native_bootstrap->bootstrap;
     if (!bootstrap) {
         goto error;
     }

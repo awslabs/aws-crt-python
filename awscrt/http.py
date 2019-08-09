@@ -153,15 +153,28 @@ class HttpClientConnection(object):
         return request
 
 
-'''
 class ServerConnection(object):
     """
     Represents an Http server connection. Everything in this class is non-blocking.
     """
-    __slots__ = ('_bootstrap', '_tls_connection_options',
-                 '_on_connection_shutdown', '_native_handle')
-'''
+    __slots__ = ('_on_incoming_request', '_on_shutdown', '_native_handle')
 
+    def __init__(self, on_incoming_request, on_shutdown):
+        assert on_incoming_request is not None
+
+        self._on_incoming_request = on_incoming_request
+        self._on_shutdown = on_shutdown
+        self._native_handle = None
+    
+    @staticmethod
+    def new_server_connection(connection, on_incoming_request, on_shutdown = None):
+        """
+        create a new server connection, usually it will be called from the on_incoming connection callback, whenever a new connection is accepted.
+        """
+        server_connection = ServerConnection(on_incoming_request, on_shutdown)
+        server_connection._native_handle = connection
+        _aws_crt_python.aws_py_http_connection_configure_server(server_connection._native_handle, on_incoming_request, on_shutdown)
+        return server_connection
 
 class HttpServer(object):
     """
@@ -217,10 +230,11 @@ class HttpServer(object):
         future = Future()
         try:
             if self._native_handle is not None:
-                _aws_crt_python.aws_py_http_server_realease(self._native_handle)
+                _aws_crt_python.aws_py_http_server_realease(
+                    self._native_handle)
         except Exception as e:
             future.set_exception(e)
-        
+
         return future
 
 
