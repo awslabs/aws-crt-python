@@ -75,6 +75,7 @@ class TestStringMethods(unittest.TestCase):
         #delete the socket, cleanup
         os.system("rm {}".format(host_name))
     
+
     def test_server_connection(self):
         print("----TEST SERVER_CONNECTION BEGIN!----")
         def on_incoming_request(connection):
@@ -105,8 +106,9 @@ class TestStringMethods(unittest.TestCase):
         print("----server setup completed!----")
         #client setup
         # invoked up on the connection closing
+        client_conn_shutdown_future = Future()
         def on_connection_shutdown(err_code):
-            print('----connection close with error code {}----'.format(err_code))
+            client_conn_shutdown_future.set_result('----client connection close with error code {}----'.format(err_code))
 
         # client bootstrap knows how to connect all the pieces. In this case it also has the default dns resolver
         # baked in.
@@ -118,10 +120,13 @@ class TestStringMethods(unittest.TestCase):
         self.assertIsNotNone(connection)
         #wait for server connection setup
         print(server_conn_future.result())
-        
+
         #release the server
         destroy_future = http.HttpServer.close(server)
         print(destroy_future.result())
+
+        #wait client side connection to shutdown
+        print(client_conn_shutdown_future.result())
 
         print("----TEST SERVER_CONNECTION SUCCESS!----")
         print("\n")

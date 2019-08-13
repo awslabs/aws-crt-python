@@ -268,18 +268,26 @@ static struct aws_http_stream *s_on_incoming_request(struct aws_http_connection 
 static void s_on_shutdown(struct aws_http_connection *connection, int error_code, void *user_data) {
     (void)connection;
     struct py_http_connection *py_server_conn = user_data;
-    PyGILState_STATE state = PyGILState_Ensure();
-    PyObject *result = NULL;
 
     PyObject *on_shutdown_cb = py_server_conn->on_connection_shutdown;
-    if (on_shutdown_cb) {
-        result = PyObject_CallFunction(on_shutdown_cb, "(Ni)", py_server_conn->capsule, error_code);
 
-        Py_DECREF(on_shutdown_cb);
+    if (!py_server_conn->destructor_called) {
+        PyGILState_STATE state = PyGILState_Ensure();
+        PyObject *result = PyObject_CallFunction(on_shutdown_cb, "(Ni)", py_server_conn->capsule, error_code);
+        if(result){
+            Py_DECREF(result);
+        }
+        else{
+            PyErr_WriteUnraisable(PyErr_Occurred());
+        }
+        Py_DECREF(py_server_conn->capsule);
+        PyGILState_Release(state);
+    } else {
+        aws_http_connection_release(py_server_conn->connection);
+        aws_mem_release(py_server_conn->allocator, py_server_conn);
     }
-    Py_XDECREF(result);
-    Py_DECREF(py_server_conn->capsule);
-    PyGILState_Release(state);
+
+    Py_DECREF(on_shutdown_cb);
 }
 
 PyObject *aws_py_http_connection_configure_server(PyObject *self, PyObject *args) {

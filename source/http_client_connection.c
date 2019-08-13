@@ -61,6 +61,7 @@ static void s_on_client_connection_shutdown(struct aws_http_connection *connecti
         Py_XDECREF(result);
         PyGILState_Release(state);
     } else if (py_client_connection->destructor_called) {
+        aws_http_connection_release(py_client_connection->connection);
         aws_mem_release(py_client_connection->allocator, py_client_connection);
     }
 

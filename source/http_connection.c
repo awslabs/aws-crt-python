@@ -38,8 +38,9 @@ void s_http_connection_destructor(PyObject *http_connection_capsule) {
         if (aws_http_connection_is_open(http_connection->connection)) {
             aws_http_connection_close(http_connection->connection);
         }
-
-        aws_http_connection_release(http_connection->connection);
+        if (http_connection->shutdown_called){
+            aws_http_connection_release(http_connection->connection);
+        }
         http_connection->connection = NULL;
     }
     if(http_connection->bootstrap){
