@@ -20,7 +20,7 @@
  */
 
 #define PY_SSIZE_T_CLEAN 1
-#include <python3.6m/Python.h>
+#include <Python.h>
 
 #include <aws/common/common.h>
 
