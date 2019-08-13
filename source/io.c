@@ -36,7 +36,7 @@ bool aws_socket_options_init_from_py(struct aws_socket_options *socket_options, 
         PyErr_SetString(PyExc_TypeError, "SocketOptions.domain is invalid");
         return false;
     }
-    socket_options->domain = (enum aws_socket_type)PyIntEnum_AsLong(sock_domain);
+    socket_options->domain = (enum aws_socket_domain)PyIntEnum_AsLong(sock_domain);
 
     PyObject *sock_type = PyObject_GetAttrString(py_socket_options, "type");
     if (!PyIntEnum_Check(sock_type)) {
