@@ -177,7 +177,7 @@ else:
 
 if sys.platform == 'win32':
     #the windows apis being used under the hood. Since we're static linking we have to follow the entire chain down
-    libraries += ['Secur32', 'Crypt32', 'Advapi32', 'BCrypt', 'Kernel32', 'Ws2_32']
+    libraries += ['Secur32', 'Crypt32', 'Advapi32', 'BCrypt', 'Kernel32', 'Ws2_32', 'Shlwapi']
 elif sys.platform == 'darwin':
     ldflags += ['-framework Security']
     include_dirs = ['/usr/local/include'] + include_dirs

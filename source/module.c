@@ -157,6 +157,7 @@ static PyMethodDef s_module_methods[] = {
     {"aws_py_io_event_loop_group_new", aws_py_io_event_loop_group_new, METH_VARARGS, NULL},
     {"aws_py_io_host_resolver_new_default", aws_py_io_host_resolver_new_default, METH_VARARGS, NULL},
     {"aws_py_io_client_bootstrap_new", aws_py_io_client_bootstrap_new, METH_VARARGS, NULL},
+    {"aws_py_io_server_bootstrap_new", aws_py_io_server_bootstrap_new, METH_VARARGS, NULL},
     {"aws_py_io_client_tls_ctx_new", aws_py_io_client_tls_ctx_new, METH_VARARGS, NULL},
     {"aws_py_io_tls_connections_options_new_from_ctx",
      aws_py_io_tls_connections_options_new_from_ctx,
