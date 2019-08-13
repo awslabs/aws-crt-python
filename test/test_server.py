@@ -27,6 +27,7 @@ log_output = 'stderr'
 io.init_logging(log_level, log_output)
 random.seed()
 
+
 class TestStringMethods(unittest.TestCase):
 
     def init(self, host_name, port, tls, connect_timeout):
@@ -36,7 +37,6 @@ class TestStringMethods(unittest.TestCase):
         event_loop_group = io.EventLoopGroup(1)
         server_bootstrap = io.ServerBootstrap(event_loop_group)
         if sys.platform == 'win32':
-            #win32
             host_name = "\\\\.\\pipe\\testsock-" + host_name
         else:
             host_name = "testsock-{}.sock".format(host_name)
@@ -47,94 +47,110 @@ class TestStringMethods(unittest.TestCase):
         return event_loop_group, server_bootstrap, tls_connection_options, socket_options
 
     def test_server_bootstrap(self):
-        # an event loop group is needed for IO operations. Unless you're a server or a client doing hundreds of connections
-        # you only want one of these.
         event_loop_group = io.EventLoopGroup(1)
         server_bootstrap = io.ServerBootstrap(event_loop_group)
         self.assertIsNotNone(server_bootstrap)
 
     def test_server_create_destroy(self):
         print("----TEST SERVER_CREATE_DESTROY BEGIN!----")
+
         def on_incoming_connection(server, connection, error_code):
             print("----fake on incoming connection!----")
-        
+
         def on_destroy_complete(server):
             future.set_result("----destroy completed!----")
-        
-        #Init for tests
+
+        # Init for tests
         host_name = str(random.random())
         port = 0
         tls = False
         connect_timeout = 3000
-        _, server_bootstrap, tls_connection_options, socket_options = self.init(host_name, port, tls, connect_timeout)
+        _, server_bootstrap, tls_connection_options, socket_options = self.init(
+            host_name, port, tls, connect_timeout)
 
-        server = http.HttpServer.new_server(server_bootstrap, host_name, port, socket_options, on_incoming_connection, on_destroy_complete)
+
+        #create server
+        server = http.HttpServer.new_server(server_bootstrap, host_name, port, socket_options,
+                                            on_incoming_connection, on_destroy_complete, tls_connection_options)
         print("----Server create success----")
+        
+        #release the server
         future = http.HttpServer.release(server)
         print(future.result())
 
+        #done
         print("----TEST SERVER_CREATE_DESTROY SUCCESS!----")
         print("\n")
-        #delete the socket, cleanup
         os.system("rm {}".format(host_name))
-    
+
     def test_server_connection(self):
         print("----TEST SERVER_CONNECTION BEGIN!----")
+
         def on_incoming_request(connection):
             print("----fake on incoming request----")
 
         def on_server_conn_shutdown(connection, error_code):
-            print("----shutdown server connection with error_code: {}----".format(error_code))
+            print(
+                "----shutdown server connection with error_code: {}----".format(error_code))
 
         def on_incoming_connection(connection, error_code):
-            #configure the connection here!
+            # configure the connection here!
             if(error_code):
-                print("----server connection fail with error_code: {}----".format(error_code))
-                server_conn_future.set_exception(Exception("Error during connect: err={}".format(error_code)))
-            server_connection = http.ServerConnection.new_server_connection(connection, on_incoming_request, on_server_conn_shutdown)
-            server_conn_future.set_result("----fake on incoming connection!----")
-        
+                print(
+                    "----server connection fail with error_code: {}----".format(error_code))
+                server_conn_future.set_exception(
+                    Exception("Error during connect: err={}".format(error_code)))
+            server_connection = http.ServerConnection.new_server_connection(
+                connection, on_incoming_request, on_server_conn_shutdown)
+            server_conn_future.set_result(server_connection)
+
         def on_destroy_complete(server):
             destroy_future.set_result("----destroy completed!----")
 
-        #Init for tests
+        # Init for tests
         host_name = str(random.random())
         port = 0
         tls = False
         connect_timeout = 3000
-        event_loop_group, server_bootstrap, tls_connection_options, socket_options = self.init(host_name, port, tls, connect_timeout)
+        event_loop_group, server_bootstrap, tls_connection_options, socket_options = self.init(
+            host_name, port, tls, connect_timeout)
 
-        #server setup
+        # server setup
         server_conn_future = Future()
-        server = http.HttpServer.new_server(server_bootstrap, host_name, port, socket_options, on_incoming_connection, on_destroy_complete)
+        server = http.HttpServer.new_server(
+            server_bootstrap, host_name, port, socket_options, on_incoming_connection, on_destroy_complete)
         print("----server setup completed!----")
-        #client setup
+
+        # client setup
         # invoked up on the connection closing
         def on_connection_shutdown(err_code):
             print('----connection close with error code {}----'.format(err_code))
 
-        # client bootstrap knows how to connect all the pieces. In this case it also has the default dns resolver
-        # baked in.
         client_bootstrap = io.ClientBootstrap(event_loop_group)
         print("----MAKE NEW CONNECTION NOW-----")
         connect_future = http.HttpClientConnection.new_connection(client_bootstrap, host_name, port, socket_options,
-                                                                on_connection_shutdown, tls_connection_options)
+                                                                  on_connection_shutdown, tls_connection_options)
+
+        #wait for client connection setup
         connection = connect_future.result()
         self.assertIsNotNone(connection)
-        #wait for server connection setup
-        print(server_conn_future.result())
         
-        #release the server
+        # wait for server connection setup
+        server_connection = server_conn_future.result()
+        self.assertIsInstance(server_connection, http.ServerConnection)
+        
+        #close server connection
+        server_connection.close()
+        
+        # release the server
         destroy_future = http.HttpServer.release(server)
         print(destroy_future.result())
 
+        #done
         print("----TEST SERVER_CONNECTION SUCCESS!----")
         print("\n")
-        #delete the socket, cleanup
         os.system("rm {}".format(host_name))
-        
+
+
 if __name__ == '__main__':
     unittest.main()
-
-# server bootstrap init
-

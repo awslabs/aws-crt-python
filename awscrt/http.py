@@ -247,11 +247,14 @@ class HttpRequestHandler(object):
     User can know the detail of the request, when the provided callbacks are fired. 
     User can send response back to the request
     """
-    __slots__ = ('_connection', 'path_and_query', 'method', '_on_incoming_body', '_stream',
+    __slots__ = ('_connection', 'path_and_query', 'method', '_on_incoming_body', '_stream', 'request_headers',
                     'has_request_body', 'request_headers_received', 'stream_completed', '_on_request_completed')
 
     def __init__(self, connection, on_incoming_body, on_request_completed):
-        assert connection is not None and isinstance(connection, ServerConnection)
+        assert connection is not None
+
+        for slot in self.__slots__:
+            setattr(self, slot, None)
 
         self._connection = connection
         self._on_incoming_body = on_incoming_body
@@ -261,6 +264,22 @@ class HttpRequestHandler(object):
         self.path_and_query = None
         self.method = None
         self.has_request_body = None
+        self.request_headers = None
+
+    '''
+    def create(self, connection, on_incoming_body, on_request_completed):
+        def on_stream_completed(error_code):
+            if error_code == 0:
+                self.response_completed.set_result(error_code)
+            else:
+                self.response_completed.set_exception(Exception(error_code))
+
+        def on_request_headers_received(headers, response_code, has_body):
+            request.response_headers = headers
+            request.response_code = response_code
+            request.has_response_body = has_body
+            request.response_headers_received.set_result(response_code)
+    '''
     
 
 class HttpRequest(object):

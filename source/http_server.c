@@ -68,6 +68,7 @@ static void s_on_destroy_complete(void *user_data) {
     } else if (py_server->destructor_called) {
         aws_mem_release(py_server->allocator, py_server);
     }
+    py_server->server = NULL;
     /* Release the bootstrap until the destroy complete */
     Py_DECREF(py_server->bootstrap);
     Py_XDECREF(result);
@@ -473,11 +474,11 @@ PyObject *aws_py_http_stream_new_server_request_handler(PyObject *self, PyObject
     struct aws_http_request_handler_options options = AWS_HTTP_REQUEST_HANDLER_OPTIONS_INIT;
     options.user_data = stream;
     options.server_connection = py_server_connection->connection;
+    /* save the headers into stream->received_headers */
     options.on_request_headers = native_on_incoming_headers;
     options.on_request_header_block_done = s_on_incoming_request_header_block_done;
     options.on_complete = native_on_stream_complete;
     
-
     if (on_incoming_body && on_incoming_body != Py_None) {
         stream->on_incoming_body = on_incoming_body;
         Py_XINCREF(on_incoming_body);
