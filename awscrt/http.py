@@ -16,27 +16,52 @@ from concurrent.futures import Future
 from enum import IntEnum
 from awscrt.io import ClientBootstrap, TlsConnectionOptions, SocketOptions, ServerBoostrap
 
+#import ptvsd;
 
-class HttpClientConnection(object):
+"""
+Base class for http connection
+"""
+class HttpConnection(object):
+    __slots__ = ('_on_connection_shutdown', '_native_handle')
+
+    def __init__(self, on_connection_shutdown):
+        for slot in self.__slots__:
+            setattr(self, slot, None)
+        
+        self._on_connection_shutdown = on_connection_shutdown
+        self._native_handle = None    
+    
+    def close(self):
+        """
+        Closes the connection, if you hold a reference to this instance of HttpClientConnection, on_connection_shutdown
+        will be invoked upon completion of the connection close.
+        """
+        if self._native_handle is not None:
+            _aws_crt_python.aws_py_http_connection_close(
+                self._native_handle)
+
+    def is_open(self):
+        """
+        Returns True if the connection is open and usable, False otherwise.
+        """
+        if self._native_handle is not None:
+            return _aws_crt_python.aws_py_http_connection_is_open(self._native_handle)
+
+        return False
+
+class HttpClientConnection(HttpConnection):
     """
     Represents an Http connection to a remote endpoint. Everything in this class is non-blocking.
     """
-    __slots__ = ('_bootstrap', '_tls_connection_options',
-                 '_on_connection_shutdown', '_native_handle')
-
-    # don't call me, I'm private
     def __init__(self, bootstrap, on_connection_shutdown, tls_connection_options):
+
         assert isinstance(bootstrap, ClientBootstrap)
         assert tls_connection_options is None or isinstance(
             tls_connection_options, TlsConnectionOptions)
-
-        for slot in self.__slots__:
-            setattr(self, slot, None)
-
-        self._bootstrap = bootstrap
+        
         self._tls_connection_options = tls_connection_options
-        self._on_connection_shutdown = on_connection_shutdown
-        self._native_handle = None
+        self._bootstrap = bootstrap
+        HttpConnection.__init__(self, on_connection_shutdown)
 
     @staticmethod
     def new_connection(bootstrap, host_name, port, socket_options,
@@ -88,24 +113,6 @@ class HttpClientConnection(object):
 
         return future
 
-    def close(self):
-        """
-        Closes the connection, if you hold a reference to this instance of HttpClientConnection, on_connection_shutdown
-        will be invoked upon completion of the connection close.
-        """
-        if self._native_handle is not None:
-            _aws_crt_python.aws_py_http_client_connection_close(
-                self._native_handle)
-
-    def is_open(self):
-        """
-        Returns True if the connection is open and usable, False otherwise.
-        """
-        if self._native_handle is not None:
-            return _aws_crt_python.aws_py_http_client_connection_is_open(self._native_handle)
-
-        return False
-
     def make_request(self, method, uri_str, outgoing_headers, outgoing_body, on_incoming_body):
         """
         path_and_query is the path and query portion
@@ -153,24 +160,23 @@ class HttpClientConnection(object):
         return request
 
 
-class ServerConnection(object):
+class ServerConnection(HttpConnection):
     """
     Represents an Http server connection. Everything in this class is non-blocking.
     """
-    __slots__ = ('_on_incoming_request', '_on_shutdown', '_native_handle')
 
     def __init__(self, on_incoming_request, on_shutdown):
         assert on_incoming_request is not None
-
         self._on_incoming_request = on_incoming_request
-        self._on_shutdown = on_shutdown
-        self._native_handle = None
+        HttpConnection.__init__(self, on_shutdown)
     
     @staticmethod
     def new_server_connection(connection, on_incoming_request, on_shutdown = None):
         """
         create a new server connection, usually it will be called from the on_incoming connection callback, whenever a new connection is accepted.
         """
+        #ptvsd.break_into_debugger()
+        print("new_server_connection", connection)
         server_connection = ServerConnection(on_incoming_request, on_shutdown)
         server_connection._native_handle = connection
         _aws_crt_python.aws_py_http_connection_configure_server(server_connection._native_handle, on_incoming_request, on_shutdown)
@@ -204,7 +210,7 @@ class HttpServer(object):
         """
         Create a new server listener, binding to the host_name and port. 
         When a new connection is received, the on_incoming_connection cb will be fired, a new ServerConnection obj will be created.
-        The aws_py_http_connection_configure_server need to be called from the callback to configure the ServerConnection 
+        The new_server_connection() need to be called from the callback to configure the ServerConnection 
         """
         assert tls_connection_options is None or isinstance(
             tls_connection_options, TlsConnectionOptions)
@@ -237,6 +243,27 @@ class HttpServer(object):
 
         return future
 
+
+class HttpRequestHandler(object):
+    """
+    Request handler object. Create a new one when the on_incoming_request() callback is invoked to handler the request.
+    User can know the detail of the request, when the provided callbacks are fired. 
+    User can send response back to the request
+    """
+    __slots__ = ('_connection', 'path_and_query', 'method', '_on_incoming_body', '_stream',
+                 'has_request_body', 'request_headers_received', 'stream_completed', '_on_request_completed')
+
+    def __init__(self, connection, on_incoming_body, on_request_completed):
+        assert connection is not None and isinstance(connection, ServerConnection)
+
+        self._connection = connection
+        self._on_incoming_body = on_incoming_body
+        self._on_request_completed = on_request_completed
+
+        self._stream = None
+        self.path_and_query = None
+        self.method = None
+        self.has_request_body = None
 
 class HttpRequest(object):
     """

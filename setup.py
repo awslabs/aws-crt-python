@@ -209,6 +209,7 @@ _aws_crt_python = setuptools.Extension(
         'source/mqtt_client_connection.c',
         'source/http_client_connection.c',
         'source/http_server.c',
+        'source/http_connection.c',
         'source/crypto.c',
     ],
     extra_objects=extra_objects,

@@ -69,10 +69,9 @@ tls_connection_options = None
 
 # an event loop group is needed for IO operations. Unless you're a server or a client doing hundreds of connections
 # you only want one of these.
-server_event_loop_group = io.EventLoopGroup(1)
-client_event_loop_group = io.EventLoopGroup(1)
+event_loop_group = io.EventLoopGroup(1)
 # server bootstrap init
-server_boostrap = io.ServerBoostrap(server_event_loop_group)
+server_boostrap = io.ServerBoostrap(event_loop_group)
 
 socket_options = io.SocketOptions()
 socket_options.connect_timeout_ms = args.connect_timeout
@@ -88,27 +87,24 @@ server_conn_future = Future()
 
 def on_incoming_connection(connection, error_code):
     #configure the connection here!
-    
+    print("------asdfasdfsf------")
     if(error_code):
         print("server connection fail with error_code: {}".format(error_code))
-        #server_conn_future.set_exception(Exception("Error during connect: err={}".format(error_code)))
-        return "fake return"
-
+        server_conn_future.set_exception(Exception("Error during connect: err={}".format(error_code)))
+    print("connection looks like:", connection)
     server_connection = http.ServerConnection.new_server_connection(connection, on_incoming_request, on_server_conn_shutdown)
     server_conn_future.set_result("fake on incoming connection!")
-    print(error_code)
-    return "fake return"
+    return "123"
 
 def on_destroy_complete(server):
     destroy_future.set_result("destroy completed!")
-    return "fake return"
 
 server = http.HttpServer.new_server(server_boostrap, host_name, port, socket_options, on_incoming_connection, on_destroy_complete)
 print("server setup completed!")
 
 # client bootstrap knows how to connect all the pieces. In this case it also has the default dns resolver
 # baked in.
-client_bootstrap = io.ClientBootstrap(client_event_loop_group)
+client_bootstrap = io.ClientBootstrap(event_loop_group)
 
 # invoked up on the connection closing
 def on_connection_shutdown(err_code):
@@ -118,10 +114,10 @@ def on_connection_shutdown(err_code):
 def on_incoming_body(body_data):
     output.write(body_data) 
 
+print("---MAKE NEW CONNECTION NOW-----")
 connect_future = http.HttpClientConnection.new_connection(client_bootstrap, host_name, port, socket_options,
                                                           on_connection_shutdown, tls_connection_options)
 connection = connect_future.result()
-
 
 print(server_conn_future.result())
 

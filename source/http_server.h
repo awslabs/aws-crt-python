@@ -18,7 +18,6 @@
 #include <aws/http/connection.h>
 
 extern const char *s_capsule_name_http_server;
-extern const char *s_capsule_name_http_server_connection;
 
 /**
  * Create a new server. returns a server object.
@@ -33,9 +32,22 @@ PyObject *aws_py_http_server_create(PyObject *self, PyObject *args);
 PyObject *aws_py_http_server_realease(PyObject *self, PyObject *args);
 
 /**
- * Configure a server connection.
- * This must be called from the server's on_incoming_connection callback.
+ * Configure a server connection. When a new connection is received, the on_incoming callback will be fired, 
+ * and user must call new_server_connection() to configure the connection, and this function will be called from
+ * new_server_connection()
  */
 PyObject *aws_py_http_connection_configure_server(PyObject *self, PyObject *args);
+
+/**
+ * Close the server connection.
+ */
+PyObject *aws_py_http_server_connection_close(PyObject *self, PyObject *args);
+
+/**
+ * Create a stream, with a server connection receiving and responding to a request.
+ * This function can only be called from the `aws_http_on_incoming_request_fn` callback.
+ * aws_py_http_stream_send_response() should be used to send a response.
+ */
+PyObject *aws_py_http_stream_new_server_request_handler(PyObject *self, PyObject *args);
 
 #endif /* AWS_CRT_PYTHON_HTTP_CLIENT_CONNECTION_H */
