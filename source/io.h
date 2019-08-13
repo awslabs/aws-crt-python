@@ -22,12 +22,12 @@
 #include "module.h"
 
 /**
- * Name string for client event_loop_group capsules.
+ * Name string for client bootstrap capsules.
  */
 extern const char *s_capsule_name_client_bootstrap;
 
 /**
- * Name string for server event_loop_group capsules.
+ * Name string for server bootstrap capsules.
  */
 extern const char *s_capsule_name_server_bootstrap;
 

@@ -14,7 +14,7 @@
 import _aws_crt_python
 from concurrent.futures import Future
 from enum import IntEnum
-from awscrt.io import ClientBootstrap, TlsConnectionOptions, SocketOptions, ServerBoostrap
+from awscrt.io import ClientBootstrap, TlsConnectionOptions, SocketOptions, ServerBootstrap
 
 
 class HttpClientConnection(object):
@@ -172,7 +172,7 @@ class HttpServer(object):
 
     # don't call me, I'm private
     def __init__(self, bootstrap, on_incoming_connection, on_destroy_complete, tls_connection_options):
-        assert isinstance(bootstrap, ServerBoostrap)
+        assert isinstance(bootstrap, ServerBootstrap)
         assert tls_connection_options is None or isinstance(
             tls_connection_options, TlsConnectionOptions)
 

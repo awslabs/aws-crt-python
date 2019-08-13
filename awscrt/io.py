@@ -75,7 +75,7 @@ class ClientBootstrap(object):
         self.host_resolver = host_resolver
         self._internal_bootstrap = _aws_crt_python.aws_py_io_client_bootstrap_new(self.elg._internal_elg, host_resolver._internal_host_resolver)
 
-class ServerBoostrap(object):
+class ServerBootstrap(object):
     __slots__ = ('elg', '_internal_bootstrap')
 
     def __init__(self, elg):
