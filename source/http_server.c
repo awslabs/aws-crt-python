@@ -333,11 +333,6 @@ PyObject *aws_py_http_connection_configure_server(PyObject *self, PyObject *args
         goto error;
     }
 
-    if (!server_conn_capsule) {
-        PyErr_SetString(PyExc_TypeError, "connection is needed to configure");
-        goto error;
-    }
-
     struct py_http_connection *py_server_conn =
         PyCapsule_GetPointer(server_conn_capsule, s_capsule_name_http_connection);
 
@@ -346,12 +341,12 @@ PyObject *aws_py_http_connection_configure_server(PyObject *self, PyObject *args
         goto error;
     }
 
-    if (!PyCallable_Check(on_incoming_request)) {
+    if (!on_incoming_request || !PyCallable_Check(on_incoming_request)) {
         PyErr_SetString(PyExc_TypeError, "on_incoming_request is invalid");
         goto error;
     }
 
-    Py_XINCREF(on_incoming_request);
+    Py_INCREF(on_incoming_request);
     py_server_conn->on_incoming_request = on_incoming_request;
 
     if (on_shutdown) {
@@ -359,7 +354,7 @@ PyObject *aws_py_http_connection_configure_server(PyObject *self, PyObject *args
             PyErr_SetString(PyExc_TypeError, "on_shutdown is invalid");
             goto error;
         }
-        Py_XINCREF(on_shutdown);
+        Py_INCREF(on_shutdown);
         py_server_conn->on_connection_shutdown = on_shutdown;
     }
 
@@ -378,6 +373,12 @@ PyObject *aws_py_http_connection_configure_server(PyObject *self, PyObject *args
     Py_RETURN_NONE;
 
 error:
+    if(on_incoming_request){
+        Py_DECREF(on_incoming_request);
+    }
+    if(on_shutdown){
+        Py_DECREF(on_shutdown);
+    }
     Py_RETURN_NONE;
 }
 
@@ -460,10 +461,6 @@ PyObject *aws_py_http_stream_new_server_request_handler(PyObject *self, PyObject
             &on_incoming_body,
             &on_request_done)) {
         PyErr_SetNone(PyExc_ValueError);
-        goto clean_up_stream;
-    }
-    if (!http_connection_capsule || !PyCapsule_CheckExact(http_connection_capsule)) {
-        PyErr_SetString(PyExc_ValueError, "http connection capsule is invalid");
         goto clean_up_stream;
     }
 
