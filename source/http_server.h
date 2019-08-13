@@ -31,10 +31,4 @@ PyObject *aws_py_http_server_create(PyObject *self, PyObject *args);
  */
 PyObject *aws_py_http_server_realease(PyObject *self, PyObject *args);
 
-/**
- * Configure a server connection.
- * This must be called from the server's on_incoming_connection callback.
- */
-PyObject *aws_py_http_connection_configure_server(PyObject *self, PyObject *args);
-
 #endif /* AWS_CRT_PYTHON_HTTP_CLIENT_CONNECTION_H */
