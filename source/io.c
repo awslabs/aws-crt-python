@@ -18,6 +18,7 @@
 #include <aws/io/event_loop.h>
 #include <aws/io/tls_channel_handler.h>
 
+
 #include <stdio.h>
 #include <string.h>
 
@@ -27,6 +28,61 @@ static const char *s_capsule_name_elg = "aws_event_loop_group";
 const char *s_capsule_name_host_resolver = "aws_host_resolver";
 const char *s_capsule_name_tls_ctx = "aws_client_tls_ctx";
 const char *s_capsule_name_tls_conn_options = "aws_tls_connection_options";
+
+bool aws_socket_options_init_from_py(struct aws_socket_options *socket_options, PyObject *py_socket_options){
+
+    PyObject *sock_domain = PyObject_GetAttrString(py_socket_options, "domain");
+    if (!PyIntEnum_Check(sock_domain)) {
+        PyErr_SetString(PyExc_TypeError, "SocketOptions.domain is invalid");
+        return false;
+    }
+    socket_options->domain = (enum aws_socket_type)PyIntEnum_AsLong(sock_domain);
+
+    PyObject *sock_type = PyObject_GetAttrString(py_socket_options, "type");
+    if (!PyIntEnum_Check(sock_type)) {
+        PyErr_SetString(PyExc_TypeError, "SocketOptions.type is invalid");
+        return false;
+    }
+    socket_options->type = (enum aws_socket_type)PyIntEnum_AsLong(sock_type);
+
+    PyObject *connect_timeout_ms = PyObject_GetAttrString(py_socket_options, "connect_timeout_ms");
+    if (!PyIntObj_Check(connect_timeout_ms)) {
+        PyErr_SetString(PyExc_TypeError, "SocketOptions.connect_timeout_ms is invalid");
+        return false;
+    }
+    socket_options->connect_timeout_ms = (uint32_t)PyLong_AsLong(connect_timeout_ms);
+
+    PyObject *keep_alive = PyObject_GetAttrString(py_socket_options, "keep_alive");
+    if (!keep_alive) {
+        PyErr_SetString(PyExc_TypeError, "SocketOptions.keep_alive is invalid");
+        return false;
+    }
+    socket_options->keepalive = (bool)PyObject_IsTrue(keep_alive);
+
+    PyObject *keep_alive_interval = PyObject_GetAttrString(py_socket_options, "keep_alive_interval_secs");
+    if (!PyIntObj_Check(keep_alive_interval)) {
+        PyErr_SetString(PyExc_TypeError, "SocketOptions.keep_alive_interval_secs is invalid");
+        return false;
+    }
+    socket_options->keep_alive_interval_sec = (uint16_t)PyLong_AsLong(keep_alive_interval);
+
+    PyObject *keep_alive_timeout = PyObject_GetAttrString(py_socket_options, "keep_alive_timeout_secs");
+    if (!PyIntObj_Check(keep_alive_timeout)) {
+        PyErr_SetString(PyExc_TypeError, "SocketOptions.keep_alive_timeout_secs is invalid");
+        return false;
+    }
+    socket_options->keep_alive_timeout_sec = (uint16_t)PyLong_AsLong(keep_alive_timeout);
+
+    PyObject *keep_alive_max_probes = PyObject_GetAttrString(py_socket_options, "keep_alive_max_probes");
+    if (!PyIntObj_Check(keep_alive_timeout)) {
+        PyErr_SetString(PyExc_TypeError, "SocketOptions.keep_alive_max_probes is invalid");
+        return false;
+    }
+    socket_options->keep_alive_max_failed_probes = (uint16_t)PyLong_AsLong(keep_alive_max_probes);
+
+    return true;
+
+}
 
 PyObject *aws_py_is_alpn_available(PyObject *self, PyObject *args) {
 

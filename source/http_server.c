@@ -57,21 +57,29 @@ static void s_http_server_destructor(PyObject *http_server_capsule) {
 
 static void s_on_destroy_complete(void *user_data) {
     struct py_http_server *py_server = user_data;
-    PyGILState_STATE state = PyGILState_Ensure();
+    
     py_server->destroy_complete = true;
     PyObject *on_destroy_complete_cb = py_server->on_destroy_complete;
     PyObject *result = NULL;
-    if (!py_server->destructor_called && on_destroy_complete_cb) {
+    
+    if (!py_server->destructor_called) {    
+        PyGILState_STATE state = PyGILState_Ensure();
+
         result = PyObject_CallFunction(on_destroy_complete_cb, "(N)", py_server->capsule);
+        if(result){
+            Py_DECREF(result);
+        }
+        else{
+            PyErr_WriteUnraisable(PyErr_Occurred());
+        }
         Py_DECREF(on_destroy_complete_cb);
+        /* Release the bootstrap until the destroy complete */
+        Py_DECREF(py_server->bootstrap);
+        Py_XDECREF(py_server->capsule);
+        PyGILState_Release(state);
     } else if (py_server->destructor_called) {
         aws_mem_release(py_server->allocator, py_server);
     }
-    /* Release the bootstrap until the destroy complete */
-    Py_DECREF(py_server->bootstrap);
-    Py_XDECREF(result);
-    Py_XDECREF(py_server->capsule);
-    PyGILState_Release(state);
 }
 
 static void s_on_incoming_connection(
@@ -137,18 +145,23 @@ PyObject *aws_py_http_server_create(PyObject *self, PyObject *args) {
         goto error;
     }
 
-    if (!host_name) {
-        PyErr_SetString(PyExc_ValueError, "host_name is a required argument");
+    if (host_name_len >= (signed int)AWS_ADDRESS_MAX_LEN || host_name_len == 0) {
+        PyErr_SetString(PyExc_ValueError, "host_name is not valid");
         goto error;
     }
 
-    if (!py_socket_options || py_socket_options == Py_None) {
+    if (py_socket_options == Py_None) {
         PyErr_SetString(PyExc_ValueError, "socket_options is a required argument");
         goto error;
     }
 
-    if (!on_incoming_connection || on_incoming_connection == Py_None) {
+    if (!PyCallable_Check(on_incoming_connection)) {
         PyErr_SetString(PyExc_ValueError, "on_incoming_connection callback is required");
+        goto error;
+    }
+
+    if (!PyCallable_Check(on_destroy_complete)) {
+        PyErr_SetString(PyExc_TypeError, "on_destroy_complete is invalid");
         goto error;
     }
 
@@ -166,72 +179,27 @@ PyObject *aws_py_http_server_create(PyObject *self, PyObject *args) {
         connection_options = PyCapsule_GetPointer(tls_conn_options_capsule, s_capsule_name_tls_conn_options);
     }
 
-    py_server = aws_mem_acquire(allocator, sizeof(struct py_http_server));
+    py_server = aws_mem_calloc(allocator, 1, sizeof(struct py_http_server));
     if (!py_server) {
         PyErr_SetAwsLastError();
         goto error;
     }
-    AWS_ZERO_STRUCT(*py_server);
 
     struct aws_socket_options socket_options;
     AWS_ZERO_STRUCT(socket_options);
-
-    PyObject *sock_domain = PyObject_GetAttrString(py_socket_options, "domain");
-    if (sock_domain) {
-        socket_options.domain = (enum aws_socket_domain)PyIntEnum_AsLong(sock_domain);
-    }
-
-    PyObject *sock_type = PyObject_GetAttrString(py_socket_options, "type");
-    if (sock_type) {
-        socket_options.type = (enum aws_socket_type)PyIntEnum_AsLong(sock_type);
-    }
-
-    PyObject *connect_timeout_ms = PyObject_GetAttrString(py_socket_options, "connect_timeout_ms");
-    if (connect_timeout_ms) {
-        socket_options.connect_timeout_ms = (uint32_t)PyLong_AsLong(connect_timeout_ms);
-    }
-
-    PyObject *keep_alive = PyObject_GetAttrString(py_socket_options, "keep_alive");
-    if (keep_alive) {
-        socket_options.keepalive = (bool)PyObject_IsTrue(keep_alive);
-    }
-
-    PyObject *keep_alive_interval = PyObject_GetAttrString(py_socket_options, "keep_alive_interval_secs");
-    if (keep_alive_interval) {
-        socket_options.keep_alive_interval_sec = (uint16_t)PyLong_AsLong(keep_alive_interval);
-    }
-
-    PyObject *keep_alive_timeout = PyObject_GetAttrString(py_socket_options, "keep_alive_timeout_secs");
-    if (keep_alive_timeout) {
-        socket_options.keep_alive_timeout_sec = (uint16_t)PyLong_AsLong(keep_alive_timeout);
-    }
-
-    PyObject *keep_alive_max_probes = PyObject_GetAttrString(py_socket_options, "keep_alive_max_probes");
-    if (keep_alive_timeout) {
-        socket_options.keep_alive_max_failed_probes = (uint16_t)PyLong_AsLong(keep_alive_max_probes);
-    }
-
-    if (!PyCallable_Check(on_incoming_connection)) {
-        PyErr_SetString(PyExc_TypeError, "on_incoming_connection is invalid");
+    if (!aws_socket_options_init_from_py(&socket_options, py_socket_options)) {
         goto error;
     }
 
-    Py_XINCREF(on_incoming_connection);
+    Py_INCREF(on_incoming_connection);
     py_server->on_incoming_connection = on_incoming_connection;
 
-    py_server->bootstrap = bootstrap_capsule;
     Py_INCREF(bootstrap_capsule);
-
-    py_server->on_destroy_complete = NULL;
-    if (on_destroy_complete && on_destroy_complete != Py_None) {
-        if (!PyCallable_Check(on_destroy_complete)) {
-            PyErr_SetString(PyExc_TypeError, "on_destroy_complete is invalid");
-            goto error;
-        }
-        Py_XINCREF(on_destroy_complete);
-        py_server->on_destroy_complete = on_destroy_complete;
-    }
-
+    py_server->bootstrap = bootstrap_capsule;
+    
+    Py_INCREF(on_destroy_complete);
+    py_server->on_destroy_complete = on_destroy_complete;
+    
     py_server->allocator = allocator;
 
     struct aws_http_server_options options;
@@ -244,7 +212,7 @@ PyObject *aws_py_http_server_create(PyObject *self, PyObject *args) {
     struct aws_socket_endpoint endpoint;
     AWS_ZERO_STRUCT(endpoint);
 
-    sprintf(endpoint.address, "%s", host_name);
+    snprintf(endpoint.address, host_name_len, "%s", host_name);
     endpoint.port = port_number;
     options.socket_options = &socket_options;
     options.endpoint = &endpoint;
@@ -257,6 +225,9 @@ PyObject *aws_py_http_server_create(PyObject *self, PyObject *args) {
         capsule = PyCapsule_New(py_server, s_capsule_name_http_server, s_http_server_destructor);
         py_server->capsule = capsule;
     } else {
+        /* fail */
+        Py_DECREF(on_incoming_connection);
+        Py_DECREF(on_destroy_complete);
         aws_mem_release(py_server->allocator, py_server);
     }
     Py_XINCREF(capsule);
@@ -268,7 +239,7 @@ error:
     return NULL;
 }
 
-PyObject *aws_py_http_server_realease(PyObject *self, PyObject *args) {
+PyObject *aws_py_http_server_release(PyObject *self, PyObject *args) {
     (void)self;
 
     PyObject *server_capsule = NULL;
@@ -276,7 +247,6 @@ PyObject *aws_py_http_server_realease(PyObject *self, PyObject *args) {
     if (PyArg_ParseTuple(args, "O", &server_capsule)) {
         if (server_capsule) {
             struct py_http_server *py_server = PyCapsule_GetPointer(server_capsule, s_capsule_name_http_server);
-            assert(py_server);
             if (py_server->server) {
                 if (!py_server->destroy_called) {
                     py_server->destroy_called = true;
