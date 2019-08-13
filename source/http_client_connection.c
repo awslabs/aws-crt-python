@@ -176,40 +176,8 @@ PyObject *aws_py_http_client_connection_create(PyObject *self, PyObject *args) {
 
     struct aws_socket_options socket_options;
     AWS_ZERO_STRUCT(socket_options);
-
-    PyObject *sock_domain = PyObject_GetAttrString(py_socket_options, "domain");
-    if (sock_domain) {
-        socket_options.domain = (enum aws_socket_domain)PyIntEnum_AsLong(sock_domain);
-    }
-
-    PyObject *sock_type = PyObject_GetAttrString(py_socket_options, "type");
-    if (sock_type) {
-        socket_options.type = (enum aws_socket_type)PyIntEnum_AsLong(sock_type);
-    }
-
-    PyObject *connect_timeout_ms = PyObject_GetAttrString(py_socket_options, "connect_timeout_ms");
-    if (connect_timeout_ms) {
-        socket_options.connect_timeout_ms = (uint32_t)PyLong_AsLong(connect_timeout_ms);
-    }
-
-    PyObject *keep_alive = PyObject_GetAttrString(py_socket_options, "keep_alive");
-    if (keep_alive) {
-        socket_options.keepalive = (bool)PyObject_IsTrue(keep_alive);
-    }
-
-    PyObject *keep_alive_interval = PyObject_GetAttrString(py_socket_options, "keep_alive_interval_secs");
-    if (keep_alive_interval) {
-        socket_options.keep_alive_interval_sec = (uint16_t)PyLong_AsLong(keep_alive_interval);
-    }
-
-    PyObject *keep_alive_timeout = PyObject_GetAttrString(py_socket_options, "keep_alive_timeout_secs");
-    if (keep_alive_timeout) {
-        socket_options.keep_alive_timeout_sec = (uint16_t)PyLong_AsLong(keep_alive_timeout);
-    }
-
-    PyObject *keep_alive_max_probes = PyObject_GetAttrString(py_socket_options, "keep_alive_max_probes");
-    if (keep_alive_timeout) {
-        socket_options.keep_alive_max_failed_probes = (uint16_t)PyLong_AsLong(keep_alive_max_probes);
+    if(!aws_socket_options_init_from_py(&socket_options, py_socket_options)){
+        goto error;
     }
 
     if (!PyCallable_Check(on_connection_setup)) {

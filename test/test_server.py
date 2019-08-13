@@ -39,14 +39,11 @@ class TestStringMethods(unittest.TestCase):
         #Settings for tests
         host_name = str(random.random())
         port = 0
-        tls = False
         connect_timeout = 3000
 
         def on_incoming_connection(server, connection, error_code):
             print("fake on incoming connection!")
         
-        def on_destroy_complete(server):
-            future.set_result("destroy completed!")
         # an event loop group is needed for IO operations. Unless you're a server or a client doing hundreds of connections
         # you only want one of these.
         event_loop_group = io.EventLoopGroup(1)
@@ -56,18 +53,15 @@ class TestStringMethods(unittest.TestCase):
             host_name = "\\\\.\\pipe\\testsock-" + host_name
         else:
             host_name = "testsock-{}.sock".format(host_name)
-        tls_connection_options = None
         socket_options = io.SocketOptions()
         socket_options.connect_timeout_ms = connect_timeout
         socket_options.domain = io.SocketDomain.Local
-        server = http.HttpServer.new_server(server_bootstrap, host_name, port, socket_options, on_incoming_connection, on_destroy_complete)
+        server = http.HttpServer.new_server(server_bootstrap, host_name, port, socket_options, on_incoming_connection)
         print("Server create success")
-        future = http.HttpServer.release(server)
+        future = http.HttpServer.close(server)
         print(future.result())
 
         print("SUCCESS!")
-        #delete the socket, cleanup
-        os.system("rm {}".format(host_name))
 
         
 if __name__ == '__main__':
