@@ -130,10 +130,6 @@ PyObject *aws_py_io_server_bootstrap_new(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    if (!elg_capsule || !PyCapsule_CheckExact(elg_capsule)) {
-        PyErr_SetNone(PyExc_ValueError);
-        return NULL;
-    }
     struct aws_event_loop_group *elg = PyCapsule_GetPointer(elg_capsule, s_capsule_name_elg);
     if (!elg) {
         return NULL;

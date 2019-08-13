@@ -14,7 +14,7 @@
 import _aws_crt_python
 from concurrent.futures import Future
 from enum import IntEnum
-from awscrt.io import ClientBootstrap, TlsConnectionOptions, SocketOptions, ServerBoostrap
+from awscrt.io import ClientBootstrap, TlsConnectionOptions, SocketOptions, ServerBootstrap
 
 #import ptvsd;
 
@@ -176,7 +176,6 @@ class ServerConnection(HttpConnection):
         create a new server connection, usually it will be called from the on_incoming connection callback, whenever a new connection is accepted.
         """
         #ptvsd.break_into_debugger()
-        print("new_server_connection", connection)
         server_connection = ServerConnection(on_incoming_request, on_shutdown)
         server_connection._native_handle = connection
         _aws_crt_python.aws_py_http_connection_configure_server(server_connection._native_handle, on_incoming_request, on_shutdown)
@@ -191,7 +190,7 @@ class HttpServer(object):
 
     # don't call me, I'm private
     def __init__(self, bootstrap, on_incoming_connection, on_destroy_complete, tls_connection_options):
-        assert isinstance(bootstrap, ServerBoostrap)
+        assert isinstance(bootstrap, ServerBootstrap)
         assert tls_connection_options is None or isinstance(
             tls_connection_options, TlsConnectionOptions)
 
