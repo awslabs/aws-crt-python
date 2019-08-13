@@ -154,12 +154,7 @@ class HttpClientConnection(object):
 
 
 '''
-class ServerConnection(object):
-    """
-    Represents an Http server connection. Everything in this class is non-blocking.
-    """
-    __slots__ = ('_bootstrap', '_tls_connection_options',
-                 '_on_connection_shutdown', '_native_handle')
+TODO: Server Connection class,and configure the server connection.
 '''
 
 
