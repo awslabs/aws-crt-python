@@ -144,17 +144,6 @@ PyObject *aws_py_http_server_create(PyObject *self, PyObject *args) {
         goto error;
     }
 
-    if (!bootstrap_capsule || !PyCapsule_CheckExact(bootstrap_capsule)) {
-        PyErr_SetString(PyExc_ValueError, "bootstrap is invalid");
-        goto error;
-    }
-
-    if (tls_conn_options_capsule && tls_conn_options_capsule != Py_None &&
-        !PyCapsule_CheckExact(tls_conn_options_capsule)) {
-        PyErr_SetString(PyExc_ValueError, "tls connection options is invalid");
-        goto error;
-    }
-
     if (!host_name) {
         PyErr_SetString(PyExc_ValueError, "host_name is a required argument");
         goto error;
