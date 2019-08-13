@@ -21,9 +21,6 @@
 extern const char *s_capsule_name_http_client_connection;
 extern const char *s_capsule_name_http_client_stream;
 
-struct py_http_connection;
-struct py_http_stream;
-
 /**
  * Create a new connection. returns void. The on_setup callback will be invoked
  * upon either success or failure of the connection.

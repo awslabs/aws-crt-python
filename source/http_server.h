@@ -18,7 +18,6 @@
 #include <aws/http/connection.h>
 
 extern const char *s_capsule_name_http_server;
-extern const char *s_capsule_name_http_server_connection;
 
 /**
  * Create a new server. returns a server object.
