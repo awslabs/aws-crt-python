@@ -224,7 +224,7 @@ class HttpServer(object):
             internal_conn_options_handle = None
 
         def on_destroy_complete(server_native_handle):
-            server.destroy_complete.set_result("server destroy finished!")
+            server.destroy_complete.set_result("----server destroy finished!----")
         
         server = HttpServer(bootstrap, on_incoming_connection, on_destroy_complete, tls_connection_options)
 
