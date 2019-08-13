@@ -22,12 +22,6 @@
 #include <aws/io/socket.h>
 #include <aws/io/stream.h>
 
-#ifdef _WIN32
-#    define LOCAL_SOCK_TEST_FORMAT "\\\\.\\pipe\\testsock-%s"
-#else
-#    define LOCAL_SOCK_TEST_FORMAT "testsock-%s.sock"
-#endif
-
 const char *s_capsule_name_http_server = "aws_http_server";
 
 struct py_http_server {
@@ -115,17 +109,6 @@ PyObject *aws_py_http_server_create(PyObject *self, PyObject *args) {
             &py_socket_options,
             &tls_conn_options_capsule)) {
         PyErr_SetNone(PyExc_ValueError);
-        goto error;
-    }
-
-    if (!bootstrap_capsule || !PyCapsule_CheckExact(bootstrap_capsule)) {
-        PyErr_SetString(PyExc_ValueError, "bootstrap is invalid");
-        goto error;
-    }
-
-    if (tls_conn_options_capsule && tls_conn_options_capsule != Py_None &&
-        !PyCapsule_CheckExact(tls_conn_options_capsule)) {
-        PyErr_SetString(PyExc_ValueError, "tls connection options is invalid");
         goto error;
     }
 
