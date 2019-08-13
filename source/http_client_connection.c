@@ -13,14 +13,13 @@
  * permissions and limitations under the License.
  */
 #include "http_client_connection.h"
-
+#include "http_stream.h"
 #include "io.h"
 
 #include <aws/common/array_list.h>
 #include <aws/io/socket.h>
 #include <aws/io/stream.h>
 
-const char *s_capsule_name_http_stream = "aws_http_client_stream";
 
 static void s_on_client_connection_setup(struct aws_http_connection *connection, int error_code, void *user_data) {
 
@@ -298,27 +297,6 @@ struct aws_input_stream_vtable s_py_stream_vtable = {
     .clean_up = NULL,
 };
 
-int native_on_incoming_headers(
-    struct aws_http_stream *internal_stream,
-    const struct aws_http_header *header_array,
-    size_t num_headers,
-    void *user_data) {
-    (void)internal_stream;
-    struct py_http_stream *stream = user_data;
-
-    PyGILState_STATE state = PyGILState_Ensure();
-
-    for (size_t i = 0; i < num_headers; ++i) {
-        PyObject *key = PyString_FromStringAndSize((const char *)header_array[i].name.ptr, header_array[i].name.len);
-        PyObject *value =
-            PyString_FromStringAndSize((const char *)header_array[i].value.ptr, header_array[i].value.len);
-
-        PyDict_SetItem(stream->received_headers, key, value);
-    }
-    PyGILState_Release(state);
-
-    return AWS_OP_SUCCESS;
-}
 
 static int s_on_incoming_header_block_done(struct aws_http_stream *internal_stream, bool has_body, void *user_data) {
 
@@ -338,54 +316,6 @@ static int s_on_incoming_header_block_done(struct aws_http_stream *internal_stre
     PyGILState_Release(state);
 
     return AWS_OP_SUCCESS;
-}
-
-int native_on_incoming_body(
-    struct aws_http_stream *internal_stream,
-    const struct aws_byte_cursor *data,
-    void *user_data) {
-    (void)internal_stream;
-
-    int err = AWS_OP_SUCCESS;
-
-    struct py_http_stream *stream = user_data;
-
-    PyGILState_STATE state = PyGILState_Ensure();
-
-    Py_ssize_t data_len = (Py_ssize_t)data->len;
-    PyObject *result =
-        PyObject_CallFunction(stream->on_incoming_body, "(" BYTE_BUF_FORMAT_STR ")", (const char *)data->ptr, data_len);
-    if (!result) {
-        PyErr_WriteUnraisable(PyErr_Occurred());
-        err = AWS_OP_ERR;
-    }
-    Py_XDECREF(result);
-    PyGILState_Release(state);
-
-    return err;
-}
-
-void native_on_stream_complete(struct aws_http_stream *internal_stream, int error_code, void *user_data) {
-    (void)internal_stream;
-    struct py_http_stream *stream = user_data;
-
-    PyGILState_STATE state = PyGILState_Ensure();
-
-    PyObject *result = PyObject_CallFunction(stream->on_stream_completed, "(i)", error_code);
-    Py_XDECREF(result);
-    Py_XDECREF(stream->on_stream_completed);
-    Py_XDECREF(stream->on_incoming_body);
-    Py_XDECREF(stream->outgoing_body);
-
-    PyGILState_Release(state);
-}
-
-void native_http_stream_destructor(PyObject *http_stream_capsule) {
-    struct py_http_stream *stream = PyCapsule_GetPointer(http_stream_capsule, s_capsule_name_http_stream);
-    assert(stream);
-
-    aws_http_stream_release(stream->stream);
-    aws_mem_release(stream->allocator, stream);
 }
 
 PyObject *aws_py_http_client_connection_make_request(PyObject *self, PyObject *args) {

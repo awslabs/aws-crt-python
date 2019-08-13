@@ -13,7 +13,7 @@
  * permissions and limitations under the License.
  */
 #include "http_server.h"
-#include "http_client_connection.h"
+#include "http_stream.h"
 #include "io.h"
 
 #include <aws/common/array_list.h>
