@@ -13,7 +13,7 @@
  * permissions and limitations under the License.
  */
 #include "http_server.h"
-#include "http_client_connection.h"
+#include "http_connection.h"
 #include "io.h"
 
 #include <aws/common/array_list.h>
@@ -22,14 +22,7 @@
 #include <aws/io/socket.h>
 #include <aws/io/stream.h>
 
-#ifdef _WIN32
-#    define LOCAL_SOCK_TEST_FORMAT "\\\\.\\pipe\\testsock-%s"
-#else
-#    define LOCAL_SOCK_TEST_FORMAT "testsock-%s.sock"
-#endif
-
 const char *s_capsule_name_http_server = "aws_http_server";
-const char *s_capsule_name_http_server_stream = "aws_http_server_stream";
 
 struct py_http_server {
     struct aws_allocator *allocator;
@@ -141,17 +134,6 @@ PyObject *aws_py_http_server_create(PyObject *self, PyObject *args) {
             &py_socket_options,
             &tls_conn_options_capsule)) {
         PyErr_SetNone(PyExc_ValueError);
-        goto error;
-    }
-
-    if (!bootstrap_capsule || !PyCapsule_CheckExact(bootstrap_capsule)) {
-        PyErr_SetString(PyExc_ValueError, "bootstrap is invalid");
-        goto error;
-    }
-
-    if (tls_conn_options_capsule && tls_conn_options_capsule != Py_None &&
-        !PyCapsule_CheckExact(tls_conn_options_capsule)) {
-        PyErr_SetString(PyExc_ValueError, "tls connection options is invalid");
         goto error;
     }
 
@@ -308,17 +290,9 @@ PyObject *aws_py_http_server_realease(PyObject *self, PyObject *args) {
 
 static struct aws_http_stream *s_on_incoming_request(struct aws_http_connection *connection, void *user_data) {
     (void)connection;
-    struct py_http_connection *py_server_conn = user_data;
-    PyGILState_STATE state = PyGILState_Ensure();
-    PyObject *result = NULL;
-
-    PyObject *on_incoming_req_cb = py_server_conn->on_incoming_request;
-    result = PyObject_CallFunction(on_incoming_req_cb, "(N)", py_server_conn->capsule);
-    struct py_http_stream *py_stream = PyCapsule_GetPointer(result, s_capsule_name_http_server_stream);
-
-    /* release the ref count for the stream when the stream complete callback called */
-    PyGILState_Release(state);
-    return py_stream->stream;
+    (void)user_data;
+    /* fake function */
+    return NULL;
 }
 
 static void s_on_shutdown(struct aws_http_connection *connection, int error_code, void *user_data) {
@@ -396,131 +370,4 @@ PyObject *aws_py_http_connection_configure_server(PyObject *self, PyObject *args
 
 error:
     Py_RETURN_NONE;
-}
-
-static int s_on_incoming_request_header_block_done(
-    struct aws_http_stream *internal_stream,
-    bool has_body,
-    void *user_data) {
-
-    struct py_http_stream *stream = user_data;
-    PyGILState_STATE state = PyGILState_Ensure();
-
-    struct aws_byte_cursor method;
-    struct aws_byte_cursor uri;
-
-    aws_http_stream_get_incoming_request_method(internal_stream, &method);
-    aws_http_stream_get_incoming_request_uri(internal_stream, &uri);
-
-    PyObject *py_method = PyString_FromStringAndSize((const char *)method.ptr, method.len);
-    PyObject *py_uri = PyString_FromStringAndSize((const char *)uri.ptr, uri.len);
-
-    PyObject *has_body_obj = has_body ? Py_True : Py_False;
-    if (stream->on_incoming_headers_received) {
-        PyObject *result = PyObject_CallFunction(
-            stream->on_incoming_headers_received, "(OOOO)", stream->received_headers, py_method, py_uri, has_body_obj);
-        Py_XDECREF(result);
-    }
-    Py_XDECREF(stream->received_headers);
-    Py_XDECREF(py_method);
-    Py_XDECREF(py_uri);
-    Py_DECREF(stream->on_incoming_headers_received);
-    PyGILState_Release(state);
-
-    return AWS_OP_SUCCESS;
-}
-
-/**
- * Return AWS_OP_SUCCESS to continue processing the stream.
- * Return AWS_OP_ERR to indicate failure and cancel the stream.
- */
-static int s_on_request_done(struct aws_http_stream *internal_stream, void *user_data){
-    (void) internal_stream;
-
-    struct py_http_stream *stream = user_data;
-    PyGILState_STATE state = PyGILState_Ensure();
-    PyObject *result = PyObject_CallFunction(stream->on_request_done, "(O)", stream->capsule);
-    long res = PyLong_AsLong(result);
-    Py_XDECREF(result);
-    PyGILState_Release(state);
-    return res;
-}
-
-PyObject *aws_py_http_stream_new_server_request_handler(PyObject *self, PyObject *args) {
-    (void)self;
-
-    struct aws_allocator *allocator = aws_crt_python_get_allocator();
-
-    struct py_http_connection *py_server_connection = NULL;
-
-    struct py_http_stream *stream = aws_mem_acquire(allocator, sizeof(struct py_http_stream));
-    if (!stream) {
-        PyErr_SetAwsLastError();
-        return NULL;
-    }
-
-    AWS_ZERO_STRUCT(*stream);
-    stream->allocator = allocator;
-
-    PyObject *http_connection_capsule = NULL;
-    PyObject *on_stream_completed = NULL;
-    PyObject *on_incoming_headers_received = NULL;
-    PyObject *on_incoming_body = NULL;
-    PyObject *on_request_done = NULL;
-
-    if (!PyArg_ParseTuple(
-            args,
-            "OOOO",
-            &http_connection_capsule,
-            &on_stream_completed,
-            &on_incoming_headers_received,
-            &on_incoming_body,
-            &on_request_done)) {
-        PyErr_SetNone(PyExc_ValueError);
-        goto clean_up_stream;
-    }
-    if (!http_connection_capsule || !PyCapsule_CheckExact(http_connection_capsule)) {
-        PyErr_SetString(PyExc_ValueError, "http connection capsule is invalid");
-        goto clean_up_stream;
-    }
-
-    if (!on_stream_completed) {
-        PyErr_SetString(PyExc_ValueError, "on_stream_completed callback is required");
-        goto clean_up_stream;
-    }
-
-    py_server_connection = PyCapsule_GetPointer(http_connection_capsule, s_capsule_name_http_connection);
-    struct aws_http_request_handler_options options = AWS_HTTP_REQUEST_HANDLER_OPTIONS_INIT;
-    options.user_data = stream;
-    options.server_connection = py_server_connection->connection;
-    options.on_request_headers = native_on_incoming_headers;
-    options.on_request_header_block_done = s_on_incoming_request_header_block_done;
-    options.on_complete = native_on_stream_complete;
-    
-
-    if (on_incoming_body && on_incoming_body != Py_None) {
-        stream->on_incoming_body = on_incoming_body;
-        Py_XINCREF(on_incoming_body);
-        options.on_request_body = native_on_incoming_body;
-    }
-    if (on_request_done && on_request_done != Py_None) {
-        stream->on_request_done = on_request_done;
-        Py_XINCREF(on_request_done);
-        options.on_request_done = s_on_request_done;
-    }
-    /* set stream callbacks */
-    stream->on_incoming_headers_received = on_incoming_headers_received;
-    Py_XINCREF(on_incoming_headers_received);
-    stream->on_stream_completed = on_stream_completed;
-    Py_XINCREF(on_stream_completed);
-    
-    stream->stream = aws_http_stream_new_server_request_handler(&options);
-    stream->capsule = PyCapsule_New(stream, s_capsule_name_http_stream, native_http_stream_destructor);
-
-    return stream->capsule;
-
-clean_up_stream:
-    aws_mem_release(allocator, stream);
-
-    return NULL;
 }

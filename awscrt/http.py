@@ -16,8 +16,6 @@ from concurrent.futures import Future
 from enum import IntEnum
 from awscrt.io import ClientBootstrap, TlsConnectionOptions, SocketOptions, ServerBootstrap
 
-#import ptvsd;
-
 """
 Base class for http connection
 """
@@ -175,7 +173,6 @@ class ServerConnection(HttpConnection):
         """
         create a new server connection, usually it will be called from the on_incoming connection callback, whenever a new connection is accepted.
         """
-        #ptvsd.break_into_debugger()
         server_connection = ServerConnection(on_incoming_request, on_shutdown)
         server_connection._native_handle = connection
         _aws_crt_python.aws_py_http_connection_configure_server(server_connection._native_handle, on_incoming_request, on_shutdown)
@@ -241,28 +238,6 @@ class HttpServer(object):
             future.set_exception(e)
 
         return future
-
-
-class HttpRequestHandler(object):
-    """
-    Request handler object. Create a new one when the on_incoming_request() callback is invoked to handler the request.
-    User can know the detail of the request, when the provided callbacks are fired. 
-    User can send response back to the request
-    """
-    __slots__ = ('_connection', 'path_and_query', 'method', '_on_incoming_body', '_stream',
-                 'has_request_body', 'request_headers_received', 'stream_completed', '_on_request_completed')
-
-    def __init__(self, connection, on_incoming_body, on_request_completed):
-        assert connection is not None and isinstance(connection, ServerConnection)
-
-        self._connection = connection
-        self._on_incoming_body = on_incoming_body
-        self._on_request_completed = on_request_completed
-
-        self._stream = None
-        self.path_and_query = None
-        self.method = None
-        self.has_request_body = None
 
 class HttpRequest(object):
     """

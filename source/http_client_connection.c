@@ -13,14 +13,15 @@
  * permissions and limitations under the License.
  */
 #include "http_client_connection.h"
-
+#include "http_connection.h"
 #include "io.h"
 
 #include <aws/common/array_list.h>
 #include <aws/io/socket.h>
 #include <aws/io/stream.h>
+#include <aws/http/request_response.h>
 
-const char *s_capsule_name_http_stream = "aws_http_client_stream";
+const char *s_capsule_name_http_client_stream = "aws_http_client_stream";
 
 static void s_on_client_connection_setup(struct aws_http_connection *connection, int error_code, void *user_data) {
 
@@ -233,6 +234,19 @@ error:
     Py_RETURN_NONE;
 }
 
+struct py_http_stream {	
+    struct aws_allocator *allocator;	
+    struct aws_http_stream *stream;	
+    struct aws_input_stream body_input_stream;	
+    PyObject *capsule;	
+    PyObject *on_stream_completed;	
+    PyObject *on_incoming_headers_received;	
+    PyObject *outgoing_body;	
+    PyObject *on_incoming_body;	
+    PyObject *received_headers;	
+    bool is_eos;	
+};
+
 static int s_stream_read(struct aws_input_stream *stream, struct aws_byte_buf *dest) {
     struct py_http_stream *py_stream = stream->impl;
 
@@ -298,7 +312,7 @@ struct aws_input_stream_vtable s_py_stream_vtable = {
     .clean_up = NULL,
 };
 
-int native_on_incoming_headers(
+static int s_on_incoming_response_headers(
     struct aws_http_stream *internal_stream,
     const struct aws_http_header *header_array,
     size_t num_headers,
@@ -340,7 +354,7 @@ static int s_on_incoming_header_block_done(struct aws_http_stream *internal_stre
     return AWS_OP_SUCCESS;
 }
 
-int native_on_incoming_body(
+static int s_on_incoming_response_body(
     struct aws_http_stream *internal_stream,
     const struct aws_byte_cursor *data,
     void *user_data) {
@@ -365,7 +379,7 @@ int native_on_incoming_body(
     return err;
 }
 
-void native_on_stream_complete(struct aws_http_stream *internal_stream, int error_code, void *user_data) {
+static void s_on_stream_complete(struct aws_http_stream *internal_stream, int error_code, void *user_data) {
     (void)internal_stream;
     struct py_http_stream *stream = user_data;
 
@@ -380,8 +394,8 @@ void native_on_stream_complete(struct aws_http_stream *internal_stream, int erro
     PyGILState_Release(state);
 }
 
-void native_http_stream_destructor(PyObject *http_stream_capsule) {
-    struct py_http_stream *stream = PyCapsule_GetPointer(http_stream_capsule, s_capsule_name_http_stream);
+static void s_http_client_stream_destructor(PyObject *http_stream_capsule) {
+    struct py_http_stream *stream = PyCapsule_GetPointer(http_stream_capsule, s_capsule_name_http_client_stream);
     assert(stream);
 
     aws_http_stream_release(stream->stream);
@@ -509,13 +523,13 @@ PyObject *aws_py_http_client_connection_make_request(PyObject *self, PyObject *a
     if (on_incoming_body && on_incoming_body != Py_None) {
         stream->on_incoming_body = on_incoming_body;
         Py_XINCREF(on_incoming_body);
-        request_options.on_response_body = native_on_incoming_body;
+        request_options.on_response_body = s_on_incoming_response_body;
     }
 
     stream->received_headers = PyDict_New();
-    request_options.on_response_headers = native_on_incoming_headers;
+    request_options.on_response_headers = s_on_incoming_response_headers;
     request_options.on_response_header_block_done = s_on_incoming_header_block_done;
-    request_options.on_complete = native_on_stream_complete;
+    request_options.on_complete = s_on_stream_complete;
     request_options.user_data = stream;
 
     struct aws_http_stream *http_stream = aws_http_stream_new_client_request(&request_options);
@@ -524,7 +538,7 @@ PyObject *aws_py_http_client_connection_make_request(PyObject *self, PyObject *a
     }
 
     stream->stream = http_stream;
-    return PyCapsule_New(stream, s_capsule_name_http_stream, native_http_stream_destructor);
+    return PyCapsule_New(stream, s_capsule_name_http_client_stream, s_http_client_stream_destructor);
 
 clean_up_stream:
     aws_http_message_destroy(request);
