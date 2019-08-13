@@ -16,6 +16,7 @@
 #include "crypto.h"
 #include "http_client_connection.h"
 #include "http_server.h"
+#include "http_connection.h"
 #include "io.h"
 #include "mqtt_client.h"
 #include "mqtt_client_connection.h"
@@ -197,7 +198,7 @@ static PyMethodDef s_module_methods[] = {
 
     /* HTTP connetion */
     {"aws_py_http_connection_close", aws_py_http_connection_close, METH_VARARGS, NULL},
-    {"aws_py_http_connection_close", aws_py_http_connection_close, METH_VARARGS, NULL},
+    {"aws_py_http_connection_is_open", aws_py_http_connection_is_open, METH_VARARGS, NULL},
 
     /* HTTP client */
     {"aws_py_http_client_connection_create", aws_py_http_client_connection_create, METH_VARARGS, NULL},

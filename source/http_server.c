@@ -14,6 +14,7 @@
  */
 #include "http_server.h"
 #include "http_stream.h"
+#include "http_connection.h"
 #include "io.h"
 
 #include <aws/common/array_list.h>
@@ -22,14 +23,7 @@
 #include <aws/io/socket.h>
 #include <aws/io/stream.h>
 
-#ifdef _WIN32
-#    define LOCAL_SOCK_TEST_FORMAT "\\\\.\\pipe\\testsock-%s"
-#else
-#    define LOCAL_SOCK_TEST_FORMAT "testsock-%s.sock"
-#endif
-
 const char *s_capsule_name_http_server = "aws_http_server";
-const char *s_capsule_name_http_server_stream = "aws_http_server_stream";
 
 struct py_http_server {
     struct aws_allocator *allocator;
@@ -303,7 +297,7 @@ static struct aws_http_stream *s_on_incoming_request(struct aws_http_connection 
 
     PyObject *on_incoming_req_cb = py_server_conn->on_incoming_request;
     result = PyObject_CallFunction(on_incoming_req_cb, "(N)", py_server_conn->capsule);
-    struct py_http_stream *py_stream = PyCapsule_GetPointer(result, s_capsule_name_http_server_stream);
+    struct py_http_stream *py_stream = PyCapsule_GetPointer(result, s_capsule_name_http_stream);
 
     /* release the ref count for the stream when the stream complete callback called */
     PyGILState_Release(state);

@@ -14,11 +14,13 @@
  */
 #include "http_client_connection.h"
 #include "http_stream.h"
+#include "http_connection.h"
 #include "io.h"
 
 #include <aws/common/array_list.h>
 #include <aws/io/socket.h>
 #include <aws/io/stream.h>
+#include <aws/http/request_response.h>
 
 
 static void s_on_client_connection_setup(struct aws_http_connection *connection, int error_code, void *user_data) {

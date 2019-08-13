@@ -17,8 +17,6 @@
 #include "module.h"
 #include "http_connection.h"
 #include <aws/http/connection.h>
-#include <aws/http/request_response.h>
-#include <aws/io/stream.h>
 
 /**
  * Create a new connection. returns void. The on_setup callback will be invoked
