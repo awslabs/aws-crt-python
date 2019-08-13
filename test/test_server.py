@@ -61,6 +61,7 @@ class TestStringMethods(unittest.TestCase):
         socket_options.connect_timeout_ms = connect_timeout
         socket_options.domain = io.SocketDomain.Local
         server = http.HttpServer.new_server(server_bootstrap, host_name, port, socket_options, on_incoming_connection, on_destroy_complete)
+        print("Server create success")
         future = http.HttpServer.release(server)
         print(future.result())
 
