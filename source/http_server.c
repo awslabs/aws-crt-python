@@ -212,7 +212,7 @@ PyObject *aws_py_http_server_create(PyObject *self, PyObject *args) {
     struct aws_socket_endpoint endpoint;
     AWS_ZERO_STRUCT(endpoint);
 
-    snprintf(endpoint.address, host_name_len, "%s", host_name);
+    snprintf(endpoint.address, host_name_len+1, "%s", host_name);
     endpoint.port = port_number;
     options.socket_options = &socket_options;
     options.endpoint = &endpoint;
