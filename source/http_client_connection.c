@@ -435,7 +435,7 @@ PyObject *aws_py_http_client_connection_make_request(PyObject *self, PyObject *a
     stream->on_stream_completed = on_stream_completed;
     Py_XINCREF(on_stream_completed);
     stream->on_incoming_headers_received = on_incoming_headers_received;
-    
+    Py_XINCREF(on_incoming_headers_received);
 
     struct aws_http_request_options request_options;
     AWS_ZERO_STRUCT(request_options);
