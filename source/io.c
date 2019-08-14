@@ -170,8 +170,8 @@ static void s_server_bootstrap_destructor(PyObject *bootstrap_capsule) {
     assert(PyCapsule_CheckExact(bootstrap_capsule));
     struct server_bootstrap *bootstrap = PyCapsule_GetPointer(bootstrap_capsule, s_capsule_name_server_bootstrap);
     assert(bootstrap);
-    Py_DECREF(bootstrap->elg_capsule);
     aws_server_bootstrap_release(bootstrap->bootstrap);
+    Py_DECREF(bootstrap->elg_capsule);
     aws_mem_release(bootstrap->allocator, bootstrap);
 }
 
@@ -212,8 +212,8 @@ static void s_client_bootstrap_destructor(PyObject *bootstrap_capsule) {
     
     struct client_bootstrap *bootstrap = PyCapsule_GetPointer(bootstrap_capsule, s_capsule_name_client_bootstrap);
     assert(bootstrap);
-    Py_DECREF(bootstrap->elg_capsule);
     aws_client_bootstrap_release(bootstrap->bootstrap);
+    Py_DECREF(bootstrap->elg_capsule);
     aws_mem_release(bootstrap->allocator, bootstrap);
 }
 

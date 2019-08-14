@@ -44,14 +44,14 @@ class TestStringMethods(unittest.TestCase):
         socket_options.connect_timeout_ms = connect_timeout
         socket_options.domain = io.SocketDomain.Local
         return event_loop_group, server_bootstrap, None, socket_options
-
+    
     def test_server_bootstrap(self):
         # an event loop group is needed for IO operations. Unless you're a server or a client doing hundreds of connections
         # you only want one of these.
         event_loop_group = io.EventLoopGroup(1)
         server_bootstrap = io.ServerBootstrap(event_loop_group)
         self.assertIsNotNone(server_bootstrap)
-
+    
     def test_server_create_destroy(self):
         print("----TEST SERVER_CREATE_DESTROY BEGIN!----")
         def on_incoming_connection(server, connection, error_code):
@@ -75,7 +75,7 @@ class TestStringMethods(unittest.TestCase):
         #delete the socket, cleanup
         os.system("rm {}".format(host_name))
     
-
+    
     def test_server_connection(self):
         print("----TEST SERVER_CONNECTION BEGIN!----")
         def on_incoming_request(connection):
@@ -132,7 +132,7 @@ class TestStringMethods(unittest.TestCase):
         print("\n")
         #delete the socket, cleanup
         os.system("rm {}".format(host_name))
-        
+    
 if __name__ == '__main__':
     unittest.main()
 
