@@ -30,6 +30,7 @@ const char *s_capsule_name_tls_ctx = "aws_client_tls_ctx";
 const char *s_capsule_name_tls_conn_options = "aws_tls_connection_options";
 
 bool aws_socket_options_init_from_py(struct aws_socket_options *socket_options, PyObject *py_socket_options){
+    AWS_ZERO_STRUCT(*socket_options);
 
     PyObject *sock_domain = PyObject_GetAttrString(py_socket_options, "domain");
     if (!PyIntEnum_Check(sock_domain)) {

@@ -149,7 +149,7 @@ PyObject *aws_py_http_client_connection_create(PyObject *self, PyObject *args) {
     Py_INCREF(bootstrap_capsule);
 
     struct aws_socket_options socket_options;
-    AWS_ZERO_STRUCT(socket_options);
+    
     if(!aws_socket_options_init_from_py(&socket_options, py_socket_options)){
         goto error;
     }

@@ -59,12 +59,10 @@ class TestServerCreate(unittest.TestCase):
                                             on_incoming_connection)
         print("----Server create success----")
         future = http.HttpServer.close(server)
-        future = http.HttpServer.close(server)
-        future = http.HttpServer.close(server)
-        print(future.result())
-
-        print("----TEST SERVER_CREATE_DESTROY SUCCESS!----")
-        print("\n")
+        if future.result():
+            print("----TEST SERVER_CREATE_DESTROY SUCCESS!----")
+            print("\n")
+        
         # delete the socket, cleanup
         os.system("rm {}".format(self.host_name))
 
@@ -94,7 +92,7 @@ class TestServerConnection(unittest.TestCase):
     def test_server_bootstrap(self):
         # an event loop group is needed for IO operations. Unless you're a server or a client doing hundreds of
         # connections you only want one of these.
-        self.assertIsNotNone(self.port)
+        self.assertIsNotNone(self.server_bootstrap)
 
     def test_server_connection(self):
 
@@ -141,7 +139,9 @@ class TestServerConnection(unittest.TestCase):
         server_connection = server_conn_future.result()
         # release the server
         destroy_future = http.HttpServer.close(server)
-        print(destroy_future.result())
+        if destroy_future.result():
+            print("----SERVER DESTROY FINISHED----")
+        
 
         # wait client side connection to shutdown
         print(client_conn_shutdown_future.result())
@@ -150,7 +150,6 @@ class TestServerConnection(unittest.TestCase):
         print("\n")
         # delete the socket, cleanup
         os.system("rm {}".format(self.host_name))
-
 
 if __name__ == '__main__':
     unittest.main()
