@@ -19,53 +19,54 @@ from awscrt import io, http
 import unittest
 import random
 
-
 log_level = io.LogLevel.NoLogs
 log_level = io.LogLevel.Error
 log_output = 'stderr'
 io.init_logging(log_level, log_output)
 
+
 class TestStringMethods(unittest.TestCase):
 
     def test_server_bootstrap(self):
-        # an event loop group is needed for IO operations. Unless you're a server or a client doing hundreds of connections
-        # you only want one of these.
+        # an event loop group is needed for IO operations. Unless you're a server or a client doing hundreds of
+        # connections you only want one of these.
         event_loop_group = io.EventLoopGroup(1)
         server_bootstrap = io.ServerBootstrap(event_loop_group)
         self.assertIsNotNone(server_bootstrap)
 
     def test_server_create_destroy(self):
 
-        #Settings for tests
+        # Settings for tests
         host_name = str(random.random())
         port = 0
         connect_timeout = 3000
 
         def on_incoming_connection(server, connection, error_code):
             print("fake on incoming connection!")
-        
-        # an event loop group is needed for IO operations. Unless you're a server or a client doing hundreds of connections
-        # you only want one of these.
+
+        # an event loop group is needed for IO operations. Unless you're a server or a client doing hundreds of
+        # connections you only want one of these.
         event_loop_group = io.EventLoopGroup(1)
         server_bootstrap = io.ServerBootstrap(event_loop_group)
         if sys.platform == 'win32':
-            #win32
+            # win32
             host_name = "\\\\.\\pipe\\testsock-" + host_name
         else:
             host_name = "testsock-{}.sock".format(host_name)
         socket_options = io.SocketOptions()
         socket_options.connect_timeout_ms = connect_timeout
         socket_options.domain = io.SocketDomain.Local
-        server = http.HttpServer.new_server(server_bootstrap, host_name, port, socket_options, on_incoming_connection)
+        server = http.HttpServer(server_bootstrap, host_name, port, socket_options, on_incoming_connection)
         print("Server create success")
+        future = http.HttpServer.close(server)
+        future = http.HttpServer.close(server)
         future = http.HttpServer.close(server)
         print(future.result())
 
         print("SUCCESS!")
 
-        
+
 if __name__ == '__main__':
     unittest.main()
 
 # server bootstrap init
-

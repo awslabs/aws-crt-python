@@ -73,6 +73,7 @@ static void s_on_destroy_complete(void *user_data) {
         
         PyGILState_Release(state);
     } else {
+        Py_DECREF(py_server->on_destroy_complete);
         aws_mem_release(py_server->allocator, py_server);
     }
 }
@@ -141,7 +142,6 @@ PyObject *aws_py_http_server_create(PyObject *self, PyObject *args) {
 
     struct aws_server_bootstrap *bootstrap = PyCapsule_GetPointer(bootstrap_capsule, s_capsule_name_server_bootstrap);
     if (!bootstrap) {
-        PyErr_SetString(PyExc_ValueError, "the bootstrap capsule has an invalid pointer");
         goto error;
     }
 
@@ -149,6 +149,9 @@ PyObject *aws_py_http_server_create(PyObject *self, PyObject *args) {
 
     if (tls_conn_options_capsule != Py_None) {
         connection_options = PyCapsule_GetPointer(tls_conn_options_capsule, s_capsule_name_tls_conn_options);
+        if(!connection_options){
+            goto error;
+        }
     }
 
     py_server = aws_mem_calloc(allocator, 1, sizeof(struct py_http_server));
@@ -158,15 +161,13 @@ PyObject *aws_py_http_server_create(PyObject *self, PyObject *args) {
     }
 
     struct aws_socket_options socket_options;
-    AWS_ZERO_STRUCT(socket_options);
     if (!aws_socket_options_init_from_py(&socket_options, py_socket_options)) {
         goto error;
     }
 
-    Py_INCREF(on_incoming_connection);
     py_server->on_incoming_connection = on_incoming_connection;
 
-    Py_INCREF(on_destroy_complete);
+    
     py_server->on_destroy_complete = on_destroy_complete;
     
     py_server->allocator = allocator;
@@ -187,20 +188,23 @@ PyObject *aws_py_http_server_create(PyObject *self, PyObject *args) {
     options.endpoint = &endpoint;
     options.on_incoming_connection = s_on_incoming_connection;
     options.on_destroy_complete = s_on_destroy_complete;
-    py_server->server = aws_http_server_new(&options);
     PyObject *capsule = NULL;
+    py_server->server = aws_http_server_new(&options);
+    
     if (py_server->server) {
         /* success */
         capsule = PyCapsule_New(py_server, s_capsule_name_http_server, s_http_server_destructor);
+        if(!capsule){
+            goto error;
+        }
         py_server->capsule = capsule;
-    } else {
-        /* fail */
-        Py_DECREF(on_incoming_connection);
-        Py_DECREF(on_destroy_complete);
-        aws_mem_release(py_server->allocator, py_server);
+
+        Py_INCREF(on_incoming_connection);
+        Py_INCREF(on_destroy_complete);
+        Py_INCREF(capsule);
+        return capsule;
     }
-    Py_XINCREF(capsule);
-    return capsule;
+
 error:
     if (py_server) {
         aws_mem_release(py_server->allocator, py_server);
