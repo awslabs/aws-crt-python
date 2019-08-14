@@ -29,7 +29,7 @@ PyObject *aws_py_http_server_create(PyObject *self, PyObject *args);
  * Release the server. It will close the listening socket and all the connections existing in the server.
  * The on_destroy_complete will be invoked when the destroy operation completes
  */
-PyObject *aws_py_http_server_realease(PyObject *self, PyObject *args);
+PyObject *aws_py_http_server_release(PyObject *self, PyObject *args);
 
 /**
  * Configure a server connection. When a new connection is received, the on_incoming callback will be fired, 

@@ -45,6 +45,7 @@ struct aws_byte_buf;
 #define PyString_FromAwsByteCursor(cursor) PyString_FromStringAndSize((const char *)(cursor)->ptr, (cursor)->len)
 
 int PyIntEnum_Check(PyObject *int_enum_obj);
+int PyIntObj_Check(PyObject *int_obj);
 long PyIntEnum_AsLong(PyObject *int_enum_obj);
 
 struct aws_byte_cursor aws_byte_cursor_from_pystring(PyObject *str);

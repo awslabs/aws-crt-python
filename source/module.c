@@ -107,6 +107,14 @@ int PyIntEnum_Check(PyObject *int_enum_obj) {
 #endif
 }
 
+int PyIntObj_Check(PyObject *int_obj) {
+#if PY_MAJOR_VERSION == 2
+    return PyInt_Check(int_obj);
+#else
+    return PyLong_Check(int_obj);
+#endif
+}
+
 long PyIntEnum_AsLong(PyObject *int_enum_obj) {
 #if PY_MAJOR_VERSION == 2
     return PyInt_AsLong(int_enum_obj);
@@ -206,7 +214,7 @@ static PyMethodDef s_module_methods[] = {
 
     /* HTTP server */
     {"aws_py_http_server_create", aws_py_http_server_create, METH_VARARGS, NULL},
-    {"aws_py_http_server_realease", aws_py_http_server_realease, METH_VARARGS, NULL},
+    {"aws_py_http_server_release", aws_py_http_server_release, METH_VARARGS, NULL},
     {"aws_py_http_connection_configure_server", aws_py_http_connection_configure_server, METH_VARARGS, NULL},
 
     {NULL, NULL, 0, NULL},

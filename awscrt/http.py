@@ -53,6 +53,8 @@ class HttpClientConnection(HttpConnection):
     """
     Represents an Http connection to a remote endpoint. Everything in this class is non-blocking.
     """
+
+    # don't call me, I'm private
     def __init__(self, bootstrap, on_connection_shutdown, tls_connection_options):
 
         assert isinstance(bootstrap, ClientBootstrap)
@@ -75,24 +77,20 @@ class HttpClientConnection(HttpConnection):
         returns a future where the result is a new instance to HttpClientConnection, once the connection has completed
         and is ready for use.
         """
-        assert tls_connection_options is None or isinstance(
-            tls_connection_options, TlsConnectionOptions)
+        assert tls_connection_options is None or isinstance(tls_connection_options, TlsConnectionOptions)
         assert host_name is not None
         assert port is not None
-        assert socket_options is not None and isinstance(
-            socket_options, SocketOptions)
+        assert socket_options is not None and isinstance(socket_options, SocketOptions)
 
         future = Future()
-        connection = HttpClientConnection(
-            bootstrap, on_connection_shutdown, tls_connection_options)
+        connection = HttpClientConnection(bootstrap, on_connection_shutdown, tls_connection_options)
 
         def on_connection_setup_native_cb(native_handle, error_code):
             if error_code == 0:
                 connection._native_handle = native_handle
                 future.set_result(connection)
             else:
-                future.set_exception(
-                    Exception("Error during connect: err={}".format(error_code)))
+                future.set_exception(Exception("Error during connect: err={}".format(error_code)))
 
         try:
             if tls_connection_options is not None:
@@ -133,8 +131,8 @@ class HttpClientConnection(HttpConnection):
         After this future completes, you can get the result of request.response_completed,
         for the remainder of the response.
         """
-        request = HttpRequest(self, method, uri_str,
-                              outgoing_headers, outgoing_body, on_incoming_body)
+        
+        request = HttpRequest(self, method, uri_str, outgoing_headers, outgoing_body, on_incoming_body)
 
         def on_stream_completed(error_code):
             if error_code == 0:
@@ -185,61 +183,57 @@ class HttpServer(object):
     Represents an Http server. Everything in this class is non-blocking.
     """
     __slots__ = ('_bootstrap', '_tls_connection_options', '_on_incoming_connection',
-                 '_on_destroy_complete', '_native_handle')
+                 '_on_destroy_complete', '_native_handle', '_destroy_complete')
 
-    # don't call me, I'm private
-    def __init__(self, bootstrap, on_incoming_connection, on_destroy_complete, tls_connection_options):
+    def __init__(self, bootstrap, host_name, port, socket_options, on_incoming_connection, tls_connection_options=None):
+        """
+        Create a new server listener, binding to the host_name and port. 
+        When a new connection is received, the on_incoming_connection cb will be fired, a new ServerConnection obj will be created.
+        The aws_py_http_connection_configure_server need to be called from the callback to configure the ServerConnection 
+        @param socket_options: awscrt.io.SocketOptions for the server's listening socket. Required
+        @param on_incoming_connection: Callback with signature (connection: HttpConnection.native_handle, error_code: int) Required
+        @param bootstrap: awscrt.io.ServerBootstrap. Required
+        @param tls_connection_options: awscrt.io.TlsConnectionOptions, for TLS connection
+        """    
         assert isinstance(bootstrap, ServerBootstrap)
-        assert tls_connection_options is None or isinstance(
-            tls_connection_options, TlsConnectionOptions)
-
+        assert tls_connection_options is None or isinstance(tls_connection_options, TlsConnectionOptions)
+        assert host_name is not None
+        assert port is not None
+        assert isinstance(socket_options, SocketOptions)
+        assert on_incoming_connection is not None
         for slot in self.__slots__:
             setattr(self, slot, None)
+
+        def on_destroy_complete(server_native_handle):
+            self._destroy_complete.set_result(True)
 
         self._bootstrap = bootstrap
         self._tls_connection_options = tls_connection_options
         self._on_incoming_connection = on_incoming_connection
         self._on_destroy_complete = on_destroy_complete
         self._native_handle = None
+        self._destroy_complete = Future()
 
-    @staticmethod
-    def new_server(bootstrap, host_name, port, socket_options, on_incoming_connection,
-                   on_destroy_complete=None, tls_connection_options=None):
-        """
-        Create a new server listener, binding to the host_name and port. 
-        When a new connection is received, the on_incoming_connection cb will be fired, a new ServerConnection obj will be created.
-        The new_server_connection() need to be called from the callback to configure the ServerConnection 
-        """
-        assert tls_connection_options is None or isinstance(
-            tls_connection_options, TlsConnectionOptions)
-        assert host_name is not None
-        assert port is not None
-        assert socket_options is not None and isinstance(
-            socket_options, SocketOptions)
-        assert on_incoming_connection is not None
         if tls_connection_options is not None:
             internal_conn_options_handle = tls_connection_options._internal_tls_conn_options
         else:
             internal_conn_options_handle = None
-        server = HttpServer(bootstrap, on_incoming_connection,
-                            on_destroy_complete, tls_connection_options)
-        server._native_handle = _aws_crt_python.aws_py_http_server_create(
-            bootstrap._internal_bootstrap, on_incoming_connection, on_destroy_complete, host_name, port, socket_options, internal_conn_options_handle)
-        return server
 
-    def release(self):
+        self._native_handle = _aws_crt_python.aws_py_http_server_create(
+            bootstrap._internal_bootstrap, on_incoming_connection, on_destroy_complete, host_name, port, socket_options,
+            internal_conn_options_handle)
+
+    def close(self):
         """
-        release the server, no more connections will be accepted, when the server finishes destroy process, the on_destroy_complete will be invoked
+        close the server, no more connections will be accepted, a future object will be returned, and when the close process finishes
+        the future result or exception will be set.
         """
-        future = Future()
         try:
-            if self._native_handle is not None:
-                _aws_crt_python.aws_py_http_server_realease(
-                    self._native_handle)
+            _aws_crt_python.aws_py_http_server_release(self._native_handle)
         except Exception as e:
-            future.set_exception(e)
+            self._destroy_complete.set_exception(e)
 
-        return future
+        return self._destroy_complete
 
 class HttpRequestHandler(object):
     """
@@ -296,9 +290,10 @@ class HttpRequest(object):
 
     on_incoming_body is invoked as the response body is received. It takes a single argument of type bytes.
     """
-    __slots__ = ('_connection', 'path_and_query', 'method', 'outgoing_headers', '_outgoing_body', '_on_incoming_body', '_stream',
-                 'response_headers', 'response_code', 'has_response_body', 'response_headers_received',
-                 'response_completed')
+    __slots__ = (
+        '_connection', 'path_and_query', 'method', 'outgoing_headers', '_outgoing_body', '_on_incoming_body', '_stream',
+        'response_headers', 'response_code', 'has_response_body', 'response_headers_received',
+        'response_completed')
 
     def __init__(self, connection, method, path_and_query, outgoing_headers, outgoing_body, on_incoming_body):
         import io
