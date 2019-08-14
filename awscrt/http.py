@@ -129,6 +129,7 @@ class HttpClientConnection(HttpConnection):
         After this future completes, you can get the result of request.response_completed,
         for the remainder of the response.
         """
+        
         request = HttpRequest(self, method, uri_str, outgoing_headers, outgoing_body, on_incoming_body)
 
         def on_stream_completed(error_code):
