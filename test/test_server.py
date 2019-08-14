@@ -55,9 +55,11 @@ class TestServerCreate(unittest.TestCase):
         def on_incoming_connection(server, connection, error_code):
             print("----fake on incoming connection!----")
 
-        server = http.HttpServer.new_server(self.server_bootstrap, self.host_name, self.port, self.socket_options,
+        server = http.HttpServer(self.server_bootstrap, self.host_name, self.port, self.socket_options,
                                             on_incoming_connection)
         print("----Server create success----")
+        future = http.HttpServer.close(server)
+        future = http.HttpServer.close(server)
         future = http.HttpServer.close(server)
         print(future.result())
 
@@ -115,7 +117,7 @@ class TestServerConnection(unittest.TestCase):
 
         # server setup
         server_conn_future = Future()
-        server = http.HttpServer.new_server(self.server_bootstrap, self.host_name, self.port, self.socket_options,
+        server = http.HttpServer(self.server_bootstrap, self.host_name, self.port, self.socket_options,
                                             on_incoming_connection)
         print("----server setup completed!----")
         # client setup
