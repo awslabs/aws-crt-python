@@ -199,7 +199,6 @@ PyObject *aws_py_http_server_create(PyObject *self, PyObject *args) {
 
         Py_INCREF(on_incoming_connection);
         Py_INCREF(on_destroy_complete);
-        Py_INCREF(capsule);
         return capsule;
     }
 
