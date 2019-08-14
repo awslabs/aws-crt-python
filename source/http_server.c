@@ -268,7 +268,7 @@ static struct aws_http_stream *s_on_incoming_request(struct aws_http_connection 
 static void s_on_shutdown(struct aws_http_connection *connection, int error_code, void *user_data) {
     (void)connection;
     struct py_http_connection *py_server_conn = user_data;
-
+    py_server_conn->shutdown_called = true;
     PyObject *on_shutdown_cb = py_server_conn->on_connection_shutdown;
 
     if (!py_server_conn->destructor_called) {
