@@ -175,18 +175,16 @@ class HttpServer(object):
         self.destroy_complete = Future()
 
     
-    """
-    socket_options: awscrt.io.SocketOptions for the server's listening socket. Required
-    on_incoming_connection: Callback with signature (connection: HttpConnection.native_handle, error_code: int) Required
-    bootstrap: awscrt.io.ServerBootstrap. Required
-    tls_connection_options: awscrt.io.TlsConnectionOptions, for TLS connection
-    """
     @staticmethod
     def new_server(bootstrap, host_name, port, socket_options, on_incoming_connection, tls_connection_options=None):
         """
         Create a new server listener, binding to the host_name and port. 
         When a new connection is received, the on_incoming_connection cb will be fired, a new ServerConnection obj will be created.
         The aws_py_http_connection_configure_server need to be called from the callback to configure the ServerConnection 
+        @param socket_options: awscrt.io.SocketOptions for the server's listening socket. Required
+        @param on_incoming_connection: Callback with signature (connection: HttpConnection.native_handle, error_code: int) Required
+        @param bootstrap: awscrt.io.ServerBootstrap. Required
+        @param tls_connection_options: awscrt.io.TlsConnectionOptions, for TLS connection
         """
         assert tls_connection_options is None or isinstance(tls_connection_options, TlsConnectionOptions)
         assert host_name is not None
