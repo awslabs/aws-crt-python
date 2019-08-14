@@ -38,14 +38,12 @@ struct py_http_server {
 
 static void s_http_server_destructor(PyObject *http_server_capsule) {
     struct py_http_server *py_server = PyCapsule_GetPointer(http_server_capsule, s_capsule_name_http_server);
-    assert(py_server);
     py_server->destructor_called = true;
     if (py_server->server) {
         if (!py_server->destroy_called) {
             aws_http_server_release(py_server->server);
             py_server->destroy_called = true;
         }
-        py_server->server = NULL;
     }
     /* the incoming callback is not freed until now */
     Py_DECREF(py_server->on_incoming_connection);
@@ -60,12 +58,11 @@ static void s_on_destroy_complete(void *user_data) {
     
     py_server->destroy_complete = true;
     PyObject *on_destroy_complete_cb = py_server->on_destroy_complete;
-    PyObject *result = NULL;
-    
+    py_server->server = NULL;
     if (!py_server->destructor_called) {    
         PyGILState_STATE state = PyGILState_Ensure();
 
-        result = PyObject_CallFunction(on_destroy_complete_cb, "(N)", py_server->capsule);
+        PyObject *result = PyObject_CallFunction(on_destroy_complete_cb, "(N)", py_server->capsule);
         if(result){
             Py_DECREF(result);
         }
@@ -77,7 +74,7 @@ static void s_on_destroy_complete(void *user_data) {
         Py_DECREF(py_server->bootstrap);
         Py_XDECREF(py_server->capsule);
         PyGILState_Release(state);
-    } else if (py_server->destructor_called) {
+    } else {
         aws_mem_release(py_server->allocator, py_server);
     }
 }
@@ -245,7 +242,7 @@ PyObject *aws_py_http_server_release(PyObject *self, PyObject *args) {
     PyObject *server_capsule = NULL;
 
     if (PyArg_ParseTuple(args, "O", &server_capsule)) {
-        if (server_capsule) {
+        if (server_capsule != Py_None) {
             struct py_http_server *py_server = PyCapsule_GetPointer(server_capsule, s_capsule_name_http_server);
             if (py_server->server) {
                 if (!py_server->destroy_called) {
