@@ -45,7 +45,7 @@ static void s_http_server_destructor(PyObject *http_server_capsule) {
         }
     }
     /* the incoming callback is not freed until now */
-    Py_DECREF(py_server->on_incoming_connection);
+    Py_XDECREF(py_server->on_incoming_connection);
     if (py_server->destroy_complete) {
         aws_mem_release(py_server->allocator, py_server);
     }
@@ -62,18 +62,16 @@ static void s_on_destroy_complete(void *user_data) {
 
         PyObject *result = PyObject_CallFunction(on_destroy_complete_cb, "(N)", py_server->capsule);
         if(result){
-            Py_DECREF(result);
+            Py_XDECREF(result);
         }
         else{
             PyErr_WriteUnraisable(PyErr_Occurred());
         }
-        Py_DECREF(py_server->on_destroy_complete);
-        
-        Py_DECREF(py_server->capsule);
+        Py_XDECREF(py_server->on_destroy_complete);
         
         PyGILState_Release(state);
     } else {
-        Py_DECREF(py_server->on_destroy_complete);
+        Py_XDECREF(py_server->on_destroy_complete);
         aws_mem_release(py_server->allocator, py_server);
     }
 }

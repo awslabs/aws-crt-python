@@ -59,11 +59,8 @@ class TestStringMethods(unittest.TestCase):
         server = http.HttpServer(server_bootstrap, host_name, port, socket_options, on_incoming_connection)
         print("Server create success")
         future = http.HttpServer.close(server)
-        future = http.HttpServer.close(server)
-        future = http.HttpServer.close(server)
-        print(future.result())
-
-        print("SUCCESS!")
+        if future:
+            print("SUCCESS!")
 
 
 if __name__ == '__main__':
