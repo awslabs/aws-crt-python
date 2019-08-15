@@ -70,7 +70,8 @@ static void s_on_destroy_complete(void *user_data) {
             PyErr_WriteUnraisable(PyErr_Occurred());
         }
         /**
-         * If this not comments out, the VSCode Python Debugger will fail with SegFault, even though nothing else fails.
+         * TODO:: Potential leak
+         * If this is not commented out, the VSCode Python Debugger will fail with SegFault, even though nothing else fails.
          * But this should be right! Or somthing in Python already release this object, Totally no idea!
          */
         //Py_XDECREF(py_server->on_destroy_complete);
