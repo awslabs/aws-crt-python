@@ -47,6 +47,7 @@ static void s_http_server_destructor(PyObject *http_server_capsule) {
     /* the incoming callback is not freed until now */
     Py_XDECREF(py_server->on_incoming_connection);
     if (py_server->destroy_complete) {
+         
         aws_mem_release(py_server->allocator, py_server);
     }
 }
@@ -57,23 +58,25 @@ static void s_on_destroy_complete(void *user_data) {
     py_server->destroy_complete = true;
     PyObject *on_destroy_complete_cb = py_server->on_destroy_complete;
     py_server->server = NULL;
+    PyGILState_STATE state = PyGILState_Ensure();
     if (!py_server->destructor_called) {    
-        PyGILState_STATE state = PyGILState_Ensure();
-
         PyObject *result = PyObject_CallFunction(on_destroy_complete_cb, "(N)", py_server->capsule);
         if(result){
             Py_XDECREF(result);
         }
         else{
             PyErr_WriteUnraisable(PyErr_Occurred());
-        }
-        Py_XDECREF(py_server->on_destroy_complete);
-        
-        PyGILState_Release(state);
+        }   
+        /**
+         * If this not comments out, the VSCode Python Debugger will fail with SegFault, even though nothing else fails.
+         * But this should be right! Or somthing in Python already release this object, Totally no idea!
+         */
+        //Py_XDECREF(py_server->on_destroy_complete); 
     } else {
         Py_XDECREF(py_server->on_destroy_complete);
         aws_mem_release(py_server->allocator, py_server);
     }
+    PyGILState_Release(state);
 }
 
 static void s_on_incoming_connection(
@@ -196,7 +199,6 @@ PyObject *aws_py_http_server_create(PyObject *self, PyObject *args) {
             goto error;
         }
         py_server->capsule = capsule;
-
         Py_INCREF(on_incoming_connection);
         Py_INCREF(on_destroy_complete);
         return capsule;

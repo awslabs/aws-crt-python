@@ -156,7 +156,7 @@ class HttpServer(object):
     Represents an Http server. Everything in this class is non-blocking.
     """
     __slots__ = ('_bootstrap', '_tls_connection_options', '_on_incoming_connection',
-                 '_on_destroy_complete', '_native_handle', '_destroy_complete')
+                 '_native_handle', '_destroy_complete')
 
     def __init__(self, bootstrap, host_name, port, socket_options, on_incoming_connection, tls_connection_options=None):
         """
@@ -183,7 +183,6 @@ class HttpServer(object):
         self._bootstrap = bootstrap
         self._tls_connection_options = tls_connection_options
         self._on_incoming_connection = on_incoming_connection
-        self._on_destroy_complete = on_destroy_complete
         self._native_handle = None
         self._destroy_complete = Future()
 
