@@ -86,6 +86,7 @@ static void s_on_incoming_connection(
     void *user_data) {
     (void)server;
     struct py_http_server *py_server = user_data;
+    PyGILState_STATE state = PyGILState_Ensure();
     PyObject *result = NULL;
     PyObject *connection_capsule = NULL;
 
@@ -96,29 +97,24 @@ static void s_on_incoming_connection(
     AWS_ZERO_STRUCT(*py_connection);
     py_connection->allocator = py_server->allocator;
     if (!error_code) {
-
-        PyGILState_STATE state = PyGILState_Ensure();
         py_connection->connection = connection;
         connection_capsule = PyCapsule_New(py_connection, s_capsule_name_http_connection, s_http_connection_destructor);
+        py_connection->capsule = connection_capsule;
         if (!connection_capsule) {
             PyGILState_Release(state);
             return;
         }
-
-        py_connection->capsule = connection_capsule;
-        /* the callback will be fired multiple times, do not clean it up unless the server is gone */
-        result = PyObject_CallFunction(on_incoming_conn_cb, "(Ni)", py_connection->capsule, error_code);
-        if (result) {
-            Py_DECREF(result);
-        } else {
-            PyErr_WriteUnraisable(PyErr_Occurred());
-            PyGILState_Release(state);
-            return;
-        }
-        PyGILState_Release(state);
     } else {
         aws_mem_release(py_connection->allocator, py_connection);
     }
+    /* the callback will be fired multiple times, do not clean it up unless the server is gone */
+    result = PyObject_CallFunction(on_incoming_conn_cb, "(Ni)", connection_capsule, error_code);
+    if (result) {
+        Py_XDECREF(result);
+    } else {
+        PyErr_WriteUnraisable(PyErr_Occurred());
+    }
+    PyGILState_Release(state);
 }
 
 PyObject *aws_py_http_server_create(PyObject *self, PyObject *args) {
@@ -180,6 +176,7 @@ PyObject *aws_py_http_server_create(PyObject *self, PyObject *args) {
     if (!bootstrap) {
         goto error;
     }
+
     struct aws_tls_connection_options *connection_options = NULL;
 
     if (tls_conn_options_capsule != Py_None) {
@@ -201,8 +198,12 @@ PyObject *aws_py_http_server_create(PyObject *self, PyObject *args) {
     }
 
     py_server->on_incoming_connection = on_incoming_connection;
+
     py_server->bootstrap = bootstrap_capsule;
+
+    Py_INCREF(on_destroy_complete);
     py_server->on_destroy_complete = on_destroy_complete;
+
     py_server->allocator = allocator;
 
     struct aws_http_server_options options;
@@ -214,13 +215,13 @@ PyObject *aws_py_http_server_create(PyObject *self, PyObject *args) {
     options.server_user_data = py_server;
     struct aws_socket_endpoint endpoint;
     AWS_ZERO_STRUCT(endpoint);
+
     snprintf(endpoint.address, host_name_len + 1, "%s", host_name);
     endpoint.port = port_number;
     options.socket_options = &socket_options;
     options.endpoint = &endpoint;
     options.on_incoming_connection = s_on_incoming_connection;
     options.on_destroy_complete = s_on_destroy_complete;
-
     PyObject *capsule = NULL;
     py_server->server = aws_http_server_new(&options);
 
@@ -442,7 +443,7 @@ static int s_on_request_done(struct aws_http_stream *internal_stream, void *user
         }
     }
     PyGILState_Release(state);
-    if(error){
+    if (error) {
         return AWS_OP_ERR;
     }
     return res;
@@ -489,7 +490,7 @@ PyObject *aws_py_http_stream_new_server_request_handler(PyObject *self, PyObject
         goto clean_up_stream;
     }
     py_server_connection = PyCapsule_GetPointer(http_connection_capsule, s_capsule_name_http_connection);
-    if(!py_server_connection){
+    if (!py_server_connection) {
         goto clean_up_stream;
     }
     struct aws_http_request_handler_options options = AWS_HTTP_REQUEST_HANDLER_OPTIONS_INIT;
@@ -501,14 +502,14 @@ PyObject *aws_py_http_stream_new_server_request_handler(PyObject *self, PyObject
     options.on_complete = native_on_stream_complete;
 
     if (on_incoming_body != Py_None) {
-        if(!PyCallable_Check(on_incoming_body)) {
+        if (!PyCallable_Check(on_incoming_body)) {
             goto clean_up_stream;
         }
         stream->on_incoming_body = on_incoming_body;
         options.on_request_body = native_on_incoming_body;
     }
     if (on_request_done != Py_None) {
-        if(!PyCallable_Check(on_request_done)) {
+        if (!PyCallable_Check(on_request_done)) {
             goto clean_up_stream;
         }
         stream->on_request_done = on_request_done;
@@ -518,15 +519,15 @@ PyObject *aws_py_http_stream_new_server_request_handler(PyObject *self, PyObject
     stream->on_incoming_headers_received = on_incoming_headers_received;
     stream->on_stream_completed = on_stream_completed;
     stream->stream = aws_http_stream_new_server_request_handler(&options);
-    if(!stream->stream){
+    if (!stream->stream) {
         PyErr_SetString(PyExc_ValueError, "create server request handler failed!");
         goto clean_up_stream;
     }
     stream->capsule = PyCapsule_New(stream, s_capsule_name_http_stream, native_http_stream_destructor);
-    if(!stream->capsule){
+    if (!stream->capsule) {
         goto clean_up_stream;
     }
-    if (on_incoming_body != Py_None){
+    if (on_incoming_body != Py_None) {
         Py_XINCREF(on_incoming_body);
     }
     if (on_request_done != Py_None) {
