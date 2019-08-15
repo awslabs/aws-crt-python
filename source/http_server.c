@@ -69,7 +69,8 @@ static void s_on_destroy_complete(void *user_data) {
         else{
             PyErr_WriteUnraisable(PyErr_Occurred());
         }
-        Py_DECREF(on_destroy_complete_cb);
+        /* comment this out temperatory */
+        //Py_DECREF(on_destroy_complete_cb);
         /* Release the bootstrap until the destroy complete */
         Py_DECREF(py_server->bootstrap);
         PyGILState_Release(state);
@@ -190,13 +191,8 @@ PyObject *aws_py_http_server_create(PyObject *self, PyObject *args) {
     }
 
     py_server->on_incoming_connection = on_incoming_connection;
-
-    Py_INCREF(bootstrap_capsule);
     py_server->bootstrap = bootstrap_capsule;
-    
-    Py_INCREF(on_destroy_complete);
     py_server->on_destroy_complete = on_destroy_complete;
-    
     py_server->allocator = allocator;
 
     struct aws_http_server_options options;
@@ -225,7 +221,7 @@ PyObject *aws_py_http_server_create(PyObject *self, PyObject *args) {
             goto error;
         }
         py_server->capsule = capsule;
-
+        Py_INCREF(bootstrap_capsule);
         Py_INCREF(on_incoming_connection);
         Py_INCREF(on_destroy_complete);
         return capsule;
