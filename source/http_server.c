@@ -69,7 +69,11 @@ static void s_on_destroy_complete(void *user_data) {
         } else {
             PyErr_WriteUnraisable(PyErr_Occurred());
         }
-        Py_DECREF(on_destroy_complete_cb);
+        /**
+         * If this not comments out, the VSCode Python Debugger will fail with SegFault, even though nothing else fails.
+         * But this should be right! Or somthing in Python already release this object, Totally no idea!
+         */
+        //Py_XDECREF(py_server->on_destroy_complete);
         /* Release the bootstrap until the destroy complete */
         Py_DECREF(py_server->bootstrap);
         PyGILState_Release(state);
@@ -201,7 +205,6 @@ PyObject *aws_py_http_server_create(PyObject *self, PyObject *args) {
 
     py_server->bootstrap = bootstrap_capsule;
 
-    Py_INCREF(on_destroy_complete);
     py_server->on_destroy_complete = on_destroy_complete;
 
     py_server->allocator = allocator;
