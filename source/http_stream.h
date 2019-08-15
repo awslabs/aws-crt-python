@@ -28,6 +28,7 @@ struct py_http_stream {
     struct aws_http_stream *stream;
     struct aws_input_stream body_input_stream;
     PyObject *capsule;
+    PyObject *connection_capsule;
     PyObject *on_stream_completed;
     PyObject *on_incoming_headers_received;
     PyObject *outgoing_body;

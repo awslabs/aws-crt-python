@@ -16,21 +16,23 @@ from concurrent.futures import Future
 from enum import IntEnum
 from awscrt.io import ClientBootstrap, TlsConnectionOptions, SocketOptions, ServerBootstrap
 
-#import ptvsd;
-#ptvsd.break_into_debugger()
+# import ptvsd;
+# ptvsd.break_into_debugger()
 """
 Base class for http connection
 """
+
+
 class HttpConnection(object):
     __slots__ = ('_on_connection_shutdown', '_native_handle')
 
     def __init__(self, on_connection_shutdown):
         for slot in self.__slots__:
             setattr(self, slot, None)
-        
+
         self._on_connection_shutdown = on_connection_shutdown
-        self._native_handle = None    
-    
+        self._native_handle = None
+
     def close(self):
         """
         Closes the connection, if you hold a reference to this instance of HttpClientConnection, on_connection_shutdown
@@ -49,6 +51,7 @@ class HttpConnection(object):
 
         return False
 
+
 class HttpClientConnection(HttpConnection):
     """
     Represents an Http connection to a remote endpoint. Everything in this class is non-blocking.
@@ -60,7 +63,7 @@ class HttpClientConnection(HttpConnection):
         assert isinstance(bootstrap, ClientBootstrap)
         assert tls_connection_options is None or isinstance(
             tls_connection_options, TlsConnectionOptions)
-        
+
         self._tls_connection_options = tls_connection_options
         self._bootstrap = bootstrap
         HttpConnection.__init__(self, on_connection_shutdown)
@@ -131,14 +134,11 @@ class HttpClientConnection(HttpConnection):
         After this future completes, you can get the result of request.response_completed,
         for the remainder of the response.
         """
-        
+
         request = HttpRequest(self, method, uri_str, outgoing_headers, outgoing_body, on_incoming_body)
 
         def on_stream_completed(error_code):
-            if error_code == 0:
-                request.response_completed.set_result(error_code)
-            else:
-                request.response_completed.set_exception(Exception(error_code))
+            request.response_completed.set_result(error_code)
 
         def on_incoming_headers_received(headers, response_code, has_body):
             request.response_headers = headers
@@ -167,25 +167,28 @@ class ServerConnection(HttpConnection):
         assert on_incoming_request is not None
         self._on_incoming_request = on_incoming_request
         HttpConnection.__init__(self, on_shutdown)
-    
+
     @staticmethod
-    def new_server_connection(connection, on_incoming_request, on_shutdown = None):
+    def new_server_connection(connection, on_incoming_request, on_shutdown=None):
         """
         create a new server connection, usually it will be called from the on_incoming connection callback, whenever a new connection is accepted.
         """
         server_connection = ServerConnection(on_incoming_request, on_shutdown)
         server_connection._native_handle = connection
-        _aws_crt_python.aws_py_http_connection_configure_server(server_connection._native_handle, on_incoming_request, on_shutdown)
+        _aws_crt_python.aws_py_http_connection_configure_server(server_connection._native_handle, on_incoming_request,
+                                                                on_shutdown)
         return server_connection
+
 
 class HttpServer(object):
     """
     Represents an Http server. Everything in this class is non-blocking.
     """
     __slots__ = ('_bootstrap', '_tls_connection_options', '_on_incoming_connection',
-                 '_on_destroy_complete', '_native_handle', '_destroy_complete')
+                 '_on_destroy_complete', '_native_handle', '_destroy_complete', '_initial_window_size')
 
-    def __init__(self, bootstrap, host_name, port, socket_options, on_incoming_connection, tls_connection_options=None):
+    def __init__(self, bootstrap, host_name, port, socket_options, on_incoming_connection, initial_window_size=-1,
+                 tls_connection_options=None):
         """
         Create a new server listener, binding to the host_name and port. 
         When a new connection is received, the on_incoming_connection cb will be fired, a new ServerConnection obj will be created.
@@ -194,7 +197,7 @@ class HttpServer(object):
         @param on_incoming_connection: Callback with signature (connection: HttpConnection.native_handle, error_code: int) Required
         @param bootstrap: awscrt.io.ServerBootstrap. Required
         @param tls_connection_options: awscrt.io.TlsConnectionOptions, for TLS connection
-        """    
+        """
         assert isinstance(bootstrap, ServerBootstrap)
         assert tls_connection_options is None or isinstance(tls_connection_options, TlsConnectionOptions)
         assert host_name is not None
@@ -213,6 +216,7 @@ class HttpServer(object):
         self._on_destroy_complete = on_destroy_complete
         self._native_handle = None
         self._destroy_complete = Future()
+        self._initial_window_size = initial_window_size
 
         if tls_connection_options is not None:
             internal_conn_options_handle = tls_connection_options._internal_tls_conn_options
@@ -220,7 +224,8 @@ class HttpServer(object):
             internal_conn_options_handle = None
 
         self._native_handle = _aws_crt_python.aws_py_http_server_create(
-            bootstrap._internal_bootstrap, on_incoming_connection, on_destroy_complete, host_name, port, socket_options,
+            bootstrap._internal_bootstrap, on_incoming_connection, on_destroy_complete, host_name, port,
+            initial_window_size, socket_options,
             internal_conn_options_handle)
 
     def close(self):
@@ -235,6 +240,7 @@ class HttpServer(object):
 
         return self._destroy_complete
 
+
 class HttpRequestHandler(object):
     """
     Request handler object. Create a new one when the on_incoming_request() callback is invoked to handler the request.
@@ -242,39 +248,79 @@ class HttpRequestHandler(object):
     User can send response back to the request
     """
     __slots__ = ('_connection', 'path_and_query', 'method', '_on_incoming_body', '_stream', 'request_headers',
-                    'has_request_body', 'request_headers_received', 'stream_completed', '_on_request_completed')
+                 'has_request_body', '_native_handle', '_on_request_done', 'stream_completed', 'has_incoming_body'
+                 , 'request_header_received')
 
-    def __init__(self, connection, on_incoming_body, on_request_completed):
+    def __init__(self, connection, on_incoming_body=None, on_request_done=None):
+        """
+        ONLY CALLED FROM on_incoming_request CALLBACK
+        """
         assert connection is not None
+
+        def on_stream_completed(error_code):
+            self.stream_completed.set_result(error_code)
+
+        def on_request_headers_received(headers, method, uri, has_body):
+            self.request_headers = headers
+            self.method = method
+            self.path_and_query = uri
+            self.has_incoming_body = has_body
+            self.request_header_received.set_result(True)
 
         for slot in self.__slots__:
             setattr(self, slot, None)
 
         self._connection = connection
         self._on_incoming_body = on_incoming_body
-        self._on_request_completed = on_request_completed
+        self._on_request_done = on_request_done
 
         self._stream = None
         self.path_and_query = None
         self.method = None
         self.has_request_body = None
         self.request_headers = None
+        self._native_handle = None
+        self.has_incoming_body = None
 
-    '''
-    def create(self, connection, on_incoming_body, on_request_completed):
-        def on_stream_completed(error_code):
-            if error_code == 0:
-                self.response_completed.set_result(error_code)
-            else:
-                self.response_completed.set_exception(Exception(error_code))
+        self.stream_completed = Future()
+        self.request_header_received = Future()
 
-        def on_request_headers_received(headers, response_code, has_body):
-            request.response_headers = headers
-            request.response_code = response_code
-            request.has_response_body = has_body
-            request.response_headers_received.set_result(response_code)
-    '''
+        self._native_handle = _aws_crt_python.aws_py_http_stream_new_server_request_handler(self._connection,
+                                                                                            on_stream_completed,
+                                                                                            on_request_headers_received,
+                                                                                            self._on_incoming_body,
+                                                                                            self._on_request_done)
+
+    def send_response(self, response):
+        try:
+            _aws_crt_python.aws_py_http_stream_server_send_response(self._native_handle, response)
+
+        except Exception as e:
+            print(e)
+
+
+class HttpResponse(object):
+    """
+    Represents an HttpResponse to pass to HttpRequestHandler.send_response(). status is response status code (3 digital int)
+    outgoing_headers are the headers to send as part of the request. outgoing_body is a python string object, that contains
+    the body of the response
     
+    #TODO 
+    make outgoing_body a stream object instead of the string object, but now we just make it as a string to make it easy
+    And I guess the input stream of client side is not bug free, now 
+    """
+    __slots__ = ('status', 'outgoing_headers', '_outgoing_body')
+
+    def __init__(self, status, outgoing_headers, outgoing_body=None):
+        assert status is not None
+        assert outgoing_headers is not None
+
+        for slot in self.__slots__:
+            setattr(self, slot, None)
+        self.status = status
+        self.outgoing_headers = outgoing_headers
+        self._outgoing_body = outgoing_body
+
 
 class HttpRequest(object):
     """
@@ -308,7 +354,6 @@ class HttpRequest(object):
 
         if path_and_query is None:
             self.path_and_query = '/'
-
         self._connection = connection
         self.method = method
         self.outgoing_headers = outgoing_headers

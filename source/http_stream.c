@@ -90,5 +90,6 @@ void native_http_stream_destructor(PyObject *http_stream_capsule) {
     assert(stream);
 
     aws_http_stream_release(stream->stream);
+    Py_DECREF(stream->connection_capsule);
     aws_mem_release(stream->allocator, stream);
 }

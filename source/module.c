@@ -216,6 +216,8 @@ static PyMethodDef s_module_methods[] = {
     {"aws_py_http_server_create", aws_py_http_server_create, METH_VARARGS, NULL},
     {"aws_py_http_server_release", aws_py_http_server_release, METH_VARARGS, NULL},
     {"aws_py_http_connection_configure_server", aws_py_http_connection_configure_server, METH_VARARGS, NULL},
+    {"aws_py_http_stream_new_server_request_handler", aws_py_http_stream_new_server_request_handler, METH_VARARGS, NULL},
+    {"aws_py_http_stream_server_send_response", aws_py_http_stream_server_send_response, METH_VARARGS, NULL},
 
     {NULL, NULL, 0, NULL},
 };

@@ -41,9 +41,14 @@ PyObject *aws_py_http_connection_configure_server(PyObject *self, PyObject *args
 /**
  * Create a stream, with a server connection receiving and responding to a request.
  * This function can only be called from the `aws_http_on_incoming_request_fn` callback.
- * aws_py_http_stream_send_response() should be used to send a response.
+ * aws_py_http_stream_server_send_response() should be used to send a response.
  */
 PyObject *aws_py_http_stream_new_server_request_handler(PyObject *self, PyObject *args);
 
+
+/**
+ * Send the response back.
+ */
+PyObject *aws_py_http_stream_server_send_response(PyObject *self, PyObject *args);
 
 #endif /* AWS_CRT_PYTHON_HTTP_CLIENT_CONNECTION_H */

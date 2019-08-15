@@ -27,6 +27,11 @@ log_output = 'stderr'
 io.init_logging(log_level, log_output)
 
 
+def print_header_list(headers):
+    for key, value in headers.items():
+        print('{}: {}'.format(key, value))
+
+
 class TestServerCreate(unittest.TestCase):
     def setUp(self):
 
@@ -56,13 +61,13 @@ class TestServerCreate(unittest.TestCase):
             print("----fake on incoming connection!----")
 
         server = http.HttpServer(self.server_bootstrap, self.host_name, self.port, self.socket_options,
-                                            on_incoming_connection)
+                                 on_incoming_connection)
         print("----Server create success----")
         future = http.HttpServer.close(server)
         if future.result():
             print("----TEST SERVER_CREATE_DESTROY SUCCESS!----")
             print("\n")
-        
+
         # delete the socket, cleanup
         os.system("rm {}".format(self.host_name))
 
@@ -117,7 +122,7 @@ class TestServerConnection(unittest.TestCase):
         # server setup
         server_conn_future = Future()
         server = http.HttpServer(self.server_bootstrap, self.host_name, self.port, self.socket_options,
-                                            on_incoming_connection)
+                                 on_incoming_connection)
         print("----server setup completed!----")
         # client setup
         # invoked up on the connection closing
@@ -142,16 +147,159 @@ class TestServerConnection(unittest.TestCase):
         destroy_future = http.HttpServer.close(server)
         if destroy_future.result():
             print("----SERVER DESTROY FINISHED----")
-        
 
         # wait client side connection to shutdown
         print(client_conn_shutdown_future.result())
 
-        #done
+        # done
         print("----TEST SERVER_CONNECTION SUCCESS!----")
         print("\n")
         # delete the socket, cleanup
         os.system("rm {}".format(self.host_name))
+
+
+class TestServerRequest(unittest.TestCase):
+    def setUp(self):
+
+        # an event loop group is needed for IO operations. Unless you're a server or a client doing hundreds of
+        # connections you only want one of these.
+        random.seed()
+        host_name = str(random.random())
+        self.port = 0
+        tls = False
+        connect_timeout = 3000
+        self.server_event_loop_group = io.EventLoopGroup(1)
+        self.client_event_loop_group = io.EventLoopGroup(1)
+        self.server_bootstrap = io.ServerBootstrap(self.server_event_loop_group)
+        if sys.platform == 'win32':
+            # win32
+            self.host_name = "\\\\.\\pipe\\testsock-" + host_name
+        else:
+            self.host_name = "testsock-{}.sock".format(host_name)
+        self.socket_options = io.SocketOptions()
+        self.socket_options.connect_timeout_ms = connect_timeout
+        self.socket_options.domain = io.SocketDomain.Local
+        self.tls_connection_options = None
+
+    def test_server_request(self):
+        print("----TEST SERVER_REQUEST BEGIN!----")
+
+        output = getattr(sys.stdout, 'buffer', sys.stdout)
+
+        def server_on_incoming_body(body_data):
+            output.write(body_data)
+            request_body_future.set_result(True)
+
+        def on_incoming_request(connection):
+            request_handler = http.HttpRequestHandler(connection, server_on_incoming_body)
+            request_handler_future.set_result(request_handler)
+            return request_handler._native_handle
+
+        def on_server_conn_shutdown(connection, error_code):
+            print("----shutdown server connection with error_code: {}----".format(error_code))
+
+        def on_incoming_connection(connection, error_code):
+            # configure the connection here!
+            if error_code:
+                print("----server connection fail with error_code: {}----".format(error_code))
+                server_conn_future.set_exception(Exception("Error during connect: err={}".format(error_code)))
+            server_connection = http.ServerConnection.new_server_connection(connection, on_incoming_request,
+                                                                            on_server_conn_shutdown)
+            server_conn_future.set_result(server_connection)
+
+        # server setup
+        server_conn_future = Future()
+        request_handler_future = Future()
+        request_body_future = Future()
+        server = http.HttpServer(self.server_bootstrap, self.host_name, self.port, self.socket_options,
+                                 on_incoming_connection)
+        print("----server setup completed!----")
+        # client setup
+        client_conn_shutdown_future = Future()
+
+        def on_connection_shutdown(err_code):
+            client_conn_shutdown_future.set_result(
+                '----client connection close with error code {}----'.format(err_code))
+
+        def client_on_incoming_body(body_data):
+            print(body_data)
+
+        def response_received_cb(ftr):
+            print('Response Code: {}'.format(request.response_code))
+            print_header_list(request.response_headers)
+
+        # invoked by the http request call as the response body is received in chunks
+
+        # client bootstrap knows how to connect all the pieces. In this case it also has the default dns resolver
+        # baked in.
+        client_bootstrap = io.ClientBootstrap(self.client_event_loop_group)
+        print("----MAKE NEW CONNECTION NOW-----")
+        connect_future = http.HttpClientConnection.new_connection(client_bootstrap, self.host_name, self.port,
+                                                                  self.socket_options,
+                                                                  on_connection_shutdown, self.tls_connection_options)
+        connection = connect_future.result()
+
+        method = 'GET'
+        uri_str = '/'
+        outgoing_headers = {'host': self.host_name,
+                            'user-agent': 'elasticurl.py 1.0, Powered by the AWS Common Runtime.'}
+        outgoing_data = "{'test':'testval'}"
+        data_bytes = outgoing_data.encode(encoding='utf-8')
+        data_len = 0
+        data_stream = None
+        print("Sending {} bytes as body".format(data_len))
+        if data_len != 0:
+            outgoing_headers['content-length'] = str(data_len)
+        # wait for server connection setup
+        server_connection = server_conn_future.result()
+        # make request
+        print("----MAKE REQUEST NOW-----")
+        request = connection.make_request(method, uri_str, outgoing_headers, data_stream, client_on_incoming_body)
+        request.response_headers_received.add_done_callback(response_received_cb)
+
+        request_handler = request_handler_future.result()
+        if request_handler.request_header_received.result():
+            print("----REQUEST HEAD RECEIVED-----")
+            print("\n")
+            print("method:" + request_handler.method)
+            print("uri:" + request_handler.path_and_query)
+            print_header_list(request_handler.request_headers)
+            print("\n")
+        '''
+        if request_body_future.result():
+            print("body received")
+        '''
+        # make response
+        response_headers = {'Date': "Fri, 01 Mar 2019 17:18:55 GMT",
+                            'user-agent': 'elasticurl.py 1.0, Powered by the AWS Common Runtime.'}
+        response_body = "write more tests"
+        if len(response_body) != 0:
+            response_headers['content-length'] = str(len(response_body))
+        response = http.HttpResponse(308, response_headers, response_body)
+        request_handler.send_response(response)
+
+        # wait for response
+        response_start = request.response_headers_received.result(timeout=10)
+        # wait until the full response is finished
+        response_finished = request.response_completed.result(timeout=10)
+
+        # release the server
+        destroy_future = http.HttpServer.close(server)
+        if destroy_future.result():
+            print("----SERVER DESTROY FINISHED----")
+        # wait client side connection to shutdown
+        print(client_conn_shutdown_future.result())
+
+        # wait for server stream close
+        print(request_handler.stream_completed.result())
+        # done
+        if data_stream is not None:
+            data_stream.close()
+        print("----TEST SERVER_REQUEST SUCCESS!----")
+
+        # delete the socket, cleanup
+        os.system("rm {}".format(self.host_name))
+
 
 if __name__ == '__main__':
     unittest.main()

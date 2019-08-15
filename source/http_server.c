@@ -133,18 +133,20 @@ PyObject *aws_py_http_server_create(PyObject *self, PyObject *args) {
     const char *host_name = NULL;
     Py_ssize_t host_name_len = 0;
     uint16_t port_number = 0;
+    int initial_window_size = -1;
     PyObject *py_socket_options = NULL;
     PyObject *tls_conn_options_capsule = NULL;
 
     if (!PyArg_ParseTuple(
             args,
-            "OOOs#HOO",
+            "OOOs#HHOO",
             &bootstrap_capsule,
             &on_incoming_connection,
             &on_destroy_complete,
             &host_name,
             &host_name_len,
             &port_number,
+            &initial_window_size,
             &py_socket_options,
             &tls_conn_options_capsule)) {
         PyErr_SetNone(PyExc_ValueError);
@@ -209,8 +211,10 @@ PyObject *aws_py_http_server_create(PyObject *self, PyObject *args) {
 
     py_server->allocator = allocator;
 
-    struct aws_http_server_options options;
-    AWS_ZERO_STRUCT(options);
+    struct aws_http_server_options options = AWS_HTTP_SERVER_OPTIONS_INIT;
+    if(initial_window_size!=-1){
+        options.initial_window_size = initial_window_size;
+    }
     options.self_size = sizeof(options);
     options.bootstrap = bootstrap;
     options.tls_options = connection_options;
@@ -369,7 +373,7 @@ PyObject *aws_py_http_connection_configure_server(PyObject *self, PyObject *args
     options.on_incoming_request = s_on_incoming_request;
     options.on_shutdown = s_on_shutdown;
 
-    if (aws_http_connection_configure_server(py_server_conn->connection, &options)) {
+    if (aws_http_connection_configure_server(py_server_conn->connection, &options) != AWS_OP_SUCCESS) {
         PyErr_SetAwsLastError();
         goto error;
     }
@@ -454,7 +458,6 @@ static int s_on_request_done(struct aws_http_stream *internal_stream, void *user
 
 PyObject *aws_py_http_stream_new_server_request_handler(PyObject *self, PyObject *args) {
     (void)self;
-
     struct aws_allocator *allocator = aws_crt_python_get_allocator();
 
     struct py_http_connection *py_server_connection = NULL;
@@ -474,7 +477,7 @@ PyObject *aws_py_http_stream_new_server_request_handler(PyObject *self, PyObject
 
     if (!PyArg_ParseTuple(
             args,
-            "OOOO",
+            "OOOOO",
             &http_connection_capsule,
             &on_stream_completed,
             &on_incoming_headers_received,
@@ -500,6 +503,7 @@ PyObject *aws_py_http_stream_new_server_request_handler(PyObject *self, PyObject
     options.user_data = stream;
     options.server_connection = py_server_connection->connection;
     /* save the headers into stream->received_headers */
+    stream->received_headers = PyDict_New();
     options.on_request_headers = native_on_incoming_headers;
     options.on_request_header_block_done = s_on_incoming_request_header_block_done;
     options.on_complete = native_on_stream_complete;
@@ -536,6 +540,8 @@ PyObject *aws_py_http_stream_new_server_request_handler(PyObject *self, PyObject
     if (on_request_done != Py_None) {
         Py_XINCREF(on_request_done);
     }
+    stream->connection_capsule = http_connection_capsule;
+    Py_INCREF(stream->connection_capsule);
     Py_XINCREF(on_stream_completed);
     Py_XINCREF(on_incoming_headers_received);
     return stream->capsule;
@@ -543,5 +549,83 @@ PyObject *aws_py_http_stream_new_server_request_handler(PyObject *self, PyObject
 clean_up_stream:
     aws_mem_release(allocator, stream);
 
+    return NULL;
+}
+
+PyObject *aws_py_http_stream_server_send_response(PyObject *self, PyObject *args){
+    (void)self;
+    struct py_http_stream *py_request_handler = NULL;
+    struct aws_allocator *allocator = aws_crt_python_get_allocator();
+    struct aws_http_message *response = aws_http_message_new_response(allocator);
+    if (!response) {
+        PyErr_SetAwsLastError();
+        return NULL;
+    }
+    
+    PyObject *http_stream_capsule = NULL;
+    PyObject *py_http_response = NULL;
+
+    if (!PyArg_ParseTuple(
+            args,
+            "OO",
+            &http_stream_capsule,
+            &py_http_response)) {
+        PyErr_SetNone(PyExc_ValueError);
+        goto error;
+    }
+    
+    py_request_handler = PyCapsule_GetPointer(http_stream_capsule, s_capsule_name_http_stream);
+    if(!py_request_handler){
+        goto error;
+    }
+
+    if(py_http_response == Py_None){
+        PyErr_SetString(PyExc_ValueError, "the response argument is required");
+        goto error;
+    }
+
+    PyObject *status = PyObject_GetAttrString(py_http_response, "status");
+    if (!status || status == Py_None) {
+        PyErr_SetString(PyExc_ValueError, "response status is required");
+        goto error;
+    }
+    aws_http_message_set_response_status(response, (int)PyLong_AsLong(status));
+
+    PyObject *response_headers = PyObject_GetAttrString(py_http_response, "outgoing_headers");
+    if (!response_headers) {
+        PyErr_SetString(PyExc_ValueError, "outgoing headers is required");
+        goto error;
+    }
+
+    Py_ssize_t num_headers = PyDict_Size(response_headers);
+    if (num_headers > 0) {
+        PyObject *key, *value;
+        Py_ssize_t pos = 0;
+
+        while (PyDict_Next(response_headers, &pos, &key, &value)) {
+            struct aws_http_header http_header;
+            http_header.name = aws_byte_cursor_from_pystring(key);
+            http_header.value = aws_byte_cursor_from_pystring(value);
+
+            aws_http_message_add_header(response, http_header);
+        }
+    }
+    /* let's just set it as a string object to make it easy (to debug) */
+    /* TODO: make it a input_stream object */
+    PyObject *outgoing_body = PyObject_GetAttrString(py_http_response, "_outgoing_body");
+    if (outgoing_body && outgoing_body != Py_None) {
+        struct aws_byte_cursor body = aws_byte_cursor_from_pystring(outgoing_body);
+        aws_http_message_set_body_stream(response, aws_input_stream_new_from_cursor(allocator, &body));
+    }
+
+    if(aws_http_stream_send_response(py_request_handler->stream, response)!=AWS_OP_SUCCESS){
+        PyErr_SetString(PyExc_ValueError, "send response failed");
+        goto error;
+    }
+    Py_RETURN_NONE;
+
+error:
+    /* ?The PyObjects? */
+    aws_http_message_destroy(response);
     return NULL;
 }

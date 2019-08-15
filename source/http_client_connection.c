@@ -242,8 +242,8 @@ static int s_stream_read(struct aws_input_stream *stream, struct aws_byte_buf *d
         unavailable), and return that 0 data was read. Try again later. */
         PyErr_Clear();
     }
-
-    Py_XDECREF(result);
+    /* DECREF this twice? */
+    //Py_XDECREF(result);
     Py_DECREF(mv);
 
     PyGILState_Release(state);
@@ -334,6 +334,7 @@ PyObject *aws_py_http_client_connection_make_request(PyObject *self, PyObject *a
     }
 
     py_connection = PyCapsule_GetPointer(http_connection_capsule, s_capsule_name_http_connection);
+    stream->connection_capsule = http_connection_capsule;
 
     if (!py_http_request) {
         PyErr_SetString(PyExc_ValueError, "the request argument is required");
@@ -425,6 +426,7 @@ PyObject *aws_py_http_client_connection_make_request(PyObject *self, PyObject *a
     }
 
     stream->stream = http_stream;
+    Py_INCREF(stream->connection_capsule);
     return PyCapsule_New(stream, s_capsule_name_http_stream, native_http_stream_destructor);
 
 clean_up_stream:
