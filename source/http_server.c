@@ -60,18 +60,14 @@ static void s_on_destroy_complete(void *user_data) {
     py_server->server = NULL;
     PyGILState_STATE state = PyGILState_Ensure();
     if (!py_server->destructor_called) {    
-        PyObject *result = PyObject_CallFunction(on_destroy_complete_cb, "(N)", py_server->capsule);
+        PyObject *result = PyObject_CallFunction(on_destroy_complete_cb, "(O)", py_server->capsule);
         if(result){
             Py_XDECREF(result);
         }
         else{
             PyErr_WriteUnraisable(PyErr_Occurred());
         }   
-        /**
-         * If this not comments out, the VSCode Python Debugger will fail with SegFault, even though nothing else fails.
-         * But this should be right! Or somthing in Python already release this object, Totally no idea!
-         */
-        //Py_XDECREF(py_server->on_destroy_complete); 
+        Py_XDECREF(py_server->on_destroy_complete); 
     } else {
         Py_XDECREF(py_server->on_destroy_complete);
         aws_mem_release(py_server->allocator, py_server);
