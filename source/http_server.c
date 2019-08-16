@@ -140,7 +140,7 @@ PyObject *aws_py_http_server_create(PyObject *self, PyObject *args) {
 
     if (!PyArg_ParseTuple(
             args,
-            "OOOs#HHOO",
+            "OOOs#HiOO",
             &bootstrap_capsule,
             &on_incoming_connection,
             &on_destroy_complete,
