@@ -19,11 +19,7 @@ from awscrt import io, http
 import unittest
 import random
 from concurrent.futures import Future
-try:
-    from urllib.parse import urlparse
-except ImportError:
-    from urlparse import urlparse
-# log settings
+
 log_level = io.LogLevel.NoLogs
 log_level = io.LogLevel.Error
 log_output = 'stderr'
@@ -189,12 +185,17 @@ class TestServerRequest(unittest.TestCase):
 
         output = getattr(sys.stdout, 'buffer', sys.stdout)
 
+        server_request_done_futrue = Future()
+        def server_request_done():
+            server_request_done_futrue.set_result(True)
+            Error = False
+            return Error
+
         def server_on_incoming_body(body_data):
             output.write(body_data)
-            request_body_future.set_result(True)
 
         def on_incoming_request(connection):
-            request_handler = http.HttpRequestHandler(connection, server_on_incoming_body)
+            request_handler = http.HttpRequestHandler(connection, server_on_incoming_body, server_request_done)
             request_handler_future.set_result(request_handler)
             return request_handler._native_handle
 
@@ -213,7 +214,6 @@ class TestServerRequest(unittest.TestCase):
         # server setup
         server_conn_future = Future()
         request_handler_future = Future()
-        request_body_future = Future()
         server = http.HttpServer(self.server_bootstrap, self.host_name, self.port, self.socket_options,
                                  on_incoming_connection)
         print("----server setup completed!----")
@@ -225,7 +225,7 @@ class TestServerRequest(unittest.TestCase):
                 '----client connection close with error code {}----'.format(err_code))
 
         def client_on_incoming_body(body_data):
-            print(body_data)
+            output.write(body_data)
 
         def response_received_cb(ftr):
             print('Response Code: {}'.format(request.response_code))
@@ -259,7 +259,8 @@ class TestServerRequest(unittest.TestCase):
         print("----MAKE REQUEST NOW-----")
         request = connection.make_request(method, uri_str, outgoing_headers, data_stream, client_on_incoming_body)
         request.response_headers_received.add_done_callback(response_received_cb)
-
+        
+        #wait for request received 
         request_handler = request_handler_future.result()
         if request_handler.request_header_received.result():
             print("----REQUEST HEAD RECEIVED-----")
@@ -268,15 +269,17 @@ class TestServerRequest(unittest.TestCase):
             print("uri:" + request_handler.path_and_query)
             print_header_list(request_handler.request_headers)
             print("\n")
-        if request_body_future.result():
-            print("body received")
+        if server_request_done_futrue.result():
+            print("request decode done")
+
         # make response
         response_headers = {'Date': "Fri, 01 Mar 2019 17:18:55 GMT",
                             'user-agent': 'elasticurl.py 1.0, Powered by the AWS Common Runtime.'}
-        response_body = "write more tests"
+        response_body = "write more tests".encode(encoding='utf-8')
+        response_body_stream = BytesIO(response_body)
         if len(response_body) != 0:
             response_headers['content-length'] = str(len(response_body))
-        response = http.HttpResponse(308, response_headers, response_body)
+        response = http.HttpResponse(308, response_headers, response_body_stream)
         request_handler.send_response(response)
 
         # wait for response
@@ -300,92 +303,7 @@ class TestServerRequest(unittest.TestCase):
 
         # delete the socket, cleanup
         os.system("rm {}".format(self.host_name))
-        #output.close()
-
-
-class TestClient(unittest.TestCase):
-
-    def test_server_create_destroy(self):
-
-        # an event loop group is needed for IO operations. Unless you're a server or a client doing hundreds of connections
-        # you only want one of these.
-        event_loop_group = io.EventLoopGroup(1)
-
-        # client bootstrap knows how to connect all the pieces. In this case it also has the default dns resolver
-        # baked in.
-        client_bootstrap = io.ClientBootstrap(event_loop_group)
-        url = urlparse("http://httpbin.org/post")
-        port = 443
-        scheme = 'https'
-        if url.scheme is not None and url.scheme == 'http':
-            scheme = 'http'
-        
-        if url.port is not None:
-            port = url.port
-        else:
-            if scheme == 'http':
-                port = 80
-
-        tls_connection_options = None
-
-        output = getattr(sys.stdout, 'buffer', sys.stdout)
-        method = 'POST'
-        # invoked up on the connection closing
-        def on_connection_shutdown(err_code):
-            print('connection close with error code {}'.format(err_code))
-
-
-        # invoked by the http request call as the response body is received in chunks
-        def on_incoming_body(body_data):
-            print(body_data)                
-
-        data_bytes = "\"{'test':'testval'}\"".encode(encoding='utf-8')
-        data_len = len(data_bytes)
-        data_stream = BytesIO(data_bytes)
-
-        print("Sending {} bytes as body".format(data_len))
-
-        socket_options = io.SocketOptions()
-        socket_options.connect_timeout_ms = 3000
-        hostname = url.hostname
-        connect_future = http.HttpClientConnection.new_connection(client_bootstrap, hostname, port, socket_options,
-                                                                on_connection_shutdown, tls_connection_options)
-        connection = connect_future.result()
-        outgoing_headers = {'host': hostname, 'user-agent': 'elasticurl.py 1.0, Powered by the AWS Common Runtime.', 'content-type': 'application/json'}
-        
-        uri_str = url.path
-
-        if uri_str is None or uri_str == '':
-            uri_str = '/'
-
-        if url.query is not None:
-            uri_str += url.query
-        # invoked as soon as the response headers are received
-        def response_received_cb(ftr):
-            print('Response Code: {}'.format(request.response_code))
-            print_header_list(request.response_headers)
-        
-        if data_len != 0:
-            outgoing_headers['content-length'] = str(data_len)
-        # make the request
-        request = connection.make_request(method, uri_str, outgoing_headers, data_stream, on_incoming_body)
-        request.response_headers_received.add_done_callback(response_received_cb)
-
-        # wait for response headers
-        response_start = request.response_headers_received.result(timeout=10)
-
-        # wait until the full response is finished
-        response_finished = request.response_completed.result(timeout=10)
-        request = None
-        connection = None
-
-        if data_stream is not None:
-            data_stream.close()
-        #output.close()
-
 
 
 if __name__ == '__main__':
     unittest.main()
-
-# server bootstrap init

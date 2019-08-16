@@ -35,11 +35,14 @@ struct py_http_stream {
     PyObject *on_incoming_body;
     PyObject *received_headers;
     bool is_eos;
+
     /* only for server side */
     PyObject *on_request_done;
 };
 
 void native_http_stream_destructor(PyObject *http_stream_capsule);
+
+struct aws_input_stream_vtable s_py_stream_vtable;
 
 int native_on_incoming_headers(
     struct aws_http_stream *internal_stream,

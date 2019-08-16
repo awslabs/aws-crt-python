@@ -24,6 +24,9 @@ Base class for http connection
 
 
 class HttpConnection(object):
+    """
+    Father Class of HttpClientConnection and HttpServerConnection. Meaningless if called individually.
+    """
     __slots__ = ('_on_connection_shutdown', '_native_handle')
 
     def __init__(self, on_connection_shutdown):
@@ -164,6 +167,9 @@ class ServerConnection(HttpConnection):
     """
 
     def __init__(self, on_incoming_request, on_shutdown):
+        """
+        private
+        """
         assert on_incoming_request is not None
         self._on_incoming_request = on_incoming_request
         HttpConnection.__init__(self, on_shutdown)
@@ -172,6 +178,10 @@ class ServerConnection(HttpConnection):
     def new_server_connection(connection, on_incoming_request, on_shutdown=None):
         """
         create a new server connection, usually it will be called from the on_incoming connection callback, whenever a new connection is accepted.
+
+        on_incoming_request is invoked whenever a new request is received from the connection. It takes http.HttpConnection._native_handle as argument
+        and it has to call http.HttpRequestHandler() to create a new request handler to handle the request
+        on_shutdown is invoked as the connection is shutted down. It takes http.HttpConnection._native_handle and error_code as argument
         """
         server_connection = ServerConnection(on_incoming_request, on_shutdown)
         server_connection._native_handle = connection
@@ -193,10 +203,11 @@ class HttpServer(object):
         Create a new server listener, binding to the host_name and port. 
         When a new connection is received, the on_incoming_connection cb will be fired, a new ServerConnection obj will be created.
         The aws_py_http_connection_configure_server need to be called from the callback to configure the ServerConnection 
-        @param socket_options: awscrt.io.SocketOptions for the server's listening socket. Required
-        @param on_incoming_connection: Callback with signature (connection: HttpConnection.native_handle, error_code: int) Required
-        @param bootstrap: awscrt.io.ServerBootstrap. Required
-        @param tls_connection_options: awscrt.io.TlsConnectionOptions, for TLS connection
+        
+        socket_options: awscrt.io.SocketOptions for the server's listening socket. Required
+        on_incoming_connection: Callback with signature (connection: HttpConnection.native_handle, error_code: int) Required
+        bootstrap: awscrt.io.ServerBootstrap. Required
+        tls_connection_options: awscrt.io.TlsConnectionOptions, for TLS connection
         """
         assert isinstance(bootstrap, ServerBootstrap)
         assert tls_connection_options is None or isinstance(tls_connection_options, TlsConnectionOptions)
@@ -254,6 +265,11 @@ class HttpRequestHandler(object):
     def __init__(self, connection, on_incoming_body=None, on_request_done=None):
         """
         ONLY CALLED FROM on_incoming_request CALLBACK
+        
+        connection is http.HttpConnection._native_handle object
+        on_incoming_body is invoked as the request body is received. It takes a single argument of type bytes.
+        on_request_done is invoked as the request finished receiving. It takes no argument but have to 
+        return an bool as Error or not (False to continue processing the stream, True to indicate failure and cancel the stream) 
         """
         assert connection is not None
 
@@ -302,18 +318,22 @@ class HttpRequestHandler(object):
 class HttpResponse(object):
     """
     Represents an HttpResponse to pass to HttpRequestHandler.send_response(). status is response status code (3 digital int)
-    outgoing_headers are the headers to send as part of the request. outgoing_body is a python string object, that contains
-    the body of the response
+    outgoing_headers are the headers to send as part of the response.
     
-    #TODO 
-    make outgoing_body a stream object instead of the string object, but now we just make it as a string to make it easy
-    And I guess the input stream of client side is not bug free, now 
+    #TODO WAT
+    outgoing_body is invoked to read the body of the response. It takes a single parameter of type MemoryView
+    (it's writable), and you signal the end of the stream by returning OutgoingHttpBodyState.Done for the first tuple
+    argument. If you aren't done sending the body, the first tuple argument should be OutgoingHttpBodyState.InProgress
+    The second tuple argument is the size of the data written to the memoryview.
     """
     __slots__ = ('status', 'outgoing_headers', '_outgoing_body')
 
     def __init__(self, status, outgoing_headers, outgoing_body=None):
+        import io
+
         assert status is not None
         assert outgoing_headers is not None
+        assert not outgoing_body or isinstance(outgoing_body, io.IOBase)
 
         for slot in self.__slots__:
             setattr(self, slot, None)

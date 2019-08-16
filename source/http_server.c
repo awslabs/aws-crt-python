@@ -444,12 +444,11 @@ static int s_on_request_done(struct aws_http_stream *internal_stream, void *user
 
     struct py_http_stream *stream = user_data;
     bool error = false;
-    long res = 0;
     PyGILState_STATE state = PyGILState_Ensure();
     if (stream->on_request_done) {
-        PyObject *result = PyObject_CallFunction(stream->on_request_done, "(O)", stream->capsule);
+        PyObject *result = PyObject_CallFunction(stream->on_request_done, NULL);
         if (result) {
-            res = PyLong_AsLong(result);
+            error = result == Py_True;
             Py_XDECREF(result);
         } else {
             PyErr_WriteUnraisable(PyErr_Occurred());
@@ -460,7 +459,7 @@ static int s_on_request_done(struct aws_http_stream *internal_stream, void *user
     if (error) {
         return AWS_OP_ERR;
     }
-    return res;
+    return AWS_OP_SUCCESS;
 }
 
 PyObject *aws_py_http_stream_new_server_request_handler(PyObject *self, PyObject *args) {
@@ -475,6 +474,9 @@ PyObject *aws_py_http_stream_new_server_request_handler(PyObject *self, PyObject
         return NULL;
     }
     stream->allocator = allocator;
+    stream->body_input_stream.allocator = allocator;
+    stream->body_input_stream.vtable = &s_py_stream_vtable;
+    stream->body_input_stream.impl = stream;
 
     PyObject *http_connection_capsule = NULL;
     PyObject *on_stream_completed = NULL;
@@ -613,12 +615,16 @@ PyObject *aws_py_http_stream_server_send_response(PyObject *self, PyObject *args
             aws_http_message_add_header(response, http_header);
         }
     }
-    /* let's just set it as a string object to make it easy (to debug) */
-    /* TODO: make it a input_stream object */
+
     PyObject *outgoing_body = PyObject_GetAttrString(py_http_response, "_outgoing_body");
     if (outgoing_body && outgoing_body != Py_None) {
-        struct aws_byte_cursor body = aws_byte_cursor_from_pystring(outgoing_body);
-        aws_http_message_set_body_stream(response, aws_input_stream_new_from_cursor(allocator, &body));
+        /* Check that the stream has a readinto method */
+        PyObject *readinto = PyObject_GetAttrString(outgoing_body, "readinto");
+        if (readinto && readinto != Py_None) {
+            py_request_handler->outgoing_body = outgoing_body;
+            Py_INCREF(outgoing_body);
+            aws_http_message_set_body_stream(response, &py_request_handler->body_input_stream);
+        }
     }
 
     if (aws_http_stream_send_response(py_request_handler->stream, response) != AWS_OP_SUCCESS) {

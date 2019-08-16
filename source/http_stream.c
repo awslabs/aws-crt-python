@@ -23,6 +23,69 @@
 const char *s_capsule_name_http_stream = "aws_http_client_stream";
 
 
+static int s_stream_read(struct aws_input_stream *stream, struct aws_byte_buf *dest) {
+    struct py_http_stream *py_stream = stream->impl;
+
+    int err = AWS_OP_SUCCESS;
+
+    PyGILState_STATE state = PyGILState_Ensure();
+
+    PyObject *mv = aws_py_memory_view_from_byte_buffer(dest, PyBUF_WRITE);
+
+    if (!mv) {
+        PyGILState_Release(state);
+        return AWS_OP_ERR;
+    }
+
+    PyObject *readinto = PyObject_GetAttrString(py_stream->outgoing_body, "readinto");
+    AWS_ASSERT(readinto);
+
+    PyObject *result = PyObject_CallFunction(readinto, "(O)", mv);
+
+    if (result && result != Py_None) {
+        if (!PyLong_Check(result)) {
+            /* Log that readinto must throw BlockingIOError, return None, or a number, and return error */
+            err = AWS_OP_ERR;
+        }
+        /* Number returned, successful read */
+        size_t amount_read = PyLong_AsSize_t(result);
+        Py_DECREF(result);
+
+        /* Returning 0 means we're at the end of the stream. */
+        if (amount_read == 0) {
+            py_stream->is_eos = true;
+        } else {
+            dest->len += amount_read;
+        }
+    } else {
+        /* No result or not a number, clear the exception flag (BufferedIOBase throws BlockingIOError if data is
+        unavailable), and return that 0 data was read. Try again later. */
+        PyErr_Clear();
+    }
+    Py_DECREF(mv);
+
+    PyGILState_Release(state);
+
+    return err;
+}
+
+static int s_stream_get_status(struct aws_input_stream *stream, struct aws_stream_status *status) {
+    struct py_http_stream *py_stream = stream->impl;
+
+    status->is_valid = true;
+    status->is_end_of_stream = py_stream->is_eos;
+
+    return AWS_OP_SUCCESS;
+}
+
+struct aws_input_stream_vtable s_py_stream_vtable = {
+    .seek = NULL,
+    .read = s_stream_read,
+    .get_status = s_stream_get_status,
+    .get_length = NULL,
+    .clean_up = NULL,
+};
+
 int native_on_incoming_headers(
     struct aws_http_stream *internal_stream,
     const struct aws_http_header *header_array,
