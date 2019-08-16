@@ -33,6 +33,7 @@ struct py_http_connection{
 
     /*server side */
     PyObject *on_incoming_request;
+    PyObject *server_capsule;
 };
 
 void s_http_connection_destructor(PyObject *http_server_conn_capsule);

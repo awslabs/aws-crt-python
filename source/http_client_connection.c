@@ -13,15 +13,14 @@
  * permissions and limitations under the License.
  */
 #include "http_client_connection.h"
-#include "http_stream.h"
 #include "http_connection.h"
+#include "http_stream.h"
 #include "io.h"
 
 #include <aws/common/array_list.h>
+#include <aws/http/request_response.h>
 #include <aws/io/socket.h>
 #include <aws/io/stream.h>
-#include <aws/http/request_response.h>
-
 
 static void s_on_client_connection_setup(struct aws_http_connection *connection, int error_code, void *user_data) {
 
@@ -34,8 +33,7 @@ static void s_on_client_connection_setup(struct aws_http_connection *connection,
 
     if (!error_code) {
         py_client_connection->connection = connection;
-        capsule =
-            PyCapsule_New(py_client_connection, s_capsule_name_http_connection, s_http_connection_destructor);
+        capsule = PyCapsule_New(py_client_connection, s_capsule_name_http_connection, s_http_connection_destructor);
         py_client_connection->capsule = capsule;
     } else {
         aws_mem_release(py_client_connection->allocator, py_client_connection);
@@ -62,10 +60,15 @@ static void s_on_client_connection_shutdown(struct aws_http_connection *connecti
         PyGILState_Release(state);
     } else if (py_client_connection->destructor_called) {
         aws_http_connection_release(py_client_connection->connection);
+        if (py_client_connection->bootstrap) {
+            Py_DECREF(py_client_connection->bootstrap);
+            py_client_connection->bootstrap = NULL;
+        }
         aws_mem_release(py_client_connection->allocator, py_client_connection);
     }
-
-    Py_XDECREF(on_conn_shutdown_cb);
+    if (on_conn_shutdown_cb) {
+        Py_XDECREF(on_conn_shutdown_cb);
+    }
 }
 
 PyObject *aws_py_http_client_connection_create(PyObject *self, PyObject *args) {
@@ -125,7 +128,8 @@ PyObject *aws_py_http_client_connection_create(PyObject *self, PyObject *args) {
         goto error;
     }
 
-    struct client_bootstrap *native_bootstrap = PyCapsule_GetPointer(bootstrap_capsule, s_capsule_name_client_bootstrap);
+    struct client_bootstrap *native_bootstrap =
+        PyCapsule_GetPointer(bootstrap_capsule, s_capsule_name_client_bootstrap);
     struct aws_client_bootstrap *bootstrap = native_bootstrap->bootstrap;
     if (!bootstrap) {
         PyErr_SetString(PyExc_ValueError, "the bootstrap capsule has an invalid pointer");
@@ -149,8 +153,8 @@ PyObject *aws_py_http_client_connection_create(PyObject *self, PyObject *args) {
     Py_INCREF(bootstrap_capsule);
 
     struct aws_socket_options socket_options;
-    
-    if(!aws_socket_options_init_from_py(&socket_options, py_socket_options)){
+
+    if (!aws_socket_options_init_from_py(&socket_options, py_socket_options)) {
         goto error;
     }
 
@@ -242,8 +246,6 @@ static int s_stream_read(struct aws_input_stream *stream, struct aws_byte_buf *d
         unavailable), and return that 0 data was read. Try again later. */
         PyErr_Clear();
     }
-    /* DECREF this twice? */
-    //Py_XDECREF(result);
     Py_DECREF(mv);
 
     PyGILState_Release(state);
@@ -268,7 +270,6 @@ struct aws_input_stream_vtable s_py_stream_vtable = {
     .clean_up = NULL,
 };
 
-
 static int s_on_incoming_header_block_done(struct aws_http_stream *internal_stream, bool has_body, void *user_data) {
 
     struct py_http_stream *stream = user_data;
@@ -283,6 +284,7 @@ static int s_on_incoming_header_block_done(struct aws_http_stream *internal_stre
         stream->on_incoming_headers_received, "(OiO)", stream->received_headers, response_code, has_body_obj);
     Py_XDECREF(result);
     Py_XDECREF(stream->received_headers);
+    Py_XDECREF(has_body_obj);
     Py_DECREF(stream->on_incoming_headers_received);
     PyGILState_Release(state);
 
