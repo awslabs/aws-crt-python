@@ -176,9 +176,9 @@ class HttpServer(object):
         assert on_incoming_connection is not None
         for slot in self.__slots__:
             setattr(self, slot, None)
-
+        
         def on_destroy_complete(server_native_handle):
-            self._destroy_complete.set_result(None)
+            self._destroy_complete.set_result(True)
 
         self._bootstrap = bootstrap
         self._tls_connection_options = tls_connection_options
