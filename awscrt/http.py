@@ -117,7 +117,7 @@ class HttpClientConnection(HttpConnection):
 
         return future
 
-    def make_request(self, method, uri_str, outgoing_headers, outgoing_body, on_incoming_body):
+    def make_request(self, method, uri_str, outgoing_headers, outgoing_body, on_incoming_body = None):
         """
         path_and_query is the path and query portion
         of a URL. method is the http method (GET, PUT, etc...). outgoing_headers are the headers to send as part
