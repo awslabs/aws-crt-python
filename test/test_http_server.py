@@ -31,7 +31,6 @@ def print_header_list(headers):
         print('{}: {}'.format(key, value))
 
 
-
 class TestServerConnection(unittest.TestCase):
     def setUp(self):
 
@@ -66,7 +65,7 @@ class TestServerConnection(unittest.TestCase):
             print("----fake on incoming connection!----")
 
         server = http.HttpServer(self.server_bootstrap, self.host_name, self.port, self.socket_options,
-                                    on_incoming_connection)
+                                 on_incoming_connection)
         print("----Server create success----")
         future = http.HttpServer.close(server)
         if future.result():
@@ -80,11 +79,10 @@ class TestServerConnection(unittest.TestCase):
             print("----fake on incoming connection!----")
 
         server = http.HttpServer(self.server_bootstrap, self.host_name, self.port, self.socket_options,
-                                    on_incoming_connection)
+                                 on_incoming_connection)
         print("----Server create success----")
         print("----Let destructor to clean it up----")
         print("\n")
-
 
     def test_server_connection(self):
 
@@ -144,10 +142,9 @@ class TestServerConnection(unittest.TestCase):
 
 
 class TestServerRequestResponse(unittest.TestCase):
-    
+
     def on_incoming_body(self, body_data):
-        self.output.write(body_data)
-        self.output.write(bytes('\n', encoding = "utf8"))
+        print(str(body_data, encoding='utf-8'))
 
     def setUp(self):
 
@@ -173,6 +170,7 @@ class TestServerRequestResponse(unittest.TestCase):
         self.output = getattr(sys.stdout, 'buffer', sys.stdout)
 
         self.server_request_done_futrue = Future()
+
         def server_request_done():
             self.server_request_done_futrue.set_result(True)
             Error = False
@@ -199,7 +197,7 @@ class TestServerRequestResponse(unittest.TestCase):
         self.server_conn_future = Future()
         self.request_handler_future = Future()
         server = http.HttpServer(self.server_bootstrap, self.host_name, self.port, self.socket_options,
-                                    on_incoming_connection)
+                                 on_incoming_connection)
         # client setup
         self.client_conn_shutdown_future = Future()
 
@@ -209,19 +207,19 @@ class TestServerRequestResponse(unittest.TestCase):
 
         client_bootstrap = io.ClientBootstrap(self.event_loop_group)
         connect_future = http.HttpClientConnection.new_connection(client_bootstrap, self.host_name, self.port,
-                                                                    self.socket_options,
-                                                                    on_connection_shutdown, self.tls_connection_options)
+                                                                  self.socket_options,
+                                                                  on_connection_shutdown, self.tls_connection_options)
         self.client_connection = connect_future.result()
         # wait for server connection setup
         self.server_connection = self.server_conn_future.result()
-        #connections success 
-        
+        # connections success
 
     def test_server_request_response_1line(self):
         print("----test_server_request_response_1line BEGIN!----")
+
         def response_received_cb(ftr):
             self.assertEqual(request.response_code, response_status)
-            
+
         method = 'GET'
         uri_str = '/'
         outgoing_headers = {}
@@ -231,8 +229,8 @@ class TestServerRequestResponse(unittest.TestCase):
         print("----MAKE REQUEST NOW-----")
         request = self.client_connection.make_request(method, uri_str, outgoing_headers, data_stream)
         request.response_headers_received.add_done_callback(response_received_cb)
-        
-        #wait for request received 
+
+        # wait for request received
         request_handler = self.request_handler_future.result()
         if request_handler.request_header_received.result():
             self.assertEqual(method, request_handler.method)
@@ -262,14 +260,15 @@ class TestServerRequestResponse(unittest.TestCase):
 
     def test_server_request_response_body_from_string(self):
         print("----test_server_request_response_body_from_string BEGIN!----")
-        
+
         def response_received_cb(ftr):
             self.assertEqual(request.response_code, response_status)
             self.assertEqual(request.response_headers, response_headers)
+
         method = 'GET'
         uri_str = '/'
         request_headers = {'host': self.host_name,
-                            'user-agent': 'elasticurl.py 1.0, Powered by the AWS Common Runtime.'}
+                           'user-agent': 'elasticurl.py 1.0, Powered by the AWS Common Runtime.'}
         outgoing_data = "----test body from string success----"
         request_data_bytes = outgoing_data.encode(encoding='utf-8')
         request_data_len = len(request_data_bytes)
@@ -279,10 +278,11 @@ class TestServerRequestResponse(unittest.TestCase):
 
         # make request
         print("----MAKE REQUEST NOW-----")
-        request = self.client_connection.make_request(method, uri_str, request_headers, request_data_stream, self.on_incoming_body)
+        request = self.client_connection.make_request(method, uri_str, request_headers, request_data_stream,
+                                                      self.on_incoming_body)
         request.response_headers_received.add_done_callback(response_received_cb)
-        
-        #wait for request received 
+
+        # wait for request received
         request_handler = self.request_handler_future.result()
         if request_handler.request_header_received.result():
             self.assertEqual(method, request_handler.method)
@@ -299,7 +299,7 @@ class TestServerRequestResponse(unittest.TestCase):
         response_body_stream = BytesIO(response_body)
         if len(response_body) != 0:
             response_headers['content-length'] = str(len(response_body))
-        
+
         response_status = 308
         response = http.HttpResponse(response_status, response_headers, response_body_stream)
         request_handler.send_response(response)
@@ -321,14 +321,16 @@ class TestServerRequestResponse(unittest.TestCase):
 
     def test_server_request_response_body_from_file(self):
         print("----test_server_request_response_body_from_file BEGIN!----")
-        #make request
+
+        # make request
         def response_received_cb(ftr):
             self.assertEqual(request.response_code, response_status)
             self.assertEqual(request.response_headers, response_headers)
+
         method = 'GET'
         uri_str = '/'
         request_headers = {'host': self.host_name,
-                            'user-agent': 'elasticurl.py 1.0, Powered by the AWS Common Runtime.'}
+                           'user-agent': 'elasticurl.py 1.0, Powered by the AWS Common Runtime.'}
         data_file = "http_test_body.txt"
         request_data_len = os.stat(data_file).st_size
         request_data_stream = open(data_file, 'rb')
@@ -338,10 +340,11 @@ class TestServerRequestResponse(unittest.TestCase):
         server_connection = self.server_conn_future.result()
         # make request
         print("----MAKE REQUEST NOW-----")
-        request = self.client_connection.make_request(method, uri_str, request_headers, request_data_stream, self.on_incoming_body)
+        request = self.client_connection.make_request(method, uri_str, request_headers, request_data_stream,
+                                                      self.on_incoming_body)
         request.response_headers_received.add_done_callback(response_received_cb)
-        
-        #wait for request received 
+
+        # wait for request received
         request_handler = self.request_handler_future.result()
         if request_handler.request_header_received.result():
             self.assertEqual(method, request_handler.method)
@@ -354,12 +357,12 @@ class TestServerRequestResponse(unittest.TestCase):
         # make response
         response_headers = {'Date': "Fri, 01 Mar 2019 17:18:55 GMT",
                             'user-agent': 'elasticurl.py 1.0, Powered by the AWS Common Runtime.'}
-        
+
         response_body_len = os.stat(data_file).st_size
         response_body_stream = open(data_file, 'rb')
         if response_body_len != 0:
             response_headers['content-length'] = str(response_body_len)
-        
+
         response_status = 308
         response = http.HttpResponse(response_status, response_headers, response_body_stream)
         request_handler.send_response(response)
@@ -378,6 +381,7 @@ class TestServerRequestResponse(unittest.TestCase):
             response_body_stream.close()
         print("----test_server_request_response_body_from_file SUCCESS!----")
         print("\n")
+
 
 if __name__ == '__main__':
     unittest.main()
