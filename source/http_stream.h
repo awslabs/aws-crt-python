@@ -22,6 +22,8 @@
 #include <aws/io/stream.h>
 
 extern const char *s_capsule_name_http_stream;
+extern struct aws_input_stream_vtable s_py_stream_vtable;
+
 
 struct py_http_stream {
     struct aws_allocator *allocator;
@@ -41,8 +43,6 @@ struct py_http_stream {
 };
 
 void native_http_stream_destructor(PyObject *http_stream_capsule);
-
-struct aws_input_stream_vtable s_py_stream_vtable;
 
 int native_on_incoming_headers(
     struct aws_http_stream *internal_stream,
