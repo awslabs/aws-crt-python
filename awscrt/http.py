@@ -259,7 +259,7 @@ class HttpRequestHandler(object):
     User can send response back to the request
     """
     __slots__ = ('_connection', 'path_and_query', 'method', '_on_incoming_body', '_stream', 'request_headers',
-                 'has_request_body', '_native_handle', '_on_request_done', 'stream_completed', 'has_incoming_body'
+                 'has_request_body', '_native_handle', '_on_request_done', '_stream_completed', 'has_incoming_body'
                  , 'request_header_received')
 
     def __init__(self, connection, on_incoming_body=None, on_request_done=None):
@@ -274,7 +274,7 @@ class HttpRequestHandler(object):
         assert connection is not None
 
         def on_stream_completed(error_code):
-            self.stream_completed.set_result(error_code)
+            self._stream_completed.set_result(error_code)
 
         def on_request_headers_received(headers, method, uri, has_body):
             self.request_headers = headers
@@ -298,7 +298,7 @@ class HttpRequestHandler(object):
         self._native_handle = None
         self.has_incoming_body = None
 
-        self.stream_completed = Future()
+        self._stream_completed = Future()
         self.request_header_received = Future()
 
         self._native_handle = _aws_crt_python.aws_py_http_stream_new_server_request_handler(self._connection,
@@ -313,7 +313,7 @@ class HttpRequestHandler(object):
 
         except Exception as e:
             print(e)
-
+        return self._stream_completed
 
 class HttpResponse(object):
     """

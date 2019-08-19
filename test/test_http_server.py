@@ -242,7 +242,8 @@ class TestServerRequestResponse(unittest.TestCase):
         response_headers = {}
         response_status = 200
         response = http.HttpResponse(response_status, response_headers)
-        request_handler.send_response(response)
+
+        stream_completed = request_handler.send_response(response)
 
         # wait for response
         response_start = request.response_headers_received.result(timeout=10)
@@ -251,11 +252,72 @@ class TestServerRequestResponse(unittest.TestCase):
         response_finished = request.response_completed.result(timeout=10)
 
         # wait for server stream is finished
-        self.assertEqual(request_handler.stream_completed.result(), 0)
+        self.assertEqual(stream_completed.result(), 0)
         # done
         if data_stream is not None:
             data_stream.close()
         print("----test_server_request_response_1line SUCCESS!----")
+        print("\n")
+
+    def test_server_request_response_multiple_request(self):
+        print("----test_server_request_response_multiple_request BEGIN!----")
+
+        def response_received_cb(ftr):
+            self.assertEqual(request.response_code, response_status)
+
+        method = 'GET'
+        uri_str = '/'
+        outgoing_headers = {}
+        data_stream = None
+
+        # make request
+        print("----MAKE REQUEST NOW-----")
+        request = self.client_connection.make_request(method, uri_str, outgoing_headers, data_stream)
+        request.response_headers_received.add_done_callback(response_received_cb)
+
+        # wait for request received
+        request_handler = self.request_handler_future.result()
+        self.request_handler_future = Future()
+        if request_handler.request_header_received.result():
+            self.assertEqual(method, request_handler.method)
+            self.assertEqual(uri_str, request_handler.path_and_query)
+        if self.server_request_done_futrue.result():
+            print("----request receiving done----")
+        self.server_request_done_futrue = Future()
+
+        # make another request
+        print("----MAKE THE SECOND REQUEST NOW-----")
+        second_request = self.client_connection.make_request(method, uri_str, outgoing_headers, data_stream)
+        second_request.response_headers_received.add_done_callback(response_received_cb)
+
+        # wait for request received
+        second_request_handler = self.request_handler_future.result()
+        self.request_handler_future = Future()
+        if second_request_handler.request_header_received.result():
+            self.assertEqual(method, second_request_handler.method)
+            self.assertEqual(uri_str, second_request_handler.path_and_query)
+        if self.server_request_done_futrue.result():
+            print("----second request receiving done----")
+
+        # make response
+        response_headers = {}
+        response_status = 200
+        response = http.HttpResponse(response_status, response_headers)
+
+        stream_completed = request_handler.send_response(response)
+
+        # wait for response
+        response_start = request.response_headers_received.result(timeout=10)
+
+        # wait until the full response is finished
+        response_finished = request.response_completed.result(timeout=10)
+
+        # wait for server stream is finished
+        self.assertEqual(stream_completed.result(), 0)
+        # done
+        if data_stream is not None:
+            data_stream.close()
+        print("----test_server_request_response_multiple_request SUCCESS!----")
         print("\n")
 
     def test_server_request_response_body_from_string(self):
@@ -302,7 +364,7 @@ class TestServerRequestResponse(unittest.TestCase):
 
         response_status = 308
         response = http.HttpResponse(response_status, response_headers, response_body_stream)
-        request_handler.send_response(response)
+        stream_completed = request_handler.send_response(response)
 
         # wait for response
         response_start = request.response_headers_received.result(timeout=10)
@@ -310,7 +372,7 @@ class TestServerRequestResponse(unittest.TestCase):
         response_finished = request.response_completed.result(timeout=10)
 
         # wait for server stream close
-        self.assertEqual(request_handler.stream_completed.result(), 0)
+        self.assertEqual(stream_completed.result(), 0)
         # done
         if request_data_stream is not None:
             request_data_stream.close()
@@ -365,7 +427,7 @@ class TestServerRequestResponse(unittest.TestCase):
 
         response_status = 308
         response = http.HttpResponse(response_status, response_headers, response_body_stream)
-        request_handler.send_response(response)
+        stream_completed = request_handler.send_response(response)
 
         # wait for response
         response_start = request.response_headers_received.result(timeout=10)
@@ -373,7 +435,7 @@ class TestServerRequestResponse(unittest.TestCase):
         response_finished = request.response_completed.result(timeout=10)
 
         # wait for server stream close
-        self.assertEqual(request_handler.stream_completed.result(), 0)
+        self.assertEqual(stream_completed.result(), 0)
         # done
         if request_data_stream is not None:
             request_data_stream.close()
