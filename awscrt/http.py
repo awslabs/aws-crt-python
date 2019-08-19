@@ -105,11 +105,9 @@ class HttpClientConnection(object):
         of a URL. method is the http method (GET, PUT, etc...). outgoing_headers are the headers to send as part
         of the request.
 
-        #TODO
-        outgoing_body is invoked to read the body of the request. It takes a single parameter of type MemoryView
-        (it's writable), and you signal the end of the stream by returning OutgoingHttpBodyState.Done for the first tuple
-        argument. If you aren't done sending the body, the first tuple argument should be OutgoingHttpBodyState.InProgress
-        The second tuple argument is the size of the data written to the memoryview.
+        outgoing_body is an io.IOBase object that is used to stream the request body. Data will be read out of the stream
+        until EOS is reached. The most common usages will be io.StringIO, file objects (via the global open/close functions),
+        and io.BinaryIO.
 
         on_incoming_body is invoked as the response body is received. It takes a single argument of type bytes.
 
@@ -150,11 +148,9 @@ class HttpRequest(object):
     of a URL. method is the http method (GET, PUT, etc...). outgoing_headers are the headers to send as part
     of the request.
 
-    #TODO WAT
-    outgoing_body is invoked to read the body of the request. It takes a single parameter of type MemoryView
-    (it's writable), and you signal the end of the stream by returning OutgoingHttpBodyState.Done for the first tuple
-    argument. If you aren't done sending the body, the first tuple argument should be OutgoingHttpBodyState.InProgress
-    The second tuple argument is the size of the data written to the memoryview.
+    outgoing_body is an io.IOBase object that is used to stream the request body. Data will be read out of the stream
+    until EOS is reached. The most common usages will be io.StringIO, file objects (via the global open/close functions),
+    and io.BinaryIO.
 
     on_incoming_body is invoked as the response body is received. It takes a single argument of type bytes.
     """
@@ -163,12 +159,12 @@ class HttpRequest(object):
                  'response_completed')
 
     def __init__(self, connection, method, path_and_query, outgoing_headers, outgoing_body, on_incoming_body):
-        import io
+        from io import IOBase
 
         assert method is not None
         assert outgoing_headers is not None
         assert connection is not None and isinstance(connection, HttpClientConnection)
-        assert not outgoing_body or isinstance(outgoing_body, io.IOBase)
+        assert not outgoing_body or isinstance(outgoing_body, IOBase)
 
         self.path_and_query = path_and_query
 
