@@ -206,6 +206,7 @@ class HttpServer(object):
         
         socket_options: awscrt.io.SocketOptions for the server's listening socket. Required
         on_incoming_connection: Callback with signature (connection: HttpConnection.native_handle, error_code: int) Required
+        user must call http.ServerConnection.new_server_connection() to configure the connection in this callback or the connection will fail
         bootstrap: awscrt.io.ServerBootstrap. Required
         tls_connection_options: awscrt.io.TlsConnectionOptions, for TLS connection
         """
