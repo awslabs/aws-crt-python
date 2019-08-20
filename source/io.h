@@ -20,6 +20,7 @@
  */
 
 #include "module.h"
+#include <aws/io/socket.h>
 
 /**
  * Name string for client bootstrap capsules.
@@ -45,6 +46,11 @@ extern const char *s_capsule_name_tls_conn_options;
  * Name String to logging capsules
  */
 extern const char *s_capsule_name_logger;
+
+/**
+ *  Init aws_socket_options from SocketOptions. Returns false and sets python exception if error occurred. 
+ */
+bool aws_socket_options_init_from_py(struct aws_socket_options *socket_options, PyObject *py_socket_options);
 
 /**
  * Returns a capsule for logging and starts the logging sub-system

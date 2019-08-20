@@ -15,6 +15,7 @@
 #include "module.h"
 #include "crypto.h"
 #include "http_client_connection.h"
+#include "http_server.h"
 #include "io.h"
 #include "mqtt_client.h"
 #include "mqtt_client_connection.h"
@@ -102,6 +103,14 @@ int PyIntEnum_Check(PyObject *int_enum_obj) {
     return PyInt_Check(int_enum_obj);
 #else
     return PyLong_Check(int_enum_obj);
+#endif
+}
+
+int PyIntObj_Check(PyObject *int_obj) {
+#if PY_MAJOR_VERSION == 2
+    return PyInt_Check(int_obj);
+#else
+    return PyLong_Check(int_obj);
 #endif
 }
 
@@ -199,6 +208,10 @@ static PyMethodDef s_module_methods[] = {
     {"aws_py_http_client_connection_close", aws_py_http_client_connection_close, METH_VARARGS, NULL},
     {"aws_py_http_client_connection_is_open", aws_py_http_client_connection_is_open, METH_VARARGS, NULL},
     {"aws_py_http_client_connection_make_request", aws_py_http_client_connection_make_request, METH_VARARGS, NULL},
+
+    /* HTTP server */
+    {"aws_py_http_server_create", aws_py_http_server_create, METH_VARARGS, NULL},
+    {"aws_py_http_server_release", aws_py_http_server_release, METH_VARARGS, NULL},
 
     {NULL, NULL, 0, NULL},
 };
