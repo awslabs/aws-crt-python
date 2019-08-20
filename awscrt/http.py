@@ -199,11 +199,7 @@ class HttpServer(object):
         close the server, no more connections will be accepted, a future object will be returned, and when the close process finishes
         the future result or exception will be set.
         """
-        try:
-            _aws_crt_python.aws_py_http_server_release(self._native_handle)
-        except Exception as e:
-            self._destroy_complete.set_exception(e)
-
+        _aws_crt_python.aws_py_http_server_release(self._native_handle)
         return self._destroy_complete
 
 
