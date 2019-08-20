@@ -107,8 +107,8 @@ class HttpClientConnection(object):
         of the request.
 
         outgoing_body is an io.IOBase object that is used to stream the request body. Data will be read out of the stream
-    until EOS is reached. The most common usages will be io.StringIO, file objects (via the global open/close functions),
-    and io.BinaryIO.
+        until EOS is reached. The most common usages will be io.StringIO, file objects (via the global open/close functions),
+        and io.BinaryIO.
 
         on_incoming_body is invoked as the response body is received. It takes a single argument of type bytes.
 
