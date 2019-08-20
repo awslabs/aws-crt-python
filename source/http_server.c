@@ -216,7 +216,7 @@ PyObject *aws_py_http_server_release(PyObject *self, PyObject *args) {
         if (server_capsule != Py_None) {
             struct py_http_server *py_server = PyCapsule_GetPointer(server_capsule, s_capsule_name_http_server);
             if(!py_server){
-                Py_RETURN_NONE;
+                return NULL;
             }
             if (py_server->server) {
                 if (!py_server->destroy_called) {
