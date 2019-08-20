@@ -321,7 +321,6 @@ static int s_stream_read(struct aws_input_stream *stream, struct aws_byte_buf *d
         PyErr_Clear();
     }
 
-    Py_XDECREF(result);
     Py_DECREF(mv);
 
     PyGILState_Release(state);
