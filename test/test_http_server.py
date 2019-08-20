@@ -178,7 +178,7 @@ class TestServerRequestResponse(unittest.TestCase):
         def on_incoming_request(connection):
             request_handler = http.HttpRequestHandler(connection, self.on_incoming_body, server_request_done)
             self.request_handler_future.set_result(request_handler)
-            return request_handler._native_handle
+            return request_handler
 
         def on_server_conn_shutdown(connection, error_code):
             print("----shutdown server connection with error_code: {}----".format(error_code))

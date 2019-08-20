@@ -284,8 +284,13 @@ static struct aws_http_stream *s_on_incoming_request(struct aws_http_connection 
 
     PyObject *on_incoming_req_cb = py_server_conn->on_incoming_request;
     result = PyObject_CallFunction(on_incoming_req_cb, "(O)", py_server_conn->capsule);
+    /* returned result will be a http.HttpRequestHandler object */
     if (result) {
-        struct py_http_stream *py_stream = PyCapsule_GetPointer(result, s_capsule_name_http_stream);
+        PyObject *stream_capsule = PyObject_GetAttrString(result, "_native_handle");
+        if(!stream_capsule){
+            goto error;
+        }
+        struct py_http_stream *py_stream = PyCapsule_GetPointer(stream_capsule, s_capsule_name_http_stream);
         if (!py_stream) {
             goto error;
         }
@@ -616,7 +621,7 @@ PyObject *aws_py_http_stream_server_send_response(PyObject *self, PyObject *args
         }
     }
 
-    PyObject *outgoing_body = PyObject_GetAttrString(py_http_response, "_outgoing_body");
+    PyObject *outgoing_body = PyObject_GetAttrString(py_http_response, "outgoing_body");
     if (outgoing_body && outgoing_body != Py_None) {
         /* Check that the stream has a readinto method */
         PyObject *readinto = PyObject_GetAttrString(outgoing_body, "readinto");

@@ -16,8 +16,6 @@ from concurrent.futures import Future
 from enum import IntEnum
 from awscrt.io import ClientBootstrap, TlsConnectionOptions, SocketOptions, ServerBootstrap
 
-# import ptvsd;
-# ptvsd.break_into_debugger()
 """
 Base class for http connection
 """
@@ -64,8 +62,7 @@ class HttpClientConnection(HttpConnection):
     def __init__(self, bootstrap, on_connection_shutdown, tls_connection_options):
 
         assert isinstance(bootstrap, ClientBootstrap)
-        assert tls_connection_options is None or isinstance(
-            tls_connection_options, TlsConnectionOptions)
+        assert tls_connection_options is None or isinstance(tls_connection_options, TlsConnectionOptions)
 
         self._tls_connection_options = tls_connection_options
         self._bootstrap = bootstrap
@@ -123,11 +120,9 @@ class HttpClientConnection(HttpConnection):
         of a URL. method is the http method (GET, PUT, etc...). outgoing_headers are the headers to send as part
         of the request.
 
-        #TODO
-        outgoing_body is invoked to read the body of the request. It takes a single parameter of type MemoryView
-        (it's writable), and you signal the end of the stream by returning OutgoingHttpBodyState.Done for the first tuple
-        argument. If you aren't done sending the body, the first tuple argument should be OutgoingHttpBodyState.InProgress
-        The second tuple argument is the size of the data written to the memoryview.
+        outgoing_body is an io.IOBase object that is used to stream the request body. Data will be read out of the stream
+        until EOS is reached. The most common usages will be io.StringIO, file objects (via the global open/close functions),
+        and io.BinaryIO.
 
         on_incoming_body is invoked as the response body is received. It takes a single argument of type bytes.
 
@@ -180,7 +175,7 @@ class ServerConnection(HttpConnection):
         create a new server connection, usually it will be called from the on_incoming connection callback, whenever a new connection is accepted.
 
         on_incoming_request is invoked whenever a new request is received from the connection. It takes http.HttpConnection._native_handle as argument
-        and it has to call http.HttpRequestHandler() to create a new request handler to handle the request
+        and it has to call http.HttpRequestHandler() to create a new request handler to handle the request and return http.HttpRequestHandler() object back
         on_shutdown is invoked as the connection is shutted down. It takes http.HttpConnection._native_handle and error_code as argument
         """
         server_connection = ServerConnection(on_incoming_request, on_shutdown)
@@ -321,13 +316,11 @@ class HttpResponse(object):
     Represents an HttpResponse to pass to HttpRequestHandler.send_response(). status is response status code (3 digital int)
     outgoing_headers are the headers to send as part of the response.
     
-    #TODO WAT
-    outgoing_body is invoked to read the body of the response. It takes a single parameter of type MemoryView
-    (it's writable), and you signal the end of the stream by returning OutgoingHttpBodyState.Done for the first tuple
-    argument. If you aren't done sending the body, the first tuple argument should be OutgoingHttpBodyState.InProgress
-    The second tuple argument is the size of the data written to the memoryview.
+    outgoing_body is an io.IOBase object that is used to stream the request body. Data will be read out of the stream
+    until EOS is reached. The most common usages will be io.StringIO, file objects (via the global open/close functions),
+    and io.BinaryIO.
     """
-    __slots__ = ('status', 'outgoing_headers', '_outgoing_body')
+    __slots__ = ('status', 'outgoing_headers', 'outgoing_body')
 
     def __init__(self, status, outgoing_headers, outgoing_body=None):
         import io
@@ -340,7 +333,7 @@ class HttpResponse(object):
             setattr(self, slot, None)
         self.status = status
         self.outgoing_headers = outgoing_headers
-        self._outgoing_body = outgoing_body
+        self.outgoing_body = outgoing_body
 
 
 class HttpRequest(object):
@@ -349,11 +342,9 @@ class HttpRequest(object):
     of a URL. method is the http method (GET, PUT, etc...). outgoing_headers are the headers to send as part
     of the request.
 
-    #TODO WAT
-    outgoing_body is invoked to read the body of the request. It takes a single parameter of type MemoryView
-    (it's writable), and you signal the end of the stream by returning OutgoingHttpBodyState.Done for the first tuple
-    argument. If you aren't done sending the body, the first tuple argument should be OutgoingHttpBodyState.InProgress
-    The second tuple argument is the size of the data written to the memoryview.
+    outgoing_body is an io.IOBase object that is used to stream the request body. Data will be read out of the stream
+    until EOS is reached. The most common usages will be io.StringIO, file objects (via the global open/close functions),
+    and io.BinaryIO.
 
     on_incoming_body is invoked as the response body is received. It takes a single argument of type bytes.
     """
