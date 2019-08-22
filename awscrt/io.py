@@ -40,41 +40,43 @@ def is_alpn_available():
 
 
 class EventLoopGroup(object):
-    __slots__ = ('_internal_elg')
+    """
+    Manages a collection of event-loops.
+    An event-loop is a thread for doing async work, such as I/O.
+    Classes that need to do async work will ask the EventLoopGroup for an event-loop to use.
+    """
 
-    def __init__(self, num_threads):
-        self._internal_elg = _aws_crt_python.aws_py_io_event_loop_group_new(num_threads)
+    __slots__ = ('_binding')
 
+    def __init__(self, num_threads=0):
+        """
+        num_threads: Number of event-loops to create. Pass 0 to create one for each processor on the machine.
+        """
+        self._binding = _aws_crt_python.aws_py_io_event_loop_group_new(num_threads)
 
 class HostResolver(object):
-    __slots__ = ('elg', '_internal_host_resolver')
-
-    def __init__(self, elg):
-        self.elg = elg
-
+    __slots__ = ('_binding')
 
 class DefaultHostResolver(HostResolver):
-    __slots__ = ('elg', '_internal_host_resolver')
+    __slots__ = ()
 
-    def __init__(self, elg, max_hosts=16):
-        super(DefaultHostResolver, self).__init__(elg)
-        self._internal_host_resolver = _aws_crt_python.aws_py_io_host_resolver_new_default(max_hosts, elg._internal_elg)
+    def __init__(self, event_loop_group, max_hosts=16):
+        assert isinstance(event_loop_group, EventLoopGroup)
 
+        super(DefaultHostResolver, self).__init__()
+        self._binding = _aws_crt_python.aws_py_io_host_resolver_new_default(max_hosts, event_loop_group)
 
 class ClientBootstrap(object):
-    __slots__ = ('elg', 'host_resolver', '_internal_bootstrap')
+    __slots__ = ('_binding')
 
-    def __init__(self, elg, host_resolver=None):
-        assert isinstance(elg, EventLoopGroup)
+    def __init__(self, event_loop_group, host_resolver=None):
+        assert isinstance(event_loop_group, EventLoopGroup)
         assert isinstance(host_resolver, HostResolver) or host_resolver is None
 
         if host_resolver is None:
-            host_resolver = DefaultHostResolver(elg)
+            host_resolver = DefaultHostResolver(event_loop_group)
 
-        self.elg = elg
-        self.host_resolver = host_resolver
-        self._internal_bootstrap = _aws_crt_python.aws_py_io_client_bootstrap_new(self.elg._internal_elg, host_resolver._internal_host_resolver)
-
+        self._binding = _aws_crt_python.aws_py_io_client_bootstrap_new(event_loop_group, host_resolver)
 
 def byte_buf_from_file(filepath):
     with open(filepath, mode='rb') as fh:
@@ -143,7 +145,7 @@ class TlsContextOptions(object):
         ca_buffer = None
         if ca_file:
             ca_buffer = byte_buf_from_file(ca_file)
-        
+
         self.ca_path = ca_path
         self.override_default_trust_store(ca_buffer)
 
@@ -195,7 +197,7 @@ class TlsContextOptions(object):
 
         cert_buffer = byte_buf_from_file(cert_path)
         key_buffer = byte_buf_from_file(pk_path)
-        
+
         return TlsContextOptions.create_server_with_mtls(cert_buffer, key_buffer)
 
     @staticmethod
@@ -223,11 +225,12 @@ class TlsContextOptions(object):
 
 
 class ClientTlsContext(object):
+    __slots__ = ('_binding')
 
     def __init__(self, options):
         assert isinstance(options, TlsContextOptions)
 
-        self._internal_tls_ctx = _aws_crt_python.aws_py_io_client_tls_ctx_new(
+        self._binding = _aws_crt_python.aws_py_io_client_tls_ctx_new(
             options.min_tls_ver.value,
             options.ca_path,
             options.ca_buffer,
@@ -244,18 +247,16 @@ class ClientTlsContext(object):
 
 
 class TlsConnectionOptions(object):
-    __slots__ = ('tls_ctx', '_internal_tls_conn_options')
+    __slots__ = ('tls_ctx', '_binding')
 
     def __init__(self, tls_ctx):
         assert isinstance(tls_ctx, ClientTlsContext)
 
         self.tls_ctx = tls_ctx
-        self._internal_tls_conn_options = _aws_crt_python.aws_py_io_tls_connections_options_new_from_ctx(tls_ctx._internal_tls_ctx)
+        self._binding = _aws_crt_python.aws_py_io_tls_connections_options_new_from_ctx(tls_ctx)
 
     def set_alpn_list(self, alpn_list):
-        _aws_crt_python.aws_py_io_tls_connection_options_set_alpn_list(self._internal_tls_conn_options, alpn_list)
+        _aws_crt_python.aws_py_io_tls_connection_options_set_alpn_list(self, alpn_list)
 
     def set_server_name(self, server_name):
-        _aws_crt_python.aws_py_io_tls_connection_options_set_server_name(self._internal_tls_conn_options, server_name)
-
-
+        _aws_crt_python.aws_py_io_tls_connection_options_set_server_name(self, server_name)
