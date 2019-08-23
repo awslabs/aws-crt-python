@@ -241,7 +241,8 @@ struct aws_client_bootstrap *get_aws_client_bootstrap(PyObject *client_bootstrap
 
     PyObject *binding_capsule = PyObject_GetAttrString(client_bootstrap, "_binding");
     if (binding_capsule) {
-        struct client_bootstrap_binding *binding = PyCapsule_GetPointer(binding_capsule, s_capsule_name_client_bootstrap);
+        struct client_bootstrap_binding *binding =
+            PyCapsule_GetPointer(binding_capsule, s_capsule_name_client_bootstrap);
         if (binding) {
             native = binding->native;
             assert(native);
