@@ -103,7 +103,7 @@ PyObject *aws_py_http_client_connection_create(PyObject *self, PyObject *args) {
     struct py_http_connection *py_connection = NULL;
     struct aws_allocator *allocator = aws_crt_python_get_allocator();
 
-    PyObject *bootstrap_capsule = NULL;
+    PyObject *bootstrap_py = NULL;
     PyObject *on_connection_shutdown = NULL;
     PyObject *on_connection_setup = NULL;
     const char *host_name = NULL;
@@ -111,32 +111,34 @@ PyObject *aws_py_http_client_connection_create(PyObject *self, PyObject *args) {
     uint16_t port_number = 0;
     Py_ssize_t initial_window_size = PY_SSIZE_T_MAX;
     PyObject *py_socket_options = NULL;
-    PyObject *tls_conn_options_capsule = NULL;
+    PyObject *tls_conn_options_py = NULL;
 
     if (!PyArg_ParseTuple(
             args,
             "OOOs#HOO",
-            &bootstrap_capsule,
+            &bootstrap_py,
             &on_connection_setup,
             &on_connection_shutdown,
             &host_name,
             &host_name_len,
             &port_number,
             &py_socket_options,
-            &tls_conn_options_capsule)) {
+            &tls_conn_options_py)) {
         PyErr_SetNone(PyExc_ValueError);
         goto error;
     }
 
-    if (!bootstrap_capsule || !PyCapsule_CheckExact(bootstrap_capsule)) {
-        PyErr_SetString(PyExc_ValueError, "bootstrap is invalid");
+    struct aws_client_bootstrap *bootstrap = aws_py_get_client_bootstrap(bootstrap_py);
+    if (!bootstrap) {
         goto error;
     }
 
-    if (tls_conn_options_capsule && tls_conn_options_capsule != Py_None &&
-        !PyCapsule_CheckExact(tls_conn_options_capsule)) {
-        PyErr_SetString(PyExc_ValueError, "tls connection options is invalid");
-        goto error;
+    struct aws_tls_connection_options *connection_options = NULL;
+    if (tls_conn_options_py != Py_None) {
+        connection_options = aws_py_get_tls_connection_options(tls_conn_options_py);
+        if (!connection_options) {
+            goto error;
+        }
     }
 
     if (!host_name) {
@@ -154,24 +156,11 @@ PyObject *aws_py_http_client_connection_create(PyObject *self, PyObject *args) {
         goto error;
     }
 
-    struct aws_client_bootstrap *bootstrap = PyCapsule_GetPointer(bootstrap_capsule, s_capsule_name_client_bootstrap);
-    if (!bootstrap) {
-        PyErr_SetString(PyExc_ValueError, "the bootstrap capsule has an invalid pointer");
-        goto error;
-    }
-
-    struct aws_tls_connection_options *connection_options = NULL;
-
-    if (tls_conn_options_capsule != Py_None) {
-        connection_options = PyCapsule_GetPointer(tls_conn_options_capsule, s_capsule_name_tls_conn_options);
-    }
-
-    py_connection = aws_mem_acquire(allocator, sizeof(struct py_http_connection));
+    py_connection = aws_mem_calloc(allocator, 1, sizeof(struct py_http_connection));
     if (!py_connection) {
         PyErr_SetAwsLastError();
         goto error;
     }
-    AWS_ZERO_STRUCT(*py_connection);
 
     struct aws_socket_options socket_options;
     AWS_ZERO_STRUCT(socket_options);

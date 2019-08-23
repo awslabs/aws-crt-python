@@ -131,7 +131,7 @@ PyObject *aws_py_io_host_resolver_new_default(PyObject *self, PyObject *args) {
         goto capsule_new_failed;
     }
 
-    /* from hereon, nothing will fail */
+    /* From hereon, nothing will fail */
 
     host_resolver->event_loop_group = elg_py;
     Py_INCREF(elg_py);
@@ -206,7 +206,7 @@ PyObject *aws_py_io_client_bootstrap_new(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    /* from hereon, we need to clean up if errors occur */
+    /* From hereon, we need to clean up if errors occur */
 
     bootstrap->native = aws_client_bootstrap_new(allocator, elg, host_resolver, NULL);
     if (!bootstrap->native) {
@@ -219,7 +219,7 @@ PyObject *aws_py_io_client_bootstrap_new(PyObject *self, PyObject *args) {
         goto capsule_new_failed;
     }
 
-    /* from hereon, nothing will fail */
+    /* From hereon, nothing will fail */
 
     bootstrap->event_loop_group = elg_py;
     Py_INCREF(elg_py);
@@ -330,7 +330,7 @@ PyObject *aws_py_io_client_tls_ctx_new(PyObject *self, PyObject *args) {
     ctx_options.verify_peer = (bool)verify_peer;
     struct aws_tls_ctx *tls_ctx = aws_tls_client_ctx_new(allocator, &ctx_options);
     if (!tls_ctx) {
-        PyErr_AwsLastError();
+        PyErr_SetAwsLastError();
         goto ctx_options_failure;
     }
 
@@ -339,7 +339,7 @@ PyObject *aws_py_io_client_tls_ctx_new(PyObject *self, PyObject *args) {
         goto capsule_new_failure;
     }
 
-    /* from hereon, nothing will fail */
+    /* From hereon, nothing will fail */
 
     aws_tls_ctx_options_clean_up(&ctx_options);
     return capsule;
@@ -414,7 +414,7 @@ PyObject *aws_py_io_tls_connections_options_new_from_ctx(PyObject *self, PyObjec
         goto capsule_new_failed;
     }
 
-    /* from hereon, nothing will fail */
+    /* From hereon, nothing will fail */
 
     aws_tls_connection_options_init_from_ctx(&conn_options->native, ctx);
 

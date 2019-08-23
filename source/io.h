@@ -22,21 +22,6 @@
 #include "module.h"
 
 /**
- * Name string for event_loop_group capsules.
- */
-extern const char *s_capsule_name_client_bootstrap;
-
-/**
- * Name string for tls_ctx capsules.
- */
-extern const char *s_capsule_name_tls_ctx;
-
-/**
- * Name string for tls_connection_options capsules.
- */
-extern const char *s_capsule_name_tls_conn_options;
-
-/**
  * Name String to logging capsules
  */
 extern const char *s_capsule_name_logger;
