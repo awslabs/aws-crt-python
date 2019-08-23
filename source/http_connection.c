@@ -27,27 +27,40 @@ void s_http_connection_destructor(PyObject *http_connection_capsule) {
     struct py_http_connection *http_connection =
         PyCapsule_GetPointer(http_connection_capsule, s_capsule_name_http_connection);
     assert(http_connection);
-    if(http_connection->on_incoming_request){
+    if (http_connection->on_incoming_request) {
         Py_DECREF(http_connection->on_incoming_request);
     }
-    
-    http_connection->destructor_called = true;
-    
-    if (http_connection->connection) {
 
+    http_connection->destructor_called = true;
+
+    if (http_connection->connection) {
         if (aws_http_connection_is_open(http_connection->connection)) {
             aws_http_connection_close(http_connection->connection);
         }
-        if (http_connection->shutdown_called){
+        if (http_connection->shutdown_called) {
             aws_http_connection_release(http_connection->connection);
+            /* server side */
+            if (http_connection->server_capsule) {
+                Py_DECREF(http_connection->server_capsule);
+            }
+            /* client side */
+            if (http_connection->bootstrap) {
+                Py_DECREF(http_connection->bootstrap);
+                http_connection->bootstrap = NULL;
+            }
+
+            http_connection->connection = NULL;
         }
-        http_connection->connection = NULL;
-    }
-    if(http_connection->bootstrap){
-        Py_DECREF(http_connection->bootstrap);
-        http_connection->bootstrap = NULL;
-    }
-    if (http_connection->shutdown_called) {
+    } else if (http_connection->shutdown_called) {
+        /* server side */
+        if (http_connection->server_capsule) {
+            Py_DECREF(http_connection->server_capsule);
+        }
+        /* client side */
+        if (http_connection->bootstrap) {
+            Py_DECREF(http_connection->bootstrap);
+            http_connection->bootstrap = NULL;
+        }
         aws_mem_release(http_connection->allocator, http_connection);
     }
 }

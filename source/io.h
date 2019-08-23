@@ -68,6 +68,11 @@ struct client_bootstrap{
 bool aws_socket_options_init_from_py(struct aws_socket_options *socket_options, PyObject *py_socket_options);
 
 /**
+ *  Init aws_socket_options from SocketOptions. Returns false and sets python exception if error occurred. 
+ */
+bool aws_socket_options_init_from_py(struct aws_socket_options *socket_options, PyObject *py_socket_options);
+
+/**
  * Returns a capsule for logging and starts the logging sub-system
  */
 PyObject *aws_py_io_init_logging(PyObject *self, PyObject *args);

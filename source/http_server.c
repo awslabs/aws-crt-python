@@ -49,35 +49,36 @@ static void s_http_server_destructor(PyObject *http_server_capsule) {
     Py_DECREF(py_server->on_incoming_connection);
 
     if (py_server->destroy_complete) {
+        /* Release the bootstrap until the destroy complete */
+        Py_DECREF(py_server->bootstrap);
         aws_mem_release(py_server->allocator, py_server);
     }
 }
 
 static void s_on_destroy_complete(void *user_data) {
     struct py_http_server *py_server = user_data;
-    
+
     py_server->destroy_complete = true;
+    PyGILState_STATE state = PyGILState_Ensure();
     PyObject *on_destroy_complete_cb = py_server->on_destroy_complete;
     py_server->server = NULL;
-    if (!py_server->destructor_called) {    
-        PyGILState_STATE state = PyGILState_Ensure();
+    if (!py_server->destructor_called) {
 
-        PyObject *result = PyObject_CallFunction(on_destroy_complete_cb, "(N)", py_server->capsule);
-        if(result){
+        PyObject *result = PyObject_CallFunction(on_destroy_complete_cb, "(O)", py_server->capsule);
+        if (result) {
             Py_XDECREF(result);
-        }
-        else{
+        } else {
             PyErr_WriteUnraisable(PyErr_Occurred());
         }
-        /* comment this out temperatory */
-        //Py_DECREF(on_destroy_complete_cb);
-        /* Release the bootstrap until the destroy complete */
-        Py_DECREF(py_server->bootstrap);
-        PyGILState_Release(state);
+
+        Py_XDECREF(on_destroy_complete_cb);
+
     } else {
-        Py_XDECREF(py_server->on_destroy_complete);
+        Py_XDECREF(on_destroy_complete_cb);
+        Py_DECREF(py_server->bootstrap);
         aws_mem_release(py_server->allocator, py_server);
     }
+    PyGILState_Release(state);
 }
 
 static void s_on_incoming_connection(
@@ -99,17 +100,25 @@ static void s_on_incoming_connection(
     py_connection->allocator = py_server->allocator;
     if (!error_code) {
         py_connection->connection = connection;
-        connection_capsule =
-            PyCapsule_New(py_connection, s_capsule_name_http_connection, s_http_connection_destructor);
-        Py_XINCREF(connection_capsule);
+        connection_capsule = PyCapsule_New(py_connection, s_capsule_name_http_connection, s_http_connection_destructor);
         py_connection->capsule = connection_capsule;
-        /* the callback will be fired multiple times, do not clean it up unless the server is gone */
-        result = PyObject_CallFunction(on_incoming_conn_cb, "(Ni)", py_connection->capsule, error_code);
-        Py_XDECREF(result);
+        if (!connection_capsule) {
+            PyGILState_Release(state);
+            return;
+        }
+        /* server connection should keep a ref_count on server */
+        py_connection->server_capsule = py_server->capsule;
+        Py_INCREF(py_connection->server_capsule);
     } else {
         aws_mem_release(py_connection->allocator, py_connection);
     }
-
+    /* the callback will be fired multiple times, do not clean it up unless the server is gone */
+    result = PyObject_CallFunction(on_incoming_conn_cb, "(Ni)", connection_capsule, error_code);
+    if (result) {
+        Py_XDECREF(result);
+    } else {
+        PyErr_WriteUnraisable(PyErr_Occurred());
+    }
     PyGILState_Release(state);
 }
 
@@ -243,7 +252,7 @@ PyObject *aws_py_http_server_release(PyObject *self, PyObject *args) {
         if (server_capsule != Py_None) {
             struct py_http_server *py_server = PyCapsule_GetPointer(server_capsule, s_capsule_name_http_server);
             if(!py_server){
-                Py_RETURN_NONE;
+                return NULL;
             }
             if (py_server->server) {
                 if (!py_server->destroy_called) {
@@ -271,22 +280,32 @@ static void s_on_shutdown(struct aws_http_connection *connection, int error_code
 
     if (!py_server_conn->destructor_called) {
         PyGILState_STATE state = PyGILState_Ensure();
-        PyObject *result = PyObject_CallFunction(on_shutdown_cb, "(Ni)", py_server_conn->capsule, error_code);
-        if(result){
-            Py_DECREF(result);
+        if (on_shutdown_cb) {
+            PyObject *result = PyObject_CallFunction(on_shutdown_cb, "(Oi)", py_server_conn->capsule, error_code);
+            if (result) {
+                Py_DECREF(result);
+            } else {
+                PyErr_WriteUnraisable(PyErr_Occurred());
+            }
+            Py_DECREF(on_shutdown_cb);
         }
-        else{
-            PyErr_WriteUnraisable(PyErr_Occurred());
-        }
-        Py_DECREF(py_server_conn->capsule);
         PyGILState_Release(state);
     } else {
+        PyGILState_STATE state = PyGILState_Ensure();
+        if (on_shutdown_cb) {
+            Py_DECREF(on_shutdown_cb);
+        }
+        PyGILState_Release(state);
         aws_http_connection_release(py_server_conn->connection);
+
+        if (py_server_conn->server_capsule) {
+            Py_DECREF(py_server_conn->server_capsule);
+        }
+
         aws_mem_release(py_server_conn->allocator, py_server_conn);
     }
-
-    Py_DECREF(on_shutdown_cb);
 }
+
 
 PyObject *aws_py_http_connection_configure_server(PyObject *self, PyObject *args) {
     (void)self;
@@ -303,25 +322,27 @@ PyObject *aws_py_http_connection_configure_server(PyObject *self, PyObject *args
     struct py_http_connection *py_server_conn =
         PyCapsule_GetPointer(server_conn_capsule, s_capsule_name_http_connection);
 
+    if (!py_server_conn) {
+        goto error;
+    }
+
     if (py_server_conn->on_incoming_request) {
         PyErr_SetString(PyExc_TypeError, "connection is already configured");
         goto error;
     }
 
-    if (!on_incoming_request || !PyCallable_Check(on_incoming_request)) {
+    if (!PyCallable_Check(on_incoming_request)) {
         PyErr_SetString(PyExc_TypeError, "on_incoming_request is invalid");
         goto error;
     }
 
-    Py_INCREF(on_incoming_request);
     py_server_conn->on_incoming_request = on_incoming_request;
 
-    if (on_shutdown) {
+    if (on_shutdown != Py_None) {
         if (!PyCallable_Check(on_shutdown)) {
             PyErr_SetString(PyExc_TypeError, "on_shutdown is invalid");
             goto error;
         }
-        Py_INCREF(on_shutdown);
         py_server_conn->on_connection_shutdown = on_shutdown;
     }
 
@@ -332,19 +353,17 @@ PyObject *aws_py_http_connection_configure_server(PyObject *self, PyObject *args
     options.on_incoming_request = s_on_incoming_request;
     options.on_shutdown = s_on_shutdown;
 
-    if (aws_http_connection_configure_server(py_server_conn->connection, &options)) {
+    if (aws_http_connection_configure_server(py_server_conn->connection, &options) != AWS_OP_SUCCESS) {
         PyErr_SetAwsLastError();
         goto error;
     }
 
+    Py_INCREF(on_incoming_request);
+    if (on_shutdown != Py_None) {
+        Py_INCREF(on_shutdown);
+    }
     Py_RETURN_NONE;
 
 error:
-    if(on_incoming_request){
-        Py_DECREF(on_incoming_request);
-    }
-    if(on_shutdown){
-        Py_DECREF(on_shutdown);
-    }
     Py_RETURN_NONE;
 }
