@@ -168,6 +168,9 @@ class ServerConnection(HttpConnection):
     def new_server_connection(connection, on_incoming_request, on_shutdown = None):
         """
         create a new server connection, usually it will be called from the on_incoming connection callback, whenever a new connection is accepted.
+        on_incoming_request is invoked whenever a new request is received from the connection. It takes http.HttpConnection._native_handle as argument
+        and it has to call http.HttpRequestHandler() to create a new request handler to handle the request and return http.HttpRequestHandler() object back
+        on_shutdown is invoked as the connection is shutted down. It takes http.HttpConnection._native_handle and error_code as argument
         """
         server_connection = ServerConnection(on_incoming_request, on_shutdown)
         server_connection._native_handle = connection
