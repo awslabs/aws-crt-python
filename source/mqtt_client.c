@@ -48,7 +48,7 @@ PyObject *aws_py_mqtt_client_new(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    struct aws_client_bootstrap *bootstrap = aws_py_get_client_bootstrap(bootstrap_py);
+    struct aws_client_bootstrap *bootstrap = get_aws_client_bootstrap(bootstrap_py);
     if (!bootstrap) {
         return NULL;
     }
@@ -84,4 +84,20 @@ client_init_failed:
 capsule_new_failed:
     aws_mem_release(allocator, client);
     return NULL;
+}
+
+struct aws_mqtt_client *get_aws_mqtt_client(PyObject *mqtt_client) {
+    struct aws_mqtt_client *native = NULL;
+
+    PyObject *binding_capsule = PyObject_GetAttrString(mqtt_client, "_binding");
+    if (binding_capsule) {
+        struct mqtt_client_binding *binding = PyCapsule_GetPointer(binding_capsule, s_capsule_name_mqtt_client);
+        if (binding) {
+            native = &binding->native;
+            assert(native);
+        }
+        Py_DECREF(binding_capsule);
+    }
+
+    return native;
 }

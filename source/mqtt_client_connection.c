@@ -144,12 +144,13 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    struct aws_mqtt_client *client = aws_py_get_mqtt_client(client_py);
+    struct aws_mqtt_client *client = get_aws_mqtt_client(client_py);
     if (!client) {
         return NULL;
     }
 
-    struct mqtt_connection_binding *py_connection = aws_mem_calloc(allocator, 1, sizeof(struct mqtt_connection_binding));
+    struct mqtt_connection_binding *py_connection =
+        aws_mem_calloc(allocator, 1, sizeof(struct mqtt_connection_binding));
     if (!py_connection) {
         PyErr_SetAwsLastError();
         return NULL;
@@ -198,6 +199,23 @@ connection_new_failed:
 capsule_new_failed:
     aws_mem_release(allocator, py_connection);
     return NULL;
+}
+
+struct aws_mqtt_client_connection *get_aws_mqtt_client_connection(PyObject *mqtt_connection) {
+    struct aws_mqtt_client_connection *native = NULL;
+
+    PyObject *binding_capsule = PyObject_GetAttrString(mqtt_connection, "_binding");
+    if (binding_capsule) {
+        struct mqtt_connection_binding *binding =
+            PyCapsule_GetPointer(binding_capsule, s_capsule_name_mqtt_client_connection);
+        if (binding) {
+            native = binding->native;
+            assert(native);
+        }
+        Py_DECREF(binding_capsule);
+    }
+
+    return native;
 }
 
 /*******************************************************************************
@@ -376,7 +394,7 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
     /* From hereon, we need to clean up if errors occur */
 
     if (tls_ctx_py != Py_None) {
-        tls_ctx = aws_py_get_tls_ctx(tls_ctx_py);
+        tls_ctx = get_aws_tls_ctx(tls_ctx_py);
         if (!tls_ctx) {
             goto error;
         }

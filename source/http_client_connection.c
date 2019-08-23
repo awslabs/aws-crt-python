@@ -128,14 +128,14 @@ PyObject *aws_py_http_client_connection_create(PyObject *self, PyObject *args) {
         goto error;
     }
 
-    struct aws_client_bootstrap *bootstrap = aws_py_get_client_bootstrap(bootstrap_py);
+    struct aws_client_bootstrap *bootstrap = get_aws_client_bootstrap(bootstrap_py);
     if (!bootstrap) {
         goto error;
     }
 
     struct aws_tls_connection_options *connection_options = NULL;
     if (tls_conn_options_py != Py_None) {
-        connection_options = aws_py_get_tls_connection_options(tls_conn_options_py);
+        connection_options = get_aws_tls_connection_options(tls_conn_options_py);
         if (!connection_options) {
             goto error;
         }

@@ -68,7 +68,7 @@ PyObject *aws_py_io_event_loop_group_new(PyObject *self, PyObject *args) {
     return PyCapsule_New(elg, s_capsule_name_elg, s_elg_destructor);
 }
 
-struct aws_event_loop_group *aws_py_get_event_loop_group(PyObject *event_loop_group) {
+struct aws_event_loop_group *get_aws_event_loop_group(PyObject *event_loop_group) {
     struct aws_event_loop_group *native = NULL;
 
     PyObject *elg_capsule = PyObject_GetAttrString(event_loop_group, "_binding");
@@ -108,7 +108,7 @@ PyObject *aws_py_io_host_resolver_new_default(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    struct aws_event_loop_group *elg = aws_py_get_event_loop_group(elg_py);
+    struct aws_event_loop_group *elg = get_aws_event_loop_group(elg_py);
     if (!elg) {
         return NULL;
     }
@@ -144,7 +144,7 @@ resolver_init_failed:
     return NULL;
 }
 
-struct aws_host_resolver *aws_py_get_host_resolver(PyObject *host_resolver) {
+struct aws_host_resolver *get_aws_host_resolver(PyObject *host_resolver) {
     struct aws_host_resolver *native = NULL;
 
     PyObject *binding_capsule = PyObject_GetAttrString(host_resolver, "_binding");
@@ -190,12 +190,12 @@ PyObject *aws_py_io_client_bootstrap_new(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    struct aws_event_loop_group *elg = aws_py_get_event_loop_group(elg_py);
+    struct aws_event_loop_group *elg = get_aws_event_loop_group(elg_py);
     if (!elg) {
         return NULL;
     }
 
-    struct aws_host_resolver *host_resolver = aws_py_get_host_resolver(host_resolver_py);
+    struct aws_host_resolver *host_resolver = get_aws_host_resolver(host_resolver_py);
     if (!host_resolver) {
         return NULL;
     }
@@ -234,6 +234,22 @@ capsule_new_failed:
 bootstrap_new_failed:
     aws_mem_release(allocator, bootstrap);
     return NULL;
+}
+
+struct aws_client_bootstrap *get_aws_client_bootstrap(PyObject *client_bootstrap) {
+    struct aws_client_bootstrap *native = NULL;
+
+    PyObject *binding_capsule = PyObject_GetAttrString(client_bootstrap, "_binding");
+    if (binding_capsule) {
+        struct client_bootstrap_binding *binding = PyCapsule_GetPointer(binding_capsule, s_capsule_name_client_bootstrap);
+        if (binding) {
+            native = binding->native;
+            assert(native);
+        }
+        Py_DECREF(binding_capsule);
+    }
+
+    return native;
 }
 
 static void s_tls_ctx_destructor(PyObject *tls_ctx_capsule) {
@@ -350,7 +366,7 @@ ctx_options_failure:
     return NULL;
 }
 
-struct aws_tls_ctx *aws_py_get_tls_ctx(PyObject *tls_ctx) {
+struct aws_tls_ctx *get_aws_tls_ctx(PyObject *tls_ctx) {
     struct aws_tls_ctx *native = NULL;
 
     PyObject *capsule = PyObject_GetAttrString(tls_ctx, "_binding");
@@ -394,7 +410,7 @@ PyObject *aws_py_io_tls_connections_options_new_from_ctx(PyObject *self, PyObjec
         return NULL;
     }
 
-    struct aws_tls_ctx *ctx = aws_py_get_tls_ctx(tls_ctx_py);
+    struct aws_tls_ctx *ctx = get_aws_tls_ctx(tls_ctx_py);
     if (!ctx) {
         return NULL;
     }
@@ -428,7 +444,7 @@ capsule_new_failed:
     return NULL;
 }
 
-struct aws_tls_connection_options *aws_py_get_tls_connection_options(PyObject *tls_connection_options) {
+struct aws_tls_connection_options *get_aws_tls_connection_options(PyObject *tls_connection_options) {
     struct aws_tls_connection_options *native = NULL;
 
     PyObject *binding_capsule = PyObject_GetAttrString(tls_connection_options, "_binding");
@@ -456,7 +472,7 @@ PyObject *aws_py_io_tls_connection_options_set_alpn_list(PyObject *self, PyObjec
         return NULL;
     }
 
-    struct aws_tls_connection_options *connection_options = aws_py_get_tls_connection_options(tls_conn_options_py);
+    struct aws_tls_connection_options *connection_options = get_aws_tls_connection_options(tls_conn_options_py);
     if (!connection_options) {
         return NULL;
     }
@@ -481,7 +497,7 @@ PyObject *aws_py_io_tls_connection_options_set_server_name(PyObject *self, PyObj
         return NULL;
     }
 
-    struct aws_tls_connection_options *connection_options = aws_py_get_tls_connection_options(tls_conn_options_py);
+    struct aws_tls_connection_options *connection_options = get_aws_tls_connection_options(tls_conn_options_py);
     if (!connection_options) {
         return NULL;
     }
