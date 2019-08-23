@@ -169,7 +169,7 @@ PyObject *aws_py_io_host_resolver_new_default(PyObject *self, PyObject *args) {
 static void s_server_bootstrap_destructor(PyObject *bootstrap_capsule) {
 
     assert(PyCapsule_CheckExact(bootstrap_capsule));
-    struct server_bootstrap *bootstrap = PyCapsule_GetPointer(bootstrap_capsule, s_capsule_name_server_bootstrap);
+    struct py_server_bootstrap *bootstrap = PyCapsule_GetPointer(bootstrap_capsule, s_capsule_name_server_bootstrap);
     assert(bootstrap);
     aws_server_bootstrap_release(bootstrap->bootstrap);
     Py_DECREF(bootstrap->elg_capsule);
@@ -191,7 +191,7 @@ PyObject *aws_py_io_server_bootstrap_new(PyObject *self, PyObject *args) {
     if (!elg) {
         return NULL;
     }
-    struct server_bootstrap *server_bootstrap = aws_mem_acquire(allocator, sizeof(struct server_bootstrap));
+    struct py_server_bootstrap *server_bootstrap = aws_mem_acquire(allocator, sizeof(struct py_server_bootstrap));
     server_bootstrap->allocator = allocator;
     struct aws_server_bootstrap *bootstrap = aws_server_bootstrap_new(allocator, elg);
     server_bootstrap->bootstrap = bootstrap;
@@ -211,7 +211,7 @@ static void s_client_bootstrap_destructor(PyObject *bootstrap_capsule) {
 
     assert(PyCapsule_CheckExact(bootstrap_capsule));
     
-    struct client_bootstrap *bootstrap = PyCapsule_GetPointer(bootstrap_capsule, s_capsule_name_client_bootstrap);
+    struct py_client_bootstrap *bootstrap = PyCapsule_GetPointer(bootstrap_capsule, s_capsule_name_client_bootstrap);
     assert(bootstrap);
     aws_client_bootstrap_release(bootstrap->bootstrap);
     Py_DECREF(bootstrap->elg_capsule);
@@ -245,7 +245,7 @@ PyObject *aws_py_io_client_bootstrap_new(PyObject *self, PyObject *args) {
     }
     struct aws_host_resolver *host_resolver = PyCapsule_GetPointer(host_resolver_capsule, s_capsule_name_host_resolver);
 
-    struct client_bootstrap *client_bootstrap = aws_mem_acquire(allocator, sizeof(struct client_bootstrap));
+    struct py_client_bootstrap *client_bootstrap = aws_mem_acquire(allocator, sizeof(struct py_client_bootstrap));
     client_bootstrap->allocator = allocator;
 
     struct aws_client_bootstrap *bootstrap = aws_client_bootstrap_new(allocator, elg, host_resolver, NULL);

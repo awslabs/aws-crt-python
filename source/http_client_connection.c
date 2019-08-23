@@ -129,7 +129,7 @@ PyObject *aws_py_http_client_connection_create(PyObject *self, PyObject *args) {
         goto error;
     }
 
-    struct client_bootstrap *native_bootstrap = PyCapsule_GetPointer(bootstrap_capsule, s_capsule_name_client_bootstrap);
+    struct py_client_bootstrap *native_bootstrap = PyCapsule_GetPointer(bootstrap_capsule, s_capsule_name_client_bootstrap);
     struct aws_client_bootstrap *bootstrap = native_bootstrap->bootstrap;
     if (!bootstrap) {
         PyErr_SetString(PyExc_ValueError, "the bootstrap capsule has an invalid pointer");

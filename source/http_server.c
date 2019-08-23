@@ -172,7 +172,7 @@ PyObject *aws_py_http_server_create(PyObject *self, PyObject *args) {
         goto error;
     }
 
-    struct server_bootstrap *native_bootstrap =
+    struct py_server_bootstrap *native_bootstrap =
         PyCapsule_GetPointer(bootstrap_capsule, s_capsule_name_server_bootstrap);
     struct aws_server_bootstrap *bootstrap = native_bootstrap->bootstrap;
     if (!bootstrap) {
@@ -365,5 +365,5 @@ PyObject *aws_py_http_connection_configure_server(PyObject *self, PyObject *args
     Py_RETURN_NONE;
 
 error:
-    Py_RETURN_NONE;
+    return NULL;
 }
