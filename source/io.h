@@ -22,21 +22,6 @@
 #include "module.h"
 
 /**
- * Name string for event_loop_group capsules.
- */
-extern const char *s_capsule_name_client_bootstrap;
-
-/**
- * Name string for tls_ctx capsules.
- */
-extern const char *s_capsule_name_tls_ctx;
-
-/**
- * Name string for tls_connection_options capsules.
- */
-extern const char *s_capsule_name_tls_conn_options;
-
-/**
  * Name String to logging capsules
  */
 extern const char *s_capsule_name_logger;
@@ -44,7 +29,7 @@ extern const char *s_capsule_name_logger;
 /**
  * Returns a capsule for logging and starts the logging sub-system
  */
-PyObject *aws_py_io_init_logging(PyObject *self, PyObject *args);
+PyObject *aws_py_init_logging(PyObject *self, PyObject *args);
 
 /**
  * Returns True if ALPN is available, False if it is not.
@@ -54,27 +39,37 @@ PyObject *aws_py_is_alpn_available(PyObject *self, PyObject *args);
 /**
  * Create a new event_loop_group to be managed by a Python Capsule.
  */
-PyObject *aws_py_io_event_loop_group_new(PyObject *self, PyObject *args);
+PyObject *aws_py_event_loop_group_new(PyObject *self, PyObject *args);
 
 /**
  * Create a new default host_resolver to be managed by a Python Capsule.
  */
-PyObject *aws_py_io_host_resolver_new_default(PyObject *self, PyObject *args);
+PyObject *aws_py_host_resolver_new_default(PyObject *self, PyObject *args);
 
 /**
  * Create a new client_bootstrap to be managed by a Python Capsule.
  */
-PyObject *aws_py_io_client_bootstrap_new(PyObject *self, PyObject *args);
+PyObject *aws_py_client_bootstrap_new(PyObject *self, PyObject *args);
 
 /**
  * Create a new tls_ctx to be managed by a Python Capsule.
  */
-PyObject *aws_py_io_client_tls_ctx_new(PyObject *self, PyObject *args);
+PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args);
 
-PyObject *aws_py_io_tls_connections_options_new_from_ctx(PyObject *self, PyObject *args);
+PyObject *aws_py_tls_connections_options_new_from_ctx(PyObject *self, PyObject *args);
 
-PyObject *aws_py_io_tls_connection_options_set_alpn_list(PyObject *self, PyObject *args);
+PyObject *aws_py_tls_connection_options_set_alpn_list(PyObject *self, PyObject *args);
 
-PyObject *aws_py_io_tls_connection_options_set_server_name(PyObject *self, PyObject *args);
+PyObject *aws_py_tls_connection_options_set_server_name(PyObject *self, PyObject *args);
+
+
+/* Given a python object, return a pointer to its underlying native type.
+ * If NULL is returned, a python error has been set */
+
+struct aws_event_loop_group *aws_py_get_event_loop_group(PyObject *event_loop_group);
+struct aws_host_resolver *aws_py_get_host_resolver(PyObject *host_resolver);
+struct aws_client_bootstrap *aws_py_get_client_bootstrap(PyObject *client_bootstrap);
+struct aws_tls_ctx *aws_py_get_tls_ctx(PyObject *tls_ctx);
+struct aws_tls_connection_options *aws_py_get_tls_connection_options(PyObject *tls_connection_options);
 
 #endif /* AWS_CRT_PYTHON_IO_H */

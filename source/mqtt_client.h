@@ -19,13 +19,10 @@
 
 #include <aws/mqtt/client.h>
 
-/** Name string for client capsules. */
-extern const char *s_capsule_name_mqtt_client;
-
-struct mqtt_python_client {
-    struct aws_mqtt_client native_client;
-};
-
 PyObject *aws_py_mqtt_client_new(PyObject *self, PyObject *args);
+
+/* Given a python object, return a pointer to its underlying native type.
+ * If NULL is returned, a python error has been set */
+struct aws_mqtt_client *aws_py_get_mqtt_client(PyObject *mqtt_client);
 
 #endif /* AWS_CRT_PYTHON_MQTT_CLIENT_H */

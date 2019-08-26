@@ -11,9 +11,10 @@
 # express or implied. See the License for the specific language governing
 # permissions and limitations under the License.
 
-import _aws_crt_python
+import _awscrt
 from concurrent.futures import Future
 from enum import IntEnum
+from awscrt import NativeResource
 from awscrt.io import ClientBootstrap, ClientTlsContext
 
 class QoS(IntEnum):
@@ -39,19 +40,19 @@ class Will(object):
         self.payload = payload
         self.retain = retain
 
-class Client(object):
-    __slots__ = ('_internal_client', 'bootstrap', 'tls_ctx')
+class Client(NativeResource):
+    __slots__ = ('tls_ctx')
 
     def __init__(self, bootstrap, tls_ctx = None):
         assert isinstance(bootstrap, ClientBootstrap)
         assert tls_ctx is None or isinstance(tls_ctx, ClientTlsContext)
 
-        self.bootstrap = bootstrap
+        super(NativeResource, self).__init__()
         self.tls_ctx = tls_ctx
-        self._internal_client = _aws_crt_python.aws_py_mqtt_client_new(self.bootstrap._internal_bootstrap)
+        self._binding = _awscrt.mqtt_client_new(bootstrap, tls_ctx)
 
-class Connection(object):
-    __slots__ = ('_internal_connection', 'client')
+class Connection(NativeResource):
+    __slots__ = ('client')
 
     def __init__(self,
             client,
@@ -65,10 +66,14 @@ class Connection(object):
         """
 
         assert isinstance(client, Client)
+        assert callable(on_connection_interrupted) or on_connection_interrupted is None
+        assert callable(on_connection_resumed) or on_connection_resumed is None
+
+        super(NativeResource, self).__init__()
         self.client = client
 
-        self._internal_connection = _aws_crt_python.aws_py_mqtt_client_connection_new(
-            client._internal_client,
+        self._binding = _awscrt.mqtt_client_connection_new(
+            client,
             on_connection_interrupted,
             on_connection_resumed,
             )
@@ -95,16 +100,12 @@ class Connection(object):
             assert will is None or isinstance(will, Will)
             assert use_websocket == False
 
-            tls_ctx_cap = None
-            if self.client.tls_ctx:
-                tls_ctx_cap = self.client.tls_ctx._internal_tls_ctx
-
-            _aws_crt_python.aws_py_mqtt_client_connection_connect(
-                self._internal_connection,
+            _awscrt.mqtt_client_connection_connect(
+                self._binding,
                 client_id,
                 host_name,
                 port,
-                tls_ctx_cap,
+                self.client.tls_ctx,
                 keep_alive,
                 ping_timeout,
                 will,
@@ -128,7 +129,7 @@ class Connection(object):
                 future.set_exception(Exception("Error during reconnect"))
 
         try:
-            _aws_crt_python.aws_py_mqtt_client_connection_reconnect(self._internal_connection, on_connect)
+            _awscrt.mqtt_client_connection_reconnect(self._binding, on_connect)
         except Exception as e:
             future.set_exception(e)
 
@@ -142,7 +143,7 @@ class Connection(object):
             future.set_result(dict())
 
         try:
-            _aws_crt_python.aws_py_mqtt_client_connection_disconnect(self._internal_connection, on_disconnect)
+            _awscrt.mqtt_client_connection_disconnect(self._binding, on_disconnect)
         except Exception as e:
             future.set_exception(e)
 
@@ -152,6 +153,7 @@ class Connection(object):
         """
         callback: callback with signature (topic, message)
         """
+
         future = Future()
         packet_id = 0
 
@@ -163,7 +165,9 @@ class Connection(object):
             ))
 
         try:
-            packet_id = _aws_crt_python.aws_py_mqtt_client_connection_subscribe(self._internal_connection, topic, qos.value, callback, suback)
+            assert callable(callback)
+            assert isinstance(qos, QoS)
+            packet_id = _awscrt.mqtt_client_connection_subscribe(self._binding, topic, qos.value, callback, suback)
         except Exception as e:
             future.set_exception(e)
 
@@ -179,7 +183,7 @@ class Connection(object):
             ))
 
         try:
-            packet_id = _aws_crt_python.aws_py_mqtt_client_connection_unsubscribe(self._internal_connection, topic, unsuback)
+            packet_id = _awscrt.mqtt_client_connection_unsubscribe(self._binding, topic, unsuback)
 
         except Exception as e:
             future.set_exception(e)
@@ -196,11 +200,11 @@ class Connection(object):
             ))
 
         try:
-            packet_id = _aws_crt_python.aws_py_mqtt_client_connection_publish(self._internal_connection, topic, payload, qos.value, retain, puback)
+            packet_id = _awscrt.mqtt_client_connection_publish(self._binding, topic, payload, qos.value, retain, puback)
         except Exception as e:
             future.set_exception(e)
 
         return future, packet_id
 
     def ping(self):
-        _aws_crt_python.aws_py_mqtt_client_connection_ping(self._internal_connection)
+        _awscrt.mqtt_client_connection_ping(self._binding)
