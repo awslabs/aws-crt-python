@@ -14,6 +14,7 @@
 import _awscrt
 from concurrent.futures import Future
 from enum import IntEnum
+from awscrt import CrtResource
 from awscrt.io import ClientBootstrap, ClientTlsContext
 
 class QoS(IntEnum):
@@ -39,18 +40,19 @@ class Will(object):
         self.payload = payload
         self.retain = retain
 
-class Client(object):
-    __slots__ = ('_binding', 'tls_ctx')
+class Client(CrtResource):
+    __slots__ = ('tls_ctx')
 
     def __init__(self, bootstrap, tls_ctx = None):
         assert isinstance(bootstrap, ClientBootstrap)
         assert tls_ctx is None or isinstance(tls_ctx, ClientTlsContext)
 
+        super(CrtResource, self).__init__()
         self.tls_ctx = tls_ctx
         self._binding = _awscrt.mqtt_client_new(bootstrap, tls_ctx)
 
-class Connection(object):
-    __slots__ = ('_binding', 'client')
+class Connection(CrtResource):
+    __slots__ = ('client')
 
     def __init__(self,
             client,
@@ -67,6 +69,7 @@ class Connection(object):
         assert callable(on_connection_interrupted) or on_connection_interrupted is None
         assert callable(on_connection_resumed) or on_connection_resumed is None
 
+        super(CrtResource, self).__init__()
         self.client = client
 
         self._binding = _awscrt.mqtt_client_connection_new(

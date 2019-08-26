@@ -12,3 +12,10 @@
 # permissions and limitations under the License.
 
 __all__ = ['io', 'mqtt', 'crypto', 'http']
+
+class CrtResource(object):
+    """
+    Base for classes that bind to a native type.
+    _binding is a python capsule referencing the native object.
+    """
+    __slots__ = ('_binding', '__weakref__')
