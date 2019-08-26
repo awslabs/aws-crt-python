@@ -101,7 +101,7 @@ PyObject *aws_py_http_client_connection_create(PyObject *self, PyObject *args) {
     (void)self;
 
     struct py_http_connection *py_connection = NULL;
-    struct aws_allocator *allocator = aws_crt_python_get_allocator();
+    struct aws_allocator *allocator = aws_py_get_allocator();
 
     PyObject *bootstrap_py = NULL;
     PyObject *on_connection_shutdown = NULL;
@@ -128,14 +128,14 @@ PyObject *aws_py_http_client_connection_create(PyObject *self, PyObject *args) {
         goto error;
     }
 
-    struct aws_client_bootstrap *bootstrap = get_aws_client_bootstrap(bootstrap_py);
+    struct aws_client_bootstrap *bootstrap = aws_py_get_client_bootstrap(bootstrap_py);
     if (!bootstrap) {
         goto error;
     }
 
     struct aws_tls_connection_options *connection_options = NULL;
     if (tls_conn_options_py != Py_None) {
-        connection_options = get_aws_tls_connection_options(tls_conn_options_py);
+        connection_options = aws_py_get_tls_connection_options(tls_conn_options_py);
         if (!connection_options) {
             goto error;
         }
@@ -421,7 +421,7 @@ PyObject *aws_py_http_client_connection_make_request(PyObject *self, PyObject *a
     (void)self;
 
     struct py_http_connection *py_connection = NULL;
-    struct aws_allocator *allocator = aws_crt_python_get_allocator();
+    struct aws_allocator *allocator = aws_py_get_allocator();
 
     struct py_http_stream *stream = aws_mem_acquire(allocator, sizeof(struct py_http_stream));
     if (!stream) {

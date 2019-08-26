@@ -51,6 +51,6 @@ PyObject *PyErr_AwsLastError(void);
 PyObject *aws_py_memory_view_from_byte_buffer(struct aws_byte_buf *buf, int flags);
 
 /* Allocator that calls into PyObject_[Malloc|Free|Realloc] */
-struct aws_allocator *aws_crt_python_get_allocator(void);
+struct aws_allocator *aws_py_get_allocator(void);
 
 #endif /* AWS_CRT_PYTHON_MODULE_H */

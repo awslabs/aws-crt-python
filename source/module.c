@@ -32,7 +32,7 @@
 static struct aws_logger s_logger;
 static bool s_logger_init = false;
 
-PyObject *aws_py_io_init_logging(PyObject *self, PyObject *args) {
+PyObject *aws_py_init_logging(PyObject *self, PyObject *args) {
     (void)self;
 
     if (s_logger_init) {
@@ -41,7 +41,7 @@ PyObject *aws_py_io_init_logging(PyObject *self, PyObject *args) {
 
     s_logger_init = true;
 
-    struct aws_allocator *allocator = aws_crt_python_get_allocator();
+    struct aws_allocator *allocator = aws_py_get_allocator();
 
     int log_level = 0;
     const char *file_path = NULL;
@@ -77,11 +77,11 @@ PyObject *aws_py_io_init_logging(PyObject *self, PyObject *args) {
 }
 
 #if PY_MAJOR_VERSION == 3
-#    define INIT_FN PyInit__aws_crt_python
+#    define INIT_FN PyInit__awscrt
 #    define UNICODE_GET_BYTES_FN PyUnicode_DATA
 #    define UNICODE_GET_BYTE_LEN_FN PyUnicode_GET_LENGTH
 #elif PY_MAJOR_VERSION == 2
-#    define INIT_FN init_aws_crt_python
+#    define INIT_FN init_awscrt
 #    define UNICODE_GET_BYTES_FN PyUnicode_AS_DATA
 #    define UNICODE_GET_BYTE_LEN_FN PyUnicode_GET_DATA_SIZE
 #endif /* PY_MAJOR_VERSION */
@@ -144,7 +144,7 @@ PyObject *aws_py_memory_view_from_byte_buffer(struct aws_byte_buf *buf, int flag
  * Allocator
  ******************************************************************************/
 
-struct aws_allocator *aws_crt_python_get_allocator(void) {
+struct aws_allocator *aws_py_get_allocator(void) {
     return aws_default_allocator();
 }
 
@@ -152,59 +152,53 @@ struct aws_allocator *aws_crt_python_get_allocator(void) {
  * Definitions
  ******************************************************************************/
 
+#define AWS_PY_METHOD_DEF(NAME, FLAGS)                                                                                 \
+    { #NAME, aws_py_##NAME, (FLAGS), NULL }
+
 static PyMethodDef s_module_methods[] = {
     /* IO */
-    {"aws_py_is_alpn_available", aws_py_is_alpn_available, METH_NOARGS, NULL},
-    {"aws_py_io_event_loop_group_new", aws_py_io_event_loop_group_new, METH_VARARGS, NULL},
-    {"aws_py_io_host_resolver_new_default", aws_py_io_host_resolver_new_default, METH_VARARGS, NULL},
-    {"aws_py_io_client_bootstrap_new", aws_py_io_client_bootstrap_new, METH_VARARGS, NULL},
-    {"aws_py_io_client_tls_ctx_new", aws_py_io_client_tls_ctx_new, METH_VARARGS, NULL},
-    {"aws_py_io_tls_connections_options_new_from_ctx",
-     aws_py_io_tls_connections_options_new_from_ctx,
-     METH_VARARGS,
-     NULL},
-    {"aws_py_io_tls_connection_options_set_alpn_list",
-     aws_py_io_tls_connection_options_set_alpn_list,
-     METH_VARARGS,
-     NULL},
-    {"aws_py_io_tls_connection_options_set_server_name",
-     aws_py_io_tls_connection_options_set_server_name,
-     METH_VARARGS,
-     NULL},
-    {"aws_py_io_init_logging", aws_py_io_init_logging, METH_VARARGS, NULL},
+    AWS_PY_METHOD_DEF(is_alpn_available, METH_NOARGS),
+    AWS_PY_METHOD_DEF(event_loop_group_new, METH_VARARGS),
+    AWS_PY_METHOD_DEF(host_resolver_new_default, METH_VARARGS),
+    AWS_PY_METHOD_DEF(client_bootstrap_new, METH_VARARGS),
+    AWS_PY_METHOD_DEF(client_tls_ctx_new, METH_VARARGS),
+    AWS_PY_METHOD_DEF(tls_connections_options_new_from_ctx, METH_VARARGS),
+    AWS_PY_METHOD_DEF(tls_connection_options_set_alpn_list, METH_VARARGS),
+    AWS_PY_METHOD_DEF(tls_connection_options_set_server_name, METH_VARARGS),
+    AWS_PY_METHOD_DEF(init_logging, METH_VARARGS),
 
     /* MQTT Client */
-    {"aws_py_mqtt_client_new", aws_py_mqtt_client_new, METH_VARARGS, NULL},
+    AWS_PY_METHOD_DEF(mqtt_client_new, METH_VARARGS),
 
     /* MQTT Client Connection */
-    {"aws_py_mqtt_client_connection_new", aws_py_mqtt_client_connection_new, METH_VARARGS, NULL},
-    {"aws_py_mqtt_client_connection_connect", aws_py_mqtt_client_connection_connect, METH_VARARGS, NULL},
-    {"aws_py_mqtt_client_connection_reconnect", aws_py_mqtt_client_connection_reconnect, METH_VARARGS, NULL},
-    {"aws_py_mqtt_client_connection_publish", aws_py_mqtt_client_connection_publish, METH_VARARGS, NULL},
-    {"aws_py_mqtt_client_connection_subscribe", aws_py_mqtt_client_connection_subscribe, METH_VARARGS, NULL},
-    {"aws_py_mqtt_client_connection_unsubscribe", aws_py_mqtt_client_connection_unsubscribe, METH_VARARGS, NULL},
-    {"aws_py_mqtt_client_connection_ping", aws_py_mqtt_client_connection_ping, METH_VARARGS, NULL},
-    {"aws_py_mqtt_client_connection_disconnect", aws_py_mqtt_client_connection_disconnect, METH_VARARGS, NULL},
+    AWS_PY_METHOD_DEF(mqtt_client_connection_new, METH_VARARGS),
+    AWS_PY_METHOD_DEF(mqtt_client_connection_connect, METH_VARARGS),
+    AWS_PY_METHOD_DEF(mqtt_client_connection_reconnect, METH_VARARGS),
+    AWS_PY_METHOD_DEF(mqtt_client_connection_publish, METH_VARARGS),
+    AWS_PY_METHOD_DEF(mqtt_client_connection_subscribe, METH_VARARGS),
+    AWS_PY_METHOD_DEF(mqtt_client_connection_unsubscribe, METH_VARARGS),
+    AWS_PY_METHOD_DEF(mqtt_client_connection_ping, METH_VARARGS),
+    AWS_PY_METHOD_DEF(mqtt_client_connection_disconnect, METH_VARARGS),
 
     /* Cryptographic primitives */
-    {"aws_py_md5_new", aws_py_md5_new, METH_NOARGS, NULL},
-    {"aws_py_sha256_new", aws_py_sha256_new, METH_NOARGS, NULL},
-    {"aws_py_hash_update", aws_py_hash_update, METH_VARARGS, NULL},
-    {"aws_py_hash_digest", aws_py_hash_digest, METH_VARARGS, NULL},
-    {"aws_py_sha256_hmac_new", aws_py_sha256_hmac_new, METH_VARARGS, NULL},
-    {"aws_py_hmac_update", aws_py_hash_update, METH_VARARGS, NULL},
-    {"aws_py_hmac_digest", aws_py_hash_digest, METH_VARARGS, NULL},
+    AWS_PY_METHOD_DEF(md5_new, METH_NOARGS),
+    AWS_PY_METHOD_DEF(sha256_new, METH_NOARGS),
+    AWS_PY_METHOD_DEF(hash_update, METH_VARARGS),
+    AWS_PY_METHOD_DEF(hash_digest, METH_VARARGS),
+    AWS_PY_METHOD_DEF(sha256_hmac_new, METH_VARARGS),
+    AWS_PY_METHOD_DEF(hash_update, METH_VARARGS),
+    AWS_PY_METHOD_DEF(hash_digest, METH_VARARGS),
 
     /* HTTP client */
-    {"aws_py_http_client_connection_create", aws_py_http_client_connection_create, METH_VARARGS, NULL},
-    {"aws_py_http_client_connection_close", aws_py_http_client_connection_close, METH_VARARGS, NULL},
-    {"aws_py_http_client_connection_is_open", aws_py_http_client_connection_is_open, METH_VARARGS, NULL},
-    {"aws_py_http_client_connection_make_request", aws_py_http_client_connection_make_request, METH_VARARGS, NULL},
+    AWS_PY_METHOD_DEF(http_client_connection_create, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http_client_connection_close, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http_client_connection_is_open, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http_client_connection_make_request, METH_VARARGS),
 
     {NULL, NULL, 0, NULL},
 };
 
-static const char s_module_name[] = "_aws_crt_python";
+static const char s_module_name[] = "_awscrt";
 PyDoc_STRVAR(s_module_doc, "C extension for binding AWS implementations of MQTT, HTTP, and friends");
 
 /*******************************************************************************
@@ -249,9 +243,9 @@ PyMODINIT_FUNC INIT_FN(void) {
     aws_io_load_error_strings();
 
     aws_io_load_log_subject_strings();
-    aws_tls_init_static_state(aws_crt_python_get_allocator());
-    aws_http_library_init(aws_crt_python_get_allocator());
-    aws_mqtt_library_init(aws_crt_python_get_allocator());
+    aws_tls_init_static_state(aws_py_get_allocator());
+    aws_http_library_init(aws_py_get_allocator());
+    aws_mqtt_library_init(aws_py_get_allocator());
 
     if (!PyEval_ThreadsInitialized()) {
         PyEval_InitThreads();

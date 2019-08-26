@@ -11,7 +11,7 @@
 # express or implied. See the License for the specific language governing
 # permissions and limitations under the License.
 
-import _aws_crt_python
+import _awscrt
 
 
 class Hash(object):
@@ -27,20 +27,20 @@ class Hash(object):
         """
         Creates a new instance of Hash, using the sha256 algorithm
         """
-        return Hash(native_handle=_aws_crt_python.aws_py_sha256_new())
+        return Hash(native_handle=_awscrt.sha256_new())
 
     @staticmethod
     def md5_new():
         """
         Creates a new instance of Hash, using the md5 algorithm.
         """
-        return Hash(native_handle=_aws_crt_python.aws_py_md5_new())
+        return Hash(native_handle=_awscrt.md5_new())
 
     def update(self, to_hash):
-        _aws_crt_python.aws_py_hash_update(self._hash, to_hash)
+        _awscrt.hash_update(self._hash, to_hash)
 
     def digest(self, truncate_to = 0):
-        return _aws_crt_python.aws_py_hash_digest(self._hash, truncate_to)
+        return _awscrt.hash_digest(self._hash, truncate_to)
 
 
 class HMAC(object):
@@ -55,10 +55,10 @@ class HMAC(object):
         """
         Creates a new instance of HMAC, using SHA256 HMAC as the algorithm and secret_key as the secret
         """
-        return HMAC(native_handle=_aws_crt_python.aws_py_sha256_hmac_new(secret_key))
+        return HMAC(native_handle=_awscrt.sha256_hmac_new(secret_key))
 
     def update(self, to_hmac):
-        _aws_crt_python.aws_py_hmac_update(self._hmac, to_hmac)
+        _awscrt.hmac_update(self._hmac, to_hmac)
 
     def digest(self, truncate_to = 0):
-        return _aws_crt_python.aws_py_hmac_digest(self._hmac, truncate_to)
+        return _awscrt.hmac_digest(self._hmac, truncate_to)

@@ -11,7 +11,7 @@
 # express or implied. See the License for the specific language governing
 # permissions and limitations under the License.
 
-import _aws_crt_python
+import _awscrt
 from enum import IntEnum
 
 
@@ -32,11 +32,11 @@ def init_logging(log_level, file_name):
     assert log_level is not None
     assert file_name is not None
 
-    _aws_crt_python.aws_py_io_init_logging(log_level, file_name)
+    _awscrt.init_logging(log_level, file_name)
 
 
 def is_alpn_available():
-    return _aws_crt_python.aws_py_is_alpn_available()
+    return _awscrt.is_alpn_available()
 
 
 class EventLoopGroup(object):
@@ -52,7 +52,7 @@ class EventLoopGroup(object):
         """
         num_threads: Number of event-loops to create. Pass 0 to create one for each processor on the machine.
         """
-        self._binding = _aws_crt_python.aws_py_io_event_loop_group_new(num_threads)
+        self._binding = _awscrt.event_loop_group_new(num_threads)
 
 class HostResolver(object):
     __slots__ = ('_binding')
@@ -64,7 +64,7 @@ class DefaultHostResolver(HostResolver):
         assert isinstance(event_loop_group, EventLoopGroup)
 
         super(DefaultHostResolver, self).__init__()
-        self._binding = _aws_crt_python.aws_py_io_host_resolver_new_default(max_hosts, event_loop_group)
+        self._binding = _awscrt.host_resolver_new_default(max_hosts, event_loop_group)
 
 class ClientBootstrap(object):
     __slots__ = ('_binding')
@@ -76,7 +76,7 @@ class ClientBootstrap(object):
         if host_resolver is None:
             host_resolver = DefaultHostResolver(event_loop_group)
 
-        self._binding = _aws_crt_python.aws_py_io_client_bootstrap_new(event_loop_group, host_resolver)
+        self._binding = _awscrt.client_bootstrap_new(event_loop_group, host_resolver)
 
 def byte_buf_from_file(filepath):
     with open(filepath, mode='rb') as fh:
@@ -230,7 +230,7 @@ class ClientTlsContext(object):
     def __init__(self, options):
         assert isinstance(options, TlsContextOptions)
 
-        self._binding = _aws_crt_python.aws_py_io_client_tls_ctx_new(
+        self._binding = _awscrt.client_tls_ctx_new(
             options.min_tls_ver.value,
             options.ca_path,
             options.ca_buffer,
@@ -253,10 +253,10 @@ class TlsConnectionOptions(object):
         assert isinstance(tls_ctx, ClientTlsContext)
 
         self.tls_ctx = tls_ctx
-        self._binding = _aws_crt_python.aws_py_io_tls_connections_options_new_from_ctx(tls_ctx)
+        self._binding = _awscrt.tls_connections_options_new_from_ctx(tls_ctx)
 
     def set_alpn_list(self, alpn_list):
-        _aws_crt_python.aws_py_io_tls_connection_options_set_alpn_list(self, alpn_list)
+        _awscrt.tls_connection_options_set_alpn_list(self, alpn_list)
 
     def set_server_name(self, server_name):
-        _aws_crt_python.aws_py_io_tls_connection_options_set_server_name(self, server_name)
+        _awscrt.tls_connection_options_set_server_name(self, server_name)

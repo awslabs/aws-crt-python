@@ -21,7 +21,7 @@ const char *s_capsule_name_mqtt_client = "aws_mqtt_client";
 struct mqtt_client_binding {
     struct aws_mqtt_client native;
 
-    /* Dependencies that must outlive us */
+    /* Dependencies that must outlive this */
     PyObject *bootstrap;
     PyObject *tls_ctx;
 };
@@ -34,13 +34,13 @@ static void s_mqtt_python_client_destructor(PyObject *client_capsule) {
     aws_mqtt_client_clean_up(&client->native);
     Py_DECREF(client->bootstrap);
     Py_DECREF(client->tls_ctx);
-    aws_mem_release(aws_crt_python_get_allocator(), client);
+    aws_mem_release(aws_py_get_allocator(), client);
 }
 
 PyObject *aws_py_mqtt_client_new(PyObject *self, PyObject *args) {
     (void)self;
 
-    struct aws_allocator *allocator = aws_crt_python_get_allocator();
+    struct aws_allocator *allocator = aws_py_get_allocator();
 
     PyObject *bootstrap_py;
     PyObject *tls_ctx_py;
@@ -48,7 +48,7 @@ PyObject *aws_py_mqtt_client_new(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    struct aws_client_bootstrap *bootstrap = get_aws_client_bootstrap(bootstrap_py);
+    struct aws_client_bootstrap *bootstrap = aws_py_get_client_bootstrap(bootstrap_py);
     if (!bootstrap) {
         return NULL;
     }
@@ -86,7 +86,7 @@ capsule_new_failed:
     return NULL;
 }
 
-struct aws_mqtt_client *get_aws_mqtt_client(PyObject *mqtt_client) {
+struct aws_mqtt_client *aws_py_get_mqtt_client(PyObject *mqtt_client) {
     struct aws_mqtt_client *native = NULL;
 
     PyObject *binding_capsule = PyObject_GetAttrString(mqtt_client, "_binding");

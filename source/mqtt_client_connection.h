@@ -32,6 +32,6 @@ PyObject *aws_py_mqtt_client_connection_disconnect(PyObject *self, PyObject *arg
 
 /* Given a python object, return a pointer to its underlying native type.
  * If NULL is returned, a python error has been set */
-struct aws_mqtt_client_connection *get_aws_mqtt_client_connection(PyObject *mqtt_client_connection);
+struct aws_mqtt_client_connection *aws_py_get_mqtt_client_connection(PyObject *mqtt_client_connection);
 
 #endif /* MQTT_CLIENT_CONNECTION_H */

@@ -45,10 +45,10 @@ static void s_elg_destructor(PyObject *elg_capsule) {
     aws_mem_release(allocator, elg);
 }
 
-PyObject *aws_py_io_event_loop_group_new(PyObject *self, PyObject *args) {
+PyObject *aws_py_event_loop_group_new(PyObject *self, PyObject *args) {
     (void)self;
 
-    struct aws_allocator *allocator = aws_crt_python_get_allocator();
+    struct aws_allocator *allocator = aws_py_get_allocator();
 
     uint16_t num_threads;
     if (!PyArg_ParseTuple(args, "H", &num_threads)) {
@@ -68,7 +68,7 @@ PyObject *aws_py_io_event_loop_group_new(PyObject *self, PyObject *args) {
     return PyCapsule_New(elg, s_capsule_name_elg, s_elg_destructor);
 }
 
-struct aws_event_loop_group *get_aws_event_loop_group(PyObject *event_loop_group) {
+struct aws_event_loop_group *aws_py_get_event_loop_group(PyObject *event_loop_group) {
     struct aws_event_loop_group *native = NULL;
 
     PyObject *elg_capsule = PyObject_GetAttrString(event_loop_group, "_binding");
@@ -84,7 +84,7 @@ struct aws_event_loop_group *get_aws_event_loop_group(PyObject *event_loop_group
 struct host_resolver_binding {
     struct aws_host_resolver native;
 
-    /* Dependencies that must outlive us */
+    /* Dependencies that must outlive this */
     PyObject *event_loop_group;
 };
 
@@ -94,13 +94,13 @@ static void s_host_resolver_destructor(PyObject *host_resolver_capsule) {
     assert(host_resolver);
     aws_host_resolver_clean_up(&host_resolver->native);
     Py_DECREF(host_resolver->event_loop_group);
-    aws_mem_release(aws_crt_python_get_allocator(), host_resolver);
+    aws_mem_release(aws_py_get_allocator(), host_resolver);
 }
 
-PyObject *aws_py_io_host_resolver_new_default(PyObject *self, PyObject *args) {
+PyObject *aws_py_host_resolver_new_default(PyObject *self, PyObject *args) {
     (void)self;
 
-    struct aws_allocator *allocator = aws_crt_python_get_allocator();
+    struct aws_allocator *allocator = aws_py_get_allocator();
 
     Py_ssize_t max_hosts;
     PyObject *elg_py;
@@ -109,11 +109,11 @@ PyObject *aws_py_io_host_resolver_new_default(PyObject *self, PyObject *args) {
     }
 
     if (max_hosts < 1) {
-        PyErr_SetString(PyExc_ValueError, "max_hosts is invalid");
+        PyErr_SetString(PyExc_ValueError, "max_hosts must be greater than 0");
         return NULL;
     }
 
-    struct aws_event_loop_group *elg = get_aws_event_loop_group(elg_py);
+    struct aws_event_loop_group *elg = aws_py_get_event_loop_group(elg_py);
     if (!elg) {
         return NULL;
     }
@@ -149,7 +149,7 @@ resolver_init_failed:
     return NULL;
 }
 
-struct aws_host_resolver *get_aws_host_resolver(PyObject *host_resolver) {
+struct aws_host_resolver *aws_py_get_host_resolver(PyObject *host_resolver) {
     struct aws_host_resolver *native = NULL;
 
     PyObject *binding_capsule = PyObject_GetAttrString(host_resolver, "_binding");
@@ -168,7 +168,7 @@ struct aws_host_resolver *get_aws_host_resolver(PyObject *host_resolver) {
 struct client_bootstrap_binding {
     struct aws_client_bootstrap *native;
 
-    /* Dependencies that must outlive us */
+    /* Dependencies that must outlive this */
     PyObject *event_loop_group;
     PyObject *host_resolver;
 };
@@ -180,13 +180,13 @@ static void s_client_bootstrap_destructor(PyObject *bootstrap_capsule) {
     Py_DECREF(bootstrap->host_resolver);
     Py_DECREF(bootstrap->event_loop_group);
     aws_client_bootstrap_release(bootstrap->native);
-    aws_mem_release(aws_crt_python_get_allocator(), bootstrap);
+    aws_mem_release(aws_py_get_allocator(), bootstrap);
 }
 
-PyObject *aws_py_io_client_bootstrap_new(PyObject *self, PyObject *args) {
+PyObject *aws_py_client_bootstrap_new(PyObject *self, PyObject *args) {
     (void)self;
 
-    struct aws_allocator *allocator = aws_crt_python_get_allocator();
+    struct aws_allocator *allocator = aws_py_get_allocator();
 
     PyObject *elg_py;
     PyObject *host_resolver_py;
@@ -195,12 +195,12 @@ PyObject *aws_py_io_client_bootstrap_new(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    struct aws_event_loop_group *elg = get_aws_event_loop_group(elg_py);
+    struct aws_event_loop_group *elg = aws_py_get_event_loop_group(elg_py);
     if (!elg) {
         return NULL;
     }
 
-    struct aws_host_resolver *host_resolver = get_aws_host_resolver(host_resolver_py);
+    struct aws_host_resolver *host_resolver = aws_py_get_host_resolver(host_resolver_py);
     if (!host_resolver) {
         return NULL;
     }
@@ -241,7 +241,7 @@ bootstrap_new_failed:
     return NULL;
 }
 
-struct aws_client_bootstrap *get_aws_client_bootstrap(PyObject *client_bootstrap) {
+struct aws_client_bootstrap *aws_py_get_client_bootstrap(PyObject *client_bootstrap) {
     struct aws_client_bootstrap *native = NULL;
 
     PyObject *binding_capsule = PyObject_GetAttrString(client_bootstrap, "_binding");
@@ -266,10 +266,10 @@ static void s_tls_ctx_destructor(PyObject *tls_ctx_capsule) {
     aws_tls_ctx_destroy(tls_ctx);
 }
 
-PyObject *aws_py_io_client_tls_ctx_new(PyObject *self, PyObject *args) {
+PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args) {
     (void)self;
 
-    struct aws_allocator *allocator = aws_crt_python_get_allocator();
+    struct aws_allocator *allocator = aws_py_get_allocator();
 
     int min_tls_version;
     const char *ca_path;
@@ -372,7 +372,7 @@ ctx_options_failure:
     return NULL;
 }
 
-struct aws_tls_ctx *get_aws_tls_ctx(PyObject *tls_ctx) {
+struct aws_tls_ctx *aws_py_get_tls_ctx(PyObject *tls_ctx) {
     struct aws_tls_ctx *native = NULL;
 
     PyObject *capsule = PyObject_GetAttrString(tls_ctx, "_binding");
@@ -388,13 +388,13 @@ struct aws_tls_ctx *get_aws_tls_ctx(PyObject *tls_ctx) {
 struct tls_connection_options_binding {
     struct aws_tls_connection_options native;
 
-    /* Dependencies that must outlive us */
+    /* Dependencies that must outlive this */
     PyObject *tls_ctx;
 };
 
 static void s_tls_connection_options_destructor(PyObject *tls_connection_options_capsule) {
 
-    struct aws_allocator *allocator = aws_crt_python_get_allocator();
+    struct aws_allocator *allocator = aws_py_get_allocator();
 
     struct tls_connection_options_binding *tls_connection_options =
         PyCapsule_GetPointer(tls_connection_options_capsule, s_capsule_name_tls_conn_options);
@@ -405,10 +405,10 @@ static void s_tls_connection_options_destructor(PyObject *tls_connection_options
     aws_mem_release(allocator, tls_connection_options);
 }
 
-PyObject *aws_py_io_tls_connections_options_new_from_ctx(PyObject *self, PyObject *args) {
+PyObject *aws_py_tls_connections_options_new_from_ctx(PyObject *self, PyObject *args) {
     (void)self;
 
-    struct aws_allocator *allocator = aws_crt_python_get_allocator();
+    struct aws_allocator *allocator = aws_py_get_allocator();
 
     PyObject *tls_ctx_py;
 
@@ -416,7 +416,7 @@ PyObject *aws_py_io_tls_connections_options_new_from_ctx(PyObject *self, PyObjec
         return NULL;
     }
 
-    struct aws_tls_ctx *ctx = get_aws_tls_ctx(tls_ctx_py);
+    struct aws_tls_ctx *ctx = aws_py_get_tls_ctx(tls_ctx_py);
     if (!ctx) {
         return NULL;
     }
@@ -450,7 +450,7 @@ capsule_new_failed:
     return NULL;
 }
 
-struct aws_tls_connection_options *get_aws_tls_connection_options(PyObject *tls_connection_options) {
+struct aws_tls_connection_options *aws_py_get_tls_connection_options(PyObject *tls_connection_options) {
     struct aws_tls_connection_options *native = NULL;
 
     PyObject *binding_capsule = PyObject_GetAttrString(tls_connection_options, "_binding");
@@ -467,10 +467,10 @@ struct aws_tls_connection_options *get_aws_tls_connection_options(PyObject *tls_
     return native;
 }
 
-PyObject *aws_py_io_tls_connection_options_set_alpn_list(PyObject *self, PyObject *args) {
+PyObject *aws_py_tls_connection_options_set_alpn_list(PyObject *self, PyObject *args) {
     (void)self;
 
-    struct aws_allocator *allocator = aws_crt_python_get_allocator();
+    struct aws_allocator *allocator = aws_py_get_allocator();
 
     PyObject *tls_conn_options_py;
     const char *alpn_list;
@@ -478,7 +478,7 @@ PyObject *aws_py_io_tls_connection_options_set_alpn_list(PyObject *self, PyObjec
         return NULL;
     }
 
-    struct aws_tls_connection_options *connection_options = get_aws_tls_connection_options(tls_conn_options_py);
+    struct aws_tls_connection_options *connection_options = aws_py_get_tls_connection_options(tls_conn_options_py);
     if (!connection_options) {
         return NULL;
     }
@@ -491,10 +491,10 @@ PyObject *aws_py_io_tls_connection_options_set_alpn_list(PyObject *self, PyObjec
     Py_RETURN_NONE;
 }
 
-PyObject *aws_py_io_tls_connection_options_set_server_name(PyObject *self, PyObject *args) {
+PyObject *aws_py_tls_connection_options_set_server_name(PyObject *self, PyObject *args) {
     (void)self;
 
-    struct aws_allocator *allocator = aws_crt_python_get_allocator();
+    struct aws_allocator *allocator = aws_py_get_allocator();
 
     PyObject *tls_conn_options_py;
     const char *server_name;
@@ -503,7 +503,7 @@ PyObject *aws_py_io_tls_connection_options_set_server_name(PyObject *self, PyObj
         return NULL;
     }
 
-    struct aws_tls_connection_options *connection_options = get_aws_tls_connection_options(tls_conn_options_py);
+    struct aws_tls_connection_options *connection_options = aws_py_get_tls_connection_options(tls_conn_options_py);
     if (!connection_options) {
         return NULL;
     }

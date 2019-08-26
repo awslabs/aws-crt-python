@@ -11,7 +11,7 @@
 # express or implied. See the License for the specific language governing
 # permissions and limitations under the License.
 
-import _aws_crt_python
+import _awscrt
 from concurrent.futures import Future
 from enum import IntEnum
 from awscrt.io import ClientBootstrap, TlsConnectionOptions, SocketOptions
@@ -64,13 +64,14 @@ class HttpClientConnection(object):
                 future.set_exception(Exception("Error during connect: err={}".format(error_code)))
 
         try:
-            _aws_crt_python.aws_py_http_client_connection_create(bootstrap,
-                                                                 on_connection_setup_native_cb,
-                                                                 connection._on_connection_shutdown,
-                                                                 host_name,
-                                                                 port,
-                                                                 socket_options,
-                                                                 tls_connection_options)
+            _awscrt.http_client_connection_create(
+                bootstrap,
+                on_connection_setup_native_cb,
+                connection._on_connection_shutdown,
+                host_name,
+                port,
+                socket_options,
+                tls_connection_options)
 
         except Exception as e:
             future.set_exception(e)
@@ -83,14 +84,14 @@ class HttpClientConnection(object):
         will be invoked upon completion of the connection close.
         """
         if self._native_handle is not None:
-            _aws_crt_python.aws_py_http_client_connection_close(self._native_handle)
+            _awscrt.http_client_connection_close(self._native_handle)
 
     def is_open(self):
         """
         Returns True if the connection is open and usable, False otherwise.
         """
         if self._native_handle is not None:
-            return _aws_crt_python.aws_py_http_client_connection_is_open(self._native_handle)
+            return _awscrt.http_client_connection_is_open(self._native_handle)
 
         return False
 
@@ -128,10 +129,11 @@ class HttpClientConnection(object):
             request.response_headers_received.set_result(response_code)
 
         try:
-            request._stream = _aws_crt_python.aws_py_http_client_connection_make_request(self._native_handle,
-                                                                                         request,
-                                                                                         on_stream_completed,
-                                                                                         on_incoming_headers_received)
+            request._stream = _awscrt.http_client_connection_make_request(
+                self._native_handle,
+                request,
+                on_stream_completed,
+                on_incoming_headers_received)
 
         except Exception as e:
             request.response_headers_received.set_exception(e)

@@ -192,8 +192,8 @@ else:
 # ensure that the child linker process gets our flags
 os.environ['LDFLAGS'] = ' '.join(ldflags)
 
-_aws_crt_python = setuptools.Extension(
-    '_aws_crt_python',
+_awscrt = setuptools.Extension(
+    '_awscrt',
     language='c',
     define_macros=[
         ('MAJOR_VERSION', '1'),
@@ -232,6 +232,6 @@ setuptools.setup(
         'enum34 ; python_version<"3.4"',
         'futures ; python_version<"3.2"',
     ],
-    ext_modules = [_aws_crt_python],
+    ext_modules = [_awscrt],
 )
 

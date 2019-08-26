@@ -45,7 +45,7 @@ struct mqtt_connection_binding {
 
     PyObject *on_connect;
 
-    /* Dependencies that must outlive us */
+    /* Dependencies that must outlive this */
     PyObject *on_connection_interrupted;
     PyObject *on_connection_resumed;
     PyObject *client;
@@ -58,7 +58,7 @@ static void s_mqtt_python_connection_finish_destruction(struct mqtt_connection_b
     Py_DECREF(py_connection->on_connection_resumed);
     Py_DECREF(py_connection->client);
 
-    aws_mem_release(aws_crt_python_get_allocator(), py_connection);
+    aws_mem_release(aws_py_get_allocator(), py_connection);
 }
 
 static void s_mqtt_python_connection_destructor_on_disconnect(
@@ -135,7 +135,7 @@ static void s_on_connection_resumed(
 PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
     (void)self;
 
-    struct aws_allocator *allocator = aws_crt_python_get_allocator();
+    struct aws_allocator *allocator = aws_py_get_allocator();
 
     PyObject *client_py;
     PyObject *on_connection_interrupted;
@@ -144,7 +144,7 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    struct aws_mqtt_client *client = get_aws_mqtt_client(client_py);
+    struct aws_mqtt_client *client = aws_py_get_mqtt_client(client_py);
     if (!client) {
         return NULL;
     }
@@ -201,7 +201,7 @@ capsule_new_failed:
     return NULL;
 }
 
-struct aws_mqtt_client_connection *get_aws_mqtt_client_connection(PyObject *mqtt_connection) {
+struct aws_mqtt_client_connection *aws_py_get_mqtt_client_connection(PyObject *mqtt_connection) {
     struct aws_mqtt_client_connection *native = NULL;
 
     PyObject *binding_capsule = PyObject_GetAttrString(mqtt_connection, "_binding");
@@ -394,13 +394,13 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
     /* From hereon, we need to clean up if errors occur */
 
     if (tls_ctx_py != Py_None) {
-        tls_ctx = get_aws_tls_ctx(tls_ctx_py);
+        tls_ctx = aws_py_get_tls_ctx(tls_ctx_py);
         if (!tls_ctx) {
             goto error;
         }
 
         aws_tls_connection_options_init_from_ctx(&tls_options, tls_ctx);
-        struct aws_allocator *allocator = aws_crt_python_get_allocator();
+        struct aws_allocator *allocator = aws_py_get_allocator();
         struct aws_byte_cursor server_name_cur = aws_byte_cursor_from_c_str(server_name);
         if (aws_tls_connection_options_set_server_name(&tls_options, allocator, &server_name_cur)) {
             PyErr_SetAwsLastError();
@@ -514,7 +514,7 @@ static void s_publish_complete(
 
     PyGILState_Release(state);
 
-    aws_mem_release(aws_crt_python_get_allocator(), metadata);
+    aws_mem_release(aws_py_get_allocator(), metadata);
 }
 
 PyObject *aws_py_mqtt_client_connection_publish(PyObject *self, PyObject *args) {
@@ -547,7 +547,7 @@ PyObject *aws_py_mqtt_client_connection_publish(PyObject *self, PyObject *args) 
     struct publish_complete_userdata *metadata = NULL;
 
     /* Heap allocate payload so that it may persist */
-    metadata = aws_mem_calloc(aws_crt_python_get_allocator(), 1, sizeof(struct publish_complete_userdata));
+    metadata = aws_mem_calloc(aws_py_get_allocator(), 1, sizeof(struct publish_complete_userdata));
     if (!metadata) {
         PyErr_SetAwsLastError();
         goto metadata_alloc_failed;
@@ -578,7 +578,7 @@ PyObject *aws_py_mqtt_client_connection_publish(PyObject *self, PyObject *args) 
 
 publish_failed:
     Py_DECREF(metadata->callback);
-    aws_mem_release(aws_crt_python_get_allocator(), metadata);
+    aws_mem_release(aws_py_get_allocator(), metadata);
 metadata_alloc_failed:
 arg_error:
     PyBuffer_Release(&topic_stack);

@@ -11,7 +11,7 @@
 # express or implied. See the License for the specific language governing
 # permissions and limitations under the License.
 
-import _aws_crt_python
+import _awscrt
 from concurrent.futures import Future
 from enum import IntEnum
 from awscrt.io import ClientBootstrap, ClientTlsContext
@@ -47,7 +47,7 @@ class Client(object):
         assert tls_ctx is None or isinstance(tls_ctx, ClientTlsContext)
 
         self.tls_ctx = tls_ctx
-        self._binding = _aws_crt_python.aws_py_mqtt_client_new(bootstrap, tls_ctx)
+        self._binding = _awscrt.mqtt_client_new(bootstrap, tls_ctx)
 
 class Connection(object):
     __slots__ = ('_binding', 'client')
@@ -69,7 +69,7 @@ class Connection(object):
 
         self.client = client
 
-        self._binding = _aws_crt_python.aws_py_mqtt_client_connection_new(
+        self._binding = _awscrt.mqtt_client_connection_new(
             client,
             on_connection_interrupted,
             on_connection_resumed,
@@ -97,7 +97,7 @@ class Connection(object):
             assert will is None or isinstance(will, Will)
             assert use_websocket == False
 
-            _aws_crt_python.aws_py_mqtt_client_connection_connect(
+            _awscrt.mqtt_client_connection_connect(
                 self._binding,
                 client_id,
                 host_name,
@@ -126,7 +126,7 @@ class Connection(object):
                 future.set_exception(Exception("Error during reconnect"))
 
         try:
-            _aws_crt_python.aws_py_mqtt_client_connection_reconnect(self._binding, on_connect)
+            _awscrt.mqtt_client_connection_reconnect(self._binding, on_connect)
         except Exception as e:
             future.set_exception(e)
 
@@ -140,7 +140,7 @@ class Connection(object):
             future.set_result(dict())
 
         try:
-            _aws_crt_python.aws_py_mqtt_client_connection_disconnect(self._binding, on_disconnect)
+            _awscrt.mqtt_client_connection_disconnect(self._binding, on_disconnect)
         except Exception as e:
             future.set_exception(e)
 
@@ -164,7 +164,7 @@ class Connection(object):
         try:
             assert callable(callback)
             assert isinstance(qos, QoS)
-            packet_id = _aws_crt_python.aws_py_mqtt_client_connection_subscribe(self._binding, topic, qos.value, callback, suback)
+            packet_id = _awscrt.mqtt_client_connection_subscribe(self._binding, topic, qos.value, callback, suback)
         except Exception as e:
             future.set_exception(e)
 
@@ -180,7 +180,7 @@ class Connection(object):
             ))
 
         try:
-            packet_id = _aws_crt_python.aws_py_mqtt_client_connection_unsubscribe(self._binding, topic, unsuback)
+            packet_id = _awscrt.mqtt_client_connection_unsubscribe(self._binding, topic, unsuback)
 
         except Exception as e:
             future.set_exception(e)
@@ -197,11 +197,11 @@ class Connection(object):
             ))
 
         try:
-            packet_id = _aws_crt_python.aws_py_mqtt_client_connection_publish(self._binding, topic, payload, qos.value, retain, puback)
+            packet_id = _awscrt.mqtt_client_connection_publish(self._binding, topic, payload, qos.value, retain, puback)
         except Exception as e:
             future.set_exception(e)
 
         return future, packet_id
 
     def ping(self):
-        _aws_crt_python.aws_py_mqtt_client_connection_ping(self._binding)
+        _awscrt.mqtt_client_connection_ping(self._binding)

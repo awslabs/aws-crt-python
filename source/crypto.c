@@ -43,7 +43,7 @@ PyObject *aws_py_sha256_new(PyObject *self, PyObject *args) {
     (void)self;
     (void)args;
 
-    struct aws_allocator *allocator = aws_crt_python_get_allocator();
+    struct aws_allocator *allocator = aws_py_get_allocator();
 
     struct aws_hash *sha256 = aws_sha256_new(allocator);
 
@@ -58,7 +58,7 @@ PyObject *aws_py_md5_new(PyObject *self, PyObject *args) {
     (void)self;
     (void)args;
 
-    struct aws_allocator *allocator = aws_crt_python_get_allocator();
+    struct aws_allocator *allocator = aws_py_get_allocator();
 
     struct aws_hash *md5 = aws_md5_new(allocator);
 
@@ -124,7 +124,7 @@ PyObject *aws_py_hash_digest(PyObject *self, PyObject *args) {
 PyObject *aws_py_sha256_hmac_new(PyObject *self, PyObject *args) {
     (void)self;
 
-    struct aws_allocator *allocator = aws_crt_python_get_allocator();
+    struct aws_allocator *allocator = aws_py_get_allocator();
 
     const char *secret_ptr;
     Py_ssize_t secret_len;
