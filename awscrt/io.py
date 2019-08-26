@@ -12,7 +12,7 @@
 # permissions and limitations under the License.
 
 import _awscrt
-from awscrt import CrtResource
+from awscrt import NativeResource
 from enum import IntEnum
 
 
@@ -40,7 +40,7 @@ def is_alpn_available():
     return _awscrt.is_alpn_available()
 
 
-class EventLoopGroup(CrtResource):
+class EventLoopGroup(NativeResource):
     """
     Manages a collection of event-loops.
     An event-loop is a thread for doing async work, such as I/O.
@@ -53,10 +53,10 @@ class EventLoopGroup(CrtResource):
         """
         num_threads: Number of event-loops to create. Pass 0 to create one for each processor on the machine.
         """
-        super(CrtResource, self).__init__()
+        super(NativeResource, self).__init__()
         self._binding = _awscrt.event_loop_group_new(num_threads)
 
-class HostResolver(CrtResource):
+class HostResolver(NativeResource):
     __slots__ = ()
 
 class DefaultHostResolver(HostResolver):
@@ -68,14 +68,14 @@ class DefaultHostResolver(HostResolver):
         super(DefaultHostResolver, self).__init__()
         self._binding = _awscrt.host_resolver_new_default(max_hosts, event_loop_group)
 
-class ClientBootstrap(CrtResource):
+class ClientBootstrap(NativeResource):
     __slots__ = ()
 
     def __init__(self, event_loop_group, host_resolver=None):
         assert isinstance(event_loop_group, EventLoopGroup)
         assert isinstance(host_resolver, HostResolver) or host_resolver is None
 
-        super(CrtResource, self).__init__()
+        super(NativeResource, self).__init__()
 
         if host_resolver is None:
             host_resolver = DefaultHostResolver(event_loop_group)
@@ -228,13 +228,13 @@ class TlsContextOptions(object):
         return opt
 
 
-class ClientTlsContext(CrtResource):
+class ClientTlsContext(NativeResource):
     __slots__ = ()
 
     def __init__(self, options):
         assert isinstance(options, TlsContextOptions)
 
-        super(CrtResource, self).__init__()
+        super(NativeResource, self).__init__()
         self._binding = _awscrt.client_tls_ctx_new(
             options.min_tls_ver.value,
             options.ca_path,
@@ -251,13 +251,13 @@ class ClientTlsContext(CrtResource):
         return TlsConnectionOptions(self)
 
 
-class TlsConnectionOptions(CrtResource):
+class TlsConnectionOptions(NativeResource):
     __slots__ = ('tls_ctx')
 
     def __init__(self, tls_ctx):
         assert isinstance(tls_ctx, ClientTlsContext)
 
-        super(CrtResource, self).__init__()
+        super(NativeResource, self).__init__()
         self.tls_ctx = tls_ctx
         self._binding = _awscrt.tls_connections_options_new_from_ctx(tls_ctx)
 
