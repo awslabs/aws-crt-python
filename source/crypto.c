@@ -31,7 +31,7 @@ static void s_hash_destructor(PyObject *hash_capsule) {
 }
 
 static void s_hmac_destructor(PyObject *hmac_capsule) {
-    assert(PyCapsule_CheckExact(hash_capsule));
+    assert(PyCapsule_CheckExact(hmac_capsule));
 
     struct aws_hmac *hmac = PyCapsule_GetPointer(hmac_capsule, s_capsule_name_hmac);
     assert(hmac);

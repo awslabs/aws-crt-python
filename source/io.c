@@ -102,9 +102,14 @@ PyObject *aws_py_io_host_resolver_new_default(PyObject *self, PyObject *args) {
 
     struct aws_allocator *allocator = aws_crt_python_get_allocator();
 
-    int max_hosts;
+    Py_ssize_t max_hosts;
     PyObject *elg_py;
-    if (!PyArg_ParseTuple(args, "bO", &max_hosts, &elg_py)) {
+    if (!PyArg_ParseTuple(args, "nO", &max_hosts, &elg_py)) {
+        return NULL;
+    }
+
+    if (max_hosts < 1) {
+        PyErr_SetString(PyExc_ValueError, "max_hosts is invalid");
         return NULL;
     }
 

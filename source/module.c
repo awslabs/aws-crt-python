@@ -119,8 +119,9 @@ void PyErr_SetAwsLastError(void) {
 
 PyObject *PyErr_AwsLastError(void) {
     int err = aws_last_error();
+    const char *name = aws_error_name(err);
     const char *msg = aws_error_str(err);
-    return PyErr_Format(PyExc_RuntimeError, "%d: %s", err, msg);
+    return PyErr_Format(PyExc_RuntimeError, "%d (%s): %s", err, name, msg);
 }
 
 PyObject *aws_py_memory_view_from_byte_buffer(struct aws_byte_buf *buf, int flags) {

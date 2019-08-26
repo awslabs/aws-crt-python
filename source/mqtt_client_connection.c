@@ -255,7 +255,7 @@ static void s_on_connect(
 
 /* If unsuccessful, false is returned and a Python error has been set */
 bool s_set_will(struct aws_mqtt_client_connection *connection, PyObject *will) {
-    assert(will && (will != PyNone));
+    assert(will && (will != Py_None));
 
     bool success = false;
 
