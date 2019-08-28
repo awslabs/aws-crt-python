@@ -14,7 +14,7 @@
  */
 #include "module.h"
 #include "crypto.h"
-#include "http_client_connection.h"
+#include "http_connection.h"
 #include "io.h"
 #include "mqtt_client.h"
 #include "mqtt_client_connection.h"
@@ -113,6 +113,24 @@ long PyIntEnum_AsLong(PyObject *int_enum_obj) {
 #endif
 }
 
+int PyLongOrInt_Check(PyObject *obj) {
+    if (PyLong_Check(obj)) {
+        return 1;
+    }
+#if PY_MAJOR_VERSION == 2
+    if (PyInt_Check(obj)) {
+        return 1;
+    }
+#endif
+    return 0;
+}
+
+PyObject *PyObject_BorrowAttrString(PyObject *o, const char *attr_string) {
+    PyObject *val = PyObject_GetAttrString(o, attr_string);
+    Py_XDECREF(val);
+    return val;
+}
+
 void PyErr_SetAwsLastError(void) {
     PyErr_AwsLastError();
 }
@@ -190,9 +208,9 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(hash_digest, METH_VARARGS),
 
     /* HTTP client */
-    AWS_PY_METHOD_DEF(http_client_connection_create, METH_VARARGS),
-    AWS_PY_METHOD_DEF(http_client_connection_close, METH_VARARGS),
-    AWS_PY_METHOD_DEF(http_client_connection_is_open, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http_connection_close, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http_connection_is_open, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http_client_connection_new, METH_VARARGS),
     AWS_PY_METHOD_DEF(http_client_connection_make_request, METH_VARARGS),
 
     {NULL, NULL, 0, NULL},

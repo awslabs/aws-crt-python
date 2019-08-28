@@ -158,12 +158,6 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
 
     /* From hereon, we need to clean up if errors occur */
 
-    PyObject *capsule =
-        PyCapsule_New(py_connection, s_capsule_name_mqtt_client_connection, s_mqtt_python_connection_destructor);
-    if (!capsule) {
-        goto capsule_new_failed;
-    }
-
     py_connection->native = aws_mqtt_client_connection_new(client);
     if (!py_connection->native) {
         PyErr_SetAwsLastError();
@@ -181,6 +175,12 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
         goto set_interruption_failed;
     }
 
+    PyObject *capsule =
+        PyCapsule_New(py_connection, s_capsule_name_mqtt_client_connection, s_mqtt_python_connection_destructor);
+    if (!capsule) {
+        goto capsule_new_failed;
+    }
+
     /* From hereon, nothing will fail */
 
     py_connection->on_connection_interrupted = on_connection_interrupted;
@@ -192,11 +192,10 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
 
     return capsule;
 
+capsule_new_failed:
 set_interruption_failed:
     aws_mqtt_client_connection_destroy(py_connection->native);
 connection_new_failed:
-    Py_DECREF(capsule);
-capsule_new_failed:
     aws_mem_release(allocator, py_connection);
     return NULL;
 }
@@ -204,7 +203,7 @@ capsule_new_failed:
 struct aws_mqtt_client_connection *aws_py_get_mqtt_client_connection(PyObject *mqtt_connection) {
     struct aws_mqtt_client_connection *native = NULL;
 
-    PyObject *binding_capsule = PyObject_GetAttrString(mqtt_connection, "_binding");
+    PyObject *binding_capsule = PyObject_BorrowAttrString(mqtt_connection, "_binding");
     if (binding_capsule) {
         struct mqtt_connection_binding *binding =
             PyCapsule_GetPointer(binding_capsule, s_capsule_name_mqtt_client_connection);
@@ -212,7 +211,6 @@ struct aws_mqtt_client_connection *aws_py_get_mqtt_client_connection(PyObject *m
             native = binding->native;
             assert(native);
         }
-        Py_DECREF(binding_capsule);
     }
 
     return native;
@@ -257,54 +255,40 @@ static void s_on_connect(
 bool s_set_will(struct aws_mqtt_client_connection *connection, PyObject *will) {
     assert(will && (will != Py_None));
 
-    bool success = false;
-
-    /* These references all need to be cleaned up before function returns */
-    PyObject *py_topic = NULL;
-    PyObject *py_qos = NULL;
-    PyObject *py_payload = NULL;
-    PyObject *py_retain = NULL;
-
-    py_topic = PyObject_GetAttrString(will, "topic");
+    PyObject *py_topic = PyObject_BorrowAttrString(will, "topic");
     struct aws_byte_cursor topic = aws_byte_cursor_from_pystring(py_topic);
     if (!topic.ptr) {
         PyErr_SetString(PyExc_TypeError, "Will.topic is invalid");
-        goto done;
+        return false;
     }
 
-    py_qos = PyObject_GetAttrString(will, "qos");
+    PyObject *py_qos = PyObject_BorrowAttrString(will, "qos");
     if (!py_qos || !PyIntEnum_Check(py_qos)) {
         PyErr_SetString(PyExc_TypeError, "Will.qos is invalid");
-        goto done;
+        return false;
     }
     enum aws_mqtt_qos qos = (enum aws_mqtt_qos)PyIntEnum_AsLong(py_qos);
 
-    py_payload = PyObject_GetAttrString(will, "payload");
+    PyObject *py_payload = PyObject_BorrowAttrString(will, "payload");
     struct aws_byte_cursor payload = aws_byte_cursor_from_pystring(py_payload);
     if (!payload.ptr) {
         PyErr_SetString(PyExc_TypeError, "Will.payload is invalid");
-        goto done;
+        return false;
     }
 
-    py_retain = PyObject_GetAttrString(will, "retain");
+    PyObject *py_retain = PyObject_BorrowAttrString(will, "retain");
     if (!PyBool_Check(py_retain)) {
         PyErr_SetString(PyExc_TypeError, "Will.retain is invalid");
-        goto done;
+        return false;
     }
     bool retain = py_retain == Py_True;
 
     if (aws_mqtt_client_connection_set_will(connection, &topic, qos, retain, &payload)) {
         PyErr_SetAwsLastError();
-    } else {
-        success = true;
+        return false;
     }
 
-done:
-    Py_XDECREF(py_topic);
-    Py_XDECREF(py_qos);
-    Py_XDECREF(py_payload);
-    Py_XDECREF(py_retain);
-    return success;
+    return true;
 }
 
 PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) {

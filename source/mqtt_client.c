@@ -61,14 +61,14 @@ PyObject *aws_py_mqtt_client_new(PyObject *self, PyObject *args) {
 
     /* From hereon, we need to clean up if errors occur */
 
-    PyObject *capsule = PyCapsule_New(client, s_capsule_name_mqtt_client, s_mqtt_python_client_destructor);
-    if (!capsule) {
-        goto capsule_new_failed;
-    }
-
     if (aws_mqtt_client_init(&client->native, allocator, bootstrap)) {
         PyErr_SetAwsLastError();
         goto client_init_failed;
+    }
+
+    PyObject *capsule = PyCapsule_New(client, s_capsule_name_mqtt_client, s_mqtt_python_client_destructor);
+    if (!capsule) {
+        goto capsule_new_failed;
     }
 
     /* From hereon, nothing will fail */
@@ -79,9 +79,9 @@ PyObject *aws_py_mqtt_client_new(PyObject *self, PyObject *args) {
     Py_INCREF(client->tls_ctx);
     return capsule;
 
-client_init_failed:
-    Py_DECREF(capsule);
 capsule_new_failed:
+    aws_mqtt_client_clean_up(&client->native);
+client_init_failed:
     aws_mem_release(allocator, client);
     return NULL;
 }
@@ -89,14 +89,13 @@ capsule_new_failed:
 struct aws_mqtt_client *aws_py_get_mqtt_client(PyObject *mqtt_client) {
     struct aws_mqtt_client *native = NULL;
 
-    PyObject *binding_capsule = PyObject_GetAttrString(mqtt_client, "_binding");
+    PyObject *binding_capsule = PyObject_BorrowAttrString(mqtt_client, "_binding");
     if (binding_capsule) {
         struct mqtt_client_binding *binding = PyCapsule_GetPointer(binding_capsule, s_capsule_name_mqtt_client);
         if (binding) {
             native = &binding->native;
             assert(native);
         }
-        Py_DECREF(binding_capsule);
     }
 
     return native;

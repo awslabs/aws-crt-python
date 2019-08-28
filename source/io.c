@@ -16,6 +16,7 @@
 
 #include <aws/io/channel_bootstrap.h>
 #include <aws/io/event_loop.h>
+#include <aws/io/socket.h>
 #include <aws/io/tls_channel_handler.h>
 
 #include <stdio.h>
@@ -26,6 +27,65 @@ static const char *s_capsule_name_elg = "aws_event_loop_group";
 const char *s_capsule_name_host_resolver = "aws_host_resolver";
 const char *s_capsule_name_tls_ctx = "aws_client_tls_ctx";
 const char *s_capsule_name_tls_conn_options = "aws_tls_connection_options";
+
+bool aws_py_socket_options_init(struct aws_socket_options *socket_options, PyObject *py_socket_options){
+    AWS_ZERO_STRUCT(*socket_options);
+
+    PyObject *sock_domain = PyObject_BorrowAttrString(py_socket_options, "domain");
+    if (!PyIntEnum_Check(sock_domain)) {
+        PyErr_SetString(PyExc_TypeError, "SocketOptions.domain is invalid");
+        goto error;
+    }
+    socket_options->domain = (enum aws_socket_domain)PyIntEnum_AsLong(sock_domain);
+
+    PyObject *sock_type = PyObject_BorrowAttrString(py_socket_options, "type");
+    if (!PyIntEnum_Check(sock_type)) {
+        PyErr_SetString(PyExc_TypeError, "SocketOptions.type is invalid");
+        goto error;
+    }
+    socket_options->type = (enum aws_socket_type)PyIntEnum_AsLong(sock_type);
+
+    PyObject *connect_timeout_ms = PyObject_BorrowAttrString(py_socket_options, "connect_timeout_ms");
+    if (!PyLongOrInt_Check(connect_timeout_ms)) {
+        PyErr_SetString(PyExc_TypeError, "SocketOptions.connect_timeout_ms is invalid");
+        goto error;
+    }
+    socket_options->connect_timeout_ms = (uint32_t)PyLong_AsLong(connect_timeout_ms);
+
+    PyObject *keep_alive = PyObject_BorrowAttrString(py_socket_options, "keep_alive");
+    if (!keep_alive) {
+        PyErr_SetString(PyExc_TypeError, "SocketOptions.keep_alive is invalid");
+        goto error;
+    }
+    socket_options->keepalive = (bool)PyObject_IsTrue(keep_alive);
+
+    PyObject *keep_alive_interval = PyObject_BorrowAttrString(py_socket_options, "keep_alive_interval_secs");
+    if (!PyLongOrInt_Check(keep_alive_interval)) {
+        PyErr_SetString(PyExc_TypeError, "SocketOptions.keep_alive_interval_secs is invalid");
+        goto error;
+    }
+    socket_options->keep_alive_interval_sec = (uint16_t)PyLong_AsLong(keep_alive_interval);
+
+    PyObject *keep_alive_timeout = PyObject_BorrowAttrString(py_socket_options, "keep_alive_timeout_secs");
+    if (!PyLongOrInt_Check(keep_alive_timeout)) {
+        PyErr_SetString(PyExc_TypeError, "SocketOptions.keep_alive_timeout_secs is invalid");
+        goto error;
+    }
+    socket_options->keep_alive_timeout_sec = (uint16_t)PyLong_AsLong(keep_alive_timeout);
+
+    PyObject *keep_alive_max_probes = PyObject_BorrowAttrString(py_socket_options, "keep_alive_max_probes");
+    if (!PyLongOrInt_Check(keep_alive_timeout)) {
+        PyErr_SetString(PyExc_TypeError, "SocketOptions.keep_alive_max_probes is invalid");
+        goto error;
+    }
+    socket_options->keep_alive_max_failed_probes = (uint16_t)PyLong_AsLong(keep_alive_max_probes);
+
+    return true;
+
+error:
+    AWS_ZERO_STRUCT(*socket_options);
+    return false;
+}
 
 PyObject *aws_py_is_alpn_available(PyObject *self, PyObject *args) {
 
@@ -61,21 +121,31 @@ PyObject *aws_py_event_loop_group_new(PyObject *self, PyObject *args) {
     }
 
     if (aws_event_loop_group_default_init(elg, allocator, num_threads)) {
-        aws_mem_release(allocator, elg);
-        return PyErr_AwsLastError();
+        PyErr_SetAwsLastError();
+        goto elg_init_failed;
     }
 
-    return PyCapsule_New(elg, s_capsule_name_elg, s_elg_destructor);
+    PyObject *capsule = PyCapsule_New(elg, s_capsule_name_elg, s_elg_destructor);
+    if (!capsule) {
+        goto capsule_new_failed;
+    }
+
+    return capsule;
+
+capsule_new_failed:
+    aws_event_loop_group_clean_up(elg);
+elg_init_failed:
+    aws_mem_release(allocator, elg);
+    return NULL;
 }
 
 struct aws_event_loop_group *aws_py_get_event_loop_group(PyObject *event_loop_group) {
     struct aws_event_loop_group *native = NULL;
 
-    PyObject *elg_capsule = PyObject_GetAttrString(event_loop_group, "_binding");
+    PyObject *elg_capsule = PyObject_BorrowAttrString(event_loop_group, "_binding");
     if (elg_capsule) {
         native = PyCapsule_GetPointer(elg_capsule, s_capsule_name_elg);
         assert(native);
-        Py_DECREF(elg_capsule);
     }
 
     return native;
@@ -152,14 +222,13 @@ resolver_init_failed:
 struct aws_host_resolver *aws_py_get_host_resolver(PyObject *host_resolver) {
     struct aws_host_resolver *native = NULL;
 
-    PyObject *binding_capsule = PyObject_GetAttrString(host_resolver, "_binding");
+    PyObject *binding_capsule = PyObject_BorrowAttrString(host_resolver, "_binding");
     if (binding_capsule) {
         struct host_resolver_binding *binding = PyCapsule_GetPointer(binding_capsule, s_capsule_name_host_resolver);
         if (binding) {
             native = &binding->native;
             assert(native);
         }
-        Py_DECREF(binding_capsule);
     }
 
     return native;
@@ -244,7 +313,7 @@ bootstrap_new_failed:
 struct aws_client_bootstrap *aws_py_get_client_bootstrap(PyObject *client_bootstrap) {
     struct aws_client_bootstrap *native = NULL;
 
-    PyObject *binding_capsule = PyObject_GetAttrString(client_bootstrap, "_binding");
+    PyObject *binding_capsule = PyObject_BorrowAttrString(client_bootstrap, "_binding");
     if (binding_capsule) {
         struct client_bootstrap_binding *binding =
             PyCapsule_GetPointer(binding_capsule, s_capsule_name_client_bootstrap);
@@ -252,7 +321,6 @@ struct aws_client_bootstrap *aws_py_get_client_bootstrap(PyObject *client_bootst
             native = binding->native;
             assert(native);
         }
-        Py_DECREF(binding_capsule);
     }
 
     return native;
@@ -375,11 +443,10 @@ ctx_options_failure:
 struct aws_tls_ctx *aws_py_get_tls_ctx(PyObject *tls_ctx) {
     struct aws_tls_ctx *native = NULL;
 
-    PyObject *capsule = PyObject_GetAttrString(tls_ctx, "_binding");
+    PyObject *capsule = PyObject_BorrowAttrString(tls_ctx, "_binding");
     if (capsule) {
         native = PyCapsule_GetPointer(capsule, s_capsule_name_tls_ctx);
         assert(native);
-        Py_DECREF(capsule);
     }
 
     return native;
@@ -453,7 +520,7 @@ capsule_new_failed:
 struct aws_tls_connection_options *aws_py_get_tls_connection_options(PyObject *tls_connection_options) {
     struct aws_tls_connection_options *native = NULL;
 
-    PyObject *binding_capsule = PyObject_GetAttrString(tls_connection_options, "_binding");
+    PyObject *binding_capsule = PyObject_BorrowAttrString(tls_connection_options, "_binding");
     if (binding_capsule) {
         struct tls_connection_options_binding *binding =
             PyCapsule_GetPointer(binding_capsule, s_capsule_name_tls_conn_options);
@@ -461,7 +528,6 @@ struct aws_tls_connection_options *aws_py_get_tls_connection_options(PyObject *t
             native = &binding->native;
             assert(native);
         }
-        Py_DECREF(binding_capsule);
     }
 
     return native;

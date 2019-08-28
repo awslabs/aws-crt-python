@@ -189,8 +189,8 @@ socket_options = io.SocketOptions()
 socket_options.connect_timeout_ms = args.connect_timeout
 
 hostname = url.hostname
-connect_future = http.HttpClientConnection.new_connection(client_bootstrap, hostname, port, socket_options,
-                                                          on_connection_shutdown, tls_connection_options)
+connect_future = http.HttpClientConnection.new(client_bootstrap, hostname, port, socket_options,
+                                               on_connection_shutdown, tls_connection_options)
 connection = connect_future.result()
 
 outgoing_headers = {'host': hostname, 'user-agent': 'elasticurl.py 1.0, Powered by the AWS Common Runtime.'}
@@ -222,9 +222,6 @@ def response_received_cb(ftr):
 # make the request
 request = connection.make_request(method, uri_str, outgoing_headers, on_outgoing_body, on_incoming_body)
 request.response_headers_received.add_done_callback(response_received_cb)
-
-# wait for response headers
-response_start = request.response_headers_received.result(timeout=10)
 
 # wait until the full response is finished
 response_finished = request.response_completed.result(timeout=10)
