@@ -104,6 +104,7 @@ static void s_on_connection_shutdown(struct aws_http_connection *native_connecti
     /* Set result of shutdown_future, then clear our reference to shutdown_future. */
     PyObject *result = PyObject_CallMethod(connection->shutdown_future, "set_result", "(i)", error_code);
     if (!result) {
+        /* This function must succeed. Can't leave a Future incomplete */
         PyErr_WriteUnraisable(PyErr_Occurred());
         AWS_FATAL_ASSERT(0);
     }
@@ -141,12 +142,13 @@ static void s_on_client_connection_setup(
 
     /* Invoke on_setup, then clear our reference to it */
     PyObject *result = PyObject_CallFunction(connection->on_setup, "(Ni)", capsule ? capsule : Py_None, error_code);
-    if (result) {
-        Py_DECREF(result);
-    } else {
+    if (!result) {
+        /* This function must succeed. Can't leave a Future incomplete. */
         PyErr_WriteUnraisable(PyErr_Occurred());
+        AWS_FATAL_ASSERT(0);
     }
 
+    Py_DECREF(result);
     Py_CLEAR(connection->on_setup);
 
     if (native_connection) {
@@ -427,7 +429,12 @@ static void s_on_stream_complete(struct aws_http_stream *internal_stream, int er
     PyGILState_STATE state = PyGILState_Ensure();
 
     PyObject *result = PyObject_CallFunction(stream->on_stream_completed, "(i)", error_code);
-    Py_XDECREF(result);
+    if (!result) {
+        /* This function must succeed. Can't leave a Future incomplete. */
+        PyErr_WriteUnraisable(PyErr_Occurred());
+        AWS_FATAL_ASSERT(0);
+    }
+    Py_DECREF(result);
 
     /* There will be no more callbacks, clear */
     Py_CLEAR(stream->on_stream_completed);
