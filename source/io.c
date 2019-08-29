@@ -28,7 +28,7 @@ const char *s_capsule_name_host_resolver = "aws_host_resolver";
 const char *s_capsule_name_tls_ctx = "aws_client_tls_ctx";
 const char *s_capsule_name_tls_conn_options = "aws_tls_connection_options";
 
-bool aws_py_socket_options_init(struct aws_socket_options *socket_options, PyObject *py_socket_options){
+bool aws_py_socket_options_init(struct aws_socket_options *socket_options, PyObject *py_socket_options) {
     AWS_ZERO_STRUCT(*socket_options);
 
     bool success = false;
@@ -101,7 +101,7 @@ done:
     Py_DECREF(keep_alive_interval);
     Py_DECREF(keep_alive_timeout);
     Py_DECREF(keep_alive_max_probes);
-    
+
     if (!success) {
         AWS_ZERO_STRUCT(*socket_options);
     }

@@ -69,7 +69,6 @@ PyObject *aws_py_tls_connection_options_set_alpn_list(PyObject *self, PyObject *
 
 PyObject *aws_py_tls_connection_options_set_server_name(PyObject *self, PyObject *args);
 
-
 /* Given a python object, return a pointer to its underlying native type.
  * If NULL is returned, a python error has been set */
 
