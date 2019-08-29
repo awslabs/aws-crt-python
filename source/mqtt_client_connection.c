@@ -203,7 +203,7 @@ connection_new_failed:
 struct aws_mqtt_client_connection *aws_py_get_mqtt_client_connection(PyObject *mqtt_connection) {
     struct aws_mqtt_client_connection *native = NULL;
 
-    PyObject *binding_capsule = PyObject_BorrowAttrString(mqtt_connection, "_binding");
+    PyObject *binding_capsule = PyObject_GetAttrString(mqtt_connection, "_binding");
     if (binding_capsule) {
         struct mqtt_connection_binding *binding =
             PyCapsule_GetPointer(binding_capsule, s_capsule_name_mqtt_client_connection);
@@ -211,6 +211,7 @@ struct aws_mqtt_client_connection *aws_py_get_mqtt_client_connection(PyObject *m
             native = binding->native;
             assert(native);
         }
+        Py_DECREF(binding_capsule);
     }
 
     return native;
@@ -255,40 +256,55 @@ static void s_on_connect(
 bool s_set_will(struct aws_mqtt_client_connection *connection, PyObject *will) {
     assert(will && (will != Py_None));
 
-    PyObject *py_topic = PyObject_BorrowAttrString(will, "topic");
+    bool success = false;
+
+    /* These references all need to be cleaned up before function returns */
+    PyObject *py_topic = NULL;
+    PyObject *py_qos = NULL;
+    PyObject *py_payload = NULL;
+    PyObject *py_retain = NULL;
+
+    py_topic = PyObject_GetAttrString(will, "topic");
     struct aws_byte_cursor topic = aws_byte_cursor_from_pystring(py_topic);
     if (!topic.ptr) {
         PyErr_SetString(PyExc_TypeError, "Will.topic is invalid");
-        return false;
+        goto done;
     }
 
-    PyObject *py_qos = PyObject_BorrowAttrString(will, "qos");
+    py_qos = PyObject_GetAttrString(will, "qos");
     if (!py_qos || !PyIntEnum_Check(py_qos)) {
         PyErr_SetString(PyExc_TypeError, "Will.qos is invalid");
-        return false;
+        goto done;
     }
     enum aws_mqtt_qos qos = (enum aws_mqtt_qos)PyIntEnum_AsLong(py_qos);
 
-    PyObject *py_payload = PyObject_BorrowAttrString(will, "payload");
+    py_payload = PyObject_GetAttrString(will, "payload");
     struct aws_byte_cursor payload = aws_byte_cursor_from_pystring(py_payload);
     if (!payload.ptr) {
         PyErr_SetString(PyExc_TypeError, "Will.payload is invalid");
-        return false;
+        goto done;
     }
 
-    PyObject *py_retain = PyObject_BorrowAttrString(will, "retain");
+    py_retain = PyObject_GetAttrString(will, "retain");
     if (!PyBool_Check(py_retain)) {
         PyErr_SetString(PyExc_TypeError, "Will.retain is invalid");
-        return false;
+        goto done;
     }
     bool retain = py_retain == Py_True;
 
     if (aws_mqtt_client_connection_set_will(connection, &topic, qos, retain, &payload)) {
         PyErr_SetAwsLastError();
-        return false;
+        goto done;
     }
 
-    return true;
+    success = true;
+
+done:
+    Py_XDECREF(py_topic);
+    Py_XDECREF(py_qos);
+    Py_XDECREF(py_payload);
+    Py_XDECREF(py_retain);
+    return success;
 }
 
 PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) {

@@ -48,14 +48,10 @@ struct http_connection_binding {
 };
 
 static void s_connection_destroy(struct http_connection_binding *connection) {
-    assert(PyGILState_Check());
-
-    Py_DECREF(connection->bootstrap);
-    Py_DECREF(connection->tls_ctx);
-
-    /* These may already have been cleared*/
     Py_XDECREF(connection->on_setup);
     Py_XDECREF(connection->shutdown_future);
+    Py_XDECREF(connection->bootstrap);
+    Py_XDECREF(connection->tls_ctx);
 
     aws_mem_release(aws_py_get_allocator(), connection);
 }
@@ -63,20 +59,21 @@ static void s_connection_destroy(struct http_connection_binding *connection) {
 struct aws_http_connection *aws_py_get_http_connection(PyObject *connection) {
     struct aws_http_connection *native = NULL;
 
-    PyObject *capsule = PyObject_BorrowAttrString(connection, "_binding");
+    PyObject *capsule = PyObject_GetAttrString(connection, "_binding");
     if (capsule) {
         struct http_connection_binding *binding = PyCapsule_GetPointer(capsule, s_capsule_name_http_connection);
         if (binding) {
             native = binding->native;
-            assert(native);
+            AWS_FATAL_ASSERT(native);
         }
+        Py_DECREF(capsule);
     }
 
     return native;
 }
 
 static void s_connection_release(struct http_connection_binding *connection) {
-    assert(!connection->release_called);
+    AWS_FATAL_ASSERT(!connection->release_called);
     connection->release_called = true;
 
     bool destroy_after_release = connection->shutdown_called;
@@ -96,7 +93,7 @@ static void s_connection_capsule_destructor(PyObject *capsule) {
 static void s_on_connection_shutdown(struct aws_http_connection *native_connection, int error_code, void *user_data) {
     (void)native_connection;
     struct http_connection_binding *connection = user_data;
-    assert(!connection->shutdown_called);
+    AWS_FATAL_ASSERT(!connection->shutdown_called);
 
     PyGILState_STATE state = PyGILState_Ensure();
 
@@ -105,13 +102,12 @@ static void s_on_connection_shutdown(struct aws_http_connection *native_connecti
     bool destroy_after_shutdown = connection->release_called;
 
     /* Set result of shutdown_future, then clear our reference to shutdown_future. */
-    PyObject *set_result_fn = PyObject_BorrowAttrString(connection->shutdown_future, "set_result");
-    PyObject *set_result_result = PyObject_CallFunction(set_result_fn, "(i)", error_code);
-    if (set_result_result) {
-        Py_DECREF(set_result_result);
-    } else {
+    PyObject *result = PyObject_CallMethod(connection->shutdown_future, "set_result", "(i)", error_code);
+    if (!result) {
         PyErr_WriteUnraisable(PyErr_Occurred());
+        AWS_FATAL_ASSERT(0);
     }
+    Py_DECREF(result);
     Py_CLEAR(connection->shutdown_future);
 
     if (destroy_after_shutdown) {
@@ -127,8 +123,8 @@ static void s_on_client_connection_setup(
     void *user_data) {
 
     struct http_connection_binding *connection = user_data;
-    assert((int)native_connection ^ error_code);
-    assert(connection->on_setup);
+    AWS_FATAL_ASSERT((native_connection != NULL) ^ error_code);
+    AWS_FATAL_ASSERT(connection->on_setup);
 
     connection->native = native_connection;
 
@@ -163,7 +159,8 @@ static void s_on_client_connection_setup(
         s_connection_destroy(connection);
     }
 
-    Py_XDECREF(capsule);
+    /* Py_XDECREF(capsule); ??? Not sure why this deletes capsule. It's referenced by HttpConnection._binding !!! */
+
     Py_XDECREF(result);
     PyGILState_Release(state);
 }
@@ -201,33 +198,31 @@ PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    struct aws_tls_connection_options *tls_options = NULL;
-    PyObject *tls_ctx_py = Py_None;
-    if (tls_options_py != Py_None) {
-        tls_options = aws_py_get_tls_connection_options(tls_options_py);
-        if (!tls_options) {
-            return NULL;
-        }
-
-        tls_ctx_py = PyObject_BorrowAttrString(tls_options_py, "tls_ctx");
-        if (!tls_ctx_py) {
-            return NULL;
-        }
-    }
-
-    struct aws_socket_options socket_options;
-    if (!aws_py_socket_options_init(&socket_options, socket_options_py)) {
-        return NULL;
-    }
-
     struct http_connection_binding *connection = aws_mem_calloc(allocator, 1, sizeof(struct http_connection_binding));
     if (!connection) {
         return PyErr_AwsLastError();
     }
 
-    /* From hereon, only the final connect() call may fail.
-     * Usually we don't INCREF until we're sure everything succeeded but connect() is async
-     * so make sure everything is ready to go before calling it. */
+    /* From hereon, we need to clean up if errors occur */
+
+    struct aws_tls_connection_options *tls_options = NULL;
+    if (tls_options_py != Py_None) {
+        tls_options = aws_py_get_tls_connection_options(tls_options_py);
+        if (!tls_options) {
+            goto error;
+        }
+
+        connection->tls_ctx = PyObject_GetAttrString(tls_options_py, "tls_ctx"); /* Creates new reference */
+        if (!connection->tls_ctx) {
+            goto error;
+        }
+        Py_INCREF(connection->tls_ctx);
+    }
+
+    struct aws_socket_options socket_options;
+    if (!aws_py_socket_options_init(&socket_options, socket_options_py)) {
+        goto error;
+    }
 
     struct aws_http_client_connection_options http_options = {
         .self_size = sizeof(http_options),
@@ -249,16 +244,17 @@ PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args) {
     Py_INCREF(connection->shutdown_future);
     connection->bootstrap = bootstrap_py;
     Py_INCREF(connection->bootstrap);
-    connection->tls_ctx = tls_ctx_py;
-    Py_INCREF(connection->tls_ctx);
 
     if (aws_http_client_connect(&http_options)) {
         PyErr_SetAwsLastError();
-        s_connection_destroy(connection);
-        return NULL;
+        goto error;
     }
 
     Py_RETURN_NONE;
+
+error:
+    s_connection_destroy(connection);
+    return NULL;
 }
 
 PyObject *aws_py_http_connection_close(PyObject *self, PyObject *args) {
@@ -313,18 +309,18 @@ struct http_stream_binding {
 struct aws_http_stream *aws_py_get_http_stream(PyObject *stream) {
     struct aws_http_stream *native = NULL;
 
-    PyObject *capsule = PyObject_BorrowAttrString(stream, "_binding");
+    PyObject *capsule = PyObject_GetAttrString(stream, "_binding");
     if (capsule) {
         struct http_stream_binding *binding = PyCapsule_GetPointer(capsule, s_capsule_name_http_stream);
         if (binding) {
             native = binding->native;
-            assert(native);
+            AWS_FATAL_ASSERT(native);
         }
+        Py_DECREF(capsule);
     }
 
     return native;
 }
-
 
 static enum aws_http_outgoing_body_state s_stream_outgoing_body(
     struct aws_http_stream *internal_stream,
@@ -446,7 +442,6 @@ static void s_on_stream_complete(struct aws_http_stream *internal_stream, int er
 
 static void s_stream_capsule_destructor(PyObject *http_stream_capsule) {
     struct http_stream_binding *stream = PyCapsule_GetPointer(http_stream_capsule, s_capsule_name_http_stream);
-    assert(stream);
 
     /* If native stream was created, on_complete was already called and most references have already been cleared.
      * Otherwise, native stream failed creation, so we need to clear everything */
@@ -482,10 +477,14 @@ PyObject *aws_py_http_client_connection_make_request(PyObject *self, PyObject *a
     PyObject *py_http_request = NULL;
     PyObject *on_stream_completed = NULL;
     PyObject *on_incoming_headers_received = NULL;
-
     if (!PyArg_ParseTuple(
             args, "OOOO", &py_connection, &py_http_request, &on_stream_completed, &on_incoming_headers_received)) {
         PyErr_SetNone(PyExc_ValueError);
+        goto clean_up_stream;
+    }
+
+    struct aws_http_connection *native_connection = aws_py_get_http_connection(py_connection);
+    if (!native_connection) {
         goto clean_up_stream;
     }
 
@@ -515,10 +514,10 @@ PyObject *aws_py_http_client_connection_make_request(PyObject *self, PyObject *a
 
     struct aws_http_request_options request_options = {
         .self_size = sizeof(request_options),
-        .client_connection = aws_py_get_http_connection(stream->connection),
+        .client_connection = native_connection,
     };
 
-    PyObject *method_str = PyObject_BorrowAttrString(py_http_request, "method");
+    PyObject *method_str = PyObject_GetAttrString(py_http_request, "method");
     if (!method_str) {
         PyErr_SetString(PyExc_ValueError, "http method is required");
         goto clean_up_stream;
@@ -526,7 +525,7 @@ PyObject *aws_py_http_client_connection_make_request(PyObject *self, PyObject *a
 
     request_options.method = aws_byte_cursor_from_pystring(method_str);
 
-    PyObject *uri_str = PyObject_BorrowAttrString(py_http_request, "path_and_query");
+    PyObject *uri_str = PyObject_GetAttrString(py_http_request, "path_and_query");
     if (!uri_str) {
         PyErr_SetString(PyExc_ValueError, "The URI path and query is required");
         goto clean_up_stream;
@@ -534,7 +533,7 @@ PyObject *aws_py_http_client_connection_make_request(PyObject *self, PyObject *a
 
     request_options.uri = aws_byte_cursor_from_pystring(uri_str);
 
-    PyObject *request_headers = PyObject_BorrowAttrString(py_http_request, "outgoing_headers");
+    PyObject *request_headers = PyObject_GetAttrString(py_http_request, "outgoing_headers");
     if (!request_headers) {
         PyErr_SetString(PyExc_ValueError, "outgoing headers is required");
         goto clean_up_stream;
@@ -564,14 +563,14 @@ PyObject *aws_py_http_client_connection_make_request(PyObject *self, PyObject *a
         request_options.num_headers = (size_t)num_headers;
     }
 
-    PyObject *on_read_body = PyObject_BorrowAttrString(py_http_request, "_on_read_body");
+    PyObject *on_read_body = PyObject_GetAttrString(py_http_request, "_on_read_body");
     if (on_read_body && on_read_body != Py_None) {
         stream->on_read_body = on_read_body;
         Py_XINCREF(on_read_body);
         request_options.stream_outgoing_body = s_stream_outgoing_body;
     }
 
-    PyObject *on_incoming_body = PyObject_BorrowAttrString(py_http_request, "_on_incoming_body");
+    PyObject *on_incoming_body = PyObject_GetAttrString(py_http_request, "_on_incoming_body");
     if (on_incoming_body && on_incoming_body != Py_None) {
         stream->on_incoming_body = on_incoming_body;
         Py_XINCREF(on_incoming_body);

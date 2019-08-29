@@ -89,13 +89,14 @@ client_init_failed:
 struct aws_mqtt_client *aws_py_get_mqtt_client(PyObject *mqtt_client) {
     struct aws_mqtt_client *native = NULL;
 
-    PyObject *binding_capsule = PyObject_BorrowAttrString(mqtt_client, "_binding");
+    PyObject *binding_capsule = PyObject_GetAttrString(mqtt_client, "_binding");
     if (binding_capsule) {
         struct mqtt_client_binding *binding = PyCapsule_GetPointer(binding_capsule, s_capsule_name_mqtt_client);
         if (binding) {
             native = &binding->native;
             assert(native);
         }
+        Py_DECREF(binding_capsule);
     }
 
     return native;

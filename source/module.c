@@ -125,12 +125,6 @@ int PyLongOrInt_Check(PyObject *obj) {
     return 0;
 }
 
-PyObject *PyObject_BorrowAttrString(PyObject *o, const char *attr_string) {
-    PyObject *val = PyObject_GetAttrString(o, attr_string);
-    Py_XDECREF(val);
-    return val;
-}
-
 void PyErr_SetAwsLastError(void) {
     PyErr_AwsLastError();
 }
