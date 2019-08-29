@@ -34,7 +34,7 @@
 
 #include <string.h>
 
-const char *s_capsule_name_mqtt_client_connection = "aws_mqtt_client_connection";
+static const char *s_capsule_name_mqtt_client_connection = "aws_mqtt_client_connection";
 
 /*******************************************************************************
  * New Connection
@@ -158,12 +158,6 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
 
     /* From hereon, we need to clean up if errors occur */
 
-    PyObject *capsule =
-        PyCapsule_New(py_connection, s_capsule_name_mqtt_client_connection, s_mqtt_python_connection_destructor);
-    if (!capsule) {
-        goto capsule_new_failed;
-    }
-
     py_connection->native = aws_mqtt_client_connection_new(client);
     if (!py_connection->native) {
         PyErr_SetAwsLastError();
@@ -181,6 +175,12 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
         goto set_interruption_failed;
     }
 
+    PyObject *capsule =
+        PyCapsule_New(py_connection, s_capsule_name_mqtt_client_connection, s_mqtt_python_connection_destructor);
+    if (!capsule) {
+        goto capsule_new_failed;
+    }
+
     /* From hereon, nothing will fail */
 
     py_connection->on_connection_interrupted = on_connection_interrupted;
@@ -192,11 +192,10 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
 
     return capsule;
 
+capsule_new_failed:
 set_interruption_failed:
     aws_mqtt_client_connection_destroy(py_connection->native);
 connection_new_failed:
-    Py_DECREF(capsule);
-capsule_new_failed:
     aws_mem_release(allocator, py_connection);
     return NULL;
 }
@@ -295,9 +294,10 @@ bool s_set_will(struct aws_mqtt_client_connection *connection, PyObject *will) {
 
     if (aws_mqtt_client_connection_set_will(connection, &topic, qos, retain, &payload)) {
         PyErr_SetAwsLastError();
-    } else {
-        success = true;
+        goto done;
     }
+
+    success = true;
 
 done:
     Py_XDECREF(py_topic);

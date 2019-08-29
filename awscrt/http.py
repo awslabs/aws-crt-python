@@ -14,60 +14,81 @@
 import _awscrt
 from concurrent.futures import Future
 from enum import IntEnum
+from awscrt import NativeResource
 from awscrt.io import ClientBootstrap, TlsConnectionOptions, SocketOptions
 
-
-class HttpClientConnection(object):
+class HttpConnection(NativeResource):
     """
-    Represents an Http connection to a remote endpoint. Everything in this class is non-blocking.
+    Base for HTTP connection classes. Do not instantiate directly.
     """
-    __slots__ = ('_bootstrap', '_tls_connection_options', '_on_connection_shutdown', '_native_handle')
 
-    # don't call me, I'm private
-    def __init__(self, bootstrap, on_connection_shutdown, tls_connection_options):
-        assert isinstance(bootstrap, ClientBootstrap)
-        assert tls_connection_options is None or isinstance(tls_connection_options, TlsConnectionOptions)
+    __slots__ = ('_shutdown_future')
 
-        for slot in self.__slots__:
-            setattr(self, slot, None)
+    def __init__(self):
+        assert not type(self) is HttpConnection # Do not instantiate base class directly
+        self._shutdown_future = Future()
 
-        self._bootstrap = bootstrap
-        self._tls_connection_options = tls_connection_options
-        self._on_connection_shutdown = on_connection_shutdown
-        self._native_handle = None
+    def close(self):
+        """
+        Close the connection.
+        Returns a future which will have a result when the connection has finished shutting down.
+        The result will an int indicating why shutdown occurred.
+        """
+        _awscrt.http_connection_close(self._binding)
+        return self._shutdown_future
 
-    @staticmethod
-    def new_connection(bootstrap, host_name, port, socket_options,
-                       on_connection_shutdown=None, tls_connection_options=None):
+    def add_shutdown_callback(self, fn):
+        """
+        fn(error_code: int) will be called when the connection shuts down.
+        error_code indicates the reason that shutdown occurred.
+        Note that the connection may have been garbage collected by the time fn is finally called.
+        """
+        self._shutdown_future.add_done_callback(lambda future: fn(future.result()))
+
+    def is_open(self):
+        """
+        Returns True if the connection is open and usable, False otherwise.
+        """
+        return _awscrt.http_connection_is_open(self._binding)
+
+
+class HttpClientConnection(HttpConnection):
+    """
+    An HTTP client connection. All operations are async.
+    Use HttpClientConnection.new() to establish a new connection.
+    """
+    __slots__ = ()
+
+    @classmethod
+    def new(cls, bootstrap, host_name, port, socket_options,
+                on_connection_shutdown=None, tls_connection_options=None):
         """
         Initiates a new connection to host_name and port using socket_options and tls_connection_options if supplied.
         if tls_connection_options is None, then the connection will be attempted over plain-text.
-        on_connection_shutdown will be invoked if the connection shuts-down while you still hold a reference to it.
-        on_connection_shutdown takes a single argument of int type, to specify the shutdown reason.
 
-        returns a future where the result is a new instance to HttpClientConnection, once the connection has completed
+        Returns a future where the result is a new instance to HttpClientConnection, once the connection has completed
         and is ready for use.
         """
-        assert tls_connection_options is None or isinstance(tls_connection_options, TlsConnectionOptions)
-        assert host_name is not None
-        assert port is not None
-        assert socket_options is not None and isinstance(socket_options, SocketOptions)
-
         future = Future()
-        connection = HttpClientConnection(bootstrap, on_connection_shutdown, tls_connection_options)
-
-        def on_connection_setup_native_cb(native_handle, error_code):
-            if error_code == 0:
-                connection._native_handle = native_handle
-                future.set_result(connection)
-            else:
-                future.set_exception(Exception("Error during connect: err={}".format(error_code)))
-
         try:
-            _awscrt.http_client_connection_create(
+            assert isinstance(bootstrap, ClientBootstrap)
+            assert host_name
+            assert tls_connection_options is None or isinstance(tls_connection_options, TlsConnectionOptions)
+            assert isinstance(socket_options, SocketOptions)
+
+            connection = cls()
+
+            def on_connection_setup(binding, error_code):
+                if error_code == 0:
+                    connection._binding = binding
+                    future.set_result(connection)
+                else:
+                    future.set_exception(Exception("Error during connect: err={}".format(error_code)))
+
+            _awscrt.http_client_connection_new(
                 bootstrap,
-                on_connection_setup_native_cb,
-                connection._on_connection_shutdown,
+                on_connection_setup,
+                connection._shutdown_future,
                 host_name,
                 port,
                 socket_options,
@@ -78,22 +99,6 @@ class HttpClientConnection(object):
 
         return future
 
-    def close(self):
-        """
-        Closes the connection, if you hold a reference to this instance of HttpClientConnection, on_connection_shutdown
-        will be invoked upon completion of the connection close.
-        """
-        if self._native_handle is not None:
-            _awscrt.http_client_connection_close(self._native_handle)
-
-    def is_open(self):
-        """
-        Returns True if the connection is open and usable, False otherwise.
-        """
-        if self._native_handle is not None:
-            return _awscrt.http_client_connection_is_open(self._native_handle)
-
-        return False
 
     def make_request(self, method, uri_str, outgoing_headers, on_outgoing_body, on_incoming_body):
         """
@@ -129,14 +134,14 @@ class HttpClientConnection(object):
             request.response_headers_received.set_result(response_code)
 
         try:
-            request._stream = _awscrt.http_client_connection_make_request(
-                self._native_handle,
+            request._stream = _awscrt.http_client_stream_new(
+                self,
                 request,
                 on_stream_completed,
                 on_incoming_headers_received)
 
         except Exception as e:
-            request.response_headers_received.set_exception(e)
+            request.response_completed.set_exception(e)
 
         return request
 

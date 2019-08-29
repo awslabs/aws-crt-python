@@ -21,10 +21,12 @@
 
 #include "module.h"
 
+struct aws_socket_options;
+
 /**
- * Name String to logging capsules
+ *  Init aws_socket_options from SocketOptions. Returns false and sets python exception if error occurred.
  */
-extern const char *s_capsule_name_logger;
+bool aws_py_socket_options_init(struct aws_socket_options *socket_options, PyObject *py_socket_options);
 
 /**
  * Returns a capsule for logging and starts the logging sub-system
@@ -61,7 +63,6 @@ PyObject *aws_py_tls_connections_options_new_from_ctx(PyObject *self, PyObject *
 PyObject *aws_py_tls_connection_options_set_alpn_list(PyObject *self, PyObject *args);
 
 PyObject *aws_py_tls_connection_options_set_server_name(PyObject *self, PyObject *args);
-
 
 /* Given a python object, return a pointer to its underlying native type.
  * If NULL is returned, a python error has been set */

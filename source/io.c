@@ -16,16 +16,97 @@
 
 #include <aws/io/channel_bootstrap.h>
 #include <aws/io/event_loop.h>
+#include <aws/io/socket.h>
 #include <aws/io/tls_channel_handler.h>
 
 #include <stdio.h>
 #include <string.h>
 
-const char *s_capsule_name_client_bootstrap = "aws_client_bootstrap";
+static const char *s_capsule_name_client_bootstrap = "aws_client_bootstrap";
 static const char *s_capsule_name_elg = "aws_event_loop_group";
-const char *s_capsule_name_host_resolver = "aws_host_resolver";
-const char *s_capsule_name_tls_ctx = "aws_client_tls_ctx";
-const char *s_capsule_name_tls_conn_options = "aws_tls_connection_options";
+static const char *s_capsule_name_host_resolver = "aws_host_resolver";
+static const char *s_capsule_name_tls_ctx = "aws_client_tls_ctx";
+static const char *s_capsule_name_tls_conn_options = "aws_tls_connection_options";
+
+bool aws_py_socket_options_init(struct aws_socket_options *socket_options, PyObject *py_socket_options) {
+    AWS_ZERO_STRUCT(*socket_options);
+
+    bool success = false;
+
+    /* These references all need to be cleaned up before function returns */
+    PyObject *sock_domain = NULL;
+    PyObject *sock_type = NULL;
+    PyObject *connect_timeout_ms = NULL;
+    PyObject *keep_alive = NULL;
+    PyObject *keep_alive_interval = NULL;
+    PyObject *keep_alive_timeout = NULL;
+    PyObject *keep_alive_max_probes = NULL;
+
+    sock_domain = PyObject_GetAttrString(py_socket_options, "domain");
+    if (!PyIntEnum_Check(sock_domain)) {
+        PyErr_SetString(PyExc_TypeError, "SocketOptions.domain is invalid");
+        goto done;
+    }
+    socket_options->domain = (enum aws_socket_domain)PyIntEnum_AsLong(sock_domain);
+
+    sock_type = PyObject_GetAttrString(py_socket_options, "type");
+    if (!PyIntEnum_Check(sock_type)) {
+        PyErr_SetString(PyExc_TypeError, "SocketOptions.type is invalid");
+        goto done;
+    }
+    socket_options->type = (enum aws_socket_type)PyIntEnum_AsLong(sock_type);
+
+    connect_timeout_ms = PyObject_GetAttrString(py_socket_options, "connect_timeout_ms");
+    if (!PyLongOrInt_Check(connect_timeout_ms)) {
+        PyErr_SetString(PyExc_TypeError, "SocketOptions.connect_timeout_ms is invalid");
+        goto done;
+    }
+    socket_options->connect_timeout_ms = (uint32_t)PyLong_AsLong(connect_timeout_ms);
+
+    keep_alive = PyObject_GetAttrString(py_socket_options, "keep_alive");
+    if (!keep_alive) {
+        PyErr_SetString(PyExc_TypeError, "SocketOptions.keep_alive is invalid");
+        goto done;
+    }
+    socket_options->keepalive = (bool)PyObject_IsTrue(keep_alive);
+
+    keep_alive_interval = PyObject_GetAttrString(py_socket_options, "keep_alive_interval_secs");
+    if (!PyLongOrInt_Check(keep_alive_interval)) {
+        PyErr_SetString(PyExc_TypeError, "SocketOptions.keep_alive_interval_secs is invalid");
+        goto done;
+    }
+    socket_options->keep_alive_interval_sec = (uint16_t)PyLong_AsLong(keep_alive_interval);
+
+    keep_alive_timeout = PyObject_GetAttrString(py_socket_options, "keep_alive_timeout_secs");
+    if (!PyLongOrInt_Check(keep_alive_timeout)) {
+        PyErr_SetString(PyExc_TypeError, "SocketOptions.keep_alive_timeout_secs is invalid");
+        goto done;
+    }
+    socket_options->keep_alive_timeout_sec = (uint16_t)PyLong_AsLong(keep_alive_timeout);
+
+    keep_alive_max_probes = PyObject_GetAttrString(py_socket_options, "keep_alive_max_probes");
+    if (!PyLongOrInt_Check(keep_alive_timeout)) {
+        PyErr_SetString(PyExc_TypeError, "SocketOptions.keep_alive_max_probes is invalid");
+        goto done;
+    }
+    socket_options->keep_alive_max_failed_probes = (uint16_t)PyLong_AsLong(keep_alive_max_probes);
+
+    success = true;
+
+done:
+    Py_DECREF(sock_domain);
+    Py_DECREF(sock_type);
+    Py_DECREF(connect_timeout_ms);
+    Py_DECREF(keep_alive);
+    Py_DECREF(keep_alive_interval);
+    Py_DECREF(keep_alive_timeout);
+    Py_DECREF(keep_alive_max_probes);
+
+    if (!success) {
+        AWS_ZERO_STRUCT(*socket_options);
+    }
+    return success;
+}
 
 PyObject *aws_py_is_alpn_available(PyObject *self, PyObject *args) {
 
@@ -61,11 +142,22 @@ PyObject *aws_py_event_loop_group_new(PyObject *self, PyObject *args) {
     }
 
     if (aws_event_loop_group_default_init(elg, allocator, num_threads)) {
-        aws_mem_release(allocator, elg);
-        return PyErr_AwsLastError();
+        PyErr_SetAwsLastError();
+        goto elg_init_failed;
     }
 
-    return PyCapsule_New(elg, s_capsule_name_elg, s_elg_destructor);
+    PyObject *capsule = PyCapsule_New(elg, s_capsule_name_elg, s_elg_destructor);
+    if (!capsule) {
+        goto capsule_new_failed;
+    }
+
+    return capsule;
+
+capsule_new_failed:
+    aws_event_loop_group_clean_up(elg);
+elg_init_failed:
+    aws_mem_release(allocator, elg);
+    return NULL;
 }
 
 struct aws_event_loop_group *aws_py_get_event_loop_group(PyObject *event_loop_group) {

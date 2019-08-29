@@ -40,6 +40,9 @@ struct aws_byte_buf;
 int PyIntEnum_Check(PyObject *int_enum_obj);
 long PyIntEnum_AsLong(PyObject *int_enum_obj);
 
+/* Python 2/3 compatible check. Return whether object is a PyLong (OR PyInt in python2). */
+int PyLongOrInt_Check(PyObject *obj);
+
 struct aws_byte_cursor aws_byte_cursor_from_pystring(PyObject *str);
 
 /* Set current thread's error indicator based on aws_last_error() */
