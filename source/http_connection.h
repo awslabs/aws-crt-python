@@ -16,8 +16,6 @@
  */
 #include "module.h"
 
-#include <aws/http/connection.h>
-
 /**
  * Close the connection if it's open.
  */
@@ -34,15 +32,10 @@ PyObject *aws_py_http_connection_is_open(PyObject *self, PyObject *args);
  */
 PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args);
 
-/**
- * Initiates a request on connection.
- */
-PyObject *aws_py_http_client_connection_make_request(PyObject *self, PyObject *args);
-
 /* Given a python object, return a pointer to its underlying native type.
  * If NULL is returned, a python error has been set */
 
 struct aws_http_connection *aws_py_get_http_connection(PyObject *connection);
-struct aws_http_stream *aws_py_get_http_stream(PyObject *stream);
+
 
 #endif /* AWS_CRT_PYTHON_HTTP_CONNECTION_H */

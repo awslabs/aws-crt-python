@@ -134,7 +134,7 @@ class HttpClientConnection(HttpConnection):
             request.response_headers_received.set_result(response_code)
 
         try:
-            request._stream = _awscrt.http_client_connection_make_request(
+            request._stream = _awscrt.http_client_stream_new(
                 self,
                 request,
                 on_stream_completed,

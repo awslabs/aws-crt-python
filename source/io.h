@@ -24,11 +24,6 @@
 struct aws_socket_options;
 
 /**
- * Name String to logging capsules
- */
-extern const char *s_capsule_name_logger;
-
-/**
  *  Init aws_socket_options from SocketOptions. Returns false and sets python exception if error occurred.
  */
 bool aws_py_socket_options_init(struct aws_socket_options *socket_options, PyObject *py_socket_options);

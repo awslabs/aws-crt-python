@@ -16,7 +16,7 @@
 
 #include "io.h"
 
-const char *s_capsule_name_mqtt_client = "aws_mqtt_client";
+static const char *s_capsule_name_mqtt_client = "aws_mqtt_client";
 
 struct mqtt_client_binding {
     struct aws_mqtt_client native;

@@ -22,11 +22,11 @@
 #include <stdio.h>
 #include <string.h>
 
-const char *s_capsule_name_client_bootstrap = "aws_client_bootstrap";
+static const char *s_capsule_name_client_bootstrap = "aws_client_bootstrap";
 static const char *s_capsule_name_elg = "aws_event_loop_group";
-const char *s_capsule_name_host_resolver = "aws_host_resolver";
-const char *s_capsule_name_tls_ctx = "aws_client_tls_ctx";
-const char *s_capsule_name_tls_conn_options = "aws_tls_connection_options";
+static const char *s_capsule_name_host_resolver = "aws_host_resolver";
+static const char *s_capsule_name_tls_ctx = "aws_client_tls_ctx";
+static const char *s_capsule_name_tls_conn_options = "aws_tls_connection_options";
 
 bool aws_py_socket_options_init(struct aws_socket_options *socket_options, PyObject *py_socket_options) {
     AWS_ZERO_STRUCT(*socket_options);

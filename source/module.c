@@ -15,6 +15,7 @@
 #include "module.h"
 #include "crypto.h"
 #include "http_connection.h"
+#include "http_stream.h"
 #include "io.h"
 #include "mqtt_client.h"
 #include "mqtt_client_connection.h"
@@ -201,11 +202,11 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(hash_update, METH_VARARGS),
     AWS_PY_METHOD_DEF(hash_digest, METH_VARARGS),
 
-    /* HTTP client */
+    /* HTTP */
     AWS_PY_METHOD_DEF(http_connection_close, METH_VARARGS),
     AWS_PY_METHOD_DEF(http_connection_is_open, METH_VARARGS),
     AWS_PY_METHOD_DEF(http_client_connection_new, METH_VARARGS),
-    AWS_PY_METHOD_DEF(http_client_connection_make_request, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http_client_stream_new, METH_VARARGS),
 
     {NULL, NULL, 0, NULL},
 };

@@ -34,7 +34,7 @@
 
 #include <string.h>
 
-const char *s_capsule_name_mqtt_client_connection = "aws_mqtt_client_connection";
+static const char *s_capsule_name_mqtt_client_connection = "aws_mqtt_client_connection";
 
 /*******************************************************************************
  * New Connection
