@@ -190,7 +190,6 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(mqtt_client_connection_publish, METH_VARARGS),
     AWS_PY_METHOD_DEF(mqtt_client_connection_subscribe, METH_VARARGS),
     AWS_PY_METHOD_DEF(mqtt_client_connection_unsubscribe, METH_VARARGS),
-    AWS_PY_METHOD_DEF(mqtt_client_connection_ping, METH_VARARGS),
     AWS_PY_METHOD_DEF(mqtt_client_connection_disconnect, METH_VARARGS),
 
     /* Cryptographic primitives */
@@ -222,8 +221,6 @@ PyDoc_STRVAR(s_module_doc, "C extension for binding AWS implementations of MQTT,
 static void s_module_free(void *userdata) {
     (void)userdata;
 
-    aws_tls_clean_up_static_state();
-
     if (s_logger_init) {
         aws_logger_clean_up(&s_logger);
     }
@@ -252,12 +249,6 @@ PyMODINIT_FUNC INIT_FN(void) {
     (void)m;
 #endif /* PY_MAJOR_VERSION */
 
-    aws_load_error_strings();
-    aws_io_load_error_strings();
-
-    aws_io_load_log_subject_strings();
-    aws_tls_init_static_state(aws_py_get_allocator());
-    aws_http_library_init(aws_py_get_allocator());
     aws_mqtt_library_init(aws_py_get_allocator());
 
     if (!PyEval_ThreadsInitialized()) {

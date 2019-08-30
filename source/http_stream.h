@@ -16,11 +16,22 @@
  */
 #include "module.h"
 
-struct aws_http_stream *aws_py_get_http_stream(PyObject *stream);
+struct aws_http_message;
 
 /**
  * Initiates a request on connection.
  */
 PyObject *aws_py_http_client_stream_new(PyObject *self, PyObject *args);
+
+/**
+ * Update the aws_http_message so all its fields match the HttpRequest.
+ * Returns false and sets python error if failure occurred.
+ */
+bool aws_py_http_request_copy_from_py(struct aws_http_message *dst, PyObject *src);
+
+/* Given a python object, return a pointer to its underlying native type.
+ * If NULL is returned, a python error has been set */
+
+struct aws_http_stream *aws_py_get_http_stream(PyObject *stream);
 
 #endif /* AWS_CRT_PYTHON_HTTP_STREAM_H */

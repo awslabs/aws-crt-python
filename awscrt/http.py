@@ -13,9 +13,22 @@
 
 import _awscrt
 from concurrent.futures import Future
-from enum import IntEnum
+from collections import defaultdict
+from enum import IntEnum, Enum
 from awscrt import NativeResource
 from awscrt.io import ClientBootstrap, TlsConnectionOptions, SocketOptions
+
+class HttpMethod(Enum):
+    GET = 1
+    HEAD = 2
+    POST = 3
+    PUT = 4
+    DELETE = 5
+    CONNECT = 6
+    OPTIONS = 7
+    TRACE = 8
+    PATCH = 9
+
 
 class HttpConnection(NativeResource):
     """
@@ -57,7 +70,7 @@ class HttpClientConnection(HttpConnection):
     An HTTP client connection. All operations are async.
     Use HttpClientConnection.new() to establish a new connection.
     """
-    __slots__ = ()
+    __slots__ = ('host_name', 'port')
 
     @classmethod
     def new(cls, bootstrap, host_name, port, socket_options,
@@ -77,6 +90,8 @@ class HttpClientConnection(HttpConnection):
             assert isinstance(socket_options, SocketOptions)
 
             connection = cls()
+            connection.host_name = host_name
+            connection.port = port
 
             def on_connection_setup(binding, error_code):
                 if error_code == 0:
@@ -100,92 +115,92 @@ class HttpClientConnection(HttpConnection):
         return future
 
 
-    def make_request(self, method, uri_str, outgoing_headers, on_outgoing_body, on_incoming_body):
-        """
-        path_and_query is the path and query portion
-        of a URL. method is the http method (GET, PUT, etc...). outgoing_headers are the headers to send as part
-        of the request.
-
-        on_read_body is invoked to read the body of the request. It takes a single parameter of type MemoryView
-        (it's writable), and you signal the end of the stream by returning OutgoingHttpBodyState.Done for the first tuple
-        argument. If you aren't done sending the body, the first tuple argument should be OutgoingHttpBodyState.InProgress
-        The second tuple argument is the size of the data written to the memoryview.
-
-        on_incoming_body is invoked as the response body is received. It takes a single argument of type bytes.
-
-        Makes an Http request. When the headers from the response are received, the returned
-        HttpRequest.response_headers_received future will have a result.
-        and request.response_headers will be filled in, and request.response_code will be available.
-        After this future completes, you can get the result of request.response_completed,
-        for the remainder of the response.
-        """
-        request = HttpRequest(self, method, uri_str, outgoing_headers, on_outgoing_body, on_incoming_body)
-
-        def on_stream_completed(error_code):
-            if error_code == 0:
-                request.response_completed.set_result(error_code)
-            else:
-                request.response_completed.set_exception(Exception(error_code))
-
-        def on_incoming_headers_received(headers, response_code, has_body):
-            request.response_headers = headers
-            request.response_code = response_code
-            request.has_response_body = has_body
-            request.response_headers_received.set_result(response_code)
-
-        try:
-            request._stream = _awscrt.http_client_stream_new(
-                self,
-                request,
-                on_stream_completed,
-                on_incoming_headers_received)
-
-        except Exception as e:
-            request.response_completed.set_exception(e)
-
-        return request
+    def make_request(self, request, on_response, on_body):
+        return HttpClientStream(self, request, on_response, on_body)
 
 
-class OutgoingHttpBodyState(IntEnum):
-    InProgress = 0
-    Done = 1
+class HttpStream(NativeResource):
+    __slots__ = ('connection', 'complete_future', '_on_body_cb')
+
+    def __init__(self, connection, on_body=None):
+        self.connection = connection
+        self.complete_future = Future()
+        self._on_body_cb = on_body
+
+    def _on_body(self, chunk):
+        if self._on_body_cb:
+            self._on_body_cb(self, chunk)
+
+    def _on_complete(self, error_code):
+        if error_code:
+            self.complete_future.set_result(None)
+        else:
+            self.complete_future.set_exception(Exception(error_code)) # TODO: Actual exceptions for error_codes
+
+
+class HttpClientStream(HttpStream):
+    __slots__ = ('request', 'response_status_code', '_on_response_cb', '_on_body_cb')
+
+    def __init__(self, connection, request, on_response=None, on_body=None):
+        assert isinstance(connection, HttpClientConnection)
+        assert isinstance(request, HttpRequest)
+        assert callable(on_response) or on_response is None
+        assert callable(on_body) or on_body is None
+
+        super(HttpStream, self).__init__(connection, on_body)
+
+        self.request = request
+        self._on_response_cb = on_response
+        self.response_status_code = None
+
+        _awscrt.http_client_stream_new(self, connection, request)
+
+
+    def _on_response(self, status_code, name_value_pairs):
+        self.response_status_code = status_code
+
+        headers = HttpHeaders()
+        for pair in name_value_pairs:
+            headers.add(pair[0], pair[1])
+
+        if self._on_response_cb:
+            self._on_response_cb(self, status_code, headers)
 
 
 class HttpRequest(object):
-    """
-    Represents an HttpRequest to pass to HttpClientConnection.make_request(). path_and_query is the path and query portion
-    of a URL. method is the http method (GET, PUT, etc...). outgoing_headers are the headers to send as part
-    of the request.
+    __slots__ = ('method', 'path', 'headers', 'body')
 
-    on_read_body is invoked to read the body of the request. It takes a single parameter of type MemoryView
-    (it's writable), and you signal the end of the stream by returning OutgoingHttpBodyState.Done for the first tuple
-    argument. If you aren't done sending the body, the first tuple argument should be OutgoingHttpBodyState.InProgress
-    The second tuple argument is the size of the data written to the memoryview.
-
-    on_incoming_body is invoked as the response body is received. It takes a single argument of type bytes.
-    """
-    __slots__ = ('_connection', 'path_and_query', 'method', 'outgoing_headers', '_on_read_body', '_on_incoming_body', '_stream',
-                 'response_headers', 'response_code', 'has_response_body', 'response_headers_received',
-                 'response_completed')
-
-    def __init__(self, connection, method, path_and_query, outgoing_headers, on_read_body, on_incoming_body):
-        assert method is not None
-        assert outgoing_headers is not None
-        assert connection is not None and isinstance(connection, HttpClientConnection)
-
-        self.path_and_query = path_and_query
-
-        if path_and_query is None:
-            self.path_and_query = '/'
-
-        self._connection = connection
+    def __init__(self, method=None, path=None, body=None):
         self.method = method
-        self.outgoing_headers = outgoing_headers
-        self._on_read_body = on_read_body
-        self._on_incoming_body = on_incoming_body
-        self.response_completed = Future()
-        self.response_headers_received = Future()
-        self._stream = None
-        self.response_headers = None
-        self.response_code = None
-        self.has_response_body = False
+        self.path = path
+        self.body = body
+        self.headers = HttpHeaders()
+
+
+class HttpHeaders(object):
+    __slots__ = ('map')
+    def __init__(self):
+        self.map = defaultdict(list)
+
+    def add(self, name, value):
+        self.map[name.lower()].append(value)
+
+    def set(self, name, value):
+        self.map[name.lower()] = [value]
+
+    def get_list(self, name):
+        return self.map.get(name.lower(), [])
+
+    def get(self, name):
+        values = self.map.get(name.lower())
+        if values:
+            return values[0]
+        else:
+            return ""
+
+    def remove(self, name):
+        try:
+            del self.map[name.lower()]
+        except:
+            pass
+

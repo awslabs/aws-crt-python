@@ -205,6 +205,3 @@ class Connection(NativeResource):
             future.set_exception(e)
 
         return future, packet_id
-
-    def ping(self):
-        _awscrt.mqtt_client_connection_ping(self._binding)
