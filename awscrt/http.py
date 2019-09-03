@@ -14,7 +14,7 @@
 import _awscrt
 from concurrent.futures import Future
 from collections import defaultdict
-from enum import IntEnum, Enum
+from enum import Enum
 from awscrt import NativeResource
 from awscrt.io import ClientBootstrap, TlsConnectionOptions, SocketOptions
 
@@ -30,15 +30,14 @@ class HttpMethod(Enum):
     PATCH = 9
 
 
-class HttpConnection(NativeResource):
+class HttpConnectionBase(NativeResource):
     """
-    Base for HTTP connection classes. Do not instantiate directly.
+    Base for HTTP connection classes.
     """
 
     __slots__ = ('_shutdown_future')
 
     def __init__(self):
-        assert not type(self) is HttpConnection # Do not instantiate base class directly
         self._shutdown_future = Future()
 
     def close(self):
@@ -65,7 +64,7 @@ class HttpConnection(NativeResource):
         return _awscrt.http_connection_is_open(self._binding)
 
 
-class HttpClientConnection(HttpConnection):
+class HttpClientConnection(HttpConnectionBase):
     """
     An HTTP client connection. All operations are async.
     Use HttpClientConnection.new() to establish a new connection.
@@ -173,7 +172,7 @@ class HttpRequest(object):
     def __init__(self, method=None, path=None, body=None):
         self.method = method
         self.path = path
-        self.body = body
+        self.body = body # TODO: io.RawIOBase | nonblocking
         self.headers = HttpHeaders()
 
 

@@ -26,6 +26,8 @@ PyObject *aws_py_http_client_stream_new(PyObject *self, PyObject *args);
 /**
  * Update the aws_http_message so all its fields match the HttpRequest.
  * Returns false and sets python error if failure occurred.
+ * Note that if failure occurred the aws_http_message might be in a
+ * "partially copied" state.
  */
 bool aws_py_http_request_copy_from_py(struct aws_http_message *dst, PyObject *src);
 

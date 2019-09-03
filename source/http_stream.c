@@ -194,8 +194,8 @@ static int s_on_incoming_body(
     /*************** GIL ACQUIRE ***************/
     PyGILState_STATE state = PyGILState_Ensure();
 
-    PyObject *result =
-        PyObject_CallMethod(stream->self_proxy, "_on_body", "(" BYTE_BUF_FORMAT_STR ")", (const char *)data->ptr, data_len);
+    PyObject *result = PyObject_CallMethod(
+        stream->self_proxy, "_on_body", "(" BYTE_BUF_FORMAT_STR ")", (const char *)data->ptr, data_len);
 
     Py_XDECREF(result);
 
@@ -235,11 +235,6 @@ static void s_on_stream_complete(struct aws_http_stream *native_stream, int erro
     /*************** GIL RELEASE ***************/
 }
 
-bool aws_py_http_request_copy_from_py(struct aws_http_message *dst, PyObject *src) {
-    (void)dst;(void)src;
-    return false;
-}
-
 static void s_stream_capsule_destructor(PyObject *http_stream_capsule) {
     struct http_stream_binding *stream = PyCapsule_GetPointer(http_stream_capsule, s_capsule_name_http_stream);
 
@@ -273,7 +268,7 @@ PyObject *aws_py_http_client_stream_new(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    struct http_stream_binding *stream = aws_mem_calloc(allocator, 1, sizeof (struct http_stream_binding));
+    struct http_stream_binding *stream = aws_mem_calloc(allocator, 1, sizeof(struct http_stream_binding));
     if (!stream) {
         return PyErr_AwsLastError();
     }
@@ -347,4 +342,88 @@ error:
         aws_mem_release(allocator, stream);
     }
     return NULL;
+}
+
+bool aws_py_http_request_copy_from_py(struct aws_http_message *dst, PyObject *src) {
+
+    bool success = false;
+
+    /* Objects that need to be cleaned up whether or not we succeed */
+    PyObject *method = NULL;
+    PyObject *path = NULL;
+    PyObject *headers = NULL;
+    PyObject *map = NULL;
+
+    method = PyObject_GetAttrString(src, "method");
+    struct aws_byte_cursor method_cur = aws_byte_cursor_from_pystring(method);
+    if (!method_cur.ptr) {
+        PyErr_SetString(PyExc_TypeError, "HttpRequest.method is invalid");
+        goto done;
+    }
+    if (aws_http_message_set_request_method(dst, method_cur)) {
+        PyErr_SetAwsLastError();
+        goto done;
+    }
+
+    path = PyObject_GetAttrString(src, "path");
+    struct aws_byte_cursor path_cur = aws_byte_cursor_from_pystring(path);
+    if (!path_cur.ptr) {
+        PyErr_SetString(PyExc_TypeError, "HttpRequest.path is invalid");
+        goto done;
+    }
+    if (aws_http_message_set_request_path(src, path_cur)) {
+        PyErr_SetAwsLastError();
+        goto done;
+    }
+
+    headers = PyObject_GetAttrString(src, "headers");
+    if (!headers) {
+        goto done;
+    }
+
+    map = PyObject_GetAttrString(headers, "map");
+    if (!map) {
+        goto done;
+    }
+
+    /* Clear existing headers, before adding the new values. */
+    size_t num_headers = aws_http_message_get_header_count(src);
+    for (size_t i = 0; i < num_headers; ++i) {
+        aws_http_message_erase_header(dst, num_headers - (1 + i)); /* erase from back to front */
+    }
+
+    /* Copy in new header values */
+    Py_ssize_t map_pos = 0;
+    PyObject *header_name = NULL;
+    PyObject *value_list = NULL;
+    while (PyDict_Next(map, &map_pos, &header_name, &value_list)) {
+        struct aws_byte_cursor name_cur = aws_byte_cursor_from_pystring(header_name);
+        if (!name_cur.ptr) {
+            PyErr_SetString(PyExc_TypeError, "Header name is invalid");
+            goto done;
+        }
+
+        Py_ssize_t num_values = PyList_Size(values_list);
+        for (Py_ssize_t value_i = 0; value_i < num_values; ++num_values) {
+            PyObject *header_value = PyList_GET_ITEM(value_list, value_i);
+            struct value_cur = aws_byte_cursor_from_pystring(header_value);
+            if (!value_cur.ptr) {
+                PyErr_SetString(PyExc_TypeError, "Header value is invalid");
+                goto done;
+            }
+
+            if (aws_http_request_add_header(dst, struct aws_header{name_cur, value_cur})) {
+                PyErr_SetAwsLastError();
+                goto done;
+            }
+        }
+    }
+
+    // TODO: body?
+
+    success = true;
+done:
+    // TODO: cleanup
+
+    return false;
 }
