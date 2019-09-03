@@ -137,6 +137,44 @@ PyObject *PyErr_AwsLastError(void) {
     return PyErr_Format(PyExc_RuntimeError, "%d (%s): %s", err, name, msg);
 }
 
+struct py_err_to_aws_err {
+    PyObject *py;
+    int aws;
+}
+
+static const struct py_err_to_aws_err s_py_err_to_aws_err_array[] = {
+    {PyExc_BlockingIOError, AWS_IO_READ_WOULD_BLOCK},
+    {PyExc_BrokenPipeError, AWS_IO_BROKEN_PIPE},
+    {PyExc_FileNotFoundError, AWS_ERROR_FILE_INVALID_PATH},
+    {PyExc_IndexError, AWS_ERROR_INVALID_INDEX},
+    {PyExc_MemoryError, AWS_ERROR_OOM},
+    {PyExc_NotImplementedError, AWS_ERROR_UNIMPLEMENTED},
+    {PyExc_OverflowError, AWS_ERROR_OVERFLOW_DETECTED},
+    {PyExc_TypeError, AWS_ERROR_INVALID_ARGUMENT},
+    {PyExc_ValueError, AWS_ERROR_INVALID_ARGUMENT},
+};
+
+int aws_raise_py_err(void) {
+    AWS_ASSERT(PyErr_Occurred() != NULL);
+    AWS_ASSERT(PyGILState_Check() == 1);
+
+    int aws_error = AWS_ERROR_UNKNOWN;
+
+    for (size_t i; i < AWS_ARRAY_SIZE(s_py_err_to_aws_err_array); ++i) {
+        const struct py_err_to_aws_err *err_mapping = &s_py_err_to_aws_err_array[i];
+        if (PyErr_ExceptionMatches(err_mapping->py)) {
+            aws_error = err_mapping->aws;
+            break;
+        }
+    }
+
+    /* Print standard traceback to sys.stderr and clear the error indicator. */
+    PyErr_Print();
+    sprintf(stderr, "Treating Python exception as %d(%s)\n", aws_err, aws_error_name(aws_err));
+
+    return aws_raise_error(aws_error);
+}
+
 PyObject *aws_py_memory_view_from_byte_buffer(struct aws_byte_buf *buf, int flags) {
 #if PY_MAJOR_VERSION == 3
     return PyMemoryView_FromMemory((char *)(buf->buffer + buf->len), (Py_ssize_t)(buf->capacity - buf->len), flags);
@@ -178,6 +216,7 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(tls_connections_options_new_from_ctx, METH_VARARGS),
     AWS_PY_METHOD_DEF(tls_connection_options_set_alpn_list, METH_VARARGS),
     AWS_PY_METHOD_DEF(tls_connection_options_set_server_name, METH_VARARGS),
+    AWS_PY_METHOD_DEF(input_stream_new, METH_VARARGS),
     AWS_PY_METHOD_DEF(init_logging, METH_VARARGS),
 
     /* MQTT Client */

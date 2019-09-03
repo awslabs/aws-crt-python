@@ -27,6 +27,7 @@ static const char *s_capsule_name_elg = "aws_event_loop_group";
 static const char *s_capsule_name_host_resolver = "aws_host_resolver";
 static const char *s_capsule_name_tls_ctx = "aws_client_tls_ctx";
 static const char *s_capsule_name_tls_conn_options = "aws_tls_connection_options";
+static const char *s_capsule_name_input_stream = "aws_input_stream";
 
 bool aws_py_socket_options_init(struct aws_socket_options *socket_options, PyObject *py_socket_options) {
     AWS_ZERO_STRUCT(*socket_options);
@@ -608,4 +609,187 @@ PyObject *aws_py_tls_connection_options_set_server_name(PyObject *self, PyObject
     }
 
     Py_RETURN_NONE;
+}
+
+/* aws_input_stream implementation for accessing Python's io.RawIOBase */
+struct aws_input_stream_py_impl {
+    struct aws_input_stream base;
+
+    bool end_of_file;
+
+    /* Dependencies that must outlive this */
+    PyObject *raw_io_base;
+};
+
+static void s_aws_input_stream_py_clean_up(struct aws_input_stream *stream) {
+    struct aws_input_stream_py_impl *impl = stream->impl;
+    Py_DECREF(impl->raw_io_base);
+    aws_mem_release(aws_py_get_allocator(), impl);
+}
+
+static int s_aws_input_stream_py_seek(
+    struct aws_input_stream *stream,
+    aws_off_t offset,
+    enum aws_stream_seek_basis basis) {
+
+    struct aws_input_stream_py_impl *impl = stream->impl;
+
+    int aws_result = AWS_OP_SUCCESS;
+    PyObject *method_result = NULL;
+
+    /*************** GIL ACQUIRE ***************/
+    PyGILState_STATE state = PyGILState_Ensure();
+
+    method_result = PyObject_CallMethod(impl->raw_io_base, "seek", "(li)", &offset, &basis);
+    if (!method_result) {
+        aws_result = aws_raise_py_err();
+        goto done;
+    }
+
+    /* Clear EOF */
+    impl->is_end_of_stream = false;
+
+done:
+    Py_XDECREF(method_result);
+    PyGILState_Release(state);
+    /*************** GIL RELEASE ***************/
+
+    return aws_result;
+}
+
+int s_aws_input_stream_py_read(struct aws_input_stream *stream, struct aws_byte_buf *dest) {
+    struct aws_input_stream_py_impl *impl = stream->impl;
+
+    int aws_result = AWS_OP_SUCCESS;
+    PyObject *memory_view = NULL;
+    PyObject *method_result = NULL;
+
+    /*************** GIL ACQUIRE ***************/
+    PyGILState_STATE state = PyGILState_Ensure();
+
+    memory_view = PyMemoryView_FromMemory(dest->buffer + dest->len, dest->capacity - dest->len, PyBUF_WRITE);
+    if (!memory_view) {
+        aws_result = aws_raise_py_err();
+        goto done;
+    }
+
+    method_result = PyObject_CallMethod(impl->raw_io_base, "readinto", "(O)", &memory_view);
+    if (!result) {
+        aws_result = aws_raise_py_err();
+        goto done;
+    }
+
+    /* Return the number of bytes read. If the object is in non-blocking mode
+     * and no bytes are available, None is returned */
+    Py_ssize_t bytes_read = 0;
+    if (method_result != Py_None) {
+        bytes_read = PyLong_AsSsize_t(method_result);
+        if (bytes_read == -1 && PyErr_Occurred()) {
+            aws_result = aws_raise_py_err();
+            goto done;
+        }
+        AWS_FATAL_ASSERT(bytes_read >= 0);
+
+        if (bytes_read == 0) {
+            impl->is_end_of_stream = true;
+        } else {
+            dest->len += bytes_read;
+        }
+    }
+
+done:
+    Py_XDECREF(memory_view);
+    Py_XDECREF(method_result);
+    PyGILState_Release(state);
+    /*************** GIL RELEASE ***************/
+
+    return aws_result;
+}
+
+int s_aws_input_stream_py_get_status(struct aws_input_stream *stream, struct aws_stream_status *status) {
+    struct aws_input_stream_py_impl *impl = stream->impl;
+
+    status->is_valid = true;
+    status->is_end_of_stream = impl->is_end_of_stream;
+
+    return AWS_OP_SUCCESS;
+}
+
+int s_aws_input_stream_py_get_length(struct aws_input_stream *stream, int64_t *out_length) {
+    (void)stream;
+    (void)out_length;
+    return AWS_ERROR_UNIMPLEMENTED;
+}
+
+static struct aws_input_table_vtable s_aws_input_stream_py_vtable = {
+    .seek = s_aws_input_stream_py_seek,
+    .read = s_aws_input_stream_py_read,
+    .get_status = s_aws_input_stream_py_get_status,
+    .get_length = s_aws_input_stream_py_get_length,
+    .clean_up = s_aws_input_stream_py_clean_up,
+};
+
+struct aws_input_stream *aws_input_stream_new_from_py(PyObject *raw_io_base) {
+    struct aws_allocator *alloc = aws_py_get_allocator();
+
+    struct aws_input_stream_py_impl *impl = aws_mem_calloc(alloc, 1, sizeof(struct aws_input_stream_py_impl));
+    if (!impl) {
+        return NULL;
+    }
+
+    impl->base.allocator = alloc;
+    impl->base.vtable = &s_aws_input_stream_py_vtable;
+    impl->base.impl = impl;
+
+    impl->raw_io_base = raw_io_base;
+    Py_INCREF(impl->raw_io_base);
+
+    return &impl->base
+}
+
+struct input_stream_binding {
+    struct aws_input_stream *native;
+};
+
+static void s_input_stream_capsule_destructor(PyObject *capsule) {
+    struct input_stream_binding *stream = PyCapsule_GetPointer(capsule, s_capsule_name_input_stream);
+
+    aws_input_stream_destroy(stream->native);
+    Py_XDECREF(stream->raw_io_base);
+
+    aws_mem_release(aws_py_get_allocator(), stream);
+}
+
+PyObject *aws_py_input_stream_new(PyObject *self, PyObject *args) {
+    (void)self;
+
+    PyObject *raw_io_base;
+    if (!PyArg_ParseTuple(args, "O", &raw_io_base)) {
+        return NULL;
+    }
+
+    struct input_stream_binding *stream =
+        aws_mem_calloc(aws_py_get_allocator(), 1, sizeof(struct input_stream_binding));
+    if (!input_stream_binding) {
+        return PyErr_AwsLastError();
+    }
+
+    PyObject *capsule = PyCapsule_New(stream, )
+}
+
+struct aws_input_stream *aws_py_get_input_stream(PyObject *input_stream) {
+    struct aws_input_stream *native = NULL;
+
+    PyObject *binding_capsule = PyObject_GetAttrString(tls_connection_options, "_binding");
+    if (binding_capsule) {
+        struct input_stream_binding *binding =
+            PyCapsule_GetPointer(binding_capsule, s_capsule_name_input_stream, s_input_stream_capsule_destructor);
+        if (binding) {
+            native = &binding->native;
+            assert(native);
+        }
+        Py_DECREF(binding_capsule);
+    }
+
+    return native;
 }

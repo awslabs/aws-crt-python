@@ -14,6 +14,7 @@
 import _awscrt
 from awscrt import NativeResource
 from enum import IntEnum
+from io import RawIOBase
 
 
 class LogLevel(IntEnum):
@@ -266,3 +267,10 @@ class TlsConnectionOptions(NativeResource):
 
     def set_server_name(self, server_name):
         _awscrt.tls_connection_options_set_server_name(self, server_name)
+
+
+class InputStream(NativeResource):
+    __slots__ = ()
+    def __init__(self, raw_io_base):
+        assert isinstance(raw_io_base, RawIOBase)
+        self._binding = _awscrt.aws_py_input_stream_new(raw_io_base)

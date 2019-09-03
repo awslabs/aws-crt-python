@@ -51,6 +51,10 @@ void PyErr_SetAwsLastError(void);
 /* Set current thread's error indicator based on aws_last_error() and returns NULL */
 PyObject *PyErr_AwsLastError(void);
 
+/* Print the current Python error to stderr and clear the Python error indicator,
+ * while invoking aws_raise_error(x) with a corresponding AWS error code (fallback is AWS_ERROR_UNKNOWN). */
+int aws_raise_py_err(void);
+
 PyObject *aws_py_memory_view_from_byte_buffer(struct aws_byte_buf *buf, int flags);
 
 /* Allocator that calls into PyObject_[Malloc|Free|Realloc] */
