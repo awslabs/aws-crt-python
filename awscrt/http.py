@@ -16,7 +16,7 @@ from concurrent.futures import Future
 from collections import defaultdict
 from enum import Enum
 from awscrt import NativeResource
-from awscrt.io import ClientBootstrap, TlsConnectionOptions, SocketOptions
+from awscrt.io import ClientBootstrap, InputStream, TlsConnectionOptions, SocketOptions
 
 class HttpMethod(Enum):
     GET = 1
@@ -118,7 +118,7 @@ class HttpClientConnection(HttpConnectionBase):
         return HttpClientStream(self, request, on_response, on_body)
 
 
-class HttpStream(NativeResource):
+class HttpStreamBase(NativeResource):
     __slots__ = ('connection', 'complete_future', '_on_body_cb')
 
     def __init__(self, connection, on_body=None):
@@ -137,7 +137,7 @@ class HttpStream(NativeResource):
             self.complete_future.set_exception(Exception(error_code)) # TODO: Actual exceptions for error_codes
 
 
-class HttpClientStream(HttpStream):
+class HttpClientStream(HttpStreamBase):
     __slots__ = ('request', 'response_status_code', '_on_response_cb', '_on_body_cb')
 
     def __init__(self, connection, request, on_response=None, on_body=None):
@@ -146,7 +146,7 @@ class HttpClientStream(HttpStream):
         assert callable(on_response) or on_response is None
         assert callable(on_body) or on_body is None
 
-        super(HttpStream, self).__init__(connection, on_body)
+        super(HttpStreamBase, self).__init__(connection, on_body)
 
         self.request = request
         self._on_response_cb = on_response
@@ -166,31 +166,78 @@ class HttpClientStream(HttpStream):
             self._on_response_cb(self, status_code, headers)
 
 
-class HttpRequest(object):
-    __slots__ = ('method', 'path', 'headers', 'body')
+class HttpMessageBase(NativeResource):
+    """
+    Base for HttpRequest and HttpResponse classes.
+    """
+    __slots__ = ('headers', 'body')
+
+    def __init__(self, body=None):
+        assert isinstance(body, InputStream) or body is None
+        self.headers = HttpHeaders()
+        """`HttpHeaders`"""
+
+        self.body = body
+        """`awscrt.io.InputStream` for the body"""
+
+
+class HttpRequest(HttpMessageBase):
+    """
+    Definition for an outgoing HTTP request.
+    The request may be transformed (ex: signing the request) before its data is eventually sent.
+    """
+
+    __slots__ = ('method', 'path')
 
     def __init__(self, method=None, path=None, body=None):
+        super(HttpMessageBase, self).__init__(body)
         self.method = method
+        """Method for the HTTP request. Ex: \"GET\""""
+
         self.path = path
-        self.body = body # TODO: io.RawIOBase | nonblocking
-        self.headers = HttpHeaders()
+        """Path-and-query value for HTTP request. Ex: \"/index.html\""""
+
+        self._binding = _awscrt.http_message_new_request(self)
 
 
 class HttpHeaders(object):
+    """
+    Collection of HTTP headers.
+    `map` holds the full collection, with lowercased names and lists of values.
+    Convenience functions are provided.
+    """
+
     __slots__ = ('map')
+
     def __init__(self):
         self.map = defaultdict(list)
+        """Map of all headers, where key is lowercased name and value is list of strings."""
 
     def add(self, name, value):
+        """
+        Add a name-value pair.
+        """
         self.map[name.lower()].append(value)
 
     def set(self, name, value):
+        """
+        Set a name-value pair, any existing values for the name are removed.
+        """
         self.map[name.lower()] = [value]
 
     def get_list(self, name):
+        """
+        Get the list of values for this name.
+        Returns an empty list if no values exist.
+        """
         return self.map.get(name.lower(), [])
 
     def get(self, name):
+        """
+        Get the first value for this name.
+        Ignores any additional values.
+        Returns an empty string if no values exist.
+        """
         values = self.map.get(name.lower())
         if values:
             return values[0]
@@ -198,6 +245,9 @@ class HttpHeaders(object):
             return ""
 
     def remove(self, name):
+        """
+        Remove all values for this name.
+        """
         try:
             del self.map[name.lower()]
         except:

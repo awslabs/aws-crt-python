@@ -23,17 +23,13 @@ struct aws_http_message;
  */
 PyObject *aws_py_http_client_stream_new(PyObject *self, PyObject *args);
 
-/**
- * Update the aws_http_message so all its fields match the HttpRequest.
- * Returns false and sets python error if failure occurred.
- * Note that if failure occurred the aws_http_message might be in a
- * "partially copied" state.
- */
-bool aws_py_http_request_copy_from_py(struct aws_http_message *dst, PyObject *src);
+
+bool aws_py_http_message_new_request(struct aws_http_message *dst, PyObject *src);
 
 /* Given a python object, return a pointer to its underlying native type.
  * If NULL is returned, a python error has been set */
 
 struct aws_http_stream *aws_py_get_http_stream(PyObject *stream);
+struct aws_http_message *aws_py_get_http_message(PyObject *http_request);
 
 #endif /* AWS_CRT_PYTHON_HTTP_STREAM_H */

@@ -19,6 +19,7 @@
 #include <aws/http/request_response.h>
 
 static const char *s_capsule_name_http_stream = "aws_http_stream";
+static const char *s_capsule_name_http_message = "aws_http_message";
 
 struct http_stream_binding {
     struct aws_http_stream *native;
@@ -344,39 +345,53 @@ error:
     return NULL;
 }
 
-bool aws_py_http_request_copy_from_py(struct aws_http_message *dst, PyObject *src) {
+/**
+ * Bind http_message_binding to HttpRequest/HttpResponse.
+ *
+ * This binding acts differently than most because it seems cruel to ask Python
+ * users to interact with the headers via the C API.
+ * So instead of keeping the native type in sync with the Python type at all times,
+ * We lazily sync their contents only when we must.
+ */
+static struct http_message_binding {
+    struct aws_http_message *native;
+
+    /* Weak reference proxy to python self. */
+    struct PyObject *self_proxy;
+
+    /* Dependencies that must outlive this */
+    struct PyObject *body_stream;
+}
+
+static void
+    s_http_message_capsule_destructor(PyObject *capsule) {
+    struct aws_http_message *message = PyCapsule_GetPointer(capsule, s_capsule_name_http_message);
+
+    aws_http_message_destroy(message->native);
+    Py_XDECREF(message->self_proxy);
+    Py_XDECREF(message->body_stream);
+
+    aws_mem_release(aws_py_get_allocator(), message);
+}
+
+/**
+ * Update the aws_http_message based on its HttpRequest/HttpResponse Python self.
+ * Returns false and sets python error if failure occurred.
+ * Note that if failure occurred the aws_http_message might be in a
+ * "partially copied" state and should not be used.
+ */
+static bool s_http_message_update_from_py(struct http_message_binding *request) {
 
     bool success = false;
 
     /* Objects that need to be cleaned up whether or not we succeed */
-    PyObject *method = NULL;
-    PyObject *path = NULL;
     PyObject *headers = NULL;
     PyObject *map = NULL;
+    PyObject *body_stream = NULL;
+    PyObject *method = NULL;
+    PyObject *path = NULL;
 
-    method = PyObject_GetAttrString(src, "method");
-    struct aws_byte_cursor method_cur = aws_byte_cursor_from_pystring(method);
-    if (!method_cur.ptr) {
-        PyErr_SetString(PyExc_TypeError, "HttpRequest.method is invalid");
-        goto done;
-    }
-    if (aws_http_message_set_request_method(dst, method_cur)) {
-        PyErr_SetAwsLastError();
-        goto done;
-    }
-
-    path = PyObject_GetAttrString(src, "path");
-    struct aws_byte_cursor path_cur = aws_byte_cursor_from_pystring(path);
-    if (!path_cur.ptr) {
-        PyErr_SetString(PyExc_TypeError, "HttpRequest.path is invalid");
-        goto done;
-    }
-    if (aws_http_message_set_request_path(src, path_cur)) {
-        PyErr_SetAwsLastError();
-        goto done;
-    }
-
-    headers = PyObject_GetAttrString(src, "headers");
+    headers = PyObject_GetAttrString(request->self_proxy, "headers");
     if (!headers) {
         goto done;
     }
@@ -389,7 +404,7 @@ bool aws_py_http_request_copy_from_py(struct aws_http_message *dst, PyObject *sr
     /* Clear existing headers, before adding the new values. */
     size_t num_headers = aws_http_message_get_header_count(src);
     for (size_t i = 0; i < num_headers; ++i) {
-        aws_http_message_erase_header(dst, num_headers - (1 + i)); /* erase from back to front */
+        aws_http_message_erase_header(message->native, num_headers - (1 + i)); /* erase from back to front */
     }
 
     /* Copy in new header values */
@@ -412,18 +427,131 @@ bool aws_py_http_request_copy_from_py(struct aws_http_message *dst, PyObject *sr
                 goto done;
             }
 
-            if (aws_http_request_add_header(dst, struct aws_header{name_cur, value_cur})) {
+            if (aws_http_request_add_header(message->native, struct aws_header{name_cur, value_cur})) {
                 PyErr_SetAwsLastError();
                 goto done;
             }
         }
     }
 
-    // TODO: body?
+    /* Clear any existing reference to body-stream before updating value */
+    Py_CLEAR(message->body_stream);
+    aws_http_message_set_body_stream(NULL);
+
+    body_stream = PyObject_GetAttrString(message->self_proxy, "body");
+    if (!body_stream) {
+        goto done;
+    }
+
+    if (body_stream != Py_None) {
+        struct aws_input_stream *body_stream_native = aws_py_get_input_stream(body_stream);
+        if (!body_stream_native) {
+            goto done;
+        }
+
+        message->body_stream = body_stream;
+        Py_INCREF(message->body_stream);
+        aws_http_message_set_body_stream(body_stream_native);
+    }
+
+    /* HttpRequest subclass */
+    if (aws_http_message_is_request(message->native)) {
+        method = PyObject_GetAttrString(request->self_proxy, "method");
+        struct aws_byte_cursor method_cur = aws_byte_cursor_from_pystring(method);
+        if (!method_cur.ptr) {
+            PyErr_SetString(PyExc_TypeError, "HttpRequest.method is invalid");
+            goto done;
+        }
+        if (aws_http_message_set_request_method(message->native, method_cur)) {
+            PyErr_SetAwsLastError();
+            goto done;
+        }
+
+        path = PyObject_GetAttrString(request->self_proxy, "path");
+        struct aws_byte_cursor path_cur = aws_byte_cursor_from_pystring(path);
+        if (!path_cur.ptr) {
+            PyErr_SetString(PyExc_TypeError, "HttpRequest.path is invalid");
+            goto done;
+        }
+        if (aws_http_message_set_request_path(request->self_proxy, path_cur)) {
+            PyErr_SetAwsLastError();
+            goto done;
+        }
+    }
 
     success = true;
 done:
-    // TODO: cleanup
+    Py_XDECREF(headers);
+    Py_XDECREF(map);
+    Py_XDECREF(body_stream);
+    Py_XDECREF(method);
+    Py_XDECREF(path);
 
     return false;
+}
+
+struct aws_http_message *aws_py_get_http_message(PyObject *http_request) {
+    struct aws_http_message *native = NULL;
+
+    PyObject *capsule = PyObject_GetAttrString(stream, "_binding");
+    if (capsule) {
+        struct http_message_binding *message_binding = PyCapsule_GetPointer(capsule, s_capsule_name_http_message);
+        if (message_binding) {
+            /* Update contents of aws_http_message before returning it */
+            if (s_http_message_update_from_py(message_binding)) {
+                native = binding->native;
+                AWS_FATAL_ASSERT(native);
+            }
+        }
+        Py_DECREF(capsule);
+    }
+
+    return native;
+}
+
+PyObject *aws_py_http_client_stream_new(PyObject *self, PyObject *args) {
+    (void)self;
+
+    PyObject *request_py;
+    if (!PyArg_ParseTuple(args, "O", &request_py)) {
+        return NULL;
+    }
+
+    AWS_FATAL_ASSERT(request_py != Py_None);
+
+    struct aws_allocator *alloc = aws_py_get_allocator();
+    struct http_message_binding *request = aws_mem_calloc(alloc, 1, sizeof(struct http_message_binding));
+    if (!request) {
+        return PyErr_AwsLastError();
+    }
+
+    /* From hereon, we need to clean up if errors occur.
+     * Fortunately, the capsule destructor will clean up anything stored inside the binding */
+
+    PyObject *capsule = PyCapsule_New(request, s_capsule_name_http_message, s_http_message_capsule_destructor);
+    if (!capsule) {
+        goto error;
+    }
+
+    /* Create native message now, but we don't set its contents till later */
+    request->native = aws_http_message_new_request(alloc);
+    if (!request->native) {
+        goto error;
+    }
+
+    request->self_proxy = PyWeakref_NewProxy(request_py, NULL);
+    if (!request->self_proxy) {
+        goto error;
+    }
+
+
+    return capsule;
+
+error:
+    if (capsule) {
+        Py_DECREF(capsule);
+    } else {
+        aws_mem_release(alloc, request);
+    }
+    return NULL;
 }
