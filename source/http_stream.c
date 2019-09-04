@@ -15,6 +15,7 @@
 #include "http_stream.h"
 
 #include "http_connection.h"
+#include "io.h"
 #include <aws/http/connection.h>
 #include <aws/http/request_response.h>
 
@@ -28,9 +29,6 @@ struct http_stream_binding {
      * NOTE: The python self is forced to stay alive until on_complete fires.
      * We do this by INCREFing when setup is successful, and DECREFing when on_complete fires. */
     PyObject *self_proxy;
-
-    /* Message being sent. This can be cleaned up when the stream completes */
-    struct aws_http_message *outgoing_message;
 
     /* Build up list of (name,value) tuples as headers come in via repeated on_headers callacks.
      * Then deliver them to python all at once from the header_block_done callback */
@@ -56,43 +54,6 @@ struct aws_http_stream *aws_py_get_http_stream(PyObject *stream) {
     return native;
 }
 
-// static enum aws_http_outgoing_body_state s_stream_outgoing_body(
-//     struct aws_http_stream *internal_stream,
-//     struct aws_byte_buf *buf,
-//     void *user_data) {
-//     (void)internal_stream;
-
-//     struct http_stream_binding *stream = user_data;
-
-//     /*************** GIL ACQUIRE ***************/
-//     PyGILState_STATE state = PyGILState_Ensure();
-
-//     PyObject *mv = aws_py_memory_view_from_byte_buffer(buf, PyBUF_WRITE);
-
-//     if (!mv) {
-//         aws_http_connection_close(aws_http_stream_get_connection(stream->native));
-//         PyGILState_Release(state);
-//         return AWS_HTTP_OUTGOING_BODY_DONE;
-//     }
-
-//     PyObject *result = PyObject_CallFunction(stream->on_read_body, "(O)", mv);
-//     /* the return from python land is a tuple where the first argument is the body state
-//      * and the second is the amount written */
-//     PyObject *state_code = PyTuple_GetItem(result, 0);
-//     enum aws_http_outgoing_body_state body_state = (enum aws_http_outgoing_body_state)PyIntEnum_AsLong(state_code);
-//     PyObject *written_obj = PyTuple_GetItem(result, 1);
-//     long written = (long)PyLong_AsLong(written_obj);
-//     Py_XDECREF(result);
-//     Py_XDECREF(mv);
-
-//     PyGILState_Release(state);
-//     /*************** GIL RELEASE ***************/
-
-//     buf->len += written;
-
-//     return body_state;
-// }
-
 static int s_on_incoming_headers(
     struct aws_http_stream *native_stream,
     const struct aws_http_header *header_array,
@@ -100,6 +61,7 @@ static int s_on_incoming_headers(
     void *user_data) {
 
     struct http_stream_binding *stream = user_data;
+    int aws_result = AWS_OP_SUCCESS;
 
     /*************** GIL ACQUIRE ***************/
     PyGILState_STATE state = PyGILState_Ensure();
@@ -118,12 +80,14 @@ static int s_on_incoming_headers(
             (const char *)header->value.ptr,
             header->value.len);
         if (!name_value_pair) {
+            aws_result = aws_raise_py_error();
             goto done;
         }
 
         bool append_success = PyList_Append(stream->received_headers, name_value_pair) == 0;
         Py_DECREF(name_value_pair);
         if (!append_success) {
+            aws_result = aws_raise_py_error();
             goto done;
         }
     }
@@ -132,12 +96,7 @@ done:
     PyGILState_Release(state);
     /*************** GIL RELEASE ***************/
 
-    if (PyErr_Occurred()) {
-        PyErr_WriteUnraisable(PyErr_Occurred());
-        return aws_raise_error(AWS_ERROR_HTTP_CALLBACK_FAILURE);
-    }
-
-    return AWS_OP_SUCCESS;
+    return aws_result;
 }
 
 static int s_on_incoming_header_block_done(struct aws_http_stream *native_stream, bool has_body, void *user_data) {
@@ -149,6 +108,8 @@ static int s_on_incoming_header_block_done(struct aws_http_stream *native_stream
         return AWS_OP_ERR;
     }
 
+    int aws_result = AWS_OP_SUCCESS;
+
     /*************** GIL ACQUIRE ***************/
     PyGILState_STATE state = PyGILState_Ensure();
 
@@ -159,23 +120,24 @@ static int s_on_incoming_header_block_done(struct aws_http_stream *native_stream
     PyObject *result =
         PyObject_CallMethod(stream->self_proxy, "_on_response", "(Oi)", stream->received_headers, response_code);
     if (!result) {
+        aws_result = aws_raise_py_error();
         goto done;
     }
     Py_DECREF(result);
 
     /* Clear the list so we're ready for next header block */
-    PyObject_CallMethod(stream->received_headers, "clear", "()");
+    result = PyObject_CallMethod(stream->received_headers, "clear", "()", NULL);
+    if (!result) {
+        aws_result = aws_raise_py_error();
+        goto done;
+    }
+    Py_DECREF(result);
 
 done:
     PyGILState_Release(state);
     /*************** GIL RELEASE ***************/
 
-    if (PyErr_Occurred()) {
-        PyErr_WriteUnraisable(PyErr_Occurred());
-        return aws_raise_error(AWS_ERROR_HTTP_CALLBACK_FAILURE);
-    }
-
-    return AWS_OP_SUCCESS;
+    return aws_result;
 }
 
 static int s_on_incoming_body(
@@ -187,28 +149,29 @@ static int s_on_incoming_body(
 
     struct http_stream_binding *stream = user_data;
 
-    if (data->len > PY_SIZE_MAX) {
+    if (data->len > PY_SSIZE_T_MAX) {
         return aws_raise_error(AWS_ERROR_OVERFLOW_DETECTED);
     }
     Py_ssize_t data_len = (Py_ssize_t)data->len;
+
+    int aws_result = AWS_OP_SUCCESS;
 
     /*************** GIL ACQUIRE ***************/
     PyGILState_STATE state = PyGILState_Ensure();
 
     PyObject *result = PyObject_CallMethod(
-        stream->self_proxy, "_on_body", "(" BYTE_BUF_FORMAT_STR ")", (const char *)data->ptr, data_len);
+        stream->self_proxy, "_on_body", "(" READABLE_BYTES_FORMAT_STR ")", (const char *)data->ptr, data_len);
+    if (!result) {
+        aws_result = aws_raise_py_error();
+        goto done;
+    }
+    Py_DECREF(result);
 
-    Py_XDECREF(result);
-
+done:
     PyGILState_Release(state);
     /*************** GIL RELEASE ***************/
 
-    if (PyErr_Occurred()) {
-        PyErr_WriteUnraisable(PyErr_Occurred());
-        return aws_raise_error(AWS_ERROR_HTTP_CALLBACK_FAILURE);
-    }
-
-    return AWS_OP_SUCCESS;
+    return aws_result;
 }
 
 static void s_on_stream_complete(struct aws_http_stream *native_stream, int error_code, void *user_data) {
@@ -244,7 +207,6 @@ static void s_stream_capsule_destructor(PyObject *http_stream_capsule) {
      * 2) Stream successfully reached end of life, and on_complete has already fired. */
 
     aws_http_stream_release(stream->native);
-    aws_http_message_destroy(stream->outgoing_message);
     Py_XDECREF(stream->self_proxy);
     Py_XDECREF(stream->received_headers);
     Py_XDECREF(stream->connection);
@@ -266,6 +228,11 @@ PyObject *aws_py_http_client_stream_new(PyObject *self, PyObject *args) {
 
     struct aws_http_connection *native_connection = aws_py_get_http_connection(py_connection);
     if (!native_connection) {
+        return NULL;
+    }
+
+    struct aws_http_message *native_request = aws_py_get_http_message(py_request);
+    if (!native_request) {
         return NULL;
     }
 
@@ -295,17 +262,6 @@ PyObject *aws_py_http_client_stream_new(PyObject *self, PyObject *args) {
         goto error;
     }
 
-    /* Create aws_http_message that mirrors the HttpRequest */
-    stream->outgoing_message = aws_http_message_new_request(allocator);
-    if (!stream->outgoing_message) {
-        PyErr_SetAwsLastError();
-        goto error;
-    }
-
-    if (!aws_py_http_request_copy_from_py(stream->outgoing_message, py_request)) {
-        goto error;
-    }
-
     /* NOTE: Callbacks might start firing before aws_http_connection_make_request() can even return.
      * Therefore, we set `HttpClientStream._binding = capsule` now, instead of returning capsule to caller */
     if (PyObject_SetAttrString(py_stream, "_binding", capsule) == -1) {
@@ -314,7 +270,7 @@ PyObject *aws_py_http_client_stream_new(PyObject *self, PyObject *args) {
 
     struct aws_http_make_request_options request_options = {
         .self_size = sizeof(request_options),
-        .request = stream->outgoing_message,
+        .request = native_request,
         .on_response_headers = s_on_incoming_headers,
         .on_response_header_block_done = s_on_incoming_header_block_done,
         .on_response_body = s_on_incoming_body,
@@ -348,25 +304,25 @@ error:
 /**
  * Bind http_message_binding to HttpRequest/HttpResponse.
  *
- * This binding acts differently than most because it seems cruel to ask Python
- * users to interact with the headers via the C API.
- * So instead of keeping the native type in sync with the Python type at all times,
- * We lazily sync their contents only when we must.
+ * This binding acts differently than most. Instead of keeping the native type in
+ * sync with the Python type at all times, we lazily sync their contents only when we must.
+ * We do this because it seems cruel to make Python developers them access headers via the C API,
+ * they want to access Python's native dict and list types.
  */
-static struct http_message_binding {
+struct http_message_binding {
     struct aws_http_message *native;
 
     /* Weak reference proxy to python self. */
-    struct PyObject *self_proxy;
+    PyObject *self_proxy;
 
     /* Dependencies that must outlive this */
-    struct PyObject *body_stream;
-}
+    PyObject *body_stream;
+};
 
-static void
-    s_http_message_capsule_destructor(PyObject *capsule) {
-    struct aws_http_message *message = PyCapsule_GetPointer(capsule, s_capsule_name_http_message);
+static void s_http_message_capsule_destructor(PyObject *capsule) {
+    struct http_message_binding *message = PyCapsule_GetPointer(capsule, s_capsule_name_http_message);
 
+    /* Note that destructor may be cleaning up a message that failed part-way through initialization */
     aws_http_message_destroy(message->native);
     Py_XDECREF(message->self_proxy);
     Py_XDECREF(message->body_stream);
@@ -380,18 +336,26 @@ static void
  * Note that if failure occurred the aws_http_message might be in a
  * "partially copied" state and should not be used.
  */
-static bool s_http_message_update_from_py(struct http_message_binding *request) {
+static bool s_http_message_update_from_py(struct http_message_binding *message) {
 
     bool success = false;
 
     /* Objects that need to be cleaned up whether or not we succeed */
+    PyObject *message_self = NULL;
     PyObject *headers = NULL;
     PyObject *map = NULL;
     PyObject *body_stream = NULL;
     PyObject *method = NULL;
     PyObject *path = NULL;
 
-    headers = PyObject_GetAttrString(request->self_proxy, "headers");
+    /* Doing a lot of queries so grab a hard reference */
+    message_self = PyWeakref_GetObject(message->self_proxy);
+    if (!message_self) {
+        goto done;
+    }
+    Py_INCREF(message_self);
+
+    headers = PyObject_GetAttrString(message_self, "headers");
     if (!headers) {
         goto done;
     }
@@ -402,32 +366,33 @@ static bool s_http_message_update_from_py(struct http_message_binding *request) 
     }
 
     /* Clear existing headers, before adding the new values. */
-    size_t num_headers = aws_http_message_get_header_count(src);
+    size_t num_headers = aws_http_message_get_header_count(message->native);
     for (size_t i = 0; i < num_headers; ++i) {
         aws_http_message_erase_header(message->native, num_headers - (1 + i)); /* erase from back to front */
     }
 
     /* Copy in new header values */
+    struct aws_http_header header;
     Py_ssize_t map_pos = 0;
     PyObject *header_name = NULL;
-    PyObject *value_list = NULL;
-    while (PyDict_Next(map, &map_pos, &header_name, &value_list)) {
-        struct aws_byte_cursor name_cur = aws_byte_cursor_from_pystring(header_name);
-        if (!name_cur.ptr) {
+    PyObject *values_list = NULL;
+    while (PyDict_Next(map, &map_pos, &header_name, &values_list)) {
+        header.name = aws_byte_cursor_from_pystring(header_name);
+        if (!header.name.ptr) {
             PyErr_SetString(PyExc_TypeError, "Header name is invalid");
             goto done;
         }
 
         Py_ssize_t num_values = PyList_Size(values_list);
         for (Py_ssize_t value_i = 0; value_i < num_values; ++num_values) {
-            PyObject *header_value = PyList_GET_ITEM(value_list, value_i);
-            struct value_cur = aws_byte_cursor_from_pystring(header_value);
-            if (!value_cur.ptr) {
+            PyObject *header_value = PyList_GET_ITEM(values_list, value_i);
+            header.value = aws_byte_cursor_from_pystring(header_value);
+            if (!header.value.ptr) {
                 PyErr_SetString(PyExc_TypeError, "Header value is invalid");
                 goto done;
             }
 
-            if (aws_http_request_add_header(message->native, struct aws_header{name_cur, value_cur})) {
+            if (aws_http_message_add_header(message->native, header)) {
                 PyErr_SetAwsLastError();
                 goto done;
             }
@@ -436,9 +401,9 @@ static bool s_http_message_update_from_py(struct http_message_binding *request) 
 
     /* Clear any existing reference to body-stream before updating value */
     Py_CLEAR(message->body_stream);
-    aws_http_message_set_body_stream(NULL);
+    aws_http_message_set_body_stream(message->native, NULL);
 
-    body_stream = PyObject_GetAttrString(message->self_proxy, "body");
+    body_stream = PyObject_GetAttrString(message_self, "body");
     if (!body_stream) {
         goto done;
     }
@@ -451,12 +416,12 @@ static bool s_http_message_update_from_py(struct http_message_binding *request) 
 
         message->body_stream = body_stream;
         Py_INCREF(message->body_stream);
-        aws_http_message_set_body_stream(body_stream_native);
+        aws_http_message_set_body_stream(message->native, body_stream_native);
     }
 
     /* HttpRequest subclass */
     if (aws_http_message_is_request(message->native)) {
-        method = PyObject_GetAttrString(request->self_proxy, "method");
+        method = PyObject_GetAttrString(message_self, "method");
         struct aws_byte_cursor method_cur = aws_byte_cursor_from_pystring(method);
         if (!method_cur.ptr) {
             PyErr_SetString(PyExc_TypeError, "HttpRequest.method is invalid");
@@ -467,13 +432,13 @@ static bool s_http_message_update_from_py(struct http_message_binding *request) 
             goto done;
         }
 
-        path = PyObject_GetAttrString(request->self_proxy, "path");
+        path = PyObject_GetAttrString(message_self, "path");
         struct aws_byte_cursor path_cur = aws_byte_cursor_from_pystring(path);
         if (!path_cur.ptr) {
             PyErr_SetString(PyExc_TypeError, "HttpRequest.path is invalid");
             goto done;
         }
-        if (aws_http_message_set_request_path(request->self_proxy, path_cur)) {
+        if (aws_http_message_set_request_path(message->native, path_cur)) {
             PyErr_SetAwsLastError();
             goto done;
         }
@@ -481,25 +446,26 @@ static bool s_http_message_update_from_py(struct http_message_binding *request) 
 
     success = true;
 done:
+    Py_XDECREF(message_self);
     Py_XDECREF(headers);
     Py_XDECREF(map);
     Py_XDECREF(body_stream);
     Py_XDECREF(method);
     Py_XDECREF(path);
 
-    return false;
+    return success;
 }
 
-struct aws_http_message *aws_py_get_http_message(PyObject *http_request) {
+struct aws_http_message *aws_py_get_http_message(PyObject *http_message) {
     struct aws_http_message *native = NULL;
 
-    PyObject *capsule = PyObject_GetAttrString(stream, "_binding");
+    PyObject *capsule = PyObject_GetAttrString(http_message, "_binding");
     if (capsule) {
         struct http_message_binding *message_binding = PyCapsule_GetPointer(capsule, s_capsule_name_http_message);
         if (message_binding) {
             /* Update contents of aws_http_message before returning it */
             if (s_http_message_update_from_py(message_binding)) {
-                native = binding->native;
+                native = message_binding->native;
                 AWS_FATAL_ASSERT(native);
             }
         }
@@ -509,15 +475,15 @@ struct aws_http_message *aws_py_get_http_message(PyObject *http_request) {
     return native;
 }
 
-PyObject *aws_py_http_client_stream_new(PyObject *self, PyObject *args) {
+PyObject *aws_py_http_request_new(PyObject *self, PyObject *args) {
     (void)self;
 
-    PyObject *request_py;
-    if (!PyArg_ParseTuple(args, "O", &request_py)) {
+    PyObject *py_request;
+    if (!PyArg_ParseTuple(args, "O", &py_request)) {
         return NULL;
     }
 
-    AWS_FATAL_ASSERT(request_py != Py_None);
+    AWS_FATAL_ASSERT(py_request != Py_None);
 
     struct aws_allocator *alloc = aws_py_get_allocator();
     struct http_message_binding *request = aws_mem_calloc(alloc, 1, sizeof(struct http_message_binding));
@@ -539,11 +505,10 @@ PyObject *aws_py_http_client_stream_new(PyObject *self, PyObject *args) {
         goto error;
     }
 
-    request->self_proxy = PyWeakref_NewProxy(request_py, NULL);
+    request->self_proxy = PyWeakref_NewProxy(py_request, NULL);
     if (!request->self_proxy) {
         goto error;
     }
-
 
     return capsule;
 

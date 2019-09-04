@@ -37,5 +37,4 @@ PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args);
 
 struct aws_http_connection *aws_py_get_http_connection(PyObject *connection);
 
-
 #endif /* AWS_CRT_PYTHON_HTTP_CONNECTION_H */

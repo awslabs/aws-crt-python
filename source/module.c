@@ -137,53 +137,82 @@ PyObject *PyErr_AwsLastError(void) {
     return PyErr_Format(PyExc_RuntimeError, "%d (%s): %s", err, name, msg);
 }
 
-struct py_err_to_aws_err {
-    PyObject *py;
-    int aws;
+/* Key is `PyObject*` of Python exception type, value is `int` of AWS_ERROR_ enum (cast to void*) */
+static struct aws_hash_table s_py_to_aws_error_map;
+
+static void s_py_to_aws_error_map_init() {
+    struct error_pair {
+        PyObject *py_exception_type;
+        int aws_error_code;
+    };
+
+    struct error_pair s_py_to_aws_error_array[] = {
+        {PyExc_BlockingIOError, AWS_IO_READ_WOULD_BLOCK},
+        {PyExc_BrokenPipeError, AWS_IO_BROKEN_PIPE},
+        {PyExc_FileNotFoundError, AWS_ERROR_FILE_INVALID_PATH},
+        {PyExc_IndexError, AWS_ERROR_INVALID_INDEX},
+        {PyExc_MemoryError, AWS_ERROR_OOM},
+        {PyExc_NotImplementedError, AWS_ERROR_UNIMPLEMENTED},
+        {PyExc_OverflowError, AWS_ERROR_OVERFLOW_DETECTED},
+        {PyExc_TypeError, AWS_ERROR_INVALID_ARGUMENT},
+        {PyExc_ValueError, AWS_ERROR_INVALID_ARGUMENT},
+    };
+
+    if (aws_hash_table_init(
+            &s_py_to_aws_error_map,
+            aws_py_get_allocator(),
+            AWS_ARRAY_SIZE(s_py_to_aws_error_array),
+            aws_hash_ptr,
+            aws_ptr_eq,
+            NULL /*destroy_key_fn*/,
+            NULL /*destroy_value_fn*/)) {
+        AWS_FATAL_ASSERT(0);
+    }
+
+    for (size_t i = 0; i < AWS_ARRAY_SIZE(s_py_to_aws_error_array); ++i) {
+        const void *key = s_py_to_aws_error_array[i].py_exception_type;
+        void *value = (void *)(size_t)s_py_to_aws_error_array[i].aws_error_code;
+        if (aws_hash_table_put(&s_py_to_aws_error_map, key, value, NULL)) {
+            AWS_FATAL_ASSERT(0);
+        }
+    }
 }
 
-static const struct py_err_to_aws_err s_py_err_to_aws_err_array[] = {
-    {PyExc_BlockingIOError, AWS_IO_READ_WOULD_BLOCK},
-    {PyExc_BrokenPipeError, AWS_IO_BROKEN_PIPE},
-    {PyExc_FileNotFoundError, AWS_ERROR_FILE_INVALID_PATH},
-    {PyExc_IndexError, AWS_ERROR_INVALID_INDEX},
-    {PyExc_MemoryError, AWS_ERROR_OOM},
-    {PyExc_NotImplementedError, AWS_ERROR_UNIMPLEMENTED},
-    {PyExc_OverflowError, AWS_ERROR_OVERFLOW_DETECTED},
-    {PyExc_TypeError, AWS_ERROR_INVALID_ARGUMENT},
-    {PyExc_ValueError, AWS_ERROR_INVALID_ARGUMENT},
-};
-
-int aws_raise_py_err(void) {
+int aws_raise_py_error(void) {
     AWS_ASSERT(PyErr_Occurred() != NULL);
     AWS_ASSERT(PyGILState_Check() == 1);
 
-    int aws_error = AWS_ERROR_UNKNOWN;
+    int aws_error_code = AWS_ERROR_UNKNOWN;
 
-    for (size_t i; i < AWS_ARRAY_SIZE(s_py_err_to_aws_err_array); ++i) {
-        const struct py_err_to_aws_err *err_mapping = &s_py_err_to_aws_err_array[i];
-        if (PyErr_ExceptionMatches(err_mapping->py)) {
-            aws_error = err_mapping->aws;
-            break;
-        }
+    struct aws_hash_element *found;
+    aws_hash_table_find(&s_py_to_aws_error_map, PyErr_Occurred(), &found);
+    if (found) {
+        aws_error_code = (int)(size_t)found->value;
     }
 
     /* Print standard traceback to sys.stderr and clear the error indicator. */
     PyErr_Print();
-    sprintf(stderr, "Treating Python exception as %d(%s)\n", aws_err, aws_error_name(aws_err));
+    fprintf(stderr, "Treating Python exception as error %d(%s)\n", aws_error_code, aws_error_name(aws_error_code));
 
-    return aws_raise_error(aws_error);
+    return aws_raise_error(aws_error_code);
 }
 
-PyObject *aws_py_memory_view_from_byte_buffer(struct aws_byte_buf *buf, int flags) {
+PyObject *aws_py_memory_view_from_byte_buffer(struct aws_byte_buf *buf) {
+    size_t available = buf->capacity - buf->len;
+    if (available > PY_SSIZE_T_MAX) {
+        PyErr_SetString(PyExc_OverflowError, "Buffer exceeds PY_SSIZE_T_MAX");
+        return NULL;
+    }
+
+    Py_ssize_t mem_size = available;
+    char *mem_start = (char *)(buf->buffer + buf->len);
+
 #if PY_MAJOR_VERSION == 3
-    return PyMemoryView_FromMemory((char *)(buf->buffer + buf->len), (Py_ssize_t)(buf->capacity - buf->len), flags);
+    return PyMemoryView_FromMemory(mem_start, mem_size, PyBUF_WRITE);
 #else
     Py_buffer py_buf;
-    Py_ssize_t size = buf->capacity - buf->len;
-
-    int read_only = (flags & PyBUF_WRITE) != PyBUF_WRITE;
-    if (PyBuffer_FillInfo(&py_buf, NULL, (char *)(buf->buffer + buf->len), size, read_only, PyBUF_CONTIG)) {
+    int read_only = 0;
+    if (PyBuffer_FillInfo(&py_buf, NULL /*obj*/, mem_start, mem_size, read_only, PyBUF_WRITABLE)) {
         return NULL;
     }
 
@@ -260,6 +289,8 @@ PyDoc_STRVAR(s_module_doc, "C extension for binding AWS implementations of MQTT,
 static void s_module_free(void *userdata) {
     (void)userdata;
 
+    aws_hash_table_clean_up(&s_py_to_aws_error_map);
+
     if (s_logger_init) {
         aws_logger_clean_up(&s_logger);
     }
@@ -293,6 +324,9 @@ PyMODINIT_FUNC INIT_FN(void) {
     if (!PyEval_ThreadsInitialized()) {
         PyEval_InitThreads();
     }
+
+    s_py_to_aws_error_map_init();
+
 #if PY_MAJOR_VERSION == 3
     return m;
 #endif /* PY_MAJOR_VERSION */

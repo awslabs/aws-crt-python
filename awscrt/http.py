@@ -253,3 +253,9 @@ class HttpHeaders(object):
         except:
             pass
 
+    def clear(self):
+        """
+        Clear all headers
+        """
+        self.map.clear()
+
