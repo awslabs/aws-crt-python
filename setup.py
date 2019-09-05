@@ -208,6 +208,7 @@ _awscrt = setuptools.Extension(
         'source/mqtt_client.c',
         'source/mqtt_client_connection.c',
         'source/http_connection.c',
+        'source/http_message.c',
         'source/http_stream.c',
         'source/crypto.c',
     ],

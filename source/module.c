@@ -14,8 +14,7 @@
  */
 #include "module.h"
 #include "crypto.h"
-#include "http_connection.h"
-#include "http_stream.h"
+#include "http.h"
 #include "io.h"
 #include "mqtt_client.h"
 #include "mqtt_client_connection.h"
