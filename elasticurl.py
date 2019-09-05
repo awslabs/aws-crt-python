@@ -79,14 +79,6 @@ if args.verbose:
 
     io.init_logging(log_level, log_output)
 
-# an event loop group is needed for IO operations. Unless you're a server or a client doing hundreds of connections
-# you only want one of these.
-event_loop_group = io.EventLoopGroup(1)
-
-# client bootstrap knows how to connect all the pieces. In this case it also has the default dns resolver
-# baked in.
-client_bootstrap = io.ClientBootstrap(event_loop_group)
-
 url = urlparse(args.url)
 port = 443
 scheme = 'https'
@@ -149,20 +141,20 @@ socket_options = io.SocketOptions()
 socket_options.connect_timeout_ms = args.connect_timeout
 
 hostname = url.hostname
-connect_future = http.HttpClientConnection.new(client_bootstrap, hostname, port, socket_options,
-                                               on_connection_shutdown, tls_connection_options)
+connect_future = http.HttpClientConnection.new(hostname, port, socket_options, tls_connection_options)
 connection = connect_future.result(10)
+connection.add_shutdown_callback(on_connection_shutdown)
 
 request = http.HttpRequest(args.method, body_stream=data_stream)
 
 if args.get:
-    request.method = http.HttpMethod.GET
+    request.method = "GET"
 
 if args.post:
-    request.method = http.HttpMethod.POST
+    request.method = "POST"
 
 if args.head:
-    request.method = http.HttpMethod.HEAD
+    request.method = "HEAD"
 
 if url.path:
     request.path = url.path
@@ -190,11 +182,11 @@ def response_received_cb(http_stream, status_code, headers):
 
 
 # make the request
-http_stream = connection.make_request(request, response_received_cb, on_incoming_body)
+stream = connection.request(request, response_received_cb, on_incoming_body)
 
 # wait until the full response is finished
-http_stream.complete_future.result(timeout=10)
-http_stream = None
+stream.complete_future.result(timeout=10)
+stream = None
 connection = None
 
 if data_stream is not None:

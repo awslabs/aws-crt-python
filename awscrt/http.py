@@ -17,18 +17,7 @@ from collections import defaultdict
 from enum import Enum
 from io import IOBase
 from awscrt import NativeResource
-from awscrt.io import ClientBootstrap, TlsConnectionOptions, SocketOptions
-
-class HttpMethod(Enum):
-    GET = 1
-    HEAD = 2
-    POST = 3
-    PUT = 4
-    DELETE = 5
-    CONNECT = 6
-    OPTIONS = 7
-    TRACE = 8
-    PATCH = 9
+from awscrt.io import ClientBootstrap, EventLoopGroup, DefaultHostResolver, TlsConnectionOptions, SocketOptions
 
 
 class HttpConnectionBase(NativeResource):
@@ -74,8 +63,7 @@ class HttpClientConnection(HttpConnectionBase):
     __slots__ = ('host_name', 'port')
 
     @classmethod
-    def new(cls, bootstrap, host_name, port, socket_options,
-                on_connection_shutdown=None, tls_connection_options=None):
+    def new(cls, host_name, port, socket_options=SocketOptions(), tls_connection_options=None, bootstrap=None):
         """
         Initiates a new connection to host_name and port using socket_options and tls_connection_options if supplied.
         if tls_connection_options is None, then the connection will be attempted over plain-text.
@@ -85,10 +73,15 @@ class HttpClientConnection(HttpConnectionBase):
         """
         future = Future()
         try:
-            assert isinstance(bootstrap, ClientBootstrap)
+            assert isinstance(bootstrap, ClientBootstrap) or bootstrap is None
             assert host_name
-            assert tls_connection_options is None or isinstance(tls_connection_options, TlsConnectionOptions)
+            assert isinstance(tls_connection_options, TlsConnectionOptions) or tls_connection_options is None
             assert isinstance(socket_options, SocketOptions)
+
+            if not bootstrap:
+                event_loop_group = EventLoopGroup(1)
+                host_resolver = DefaultHostResolver(event_loop_group)
+                bootstrap = ClientBootstrap(event_loop_group, host_resolver)
 
             connection = cls()
             connection.host_name = host_name
@@ -116,7 +109,7 @@ class HttpClientConnection(HttpConnectionBase):
         return future
 
 
-    def make_request(self, request, on_response, on_body):
+    def request(self, request, on_response=None, on_body=None):
         return HttpClientStream(self, request, on_response, on_body)
 
 
@@ -194,7 +187,7 @@ class HttpRequest(HttpMessageBase):
 
     __slots__ = ('method', 'path')
 
-    def __init__(self, method=HttpMethod.GET, path='/', body_stream=None):
+    def __init__(self, method='GET', path='/', body_stream=None):
         super(HttpRequest, self).__init__(body_stream)
         self.method = method
         self.path = path
