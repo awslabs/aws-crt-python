@@ -29,13 +29,20 @@ class Response(object):
     def on_body(self, stream, chunk):
         self.body.extend(chunk)
 
+
+class HTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
+    # silence the logger
+    def log_message(self, format, *args):
+        return
+
+
 class TestHttpClientConnection(unittest.TestCase):
     hostname = 'localhost'
     port = 8000
     timeout = 10 # seconds
 
     def test_connect(self):
-        server = http.server.HTTPServer((self.hostname, self.port), http.server.SimpleHTTPRequestHandler)
+        server = http.server.HTTPServer((self.hostname, self.port), HTTPRequestHandler)
 
         # connect
         connection_future = awscrt.http.HttpClientConnection.new(self.hostname, self.port)
@@ -64,7 +71,7 @@ class TestHttpClientConnection(unittest.TestCase):
 
 
     def test_get_request(self):
-        server = http.server.HTTPServer((self.hostname, self.port), http.server.SimpleHTTPRequestHandler)
+        server = http.server.HTTPServer((self.hostname, self.port), HTTPRequestHandler)
         connection = awscrt.http.HttpClientConnection.new(self.hostname, self.port).result(self.timeout)
 
         # client GETs a file that is served from disk.
