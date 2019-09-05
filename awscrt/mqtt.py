@@ -47,7 +47,7 @@ class Client(NativeResource):
         assert isinstance(bootstrap, ClientBootstrap)
         assert tls_ctx is None or isinstance(tls_ctx, ClientTlsContext)
 
-        super(NativeResource, self).__init__()
+        super(Client, self).__init__()
         self.tls_ctx = tls_ctx
         self._binding = _awscrt.mqtt_client_new(bootstrap, tls_ctx)
 
@@ -69,7 +69,7 @@ class Connection(NativeResource):
         assert callable(on_connection_interrupted) or on_connection_interrupted is None
         assert callable(on_connection_resumed) or on_connection_resumed is None
 
-        super(NativeResource, self).__init__()
+        super(Connection, self).__init__()
         self.client = client
 
         self._binding = _awscrt.mqtt_client_connection_new(

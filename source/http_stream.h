@@ -23,7 +23,7 @@ struct aws_http_message;
  */
 PyObject *aws_py_http_client_stream_new(PyObject *self, PyObject *args);
 
-bool aws_py_http_message_new_request(struct aws_http_message *dst, PyObject *src);
+PyObject *aws_py_http_request_new(PyObject *self, PyObject *args);
 
 /* Given a python object, return a pointer to its underlying native type.
  * If NULL is returned, a python error has been set */

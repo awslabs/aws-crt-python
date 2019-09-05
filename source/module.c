@@ -245,7 +245,6 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(tls_connections_options_new_from_ctx, METH_VARARGS),
     AWS_PY_METHOD_DEF(tls_connection_options_set_alpn_list, METH_VARARGS),
     AWS_PY_METHOD_DEF(tls_connection_options_set_server_name, METH_VARARGS),
-    AWS_PY_METHOD_DEF(input_stream_new, METH_VARARGS),
     AWS_PY_METHOD_DEF(init_logging, METH_VARARGS),
 
     /* MQTT Client */
@@ -274,6 +273,7 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(http_connection_is_open, METH_VARARGS),
     AWS_PY_METHOD_DEF(http_client_connection_new, METH_VARARGS),
     AWS_PY_METHOD_DEF(http_client_stream_new, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http_request_new, METH_VARARGS),
 
     {NULL, NULL, 0, NULL},
 };
@@ -295,6 +295,7 @@ static void s_module_free(void *userdata) {
         aws_logger_clean_up(&s_logger);
     }
     aws_mqtt_library_clean_up();
+    aws_http_library_clean_up();
 }
 
 #endif /* PY_MAJOR_VERSION == 3 */
@@ -319,6 +320,7 @@ PyMODINIT_FUNC INIT_FN(void) {
     (void)m;
 #endif /* PY_MAJOR_VERSION */
 
+    aws_http_library_init(aws_py_get_allocator());
     aws_mqtt_library_init(aws_py_get_allocator());
 
     if (!PyEval_ThreadsInitialized()) {

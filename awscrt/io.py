@@ -54,7 +54,7 @@ class EventLoopGroup(NativeResource):
         """
         num_threads: Number of event-loops to create. Pass 0 to create one for each processor on the machine.
         """
-        super(NativeResource, self).__init__()
+        super(EventLoopGroup, self).__init__()
         self._binding = _awscrt.event_loop_group_new(num_threads)
 
 class HostResolver(NativeResource):
@@ -76,7 +76,7 @@ class ClientBootstrap(NativeResource):
         assert isinstance(event_loop_group, EventLoopGroup)
         assert isinstance(host_resolver, HostResolver) or host_resolver is None
 
-        super(NativeResource, self).__init__()
+        super(ClientBootstrap, self).__init__()
 
         if host_resolver is None:
             host_resolver = DefaultHostResolver(event_loop_group)
@@ -235,7 +235,7 @@ class ClientTlsContext(NativeResource):
     def __init__(self, options):
         assert isinstance(options, TlsContextOptions)
 
-        super(NativeResource, self).__init__()
+        super(ClientTlsContext, self).__init__()
         self._binding = _awscrt.client_tls_ctx_new(
             options.min_tls_ver.value,
             options.ca_path,
@@ -258,7 +258,7 @@ class TlsConnectionOptions(NativeResource):
     def __init__(self, tls_ctx):
         assert isinstance(tls_ctx, ClientTlsContext)
 
-        super(NativeResource, self).__init__()
+        super(TlsConnectionOptions, self).__init__()
         self.tls_ctx = tls_ctx
         self._binding = _awscrt.tls_connections_options_new_from_ctx(tls_ctx)
 
@@ -267,10 +267,3 @@ class TlsConnectionOptions(NativeResource):
 
     def set_server_name(self, server_name):
         _awscrt.tls_connection_options_set_server_name(self, server_name)
-
-
-class InputStream(NativeResource):
-    __slots__ = ()
-    def __init__(self, raw_io_base):
-        assert isinstance(raw_io_base, RawIOBase)
-        self._binding = _awscrt.aws_py_input_stream_new(raw_io_base)

@@ -65,9 +65,9 @@ PyObject *aws_py_tls_connection_options_set_alpn_list(PyObject *self, PyObject *
 PyObject *aws_py_tls_connection_options_set_server_name(PyObject *self, PyObject *args);
 
 /**
- * Create a new aws_input_stream to be managed by a Python Capsule.
+ * Create a new aws_input_stream, which reads from a Python I/O stream.
  */
-PyObject *aws_py_input_stream_new(PyObject *self, PyObject *args);
+struct aws_input_stream *aws_input_stream_new_from_py(PyObject *io);
 
 /* Given a python object, return a pointer to its underlying native type.
  * If NULL is returned, a python error has been set */
@@ -77,6 +77,5 @@ struct aws_host_resolver *aws_py_get_host_resolver(PyObject *host_resolver);
 struct aws_client_bootstrap *aws_py_get_client_bootstrap(PyObject *client_bootstrap);
 struct aws_tls_ctx *aws_py_get_tls_ctx(PyObject *tls_ctx);
 struct aws_tls_connection_options *aws_py_get_tls_connection_options(PyObject *tls_connection_options);
-struct aws_input_stream *aws_py_get_input_stream(PyObject *input_stream);
 
 #endif /* AWS_CRT_PYTHON_IO_H */

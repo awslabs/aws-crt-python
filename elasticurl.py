@@ -13,6 +13,7 @@
 import argparse
 import sys
 import os
+from io import BytesIO
 from awscrt import io, http
 try:
     from urllib.parse import urlparse
@@ -21,8 +22,9 @@ except ImportError:
 
 
 def print_header_list(headers):
-    for key, value in headers.items():
-        print('{}: {}'.format(key, value))
+    for key, value_list in headers.map.items():
+        for value in value_list:
+            print('{}: {}'.format(key, value))
 
 
 parser = argparse.ArgumentParser()
@@ -121,68 +123,26 @@ if scheme == 'https':
     if args.alpn_list:
         tls_connection_options.set_alpn_list(args.alpn_list)
 
-method = args.method
-
-if args.get:
-    method = 'GET'
-
-if args.post:
-    method = 'POST'
-
-if args.head:
-    method = 'HEAD'
-
-print_headers = args.include
-
-
 # invoked up on the connection closing
 def on_connection_shutdown(err_code):
     print('connection close with error code {}'.format(err_code))
 
 
 # invoked by the http request call as the response body is received in chunks
-def on_incoming_body(body_data):
+def on_incoming_body(http_stream, body_data):
     output.write(body_data)
 
 
-written = 0
 data_len = 0
-data_file = None
+data_stream = None
 
 if args.data:
     data_bytes = args.data.encode(encoding='utf-8')
     data_len = len(data_bytes)
+    data_stream = BytesIO(data_bytes)
 elif args.data_file:
     data_len = os.stat(args.data_file).st_size
-    data_file = open(args.data_file, 'rb')
-
-
-# invoked by the http request call as the request body has a buffer that can be written to
-def on_outgoing_body(request_body_mv):
-    global written
-    global data_len
-
-    actually_written = 0
-
-    if written < data_len:
-        mv_len = len(request_body_mv)
-        cpy_len = data_len - written
-        if data_len > mv_len:
-            cpy_len = mv_len
-
-        if args.data is not None:
-            request_body_mv[0:cpy_len] = data_bytes[written:written + cpy_len]
-            actually_written = cpy_len
-
-        elif data_file is not None:
-            actually_written = data_file.readinto(request_body_mv[0:cpy_len])
-
-        written += actually_written
-
-    if written == data_len:
-        return http.OutgoingHttpBodyState.Done, actually_written
-
-    return http.OutgoingHttpBodyState.InProgress, actually_written
+    data_stream = open(args.data_file, 'rb')
 
 
 socket_options = io.SocketOptions()
@@ -191,43 +151,52 @@ socket_options.connect_timeout_ms = args.connect_timeout
 hostname = url.hostname
 connect_future = http.HttpClientConnection.new(client_bootstrap, hostname, port, socket_options,
                                                on_connection_shutdown, tls_connection_options)
-connection = connect_future.result()
+connection = connect_future.result(10)
 
-outgoing_headers = {'host': hostname, 'user-agent': 'elasticurl.py 1.0, Powered by the AWS Common Runtime.'}
+request = http.HttpRequest(args.method, body_stream=data_stream)
+
+if args.get:
+    request.method = http.HttpMethod.GET
+
+if args.post:
+    request.method = http.HttpMethod.POST
+
+if args.head:
+    request.method = http.HttpMethod.HEAD
+
+if url.path:
+    request.path = url.path
+
+if url.query:
+    request.path += '?' + url.query
+
+request.headers.add('host', hostname)
+request.headers.add('user-agent', 'elasticurl.py 1.0, Powered by the AWS Common Runtime.')
 
 if data_len != 0:
-    outgoing_headers['content-length'] = str(data_len)
+    request.headers.add('content-length', data_len)
 
 if args.header:
     for i in args.header:
         name_value_tuple = i[0].split(':')
-        outgoing_headers[name_value_tuple[0].strip()] = name_value_tuple[1].strip()
-
-uri_str = url.path
-
-if uri_str is None or uri_str == '':
-    uri_str = '/'
-
-if url.query is not None:
-    uri_str += url.query
+        request.headers.add(name_value_tuple[0].strip(), name_value_tuple[1].strip())
 
 
 # invoked as soon as the response headers are received
-def response_received_cb(ftr):
+def response_received_cb(http_stream, status_code, headers):
     if args.include:
-        print('Response Code: {}'.format(request.response_code))
-        print_header_list(request.response_headers)
+        print('Response Code: {}'.format(status_code))
+        print_header_list(headers)
 
 
 # make the request
-request = connection.make_request(method, uri_str, outgoing_headers, on_outgoing_body, on_incoming_body)
-request.response_headers_received.add_done_callback(response_received_cb)
+http_stream = connection.make_request(request, response_received_cb, on_incoming_body)
 
 # wait until the full response is finished
-response_finished = request.response_completed.result(timeout=10)
-request = None
+http_stream.complete_future.result(timeout=10)
+http_stream = None
 connection = None
 
-if data_file is not None:
-    data_file.close()
+if data_stream is not None:
+    data_stream.close()
 output.close()

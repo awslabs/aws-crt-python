@@ -15,8 +15,9 @@ import _awscrt
 from concurrent.futures import Future
 from collections import defaultdict
 from enum import Enum
+from io import IOBase
 from awscrt import NativeResource
-from awscrt.io import ClientBootstrap, InputStream, TlsConnectionOptions, SocketOptions
+from awscrt.io import ClientBootstrap, TlsConnectionOptions, SocketOptions
 
 class HttpMethod(Enum):
     GET = 1
@@ -38,6 +39,7 @@ class HttpConnectionBase(NativeResource):
     __slots__ = ('_shutdown_future')
 
     def __init__(self):
+        super(HttpConnectionBase, self).__init__()
         self._shutdown_future = Future()
 
     def close(self):
@@ -122,6 +124,7 @@ class HttpStreamBase(NativeResource):
     __slots__ = ('connection', 'complete_future', '_on_body_cb')
 
     def __init__(self, connection, on_body=None):
+        super(HttpStreamBase, self).__init__()
         self.connection = connection
         self.complete_future = Future()
         self._on_body_cb = on_body
@@ -131,7 +134,7 @@ class HttpStreamBase(NativeResource):
             self._on_body_cb(self, chunk)
 
     def _on_complete(self, error_code):
-        if error_code:
+        if error_code == 0:
             self.complete_future.set_result(None)
         else:
             self.complete_future.set_exception(Exception(error_code)) # TODO: Actual exceptions for error_codes
@@ -146,7 +149,7 @@ class HttpClientStream(HttpStreamBase):
         assert callable(on_response) or on_response is None
         assert callable(on_body) or on_body is None
 
-        super(HttpStreamBase, self).__init__(connection, on_body)
+        super(HttpClientStream, self).__init__(connection, on_body)
 
         self.request = request
         self._on_response_cb = on_response
@@ -170,16 +173,18 @@ class HttpMessageBase(NativeResource):
     """
     Base for HttpRequest and HttpResponse classes.
     """
-    __slots__ = ('headers', 'body')
+    __slots__ = ('headers', '_body_stream')
 
-    def __init__(self, body=None):
-        assert isinstance(body, InputStream) or body is None
+    def __init__(self, body_stream=None):
+        assert isinstance(body_stream, IOBase) or body_stream is None
+
+        super(HttpMessageBase, self).__init__()
         self.headers = HttpHeaders()
-        """`HttpHeaders`"""
+        self._body_stream = body_stream
 
-        self.body = body
-        """`awscrt.io.InputStream` for the body"""
-
+    @property
+    def body_stream(self):
+        return self._body_stream
 
 class HttpRequest(HttpMessageBase):
     """
@@ -189,21 +194,17 @@ class HttpRequest(HttpMessageBase):
 
     __slots__ = ('method', 'path')
 
-    def __init__(self, method=None, path=None, body=None):
-        super(HttpMessageBase, self).__init__(body)
+    def __init__(self, method=HttpMethod.GET, path='/', body_stream=None):
+        super(HttpRequest, self).__init__(body_stream)
         self.method = method
-        """Method for the HTTP request. Ex: \"GET\""""
-
         self.path = path
-        """Path-and-query value for HTTP request. Ex: \"/index.html\""""
-
-        self._binding = _awscrt.http_message_new_request(self)
+        self._binding = _awscrt.http_request_new(self, self._body_stream)
 
 
 class HttpHeaders(object):
     """
     Collection of HTTP headers.
-    `map` holds the full collection, with lowercased names and lists of values.
+    `map` holds the full collection, where key is lowercased name and value is a list of strings.
     Convenience functions are provided.
     """
 

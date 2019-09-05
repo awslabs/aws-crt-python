@@ -28,7 +28,6 @@ static const char *s_capsule_name_elg = "aws_event_loop_group";
 static const char *s_capsule_name_host_resolver = "aws_host_resolver";
 static const char *s_capsule_name_tls_ctx = "aws_client_tls_ctx";
 static const char *s_capsule_name_tls_conn_options = "aws_tls_connection_options";
-static const char *s_capsule_name_input_stream = "aws_input_stream";
 
 bool aws_py_socket_options_init(struct aws_socket_options *socket_options, PyObject *py_socket_options) {
     AWS_ZERO_STRUCT(*socket_options);
@@ -612,19 +611,19 @@ PyObject *aws_py_tls_connection_options_set_server_name(PyObject *self, PyObject
     Py_RETURN_NONE;
 }
 
-/* aws_input_stream implementation for accessing Python's io.RawIOBase */
+/* aws_input_stream implementation for accessing Python I/O classes */
 struct aws_input_stream_py_impl {
     struct aws_input_stream base;
 
     bool is_end_of_stream;
 
     /* Dependencies that must outlive this */
-    PyObject *raw_io_base;
+    PyObject *io;
 };
 
 static void s_aws_input_stream_py_clean_up(struct aws_input_stream *stream) {
     struct aws_input_stream_py_impl *impl = stream->impl;
-    Py_DECREF(impl->raw_io_base);
+    Py_DECREF(impl->io);
     aws_mem_release(aws_py_get_allocator(), impl);
 }
 
@@ -641,7 +640,7 @@ static int s_aws_input_stream_py_seek(
     /*************** GIL ACQUIRE ***************/
     PyGILState_STATE state = PyGILState_Ensure();
 
-    method_result = PyObject_CallMethod(impl->raw_io_base, "seek", "(li)", &offset, &basis);
+    method_result = PyObject_CallMethod(impl->io, "seek", "(li)", &offset, &basis);
     if (!method_result) {
         aws_result = aws_raise_py_error();
         goto done;
@@ -674,7 +673,7 @@ int s_aws_input_stream_py_read(struct aws_input_stream *stream, struct aws_byte_
         goto done;
     }
 
-    method_result = PyObject_CallMethod(impl->raw_io_base, "readinto", "(O)", &memory_view, NULL);
+    method_result = PyObject_CallMethod(impl->io, "readinto", "(O)", &memory_view, NULL);
     if (!method_result) {
         aws_result = aws_raise_py_error();
         goto done;
@@ -730,9 +729,14 @@ static struct aws_input_stream_vtable s_aws_input_stream_py_vtable = {
     .clean_up = s_aws_input_stream_py_clean_up,
 };
 
-static struct aws_input_stream *s_aws_input_stream_new_from_py(PyObject *raw_io_base) {
-    struct aws_allocator *alloc = aws_py_get_allocator();
+struct aws_input_stream *aws_input_stream_new_from_py(PyObject *io) {
 
+    if (!io || (io == Py_None)) {
+        aws_raise_error(AWS_ERROR_INVALID_ARGUMENT);
+        return NULL;
+    }
+
+    struct aws_allocator *alloc = aws_py_get_allocator();
     struct aws_input_stream_py_impl *impl = aws_mem_calloc(alloc, 1, sizeof(struct aws_input_stream_py_impl));
     if (!impl) {
         return NULL;
@@ -741,77 +745,8 @@ static struct aws_input_stream *s_aws_input_stream_new_from_py(PyObject *raw_io_
     impl->base.allocator = alloc;
     impl->base.vtable = &s_aws_input_stream_py_vtable;
     impl->base.impl = impl;
-
-    impl->raw_io_base = raw_io_base;
-    Py_INCREF(impl->raw_io_base);
+    impl->io = io;
+    Py_INCREF(impl->io);
 
     return &impl->base;
-}
-
-struct input_stream_binding {
-    struct aws_input_stream *native;
-};
-
-static void s_input_stream_capsule_destructor(PyObject *capsule) {
-    struct input_stream_binding *stream = PyCapsule_GetPointer(capsule, s_capsule_name_input_stream);
-
-    aws_input_stream_destroy(stream->native);
-
-    aws_mem_release(aws_py_get_allocator(), stream);
-}
-
-PyObject *aws_py_input_stream_new(PyObject *self, PyObject *args) {
-    (void)self;
-    struct aws_allocator *alloc = aws_py_get_allocator();
-
-    PyObject *raw_io_base;
-    if (!PyArg_ParseTuple(args, "O", &raw_io_base)) {
-        return NULL;
-    }
-
-    struct input_stream_binding *stream = aws_mem_calloc(alloc, 1, sizeof(struct input_stream_binding));
-    if (!stream) {
-        return PyErr_AwsLastError();
-    }
-
-    /* From hereon, we need to clean up if errors occur.
-     * Fortunately the capsule's destructor will clean up anything stored inside the binding  */
-
-    PyObject *capsule = PyCapsule_New(stream, s_capsule_name_input_stream, s_input_stream_capsule_destructor);
-    if (!capsule) {
-        goto error;
-    }
-
-    stream->native = s_aws_input_stream_new_from_py(raw_io_base);
-    if (!stream->native) {
-        PyErr_SetAwsLastError();
-        goto error;
-    }
-
-    return capsule;
-
-error:
-    if (capsule) {
-        Py_DECREF(capsule);
-    } else {
-        aws_mem_release(alloc, stream);
-    }
-
-    return NULL;
-}
-
-struct aws_input_stream *aws_py_get_input_stream(PyObject *input_stream) {
-    struct aws_input_stream *native = NULL;
-
-    PyObject *binding_capsule = PyObject_GetAttrString(input_stream, "_binding");
-    if (binding_capsule) {
-        struct input_stream_binding *binding = PyCapsule_GetPointer(binding_capsule, s_capsule_name_input_stream);
-        if (binding) {
-            native = binding->native;
-            assert(native);
-        }
-        Py_DECREF(binding_capsule);
-    }
-
-    return native;
 }

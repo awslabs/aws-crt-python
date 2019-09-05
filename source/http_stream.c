@@ -18,6 +18,7 @@
 #include "io.h"
 #include <aws/http/connection.h>
 #include <aws/http/request_response.h>
+#include <aws/io/stream.h>
 
 static const char *s_capsule_name_http_stream = "aws_http_stream";
 static const char *s_capsule_name_http_message = "aws_http_message";
@@ -118,7 +119,7 @@ static int s_on_incoming_header_block_done(struct aws_http_stream *native_stream
 
     /* Deliver the built up list of (name,value) tuples */
     PyObject *result =
-        PyObject_CallMethod(stream->self_proxy, "_on_response", "(Oi)", stream->received_headers, response_code);
+        PyObject_CallMethod(stream->self_proxy, "_on_response", "(iO)", response_code, stream->received_headers);
     if (!result) {
         aws_result = aws_raise_py_error();
         goto done;
@@ -315,8 +316,8 @@ struct http_message_binding {
     /* Weak reference proxy to python self. */
     PyObject *self_proxy;
 
-    /* Dependencies that must outlive this */
-    PyObject *body_stream;
+    /* Native input stream to read from HttpMessage._body_stream */
+    struct aws_input_stream *native_body_stream;
 };
 
 static void s_http_message_capsule_destructor(PyObject *capsule) {
@@ -324,8 +325,8 @@ static void s_http_message_capsule_destructor(PyObject *capsule) {
 
     /* Note that destructor may be cleaning up a message that failed part-way through initialization */
     aws_http_message_destroy(message->native);
+    aws_input_stream_destroy(message->native_body_stream);
     Py_XDECREF(message->self_proxy);
-    Py_XDECREF(message->body_stream);
 
     aws_mem_release(aws_py_get_allocator(), message);
 }
@@ -344,7 +345,6 @@ static bool s_http_message_update_from_py(struct http_message_binding *message) 
     PyObject *message_self = NULL;
     PyObject *headers = NULL;
     PyObject *map = NULL;
-    PyObject *body_stream = NULL;
     PyObject *method = NULL;
     PyObject *path = NULL;
 
@@ -383,8 +383,12 @@ static bool s_http_message_update_from_py(struct http_message_binding *message) 
             goto done;
         }
 
-        Py_ssize_t num_values = PyList_Size(values_list);
-        for (Py_ssize_t value_i = 0; value_i < num_values; ++num_values) {
+        if (!PyList_Check(values_list)) {
+            PyErr_SetString(PyExc_TypeError, "Header values should be in a list");
+        }
+
+        Py_ssize_t num_values = PyList_GET_SIZE(values_list);
+        for (Py_ssize_t value_i = 0; value_i < num_values; ++value_i) {
             PyObject *header_value = PyList_GET_ITEM(values_list, value_i);
             header.value = aws_byte_cursor_from_pystring(header_value);
             if (!header.value.ptr) {
@@ -397,26 +401,6 @@ static bool s_http_message_update_from_py(struct http_message_binding *message) 
                 goto done;
             }
         }
-    }
-
-    /* Clear any existing reference to body-stream before updating value */
-    Py_CLEAR(message->body_stream);
-    aws_http_message_set_body_stream(message->native, NULL);
-
-    body_stream = PyObject_GetAttrString(message_self, "body");
-    if (!body_stream) {
-        goto done;
-    }
-
-    if (body_stream != Py_None) {
-        struct aws_input_stream *body_stream_native = aws_py_get_input_stream(body_stream);
-        if (!body_stream_native) {
-            goto done;
-        }
-
-        message->body_stream = body_stream;
-        Py_INCREF(message->body_stream);
-        aws_http_message_set_body_stream(message->native, body_stream_native);
     }
 
     /* HttpRequest subclass */
@@ -449,7 +433,6 @@ done:
     Py_XDECREF(message_self);
     Py_XDECREF(headers);
     Py_XDECREF(map);
-    Py_XDECREF(body_stream);
     Py_XDECREF(method);
     Py_XDECREF(path);
 
@@ -479,7 +462,8 @@ PyObject *aws_py_http_request_new(PyObject *self, PyObject *args) {
     (void)self;
 
     PyObject *py_request;
-    if (!PyArg_ParseTuple(args, "O", &py_request)) {
+    PyObject *py_body_stream;
+    if (!PyArg_ParseTuple(args, "OO", &py_request, &py_body_stream)) {
         return NULL;
     }
 
@@ -508,6 +492,17 @@ PyObject *aws_py_http_request_new(PyObject *self, PyObject *args) {
     request->self_proxy = PyWeakref_NewProxy(py_request, NULL);
     if (!request->self_proxy) {
         goto error;
+    }
+
+    /* If HttpMessage._body_stream set, create native aws_input_stream to read from it. */
+    if (py_body_stream != Py_None) {
+        request->native_body_stream = aws_input_stream_new_from_py(py_body_stream);
+        if (!request->native_body_stream) {
+            PyErr_SetAwsLastError();
+            goto error;
+        }
+
+        aws_http_message_set_body_stream(request->native, request->native_body_stream);
     }
 
     return capsule;
