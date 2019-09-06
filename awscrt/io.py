@@ -12,7 +12,7 @@
 # permissions and limitations under the License.
 
 import _awscrt
-from awscrt import NativeResource
+from awscrt import NativeResource, isinstance_str
 from enum import IntEnum
 
 
@@ -143,8 +143,8 @@ class TlsContextOptions(object):
 
     def override_default_trust_store_from_path(self, ca_path, ca_file):
 
-        assert isinstance(ca_path, str) or ca_path is None
-        assert isinstance(ca_file, str) or ca_file is None
+        assert isinstance_str(ca_path) or ca_path is None
+        assert isinstance_str(ca_file) or ca_file is None
 
         ca_buffer = None
         if ca_file:
@@ -161,8 +161,8 @@ class TlsContextOptions(object):
     @staticmethod
     def create_client_with_mtls_from_path(cert_path, pk_path):
 
-        assert isinstance(cert_path, str)
-        assert isinstance(pk_path, str)
+        assert isinstance_str(cert_path)
+        assert isinstance_str(pk_path)
 
         cert_buffer = byte_buf_from_file(cert_path)
         key_buffer = byte_buf_from_file(pk_path)
@@ -184,8 +184,8 @@ class TlsContextOptions(object):
     @staticmethod
     def create_client_with_mtls_pkcs12(pkcs12_path, pkcs12_password):
 
-        assert isinstance(pkcs12_path, str)
-        assert isinstance(pkcs12_password, str)
+        assert isinstance_str(pkcs12_path)
+        assert isinstance_str(pkcs12_password)
 
         opt = TlsContextOptions()
         opt.pkcs12_path = pkcs12_path
@@ -196,8 +196,8 @@ class TlsContextOptions(object):
     @staticmethod
     def create_server_from_path(cert_path, pk_path):
 
-        assert isinstance(cert_path, str)
-        assert isinstance(pk_path, str)
+        assert isinstance_str(cert_path)
+        assert isinstance_str(pk_path)
 
         cert_buffer = byte_buf_from_file(cert_path)
         key_buffer = byte_buf_from_file(pk_path)
@@ -218,8 +218,8 @@ class TlsContextOptions(object):
     @staticmethod
     def create_server_pkcs12(pkcs12_path, pkcs12_password):
 
-        assert isinstance(pkcs12_path, str)
-        assert isinstance(pkcs12_password, str)
+        assert isinstance_str(pkcs12_path)
+        assert isinstance_str(pkcs12_password)
 
         opt = TlsContextOptions()
         opt.pkcs12_path = pkcs12_path

@@ -22,14 +22,13 @@ except ImportError:
 
 
 def print_header_list(headers):
-    for key, value_list in headers.map.items():
-        for value in value_list:
-            print('{}: {}'.format(key, value))
+    for name, value in headers:
+        print('{}: {}'.format(name, value))
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument('url', help='URL to make request to. HTTPS is assumed unless port 80 is specified or HTTP is specified in the scheme.')
-parser.add_argument('--cacert', required=False, help='FILE: path to a CA certficate file.')
+parser.add_argument('--cacert', required=False, help='FILE: path to a CA certificate file.')
 parser.add_argument('--capath', required=False, help='PATH: path to a directory containing CA files.')
 parser.add_argument('--cert', required=False, help='FILE: path to a PEM encoded certificate to use with mTLS')
 parser.add_argument('--key', required=False, help='FILE: Path to a PEM encoded private key that matches cert.')

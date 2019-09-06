@@ -77,7 +77,7 @@ static bool s_http_message_update_from_py(struct http_message_binding *message) 
         goto done;
     }
 
-    map = PyObject_GetAttrString(headers, "map");
+    map = PyObject_GetAttrString(headers, "_map");
     if (!map) {
         goto done;
     }
@@ -106,7 +106,11 @@ static bool s_http_message_update_from_py(struct http_message_binding *message) 
 
         Py_ssize_t num_values = PyList_GET_SIZE(values_list);
         for (Py_ssize_t value_i = 0; value_i < num_values; ++value_i) {
-            PyObject *header_value = PyList_GET_ITEM(values_list, value_i);
+            PyObject *name_value_pair = PyList_GET_ITEM(values_list, value_i);
+            PyObject *header_value = PyTuple_GetItem(name_value_pair, 1);
+            if (!header_value) {
+                goto done;
+            }
             header.value = aws_byte_cursor_from_pystring(header_value);
             if (!header.value.ptr) {
                 PyErr_SetString(PyExc_TypeError, "Header value is invalid");

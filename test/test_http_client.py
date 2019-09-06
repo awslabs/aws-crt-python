@@ -24,7 +24,7 @@ class Response(object):
 
     def on_response(self, stream, status_code, headers):
         self.status_code = status_code
-        self.headers = headers
+        self.headers = awscrt.http.HttpHeaders(headers)
 
     def on_body(self, stream, chunk):
         self.body.extend(chunk)
@@ -77,7 +77,11 @@ class TestHttpClientConnection(unittest.TestCase):
         # client GETs a file that is served from disk.
         target_filename = 'test/files/short.txt'
 
-        request = awscrt.http.HttpRequest("GET", '/' + target_filename)
+        request = awscrt.http.HttpRequest(
+            method="GET",
+            path='/' + target_filename,
+            headers=[('Host', self.hostname)],
+        )
 
         response = Response()
 

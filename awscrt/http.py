@@ -17,7 +17,7 @@ from concurrent.futures import Future
 from collections import defaultdict
 from enum import Enum
 from io import IOBase
-from awscrt import NativeResource
+from awscrt import NativeResource, isinstance_str
 from awscrt.io import ClientBootstrap, EventLoopGroup, DefaultHostResolver, TlsConnectionOptions, SocketOptions
 
 
@@ -61,7 +61,7 @@ class HttpClientConnection(HttpConnectionBase):
     An HTTP client connection. All operations are async.
     Use HttpClientConnection.new() to establish a new connection.
     """
-    __slots__ = ('host_name', 'port')
+    __slots__ = ('_host_name', '_port')
 
     @classmethod
     def new(cls, host_name, port, socket_options=SocketOptions(), tls_connection_options=None, bootstrap=None):
@@ -75,7 +75,7 @@ class HttpClientConnection(HttpConnectionBase):
         future = Future()
         try:
             assert isinstance(bootstrap, ClientBootstrap) or bootstrap is None
-            assert isinstance(host_name, str) and host_name
+            assert isinstance_str(host_name) and host_name
             assert isinstance(tls_connection_options, TlsConnectionOptions) or tls_connection_options is None
             assert isinstance(socket_options, SocketOptions)
 
@@ -85,8 +85,8 @@ class HttpClientConnection(HttpConnectionBase):
                 bootstrap = ClientBootstrap(event_loop_group, host_resolver)
 
             connection = cls()
-            connection.host_name = host_name
-            connection.port = port
+            connection._host_name = host_name
+            connection._port = port
 
             def on_connection_setup(binding, error_code):
                 if error_code == 0:
@@ -110,18 +110,35 @@ class HttpClientConnection(HttpConnectionBase):
         return future
 
 
+    @property
+    def host_name(self):
+        return self._host_name
+
+    @property
+    def port(self):
+        return self._port
+
+
     def request(self, request, on_response=None, on_body=None):
         return HttpClientStream(self, request, on_response, on_body)
 
 
 class HttpStreamBase(NativeResource):
-    __slots__ = ('connection', 'complete_future', '_on_body_cb')
+    __slots__ = ('_connection', '_complete_future', '_on_body_cb')
 
     def __init__(self, connection, on_body=None):
         super(HttpStreamBase, self).__init__()
-        self.connection = connection
-        self.complete_future = Future()
+        self._connection = connection
+        self._complete_future = Future()
         self._on_body_cb = on_body
+
+    @property
+    def connection(self):
+        return self._connection
+
+    @property
+    def complete_future(self):
+        return self._complete_future
 
     def _on_body(self, chunk):
         if self._on_body_cb:
@@ -129,13 +146,13 @@ class HttpStreamBase(NativeResource):
 
     def _on_complete(self, error_code):
         if error_code == 0:
-            self.complete_future.set_result(None)
+            self._complete_future.set_result(None)
         else:
-            self.complete_future.set_exception(Exception(error_code)) # TODO: Actual exceptions for error_codes
+            self._complete_future.set_exception(Exception(error_code)) # TODO: Actual exceptions for error_codes
 
 
 class HttpClientStream(HttpStreamBase):
-    __slots__ = ('request', 'response_status_code', '_on_response_cb', '_on_body_cb')
+    __slots__ = ('_response_status_code', '_on_response_cb', '_on_body_cb')
 
     def __init__(self, connection, request, on_response=None, on_body=None):
         assert isinstance(connection, HttpClientConnection)
@@ -145,36 +162,40 @@ class HttpClientStream(HttpStreamBase):
 
         super(HttpClientStream, self).__init__(connection, on_body)
 
-        self.request = request
         self._on_response_cb = on_response
-        self.response_status_code = None
+        self._response_status_code = None
 
         _awscrt.http_client_stream_new(self, connection, request)
 
 
-    def _on_response(self, status_code, name_value_pairs):
-        self.response_status_code = status_code
+    @property
+    def response_status_code(self):
+        return self._response_status_code
 
-        headers = HttpHeaders()
-        for pair in name_value_pairs:
-            headers.add(pair[0], pair[1])
+
+    def _on_response(self, status_code, name_value_pairs):
+        self._response_status_code = status_code
 
         if self._on_response_cb:
-            self._on_response_cb(self, status_code, headers)
+            self._on_response_cb(self, status_code, name_value_pairs)
 
 
 class HttpMessageBase(NativeResource):
     """
     Base for HttpRequest and HttpResponse classes.
     """
-    __slots__ = ('headers', '_body_stream')
+    __slots__ = ('_headers', '_body_stream')
 
-    def __init__(self, body_stream=None):
+    def __init__(self, headers=None, body_stream=None):
         assert isinstance(body_stream, IOBase) or body_stream is None
 
         super(HttpMessageBase, self).__init__()
-        self.headers = HttpHeaders()
+        self._headers = HttpHeaders(headers)
         self._body_stream = body_stream
+
+    @property
+    def headers(self):
+        return self._headers
 
     @property
     def body_stream(self):
@@ -188,8 +209,8 @@ class HttpRequest(HttpMessageBase):
 
     __slots__ = ('method', 'path')
 
-    def __init__(self, method='GET', path='/', body_stream=None):
-        super(HttpRequest, self).__init__(body_stream)
+    def __init__(self, method='GET', path='/', headers=None, body_stream=None):
+        super(HttpRequest, self).__init__(headers, body_stream)
         self.method = method
         self.path = path
         self._binding = _awscrt.http_request_new(self, self._body_stream)
@@ -198,59 +219,103 @@ class HttpRequest(HttpMessageBase):
 class HttpHeaders(object):
     """
     Collection of HTTP headers.
-    `map` holds the full collection, where key is lowercased name and value is a list of strings.
-    Convenience functions are provided.
+    A given header name may have multiple values.
+    Header names are always treated in a case-insensitive manner.
+    HttpHeaders can be iterated over as (name,value) pairs.
     """
 
-    __slots__ = ('map')
+    __slots__ = ('_map')
 
-    def __init__(self):
-        self.map = defaultdict(list)
-        """Map of all headers, where key is lowercased name and value is list of strings."""
+    def __init__(self, name_value_pairs=None):
+        """
+        Construct from a collection of (name,value) pairs.
+        """
+        self._map = defaultdict(list)
+        if name_value_pairs:
+            self.add_pairs(name_value_pairs)
 
     def add(self, name, value):
         """
         Add a name-value pair.
         """
-        self.map[name.lower()].append(value)
+        assert isinstance_str(name)
+        assert isinstance_str(value)
+        self._map[name.lower()].append((name, value))
+
+    def add_pairs(self, name_value_pairs):
+        """
+        Add list of (name,value) pairs.
+        """
+        for pair in name_value_pairs:
+            assert len(pair) == 2
+            self.add(pair[0], pair[1])
 
     def set(self, name, value):
         """
         Set a name-value pair, any existing values for the name are removed.
         """
-        self.map[name.lower()] = [value]
+        assert isinstance_str(name)
+        assert isinstance_str(value)
+        self._map[name.lower()] = [(name, value)]
 
-    def get_list(self, name):
+    def get_values(self, name):
         """
         Get the list of values for this name.
         Returns an empty list if no values exist.
         """
-        return self.map.get(name.lower(), [])
-
-    def get(self, name):
-        """
-        Get the first value for this name.
-        Ignores any additional values.
-        Returns an empty string if no values exist.
-        """
-        values = self.map.get(name.lower())
+        values = self._map.get(name.lower())
         if values:
-            return values[0]
-        else:
-            return ""
+            return [pair[1] for pair in values]
+        return []
+
+    def get(self, name, default=None):
+        """
+        Get the first value for this name, ignoring any additional values.
+        Returns `default` if no values exist.
+        """
+        values = self._map.get(name.lower())
+        if values:
+            return values[0][1]
+        return default
 
     def remove(self, name):
         """
         Remove all values for this name.
+        Raises a KeyError if name not found.
         """
-        try:
-            del self.map[name.lower()]
-        except:
-            pass
+        del self._map[name.lower()]
+
+    def remove_value(self, name, value):
+        """
+        Remove a specific value for this name.
+        Raises a ValueError if value not found.
+        """
+        lower_name = name.lower()
+        values = self._map[lower_name]
+        if values:
+            for i, pair in enumerate(values):
+                if pair[1] == value:
+                    if len(values) == 1:
+                        del self._map[lower_name]
+                    else:
+                        del values[i]
+                    return
+        raise ValueError("HttpHeaders.remove_value(name,value): value not found")
+
 
     def clear(self):
         """
         Clear all headers
         """
-        self.map.clear()
+        self._map.clear()
 
+    def __iter__(self):
+        """
+        Iterate over all (name,value) pairs.
+        """
+        for values in self._map.values():
+            for pair in values:
+                yield pair
+
+    def __str__(self):
+        return self.__class__.__name__ + "(" + str([pair for pair in self]) + ")"
