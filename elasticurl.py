@@ -165,7 +165,7 @@ request.headers.add('host', hostname)
 request.headers.add('user-agent', 'elasticurl.py 1.0, Powered by the AWS Common Runtime.')
 
 if data_len != 0:
-    request.headers.add('content-length', data_len)
+    request.headers.add('content-length', str(data_len))
 
 if args.header:
     for i in args.header:

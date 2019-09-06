@@ -673,7 +673,7 @@ int s_aws_input_stream_py_read(struct aws_input_stream *stream, struct aws_byte_
         goto done;
     }
 
-    method_result = PyObject_CallMethod(impl->io, "readinto", "(O)", &memory_view, NULL);
+    method_result = PyObject_CallMethod(impl->io, "readinto", "(O)", memory_view);
     if (!method_result) {
         aws_result = aws_py_raise_error();
         goto done;
