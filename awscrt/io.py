@@ -14,7 +14,6 @@
 import _awscrt
 from awscrt import NativeResource
 from enum import IntEnum
-from io import RawIOBase
 
 
 class LogLevel(IntEnum):

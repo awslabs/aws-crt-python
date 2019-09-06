@@ -139,22 +139,24 @@ PyObject *PyErr_AwsLastError(void) {
 /* Key is `PyObject*` of Python exception type, value is `int` of AWS_ERROR_ enum (cast to void*) */
 static struct aws_hash_table s_py_to_aws_error_map;
 
-static void s_py_to_aws_error_map_init() {
+static void s_py_to_aws_error_map_init(void) {
     struct error_pair {
         PyObject *py_exception_type;
         int aws_error_code;
     };
 
     struct error_pair s_py_to_aws_error_array[] = {
-        {PyExc_BlockingIOError, AWS_IO_READ_WOULD_BLOCK},
-        {PyExc_BrokenPipeError, AWS_IO_BROKEN_PIPE},
-        {PyExc_FileNotFoundError, AWS_ERROR_FILE_INVALID_PATH},
         {PyExc_IndexError, AWS_ERROR_INVALID_INDEX},
         {PyExc_MemoryError, AWS_ERROR_OOM},
         {PyExc_NotImplementedError, AWS_ERROR_UNIMPLEMENTED},
         {PyExc_OverflowError, AWS_ERROR_OVERFLOW_DETECTED},
         {PyExc_TypeError, AWS_ERROR_INVALID_ARGUMENT},
         {PyExc_ValueError, AWS_ERROR_INVALID_ARGUMENT},
+#if PY_MAJOR_VERSION == 3
+        {PyExc_FileNotFoundError, AWS_ERROR_FILE_INVALID_PATH},
+        {PyExc_BlockingIOError, AWS_IO_READ_WOULD_BLOCK},
+        {PyExc_BrokenPipeError, AWS_IO_BROKEN_PIPE},
+#endif
     };
 
     if (aws_hash_table_init(
@@ -177,7 +179,7 @@ static void s_py_to_aws_error_map_init() {
     }
 }
 
-int aws_raise_py_error(void) {
+int aws_py_raise_error(void) {
     AWS_ASSERT(PyErr_Occurred() != NULL);
     AWS_ASSERT(PyGILState_Check() == 1);
 

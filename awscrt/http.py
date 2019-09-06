@@ -11,6 +11,7 @@
 # express or implied. See the License for the specific language governing
 # permissions and limitations under the License.
 
+from __future__ import absolute_import
 import _awscrt
 from concurrent.futures import Future
 from collections import defaultdict
@@ -74,7 +75,7 @@ class HttpClientConnection(HttpConnectionBase):
         future = Future()
         try:
             assert isinstance(bootstrap, ClientBootstrap) or bootstrap is None
-            assert host_name
+            assert isinstance(host_name, str) and host_name
             assert isinstance(tls_connection_options, TlsConnectionOptions) or tls_connection_options is None
             assert isinstance(socket_options, SocketOptions)
 

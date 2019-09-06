@@ -59,7 +59,7 @@ PyObject *PyErr_AwsLastError(void);
  * Invokes aws_raise_error() with that error code and always returns AWS_OP_ERR.
  *
  * The Python error indicator MUST be set and the GIL MUST be held when calling this function. */
-int aws_raise_py_error(void);
+int aws_py_raise_error(void);
 
 /* Create a write-only memoryview from the remaining free space in an aws_byte_buf */
 PyObject *aws_py_memory_view_from_byte_buffer(struct aws_byte_buf *buf);

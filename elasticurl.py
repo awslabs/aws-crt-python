@@ -185,7 +185,7 @@ def response_received_cb(http_stream, status_code, headers):
 stream = connection.request(request, response_received_cb, on_incoming_body)
 
 # wait until the full response is finished
-stream.complete_future.result(timeout=10)
+stream.complete_future.result()
 stream = None
 connection = None
 

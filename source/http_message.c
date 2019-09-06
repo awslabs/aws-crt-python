@@ -25,8 +25,7 @@ static const char *s_capsule_name_http_message = "aws_http_message";
  *
  * This binding acts differently than most. Instead of keeping the native type in
  * sync with the Python type at all times, we lazily sync their contents only when we must.
- * We do this because it seems cruel to make Python developers them access headers via the C API,
- * they want to access Python's native dict and list types.
+ * We do this to reduce the impact of repeatedly crossing the language barrier.
  */
 struct http_message_binding {
     struct aws_http_message *native;

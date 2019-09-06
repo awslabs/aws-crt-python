@@ -642,7 +642,7 @@ static int s_aws_input_stream_py_seek(
 
     method_result = PyObject_CallMethod(impl->io, "seek", "(li)", &offset, &basis);
     if (!method_result) {
-        aws_result = aws_raise_py_error();
+        aws_result = aws_py_raise_error();
         goto done;
     }
 
@@ -669,13 +669,13 @@ int s_aws_input_stream_py_read(struct aws_input_stream *stream, struct aws_byte_
 
     memory_view = aws_py_memory_view_from_byte_buffer(dest);
     if (!memory_view) {
-        aws_result = aws_raise_py_error();
+        aws_result = aws_py_raise_error();
         goto done;
     }
 
     method_result = PyObject_CallMethod(impl->io, "readinto", "(O)", &memory_view, NULL);
     if (!method_result) {
-        aws_result = aws_raise_py_error();
+        aws_result = aws_py_raise_error();
         goto done;
     }
 
@@ -685,7 +685,7 @@ int s_aws_input_stream_py_read(struct aws_input_stream *stream, struct aws_byte_
     if (method_result != Py_None) {
         bytes_read = PyLong_AsSsize_t(method_result);
         if (bytes_read == -1 && PyErr_Occurred()) {
-            aws_result = aws_raise_py_error();
+            aws_result = aws_py_raise_error();
             goto done;
         }
         AWS_FATAL_ASSERT(bytes_read >= 0);

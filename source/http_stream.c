@@ -18,6 +18,10 @@
 
 static const char *s_capsule_name_http_stream = "aws_http_stream";
 
+/* Amount of space to reserve ahead of time for buffering headers.
+ * http://dev.chromium.org/spdy/spdy-whitepaper - "typical header sizes of 700-800 bytes is common" */
+#define HEADERS_RESERVED_BYTES 1024
+
 struct http_stream_binding {
     struct aws_http_stream *native;
 
@@ -26,9 +30,12 @@ struct http_stream_binding {
      * We do this by INCREFing when setup is successful, and DECREFing when on_complete fires. */
     PyObject *self_proxy;
 
-    /* Build up list of (name,value) tuples as headers come in via repeated on_headers callacks.
-     * Then deliver them to python all at once from the header_block_done callback */
-    PyObject *received_headers;
+    /* Buffer up headers as they come in via repeated on_headers callacks.
+     * Then deliver them to python all at once from the header_block_done callback.
+     * Buffer contains null-terminated name,value pairs, for ex:
+     * b'Content-Length\x00123\x00Host\x00example.com\x00' */
+    struct aws_byte_buf received_headers;
+    size_t received_headers_count; /* Buffer contains 2x strings per header */
 
     /* Dependencies that must outlive this */
     PyObject *connection;
@@ -56,41 +63,25 @@ static int s_on_incoming_headers(
     size_t num_headers,
     void *user_data) {
 
+    (void)native_stream;
     struct http_stream_binding *stream = user_data;
     int aws_result = AWS_OP_SUCCESS;
 
-    /*************** GIL ACQUIRE ***************/
-    PyGILState_STATE state = PyGILState_Ensure();
-
-    /* Set this just in case callback fires before aws_http_connection_make_request() has even returned */
-    stream->native = native_stream;
-
-    /* Build up list of (name,value) tuples as headers come in via repeated on_headers callacks. */
+    /* Buffer up null-terminated strings as headers come in via repeated on_headers callacks. */
+    const uint8_t terminator_byte[] = {0};
+    const struct aws_byte_cursor terminator = aws_byte_cursor_from_array(terminator_byte, 1);
     for (size_t i = 0; i < num_headers; ++i) {
         const struct aws_http_header *header = &header_array[i];
 
-        PyObject *name_value_pair = Py_BuildValue(
-            "(s#s#)",
-            (const char *)header->name.ptr,
-            header->name.len,
-            (const char *)header->value.ptr,
-            header->value.len);
-        if (!name_value_pair) {
-            aws_result = aws_raise_py_error();
-            goto done;
+        if (aws_byte_buf_append_dynamic(&stream->received_headers, &header->name) ||
+            aws_byte_buf_append_dynamic(&stream->received_headers, &terminator) ||
+            aws_byte_buf_append_dynamic(&stream->received_headers, &header->value) ||
+            aws_byte_buf_append_dynamic(&stream->received_headers, &terminator)) {
+            return AWS_OP_ERR;
         }
 
-        bool append_success = PyList_Append(stream->received_headers, name_value_pair) == 0;
-        Py_DECREF(name_value_pair);
-        if (!append_success) {
-            aws_result = aws_raise_py_error();
-            goto done;
-        }
+        stream->received_headers_count += 1;
     }
-
-done:
-    PyGILState_Release(state);
-    /*************** GIL RELEASE ***************/
 
     return aws_result;
 }
@@ -104,6 +95,11 @@ static int s_on_incoming_header_block_done(struct aws_http_stream *native_stream
         return AWS_OP_ERR;
     }
 
+    if (stream->received_headers_count > PY_SSIZE_T_MAX) {
+        return aws_raise_error(AWS_ERROR_OVERFLOW_DETECTED);
+    }
+    Py_ssize_t num_headers = (Py_ssize_t)stream->received_headers_count;
+
     int aws_result = AWS_OP_SUCCESS;
 
     /*************** GIL ACQUIRE ***************/
@@ -112,24 +108,50 @@ static int s_on_incoming_header_block_done(struct aws_http_stream *native_stream
     /* Set this just in case callback fires before aws_http_connection_make_request() has even returned */
     stream->native = native_stream;
 
+    /* Build up a list of (name,value) tuples,
+     * extracting values from buffer of [name,value,name,value,...] null-terminated strings */
+    PyObject *header_list = PyList_New(num_headers);
+    if (!header_list) {
+        aws_result = aws_py_raise_error();
+        goto done;
+    }
+
+    struct aws_byte_cursor string_cursor = aws_byte_cursor_from_buf(&stream->received_headers);
+
+    for (Py_ssize_t i = 0; i < num_headers; ++i) {
+        const char *name_str = (const char *)string_cursor.ptr;
+        size_t name_len = strlen((const char *)string_cursor.ptr);
+
+        aws_byte_cursor_advance(&string_cursor, name_len + 1);
+
+        const char *value_str = (const char *)string_cursor.ptr;
+        size_t value_len = strlen((const char *)string_cursor.ptr);
+
+        aws_byte_cursor_advance(&string_cursor, value_len + 1);
+
+        PyObject *tuple = Py_BuildValue("(s#s#)", name_str, name_len, value_str, value_len);
+        if (!tuple) {
+            aws_result = aws_py_raise_error();
+            goto done;
+        }
+
+        PyList_SET_ITEM(header_list, i, tuple); /* steals reference to tuple */
+    }
+
     /* Deliver the built up list of (name,value) tuples */
-    PyObject *result =
-        PyObject_CallMethod(stream->self_proxy, "_on_response", "(iO)", response_code, stream->received_headers);
+    PyObject *result = PyObject_CallMethod(stream->self_proxy, "_on_response", "(iO)", response_code, header_list);
     if (!result) {
-        aws_result = aws_raise_py_error();
+        aws_result = aws_py_raise_error();
         goto done;
     }
     Py_DECREF(result);
 
-    /* Clear the list so we're ready for next header block */
-    result = PyObject_CallMethod(stream->received_headers, "clear", "()", NULL);
-    if (!result) {
-        aws_result = aws_raise_py_error();
-        goto done;
-    }
-    Py_DECREF(result);
+    /* Clear the buffer so we're ready for next header block */
+    stream->received_headers.len = 0;
+    stream->received_headers_count = 0;
 
 done:
+    Py_XDECREF(header_list);
     PyGILState_Release(state);
     /*************** GIL RELEASE ***************/
 
@@ -158,7 +180,7 @@ static int s_on_incoming_body(
     PyObject *result = PyObject_CallMethod(
         stream->self_proxy, "_on_body", "(" READABLE_BYTES_FORMAT_STR ")", (const char *)data->ptr, data_len);
     if (!result) {
-        aws_result = aws_raise_py_error();
+        aws_result = aws_py_raise_error();
         goto done;
     }
     Py_DECREF(result);
@@ -204,7 +226,7 @@ static void s_stream_capsule_destructor(PyObject *http_stream_capsule) {
 
     aws_http_stream_release(stream->native);
     Py_XDECREF(stream->self_proxy);
-    Py_XDECREF(stream->received_headers);
+    aws_byte_buf_clean_up(&stream->received_headers);
     Py_XDECREF(stream->connection);
 
     aws_mem_release(aws_py_get_allocator(), stream);
@@ -253,8 +275,7 @@ PyObject *aws_py_http_client_stream_new(PyObject *self, PyObject *args) {
         goto error;
     }
 
-    stream->received_headers = PyList_New(0);
-    if (!stream->received_headers) {
+    if (aws_byte_buf_init(&stream->received_headers, allocator, HEADERS_RESERVED_BYTES)) {
         goto error;
     }
 

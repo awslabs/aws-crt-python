@@ -24,4 +24,4 @@ ENDPOINT=$(aws secretsmanager get-secret-value --secret-id "unit-test/endpoint" 
 python3 elasticurl.py -v ERROR -P -H "content-type: application/json" -i -d "{'test':'testval'}" http://httpbin.org/post
 python3 elasticurl.py -v ERROR -i https://example.com
 python3 mqtt_test.py --endpoint $ENDPOINT --port 8883 --cert /tmp/certificate.pem --key /tmp/privatekey.pem --root-ca /tmp/AmazonRootCA1.pem
-python3 -m unittest
+python3 -m unittest discover
