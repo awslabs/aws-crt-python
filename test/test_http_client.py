@@ -13,8 +13,16 @@
 
 import awscrt.http
 from collections import namedtuple
-import http.server
 import unittest
+
+# Python's simple HTTP server lives in different places in Python 2/3.
+try:
+    from http.server import HTTPServer, SimpleHTTPRequestHandler
+except:
+    from SimpleHTTPServer import SimpleHTTPRequestHandler
+    import SocketServer
+    HTTPServer = SocketServer.TCPServer
+
 
 class Response(object):
     def __init__(self):
@@ -30,7 +38,7 @@ class Response(object):
         self.body.extend(chunk)
 
 
-class HTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
+class HTTPRequestHandler(SimpleHTTPRequestHandler):
     # silence the logger
     def log_message(self, format, *args):
         return
@@ -38,14 +46,14 @@ class HTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
 
 class TestHttpClientConnection(unittest.TestCase):
     hostname = 'localhost'
-    port = 8000
     timeout = 10 # seconds
 
     def test_connect(self):
-        server = http.server.HTTPServer((self.hostname, self.port), HTTPRequestHandler)
+        server = HTTPServer((self.hostname, 0), HTTPRequestHandler)
+        port = server.server_address[1]
 
         # connect
-        connection_future = awscrt.http.HttpClientConnection.new(self.hostname, self.port)
+        connection_future = awscrt.http.HttpClientConnection.new(self.hostname, port)
         connection = connection_future.result(self.timeout)
         self.assertTrue(connection.is_open())
 
@@ -71,8 +79,9 @@ class TestHttpClientConnection(unittest.TestCase):
 
 
     def test_get_request(self):
-        server = http.server.HTTPServer((self.hostname, self.port), HTTPRequestHandler)
-        connection = awscrt.http.HttpClientConnection.new(self.hostname, self.port).result(self.timeout)
+        server = HTTPServer((self.hostname, 0), HTTPRequestHandler)
+        port = server.server_address[1]
+        connection = awscrt.http.HttpClientConnection.new(self.hostname, port).result(self.timeout)
 
         # client GETs a file that is served from disk.
         target_filename = 'test/files/short.txt'

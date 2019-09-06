@@ -30,6 +30,6 @@ def isinstance_str(x):
     """
     Python 2/3 compatible way to check isinstance(x, str).
     """
-    if version_info[0] > 2:
-        basestring = str
-    return isinstance(x, basestring)
+    if version_info[0] == 2:
+        return isinstance(x, basestring)
+    return isinstance(x, str)
