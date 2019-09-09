@@ -78,6 +78,14 @@ if args.verbose:
 
     io.init_logging(log_level, log_output)
 
+# an event loop group is needed for IO operations. Unless you're a server or a client doing hundreds of connections
+# you only want one of these.
+event_loop_group = io.EventLoopGroup(1)
+
+ # client bootstrap knows how to connect all the pieces. In this case it also has the default dns resolver
+# baked in.
+client_bootstrap = io.ClientBootstrap(event_loop_group)
+
 url = urlparse(args.url)
 port = 443
 scheme = 'https'
@@ -140,7 +148,8 @@ socket_options = io.SocketOptions()
 socket_options.connect_timeout_ms = args.connect_timeout
 
 hostname = url.hostname
-connect_future = http.HttpClientConnection.new(hostname, port, socket_options, tls_connection_options)
+connect_future = http.HttpClientConnection.new(hostname, port, socket_options,
+                                               tls_connection_options, client_bootstrap)
 connection = connect_future.result(10)
 connection.add_shutdown_callback(on_connection_shutdown)
 
@@ -188,6 +197,8 @@ stream.complete_future.result()
 stream = None
 connection = None
 
-if data_stream is not None:
+if data_stream:
     data_stream.close()
-output.close()
+
+if args.output:
+    output.close()
