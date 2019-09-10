@@ -85,7 +85,7 @@ static bool s_http_message_update_from_py(struct http_message_binding *message) 
     /* Clear existing headers, before adding the new values. */
     size_t num_headers = aws_http_message_get_header_count(message->native);
     for (size_t i = num_headers; i > 0; --i) { /* erase from back to front */
-        aws_http_message_erase_header(message->native, i - 1));
+        aws_http_message_erase_header(message->native, i - 1);
     }
 
     /* Copy in new header values */
