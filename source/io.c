@@ -624,7 +624,7 @@ struct aws_input_stream_py_impl {
 static void s_aws_input_stream_py_clean_up(struct aws_input_stream *stream) {
     struct aws_input_stream_py_impl *impl = stream->impl;
     Py_DECREF(impl->io);
-    aws_mem_release(aws_py_get_allocator(), impl);
+    /* for whatever reason the calling function cleans up the base class pointer, which happens to clean us up */
 }
 
 static int s_aws_input_stream_py_seek(
