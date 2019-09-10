@@ -9,9 +9,14 @@ git submodule update --init --recursive
 mkdir build\deps\install
 set AWS_C_INSTALL=%cd%\build\deps\install
 
-python setup.py build install
-python elasticurl.py -v ERROR -P -H "content-type: application/json" -i -d "{'test':'testval'}" http://httpbin.org/post
-python elasticurl.py -v ERROR -i https://example.com
-python -m unittest discover
+python setup.py build install || goto error
 
+python -m unittest discover || goto error
+python elasticurl.py -v ERROR -P -H "content-type: application/json" -i -d "{'test':'testval'}" http://httpbin.org/post || goto error
+python elasticurl.py -v ERROR -i https://example.com || goto error
+
+goto :EOF
+
+:error
+echo Failed with error #%errorlevel%.
 exit /b %errorlevel%
