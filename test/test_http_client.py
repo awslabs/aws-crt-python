@@ -12,7 +12,6 @@
 # permissions and limitations under the License.
 
 import awscrt.http
-from collections import namedtuple
 import unittest
 
 # Python's simple HTTP server lives in different places in Python 2/3.

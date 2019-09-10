@@ -56,10 +56,10 @@ class EventLoopGroup(NativeResource):
         super(EventLoopGroup, self).__init__()
         self._binding = _awscrt.event_loop_group_new(num_threads)
 
-class HostResolver(NativeResource):
+class HostResolverBase(NativeResource):
     __slots__ = ()
 
-class DefaultHostResolver(HostResolver):
+class DefaultHostResolver(HostResolverBase):
     __slots__ = ()
 
     def __init__(self, event_loop_group, max_hosts=16):
@@ -73,7 +73,7 @@ class ClientBootstrap(NativeResource):
 
     def __init__(self, event_loop_group, host_resolver=None):
         assert isinstance(event_loop_group, EventLoopGroup)
-        assert isinstance(host_resolver, HostResolver) or host_resolver is None
+        assert isinstance(host_resolver, HostResolverBase) or host_resolver is None
 
         super(ClientBootstrap, self).__init__()
 
@@ -82,7 +82,7 @@ class ClientBootstrap(NativeResource):
 
         self._binding = _awscrt.client_bootstrap_new(event_loop_group, host_resolver)
 
-def byte_buf_from_file(filepath):
+def _read_binary_file(filepath):
     with open(filepath, mode='rb') as fh:
         contents = fh.read()
     return contents
@@ -148,7 +148,7 @@ class TlsContextOptions(object):
 
         ca_buffer = None
         if ca_file:
-            ca_buffer = byte_buf_from_file(ca_file)
+            ca_buffer = _read_binary_file(ca_file)
 
         self.ca_path = ca_path
         self.override_default_trust_store(ca_buffer)
@@ -164,8 +164,8 @@ class TlsContextOptions(object):
         assert isinstance_str(cert_path)
         assert isinstance_str(pk_path)
 
-        cert_buffer = byte_buf_from_file(cert_path)
-        key_buffer = byte_buf_from_file(pk_path)
+        cert_buffer = _read_binary_file(cert_path)
+        key_buffer = _read_binary_file(pk_path)
 
         return TlsContextOptions.create_client_with_mtls(cert_buffer, key_buffer)
 
@@ -199,8 +199,8 @@ class TlsContextOptions(object):
         assert isinstance_str(cert_path)
         assert isinstance_str(pk_path)
 
-        cert_buffer = byte_buf_from_file(cert_path)
-        key_buffer = byte_buf_from_file(pk_path)
+        cert_buffer = _read_binary_file(cert_path)
+        key_buffer = _read_binary_file(pk_path)
 
         return TlsContextOptions.create_server_with_mtls(cert_buffer, key_buffer)
 
