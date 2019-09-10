@@ -84,8 +84,8 @@ static bool s_http_message_update_from_py(struct http_message_binding *message) 
 
     /* Clear existing headers, before adding the new values. */
     size_t num_headers = aws_http_message_get_header_count(message->native);
-    for (size_t i = 0; i < num_headers; ++i) {
-        aws_http_message_erase_header(message->native, num_headers - (1 + i)); /* erase from back to front */
+    for (size_t i = num_headers; i > 0; --i) { /* erase from back to front */
+        aws_http_message_erase_header(message->native, i - 1));
     }
 
     /* Copy in new header values */
@@ -106,8 +106,9 @@ static bool s_http_message_update_from_py(struct http_message_binding *message) 
 
         Py_ssize_t num_values = PyList_GET_SIZE(values_list);
         for (Py_ssize_t value_i = 0; value_i < num_values; ++value_i) {
-            PyObject *name_value_pair = PyList_GET_ITEM(values_list, value_i);
-            PyObject *header_value = PyTuple_GetItem(name_value_pair, 1);
+            PyObject *name_value_pair = PyList_GET_ITEM(values_list, value_i); /* CANNOT fail, just checked length */
+
+            PyObject *header_value = PyTuple_GetItem(name_value_pair, 1); /* CAN fail, assuming item is 2-tuple */
             if (!header_value) {
                 goto done;
             }

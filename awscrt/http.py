@@ -75,7 +75,7 @@ class HttpClientConnection(HttpConnectionBase):
         future = Future()
         try:
             assert isinstance(bootstrap, ClientBootstrap) or bootstrap is None
-            assert isinstance_str(host_name) and host_name
+            assert isinstance_str(host_name)
             assert isinstance(tls_connection_options, TlsConnectionOptions) or tls_connection_options is None
             assert isinstance(socket_options, SocketOptions)
 
