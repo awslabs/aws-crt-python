@@ -9,12 +9,19 @@ git submodule update --init --recursive
 mkdir build\deps\install
 set AWS_C_INSTALL=%cd%\build\deps\install
 
+echo --- installing crt ---
 python setup.py build install || goto error
 
+echo --- unittest ---
 python -m unittest discover || goto error
-python elasticurl.py -v ERROR -P -H "content-type: application/json" -i -d "{'test':'testval'}" http://httpbin.org/post || goto error
+
+echo --- elasticurl GET ---
 python elasticurl.py -v ERROR -i https://example.com || goto error
 
+echo --- elasticurl PUT ---
+python elasticurl.py -v ERROR -P -H "content-type: application/json" -i -d "{'test':'testval'}" http://httpbin.org/post || goto error
+
+echo --- common-windows.bat SUCCESS ---
 goto :EOF
 
 :error
