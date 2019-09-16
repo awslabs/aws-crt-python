@@ -17,7 +17,7 @@ set PYTHONUNBUFFERED=1
 set PYTHONVERBOSE=1
 
 echo --- unittest ---
-python -m unittest test.test_http_headers -v || goto error
+python -m unittest test.test_http_client -v || goto error
 
 echo --- elasticurl GET ---
 python elasticurl.py -v ERROR -i https://example.com || goto error
