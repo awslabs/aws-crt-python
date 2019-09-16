@@ -14,6 +14,7 @@
 import awscrt.http
 import unittest
 import sys
+import time
 
 # Python's simple HTTP server lives in different places in Python 2/3.
 try:
@@ -49,15 +50,19 @@ class TestHttpClientConnection(unittest.TestCase):
     timeout = 10 # seconds
 
     def test_connect(self):
+        #awscrt.io.init_logging(awscrt.io.LogLevel.Trace, 'stderr')
+
         print('test_connect go', file=sys.stderr)
         server = HTTPServer((self.hostname, 0), HTTPRequestHandler)
         print('server started at ', server.server_address, file=sys.stderr)
         port = server.server_address[1]
 
         # connect
-        connection_future = awscrt.http.HttpClientConnection.new(self.hostname, port)
-        print('connection newed', file=sys.stderr)
-        connection = connection_future.result(self.timeout)
+        event_loop_group = awscrt.io.EventLoopGroup(1)
+        host_resolver = awscrt.io.DefaultHostResolver(event_loop_group)
+        client_bootstrap = awscrt.io.ClientBootstrap(event_loop_group, host_resolver)
+        print('connection newing', file=sys.stderr)
+        connection = awscrt.http.HttpClientConnection.new(self.hostname, port, bootstrap=client_bootstrap).result(self.timeout)
         print('connection got', file=sys.stderr)
         self.assertTrue(connection.is_open())
 
@@ -82,7 +87,18 @@ class TestHttpClientConnection(unittest.TestCase):
         self.assertFalse(connection.is_open())
         print('closing server', file=sys.stderr)
         server.server_close()
+        del server
         print('server closed', file=sys.stderr)
+        del connection
+        del client_bootstrap
+        del host_resolver
+        del event_loop_group
+        print('sleeping before exit', file=sys.stderr)
+        time.sleep(1)
+        print('exiting test', file=sys.stderr)
+
+
+
 
 
     # def test_get_request(self):
