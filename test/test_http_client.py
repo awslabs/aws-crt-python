@@ -89,11 +89,17 @@ class TestHttpClientConnection(unittest.TestCase):
         server.server_close()
         del server
         print('server closed', file=sys.stderr)
+        print('del connection', file=sys.stderr)
         del connection
+        time.sleep(1)
+        print('del client_bootstrap', file=sys.stderr)
         del client_bootstrap
+        time.sleep(1)
+        print('del host_resolver', file=sys.stderr)
         del host_resolver
+        time.sleep(1)
+        print('del event_loop_group', file=sys.stderr)
         del event_loop_group
-        print('sleeping before exit', file=sys.stderr)
         time.sleep(1)
         print('exiting test', file=sys.stderr)
 
