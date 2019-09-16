@@ -13,11 +13,8 @@ echo --- installing crt ---
 python setup.py build install || goto error
 
 
-set PYTHONUNBUFFERED=1
-set PYTHONVERBOSE=1
-
 echo --- unittest ---
-python -m unittest test.test_http_client -v || goto error
+python -u -v -v -m unittest test.test_http_client -v || goto error
 
 echo --- elasticurl GET ---
 python elasticurl.py -v ERROR -i https://example.com || goto error
