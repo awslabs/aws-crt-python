@@ -13,7 +13,7 @@ echo --- installing crt ---
 python setup.py build install || goto error
 
 echo --- unittest ---
-python -m unittest discover || goto error
+python -v -m unittest discover --verbose || goto error
 
 echo --- elasticurl GET ---
 python elasticurl.py -v ERROR -i https://example.com || goto error
