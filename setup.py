@@ -66,7 +66,7 @@ def determine_generator_string():
             trimmed_out = out.decode('utf-8').strip()
             if 'Visual Studio' in trimmed_out and vs_major_version in trimmed_out:
                 print('selecting generator {}'.format(trimmed_out))
-                vs_version_gen_str = trimmed_out.split('[')[0].strip()
+                vs_version_gen_str = trimmed_out.split('[')[0].strip(' *')
                 break
 
         if vs_version_gen_str == None:
