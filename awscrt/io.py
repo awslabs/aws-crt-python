@@ -202,7 +202,7 @@ class TlsContextOptions(object):
         cert_buffer = _read_binary_file(cert_path)
         key_buffer = _read_binary_file(pk_path)
 
-        return TlsContextOptions.create_server_with_mtls(cert_buffer, key_buffer)
+        return TlsContextOptions.create_server(cert_buffer, key_buffer)
 
     @staticmethod
     def create_server(cert_buffer, key_buffer):
