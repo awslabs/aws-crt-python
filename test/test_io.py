@@ -17,7 +17,7 @@ from test import NativeResourceTest
 import unittest
 
 
-class TestEventLoopGroup(NativeResourceTest):
+class EventLoopGroupTest(NativeResourceTest):
     def test_init_defaults(self):
         event_loop_group = EventLoopGroup()
 
@@ -25,13 +25,13 @@ class TestEventLoopGroup(NativeResourceTest):
         event_loop_group = EventLoopGroup(1)
 
 
-class TestDefaultHostResolver(NativeResourceTest):
+class DefaultHostResolverTest(NativeResourceTest):
     def test_init(self):
         event_loop_group = EventLoopGroup()
         host_resolver = DefaultHostResolver(event_loop_group)
 
 
-class TestClientBootstrap(NativeResourceTest):
+class ClientBootstrapTest(NativeResourceTest):
     def test_init_defaults(self):
         event_loop_group = EventLoopGroup()
         bootstrap = ClientBootstrap(event_loop_group)

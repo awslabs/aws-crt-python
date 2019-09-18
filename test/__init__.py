@@ -21,7 +21,7 @@ class NativeResourceTest(unittest.TestCase):
     """
 
     def setUp(self):
-        NativeResource.track_lifetime = True
+        NativeResource._track_lifetime = True
 
     def tearDown(self):
-        self.assertEquals(0, len(NativeResource.living))
+        self.assertEqual(0, len(NativeResource._living))
