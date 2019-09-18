@@ -1,5 +1,5 @@
-#ifndef AWS_CRT_PYTHON_HTTP_CONNECTION_H
-#define AWS_CRT_PYTHON_HTTP_CONNECTION_H
+#ifndef AWS_CRT_PYTHON_HTTP_H
+#define AWS_CRT_PYTHON_HTTP_H
 /*
  * Copyright 2010-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
@@ -32,10 +32,15 @@ PyObject *aws_py_http_connection_is_open(PyObject *self, PyObject *args);
  */
 PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args);
 
+PyObject *aws_py_http_client_stream_new(PyObject *self, PyObject *args);
+
+PyObject *aws_py_http_request_new(PyObject *self, PyObject *args);
+
 /* Given a python object, return a pointer to its underlying native type.
  * If NULL is returned, a python error has been set */
 
 struct aws_http_connection *aws_py_get_http_connection(PyObject *connection);
+struct aws_http_stream *aws_py_get_http_stream(PyObject *stream);
+struct aws_http_message *aws_py_get_http_message(PyObject *http_message);
 
-
-#endif /* AWS_CRT_PYTHON_HTTP_CONNECTION_H */
+#endif /* AWS_CRT_PYTHON_HTTP_H */

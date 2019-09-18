@@ -11,6 +11,8 @@
 # express or implied. See the License for the specific language governing
 # permissions and limitations under the License.
 
+from sys import version_info
+
 __all__ = ['io', 'mqtt', 'crypto', 'http']
 
 class NativeResource(object):
@@ -23,3 +25,11 @@ class NativeResource(object):
     If we simply had python class B referencing A, and the GC decided to clean up both, it might destroy A before B.
     """
     __slots__ = ('_binding', '__weakref__')
+
+def isinstance_str(x):
+    """
+    Python 2/3 compatible way to check isinstance(x, str).
+    """
+    if version_info[0] == 2:
+        return isinstance(x, basestring)
+    return isinstance(x, str)

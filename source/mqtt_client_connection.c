@@ -755,32 +755,6 @@ PyObject *aws_py_mqtt_client_connection_unsubscribe(PyObject *self, PyObject *ar
 }
 
 /*******************************************************************************
- * Ping
- ******************************************************************************/
-
-PyObject *aws_py_mqtt_client_connection_ping(PyObject *self, PyObject *args) {
-    (void)self;
-
-    PyObject *impl_capsule;
-    if (!PyArg_ParseTuple(args, "O", &impl_capsule)) {
-        return NULL;
-    }
-
-    struct mqtt_connection_binding *connection =
-        PyCapsule_GetPointer(impl_capsule, s_capsule_name_mqtt_client_connection);
-    if (!connection) {
-        return NULL;
-    }
-
-    int err = aws_mqtt_client_connection_ping(connection->native);
-    if (err) {
-        return PyErr_AwsLastError();
-    }
-
-    Py_RETURN_NONE;
-}
-
-/*******************************************************************************
  * Disconnect
  ******************************************************************************/
 

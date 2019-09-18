@@ -11,21 +11,25 @@
 # express or implied. See the License for the specific language governing
 # permissions and limitations under the License.
 
+from __future__ import absolute_import
 import _awscrt
 from concurrent.futures import Future
-from enum import IntEnum
-from awscrt import NativeResource
-from awscrt.io import ClientBootstrap, TlsConnectionOptions, SocketOptions
+from collections import defaultdict
+from enum import Enum
+from io import IOBase
+from awscrt import NativeResource, isinstance_str
+from awscrt.io import ClientBootstrap, EventLoopGroup, DefaultHostResolver, TlsConnectionOptions, SocketOptions
 
-class HttpConnection(NativeResource):
+
+class HttpConnectionBase(NativeResource):
     """
-    Base for HTTP connection classes. Do not instantiate directly.
+    Base for HTTP connection classes.
     """
 
     __slots__ = ('_shutdown_future')
 
     def __init__(self):
-        assert not type(self) is HttpConnection # Do not instantiate base class directly
+        super(HttpConnectionBase, self).__init__()
         self._shutdown_future = Future()
 
     def close(self):
@@ -52,16 +56,15 @@ class HttpConnection(NativeResource):
         return _awscrt.http_connection_is_open(self._binding)
 
 
-class HttpClientConnection(HttpConnection):
+class HttpClientConnection(HttpConnectionBase):
     """
     An HTTP client connection. All operations are async.
     Use HttpClientConnection.new() to establish a new connection.
     """
-    __slots__ = ()
+    __slots__ = ('_host_name', '_port')
 
     @classmethod
-    def new(cls, bootstrap, host_name, port, socket_options,
-                on_connection_shutdown=None, tls_connection_options=None):
+    def new(cls, host_name, port, socket_options=SocketOptions(), tls_connection_options=None, bootstrap=None):
         """
         Initiates a new connection to host_name and port using socket_options and tls_connection_options if supplied.
         if tls_connection_options is None, then the connection will be attempted over plain-text.
@@ -71,12 +74,19 @@ class HttpClientConnection(HttpConnection):
         """
         future = Future()
         try:
-            assert isinstance(bootstrap, ClientBootstrap)
-            assert host_name
-            assert tls_connection_options is None or isinstance(tls_connection_options, TlsConnectionOptions)
+            assert isinstance(bootstrap, ClientBootstrap) or bootstrap is None
+            assert isinstance_str(host_name)
+            assert isinstance(tls_connection_options, TlsConnectionOptions) or tls_connection_options is None
             assert isinstance(socket_options, SocketOptions)
 
+            if not bootstrap:
+                event_loop_group = EventLoopGroup(1)
+                host_resolver = DefaultHostResolver(event_loop_group)
+                bootstrap = ClientBootstrap(event_loop_group, host_resolver)
+
             connection = cls()
+            connection._host_name = host_name
+            connection._port = port
 
             def on_connection_setup(binding, error_code):
                 if error_code == 0:
@@ -100,92 +110,212 @@ class HttpClientConnection(HttpConnection):
         return future
 
 
-    def make_request(self, method, uri_str, outgoing_headers, on_outgoing_body, on_incoming_body):
-        """
-        path_and_query is the path and query portion
-        of a URL. method is the http method (GET, PUT, etc...). outgoing_headers are the headers to send as part
-        of the request.
+    @property
+    def host_name(self):
+        return self._host_name
 
-        on_read_body is invoked to read the body of the request. It takes a single parameter of type MemoryView
-        (it's writable), and you signal the end of the stream by returning OutgoingHttpBodyState.Done for the first tuple
-        argument. If you aren't done sending the body, the first tuple argument should be OutgoingHttpBodyState.InProgress
-        The second tuple argument is the size of the data written to the memoryview.
-
-        on_incoming_body is invoked as the response body is received. It takes a single argument of type bytes.
-
-        Makes an Http request. When the headers from the response are received, the returned
-        HttpRequest.response_headers_received future will have a result.
-        and request.response_headers will be filled in, and request.response_code will be available.
-        After this future completes, you can get the result of request.response_completed,
-        for the remainder of the response.
-        """
-        request = HttpRequest(self, method, uri_str, outgoing_headers, on_outgoing_body, on_incoming_body)
-
-        def on_stream_completed(error_code):
-            if error_code == 0:
-                request.response_completed.set_result(error_code)
-            else:
-                request.response_completed.set_exception(Exception(error_code))
-
-        def on_incoming_headers_received(headers, response_code, has_body):
-            request.response_headers = headers
-            request.response_code = response_code
-            request.has_response_body = has_body
-            request.response_headers_received.set_result(response_code)
-
-        try:
-            request._stream = _awscrt.http_client_stream_new(
-                self,
-                request,
-                on_stream_completed,
-                on_incoming_headers_received)
-
-        except Exception as e:
-            request.response_completed.set_exception(e)
-
-        return request
+    @property
+    def port(self):
+        return self._port
 
 
-class OutgoingHttpBodyState(IntEnum):
-    InProgress = 0
-    Done = 1
+    def request(self, request, on_response=None, on_body=None):
+        return HttpClientStream(self, request, on_response, on_body)
 
 
-class HttpRequest(object):
-    """
-    Represents an HttpRequest to pass to HttpClientConnection.make_request(). path_and_query is the path and query portion
-    of a URL. method is the http method (GET, PUT, etc...). outgoing_headers are the headers to send as part
-    of the request.
+class HttpStreamBase(NativeResource):
+    __slots__ = ('_connection', '_complete_future', '_on_body_cb')
 
-    on_read_body is invoked to read the body of the request. It takes a single parameter of type MemoryView
-    (it's writable), and you signal the end of the stream by returning OutgoingHttpBodyState.Done for the first tuple
-    argument. If you aren't done sending the body, the first tuple argument should be OutgoingHttpBodyState.InProgress
-    The second tuple argument is the size of the data written to the memoryview.
-
-    on_incoming_body is invoked as the response body is received. It takes a single argument of type bytes.
-    """
-    __slots__ = ('_connection', 'path_and_query', 'method', 'outgoing_headers', '_on_read_body', '_on_incoming_body', '_stream',
-                 'response_headers', 'response_code', 'has_response_body', 'response_headers_received',
-                 'response_completed')
-
-    def __init__(self, connection, method, path_and_query, outgoing_headers, on_read_body, on_incoming_body):
-        assert method is not None
-        assert outgoing_headers is not None
-        assert connection is not None and isinstance(connection, HttpClientConnection)
-
-        self.path_and_query = path_and_query
-
-        if path_and_query is None:
-            self.path_and_query = '/'
-
+    def __init__(self, connection, on_body=None):
+        super(HttpStreamBase, self).__init__()
         self._connection = connection
+        self._complete_future = Future()
+        self._on_body_cb = on_body
+
+    @property
+    def connection(self):
+        return self._connection
+
+    @property
+    def complete_future(self):
+        return self._complete_future
+
+    def _on_body(self, chunk):
+        if self._on_body_cb:
+            self._on_body_cb(self, chunk)
+
+    def _on_complete(self, error_code):
+        if error_code == 0:
+            self._complete_future.set_result(None)
+        else:
+            self._complete_future.set_exception(Exception(error_code)) # TODO: Actual exceptions for error_codes
+
+
+class HttpClientStream(HttpStreamBase):
+    __slots__ = ('_response_status_code', '_on_response_cb', '_on_body_cb')
+
+    def __init__(self, connection, request, on_response=None, on_body=None):
+        assert isinstance(connection, HttpClientConnection)
+        assert isinstance(request, HttpRequest)
+        assert callable(on_response) or on_response is None
+        assert callable(on_body) or on_body is None
+
+        super(HttpClientStream, self).__init__(connection, on_body)
+
+        self._on_response_cb = on_response
+        self._response_status_code = None
+
+        _awscrt.http_client_stream_new(self, connection, request)
+
+
+    @property
+    def response_status_code(self):
+        return self._response_status_code
+
+
+    def _on_response(self, status_code, name_value_pairs):
+        self._response_status_code = status_code
+
+        if self._on_response_cb:
+            self._on_response_cb(self, status_code, name_value_pairs)
+
+
+class HttpMessageBase(NativeResource):
+    """
+    Base for HttpRequest and HttpResponse classes.
+    """
+    __slots__ = ('_headers', '_body_stream')
+
+    def __init__(self, headers=None, body_stream=None):
+        assert isinstance(body_stream, IOBase) or body_stream is None
+
+        super(HttpMessageBase, self).__init__()
+        self._headers = HttpHeaders(headers)
+        self._body_stream = body_stream
+
+    @property
+    def headers(self):
+        return self._headers
+
+    @property
+    def body_stream(self):
+        return self._body_stream
+
+class HttpRequest(HttpMessageBase):
+    """
+    Definition for an outgoing HTTP request.
+    The request may be transformed (ex: signing the request) before its data is eventually sent.
+    """
+
+    __slots__ = ('method', 'path')
+
+    def __init__(self, method='GET', path='/', headers=None, body_stream=None):
+        super(HttpRequest, self).__init__(headers, body_stream)
         self.method = method
-        self.outgoing_headers = outgoing_headers
-        self._on_read_body = on_read_body
-        self._on_incoming_body = on_incoming_body
-        self.response_completed = Future()
-        self.response_headers_received = Future()
-        self._stream = None
-        self.response_headers = None
-        self.response_code = None
-        self.has_response_body = False
+        self.path = path
+        self._binding = _awscrt.http_request_new(self, self._body_stream)
+
+
+class HttpHeaders(object):
+    """
+    Collection of HTTP headers.
+    A given header name may have multiple values.
+    Header names are always treated in a case-insensitive manner.
+    HttpHeaders can be iterated over as (name,value) pairs.
+    """
+
+    __slots__ = ('_map')
+
+    def __init__(self, name_value_pairs=None):
+        """
+        Construct from a collection of (name,value) pairs.
+        """
+        self._map = defaultdict(list)
+        if name_value_pairs:
+            self.add_pairs(name_value_pairs)
+
+    def add(self, name, value):
+        """
+        Add a name-value pair.
+        """
+        assert isinstance_str(name)
+        assert isinstance_str(value)
+        self._map[name.lower()].append((name, value))
+
+    def add_pairs(self, name_value_pairs):
+        """
+        Add list of (name,value) pairs.
+        """
+        for pair in name_value_pairs:
+            assert len(pair) == 2
+            self.add(pair[0], pair[1])
+
+    def set(self, name, value):
+        """
+        Set a name-value pair, any existing values for the name are removed.
+        """
+        assert isinstance_str(name)
+        assert isinstance_str(value)
+        self._map[name.lower()] = [(name, value)]
+
+    def get_values(self, name):
+        """
+        Get the list of values for this name.
+        Returns an empty list if no values exist.
+        """
+        values = self._map.get(name.lower())
+        if values:
+            return [pair[1] for pair in values]
+        return []
+
+    def get(self, name, default=None):
+        """
+        Get the first value for this name, ignoring any additional values.
+        Returns `default` if no values exist.
+        """
+        values = self._map.get(name.lower())
+        if values:
+            return values[0][1]
+        return default
+
+    def remove(self, name):
+        """
+        Remove all values for this name.
+        Raises a KeyError if name not found.
+        """
+        del self._map[name.lower()]
+
+    def remove_value(self, name, value):
+        """
+        Remove a specific value for this name.
+        Raises a ValueError if value not found.
+        """
+        lower_name = name.lower()
+        values = self._map[lower_name]
+        if values:
+            for i, pair in enumerate(values):
+                if pair[1] == value:
+                    if len(values) == 1:
+                        del self._map[lower_name]
+                    else:
+                        del values[i]
+                    return
+        raise ValueError("HttpHeaders.remove_value(name,value): value not found")
+
+
+    def clear(self):
+        """
+        Clear all headers
+        """
+        self._map.clear()
+
+    def __iter__(self):
+        """
+        Iterate over all (name,value) pairs.
+        """
+        for values in self._map.values():
+            for pair in values:
+                yield pair
+
+    def __str__(self):
+        return self.__class__.__name__ + "(" + str([pair for pair in self]) + ")"

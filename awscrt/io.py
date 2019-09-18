@@ -12,7 +12,7 @@
 # permissions and limitations under the License.
 
 import _awscrt
-from awscrt import NativeResource
+from awscrt import NativeResource, isinstance_str
 from enum import IntEnum
 
 
@@ -53,13 +53,13 @@ class EventLoopGroup(NativeResource):
         """
         num_threads: Number of event-loops to create. Pass 0 to create one for each processor on the machine.
         """
-        super(NativeResource, self).__init__()
+        super(EventLoopGroup, self).__init__()
         self._binding = _awscrt.event_loop_group_new(num_threads)
 
-class HostResolver(NativeResource):
+class HostResolverBase(NativeResource):
     __slots__ = ()
 
-class DefaultHostResolver(HostResolver):
+class DefaultHostResolver(HostResolverBase):
     __slots__ = ()
 
     def __init__(self, event_loop_group, max_hosts=16):
@@ -73,16 +73,16 @@ class ClientBootstrap(NativeResource):
 
     def __init__(self, event_loop_group, host_resolver=None):
         assert isinstance(event_loop_group, EventLoopGroup)
-        assert isinstance(host_resolver, HostResolver) or host_resolver is None
+        assert isinstance(host_resolver, HostResolverBase) or host_resolver is None
 
-        super(NativeResource, self).__init__()
+        super(ClientBootstrap, self).__init__()
 
         if host_resolver is None:
             host_resolver = DefaultHostResolver(event_loop_group)
 
         self._binding = _awscrt.client_bootstrap_new(event_loop_group, host_resolver)
 
-def byte_buf_from_file(filepath):
+def _read_binary_file(filepath):
     with open(filepath, mode='rb') as fh:
         contents = fh.read()
     return contents
@@ -143,12 +143,12 @@ class TlsContextOptions(object):
 
     def override_default_trust_store_from_path(self, ca_path, ca_file):
 
-        assert isinstance(ca_path, str) or ca_path is None
-        assert isinstance(ca_file, str) or ca_file is None
+        assert isinstance_str(ca_path) or ca_path is None
+        assert isinstance_str(ca_file) or ca_file is None
 
         ca_buffer = None
         if ca_file:
-            ca_buffer = byte_buf_from_file(ca_file)
+            ca_buffer = _read_binary_file(ca_file)
 
         self.ca_path = ca_path
         self.override_default_trust_store(ca_buffer)
@@ -161,11 +161,11 @@ class TlsContextOptions(object):
     @staticmethod
     def create_client_with_mtls_from_path(cert_path, pk_path):
 
-        assert isinstance(cert_path, str)
-        assert isinstance(pk_path, str)
+        assert isinstance_str(cert_path)
+        assert isinstance_str(pk_path)
 
-        cert_buffer = byte_buf_from_file(cert_path)
-        key_buffer = byte_buf_from_file(pk_path)
+        cert_buffer = _read_binary_file(cert_path)
+        key_buffer = _read_binary_file(pk_path)
 
         return TlsContextOptions.create_client_with_mtls(cert_buffer, key_buffer)
 
@@ -184,8 +184,8 @@ class TlsContextOptions(object):
     @staticmethod
     def create_client_with_mtls_pkcs12(pkcs12_path, pkcs12_password):
 
-        assert isinstance(pkcs12_path, str)
-        assert isinstance(pkcs12_password, str)
+        assert isinstance_str(pkcs12_path)
+        assert isinstance_str(pkcs12_password)
 
         opt = TlsContextOptions()
         opt.pkcs12_path = pkcs12_path
@@ -196,13 +196,13 @@ class TlsContextOptions(object):
     @staticmethod
     def create_server_from_path(cert_path, pk_path):
 
-        assert isinstance(cert_path, str)
-        assert isinstance(pk_path, str)
+        assert isinstance_str(cert_path)
+        assert isinstance_str(pk_path)
 
-        cert_buffer = byte_buf_from_file(cert_path)
-        key_buffer = byte_buf_from_file(pk_path)
+        cert_buffer = _read_binary_file(cert_path)
+        key_buffer = _read_binary_file(pk_path)
 
-        return TlsContextOptions.create_server_with_mtls(cert_buffer, key_buffer)
+        return TlsContextOptions.create_server(cert_buffer, key_buffer)
 
     @staticmethod
     def create_server(cert_buffer, key_buffer):
@@ -218,8 +218,8 @@ class TlsContextOptions(object):
     @staticmethod
     def create_server_pkcs12(pkcs12_path, pkcs12_password):
 
-        assert isinstance(pkcs12_path, str)
-        assert isinstance(pkcs12_password, str)
+        assert isinstance_str(pkcs12_path)
+        assert isinstance_str(pkcs12_password)
 
         opt = TlsContextOptions()
         opt.pkcs12_path = pkcs12_path
@@ -234,7 +234,7 @@ class ClientTlsContext(NativeResource):
     def __init__(self, options):
         assert isinstance(options, TlsContextOptions)
 
-        super(NativeResource, self).__init__()
+        super(ClientTlsContext, self).__init__()
         self._binding = _awscrt.client_tls_ctx_new(
             options.min_tls_ver.value,
             options.ca_path,
@@ -257,7 +257,7 @@ class TlsConnectionOptions(NativeResource):
     def __init__(self, tls_ctx):
         assert isinstance(tls_ctx, ClientTlsContext)
 
-        super(NativeResource, self).__init__()
+        super(TlsConnectionOptions, self).__init__()
         self.tls_ctx = tls_ctx
         self._binding = _awscrt.tls_connections_options_new_from_ctx(tls_ctx)
 

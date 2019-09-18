@@ -28,9 +28,9 @@ struct aws_byte_buf;
 
 #if PY_MAJOR_VERSION >= 3
 #    define PyString_FromStringAndSize PyUnicode_FromStringAndSize
-#    define BYTE_BUF_FORMAT_STR "y#"
+#    define READABLE_BYTES_FORMAT_STR "y#"
 #else
-#    define BYTE_BUF_FORMAT_STR "s#"
+#    define READABLE_BYTES_FORMAT_STR "s#"
 #endif /* PY_MAJOR_VERSION */
 
 /* AWS Specific Helpers */
@@ -51,7 +51,18 @@ void PyErr_SetAwsLastError(void);
 /* Set current thread's error indicator based on aws_last_error() and returns NULL */
 PyObject *PyErr_AwsLastError(void);
 
-PyObject *aws_py_memory_view_from_byte_buffer(struct aws_byte_buf *buf, int flags);
+/**
+ * Raise an AWS error corresponding to the current Python error.
+ *
+ * Prints the current Python error to stderr and clears the Python error indicator.
+ * Finds an AWS error code corresponding to the current Python error (fallback is AWS_ERROR_UNKNOWN).
+ * Invokes aws_raise_error() with that error code and always returns AWS_OP_ERR.
+ *
+ * The Python error indicator MUST be set and the GIL MUST be held when calling this function. */
+int aws_py_raise_error(void);
+
+/* Create a write-only memoryview from the remaining free space in an aws_byte_buf */
+PyObject *aws_py_memory_view_from_byte_buffer(struct aws_byte_buf *buf);
 
 /* Allocator that calls into PyObject_[Malloc|Free|Realloc] */
 struct aws_allocator *aws_py_get_allocator(void);

@@ -12,7 +12,7 @@
  * express or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
-#include "http_connection.h"
+#include "http.h"
 
 #include "io.h"
 
@@ -102,12 +102,13 @@ static void s_on_connection_shutdown(struct aws_http_connection *native_connecti
 
     /* Set result of shutdown_future, then clear our reference to shutdown_future. */
     PyObject *result = PyObject_CallMethod(connection->shutdown_future, "set_result", "(i)", error_code);
-    if (!result) {
-        /* This function must succeed. Can't leave a Future incomplete */
+    if (result) {
+        Py_DECREF(result);
+    } else {
         PyErr_WriteUnraisable(PyErr_Occurred());
-        AWS_FATAL_ASSERT(0);
+        /* Note: We used to FATAL_ASSERT here, since this future really must succeed.
+         * But the assert would trigger occasionally during application shutdown, so removing it for now. */
     }
-    Py_DECREF(result);
     Py_CLEAR(connection->shutdown_future);
 
     if (destroy_after_shutdown) {

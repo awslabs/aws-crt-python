@@ -66,7 +66,7 @@ def determine_generator_string():
             trimmed_out = out.decode('utf-8').strip()
             if 'Visual Studio' in trimmed_out and vs_major_version in trimmed_out:
                 print('selecting generator {}'.format(trimmed_out))
-                vs_version_gen_str = trimmed_out.split('[')[0].strip()
+                vs_version_gen_str = trimmed_out.split('[')[0].strip(' *')
                 break
 
         if vs_version_gen_str == None:
@@ -99,7 +99,7 @@ if 'AWS_C_INSTALL' in os.environ:
     if os.path.exists(os.path.join(dep_install_path, 'lib64')):
         lib_dir = 'lib64'
 
-def build_dependency(lib_name):
+def build_dependency(lib_name, extra_cmake_args=[]):
     lib_source_dir = os.path.join(current_dir, lib_name)
     global lib_dir
     # Skip library if it wasn't pulled
@@ -121,11 +121,16 @@ def build_dependency(lib_name):
         '-DBUILD_SHARED_LIBS=OFF',
         '-DCMAKE_INSTALL_LIBDIR={}'.format(lib_dir),
         '-DCMAKE_BUILD_TYPE=Release',
-        '-DUSE_S2N_PQ_CRYPTO=OFF',
         '-DBUILD_TESTING=OFF',
     ]
+    cmake_args.extend(extra_cmake_args)
     cmake_args.append(lib_source_dir)
-    build_cmd = ['cmake', '--build', './', '--config', 'release', '--target', 'install']
+    build_cmd = [
+        'cmake',
+        '--build', './',
+        '--config', 'release',
+        '--target', 'install',
+    ]
 
     ret_code = subprocess.check_call(cmake_args, stderr=subprocess.STDOUT, shell=shell)
     ret_code = subprocess.check_call(build_cmd, stderr=subprocess.STDOUT, shell=shell)
@@ -134,13 +139,13 @@ def build_dependency(lib_name):
     return ret_code
 
 if sys.platform != 'darwin' and sys.platform != 'win32':
-    build_dependency('s2n')
+    build_dependency('s2n', ['-DUSE_S2N_PQ_CRYPTO=OFF'])
 build_dependency('aws-c-common')
 build_dependency('aws-c-io')
-build_dependency('aws-c-mqtt')
 build_dependency('aws-c-cal')
 build_dependency('aws-c-compression')
 build_dependency('aws-c-http')
+build_dependency('aws-c-mqtt')
 
 os.chdir(current_dir)
 
@@ -177,7 +182,7 @@ else:
 
 if sys.platform == 'win32':
     #the windows apis being used under the hood. Since we're static linking we have to follow the entire chain down
-    libraries += ['Secur32', 'Crypt32', 'Advapi32', 'BCrypt', 'Kernel32', 'Ws2_32']
+    libraries += ['Secur32', 'Crypt32', 'Advapi32', 'BCrypt', 'Kernel32', 'Ws2_32', 'Shlwapi']
 elif sys.platform == 'darwin':
     ldflags += ['-framework Security']
     include_dirs = ['/usr/local/include'] + include_dirs
@@ -208,6 +213,7 @@ _awscrt = setuptools.Extension(
         'source/mqtt_client.c',
         'source/mqtt_client_connection.c',
         'source/http_connection.c',
+        'source/http_message.c',
         'source/http_stream.c',
         'source/crypto.c',
     ],
@@ -217,7 +223,7 @@ _awscrt = setuptools.Extension(
 
 setuptools.setup(
     name="awscrt",
-    version="v0.2.22",
+    version="0.2.22",
     author="Amazon Web Services, Inc",
     author_email="aws-sdk-common-runtime@amazon.com",
     description="A common runtime for AWS Python projects",

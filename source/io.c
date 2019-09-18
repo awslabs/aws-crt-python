@@ -17,6 +17,7 @@
 #include <aws/io/channel_bootstrap.h>
 #include <aws/io/event_loop.h>
 #include <aws/io/socket.h>
+#include <aws/io/stream.h>
 #include <aws/io/tls_channel_handler.h>
 
 #include <stdio.h>
@@ -116,14 +117,18 @@ PyObject *aws_py_is_alpn_available(PyObject *self, PyObject *args) {
     return PyBool_FromLong(aws_tls_is_alpn_available());
 }
 
-static void s_elg_destructor(PyObject *elg_capsule) {
+/* Callback when native event-loop-group finishes its async cleanup */
+static void s_elg_native_cleanup_complete(void *elg_memory) {
+    aws_mem_release(aws_py_get_allocator(), elg_memory);
+}
+
+static void s_elg_capsule_destructor(PyObject *elg_capsule) {
     struct aws_event_loop_group *elg = PyCapsule_GetPointer(elg_capsule, s_capsule_name_elg);
     assert(elg);
 
-    struct aws_allocator *allocator = elg->allocator;
-
-    aws_event_loop_group_clean_up(elg);
-    aws_mem_release(allocator, elg);
+    /* Must use async cleanup.
+     * We could deadlock if we ran the synchronous cleanup from an event-loop thread. */
+    aws_event_loop_group_cleanup_async(elg, s_elg_native_cleanup_complete, elg);
 }
 
 PyObject *aws_py_event_loop_group_new(PyObject *self, PyObject *args) {
@@ -146,7 +151,7 @@ PyObject *aws_py_event_loop_group_new(PyObject *self, PyObject *args) {
         goto elg_init_failed;
     }
 
-    PyObject *capsule = PyCapsule_New(elg, s_capsule_name_elg, s_elg_destructor);
+    PyObject *capsule = PyCapsule_New(elg, s_capsule_name_elg, s_elg_capsule_destructor);
     if (!capsule) {
         goto capsule_new_failed;
     }
@@ -608,4 +613,144 @@ PyObject *aws_py_tls_connection_options_set_server_name(PyObject *self, PyObject
     }
 
     Py_RETURN_NONE;
+}
+
+/* aws_input_stream implementation for accessing Python I/O classes */
+struct aws_input_stream_py_impl {
+    struct aws_input_stream base;
+
+    bool is_end_of_stream;
+
+    /* Dependencies that must outlive this */
+    PyObject *io;
+};
+
+static void s_aws_input_stream_py_destroy(struct aws_input_stream *stream) {
+    struct aws_input_stream_py_impl *impl = stream->impl;
+    Py_DECREF(impl->io);
+    aws_mem_release(stream->allocator, stream);
+}
+
+static int s_aws_input_stream_py_seek(
+    struct aws_input_stream *stream,
+    aws_off_t offset,
+    enum aws_stream_seek_basis basis) {
+
+    struct aws_input_stream_py_impl *impl = stream->impl;
+
+    int aws_result = AWS_OP_SUCCESS;
+    PyObject *method_result = NULL;
+
+    /*************** GIL ACQUIRE ***************/
+    PyGILState_STATE state = PyGILState_Ensure();
+
+    method_result = PyObject_CallMethod(impl->io, "seek", "(li)", &offset, &basis);
+    if (!method_result) {
+        aws_result = aws_py_raise_error();
+        goto done;
+    }
+
+    /* Clear EOF */
+    impl->is_end_of_stream = false;
+
+done:
+    Py_XDECREF(method_result);
+    PyGILState_Release(state);
+    /*************** GIL RELEASE ***************/
+
+    return aws_result;
+}
+
+int s_aws_input_stream_py_read(struct aws_input_stream *stream, struct aws_byte_buf *dest) {
+    struct aws_input_stream_py_impl *impl = stream->impl;
+
+    int aws_result = AWS_OP_SUCCESS;
+    PyObject *memory_view = NULL;
+    PyObject *method_result = NULL;
+
+    /*************** GIL ACQUIRE ***************/
+    PyGILState_STATE state = PyGILState_Ensure();
+
+    memory_view = aws_py_memory_view_from_byte_buffer(dest);
+    if (!memory_view) {
+        aws_result = aws_py_raise_error();
+        goto done;
+    }
+
+    method_result = PyObject_CallMethod(impl->io, "readinto", "(O)", memory_view);
+    if (!method_result) {
+        aws_result = aws_py_raise_error();
+        goto done;
+    }
+
+    /* Return the number of bytes read. If the object is in non-blocking mode
+     * and no bytes are available, None is returned */
+    Py_ssize_t bytes_read = 0;
+    if (method_result != Py_None) {
+        bytes_read = PyLong_AsSsize_t(method_result);
+        if (bytes_read == -1 && PyErr_Occurred()) {
+            aws_result = aws_py_raise_error();
+            goto done;
+        }
+        AWS_FATAL_ASSERT(bytes_read >= 0);
+
+        if (bytes_read == 0) {
+            impl->is_end_of_stream = true;
+        } else {
+            dest->len += bytes_read;
+        }
+    }
+
+done:
+    Py_XDECREF(memory_view);
+    Py_XDECREF(method_result);
+    PyGILState_Release(state);
+    /*************** GIL RELEASE ***************/
+
+    return aws_result;
+}
+
+int s_aws_input_stream_py_get_status(struct aws_input_stream *stream, struct aws_stream_status *status) {
+    struct aws_input_stream_py_impl *impl = stream->impl;
+
+    status->is_valid = true;
+    status->is_end_of_stream = impl->is_end_of_stream;
+
+    return AWS_OP_SUCCESS;
+}
+
+int s_aws_input_stream_py_get_length(struct aws_input_stream *stream, int64_t *out_length) {
+    (void)stream;
+    (void)out_length;
+    return AWS_ERROR_UNIMPLEMENTED;
+}
+
+static struct aws_input_stream_vtable s_aws_input_stream_py_vtable = {
+    .seek = s_aws_input_stream_py_seek,
+    .read = s_aws_input_stream_py_read,
+    .get_status = s_aws_input_stream_py_get_status,
+    .get_length = s_aws_input_stream_py_get_length,
+    .destroy = s_aws_input_stream_py_destroy,
+};
+
+struct aws_input_stream *aws_input_stream_new_from_py(PyObject *io) {
+
+    if (!io || (io == Py_None)) {
+        aws_raise_error(AWS_ERROR_INVALID_ARGUMENT);
+        return NULL;
+    }
+
+    struct aws_allocator *alloc = aws_py_get_allocator();
+    struct aws_input_stream_py_impl *impl = aws_mem_calloc(alloc, 1, sizeof(struct aws_input_stream_py_impl));
+    if (!impl) {
+        return NULL;
+    }
+
+    impl->base.allocator = alloc;
+    impl->base.vtable = &s_aws_input_stream_py_vtable;
+    impl->base.impl = impl;
+    impl->io = io;
+    Py_INCREF(impl->io);
+
+    return &impl->base;
 }

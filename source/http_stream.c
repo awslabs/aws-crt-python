@@ -12,24 +12,30 @@
  * express or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
-#include "http_stream.h"
+#include "http.h"
 
-#include "http_connection.h"
-#include <aws/http/connection.h>
 #include <aws/http/request_response.h>
 
 static const char *s_capsule_name_http_stream = "aws_http_stream";
 
+/* Amount of space to reserve ahead of time for buffering headers.
+ * http://dev.chromium.org/spdy/spdy-whitepaper - "typical header sizes of 700-800 bytes is common" */
+#define HEADERS_RESERVED_BYTES 1024
+
 struct http_stream_binding {
     struct aws_http_stream *native;
 
-    /* These references will be cleared after on_complete has fired */
-    PyObject *self; /* Keep python self alive until on_complete */
-    PyObject *on_stream_completed;
-    PyObject *on_incoming_headers_received;
-    PyObject *on_read_body;
-    PyObject *on_incoming_body;
-    PyObject *received_headers;
+    /* Weak reference proxy to python self.
+     * NOTE: The python self is forced to stay alive until on_complete fires.
+     * We do this by INCREFing when setup is successful, and DECREFing when on_complete fires. */
+    PyObject *self_proxy;
+
+    /* Buffer up headers as they come in via repeated on_headers callacks.
+     * Then deliver them to python all at once from the header_block_done callback.
+     * Buffer contains null-terminated name,value pairs, for ex:
+     * b'Content-Length\x00123\x00Host\x00example.com\x00' */
+    struct aws_byte_buf received_headers;
+    size_t received_headers_count; /* Buffer contains 2x strings per header */
 
     /* Dependencies that must outlive this */
     PyObject *connection;
@@ -51,111 +57,157 @@ struct aws_http_stream *aws_py_get_http_stream(PyObject *stream) {
     return native;
 }
 
-static enum aws_http_outgoing_body_state s_stream_outgoing_body(
-    struct aws_http_stream *internal_stream,
-    struct aws_byte_buf *buf,
-    void *user_data) {
-    (void)internal_stream;
-
-    struct http_stream_binding *stream = user_data;
-
-    PyGILState_STATE state = PyGILState_Ensure();
-
-    PyObject *mv = aws_py_memory_view_from_byte_buffer(buf, PyBUF_WRITE);
-
-    if (!mv) {
-        aws_http_connection_close(aws_http_stream_get_connection(stream->native));
-        PyGILState_Release(state);
-        return AWS_HTTP_OUTGOING_BODY_DONE;
-    }
-
-    PyObject *result = PyObject_CallFunction(stream->on_read_body, "(O)", mv);
-    /* the return from python land is a tuple where the first argument is the body state
-     * and the second is the amount written */
-    PyObject *state_code = PyTuple_GetItem(result, 0);
-    enum aws_http_outgoing_body_state body_state = (enum aws_http_outgoing_body_state)PyIntEnum_AsLong(state_code);
-    PyObject *written_obj = PyTuple_GetItem(result, 1);
-    long written = (long)PyLong_AsLong(written_obj);
-    Py_XDECREF(result);
-    Py_XDECREF(mv);
-
-    PyGILState_Release(state);
-
-    buf->len += written;
-
-    return body_state;
-}
-
-static void s_on_incoming_response_headers(
-    struct aws_http_stream *internal_stream,
+static int s_on_incoming_headers(
+    struct aws_http_stream *native_stream,
+    enum aws_http_header_block header_block,
     const struct aws_http_header *header_array,
     size_t num_headers,
     void *user_data) {
-    (void)internal_stream;
+
+    (void)native_stream;
+    (void)header_block;
     struct http_stream_binding *stream = user_data;
+    int aws_result = AWS_OP_SUCCESS;
 
-    PyGILState_STATE state = PyGILState_Ensure();
-
+    /* Buffer up null-terminated strings as headers come in via repeated on_headers callacks. */
+    const uint8_t terminator_byte[] = {0};
+    const struct aws_byte_cursor terminator = aws_byte_cursor_from_array(terminator_byte, 1);
     for (size_t i = 0; i < num_headers; ++i) {
-        PyObject *key = PyString_FromStringAndSize((const char *)header_array[i].name.ptr, header_array[i].name.len);
-        PyObject *value =
-            PyString_FromStringAndSize((const char *)header_array[i].value.ptr, header_array[i].value.len);
+        const struct aws_http_header *header = &header_array[i];
 
-        PyDict_SetItem(stream->received_headers, key, value);
+        if (aws_byte_buf_append_dynamic(&stream->received_headers, &header->name) ||
+            aws_byte_buf_append_dynamic(&stream->received_headers, &terminator) ||
+            aws_byte_buf_append_dynamic(&stream->received_headers, &header->value) ||
+            aws_byte_buf_append_dynamic(&stream->received_headers, &terminator)) {
+            return AWS_OP_ERR;
+        }
+
+        stream->received_headers_count += 1;
     }
-    PyGILState_Release(state);
+
+    return aws_result;
 }
 
-static void s_on_incoming_header_block_done(struct aws_http_stream *internal_stream, bool has_body, void *user_data) {
-
+static int s_on_incoming_header_block_done(struct aws_http_stream *native_stream, enum aws_http_header_block header_block, void *user_data) {
     struct http_stream_binding *stream = user_data;
 
-    PyGILState_STATE state = PyGILState_Ensure();
     int response_code = 0;
-    aws_http_stream_get_incoming_response_status(internal_stream, &response_code);
-
-    PyObject *has_body_obj = has_body ? Py_True : Py_False;
-
-    PyObject *result = PyObject_CallFunction(
-        stream->on_incoming_headers_received, "(OiO)", stream->received_headers, response_code, has_body_obj);
-    if (!result) {
-        PyErr_WriteUnraisable(PyErr_Occurred());
+    if (aws_http_stream_get_incoming_response_status(native_stream, &response_code)) {
+        return AWS_OP_ERR;
     }
-    Py_XDECREF(result);
-    Py_CLEAR(stream->received_headers);
-    Py_CLEAR(stream->on_incoming_headers_received);
+
+    if (stream->received_headers_count > PY_SSIZE_T_MAX) {
+        return aws_raise_error(AWS_ERROR_OVERFLOW_DETECTED);
+    }
+    Py_ssize_t num_headers = (Py_ssize_t)stream->received_headers_count;
+
+    int aws_result = AWS_OP_SUCCESS;
+
+    /*************** GIL ACQUIRE ***************/
+    PyGILState_STATE state = PyGILState_Ensure();
+
+    /* Set this just in case callback fires before aws_http_connection_make_request() has even returned */
+    stream->native = native_stream;
+
+    /* Build up a list of (name,value) tuples,
+     * extracting values from buffer of [name,value,name,value,...] null-terminated strings */
+    PyObject *header_list = PyList_New(num_headers);
+    if (!header_list) {
+        aws_result = aws_py_raise_error();
+        goto done;
+    }
+
+    struct aws_byte_cursor string_cursor = aws_byte_cursor_from_buf(&stream->received_headers);
+
+    for (Py_ssize_t i = 0; i < num_headers; ++i) {
+        const char *name_str = (const char *)string_cursor.ptr;
+        size_t name_len = strlen((const char *)string_cursor.ptr);
+
+        aws_byte_cursor_advance(&string_cursor, name_len + 1);
+
+        const char *value_str = (const char *)string_cursor.ptr;
+        size_t value_len = strlen((const char *)string_cursor.ptr);
+
+        aws_byte_cursor_advance(&string_cursor, value_len + 1);
+
+        PyObject *tuple = Py_BuildValue("(s#s#)", name_str, name_len, value_str, value_len);
+        if (!tuple) {
+            aws_result = aws_py_raise_error();
+            goto done;
+        }
+
+        PyList_SET_ITEM(header_list, i, tuple); /* steals reference to tuple */
+    }
+
+    /* TODO: handle informational and trailing headers */
+    if (header_block == AWS_HTTP_HEADER_BLOCK_MAIN) {
+
+        /* Deliver the built up list of (name,value) tuples */
+        PyObject *result = PyObject_CallMethod(stream->self_proxy, "_on_response", "(iO)", response_code, header_list);
+        if (!result) {
+            aws_result = aws_py_raise_error();
+            goto done;
+        }
+        Py_DECREF(result);
+    }
+
+    /* Clear the buffer so we're ready for next header block */
+    stream->received_headers.len = 0;
+    stream->received_headers_count = 0;
+
+done:
+    Py_XDECREF(header_list);
     PyGILState_Release(state);
+    /*************** GIL RELEASE ***************/
+
+    return aws_result;
 }
 
-static void s_on_incoming_response_body(
-    struct aws_http_stream *internal_stream,
+static int s_on_incoming_body(
+    struct aws_http_stream *native_stream,
     const struct aws_byte_cursor *data,
-    size_t *out_window_update_size,
     void *user_data) {
-    (void)internal_stream;
-    (void)out_window_update_size;
+
+    (void)native_stream;
 
     struct http_stream_binding *stream = user_data;
 
+    if (data->len > PY_SSIZE_T_MAX) {
+        return aws_raise_error(AWS_ERROR_OVERFLOW_DETECTED);
+    }
+    Py_ssize_t data_len = (Py_ssize_t)data->len;
+
+    int aws_result = AWS_OP_SUCCESS;
+
+    /*************** GIL ACQUIRE ***************/
     PyGILState_STATE state = PyGILState_Ensure();
 
-    Py_ssize_t data_len = (Py_ssize_t)data->len;
-    PyObject *result =
-        PyObject_CallFunction(stream->on_incoming_body, "(" BYTE_BUF_FORMAT_STR ")", (const char *)data->ptr, data_len);
+    PyObject *result = PyObject_CallMethod(
+        stream->self_proxy, "_on_body", "(" READABLE_BYTES_FORMAT_STR ")", (const char *)data->ptr, data_len);
     if (!result) {
-        PyErr_WriteUnraisable(PyErr_Occurred());
+        aws_result = aws_py_raise_error();
+        goto done;
     }
-    Py_XDECREF(result);
+    Py_DECREF(result);
+
+done:
     PyGILState_Release(state);
+    /*************** GIL RELEASE ***************/
+
+    return aws_result;
 }
 
-static void s_on_stream_complete(struct aws_http_stream *internal_stream, int error_code, void *user_data) {
-    (void)internal_stream;
+static void s_on_stream_complete(struct aws_http_stream *native_stream, int error_code, void *user_data) {
+    (void)native_stream;
     struct http_stream_binding *stream = user_data;
 
+    /*************** GIL ACQUIRE ***************/
     PyGILState_STATE state = PyGILState_Ensure();
 
-    PyObject *result = PyObject_CallFunction(stream->on_stream_completed, "(i)", error_code);
+    /* Set this just in case callback fires before aws_http_connection_make_request() has even returned */
+    stream->native = native_stream;
+
+    PyObject *result = PyObject_CallMethod(stream->self_proxy, "_on_complete", "(i)", error_code);
     if (!result) {
         /* This function must succeed. Can't leave a Future incomplete. */
         PyErr_WriteUnraisable(PyErr_Occurred());
@@ -163,36 +215,25 @@ static void s_on_stream_complete(struct aws_http_stream *internal_stream, int er
     }
     Py_DECREF(result);
 
-    /* There will be no more callbacks, clear */
-    Py_CLEAR(stream->on_stream_completed);
-    Py_CLEAR(stream->on_incoming_headers_received);
-    Py_CLEAR(stream->on_read_body);
-    Py_CLEAR(stream->on_incoming_body);
-    Py_CLEAR(stream->received_headers);
-    Py_CLEAR(stream->self);
+    /* DECREF python self, we don't need to force it to stay alive any longer. */
+    Py_DECREF(PyWeakref_GetObject(stream->self_proxy));
 
     PyGILState_Release(state);
+    /*************** GIL RELEASE ***************/
 }
 
 static void s_stream_capsule_destructor(PyObject *http_stream_capsule) {
     struct http_stream_binding *stream = PyCapsule_GetPointer(http_stream_capsule, s_capsule_name_http_stream);
 
-    /* If native stream was created, on_complete was already called and most references have already been cleared.
-     * Otherwise, native stream failed creation, so we need to clear everything */
-    if (stream->native) {
-        AWS_FATAL_ASSERT(stream->on_stream_completed == NULL);
+    /* Destructor runs under 2 possible conditions:
+     * 1) Creation failed, so every possible resource might need to be cleaned up.
+     * 2) Stream successfully reached end of life, and on_complete has already fired. */
 
-        aws_http_stream_release(stream->native);
-    } else {
-        Py_DECREF(stream->on_stream_completed);
-        Py_DECREF(stream->on_incoming_headers_received);
-        Py_DECREF(stream->on_read_body);
-        Py_DECREF(stream->on_incoming_body);
-        Py_DECREF(stream->received_headers);
-        Py_DECREF(stream->self);
-    }
+    aws_http_stream_release(stream->native);
+    Py_XDECREF(stream->self_proxy);
+    aws_byte_buf_clean_up(&stream->received_headers);
+    Py_XDECREF(stream->connection);
 
-    Py_DECREF(stream->connection);
     aws_mem_release(aws_py_get_allocator(), stream);
 }
 
@@ -201,137 +242,83 @@ PyObject *aws_py_http_client_stream_new(PyObject *self, PyObject *args) {
 
     struct aws_allocator *allocator = aws_py_get_allocator();
 
-    struct http_stream_binding *stream = aws_mem_calloc(allocator, 1, sizeof(struct http_stream_binding));
-    if (!stream) {
-        PyErr_SetAwsLastError();
-        return NULL;
-    }
-
+    PyObject *py_stream = NULL;
     PyObject *py_connection = NULL;
-    PyObject *py_http_request = NULL;
-    PyObject *on_stream_completed = NULL;
-    PyObject *on_incoming_headers_received = NULL;
-    if (!PyArg_ParseTuple(
-            args, "OOOO", &py_connection, &py_http_request, &on_stream_completed, &on_incoming_headers_received)) {
-        PyErr_SetNone(PyExc_ValueError);
-        goto clean_up_stream;
+    PyObject *py_request = NULL;
+    if (!PyArg_ParseTuple(args, "OOO", &py_stream, &py_connection, &py_request)) {
+        return NULL;
     }
 
     struct aws_http_connection *native_connection = aws_py_get_http_connection(py_connection);
     if (!native_connection) {
-        goto clean_up_stream;
+        return NULL;
     }
 
-    if (!py_http_request) {
-        PyErr_SetString(PyExc_ValueError, "the request argument is required");
-        goto clean_up_stream;
+    struct aws_http_message *native_request = aws_py_get_http_message(py_request);
+    if (!native_request) {
+        return NULL;
     }
 
-    if (!on_stream_completed) {
-        PyErr_SetString(PyExc_ValueError, "on_stream_completed callback is required");
-        goto clean_up_stream;
+    struct http_stream_binding *stream = aws_mem_calloc(allocator, 1, sizeof(struct http_stream_binding));
+    if (!stream) {
+        return PyErr_AwsLastError();
     }
 
-    if (!on_incoming_headers_received) {
-        PyErr_SetString(PyExc_ValueError, "on_incoming_headers_received callback is required");
-        goto clean_up_stream;
+    /* From hereon, we need to clean up if errors occur.
+     * Fortunately, the capsule destructor will clean up anything stored inside http_stream_binding */
+
+    PyObject *capsule = PyCapsule_New(stream, s_capsule_name_http_stream, s_stream_capsule_destructor);
+    if (!capsule) {
+        goto error;
     }
 
-    stream->self = py_http_request;
-    Py_XINCREF(stream->self);
     stream->connection = py_connection;
-    Py_XINCREF(stream->connection);
-    stream->on_stream_completed = on_stream_completed;
-    Py_XINCREF(on_stream_completed);
-    stream->on_incoming_headers_received = on_incoming_headers_received;
-    Py_XINCREF(on_incoming_headers_received);
+    Py_INCREF(stream->connection);
 
-    struct aws_http_request_options request_options = {
+    stream->self_proxy = PyWeakref_NewProxy(py_stream, NULL);
+    if (!stream->self_proxy) {
+        goto error;
+    }
+
+    if (aws_byte_buf_init(&stream->received_headers, allocator, HEADERS_RESERVED_BYTES)) {
+        goto error;
+    }
+
+    /* NOTE: Callbacks might start firing before aws_http_connection_make_request() can even return.
+     * Therefore, we set `HttpClientStream._binding = capsule` now, instead of returning capsule to caller */
+    if (PyObject_SetAttrString(py_stream, "_binding", capsule) == -1) {
+        goto error;
+    }
+
+    struct aws_http_make_request_options request_options = {
         .self_size = sizeof(request_options),
-        .client_connection = native_connection,
+        .request = native_request,
+        .on_response_headers = s_on_incoming_headers,
+        .on_response_header_block_done = s_on_incoming_header_block_done,
+        .on_response_body = s_on_incoming_body,
+        .on_complete = s_on_stream_complete,
+        .user_data = stream,
     };
 
-    PyObject *method_str = PyObject_GetAttrString(py_http_request, "method");
-    if (!method_str) {
-        PyErr_SetString(PyExc_ValueError, "http method is required");
-        goto clean_up_stream;
+    stream->native = aws_http_connection_make_request(native_connection, &request_options);
+    if (!stream->native) {
+        PyErr_SetAwsLastError();
+        goto error;
     }
 
-    request_options.method = aws_byte_cursor_from_pystring(method_str);
+    /* From hereon, nothing will fail */
 
-    PyObject *uri_str = PyObject_GetAttrString(py_http_request, "path_and_query");
-    if (!uri_str) {
-        PyErr_SetString(PyExc_ValueError, "The URI path and query is required");
-        goto clean_up_stream;
+    /* Force python self to stay alive until on_complete callback */
+    Py_INCREF(py_stream);
+
+    Py_DECREF(capsule);
+    Py_RETURN_NONE;
+
+error:
+    if (capsule) {
+        Py_DECREF(capsule);
+    } else {
+        aws_mem_release(allocator, stream);
     }
-
-    request_options.uri = aws_byte_cursor_from_pystring(uri_str);
-
-    PyObject *request_headers = PyObject_GetAttrString(py_http_request, "outgoing_headers");
-    if (!request_headers) {
-        PyErr_SetString(PyExc_ValueError, "outgoing headers is required");
-        goto clean_up_stream;
-    }
-
-    Py_ssize_t num_headers = PyDict_Size(request_headers);
-    struct aws_array_list headers;
-
-    if (num_headers > 0) {
-        if (aws_array_list_init_dynamic(&headers, allocator, (size_t)num_headers, sizeof(struct aws_http_header))) {
-            PyErr_SetAwsLastError();
-            goto clean_up_headers;
-        }
-
-        PyObject *key, *value;
-        Py_ssize_t pos = 0;
-
-        while (PyDict_Next(request_headers, &pos, &key, &value)) {
-            struct aws_http_header http_header;
-            http_header.name = aws_byte_cursor_from_pystring(key);
-            http_header.value = aws_byte_cursor_from_pystring(value);
-
-            aws_array_list_push_back(&headers, &http_header);
-        }
-
-        request_options.header_array = headers.data;
-        request_options.num_headers = (size_t)num_headers;
-    }
-
-    PyObject *on_read_body = PyObject_GetAttrString(py_http_request, "_on_read_body");
-    if (on_read_body && on_read_body != Py_None) {
-        stream->on_read_body = on_read_body;
-        Py_XINCREF(on_read_body);
-        request_options.stream_outgoing_body = s_stream_outgoing_body;
-    }
-
-    PyObject *on_incoming_body = PyObject_GetAttrString(py_http_request, "_on_incoming_body");
-    if (on_incoming_body && on_incoming_body != Py_None) {
-        stream->on_incoming_body = on_incoming_body;
-        Py_XINCREF(on_incoming_body);
-        request_options.on_response_body = s_on_incoming_response_body;
-    }
-
-    stream->received_headers = PyDict_New();
-    request_options.on_response_headers = s_on_incoming_response_headers;
-    request_options.on_response_header_block_done = s_on_incoming_header_block_done;
-    request_options.on_complete = s_on_stream_complete;
-    request_options.user_data = stream;
-
-    struct aws_http_stream *http_stream = aws_http_stream_new_client_request(&request_options);
-    aws_array_list_clean_up(&headers);
-
-    if (!http_stream) {
-        goto clean_up_headers;
-    }
-
-    stream->native = http_stream;
-    return PyCapsule_New(stream, s_capsule_name_http_stream, s_stream_capsule_destructor);
-
-clean_up_headers:
-    aws_array_list_clean_up(&headers);
-
-clean_up_stream:
-    aws_mem_release(allocator, stream);
-
     return NULL;
 }
