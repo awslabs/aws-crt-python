@@ -126,9 +126,8 @@ static void s_elg_capsule_destructor(PyObject *elg_capsule) {
     struct aws_event_loop_group *elg = PyCapsule_GetPointer(elg_capsule, s_capsule_name_elg);
     assert(elg);
 
-    /* Can't do synchronous cleanup.
-     * Final refcount might have been released from an event-loop thread,
-     * so we'd deadlock if we waited here for all event-loop threads to shut down. */
+    /* Must use async cleanup.
+     * We could deadlock if we ran the synchronous cleanup from an event-loop thread. */
     aws_event_loop_group_cleanup_async(elg, s_elg_native_cleanup_complete, elg);
 }
 
