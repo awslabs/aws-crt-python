@@ -621,10 +621,10 @@ struct aws_input_stream_py_impl {
     PyObject *io;
 };
 
-static void s_aws_input_stream_py_clean_up(struct aws_input_stream *stream) {
+static void s_aws_input_stream_py_destroy(struct aws_input_stream *stream) {
     struct aws_input_stream_py_impl *impl = stream->impl;
     Py_DECREF(impl->io);
-    /* for whatever reason the calling function cleans up the base class pointer, which happens to clean us up */
+    aws_mem_release(stream->allocator, stream);
 }
 
 static int s_aws_input_stream_py_seek(
@@ -726,7 +726,7 @@ static struct aws_input_stream_vtable s_aws_input_stream_py_vtable = {
     .read = s_aws_input_stream_py_read,
     .get_status = s_aws_input_stream_py_get_status,
     .get_length = s_aws_input_stream_py_get_length,
-    .clean_up = s_aws_input_stream_py_clean_up,
+    .destroy = s_aws_input_stream_py_destroy,
 };
 
 struct aws_input_stream *aws_input_stream_new_from_py(PyObject *io) {

@@ -59,11 +59,13 @@ struct aws_http_stream *aws_py_get_http_stream(PyObject *stream) {
 
 static int s_on_incoming_headers(
     struct aws_http_stream *native_stream,
+    enum aws_http_header_block header_block,
     const struct aws_http_header *header_array,
     size_t num_headers,
     void *user_data) {
 
     (void)native_stream;
+    (void)header_block;
     struct http_stream_binding *stream = user_data;
     int aws_result = AWS_OP_SUCCESS;
 
@@ -86,8 +88,7 @@ static int s_on_incoming_headers(
     return aws_result;
 }
 
-static int s_on_incoming_header_block_done(struct aws_http_stream *native_stream, bool has_body, void *user_data) {
-    (void)has_body;
+static int s_on_incoming_header_block_done(struct aws_http_stream *native_stream, enum aws_http_header_block header_block, void *user_data) {
     struct http_stream_binding *stream = user_data;
 
     int response_code = 0;
@@ -138,13 +139,17 @@ static int s_on_incoming_header_block_done(struct aws_http_stream *native_stream
         PyList_SET_ITEM(header_list, i, tuple); /* steals reference to tuple */
     }
 
-    /* Deliver the built up list of (name,value) tuples */
-    PyObject *result = PyObject_CallMethod(stream->self_proxy, "_on_response", "(iO)", response_code, header_list);
-    if (!result) {
-        aws_result = aws_py_raise_error();
-        goto done;
+    /* TODO: handle informational and trailing headers */
+    if (header_block == AWS_HTTP_HEADER_BLOCK_MAIN) {
+
+        /* Deliver the built up list of (name,value) tuples */
+        PyObject *result = PyObject_CallMethod(stream->self_proxy, "_on_response", "(iO)", response_code, header_list);
+        if (!result) {
+            aws_result = aws_py_raise_error();
+            goto done;
+        }
+        Py_DECREF(result);
     }
-    Py_DECREF(result);
 
     /* Clear the buffer so we're ready for next header block */
     stream->received_headers.len = 0;
