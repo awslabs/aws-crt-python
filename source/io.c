@@ -117,14 +117,19 @@ PyObject *aws_py_is_alpn_available(PyObject *self, PyObject *args) {
     return PyBool_FromLong(aws_tls_is_alpn_available());
 }
 
-static void s_elg_destructor(PyObject *elg_capsule) {
+/* Callback when native event-loop-group finishes its async cleanup */
+static void s_elg_native_cleanup_complete(void *elg_memory) {
+    aws_mem_release(aws_py_get_allocator(), elg_memory);
+}
+
+static void s_elg_capsule_destructor(PyObject *elg_capsule) {
     struct aws_event_loop_group *elg = PyCapsule_GetPointer(elg_capsule, s_capsule_name_elg);
     assert(elg);
 
-    struct aws_allocator *allocator = elg->allocator;
-
-    aws_event_loop_group_clean_up(elg);
-    aws_mem_release(allocator, elg);
+    /* Can't do synchronous cleanup.
+     * Final refcount might have been released from an event-loop thread,
+     * so we'd deadlock if we waited here for all event-loop threads to shut down. */
+    aws_event_loop_group_cleanup_async(elg, s_elg_native_cleanup_complete, elg);
 }
 
 PyObject *aws_py_event_loop_group_new(PyObject *self, PyObject *args) {
@@ -147,7 +152,7 @@ PyObject *aws_py_event_loop_group_new(PyObject *self, PyObject *args) {
         goto elg_init_failed;
     }
 
-    PyObject *capsule = PyCapsule_New(elg, s_capsule_name_elg, s_elg_destructor);
+    PyObject *capsule = PyCapsule_New(elg, s_capsule_name_elg, s_elg_capsule_destructor);
     if (!capsule) {
         goto capsule_new_failed;
     }
