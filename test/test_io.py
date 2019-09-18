@@ -11,30 +11,36 @@
 # express or implied. See the License for the specific language governing
 # permissions and limitations under the License.
 
-import awscrt.io
+from __future__ import absolute_import
+from awscrt.io import ClientBootstrap, DefaultHostResolver, EventLoopGroup
+from test import NativeResourceTest
 import unittest
 
 
-class TestEventLoopGroup(unittest.TestCase):
+class TestEventLoopGroup(NativeResourceTest):
     def test_init_defaults(self):
-        event_loop_group = awscrt.io.EventLoopGroup()
+        event_loop_group = EventLoopGroup()
 
     def test_1_thread(self):
-        event_loop_group = awscrt.io.EventLoopGroup(1)
+        event_loop_group = EventLoopGroup(1)
 
 
-class TestDefaultHostResolver(unittest.TestCase):
+class TestDefaultHostResolver(NativeResourceTest):
     def test_init(self):
-        event_loop_group = awscrt.io.EventLoopGroup()
-        host_resolver = awscrt.io.DefaultHostResolver(event_loop_group)
+        event_loop_group = EventLoopGroup()
+        host_resolver = DefaultHostResolver(event_loop_group)
 
 
-class TestClientBootstrap(unittest.TestCase):
+class TestClientBootstrap(NativeResourceTest):
     def test_init_defaults(self):
-        event_loop_group = awscrt.io.EventLoopGroup()
-        bootstrap = awscrt.io.ClientBootstrap(event_loop_group)
+        event_loop_group = EventLoopGroup()
+        bootstrap = ClientBootstrap(event_loop_group)
 
     def test_init(self):
-        event_loop_group = awscrt.io.EventLoopGroup()
-        host_resolver = awscrt.io.DefaultHostResolver(event_loop_group)
-        bootstrap = awscrt.io.ClientBootstrap(event_loop_group, host_resolver)
+        event_loop_group = EventLoopGroup()
+        host_resolver = DefaultHostResolver(event_loop_group)
+        bootstrap = ClientBootstrap(event_loop_group, host_resolver)
+
+
+if __name__ == '__main__':
+    unittest.main()
