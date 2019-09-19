@@ -1,3 +1,4 @@
+from distutils.ccompiler import get_default_compiler
 import setuptools
 import os
 import subprocess
@@ -6,17 +7,21 @@ import platform
 from os import path
 import sys
 
+
 def is_64bit():
     if sys.maxsize > 2**32:
         return True
 
     return False
 
+
 def is_32bit():
     return is_64bit() == False
 
-def is_arm ():
+
+def is_arm():
     return platform.machine().startswith('arm')
+
 
 def determine_cross_compile_string():
     host_arch = platform.machine()
@@ -24,11 +29,12 @@ def determine_cross_compile_string():
         return '-DCMAKE_C_FLAGS=-m32'
     return ''
 
+
 def determine_generator_string():
     if sys.platform == 'win32':
         vs_version = None
         prog_x86_path = os.getenv('PROGRAMFILES(x86)')
-        if vs_version == None:
+        if vs_version is None:
             if os.path.exists(prog_x86_path + '\\Microsoft Visual Studio\\2019'):
                 vs_version = '16.0'
                 print('found installed version of Visual Studio 2019')
@@ -40,7 +46,12 @@ def determine_generator_string():
                 print('found installed version of Visual Studio 2015')
             else:
                 print('Making an attempt at calling vswhere')
-                vswhere_args = ['%ProgramFiles(x86)%\\Microsoft Visual Studio\\Installer\\vswhere.exe', '-legacy', '-latest', '-property', 'installationVersion']
+                vswhere_args = [
+                    '%ProgramFiles(x86)%\\Microsoft Visual Studio\\Installer\\vswhere.exe',
+                    '-legacy',
+                    '-latest',
+                    '-property',
+                    'installationVersion']
                 vswhere_output = None
 
                 try:
@@ -49,7 +60,7 @@ def determine_generator_string():
                     print('No version of MSVC compiler could be found!')
                     exit(1)
 
-                if vswhere_output != None:
+                if vswhere_output is not None:
                     for out in vswhere_output.split():
                         vs_version = out.decode('utf-8')
                 else:
@@ -69,7 +80,7 @@ def determine_generator_string():
                 vs_version_gen_str = trimmed_out.split('[')[0].strip(' *')
                 break
 
-        if vs_version_gen_str == None:
+        if vs_version_gen_str is None:
             print('CMake does not recognize an installed version of visual studio on your system.')
             exit(1)
 
@@ -81,6 +92,7 @@ def determine_generator_string():
         print('Succesfully determined generator as \"{}\"'.format(vs_version_gen_str))
         return vs_version_gen_str
     return ''
+
 
 generator_string = determine_generator_string()
 cross_compile_string = determine_cross_compile_string()
@@ -98,6 +110,7 @@ if 'AWS_C_INSTALL' in os.environ:
     dep_install_path = os.getenv('AWS_C_INSTALL')
     if os.path.exists(os.path.join(dep_install_path, 'lib64')):
         lib_dir = 'lib64'
+
 
 def build_dependency(lib_name, extra_cmake_args=[]):
     lib_source_dir = os.path.join(current_dir, lib_name)
@@ -138,6 +151,7 @@ def build_dependency(lib_name, extra_cmake_args=[]):
     os.chdir(build_dir)
     return ret_code
 
+
 if sys.platform != 'darwin' and sys.platform != 'win32':
     build_dependency('s2n', ['-DUSE_S2N_PQ_CRYPTO=OFF'])
 build_dependency('aws-c-common')
@@ -149,16 +163,17 @@ build_dependency('aws-c-mqtt')
 
 os.chdir(current_dir)
 
-from distutils.ccompiler import get_default_compiler
 compiler_type = get_default_compiler()
 
 aws_c_libs = ['aws-c-mqtt', 'aws-c-http', 'aws-c-io', 'aws-c-compression', 'aws-c-cal', 'aws-c-common']
 
+
 def get_from_env(key):
     try:
         return os.environ[key]
-    except:
+    except BaseException:
         return ""
+
 
 # fetch the CFLAGS/LDFLAGS from env
 cflags = get_from_env('CFLAGS').split()
@@ -170,18 +185,18 @@ library_dirs = [path.join(dep_install_path, lib_dir)]
 extra_objects = []
 
 if compiler_type == 'msvc':
-     #if this is old python, we need to statically link in the VS2015 CRT, the invoking script
+     # if this is old python, we need to statically link in the VS2015 CRT, the invoking script
      # already overrode the compiler environment variables so that a decent compiler is used
      # and this is C so it shouldn't really matter.
      # actually, I couldn't get this to work, leave it here commented out for future brave souls
-    #if sys.version_info[0] == 2 or (sys.version_info[0] == 3 and sys.version_info[1] <= 4):
+    # if sys.version_info[0] == 2 or (sys.version_info[0] == 3 and sys.version_info[1] <= 4):
     #    cflags += ['/MT']
     pass
 else:
     cflags += ['-O3', '-Wextra', '-Werror', '-Wno-strict-aliasing', '-std=gnu99']
 
 if sys.platform == 'win32':
-    #the windows apis being used under the hood. Since we're static linking we have to follow the entire chain down
+    # the windows apis being used under the hood. Since we're static linking we have to follow the entire chain down
     libraries += ['Secur32', 'Crypt32', 'Advapi32', 'BCrypt', 'Kernel32', 'Ws2_32', 'Shlwapi']
 elif sys.platform == 'darwin':
     ldflags += ['-framework Security']
@@ -239,6 +254,5 @@ setuptools.setup(
         'enum34 ; python_version<"3.4"',
         'futures ; python_version<"3.2"',
     ],
-    ext_modules = [_awscrt],
+    ext_modules=[_awscrt],
 )
-

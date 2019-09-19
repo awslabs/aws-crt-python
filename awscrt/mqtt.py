@@ -17,11 +17,13 @@ from enum import IntEnum
 from awscrt import NativeResource
 from awscrt.io import ClientBootstrap, ClientTlsContext
 
+
 class QoS(IntEnum):
     """Quality of Service"""
     AT_MOST_ONCE = 0
     AT_LEAST_ONCE = 1
     EXACTLY_ONCE = 2
+
 
 class ConnectReturnCode(IntEnum):
     ACCEPTED = 0
@@ -30,6 +32,7 @@ class ConnectReturnCode(IntEnum):
     SERVER_UNAVAILABLE = 3
     BAD_USERNAME_OR_PASSWORD = 4
     NOT_AUTHORIZED = 5
+
 
 class Will(object):
     __slots__ = ('topic', 'qos', 'payload', 'retain')
@@ -40,10 +43,11 @@ class Will(object):
         self.payload = payload
         self.retain = retain
 
+
 class Client(NativeResource):
     __slots__ = ('tls_ctx')
 
-    def __init__(self, bootstrap, tls_ctx = None):
+    def __init__(self, bootstrap, tls_ctx=None):
         assert isinstance(bootstrap, ClientBootstrap)
         assert tls_ctx is None or isinstance(tls_ctx, ClientTlsContext)
 
@@ -51,15 +55,16 @@ class Client(NativeResource):
         self.tls_ctx = tls_ctx
         self._binding = _awscrt.mqtt_client_new(bootstrap, tls_ctx)
 
+
 class Connection(NativeResource):
     __slots__ = ('client')
 
     def __init__(self,
-            client,
-            on_connection_interrupted=None,
-            on_connection_resumed=None,
-            reconnect_min_timeout_sec=5.0,
-            reconnect_max_timeout_sec=60.0):
+                 client,
+                 on_connection_interrupted=None,
+                 on_connection_resumed=None,
+                 reconnect_min_timeout_sec=5.0,
+                 reconnect_max_timeout_sec=60.0):
         """
         on_connection_interrupted: optional callback, with signature (error_code)
         on_connection_resumed: optional callback, with signature (error_code, session_present)
@@ -76,17 +81,17 @@ class Connection(NativeResource):
             client,
             on_connection_interrupted,
             on_connection_resumed,
-            )
+        )
 
     def connect(self,
-            client_id,
-            host_name, port,
-            use_websocket=False,
-            clean_session=True, keep_alive=0,
-            ping_timeout=0,
-            will=None,
-            username=None, password=None,
-            connect_timeout_sec=5.0):
+                client_id,
+                host_name, port,
+                use_websocket=False,
+                clean_session=True, keep_alive=0,
+                ping_timeout=0,
+                will=None,
+                username=None, password=None,
+                connect_timeout_sec=5.0):
 
         future = Future()
 
@@ -112,7 +117,7 @@ class Connection(NativeResource):
                 username,
                 password,
                 on_connect,
-                )
+            )
 
         except Exception as e:
             future.set_exception(e)

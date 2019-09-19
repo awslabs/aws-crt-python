@@ -109,7 +109,6 @@ class HttpClientConnection(HttpConnectionBase):
 
         return future
 
-
     @property
     def host_name(self):
         return self._host_name
@@ -117,7 +116,6 @@ class HttpClientConnection(HttpConnectionBase):
     @property
     def port(self):
         return self._port
-
 
     def request(self, request, on_response=None, on_body=None):
         return HttpClientStream(self, request, on_response, on_body)
@@ -148,7 +146,7 @@ class HttpStreamBase(NativeResource):
         if error_code == 0:
             self._complete_future.set_result(None)
         else:
-            self._complete_future.set_exception(Exception(error_code)) # TODO: Actual exceptions for error_codes
+            self._complete_future.set_exception(Exception(error_code))  # TODO: Actual exceptions for error_codes
 
 
 class HttpClientStream(HttpStreamBase):
@@ -167,11 +165,9 @@ class HttpClientStream(HttpStreamBase):
 
         _awscrt.http_client_stream_new(self, connection, request)
 
-
     @property
     def response_status_code(self):
         return self._response_status_code
-
 
     def _on_response(self, status_code, name_value_pairs):
         self._response_status_code = status_code
@@ -200,6 +196,7 @@ class HttpMessageBase(NativeResource):
     @property
     def body_stream(self):
         return self._body_stream
+
 
 class HttpRequest(HttpMessageBase):
     """
@@ -301,7 +298,6 @@ class HttpHeaders(object):
                         del values[i]
                     return
         raise ValueError("HttpHeaders.remove_value(name,value): value not found")
-
 
     def clear(self):
         """

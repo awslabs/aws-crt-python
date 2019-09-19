@@ -25,6 +25,7 @@ class LogLevel(IntEnum):
     Debug = 5
     Trace = 6
 
+
 def init_logging(log_level, file_name):
     """
     initialize a logger. log_level is type LogLevel, and file_name is of type str.
@@ -56,8 +57,10 @@ class EventLoopGroup(NativeResource):
         super(EventLoopGroup, self).__init__()
         self._binding = _awscrt.event_loop_group_new(num_threads)
 
+
 class HostResolverBase(NativeResource):
     __slots__ = ()
+
 
 class DefaultHostResolver(HostResolverBase):
     __slots__ = ()
@@ -67,6 +70,7 @@ class DefaultHostResolver(HostResolverBase):
 
         super(DefaultHostResolver, self).__init__()
         self._binding = _awscrt.host_resolver_new_default(max_hosts, event_loop_group)
+
 
 class ClientBootstrap(NativeResource):
     __slots__ = ()
@@ -81,6 +85,7 @@ class ClientBootstrap(NativeResource):
             host_resolver = DefaultHostResolver(event_loop_group)
 
         self._binding = _awscrt.client_bootstrap_new(event_loop_group, host_resolver)
+
 
 def _read_binary_file(filepath):
     with open(filepath, mode='rb') as fh:
@@ -225,6 +230,7 @@ class TlsContextOptions(object):
         opt.pkcs12_password = pkcs12_password
         opt.verify_peer = False
         return opt
+
 
 def _alpn_list_to_str(alpn_list):
     """
