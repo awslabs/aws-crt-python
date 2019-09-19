@@ -10,3 +10,18 @@
 # on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
 # express or implied. See the License for the specific language governing
 # permissions and limitations under the License.
+
+from awscrt import NativeResource
+import unittest
+
+
+class NativeResourceTest(unittest.TestCase):
+    """
+    Test fixture asserts there are no living NativeResources when a test completes.
+    """
+
+    def setUp(self):
+        NativeResource._track_lifetime = True
+
+    def tearDown(self):
+        self.assertEqual(0, len(NativeResource._living))

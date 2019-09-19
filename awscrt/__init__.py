@@ -12,6 +12,7 @@
 # permissions and limitations under the License.
 
 from sys import version_info
+from weakref import WeakSet
 
 __all__ = ['io', 'mqtt', 'crypto', 'http']
 
@@ -24,7 +25,18 @@ class NativeResource(object):
     have B's native code Py_INCREF/DECREF A's python class. This ensures that A will not be destroyed before B.
     If we simply had python class B referencing A, and the GC decided to clean up both, it might destroy A before B.
     """
+
+    # For tracking live NativeResources in tests/debug.
+    # Note that WeakSet can accurately report if 0 objects exist, but iteration isn't 100% thread-safe.
+    _track_lifetime = False
+    _living = WeakSet()
+
     __slots__ = ('_binding', '__weakref__')
+
+    def __init__(self):
+        if NativeResource._track_lifetime:
+            NativeResource._living.add(self)
+
 
 def isinstance_str(x):
     """
