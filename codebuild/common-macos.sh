@@ -36,6 +36,11 @@ export AWS_C_INSTALL=`pwd`/build/deps/install
 # build python3 extension
 python3 setup.py build install
 
+echo --- unittest ---
 python3 -m unittest discover
-python3 elasticurl.py -v ERROR -P -H "content-type: application/json" -i -d "{'test':'testval'}" http://httpbin.org/post
+
+echo --- elasticurl GET ---
 python3 elasticurl.py -v ERROR -i https://example.com
+
+echo --- elasticurl PUT ---
+python3 elasticurl.py -v ERROR -P -H "content-type: application/json" -i -d "{'test':'testval'}" http://httpbin.org/post

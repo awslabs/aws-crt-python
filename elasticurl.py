@@ -33,7 +33,7 @@ parser.add_argument('--capath', required=False, help='PATH: path to a directory 
 parser.add_argument('--cert', required=False, help='FILE: path to a PEM encoded certificate to use with mTLS')
 parser.add_argument('--key', required=False, help='FILE: Path to a PEM encoded private key that matches cert.')
 parser.add_argument('--connect_timeout', required=False, type=int, help='INT: time in milliseconds to wait for a connection.', default=3000)
-parser.add_argument('-H', '--header', required=False, help='LINE: line to send as a header in format [header-key]: [header-value]\n', nargs='*', action='append')
+parser.add_argument('-H', '--header', required=False, help='STRING: line to send as a header in format "name:value". May be specified multiple times.', action='append')
 parser.add_argument('-d', '--data', required=False, help='STRING: Data to POST or PUT.')
 parser.add_argument('--data_file', required=False, help='FILE: File to read from file and POST or PUT')
 parser.add_argument('-M', '--method', required=False, help='STRING: Http Method verb to use for the request', default='GET')
@@ -44,7 +44,7 @@ parser.add_argument('-i', '--include', required=False, help='Includes headers in
 parser.add_argument('-k', '--insecure', required=False, help='Turns off x.509 validation', action='store_true', default=False)
 parser.add_argument('-o', '--output', required=False, help='FILE: dumps content-body to FILE instead of stdout.')
 parser.add_argument('-t', '--trace', required=False, help='FILE: dumps logs to FILE instead of stderr.')
-parser.add_argument('-p', '--alpn_list', required=False, help='STRING: List of protocols for ALPN, semi-colon delimited')
+parser.add_argument('-p', '--alpn', required=False, help='STRING: protocol for ALPN. May be specified multiple times.', action='append')
 parser.add_argument('-v', '--verbose', required=False, help='ERROR|INFO|DEBUG|TRACE: log level to configure. Default is none.')
 
 args = parser.parse_args()
@@ -119,8 +119,8 @@ if scheme == 'https':
     tls_connection_options = tls_ctx.new_connection_options()
     tls_connection_options.set_server_name(url.hostname)
 
-    if args.alpn_list:
-        tls_connection_options.set_alpn_list(args.alpn_list)
+    if args.alpn:
+        tls_connection_options.set_alpn_list(args.alpn)
 
 # invoked up on the connection closing
 def on_connection_shutdown(err_code):
@@ -178,9 +178,8 @@ if data_len != 0:
 
 if args.header:
     for i in args.header:
-        name_value_tuple = i[0].split(':')
-        request.headers.add(name_value_tuple[0].strip(), name_value_tuple[1].strip())
-
+        name, value = i.split(':')
+        request.headers.add(name.strip(), value.strip())
 
 # invoked as soon as the response headers are received
 def response_received_cb(http_stream, status_code, headers):

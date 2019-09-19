@@ -226,6 +226,16 @@ class TlsContextOptions(object):
         opt.verify_peer = False
         return opt
 
+def _alpn_list_to_str(alpn_list):
+    """
+    Transform ['h2', 'http/1.1'] -> "h2;http/1.1"
+    None is returned if list is None or empty
+    """
+    if alpn_list:
+        assert not isinstance_str(alpn_list)
+        return ';'.join(alpn_list)
+    return None
+
 
 class ClientTlsContext(NativeResource):
     __slots__ = ()
@@ -238,7 +248,7 @@ class ClientTlsContext(NativeResource):
             options.min_tls_ver.value,
             options.ca_dirpath,
             options.ca_buffer,
-            options.alpn_list,
+            _alpn_list_to_str(options.alpn_list),
             options.certificate_buffer,
             options.private_key_buffer,
             options.pkcs12_filepath,
@@ -261,7 +271,7 @@ class TlsConnectionOptions(NativeResource):
         self._binding = _awscrt.tls_connections_options_new_from_ctx(tls_ctx)
 
     def set_alpn_list(self, alpn_list):
-        _awscrt.tls_connection_options_set_alpn_list(self, alpn_list)
+        _awscrt.tls_connection_options_set_alpn_list(self, _alpn_list_to_str(alpn_list))
 
     def set_server_name(self, server_name):
         _awscrt.tls_connection_options_set_server_name(self, server_name)
