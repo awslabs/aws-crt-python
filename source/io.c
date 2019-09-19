@@ -369,7 +369,7 @@ PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args) {
     struct aws_allocator *allocator = aws_py_get_allocator();
 
     int min_tls_version;
-    const char *ca_path;
+    const char *ca_dirpath;
     const char *ca_buffer;
     Py_ssize_t ca_buffer_len;
     const char *alpn_list;
@@ -377,14 +377,14 @@ PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args) {
     Py_ssize_t certificate_buffer_len;
     const char *private_key_buffer;
     Py_ssize_t private_key_buffer_len;
-    const char *pkcs12_path;
+    const char *pkcs12_filepath;
     const char *pkcs12_password;
     uint8_t verify_peer;
     if (!PyArg_ParseTuple(
             args,
             "bzz#zz#z#zzb",
             &min_tls_version,
-            &ca_path,
+            &ca_dirpath,
             &ca_buffer,
             &ca_buffer_len,
             &alpn_list,
@@ -392,7 +392,7 @@ PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args) {
             &certificate_buffer_len,
             &private_key_buffer,
             &private_key_buffer_len,
-            &pkcs12_path,
+            &pkcs12_filepath,
             &pkcs12_password,
             &verify_peer)) {
         return NULL;
@@ -415,8 +415,8 @@ PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args) {
 
     ctx_options.minimum_tls_version = min_tls_version;
 
-    if (ca_path) {
-        if (aws_tls_ctx_options_override_default_trust_store_from_path(&ctx_options, ca_path, NULL)) {
+    if (ca_dirpath) {
+        if (aws_tls_ctx_options_override_default_trust_store_from_path(&ctx_options, ca_dirpath, NULL)) {
             PyErr_SetAwsLastError();
             goto ctx_options_failure;
         }
@@ -438,9 +438,10 @@ PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args) {
     }
 
 #ifdef __APPLE__
-    if (pkcs12_path && pkcs12_password) {
+    if (pkcs12_filepath && pkcs12_password) {
         struct aws_byte_cursor password = aws_byte_cursor_from_c_str(pkcs12_password);
-        if (aws_tls_ctx_options_init_client_mtls_pkcs12_from_path(&ctx_options, allocator, pkcs12_path, &password)) {
+        if (aws_tls_ctx_options_init_client_mtls_pkcs12_from_path(
+                &ctx_options, allocator, pkcs12_filepath, &password)) {
             PyErr_SetAwsLastError();
             goto ctx_options_failure;
         }

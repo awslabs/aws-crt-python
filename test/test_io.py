@@ -12,7 +12,7 @@
 # permissions and limitations under the License.
 
 from __future__ import absolute_import
-from awscrt.io import ClientBootstrap, DefaultHostResolver, EventLoopGroup
+from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsContextOptions
 from test import NativeResourceTest
 import unittest
 
@@ -40,6 +40,32 @@ class ClientBootstrapTest(NativeResourceTest):
         event_loop_group = EventLoopGroup()
         host_resolver = DefaultHostResolver(event_loop_group)
         bootstrap = ClientBootstrap(event_loop_group, host_resolver)
+
+
+class ClientTlsContextTest(NativeResourceTest):
+    def test_init_defaults(self):
+        opt = TlsContextOptions()
+        ctx = ClientTlsContext(opt)
+
+    def test_with_mtls_from_path(self):
+        opt = TlsContextOptions.create_client_with_mtls_from_path(
+            'test/resources/unittests.crt', 'test/resources/unittests.key')
+        ctx = ClientTlsContext(opt)
+
+    def test_with_mtls_pkcs12(self):
+        opt = TlsContextOptions.create_client_with_mtls_pkcs12(
+            'test/resources/unittests.p12', '1234')
+        ctx = ClientTlsContext(opt)
+
+    def test_override_default_trust_store_dir(self):
+        opt = TlsContextOptions()
+        opt.override_default_trust_store_from_path('test/resources', None)
+        ctx = ClientTlsContext(opt)
+
+    def test_override_default_trust_store_file(self):
+        opt = TlsContextOptions()
+        opt.override_default_trust_store_from_path(None, 'test/resources/unittests.crt')
+        ctx = ClientTlsContext(opt)
 
 
 if __name__ == '__main__':
