@@ -129,9 +129,9 @@ class TlsVersion(IntEnum):
 
 class TlsContextOptions(object):
     __slots__ = (
-        'min_tls_ver', 'ca_path', 'ca_buffer', 'alpn_list',
+        'min_tls_ver', 'ca_dirpath', 'ca_buffer', 'alpn_list',
         'certificate_buffer', 'private_key_buffer',
-        'pkcs12_path', 'pkcs12_password', 'verify_peer')
+        'pkcs12_filepath', 'pkcs12_password', 'verify_peer')
 
     def __init__(self):
 
@@ -141,16 +141,16 @@ class TlsContextOptions(object):
         self.min_tls_ver = TlsVersion.DEFAULT
         self.verify_peer = True
 
-    def override_default_trust_store_from_path(self, ca_path, ca_file):
+    def override_default_trust_store_from_path(self, ca_dirpath, ca_filepath):
 
-        assert isinstance_str(ca_path) or ca_path is None
-        assert isinstance_str(ca_file) or ca_file is None
+        assert isinstance_str(ca_dirpath) or ca_dirpath is None
+        assert isinstance_str(ca_filepath) or ca_filepath is None
 
         ca_buffer = None
-        if ca_file:
-            ca_buffer = _read_binary_file(ca_file)
+        if ca_filepath:
+            ca_buffer = _read_binary_file(ca_filepath)
 
-        self.ca_path = ca_path
+        self.ca_dirpath = ca_dirpath
         self.override_default_trust_store(ca_buffer)
 
     def override_default_trust_store(self, rootca_buffer):
@@ -159,13 +159,13 @@ class TlsContextOptions(object):
         self.ca_buffer = rootca_buffer
 
     @staticmethod
-    def create_client_with_mtls_from_path(cert_path, pk_path):
+    def create_client_with_mtls_from_path(cert_filepath, pk_filepath):
 
-        assert isinstance_str(cert_path)
-        assert isinstance_str(pk_path)
+        assert isinstance_str(cert_filepath)
+        assert isinstance_str(pk_filepath)
 
-        cert_buffer = _read_binary_file(cert_path)
-        key_buffer = _read_binary_file(pk_path)
+        cert_buffer = _read_binary_file(cert_filepath)
+        key_buffer = _read_binary_file(pk_filepath)
 
         return TlsContextOptions.create_client_with_mtls(cert_buffer, key_buffer)
 
@@ -182,25 +182,25 @@ class TlsContextOptions(object):
         return opt
 
     @staticmethod
-    def create_client_with_mtls_pkcs12(pkcs12_path, pkcs12_password):
+    def create_client_with_mtls_pkcs12(pkcs12_filepath, pkcs12_password):
 
-        assert isinstance_str(pkcs12_path)
+        assert isinstance_str(pkcs12_filepath)
         assert isinstance_str(pkcs12_password)
 
         opt = TlsContextOptions()
-        opt.pkcs12_path = pkcs12_path
+        opt.pkcs12_filepath = pkcs12_filepath
         opt.pkcs12_password = pkcs12_password
         opt.verify_peer = True
         return opt
 
     @staticmethod
-    def create_server_from_path(cert_path, pk_path):
+    def create_server_from_path(cert_filepath, pk_filepath):
 
-        assert isinstance_str(cert_path)
-        assert isinstance_str(pk_path)
+        assert isinstance_str(cert_filepath)
+        assert isinstance_str(pk_filepath)
 
-        cert_buffer = _read_binary_file(cert_path)
-        key_buffer = _read_binary_file(pk_path)
+        cert_buffer = _read_binary_file(cert_filepath)
+        key_buffer = _read_binary_file(pk_filepath)
 
         return TlsContextOptions.create_server(cert_buffer, key_buffer)
 
@@ -216,13 +216,13 @@ class TlsContextOptions(object):
         return opt
 
     @staticmethod
-    def create_server_pkcs12(pkcs12_path, pkcs12_password):
+    def create_server_pkcs12(pkcs12_filepath, pkcs12_password):
 
-        assert isinstance_str(pkcs12_path)
+        assert isinstance_str(pkcs12_filepath)
         assert isinstance_str(pkcs12_password)
 
         opt = TlsContextOptions()
-        opt.pkcs12_path = pkcs12_path
+        opt.pkcs12_filepath = pkcs12_filepath
         opt.pkcs12_password = pkcs12_password
         opt.verify_peer = False
         return opt
@@ -237,12 +237,12 @@ class ClientTlsContext(NativeResource):
         super(ClientTlsContext, self).__init__()
         self._binding = _awscrt.client_tls_ctx_new(
             options.min_tls_ver.value,
-            options.ca_path,
+            options.ca_dirpath,
             options.ca_buffer,
             options.alpn_list,
             options.certificate_buffer,
             options.private_key_buffer,
-            options.pkcs12_path,
+            options.pkcs12_filepath,
             options.pkcs12_password,
             options.verify_peer
         )
