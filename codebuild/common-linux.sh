@@ -4,16 +4,6 @@ set -e
 
 CMAKE_ARGS="$@"
 
-echo --- format check ---
-# Do format check early so we know ASAP how dumb we are.
-# Use virtual environment so pip install doesn't affect the rest of the CI script.
-python3 -m venv .direnv/fmt
-source .direnv/fmt/bin/activate
-python -m pip install autopep8
-python -m autopep8 --exit-code --diff --recursive awscrt test setup.py
-deactivate
-
-echo --- building ---
 git submodule update --init --recursive
 export AWS_C_INSTALL=`pwd`/build/deps/install
 
