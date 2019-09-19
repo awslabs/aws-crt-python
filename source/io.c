@@ -440,7 +440,8 @@ PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args) {
 #ifdef __APPLE__
     if (pkcs12_filepath && pkcs12_password) {
         struct aws_byte_cursor password = aws_byte_cursor_from_c_str(pkcs12_password);
-        if (aws_tls_ctx_options_init_client_mtls_pkcs12_from_path(&ctx_options, allocator, pkcs12_filepath, &password)) {
+        if (aws_tls_ctx_options_init_client_mtls_pkcs12_from_path(
+                &ctx_options, allocator, pkcs12_filepath, &password)) {
             PyErr_SetAwsLastError();
             goto ctx_options_failure;
         }
