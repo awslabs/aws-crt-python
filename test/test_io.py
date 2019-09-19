@@ -12,7 +12,7 @@
 # permissions and limitations under the License.
 
 from __future__ import absolute_import
-from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsContextOptions
+from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions
 from test import NativeResourceTest
 import unittest
 
@@ -66,6 +66,25 @@ class ClientTlsContextTest(NativeResourceTest):
         opt = TlsContextOptions()
         opt.override_default_trust_store_from_path(None, 'test/resources/unittests.crt')
         ctx = ClientTlsContext(opt)
+
+
+class TlsConnectionOptionsTest(NativeResourceTest):
+    def test_init(self):
+        opt = TlsContextOptions()
+        ctx = ClientTlsContext(opt)
+        conn_opt = TlsConnectionOptions(ctx)
+
+    def test_alpn_list(self):
+        opt = TlsContextOptions()
+        ctx = ClientTlsContext(opt)
+        conn_opt = TlsConnectionOptions(ctx)
+        conn_opt.set_alpn_list(['h2', 'http/1.1'])
+
+    def test_server_name(self):
+        opt = TlsContextOptions()
+        ctx = ClientTlsContext(opt)
+        conn_opt = TlsConnectionOptions(ctx)
+        conn_opt.set_server_name('localhost')
 
 
 if __name__ == '__main__':

@@ -69,7 +69,7 @@ if args.port:
 elif io.is_alpn_available():
     port = 443
     if tls_options:
-        tls_options.alpn_list='x-amzn-mqtt-ca'
+        tls_options.alpn_list = ['x-amzn-mqtt-ca']
 else:
     port = 8883
 
