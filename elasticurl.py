@@ -176,9 +176,10 @@ request.headers.add('user-agent', 'elasticurl.py 1.0, Powered by the AWS Common 
 if data_len != 0:
     request.headers.add('content-length', str(data_len))
 
-for i in args.header:
-    name, value = i.split(':')
-    request.headers.add(name.strip(), value.strip())
+if args.header:
+    for i in args.header:
+        name, value = i.split(':')
+        request.headers.add(name.strip(), value.strip())
 
 # invoked as soon as the response headers are received
 def response_received_cb(http_stream, status_code, headers):
