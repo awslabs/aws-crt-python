@@ -146,12 +146,11 @@ class TlsContextOptions(object):
         assert isinstance_str(ca_dirpath) or ca_dirpath is None
         assert isinstance_str(ca_filepath) or ca_filepath is None
 
-        ca_buffer = None
         if ca_filepath:
             ca_buffer = _read_binary_file(ca_filepath)
+            self.override_default_trust_store(ca_buffer)
 
         self.ca_dirpath = ca_dirpath
-        self.override_default_trust_store(ca_buffer)
 
     def override_default_trust_store(self, rootca_buffer):
         assert isinstance(rootca_buffer, bytes)

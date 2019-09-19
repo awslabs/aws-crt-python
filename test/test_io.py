@@ -57,12 +57,12 @@ class ClientTlsContextTest(NativeResourceTest):
             'test/resources/unittests.p12', '1234')
         ctx = ClientTlsContext(opt)
 
-    def override_default_trust_store_dir(self):
+    def test_override_default_trust_store_dir(self):
         opt = TlsContextOptions()
         opt.override_default_trust_store_from_path('test/resources', None)
         ctx = ClientTlsContext(opt)
 
-    def override_default_trust_store_file(self):
+    def test_override_default_trust_store_file(self):
         opt = TlsContextOptions()
         opt.override_default_trust_store_from_path(None, 'test/resources/unittests.crt')
         ctx = ClientTlsContext(opt)
