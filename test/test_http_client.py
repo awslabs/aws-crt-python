@@ -50,20 +50,11 @@ class TestHttpClientConnection(unittest.TestCase):
     timeout = 10 # seconds
 
     def test_connect(self):
-        awscrt.io.init_logging(awscrt.io.LogLevel.Trace, 'stderr')
-
-        print('test_connect go', file=sys.stderr)
         server = HTTPServer((self.hostname, 0), HTTPRequestHandler)
-        print('server started at ', server.server_address, file=sys.stderr)
         port = server.server_address[1]
 
         # connect
-        event_loop_group = awscrt.io.EventLoopGroup(1)
-        host_resolver = awscrt.io.DefaultHostResolver(event_loop_group)
-        client_bootstrap = awscrt.io.ClientBootstrap(event_loop_group, host_resolver)
-        print('connection newing', file=sys.stderr)
-        connection = awscrt.http.HttpClientConnection.new(self.hostname, port, bootstrap=client_bootstrap).result(self.timeout)
-        print('connection got', file=sys.stderr)
+        connection = awscrt.http.HttpClientConnection.new(self.hostname, port).result(self.timeout)
         self.assertTrue(connection.is_open())
 
         # register shutdown callback
@@ -74,10 +65,7 @@ class TestHttpClientConnection(unittest.TestCase):
         connection.add_shutdown_callback(shutdown_callback)
 
         # close connection
-        print('connection closing', file=sys.stderr)
-        close_future = connection.close()
-        shutdown_error_code_from_close_future = close_future.result(self.timeout)
-        print('connection closed', file=sys.stderr)
+        shutdown_error_code_from_close_future = connection.close().result(self.timeout)
 
         # assert that error code was reported via close_future and shutdown callback
         # error_code should be 0 (normal shutdown)
@@ -85,24 +73,8 @@ class TestHttpClientConnection(unittest.TestCase):
         self.assertEqual(1, len(shutdown_callback_results))
         self.assertEqual(0, shutdown_callback_results[0])
         self.assertFalse(connection.is_open())
-        print('closing server', file=sys.stderr)
-        server.server_close()
-        del server
-        print('server closed', file=sys.stderr)
-        print('del connection', file=sys.stderr)
-        del connection
-        time.sleep(1)
-        print('del client_bootstrap', file=sys.stderr)
-        del client_bootstrap
-        time.sleep(1)
-        print('del host_resolver', file=sys.stderr)
-        del host_resolver
-        time.sleep(1)
-        print('del event_loop_group', file=sys.stderr)
-        del event_loop_group
-        time.sleep(1)
-        print('exiting test', file=sys.stderr)
 
+        server.server_close()
 
 if __name__ == '__main__':
     unittest.main()
