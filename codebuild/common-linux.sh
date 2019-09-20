@@ -36,5 +36,6 @@ python3 mqtt_test.py --endpoint $ENDPOINT --port 8883 --cert /tmp/certificate.pe
 echo --- format check ---
 # It would be great to do this earlier, but we want a pure pip environment for build/unittest.
 # Tried doing earlier using venv but couldn't get it working in CI.
-python3 -m pip install autopep8
-python3 -m autopep8 --exit-code --diff --recursive awscrt test setup.py
+if python3 -m pip install autopep8; then
+    python3 -m autopep8 --exit-code --diff --recursive awscrt test setup.py
+fi
