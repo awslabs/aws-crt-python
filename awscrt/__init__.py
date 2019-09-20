@@ -16,6 +16,7 @@ from weakref import WeakSet
 
 __all__ = ['io', 'mqtt', 'crypto', 'http']
 
+
 class NativeResource(object):
     """
     Base for classes that bind to a native type.

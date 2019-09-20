@@ -118,5 +118,6 @@ class TestHttpHeaders(unittest.TestCase):
         h.clear()
         self.assertEqual([], [pair for pair in h])
 
+
 if __name__ == '__main__':
     unittest.main()

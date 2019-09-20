@@ -39,7 +39,7 @@ class Hash(object):
     def update(self, to_hash):
         _awscrt.hash_update(self._hash, to_hash)
 
-    def digest(self, truncate_to = 0):
+    def digest(self, truncate_to=0):
         return _awscrt.hash_digest(self._hash, truncate_to)
 
 
@@ -60,5 +60,5 @@ class HMAC(object):
     def update(self, to_hmac):
         _awscrt.hmac_update(self._hmac, to_hmac)
 
-    def digest(self, truncate_to = 0):
+    def digest(self, truncate_to=0):
         return _awscrt.hmac_digest(self._hmac, truncate_to)
