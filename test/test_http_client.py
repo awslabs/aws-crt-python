@@ -11,54 +11,62 @@
 # express or implied. See the License for the specific language governing
 # permissions and limitations under the License.
 
-import awscrt.http
-import unittest
-import sys
-import time
+from __future__ import absolute_import
+from awscrt.http import HttpClientConnection
+from awscrt.io import TlsContextOptions, ClientTlsContext, TlsConnectionOptions
+import ssl
+from test import NativeResourceTest
+import threading
 
 # Python's simple HTTP server lives in different places in Python 2/3.
 try:
     from http.server import HTTPServer, SimpleHTTPRequestHandler
-except:
+except ImportError:
     from SimpleHTTPServer import SimpleHTTPRequestHandler
     import SocketServer
     HTTPServer = SocketServer.TCPServer
 
 
-class Response(object):
-    def __init__(self):
-        self.status_code = None
-        self.headers = None
-        self.body = bytearray()
-
-    def on_response(self, stream, status_code, headers):
-        self.status_code = status_code
-        self.headers = awscrt.http.HttpHeaders(headers)
-
-    def on_body(self, stream, chunk):
-        self.body.extend(chunk)
-
-
-class HTTPRequestHandler(SimpleHTTPRequestHandler):
-    # silence the logger
-    def log_message(self, format, *args):
-        return
-
-
-class TestHttpClientConnection(unittest.TestCase):
+class TestConnection(NativeResourceTest):
     hostname = 'localhost'
-    timeout = 10 # seconds
+    timeout = 10  # seconds
 
-    def test_connect(self):
-        server = HTTPServer((self.hostname, 0), HTTPRequestHandler)
-        port = server.server_address[1]
+    def _start_server(self, tls=False):
+        self.server = HTTPServer((self.hostname, 0), SimpleHTTPRequestHandler)
+        if tls:
+            self.server.socket = ssl.wrap_socket(self.server.socket,
+                                                 keyfile="test/resources/unittests.key",
+                                                 certfile='test/resources/unittests.crt',
+                                                 server_side=True)
+        self.port = self.server.server_address[1]
+        self.server_thread = threading.Thread(target=self.server.serve_forever, name='test_server')
+        self.server_thread.start()
 
-        # connect
-        connection = awscrt.http.HttpClientConnection.new(self.hostname, port).result(self.timeout)
-        self.assertTrue(connection.is_open())
+    def _stop_server(self):
+        self.server.shutdown()
+        self.server.server_close()
+        self.server_thread.join()
+
+    def _new_client_connection(self, tls=False):
+        if tls:
+            tls_ctx_opt = TlsContextOptions()
+            tls_ctx_opt.override_default_trust_store_from_path(None, 'test/resources/unittests.crt')
+            tls_ctx = ClientTlsContext(tls_ctx_opt)
+            tls_conn_opt = tls_ctx.new_connection_options()
+            tls_conn_opt.set_server_name(self.hostname)
+        else:
+            tls_conn_opt = None
+
+        connection_future = HttpClientConnection.new(self.hostname, self.port, tls_connection_options=tls_conn_opt)
+        return connection_future.result(self.timeout)
+
+    def _test_connect(self, tls):
+        self._start_server(tls)
+        connection = self._new_client_connection(tls)
 
         # register shutdown callback
         shutdown_callback_results = []
+
         def shutdown_callback(error_code):
             shutdown_callback_results.append(error_code)
 
@@ -74,7 +82,14 @@ class TestHttpClientConnection(unittest.TestCase):
         self.assertEqual(0, shutdown_callback_results[0])
         self.assertFalse(connection.is_open())
 
-        server.server_close()
+        self._stop_server()
+
+    def test_connect(self):
+        self._test_connect(tls=False)
+
+    def test_connect_tls(self):
+        self._test_connect(tls=True)
+
 
 if __name__ == '__main__':
     unittest.main()
