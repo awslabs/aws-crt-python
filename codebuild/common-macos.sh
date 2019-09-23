@@ -37,7 +37,7 @@ export AWS_C_INSTALL=`pwd`/build/deps/install
 python3 setup.py build install
 
 echo --- unittest ---
-python3 -m unittest discover
+python3 -m unittest discover --buffer --verbose
 
 echo --- elasticurl GET ---
 python3 elasticurl.py -v ERROR -i https://example.com

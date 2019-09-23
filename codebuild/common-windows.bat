@@ -11,7 +11,7 @@ echo --- installing awscrt ---
 python setup.py build install || goto error
 
 echo --- unittest ---
-python -u -v -v -m unittest discover -v || goto error
+python -u -v -v -m unittest discover --buffer --verbose || goto error
 
 echo --- elasticurl GET ---
 python elasticurl.py -v ERROR -i https://example.com || goto error

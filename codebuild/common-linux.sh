@@ -22,7 +22,7 @@ key=$(aws secretsmanager get-secret-value --secret-id "unit-test/privatekey" --q
 ENDPOINT=$(aws secretsmanager get-secret-value --secret-id "unit-test/endpoint" --query "SecretString" | cut -f2 -d":" | sed -e 's/[\\\"\}]//g')
 
 echo --- unittest ---
-python3 -m unittest discover
+python3 -m unittest discover --buffer --verbose
 
 echo --- elasticurl GET ---
 python3 elasticurl.py -v ERROR -i https://example.com

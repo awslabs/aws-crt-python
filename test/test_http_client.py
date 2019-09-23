@@ -14,6 +14,7 @@
 from __future__ import absolute_import
 from awscrt.http import HttpClientConnection
 from awscrt.io import TlsContextOptions, ClientTlsContext, TlsConnectionOptions
+from concurrent.futures import Future
 import ssl
 from test import NativeResourceTest
 import threading
@@ -27,13 +28,13 @@ except ImportError:
     HTTPServer = SocketServer.TCPServer
 
 
-class TestConnection(NativeResourceTest):
+class TestClient(NativeResourceTest):
     hostname = 'localhost'
     timeout = 10  # seconds
 
-    def _start_server(self, tls=False):
+    def _start_server(self, secure):
         self.server = HTTPServer((self.hostname, 0), SimpleHTTPRequestHandler)
-        if tls:
+        if secure:
             self.server.socket = ssl.wrap_socket(self.server.socket,
                                                  keyfile="test/resources/unittests.key",
                                                  certfile='test/resources/unittests.crt',
@@ -47,8 +48,8 @@ class TestConnection(NativeResourceTest):
         self.server.server_close()
         self.server_thread.join()
 
-    def _new_client_connection(self, tls=False):
-        if tls:
+    def _new_client_connection(self, secure):
+        if secure:
             tls_ctx_opt = TlsContextOptions()
             tls_ctx_opt.override_default_trust_store_from_path(None, 'test/resources/unittests.crt')
             tls_ctx = ClientTlsContext(tls_ctx_opt)
@@ -60,9 +61,9 @@ class TestConnection(NativeResourceTest):
         connection_future = HttpClientConnection.new(self.hostname, self.port, tls_connection_options=tls_conn_opt)
         return connection_future.result(self.timeout)
 
-    def _test_connect(self, tls):
-        self._start_server(tls)
-        connection = self._new_client_connection(tls)
+    def _test_connect(self, secure):
+        self._start_server(secure)
+        connection = self._new_client_connection(secure)
 
         # register shutdown callback
         shutdown_callback_results = []
@@ -84,11 +85,38 @@ class TestConnection(NativeResourceTest):
 
         self._stop_server()
 
-    def test_connect(self):
-        self._test_connect(tls=False)
+    def test_connect_http(self):
+        self._test_connect(secure=False)
 
-    def test_connect_tls(self):
-        self._test_connect(tls=True)
+    def test_connect_https(self):
+        self._test_connect(secure=True)
+
+    # The connection should shut itself down cleanly when the GC collects the HttpClientConnection Python object.
+    def _test_connection_closes_on_zero_refcount(self, secure):
+        self._start_server(secure)
+
+        connection = self._new_client_connection(secure)
+
+        # Subscribing for the shutdown callback shouldn't affect the refcount of the HttpClientConnection.
+        close_future = Future()
+
+        def on_close(error_code):
+            close_future.set_result(error_code)
+
+        connection.add_shutdown_callback(on_close)
+
+        # This should cause the GC to collect the HttpClientConnection
+        del connection
+
+        close_code = close_future.result(self.timeout)
+        self.assertEqual(0, close_code)
+        self._stop_server()
+
+    def test_connection_closes_on_zero_refcount_http(self):
+        self._test_connection_closes_on_zero_refcount(secure=False)
+
+    def test_connection_closes_on_zero_refcount_https(self):
+        self._test_connection_closes_on_zero_refcount(secure=True)
 
 
 if __name__ == '__main__':
