@@ -6,16 +6,6 @@ phases:
       - sudo dpkg --add-architecture i386
       - sudo apt-get update -y
       - sudo apt-get install gcc gcc-multilib cmake3 cppcheck zlib1g-dev:i386 libffi-dev:i386 ninja-build -y
-      # compile python 32 bit from source
-      - curl -LO https://www.python.org/ftp/python/3.7.1/Python-3.7.1.tgz
-      - tar -xzf Python-3.7.1.tgz
-      - export PYTHON_HOME=`pwd`/python3_x86
-      - cd Python-3.7.1
-      - CFLAGS=-m32 LDFLAGS=-m32 ./configure --prefix=$PYTHON_HOME || cat config.log
-      - make -j 12
-      - make install
-      - export PATH=$PYTHON_HOME/bin:$PATH
-      - cd ..
       # Build OpenSSL from source
       - mkdir libcrypto-build
       - cd libcrypto-build
@@ -28,9 +18,19 @@ phases:
         no-bf no-ripemd no-dsa no-ssl2 no-ssl3 no-capieng     \
         -DSSL_FORBID_ENULL -DOPENSSL_NO_DTLS1 -DOPENSSL_NO_HEARTBEATS   \
         --prefix=`pwd`/../../build/deps/install/
-      - make -j 12 
+      - make -j 12
       - make install_sw
       - cd ../../
+      # compile python 32 bit from source
+      - curl -LO https://www.python.org/ftp/python/3.7.1/Python-3.7.1.tgz
+      - tar -xzf Python-3.7.1.tgz
+      - export PYTHON_HOME=`pwd`/python3_x86
+      - cd Python-3.7.1
+      - CFLAGS=-m32 LDFLAGS=-m32 ./configure --prefix=$PYTHON_HOME || cat config.log
+      - make -j 12
+      - make install
+      - export PATH=$PYTHON_HOME/bin:$PATH
+      - cd ..
   pre_build:
     commands:
       - export CC=gcc
