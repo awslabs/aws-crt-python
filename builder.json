@@ -28,7 +28,6 @@
     "downstream": [],
     "build": [
         ["git", "submodule", "update", "--init", "--recursive"],
-        ["export", "AWS_C_INSTALL=`pwd`/build/deps/install"],
         ["{python}", "-m", "pip", "install", "."]
     ],
     "test": [
