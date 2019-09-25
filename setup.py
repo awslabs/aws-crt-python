@@ -237,8 +237,8 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     install_requires=[
-        'enum34 ; python_version<"3.4"',
-        'futures ; python_version<"3.2"',
+        'enum34;python_version<"3.4"',
+        'futures;python_version<"3.2"',
     ],
     ext_modules=[awscrt_ext()],
     cmdclass={'build_ext': awscrt_build_ext},
