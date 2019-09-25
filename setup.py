@@ -141,21 +141,27 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
 
         build_type = 'Debug' if self.debug else 'Release'
 
+        # cmake configure
         cmake_args = [
             'cmake',
             determine_generator_string(),
             determine_cross_compile_string(),
             '-DCMAKE_PREFIX_PATH={}'.format(self.dep_install_path),
             '-DCMAKE_INSTALL_PREFIX={}'.format(self.dep_install_path),
-            '-DCMAKE_INCLUDE_PATH={}'.format(';'.join(self.include_dirs)),
-            '-DCMAKE_LIBRARY_PATH={}'.format(';'.join(self.library_dirs)),
             '-DBUILD_SHARED_LIBS=OFF',
             '-DCMAKE_BUILD_TYPE={}'.format(build_type),
             '-DBUILD_TESTING=OFF',
         ]
+        if self.include_dirs:
+            cmake_args.append('-DCMAKE_INCLUDE_PATH={}'.format(';'.join(self.include_dirs)))
+        if self.library_dirs:
+            cmake_args.append('-DCMAKE_LIBRARY_PATH={}'.format(';'.join(self.library_dirs)))
         cmake_args.extend(aws_lib.extra_cmake_args)
         cmake_args.append(lib_source_dir)
 
+        subprocess.check_call(cmake_args, shell=use_shell())
+
+        # cmake build/install
         build_cmd = [
             'cmake',
             '--build', './',
@@ -163,9 +169,7 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
             '--target', 'install',
             '--parallel', str(multiprocessing.cpu_count()),
         ]
-
-        subprocess.check_call(cmake_args, stderr=subprocess.STDOUT, shell=use_shell())
-        subprocess.check_call(build_cmd, stderr=subprocess.STDOUT, shell=use_shell())
+        subprocess.check_call(build_cmd, shell=use_shell())
 
         os.chdir(prev_cwd)
 
