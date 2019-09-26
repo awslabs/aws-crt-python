@@ -25,7 +25,7 @@ import sys
 # TODO: any other cmdline things I should be passing along?
 # TODO: is the lib name stuff really doing anything?
 # TODO: parallel?
-# TODO: use_shell()?
+
 
 def is_64bit():
     return sys.maxsize > 2**32
@@ -105,16 +105,14 @@ def determine_generator_string():
     return ''
 
 
-def use_shell():
-    return sys.platform == 'win32'
-
-
 class AwsLib(object):
     def __init__(self, name, extra_cmake_args=[]):
         self.name = name
         self.extra_cmake_args = extra_cmake_args
 
 
+# The extension depends on these libs.
+# They're built along with the extension, in the order listed.
 aws_libs = []
 if sys.platform != 'darwin' and sys.platform != 'win32':
     aws_libs.append(AwsLib('s2n', extra_cmake_args=['-DUSE_S2N_PQ_CRYPTO=OFF']))
@@ -163,7 +161,7 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
         cmake_args.extend(aws_lib.extra_cmake_args)
         cmake_args.append(lib_source_dir)
 
-        subprocess.check_call(cmake_args, shell=use_shell())
+        subprocess.check_call(cmake_args)
 
         # cmake build/install
         build_cmd = [
@@ -172,7 +170,7 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
             '--config', build_type,
             '--target', 'install',
         ]
-        subprocess.check_call(build_cmd, shell=use_shell())
+        subprocess.check_call(build_cmd)
 
         os.chdir(prev_cwd)
 
@@ -206,6 +204,9 @@ def awscrt_ext():
     extra_link_args = os.environ.get('LDFLAGS', '').split()
 
     libraries = [x.name for x in aws_libs]
+
+    # libraries must be passed to the linker with upstream dependencies listed last.
+    libraries.reverse()
 
     if sys.platform == 'win32':
         # the windows apis being used under the hood. Since we're static linking we have to follow the entire chain down
