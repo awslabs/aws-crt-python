@@ -13,7 +13,6 @@
 
 import distutils.ccompiler
 import glob
-import multiprocessing
 import os
 import os.path
 import platform
@@ -22,6 +21,11 @@ import setuptools.command.build_ext
 import subprocess
 import sys
 
+# TODO: IS it possible to build debug? what does --debug do?
+# TODO: any other cmdline things I should be passing along?
+# TODO: is the lib name stuff really doing anything?
+# TODO: parallel?
+# TODO: use_shell()?
 
 def is_64bit():
     return sys.maxsize > 2**32
@@ -167,7 +171,6 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
             '--build', './',
             '--config', build_type,
             '--target', 'install',
-            '--parallel', str(multiprocessing.cpu_count()),
         ]
         subprocess.check_call(build_cmd, shell=use_shell())
 
@@ -214,7 +217,7 @@ def awscrt_ext():
             libraries += ['crypto', 'rt']
 
     if distutils.ccompiler.get_default_compiler() != 'msvc':
-        extra_compile_args += ['-Wall', '-Wextra', '-Werror', '-Wno-strict-aliasing', '-std=gnu99']
+        extra_compile_args += ['-Wextra', '-Werror', '-Wno-strict-aliasing', '-std=gnu99']
 
     return setuptools.Extension(
         '_awscrt',
