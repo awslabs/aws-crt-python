@@ -220,6 +220,14 @@ def awscrt_ext():
     if distutils.ccompiler.get_default_compiler() != 'msvc':
         extra_compile_args += ['-Wextra', '-Werror', '-Wno-strict-aliasing', '-std=gnu99']
 
+        # linker will prefer shared libraries over static if it can find both.
+        # force linker to choose static one by using using "-l:libcrypto.a" syntax instead of "-lcrypto".
+        if sys.platform == 'win32':
+            libname_fmt = ":{}.lib"
+        else:
+            libname_fmt = ":lib{}.a"
+        libraries = [libname_fmt.format(lib) for lib in libraries]
+
     return setuptools.Extension(
         '_awscrt',
         language='c',
