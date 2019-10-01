@@ -8,7 +8,8 @@
                     "image": "123124136734.dkr.ecr.us-east-1.amazonaws.com/aws-common-runtime/linux-python:x86"
                 },
                 "x64": {
-                    "apt_packages": ["build-essential"]
+                    "apt_packages": ["build-essential"],
+                    "_comment": "on ubuntu python was using /bin/ld to link, which wasn't fully installed"
                 }
             },
             "build_env": {
@@ -43,6 +44,6 @@
         ["{python}", "setup.py", "--verbose", "build_ext", "--include-dirs=/opt/openssl/include", "--library-dirs=/opt/openssl/lib", "install"]
     ],
     "test": [
-        ["{python}", "-m", "unittest", "discover"]
+        ["{python}", "-m", "unittest", "discover", "--buffer", "--verbose"]
     ]
 }
