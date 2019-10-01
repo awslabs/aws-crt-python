@@ -19,9 +19,6 @@
         },
         "al2012": {
             "enabled": false
-        },
-        "manylinux": {
-            "enabled": false
         }
     },
     "targets": {
