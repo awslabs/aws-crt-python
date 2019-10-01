@@ -18,7 +18,16 @@
             }
         },
         "al2012": {
-            "enabled": false
+            "variables": {
+                "openssl_include": "=/opt/openssl/include",
+                "openssl_lib": "=/opt/openssl/lib"
+            }
+        },
+        "manylinux": {
+            "variables": {
+                "openssl_include": "=/opt/openssl/include",
+                "openssl_lib": "=/opt/openssl/lib"
+            }
         }
     },
     "targets": {
