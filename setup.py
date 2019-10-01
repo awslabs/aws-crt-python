@@ -186,6 +186,7 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
         # update paths so awscrt_ext can access dependencies
         self.include_dirs.append(os.path.join(self.dep_install_path, 'include'))
 
+        # some platforms (ex: fedora) use /lib64 instead of just /lib
         lib_dir = 'lib'
         if is_64bit() and os.path.exists(os.path.join(self.dep_install_path, 'lib64')):
             lib_dir = 'lib64'

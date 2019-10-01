@@ -30,6 +30,12 @@
             "enabled": false
         }
     },
+    "compilers": {
+        "clang": {
+            "!post_build_steps": [],
+            "_comment": "don't run clang-tidy, we don't have a compile_commands.json"
+        }
+    },
     "upstream": [],
     "downstream": [],
     "build": [
