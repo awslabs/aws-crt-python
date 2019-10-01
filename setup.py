@@ -212,22 +212,18 @@ def awscrt_ext():
     if sys.platform == 'win32':
         # the windows apis being used under the hood. Since we're static linking we have to follow the entire chain down
         libraries += ['Secur32', 'Crypt32', 'Advapi32', 'BCrypt', 'Kernel32', 'Ws2_32', 'Shlwapi']
-    else:
-        if sys.platform == 'darwin':
-            extra_link_args += ['-framework', 'Security']
-        else:
-            libraries += ['crypto', 'rt']
+
+    elif sys.platform == 'darwin':
+        extra_link_args += ['-framework', 'Security']
+
+    else: # unix
+        # linker will prefer shared libraries over static if it can find both.
+        # force linker to choose static one by using using "-l:libcrypto.a" syntax instead of just "-lcrypto".
+        libraries += [':libcrypto.a', ':librt.a']
+
 
     if distutils.ccompiler.get_default_compiler() != 'msvc':
         extra_compile_args += ['-Wextra', '-Werror', '-Wno-strict-aliasing', '-std=gnu99']
-
-        # linker will prefer shared libraries over static if it can find both.
-        # force linker to choose static one by using using "-l:libcrypto.a" syntax instead of "-lcrypto".
-        if sys.platform == 'win32':
-            libname_fmt = ":{}.lib"
-        else:
-            libname_fmt = ":lib{}.a"
-        libraries = [libname_fmt.format(lib) for lib in libraries]
 
     return setuptools.Extension(
         '_awscrt',
