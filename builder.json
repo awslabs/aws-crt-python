@@ -12,8 +12,9 @@
                     "_comment": "on ubuntu python was using /bin/ld to link, which wasn't fully installed"
                 }
             },
-            "build_env": {
-                "CC": "clang-6.0"
+            "variables": {
+                "openssl_include": "=/opt/openssl/include",
+                "openssl_lib": "=/opt/openssl/lib"
             }
         },
         "al2012": {
@@ -41,7 +42,7 @@
     "downstream": [],
     "build": [
         ["git", "submodule", "update", "--init", "--recursive"],
-        ["{python}", "setup.py", "--verbose", "build_ext", "--include-dirs=/opt/openssl/include", "--library-dirs=/opt/openssl/lib", "install"]
+        ["{python}", "setup.py", "--verbose", "build_ext", "--include-dirs{openssl_include}", "--library-dirs{openssl_lib}", "install"]
     ],
     "test": [
         ["{python}", "-m", "unittest", "discover", "--buffer", "--verbose"]
