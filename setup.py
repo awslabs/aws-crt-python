@@ -110,7 +110,7 @@ class AwsLib(object):
 # They're built along with the extension, in the order listed.
 AWS_LIBS = []
 if sys.platform != 'darwin' and sys.platform != 'win32':
-    AWS_LIBS.append(AwsLib('s2n', extra_cmake_args=['-DUSE_S2N_PQ_CRYPTO=OFF']))
+    AWS_LIBS.append(AwsLib('s2n'))
 AWS_LIBS.append(AwsLib('aws-c-common'))
 AWS_LIBS.append(AwsLib('aws-c-io'))
 AWS_LIBS.append(AwsLib('aws-c-cal'))
@@ -192,7 +192,7 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
         self.library_dirs.append(os.path.join(DEP_INSTALL_PATH, lib_dir))
 
         # continue with normal build_ext.run()
-        setuptools.command.build_ext.build_ext.run(self)  # can't use super() because base doesn't inherit from object
+        super().run()
 
 
 def awscrt_ext():
