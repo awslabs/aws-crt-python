@@ -11,7 +11,6 @@
 # express or implied. See the License for the specific language governing
 # permissions and limitations under the License.
 
-from sys import version_info
 from weakref import WeakSet
 
 __all__ = ['io', 'mqtt', 'crypto', 'http']
@@ -37,12 +36,3 @@ class NativeResource(object):
     def __init__(self):
         if NativeResource._track_lifetime:
             NativeResource._living.add(self)
-
-
-def isinstance_str(x):
-    """
-    Python 2/3 compatible way to check isinstance(x, str).
-    """
-    if version_info[0] == 2:
-        return isinstance(x, basestring)
-    return isinstance(x, str)

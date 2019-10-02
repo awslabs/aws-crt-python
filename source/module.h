@@ -26,22 +26,9 @@
 
 struct aws_byte_buf;
 
-#if PY_MAJOR_VERSION >= 3
-#    define PyString_FromStringAndSize PyUnicode_FromStringAndSize
-#    define READABLE_BYTES_FORMAT_STR "y#"
-#else
-#    define READABLE_BYTES_FORMAT_STR "s#"
-#endif /* PY_MAJOR_VERSION */
-
 /* AWS Specific Helpers */
 #define PyBool_FromAwsResult(result) PyBool_FromLong((result) == AWS_OP_SUCCESS)
-#define PyString_FromAwsByteCursor(cursor) PyString_FromStringAndSize((const char *)(cursor)->ptr, (cursor)->len)
-
-int PyIntEnum_Check(PyObject *int_enum_obj);
-long PyIntEnum_AsLong(PyObject *int_enum_obj);
-
-/* Python 2/3 compatible check. Return whether object is a PyLong (OR PyInt in python2). */
-int PyLongOrInt_Check(PyObject *obj);
+#define PyString_FromAwsByteCursor(cursor) PyUnicode_FromStringAndSize((const char *)(cursor)->ptr, (cursor)->len)
 
 struct aws_byte_cursor aws_byte_cursor_from_pystring(PyObject *str);
 

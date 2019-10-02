@@ -272,11 +272,11 @@ bool s_set_will(struct aws_mqtt_client_connection *connection, PyObject *will) {
     }
 
     py_qos = PyObject_GetAttrString(will, "qos");
-    if (!py_qos || !PyIntEnum_Check(py_qos)) {
+    if (!py_qos || !PyLong_Check(py_qos)) {
         PyErr_SetString(PyExc_TypeError, "Will.qos is invalid");
         goto done;
     }
-    enum aws_mqtt_qos qos = (enum aws_mqtt_qos)PyIntEnum_AsLong(py_qos);
+    enum aws_mqtt_qos qos = (enum aws_mqtt_qos)PyLong_AsLong(py_qos);
 
     py_payload = PyObject_GetAttrString(will, "payload");
     struct aws_byte_cursor payload = aws_byte_cursor_from_pystring(py_payload);

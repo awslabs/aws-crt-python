@@ -44,21 +44,21 @@ bool aws_py_socket_options_init(struct aws_socket_options *socket_options, PyObj
     PyObject *keep_alive_max_probes = NULL;
 
     sock_domain = PyObject_GetAttrString(py_socket_options, "domain");
-    if (!PyIntEnum_Check(sock_domain)) {
+    if (!PyLong_Check(sock_domain)) {
         PyErr_SetString(PyExc_TypeError, "SocketOptions.domain is invalid");
         goto done;
     }
-    socket_options->domain = (enum aws_socket_domain)PyIntEnum_AsLong(sock_domain);
+    socket_options->domain = (enum aws_socket_domain)PyLong_AsLong(sock_domain);
 
     sock_type = PyObject_GetAttrString(py_socket_options, "type");
-    if (!PyIntEnum_Check(sock_type)) {
+    if (!PyLong_Check(sock_type)) {
         PyErr_SetString(PyExc_TypeError, "SocketOptions.type is invalid");
         goto done;
     }
-    socket_options->type = (enum aws_socket_type)PyIntEnum_AsLong(sock_type);
+    socket_options->type = (enum aws_socket_type)PyLong_AsLong(sock_type);
 
     connect_timeout_ms = PyObject_GetAttrString(py_socket_options, "connect_timeout_ms");
-    if (!PyLongOrInt_Check(connect_timeout_ms)) {
+    if (!PyLong_Check(connect_timeout_ms)) {
         PyErr_SetString(PyExc_TypeError, "SocketOptions.connect_timeout_ms is invalid");
         goto done;
     }
@@ -72,21 +72,21 @@ bool aws_py_socket_options_init(struct aws_socket_options *socket_options, PyObj
     socket_options->keepalive = (bool)PyObject_IsTrue(keep_alive);
 
     keep_alive_interval = PyObject_GetAttrString(py_socket_options, "keep_alive_interval_secs");
-    if (!PyLongOrInt_Check(keep_alive_interval)) {
+    if (!PyLong_Check(keep_alive_interval)) {
         PyErr_SetString(PyExc_TypeError, "SocketOptions.keep_alive_interval_secs is invalid");
         goto done;
     }
     socket_options->keep_alive_interval_sec = (uint16_t)PyLong_AsLong(keep_alive_interval);
 
     keep_alive_timeout = PyObject_GetAttrString(py_socket_options, "keep_alive_timeout_secs");
-    if (!PyLongOrInt_Check(keep_alive_timeout)) {
+    if (!PyLong_Check(keep_alive_timeout)) {
         PyErr_SetString(PyExc_TypeError, "SocketOptions.keep_alive_timeout_secs is invalid");
         goto done;
     }
     socket_options->keep_alive_timeout_sec = (uint16_t)PyLong_AsLong(keep_alive_timeout);
 
     keep_alive_max_probes = PyObject_GetAttrString(py_socket_options, "keep_alive_max_probes");
-    if (!PyLongOrInt_Check(keep_alive_timeout)) {
+    if (!PyLong_Check(keep_alive_timeout)) {
         PyErr_SetString(PyExc_TypeError, "SocketOptions.keep_alive_max_probes is invalid");
         goto done;
     }

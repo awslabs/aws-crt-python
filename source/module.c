@@ -76,53 +76,15 @@ PyObject *aws_py_init_logging(PyObject *self, PyObject *args) {
     Py_RETURN_NONE;
 }
 
-#if PY_MAJOR_VERSION == 3
-#    define INIT_FN PyInit__awscrt
-#    define UNICODE_GET_BYTES_FN PyUnicode_DATA
-#    define UNICODE_GET_BYTE_LEN_FN PyUnicode_GET_LENGTH
-#elif PY_MAJOR_VERSION == 2
-#    define INIT_FN init_awscrt
-#    define UNICODE_GET_BYTES_FN PyUnicode_AS_DATA
-#    define UNICODE_GET_BYTE_LEN_FN PyUnicode_GET_DATA_SIZE
-#endif /* PY_MAJOR_VERSION */
-
 struct aws_byte_cursor aws_byte_cursor_from_pystring(PyObject *str) {
     if (PyBytes_CheckExact(str)) {
         return aws_byte_cursor_from_array(PyBytes_AsString(str), PyBytes_Size(str));
     }
     if (PyUnicode_CheckExact(str)) {
-        return aws_byte_cursor_from_array(UNICODE_GET_BYTES_FN(str), UNICODE_GET_BYTE_LEN_FN(str));
+        return aws_byte_cursor_from_array(PyUnicode_DATA(str), PyUnicode_GET_LENGTH(str));
     }
 
     return aws_byte_cursor_from_array(NULL, 0);
-}
-
-int PyIntEnum_Check(PyObject *int_enum_obj) {
-#if PY_MAJOR_VERSION == 2
-    return PyInt_Check(int_enum_obj);
-#else
-    return PyLong_Check(int_enum_obj);
-#endif
-}
-
-long PyIntEnum_AsLong(PyObject *int_enum_obj) {
-#if PY_MAJOR_VERSION == 2
-    return PyInt_AsLong(int_enum_obj);
-#else
-    return PyLong_AsLong(int_enum_obj);
-#endif
-}
-
-int PyLongOrInt_Check(PyObject *obj) {
-    if (PyLong_Check(obj)) {
-        return 1;
-    }
-#if PY_MAJOR_VERSION == 2
-    if (PyInt_Check(obj)) {
-        return 1;
-    }
-#endif
-    return 0;
 }
 
 void PyErr_SetAwsLastError(void) {
@@ -152,11 +114,9 @@ static void s_py_to_aws_error_map_init(void) {
         {PyExc_OverflowError, AWS_ERROR_OVERFLOW_DETECTED},
         {PyExc_TypeError, AWS_ERROR_INVALID_ARGUMENT},
         {PyExc_ValueError, AWS_ERROR_INVALID_ARGUMENT},
-#if PY_MAJOR_VERSION == 3
         {PyExc_FileNotFoundError, AWS_ERROR_FILE_INVALID_PATH},
         {PyExc_BlockingIOError, AWS_IO_READ_WOULD_BLOCK},
         {PyExc_BrokenPipeError, AWS_IO_BROKEN_PIPE},
-#endif
     };
 
     if (aws_hash_table_init(
@@ -208,17 +168,7 @@ PyObject *aws_py_memory_view_from_byte_buffer(struct aws_byte_buf *buf) {
     Py_ssize_t mem_size = available;
     char *mem_start = (char *)(buf->buffer + buf->len);
 
-#if PY_MAJOR_VERSION == 3
     return PyMemoryView_FromMemory(mem_start, mem_size, PyBUF_WRITE);
-#else
-    Py_buffer py_buf;
-    int read_only = 0;
-    if (PyBuffer_FillInfo(&py_buf, NULL /*obj*/, mem_start, mem_size, read_only, PyBUF_WRITABLE)) {
-        return NULL;
-    }
-
-    return PyMemoryView_FromBuffer(&py_buf);
-#endif /* PY_MAJOR_VERSION */
 }
 
 /*******************************************************************************
@@ -286,7 +236,6 @@ PyDoc_STRVAR(s_module_doc, "C extension for binding AWS implementations of MQTT,
  * Module Init
  ******************************************************************************/
 
-#if PY_MAJOR_VERSION == 3
 static void s_module_free(void *userdata) {
     (void)userdata;
 
@@ -299,11 +248,8 @@ static void s_module_free(void *userdata) {
     aws_http_library_clean_up();
 }
 
-#endif /* PY_MAJOR_VERSION == 3 */
+PyMODINIT_FUNC PyInit__awscrt(void) {
 
-PyMODINIT_FUNC INIT_FN(void) {
-
-#if PY_MAJOR_VERSION == 3
     static struct PyModuleDef s_module_def = {
         PyModuleDef_HEAD_INIT,
         s_module_name,
@@ -316,10 +262,6 @@ PyMODINIT_FUNC INIT_FN(void) {
         s_module_free,
     };
     PyObject *m = PyModule_Create(&s_module_def);
-#elif PY_MAJOR_VERSION == 2
-    PyObject *m = Py_InitModule3(s_module_name, s_module_methods, s_module_doc);
-    (void)m;
-#endif /* PY_MAJOR_VERSION */
 
     aws_http_library_init(aws_py_get_allocator());
     aws_mqtt_library_init(aws_py_get_allocator());
@@ -330,7 +272,5 @@ PyMODINIT_FUNC INIT_FN(void) {
 
     s_py_to_aws_error_map_init();
 
-#if PY_MAJOR_VERSION == 3
     return m;
-#endif /* PY_MAJOR_VERSION */
 }

@@ -12,7 +12,7 @@
 # permissions and limitations under the License.
 
 import _awscrt
-from awscrt import NativeResource, isinstance_str
+from awscrt import NativeResource
 from enum import IntEnum
 
 
@@ -54,7 +54,7 @@ class EventLoopGroup(NativeResource):
         """
         num_threads: Number of event-loops to create. Pass 0 to create one for each processor on the machine.
         """
-        super(EventLoopGroup, self).__init__()
+        super().__init__()
         self._binding = _awscrt.event_loop_group_new(num_threads)
 
 
@@ -68,7 +68,7 @@ class DefaultHostResolver(HostResolverBase):
     def __init__(self, event_loop_group, max_hosts=16):
         assert isinstance(event_loop_group, EventLoopGroup)
 
-        super(DefaultHostResolver, self).__init__()
+        super().__init__()
         self._binding = _awscrt.host_resolver_new_default(max_hosts, event_loop_group)
 
 
@@ -79,7 +79,7 @@ class ClientBootstrap(NativeResource):
         assert isinstance(event_loop_group, EventLoopGroup)
         assert isinstance(host_resolver, HostResolverBase) or host_resolver is None
 
-        super(ClientBootstrap, self).__init__()
+        super().__init__()
 
         if host_resolver is None:
             host_resolver = DefaultHostResolver(event_loop_group)
@@ -148,8 +148,8 @@ class TlsContextOptions(object):
 
     def override_default_trust_store_from_path(self, ca_dirpath, ca_filepath):
 
-        assert isinstance_str(ca_dirpath) or ca_dirpath is None
-        assert isinstance_str(ca_filepath) or ca_filepath is None
+        assert isinstance(ca_dirpath, str) or ca_dirpath is None
+        assert isinstance(ca_filepath, str) or ca_filepath is None
 
         if ca_filepath:
             ca_buffer = _read_binary_file(ca_filepath)
@@ -165,8 +165,8 @@ class TlsContextOptions(object):
     @staticmethod
     def create_client_with_mtls_from_path(cert_filepath, pk_filepath):
 
-        assert isinstance_str(cert_filepath)
-        assert isinstance_str(pk_filepath)
+        assert isinstance(cert_filepath, str)
+        assert isinstance(pk_filepath, str)
 
         cert_buffer = _read_binary_file(cert_filepath)
         key_buffer = _read_binary_file(pk_filepath)
@@ -188,8 +188,8 @@ class TlsContextOptions(object):
     @staticmethod
     def create_client_with_mtls_pkcs12(pkcs12_filepath, pkcs12_password):
 
-        assert isinstance_str(pkcs12_filepath)
-        assert isinstance_str(pkcs12_password)
+        assert isinstance(pkcs12_filepath, str)
+        assert isinstance(pkcs12_password, str)
 
         opt = TlsContextOptions()
         opt.pkcs12_filepath = pkcs12_filepath
@@ -200,8 +200,8 @@ class TlsContextOptions(object):
     @staticmethod
     def create_server_from_path(cert_filepath, pk_filepath):
 
-        assert isinstance_str(cert_filepath)
-        assert isinstance_str(pk_filepath)
+        assert isinstance(cert_filepath, str)
+        assert isinstance(pk_filepath, str)
 
         cert_buffer = _read_binary_file(cert_filepath)
         key_buffer = _read_binary_file(pk_filepath)
@@ -222,8 +222,8 @@ class TlsContextOptions(object):
     @staticmethod
     def create_server_pkcs12(pkcs12_filepath, pkcs12_password):
 
-        assert isinstance_str(pkcs12_filepath)
-        assert isinstance_str(pkcs12_password)
+        assert isinstance(pkcs12_filepath, str)
+        assert isinstance(pkcs12_password, str)
 
         opt = TlsContextOptions()
         opt.pkcs12_filepath = pkcs12_filepath
@@ -238,7 +238,7 @@ def _alpn_list_to_str(alpn_list):
     None is returned if list is None or empty
     """
     if alpn_list:
-        assert not isinstance_str(alpn_list)
+        assert not isinstance(alpn_list, str)
         return ';'.join(alpn_list)
     return None
 
@@ -249,7 +249,7 @@ class ClientTlsContext(NativeResource):
     def __init__(self, options):
         assert isinstance(options, TlsContextOptions)
 
-        super(ClientTlsContext, self).__init__()
+        super().__init__()
         self._binding = _awscrt.client_tls_ctx_new(
             options.min_tls_ver.value,
             options.ca_dirpath,
@@ -272,7 +272,7 @@ class TlsConnectionOptions(NativeResource):
     def __init__(self, tls_ctx):
         assert isinstance(tls_ctx, ClientTlsContext)
 
-        super(TlsConnectionOptions, self).__init__()
+        super().__init__()
         self.tls_ctx = tls_ctx
         self._binding = _awscrt.tls_connections_options_new_from_ctx(tls_ctx)
 

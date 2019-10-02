@@ -185,8 +185,7 @@ static int s_on_incoming_body(
     /*************** GIL ACQUIRE ***************/
     PyGILState_STATE state = PyGILState_Ensure();
 
-    PyObject *result = PyObject_CallMethod(
-        stream->self_proxy, "_on_body", "(" READABLE_BYTES_FORMAT_STR ")", (const char *)data->ptr, data_len);
+    PyObject *result = PyObject_CallMethod(stream->self_proxy, "_on_body", "(y#)", (const char *)data->ptr, data_len);
     if (!result) {
         aws_result = aws_py_raise_error();
         goto done;

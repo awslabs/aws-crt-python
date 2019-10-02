@@ -247,15 +247,11 @@ setuptools.setup(
     url="https://github.com/awslabs/aws-crt-python",
     packages=['awscrt'],
     classifiers=[
-        "Programming Language :: Python :: 2",
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: OS Independent",
     ],
-    install_requires=[
-        'enum34;python_version<"3.4"',
-        'futures;python_version<"3.2"',
-    ],
+    python_requires='>=3.5',
     ext_modules=[awscrt_ext()],
     cmdclass={'build_ext': awscrt_build_ext},
     test_suite='test',
