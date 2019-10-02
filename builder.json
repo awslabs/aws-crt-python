@@ -5,6 +5,7 @@
             "architectures": {
                 "x86": {
                     "enabled": false,
+                    "_comment": "disabled until we get a docker image with python2.7 installed",
                     "image": "123124136734.dkr.ecr.us-east-1.amazonaws.com/aws-common-runtime/linux-python:x86"
                 },
                 "x64": {
@@ -55,5 +56,10 @@
     ],
     "test": [
         ["{python}", "-m", "unittest", "discover", "--buffer", "--verbose"]
-    ]
+    ],
+    "_TODO": "python2",
+    "_TODO": "python format",
+    "_TODO": "clang-tidy",
+    "_TODO": "elasticurl",
+    "_TODO": "ubuntu x86"
 }

@@ -21,11 +21,6 @@ import setuptools.command.build_ext
 import subprocess
 import sys
 
-# TODO: IS it possible to build debug? what does --debug do?
-# TODO: any other cmdline things I should be passing along?
-# TODO: is the lib name stuff really doing anything?
-# TODO: parallel?
-
 
 def is_64bit():
     return sys.maxsize > 2**32

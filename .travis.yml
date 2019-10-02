@@ -8,6 +8,7 @@ osx_image:
   - xcode10.1
 compiler: clang
 
+# use the addon to do the update of homebrew, or else ruby versions get confused
 addons:
   homebrew:
     update: true
