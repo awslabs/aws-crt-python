@@ -88,7 +88,10 @@ static int s_on_incoming_headers(
     return aws_result;
 }
 
-static int s_on_incoming_header_block_done(struct aws_http_stream *native_stream, enum aws_http_header_block header_block, void *user_data) {
+static int s_on_incoming_header_block_done(
+    struct aws_http_stream *native_stream,
+    enum aws_http_header_block header_block,
+    void *user_data) {
     struct http_stream_binding *stream = user_data;
 
     int response_code = 0;
