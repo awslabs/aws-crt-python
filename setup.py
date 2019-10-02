@@ -21,6 +21,8 @@ import setuptools.command.build_ext
 import subprocess
 import sys
 
+import sysconfig
+
 # TODO: IS it possible to build debug? what does --debug do?
 # TODO: any other cmdline things I should be passing along?
 # TODO: is the lib name stuff really doing anything?
