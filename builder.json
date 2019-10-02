@@ -1,0 +1,63 @@
+{
+    "name": "aws-crt-python",
+    "hosts": {
+        "linux": {
+            "architectures": {
+                "x64": {
+                    "apt_packages": ["build-essential"],
+                    "_comment": "on ubuntu 16, python was using /bin/ld to link, which wasn't fully installed"
+                }
+            },
+            "variables": {
+                "openssl_include": "=/opt/openssl/include",
+                "openssl_lib": "=/opt/openssl/lib"
+            }
+        },
+        "al2012": {
+            "enabled": false,
+            "_comment": "al2012 can't currently pull builder.py from github. SSL: CERTIFICATE_VERIFY_FAILED",
+            "variables": {
+                "openssl_include": "=/opt/openssl/include",
+                "openssl_lib": "=/opt/openssl/lib"
+            }
+        },
+        "manylinux": {
+            "variables": {
+                "openssl_include": "=/opt/openssl/include",
+                "openssl_lib": "=/opt/openssl/lib"
+            }
+        }
+    },
+    "targets": {
+        "android": {
+            "enabled": false,
+            "_comment": "disabled until we have a reason to support python on android"
+        }
+    },
+    "compilers": {
+        "clang": {
+            "!post_build_steps": [],
+            "_comment": "don't run clang-tidy until we find a way to generate compile_commands.json"
+        },
+        "gcc": {
+            "versions": {
+                "4.8": {
+                    "enabled": false,
+                    "_comment": "on ubuntu 16, python was passing unrecognized flag '-Wdate-time' to gcc 4 (flag doesn't exist until gcc 5). This flag is coming from 'PY_CORE_CFLAGS' defined in /usr/lib/python3.5/plat-x86_64-linux-gnu/_sysconfigdata_m.py"
+                }
+            }
+        }
+    },
+    "upstream": [],
+    "downstream": [],
+    "build": [
+        ["git", "submodule", "update", "--init", "--recursive"],
+        ["{python}", "setup.py", "--verbose", "build_ext", "--include-dirs{openssl_include}", "--library-dirs{openssl_lib}", "install"]
+    ],
+    "test": [
+        ["{python}", "-m", "unittest", "discover", "--buffer", "--verbose"]
+    ],
+    "_TODO": "python format",
+    "_TODO": "clang-tidy",
+    "_TODO": "elasticurl"
+}
