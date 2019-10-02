@@ -3,11 +3,6 @@
     "hosts": {
         "linux": {
             "architectures": {
-                "x86": {
-                    "enabled": false,
-                    "_comment": "disabled until we get a docker image with python2.7 installed",
-                    "image": "123124136734.dkr.ecr.us-east-1.amazonaws.com/aws-common-runtime/linux-python:x86"
-                },
                 "x64": {
                     "apt_packages": ["build-essential"],
                     "_comment": "on ubuntu 16, python was using /bin/ld to link, which wasn't fully installed"
@@ -33,7 +28,8 @@
     },
     "targets": {
         "android": {
-            "enabled": false
+            "enabled": false,
+            "_comment": "disabled until we have some reason to support python on android"
         }
     },
     "compilers": {
@@ -42,9 +38,11 @@
             "_comment": "don't run clang-tidy until we find a way to generate compile_commands.json"
         },
         "gcc": {
-            "4.8": {
-                "enabled": false,
-                "_comment": "on ubuntu 16, python was passing unrecognized flag '-Wdate-time' to gcc 4 (flag doesn't exist until gcc 5). This flag is coming from 'PY_CORE_CFLAGS' defined in /usr/lib/python3.5/plat-x86_64-linux-gnu/_sysconfigdata_m.py"
+            "versions": {
+                "4.8": {
+                    "enabled": false,
+                    "_comment": "on ubuntu 16, python was passing unrecognized flag '-Wdate-time' to gcc 4 (flag doesn't exist until gcc 5). This flag is coming from 'PY_CORE_CFLAGS' defined in /usr/lib/python3.5/plat-x86_64-linux-gnu/_sysconfigdata_m.py"
+                }
             }
         }
     },
@@ -57,9 +55,7 @@
     "test": [
         ["{python}", "-m", "unittest", "discover", "--buffer", "--verbose"]
     ],
-    "_TODO": "python2",
     "_TODO": "python format",
     "_TODO": "clang-tidy",
-    "_TODO": "elasticurl",
-    "_TODO": "ubuntu x86"
+    "_TODO": "elasticurl"
 }
