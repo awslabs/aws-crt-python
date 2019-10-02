@@ -9,7 +9,7 @@
                 },
                 "x64": {
                     "apt_packages": ["build-essential"],
-                    "_comment": "on ubuntu python was using /bin/ld to link, which wasn't fully installed"
+                    "_comment": "on ubuntu 16, python was using /bin/ld to link, which wasn't fully installed"
                 }
             },
             "variables": {
@@ -38,7 +38,13 @@
     "compilers": {
         "clang": {
             "!post_build_steps": [],
-            "_comment": "don't run clang-tidy, we don't have a compile_commands.json"
+            "_comment": "don't run clang-tidy until we find a way to generate compile_commands.json"
+        },
+        "gcc": {
+            "4.8": {
+                "enabled": false,
+                "_comment": "on ubuntu 16, python was passing unrecognized flag '-Wdate-time' to gcc 4 (flag doesn't exist until gcc 5). This flag is coming from 'PY_CORE_CFLAGS' defined in /usr/lib/python3.5/plat-x86_64-linux-gnu/_sysconfigdata_m.py"
+            }
         }
     },
     "upstream": [],
