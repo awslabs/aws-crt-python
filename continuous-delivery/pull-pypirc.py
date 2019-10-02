@@ -15,7 +15,6 @@ import boto3
 import base64
 import os
 import argparse
-from botocore.exceptions import ClientError
 
 
 def get_secret(stage):
@@ -49,4 +48,4 @@ parser = argparse.ArgumentParser()
 parser.add_argument('stage', help='Stage to deploy the pypi package to (e.g. alpha, prod, etc...)', type=str)
 args = parser.parse_args()
 get_secret(args.stage)
-    
+

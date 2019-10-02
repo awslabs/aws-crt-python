@@ -15,7 +15,6 @@ from __future__ import absolute_import
 import _awscrt
 from concurrent.futures import Future
 from collections import defaultdict
-from enum import Enum
 from io import IOBase
 from awscrt import NativeResource, isinstance_str
 from awscrt.io import ClientBootstrap, EventLoopGroup, DefaultHostResolver, TlsConnectionOptions, SocketOptions
