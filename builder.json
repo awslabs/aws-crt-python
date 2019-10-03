@@ -62,10 +62,8 @@
     ],
     "test": [
         ["{python}", "-m", "unittest", "discover", "--buffer", "--verbose"],
+        ["{python}", "aws-c-http/integration-testing/http_client_test.py", "{python}", "elasticurl.py"],
         ["{python}", "-m", "pip", "install", "autopep8"],
         ["{python}", "-m", "autopep8", "--exit-code", "--diff", "--recursive", "awscrt", "test", "setup.py"]
-    ],
-    "_TODO": "python format",
-    "_TODO": "clang-tidy",
-    "_TODO": "elasticurl"
+    ]
 }
