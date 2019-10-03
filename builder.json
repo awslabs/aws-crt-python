@@ -37,7 +37,13 @@
     "compilers": {
         "clang": {
             "!post_build_steps": [],
-            "_comment": "don't run clang-tidy until we find a way to generate compile_commands.json"
+            "_comment": "don't run clang-tidy until we find a way to generate compile_commands.json.",
+            "versions": {
+                "6": {
+                    "_comment": "nuking post_build_steps also nuked the format check. It's better as a pre-build step anyway.",
+                    "pre_build_steps": ["./format_check.sh"]
+                }
+            }
         },
         "gcc": {
             "versions": {
@@ -55,7 +61,9 @@
         ["{python}", "setup.py", "--verbose", "build_ext", "--include-dirs{openssl_include}", "--library-dirs{openssl_lib}", "install"]
     ],
     "test": [
-        ["{python}", "-m", "unittest", "discover", "--buffer", "--verbose"]
+        ["{python}", "-m", "unittest", "discover", "--buffer", "--verbose"],
+        ["{python}", "-m", "pip", "install", "autopep8"],
+        ["{python}", "-m", "autopep8", "--exit-code", "--diff", "--recursive", "awscrt", "test", "setup.py"]
     ],
     "_TODO": "python format",
     "_TODO": "clang-tidy",
