@@ -41,7 +41,7 @@
             "versions": {
                 "6": {
                     "_comment": "nuking post_build_steps also nuked the format check. It's better as a pre-build step anyway.",
-                    "pre_build_steps": ["./format_check.sh"]
+                    "pre_build_steps": ["./format-check.sh"]
                 }
             }
         },
