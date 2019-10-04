@@ -128,7 +128,7 @@ static void s_elg_capsule_destructor(PyObject *elg_capsule) {
 
     /* Must use async cleanup.
      * We could deadlock if we ran the synchronous cleanup from an event-loop thread. */
-    aws_event_loop_group_cleanup_async(elg, s_elg_native_cleanup_complete, elg);
+    aws_event_loop_group_clean_up_async(elg, s_elg_native_cleanup_complete, elg);
 }
 
 PyObject *aws_py_event_loop_group_new(PyObject *self, PyObject *args) {
