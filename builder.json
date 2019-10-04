@@ -61,7 +61,7 @@
         ["{python}", "setup.py", "--verbose", "build_ext", "--include-dirs{openssl_include}", "--library-dirs{openssl_lib}", "install"]
     ],
     "test": [
-        ["{python}", "-m", "unittest", "discover", "--buffer", "--verbose"],
+        ["{python}", "-m", "unittest", "discover", "--verbose"],
         ["{python}", "aws-c-http/integration-testing/http_client_test.py", "{python}", "elasticurl.py"],
         ["{python}", "-m", "pip", "install", "autopep8"],
         ["{python}", "-m", "autopep8", "--exit-code", "--diff", "--recursive", "awscrt", "test", "setup.py"]

@@ -19,10 +19,13 @@ import ssl
 from test import NativeResourceTest
 import threading
 
-# Python's simple HTTP server lives in different places in Python 2/3.
+# Use a built-in Python HTTP server to test the awscrt's HTTP client
 try:
     from http.server import HTTPServer, SimpleHTTPRequestHandler
 except ImportError:
+    # Simple HTTP server lives in a different places in Python3 vs Python2:
+    # http.server.HTTPServer               == SocketServer.TCPServer
+    # http.server.SimpleHTTPRequestHandler == SimpleHTTPServer.SimpleHTTPRequestHandler
     from SimpleHTTPServer import SimpleHTTPRequestHandler
     import SocketServer
     HTTPServer = SocketServer.TCPServer
