@@ -121,12 +121,12 @@ class HttpClientConnection(HttpConnectionBase):
 
 
 class HttpStreamBase(NativeResource):
-    __slots__ = ('_connection', '_complete_future', '_on_body_cb')
+    __slots__ = ('_connection', '_completion_future', '_on_body_cb')
 
     def __init__(self, connection, on_body=None):
         super(HttpStreamBase, self).__init__()
         self._connection = connection
-        self._complete_future = Future()
+        self._completion_future = Future()
         self._on_body_cb = on_body
 
     @property
@@ -134,8 +134,8 @@ class HttpStreamBase(NativeResource):
         return self._connection
 
     @property
-    def complete_future(self):
-        return self._complete_future
+    def completion_future(self):
+        return self._completion_future
 
     def _on_body(self, chunk):
         if self._on_body_cb:
@@ -143,9 +143,9 @@ class HttpStreamBase(NativeResource):
 
     def _on_complete(self, error_code):
         if error_code == 0:
-            self._complete_future.set_result(None)
+            self._completion_future.set_result(None)
         else:
-            self._complete_future.set_exception(Exception(error_code))  # TODO: Actual exceptions for error_codes
+            self._completion_future.set_exception(Exception(error_code))  # TODO: Actual exceptions for error_codes
 
 
 class HttpClientStream(HttpStreamBase):

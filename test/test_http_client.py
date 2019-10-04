@@ -12,7 +12,7 @@
 # permissions and limitations under the License.
 
 from __future__ import absolute_import
-from awscrt.http import HttpClientConnection
+from awscrt.http import HttpClientConnection, HttpClientStream, HttpHeaders, HttpRequest
 from awscrt.io import TlsContextOptions, ClientTlsContext, TlsConnectionOptions
 from concurrent.futures import Future
 import ssl
@@ -26,6 +26,20 @@ except ImportError:
     from SimpleHTTPServer import SimpleHTTPRequestHandler
     import SocketServer
     HTTPServer = SocketServer.TCPServer
+
+# Holds contents of incoming response
+class Response(object):
+    def __init__(self):
+        self.status_code = None
+        self.headers = None
+        self.body = bytearray()
+
+    def on_response(self, stream, status_code, headers):
+        self.status_code = status_code
+        self.headers = HttpHeaders(headers)
+
+    def on_body(self, stream, chunk):
+        self.body.extend(chunk)
 
 
 class TestClient(NativeResourceTest):
@@ -117,6 +131,40 @@ class TestClient(NativeResourceTest):
 
     def test_connection_closes_on_zero_refcount_https(self):
         self._test_connection_closes_on_zero_refcount(secure=True)
+
+    # GET this very file from the server. Super meta.
+    def _test_get(self, secure):
+        self._start_server(secure)
+        connection = self._new_client_connection(secure)
+
+        test_asset_path = 'test/test_http_client.py'
+
+        request = HttpRequest('GET', test_asset_path)
+        response = Response()
+        stream = connection.request(request, response.on_response, response.on_body)
+
+        # wait for stream to complete
+        stream.completion_future.result(self.timeout)
+
+        self.assertEqual(200, response.status_code)
+
+        with open(test_asset_path, 'rb') as test_asset:
+            test_asset_bytes = test_asset.read()
+            self.assertEqual(test_asset_bytes, response.body)
+
+        # connection can't be GC'd until stream is gone
+        del stream
+
+        connection.close().result(self.timeout)
+
+        self._stop_server()
+
+
+    def test_get_http(self):
+        self._test_get(secure=False)
+
+    def test_get_https(self):
+        self._test_get(secure=True)
 
 
 if __name__ == '__main__':
