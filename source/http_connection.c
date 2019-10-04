@@ -218,7 +218,6 @@ PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args) {
         if (!connection->tls_ctx) {
             goto error;
         }
-        Py_INCREF(connection->tls_ctx);
     }
 
     struct aws_socket_options socket_options;
