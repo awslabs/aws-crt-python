@@ -27,8 +27,10 @@ except ImportError:
     import SocketServer
     HTTPServer = SocketServer.TCPServer
 
-# Holds contents of incoming response
+
 class Response(object):
+    """Holds contents of incoming response"""
+
     def __init__(self):
         self.status_code = None
         self.headers = None
@@ -42,18 +44,38 @@ class Response(object):
         self.body.extend(chunk)
 
 
+class TestRequestHandler(SimpleHTTPRequestHandler):
+    """Request handler for test server"""
+
+    # default was HTTP/1.0.
+    # specifying HTTP/1.1 keeps connection alive after handling 1 request
+    protocol_version = "HTTP/1.1"
+
+    def do_PUT(self):
+        content_length = int(self.headers['Content-Length'])
+        # store put request on the server object
+        incoming_body_bytes = self.rfile.read(content_length)
+        self.server.put_requests[self.path] = incoming_body_bytes
+        self.send_response(200, 'OK')
+        self.end_headers()
+
+
 class TestClient(NativeResourceTest):
     hostname = 'localhost'
     timeout = 10  # seconds
 
     def _start_server(self, secure):
-        self.server = HTTPServer((self.hostname, 0), SimpleHTTPRequestHandler)
+        self.server = HTTPServer((self.hostname, 0), TestRequestHandler)
         if secure:
             self.server.socket = ssl.wrap_socket(self.server.socket,
                                                  keyfile="test/resources/unittests.key",
                                                  certfile='test/resources/unittests.crt',
                                                  server_side=True)
         self.port = self.server.server_address[1]
+
+        # put requests are stored in this dict
+        self.server.put_requests = {}
+
         self.server_thread = threading.Thread(target=self.server.serve_forever, name='test_server')
         self.server_thread.start()
 
@@ -132,14 +154,14 @@ class TestClient(NativeResourceTest):
     def test_connection_closes_on_zero_refcount_https(self):
         self._test_connection_closes_on_zero_refcount(secure=True)
 
-    # GET this very file from the server. Super meta.
+    # GET request receives this very file from the server. Super meta.
     def _test_get(self, secure):
         self._start_server(secure)
         connection = self._new_client_connection(secure)
 
         test_asset_path = 'test/test_http_client.py'
 
-        request = HttpRequest('GET', test_asset_path)
+        request = HttpRequest('GET', '/' + test_asset_path)
         response = Response()
         stream = connection.request(request, response.on_response, response.on_body)
 
@@ -152,19 +174,52 @@ class TestClient(NativeResourceTest):
             test_asset_bytes = test_asset.read()
             self.assertEqual(test_asset_bytes, response.body)
 
-        # connection can't be GC'd until stream is gone
-        del stream
-
-        connection.close().result(self.timeout)
+        self.assertEqual(0, connection.close().result(self.timeout))
 
         self._stop_server()
-
 
     def test_get_http(self):
         self._test_get(secure=False)
 
     def test_get_https(self):
         self._test_get(secure=True)
+
+    # PUT request sends this very file to the server.
+    def _test_put(self, secure):
+        self._start_server(secure)
+        connection = self._new_client_connection(secure)
+        test_asset_path = 'test/test_http_client.py'
+        with open(test_asset_path, 'rb') as outgoing_body_stream:
+            outgoing_body_bytes = outgoing_body_stream.read()
+            headers = HttpHeaders([
+                ('Content-Length', str(len(outgoing_body_bytes))),
+            ])
+
+            # seek back to start of stream before trying to send it
+            outgoing_body_stream.seek(0)
+
+            request = HttpRequest('PUT', '/' + test_asset_path, headers, outgoing_body_stream)
+            response = Response()
+            http_stream = connection.request(request, response.on_response, response.on_body)
+
+            # wait for stream to complete
+            http_stream.completion_future.result(self.timeout)
+
+            self.assertEqual(200, response.status_code)
+
+            # compare what we sent against what the server received
+            server_received = self.server.put_requests.get('/' + test_asset_path)
+            self.assertIsNotNone(server_received)
+            self.assertEqual(server_received, outgoing_body_bytes)
+
+        self.assertEqual(0, connection.close().result(self.timeout))
+        self._stop_server()
+
+    def test_put_http(self):
+        self._test_put(secure=False)
+
+    def test_put_https(self):
+        self._test_put(secure=True)
 
 
 if __name__ == '__main__':
