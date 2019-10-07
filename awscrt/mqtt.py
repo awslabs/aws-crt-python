@@ -24,6 +24,12 @@ class QoS(IntEnum):
     AT_LEAST_ONCE = 1
     EXACTLY_ONCE = 2
 
+def _try_qos(qos_value):
+    """Return None if the value cannot be converted to Qos (ex: 0x80 subscribe failure)"""
+    try:
+        return QoS(qos_value)
+    except:
+        return None
 
 class ConnectReturnCode(IntEnum):
     ACCEPTED = 0
@@ -57,7 +63,7 @@ class Client(NativeResource):
 
 
 class Connection(NativeResource):
-    __slots__ = ('client')
+    __slots__ = ('client', '_on_connection_interrupted_cb', '_on_connection_resumed_cb')
 
     def __init__(self,
                  client,
@@ -66,8 +72,8 @@ class Connection(NativeResource):
                  reconnect_min_timeout_sec=5.0,
                  reconnect_max_timeout_sec=60.0):
         """
-        on_connection_interrupted: optional callback, with signature (error_code)
-        on_connection_resumed: optional callback, with signature (error_code, session_present)
+        on_connection_interrupted: optional callback, with signature (connection, error_code)
+        on_connection_resumed: optional callback, with signature (connection, error_code, session_present)
         """
 
         assert isinstance(client, Client)
@@ -76,12 +82,22 @@ class Connection(NativeResource):
 
         super(Connection, self).__init__()
         self.client = client
+        self._on_connection_interrupted_cb = on_connection_interrupted
+        self._on_connection_resumed_cb = on_connection_resumed
 
         self._binding = _awscrt.mqtt_client_connection_new(
             client,
-            on_connection_interrupted,
-            on_connection_resumed,
+            self._on_connection_interrupted,
+            self._on_connection_resumed,
         )
+
+    def _on_connection_interrupted(self, error_code):
+        if self._on_connection_interrupted_cb:
+            self._on_connection_interrupted_cb(self, error_code)
+
+    def _on_connection_resumed(self, error_code, session_present):
+        if self._on_connection_resumed_cb:
+            self._on_connection_resumed_cb(self, error_code, session_present)
 
     def connect(self,
                 client_id,
@@ -162,12 +178,15 @@ class Connection(NativeResource):
         future = Future()
         packet_id = 0
 
-        def suback(packet_id, topic, qos):
-            future.set_result(dict(
-                packet_id=packet_id,
-                topic=topic,
-                qos=QoS(qos),
-            ))
+        def suback(packet_id, topic, qos, error_code):
+            if error_code:
+                future.set_exception(Exception(error_code))  # TODO: Actual exceptions for error_codes
+            else:
+                future.set_result(dict(
+                    packet_id=packet_id,
+                    topic=topic,
+                    qos=_try_qos(qos),
+                ))
 
         try:
             assert callable(callback)
@@ -189,6 +208,40 @@ class Connection(NativeResource):
 
         try:
             packet_id = _awscrt.mqtt_client_connection_unsubscribe(self._binding, topic, unsuback)
+
+        except Exception as e:
+            future.set_exception(e)
+
+        return future, packet_id
+
+    def resubscribe_existing_topics(self):
+        """
+        Subscribe again to all current topics.
+        This is to help when resuming a connection with a clean session.
+
+        Returns (future, packet_id).
+        When the resubscribe is complete, the future will contain a dict. The dict will contain:
+        ['packet_id']: the packet ID of the server's response, or None if there were no topics to resubscribe to.
+        ['topics']: A list of (topic, qos) tuples, where qos will be None if the topic failed to resubscribe.
+        If there were no topics to resubscribe to then the list will be empty.
+        """
+        packet_id = 0
+        future = Future()
+
+        def on_suback(packet_id, topic_qos_tuples, error_code):
+            if error_code:
+                future.set_exception(Exception(error_code))  # TODO: Actual exceptions for error_codes
+            else:
+                future.set_result(dict(
+                    packet_id=packet_id,
+                    topics=[(topic, _try_qos(qos)) for (topic, qos) in topic_qos_tuples],
+                ))
+
+        try:
+            packet_id = _awscrt.mqtt_client_connection_resubscribe_existing_topics(self._binding, on_suback)
+            if packet_id is None:
+                # There were no topics to resubscribe to.
+                future.set_result(dict(packet_id=None, topics=[]))
 
         except Exception as e:
             future.set_exception(e)

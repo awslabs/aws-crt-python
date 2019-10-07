@@ -34,11 +34,28 @@ parser.add_argument('--root-ca', help="File path to root certificate authority, 
 
 io.init_logging(LogLevel.Trace, 'stderr')
 
-def on_connection_interrupted(error_code):
+def on_connection_interrupted(connection, error_code):
     print("Connection has been interrupted with error code", error_code)
 
-def on_connection_resumed(return_code, session_present):
+def on_connection_resumed(connection, return_code, session_present):
     print("Connection has been resumed with return code", return_code, "and session present:", session_present)
+
+    if not session_present:
+        print("Resubscribing to existing topics")
+        resubscribe_future, packet_id = connection.resubscribe_existing_topics()
+
+        def on_resubscribe_complete(resubscribe_future):
+            try:
+                resubscribe_results = resubscribe_future.result()
+                print("Resubscribe results:", resubscribe_results)
+                assert(resubscribe_results['packet_id'] == packet_id)
+                for (topic, qos) in resubscribe_results['topics']:
+                    assert(qos is not None)
+            except Exception as e:
+                print("Resubscribe failure:", e)
+                exit(-1)
+
+        resubscribe_future.add_done_callback(on_resubscribe_complete)
 
 receive_results = {}
 receive_event = threading.Event()
