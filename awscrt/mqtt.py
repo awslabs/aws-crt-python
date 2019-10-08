@@ -132,6 +132,7 @@ class Connection(NativeResource):
                 will,
                 username,
                 password,
+                clean_session,
                 on_connect,
             )
 
