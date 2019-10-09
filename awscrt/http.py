@@ -175,7 +175,6 @@ class HttpClientStream(HttpStreamBase):
             self._completion_future.set_exception(Exception(error_code))  # TODO: Actual exceptions for error_codes
 
 
-
 class HttpMessageBase(NativeResource):
     """
     Base for HttpRequest and HttpResponse classes.
