@@ -192,7 +192,7 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
         self.library_dirs.append(os.path.join(DEP_INSTALL_PATH, lib_dir))
 
         # continue with normal build_ext.run()
-        super().run()
+        setuptools.command.build_ext.build_ext.run(self)  # python2 breaks if we use super().run()
 
 
 def awscrt_ext():
