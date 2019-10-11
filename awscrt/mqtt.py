@@ -24,12 +24,14 @@ class QoS(IntEnum):
     AT_LEAST_ONCE = 1
     EXACTLY_ONCE = 2
 
+
 def _try_qos(qos_value):
     """Return None if the value cannot be converted to Qos (ex: 0x80 subscribe failure)"""
     try:
         return QoS(qos_value)
-    except:
+    except BaseException:
         return None
+
 
 class ConnectReturnCode(IntEnum):
     ACCEPTED = 0
