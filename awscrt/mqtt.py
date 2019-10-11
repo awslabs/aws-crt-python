@@ -29,7 +29,7 @@ def _try_qos(qos_value):
     """Return None if the value cannot be converted to Qos (ex: 0x80 subscribe failure)"""
     try:
         return QoS(qos_value)
-    except BaseException:
+    except Exception:
         return None
 
 
@@ -185,11 +185,15 @@ class Connection(NativeResource):
             if error_code:
                 future.set_exception(Exception(error_code))  # TODO: Actual exceptions for error_codes
             else:
-                future.set_result(dict(
-                    packet_id=packet_id,
-                    topic=topic,
-                    qos=_try_qos(qos),
-                ))
+                qos = _try_qos(qos)
+                if qos is None:
+                    future.set_exception(SubscribeError(topic))
+                else:
+                    future.set_result(dict(
+                        packet_id=packet_id,
+                        topic=topic,
+                        qos=qos,
+                    ))
 
         try:
             assert callable(callback)
@@ -266,3 +270,10 @@ class Connection(NativeResource):
             future.set_exception(e)
 
         return future, packet_id
+
+
+class SubscribeError(Exception):
+    """
+    Subscription rejected by server.
+    """
+    pass
