@@ -141,12 +141,6 @@ class HttpStreamBase(NativeResource):
         if self._on_body_cb:
             self._on_body_cb(self, chunk)
 
-    def _on_complete(self, error_code):
-        if error_code == 0:
-            self._completion_future.set_result(None)
-        else:
-            self._completion_future.set_exception(Exception(error_code))  # TODO: Actual exceptions for error_codes
-
 
 class HttpClientStream(HttpStreamBase):
     __slots__ = ('_response_status_code', '_on_response_cb', '_on_body_cb')
@@ -173,6 +167,12 @@ class HttpClientStream(HttpStreamBase):
 
         if self._on_response_cb:
             self._on_response_cb(self, status_code, name_value_pairs)
+
+    def _on_complete(self, error_code):
+        if error_code == 0:
+            self._completion_future.set_result(self._response_status_code)
+        else:
+            self._completion_future.set_exception(Exception(error_code))  # TODO: Actual exceptions for error_codes
 
 
 class HttpMessageBase(NativeResource):

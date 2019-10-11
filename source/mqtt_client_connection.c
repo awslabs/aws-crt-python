@@ -99,7 +99,7 @@ static void s_on_connection_interrupted(struct aws_mqtt_client_connection *conne
 
     PyGILState_STATE state = PyGILState_Ensure();
 
-    PyObject *result = PyObject_CallFunction(py_connection->on_connection_interrupted, "(I)", error_code);
+    PyObject *result = PyObject_CallFunction(py_connection->on_connection_interrupted, "(i)", error_code);
     if (result) {
         Py_DECREF(result);
     } else {
@@ -122,7 +122,7 @@ static void s_on_connection_resumed(
     PyGILState_STATE state = PyGILState_Ensure();
 
     PyObject *result = PyObject_CallFunction(
-        py_connection->on_connection_resumed, "(IN)", return_code, PyBool_FromLong(session_present));
+        py_connection->on_connection_resumed, "(iN)", return_code, PyBool_FromLong(session_present));
     if (result) {
         Py_DECREF(result);
     } else {
@@ -239,7 +239,7 @@ static void s_on_connect(
         py_connection->on_connect = NULL;
 
         PyObject *result =
-            PyObject_CallFunction(callback, "(IIN)", error_code, return_code, PyBool_FromLong(session_present));
+            PyObject_CallFunction(callback, "(iiN)", error_code, return_code, PyBool_FromLong(session_present));
         if (result) {
             Py_DECREF(result);
         } else {
@@ -324,10 +324,11 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
     Py_ssize_t username_len;
     const char *password;
     Py_ssize_t password_len;
+    int is_clean_session;
     PyObject *on_connect;
     if (!PyArg_ParseTuple(
             args,
-            "Os#s#HOHIOz#z#O",
+            "Os#s#HOHIOz#z#pO",
             &impl_capsule,
             &client_id,
             &client_id_len,
@@ -342,6 +343,7 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
             &username_len,
             &password,
             &password_len,
+            &is_clean_session,
             &on_connect)) {
         return NULL;
     }
@@ -414,16 +416,18 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
     }
 
     struct aws_byte_cursor client_id_cur = aws_byte_cursor_from_array(client_id, client_id_len);
-    struct aws_mqtt_connection_options options = {.host_name = server_name_cur,
-                                                  .port = port_number,
-                                                  .socket_options = &socket_options,
-                                                  .tls_options = tls_ctx ? &tls_options : NULL,
-                                                  .client_id = client_id_cur,
-                                                  .keep_alive_time_secs = keep_alive_time,
-                                                  .ping_timeout_ms = ping_timeout,
-                                                  .on_connection_complete = s_on_connect,
-                                                  .user_data = py_connection,
-                                                  .clean_session = true};
+    struct aws_mqtt_connection_options options = {
+        .host_name = server_name_cur,
+        .port = port_number,
+        .socket_options = &socket_options,
+        .tls_options = tls_ctx ? &tls_options : NULL,
+        .client_id = client_id_cur,
+        .keep_alive_time_secs = keep_alive_time,
+        .ping_timeout_ms = ping_timeout,
+        .on_connection_complete = s_on_connect,
+        .user_data = py_connection,
+        .clean_session = is_clean_session,
+    };
     if (aws_mqtt_client_connection_connect(py_connection->native, &options)) {
         PyErr_SetAwsLastError();
         goto error;
@@ -636,14 +640,13 @@ static void s_suback_callback(
     void *userdata) {
 
     (void)connection;
-    (void)error_code;
 
     PyObject *callback = userdata;
     PyGILState_STATE state = PyGILState_Ensure();
 
     const char *topic_str = (const char *)topic->ptr;
     Py_ssize_t topic_len = topic->len;
-    PyObject *result = PyObject_CallFunction(callback, "(Hs#b)", packet_id, topic_str, topic_len, qos);
+    PyObject *result = PyObject_CallFunction(callback, "(Hs#Bi)", packet_id, topic_str, topic_len, qos, error_code);
     if (result) {
         Py_DECREF(result);
     } else {
@@ -749,6 +752,108 @@ PyObject *aws_py_mqtt_client_connection_unsubscribe(PyObject *self, PyObject *ar
     if (msg_id == 0) {
         Py_DECREF(unsuback_callback);
         return PyErr_AwsLastError();
+    }
+
+    return PyLong_FromUnsignedLong(msg_id);
+}
+
+/*******************************************************************************
+ * Resubscribe
+ ******************************************************************************/
+
+static void s_suback_multi_callback(
+    struct aws_mqtt_client_connection *connection,
+    uint16_t packet_id,
+    const struct aws_array_list *topic_subacks, /* contains aws_mqtt_topic_subscription pointers */
+    int error_code,
+    void *userdata) {
+
+    (void)connection;
+
+    /* These must be DECREF'd when function ends */
+    PyObject *callback = userdata;
+    PyObject *callback_result = NULL;
+    PyObject *topic_qos_list = NULL;
+
+    PyGILState_STATE state = PyGILState_Ensure();
+
+    if (error_code) {
+        goto done_prepping_args;
+    }
+
+    const size_t num_topics = aws_array_list_length(topic_subacks);
+
+    /* Create list of (topic,qos) tuples */
+    topic_qos_list = PyList_New(num_topics);
+    if (!topic_qos_list) {
+        error_code = aws_py_raise_error();
+        goto done_prepping_args;
+    }
+
+    for (size_t i = 0; i < num_topics; ++i) {
+        struct aws_mqtt_topic_subscription sub_i;
+        aws_array_list_get_at(topic_subacks, &sub_i, i);
+
+        PyObject *tuple = Py_BuildValue("(s#i)", sub_i.topic.ptr, sub_i.topic.len, sub_i.qos);
+        if (!tuple) {
+            error_code = aws_py_raise_error();
+            goto done_prepping_args;
+        }
+
+        PyList_SET_ITEM(topic_qos_list, i, tuple); /* Steals reference to tuple */
+    }
+
+done_prepping_args:;
+
+    /* Don't pass the list if there was an error, since the list might be only partially constructed */
+    callback_result =
+        PyObject_CallFunction(callback, "(HOi)", packet_id, (error_code ? Py_None : topic_qos_list), error_code);
+    if (!callback_result) {
+        PyErr_WriteUnraisable(PyErr_Occurred());
+    }
+
+    Py_DECREF(callback);
+    Py_XDECREF(callback_result);
+    Py_XDECREF(topic_qos_list);
+    PyGILState_Release(state);
+}
+
+PyObject *aws_py_mqtt_client_connection_resubscribe_existing_topics(PyObject *self, PyObject *args) {
+    (void)self;
+
+    PyObject *impl_capsule;
+    PyObject *suback_callback;
+    if (!PyArg_ParseTuple(args, "OO", &impl_capsule, &suback_callback)) {
+        return NULL;
+    }
+
+    struct mqtt_connection_binding *py_connection =
+        PyCapsule_GetPointer(impl_capsule, s_capsule_name_mqtt_client_connection);
+    if (!py_connection) {
+        return NULL;
+    }
+
+    if (!PyCallable_Check(suback_callback)) {
+        PyErr_SetString(PyExc_TypeError, "suback_callback is not callable");
+        return NULL;
+    }
+
+    Py_INCREF(suback_callback);
+    uint16_t msg_id =
+        aws_mqtt_resubscribe_existing_topics(py_connection->native, s_suback_multi_callback, suback_callback);
+    if (msg_id == 0) {
+        /* C will not be invoking the python callback */
+        Py_DECREF(suback_callback);
+
+        /* Don't raise a Python exception if error is AWS_ERROR_MQTT_NO_TOPICS_FOR_RESUBSCRIBE.
+         * This is a harmless error, we'll just return None instead of a msg_id */
+        int aws_err = aws_last_error();
+        if (aws_err == AWS_ERROR_MQTT_NO_TOPICS_FOR_RESUBSCRIBE) {
+            Py_RETURN_NONE;
+        } else {
+            PyErr_SetAwsLastError();
+            return NULL;
+        }
     }
 
     return PyLong_FromUnsignedLong(msg_id);

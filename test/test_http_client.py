@@ -169,9 +169,10 @@ class TestClient(NativeResourceTest):
         stream = connection.request(request, response.on_response, response.on_body)
 
         # wait for stream to complete
-        stream.completion_future.result(self.timeout)
+        stream_completion_result = stream.completion_future.result(self.timeout)
 
         self.assertEqual(200, response.status_code)
+        self.assertEqual(200, stream_completion_result)
 
         with open(test_asset_path, 'rb') as test_asset:
             test_asset_bytes = test_asset.read()
@@ -206,9 +207,10 @@ class TestClient(NativeResourceTest):
             http_stream = connection.request(request, response.on_response, response.on_body)
 
             # wait for stream to complete
-            http_stream.completion_future.result(self.timeout)
+            stream_completion_result = http_stream.completion_future.result(self.timeout)
 
             self.assertEqual(200, response.status_code)
+            self.assertEqual(200, stream_completion_result)
 
             # compare what we sent against what the server received
             server_received = self.server.put_requests.get('/' + test_asset_path)

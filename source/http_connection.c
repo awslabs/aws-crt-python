@@ -141,7 +141,7 @@ static void s_on_client_connection_setup(
     }
 
     /* Invoke on_setup, then clear our reference to it */
-    PyObject *result = PyObject_CallFunction(connection->on_setup, "(Ni)", capsule ? capsule : Py_None, error_code);
+    PyObject *result = PyObject_CallFunction(connection->on_setup, "(Oi)", capsule ? capsule : Py_None, error_code);
     if (!result) {
         /* This function must succeed. Can't leave a Future incomplete. */
         PyErr_WriteUnraisable(PyErr_Occurred());
@@ -161,8 +161,7 @@ static void s_on_client_connection_setup(
         s_connection_destroy(connection);
     }
 
-    /* Py_XDECREF(capsule); ??? Not sure why this deletes capsule. It's referenced by HttpConnection._binding !!! */
-
+    Py_XDECREF(capsule);
     Py_XDECREF(result);
     PyGILState_Release(state);
 }
