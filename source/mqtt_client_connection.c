@@ -416,16 +416,18 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
     }
 
     struct aws_byte_cursor client_id_cur = aws_byte_cursor_from_array(client_id, client_id_len);
-    struct aws_mqtt_connection_options options = {.host_name = server_name_cur,
-                                                  .port = port_number,
-                                                  .socket_options = &socket_options,
-                                                  .tls_options = tls_ctx ? &tls_options : NULL,
-                                                  .client_id = client_id_cur,
-                                                  .keep_alive_time_secs = keep_alive_time,
-                                                  .ping_timeout_ms = ping_timeout,
-                                                  .on_connection_complete = s_on_connect,
-                                                  .user_data = py_connection,
-                                                  .clean_session = is_clean_session};
+    struct aws_mqtt_connection_options options = {
+        .host_name = server_name_cur,
+        .port = port_number,
+        .socket_options = &socket_options,
+        .tls_options = tls_ctx ? &tls_options : NULL,
+        .client_id = client_id_cur,
+        .keep_alive_time_secs = keep_alive_time,
+        .ping_timeout_ms = ping_timeout,
+        .on_connection_complete = s_on_connect,
+        .user_data = py_connection,
+        .clean_session = is_clean_session,
+    };
     if (aws_mqtt_client_connection_connect(py_connection->native, &options)) {
         PyErr_SetAwsLastError();
         goto error;
