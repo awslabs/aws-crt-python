@@ -15,7 +15,7 @@ from __future__ import absolute_import
 from awscrt.http import HttpClientConnection, HttpClientStream, HttpHeaders, HttpRequest
 from awscrt.io import TlsContextOptions, ClientTlsContext, TlsConnectionOptions
 from concurrent.futures import Future
-from io import open # Python2's built-in open() doesn't return a stream
+from io import open  # Python2's built-in open() doesn't return a stream
 import ssl
 from test import NativeResourceTest
 import threading

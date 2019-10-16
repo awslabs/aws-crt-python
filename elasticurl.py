@@ -14,7 +14,7 @@ from __future__ import print_function
 import argparse
 import sys
 import os
-from io import BytesIO, open # Python2's built-in open() doesn't return a stream
+from io import BytesIO, open  # Python2's built-in open() doesn't return a stream
 from awscrt import io, http
 try:
     from urllib.parse import urlparse
