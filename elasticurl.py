@@ -10,10 +10,11 @@
 # on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
 # express or implied. See the License for the specific language governing
 # permissions and limitations under the License.
+from __future__ import print_function
 import argparse
 import sys
 import os
-from io import BytesIO
+from io import BytesIO, open # Python2's built-in open() doesn't return a stream
 from awscrt import io, http
 try:
     from urllib.parse import urlparse
