@@ -67,7 +67,8 @@ static bool s_http_message_update_from_py(struct http_message_binding *message) 
 
     /* Doing a lot of queries so grab a hard reference */
     message_self = PyWeakref_GetObject(message->self_proxy);
-    if (!message_self) {
+    if (message_self == Py_None) {
+        PyErr_SetString(PyExc_RuntimeError, "HttpMessageBase destroyed");
         goto done;
     }
     Py_INCREF(message_self);
