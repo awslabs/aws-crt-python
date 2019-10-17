@@ -12,10 +12,11 @@
 # permissions and limitations under the License.
 
 import _awscrt
+import warnings
 from concurrent.futures import Future
 from enum import IntEnum
 from awscrt import NativeResource
-from awscrt.io import ClientBootstrap, ClientTlsContext
+from awscrt.io import ClientBootstrap, ClientTlsContext, SocketOptions
 
 
 class QoS(IntEnum):
@@ -109,9 +110,17 @@ class Connection(NativeResource):
                 ping_timeout=0,
                 will=None,
                 username=None, password=None,
-                connect_timeout_sec=5.0):
+                socket_options=SocketOptions(),
+                **kwargs):
 
         future = Future()
+
+        # Handle deprecated parameters
+        if 'connect_timeout_sec' in kwargs:
+            warnings.warn(
+                "connect_timeout_sec parameter is deprecated, please set socket_options instead.",
+                DeprecationWarning)
+            socket_options.connect_timeout_ms = kwargs['connect_timeout_sec'] * 1000
 
         def on_connect(error_code, return_code, session_present):
             if error_code == 0 and return_code == 0:
@@ -121,6 +130,7 @@ class Connection(NativeResource):
 
         try:
             assert will is None or isinstance(will, Will)
+            assert isinstance(socket_options, SocketOptions)
             assert use_websocket == False
 
             _awscrt.mqtt_client_connection_connect(
@@ -128,6 +138,7 @@ class Connection(NativeResource):
                 client_id,
                 host_name,
                 port,
+                socket_options,
                 self.client.tls_ctx,
                 keep_alive,
                 ping_timeout,
