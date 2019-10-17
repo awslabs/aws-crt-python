@@ -3,7 +3,7 @@ import subprocess
 import sys
 import time
 
-DEFAULT_TIMEOUT = 1800
+DEFAULT_TIMEOUT = 60 * 30 # 30 min
 DEFAULT_INTERVAL = 5
 DEFAULT_INDEX_URL = 'https://pypi.python.org/pypi'
 
