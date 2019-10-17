@@ -5,13 +5,13 @@ import time
 
 DEFAULT_TIMEOUT = 1800
 DEFAULT_INTERVAL = 5
-DEFAULT_INDEX_URL = 'https://pypi.org/simple'
+DEFAULT_INDEX_URL = 'https://pypi.python.org/pypi'
 
 
 def wait(package, version, index_url=DEFAULT_INDEX_URL, timeout=DEFAULT_TIMEOUT, interval=DEFAULT_INTERVAL):
     give_up_time = time.time() + timeout
     while True:
-        output = subprocess.check_output([sys.executable, '-m', 'pip', '--index', index_url, 'search', package])
+        output = subprocess.check_output([sys.executable, '-m', 'pip', 'search', '--index', index_url, package])
         output = output.decode()
 
         # output looks like: 'awscrt (0.3.1)  - A common runtime for AWS Python projects\n...'
@@ -28,12 +28,15 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('package', help="Packet name")
     parser.add_argument('version', help="Package version")
-    parser.add_argument('-i', '--index-url', default=DEFAULT_INDEX_URL, help="PyPI URL")
-    parser.add_argument('--timeout', type=float, default=DEFAULT_TIMEOUT, help="Give up after N seconds.")
-    parser.add_argument('--interval', type=float, default=DEFAULT_INTERVAL, help="Query PyPI every N seconds")
+    parser.add_argument('--index', default=DEFAULT_INDEX_URL, metavar='<url>',
+                        help="Base URL of Python Package Index. (default {})".format(DEFAULT_INDEX_URL))
+    parser.add_argument('--timeout', type=float, default=DEFAULT_TIMEOUT, metavar='<sec>',
+                        help="Give up after N seconds.")
+    parser.add_argument('--interval', type=float, default=DEFAULT_INTERVAL, metavar='<sec>',
+                        help="Query PyPI every N seconds")
     args = parser.parse_args()
 
-    if wait(args.package, args.version, args.index_url, args.timeout, args.interval):
+    if wait(args.package, args.version, args.index, args.timeout, args.interval):
         print('{} {} is available in pypi'.format(args.package, args.version))
     else:
         exit("Timed out waiting for pypi to report {} {} as latest".format(args.package, args.version))

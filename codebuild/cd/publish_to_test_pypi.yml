@@ -22,7 +22,7 @@ phases:
       - CURRENT_TAG_VERSION=$(git describe --tags | cut -f2 -dv)
       - python3 continuous-delivery/pull-pypirc.py alpha
       - python3 -m twine upload -r testpypi ../dist/*
-      - python3 continuous-delivery/wait-for-pypi.py awscrt $CURRENT_TAG_VERSION --index-url https://testpypi.python.org/simple
+      - python3 continuous-delivery/wait-for-pypi.py awscrt $CURRENT_TAG_VERSION --index https://test.pypi.org/pypi
   post_build:
     commands:
       - echo Build completed on `date`
