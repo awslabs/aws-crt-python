@@ -16,6 +16,7 @@ from awscrt import NativeResource
 import gc
 import inspect
 import sys
+import time
 import types
 import unittest
 
@@ -30,6 +31,10 @@ class NativeResourceTest(unittest.TestCase):
 
     def tearDown(self):
         gc.collect()
+
+        # Native resources might need a few more ticks to finish cleaning themselves up.
+        if NativeResource._living:
+            time.sleep(1)
 
         # Print out debugging info on leaking resources
         if NativeResource._living:
