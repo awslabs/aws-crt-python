@@ -15,6 +15,7 @@ from __future__ import absolute_import
 from awscrt.http import HttpClientConnection, HttpClientStream, HttpHeaders, HttpRequest
 from awscrt.io import TlsContextOptions, ClientTlsContext, TlsConnectionOptions
 from concurrent.futures import Future
+from io import open  # Python2's built-in open() doesn't return a stream
 import ssl
 from test import NativeResourceTest
 import threading
@@ -225,6 +226,30 @@ class TestClient(NativeResourceTest):
 
     def test_put_https(self):
         self._test_put(secure=True)
+
+    # Ensure that stream and connection classes stay alive until work is complete
+    def _test_stream_lives_until_complete(self, secure):
+        self._start_server(secure)
+        connection = self._new_client_connection(secure)
+
+        request = HttpRequest('GET', '/test/test_http_client.py')
+        stream = connection.request(request)
+        completion_future = stream.completion_future
+
+        # delete all local references
+        del stream
+        del connection
+
+        # stream should still complete successfully
+        completion_future.result(self.timeout)
+
+        self._stop_server()
+
+    def test_stream_lives_until_complete_http(self):
+        self._test_stream_lives_until_complete(secure=False)
+
+    def test_stream_lives_until_complete_https(self):
+        self._test_stream_lives_until_complete(secure=True)
 
 
 if __name__ == '__main__':

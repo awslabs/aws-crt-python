@@ -116,7 +116,7 @@ class SocketOptions(object):
 
         self.domain = SocketDomain.IPv6
         self.type = SocketType.Stream
-        self.connect_timeout_ms = 3000
+        self.connect_timeout_ms = 5000
         self.keep_alive = False
         self.keep_alive_interval_secs = 0
         self.keep_alive_timeout_secs = 0

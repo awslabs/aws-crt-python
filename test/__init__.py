@@ -11,9 +11,12 @@
 # express or implied. See the License for the specific language governing
 # permissions and limitations under the License.
 
+from __future__ import print_function
 from awscrt import NativeResource
 import gc
+import inspect
 import sys
+import time
 import types
 import unittest
 
@@ -28,6 +31,10 @@ class NativeResourceTest(unittest.TestCase):
 
     def tearDown(self):
         gc.collect()
+
+        # Native resources might need a few more ticks to finish cleaning themselves up.
+        if NativeResource._living:
+            time.sleep(1)
 
         # Print out debugging info on leaking resources
         if NativeResource._living:
@@ -44,16 +51,24 @@ class NativeResourceTest(unittest.TestCase):
                 # - the rest are what's causing this leak.
                 refcount = sys.getrefcount(i) - 2
 
-                # The act of iterating a WeakSet creates a reference. Don't show that.
-                referrers = gc.get_referrers(i)
-                for r in referrers:
-                    if isinstance(r, types.FrameType) and '_weakrefset.py' in str(r):
-                        referrers.remove(r)
-                        break
+                # Gather list of referrers, but don't show those created by the act of iterating the WeakSet
+                referrers = []
+                for r in gc.get_referrers(i):
+                    if isinstance(r, types.FrameType):
+                        frameinfo = inspect.getframeinfo(r)
+                        our_fault = (frameinfo.filename.endswith('_weakrefset.py') or
+                                     frameinfo.filename.endswith('test/__init__.py'))
+                        if our_fault:
+                            continue
+
+                    referrers.append(r)
 
                 print('  sys.getrefcount():', refcount)
                 print('  gc.referrers():', len(referrers))
                 for r in referrers:
-                    print('  -', r)
+                    if isinstance(r, types.FrameType):
+                        print('  -', inspect.getframeinfo(r))
+                    else:
+                        print('  -', r)
 
         self.assertEqual(0, len(NativeResource._living))

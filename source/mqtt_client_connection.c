@@ -316,6 +316,7 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
     const char *server_name;
     Py_ssize_t server_name_len;
     uint16_t port_number;
+    PyObject *socket_options_py;
     PyObject *tls_ctx_py;
     uint16_t keep_alive_time;
     uint32_t ping_timeout;
@@ -328,13 +329,14 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
     PyObject *on_connect;
     if (!PyArg_ParseTuple(
             args,
-            "Os#s#HOHIOz#z#pO",
+            "Os#s#HOOHIOz#z#pO",
             &impl_capsule,
             &client_id,
             &client_id_len,
             &server_name,
             &server_name_len,
             &port_number,
+            &socket_options_py,
             &tls_ctx_py,
             &keep_alive_time,
             &ping_timeout,
@@ -359,11 +361,10 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
         return NULL;
     }
 
-    struct aws_socket_options socket_options = {
-        .connect_timeout_ms = 3000,
-        .type = AWS_SOCKET_STREAM,
-        .domain = AWS_SOCKET_IPV4,
-    };
+    struct aws_socket_options socket_options;
+    if (!aws_py_socket_options_init(&socket_options, socket_options_py)) {
+        return NULL;
+    }
 
     struct aws_byte_cursor server_name_cur = aws_byte_cursor_from_array(server_name, server_name_len);
 
