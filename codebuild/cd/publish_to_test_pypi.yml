@@ -17,10 +17,12 @@ phases:
       - cp -r $CODEBUILD_SRC_DIR_aws_crt_python_windows/dist/* dist/
       - cp -r $CODEBUILD_SRC_DIR_aws_crt_python_manylinux1/dist/* dist/
       - cp -r $CODEBUILD_SRC_DIR_aws_crt_python_osx/* dist/
-      - ls -la dist/ 
-      - cd aws-crt-python 
+      - ls -la dist/
+      - cd aws-crt-python
+      - CURRENT_TAG_VERSION=$(git describe --tags | cut -f2 -dv)
       - python3 continuous-delivery/pull-pypirc.py alpha
       - python3 -m twine upload -r testpypi ../dist/*
+      - python3 continuous-delivery/wait-for-pypi.py awscrt $CURRENT_TAG_VERSION --index https://test.pypi.org/pypi
   post_build:
     commands:
       - echo Build completed on `date`

@@ -11,6 +11,7 @@
 # express or implied. See the License for the specific language governing
 # permissions and limitations under the License.
 
+from __future__ import print_function
 import distutils.ccompiler
 import glob
 import os
@@ -219,7 +220,7 @@ def awscrt_ext():
 
 setuptools.setup(
     name="awscrt",
-    version="0.3.0",
+    version="0.3.3",
     author="Amazon Web Services, Inc",
     author_email="aws-sdk-common-runtime@amazon.com",
     description="A common runtime for AWS Python projects",
