@@ -19,6 +19,7 @@ from io import open  # Python2's built-in open() doesn't return a stream
 import ssl
 from test import NativeResourceTest
 import threading
+import unittest
 
 # Use a built-in Python HTTP server to test the awscrt's HTTP client
 try:
