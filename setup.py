@@ -34,70 +34,49 @@ def is_arm():
     return platform.machine().startswith('arm')
 
 
-def determine_cross_compile_string():
+def determine_cross_compile_args():
     host_arch = platform.machine()
     if (host_arch == 'AMD64' or host_arch == 'x86_64') and is_32bit() and sys.platform != 'win32':
-        return '-DCMAKE_C_FLAGS=-m32'
-    return ''
+        return ['-DCMAKE_C_FLAGS=-m32']
+    return []
 
 
-def determine_generator_string():
+def determine_generator_args():
     if sys.platform == 'win32':
-        prog_x86_path = os.getenv('PROGRAMFILES(x86)')
-        if os.path.exists(prog_x86_path + '\\Microsoft Visual Studio\\2019'):
-            vs_version = '16.0'
-            print('found installed version of Visual Studio 2019')
-        elif os.path.exists(prog_x86_path + '\\Microsoft Visual Studio\\2017'):
-            vs_version = '15.0'
-            print('found installed version of Visual Studio 2017')
-        elif os.path.exists(prog_x86_path + '\\Microsoft Visual Studio 14.0'):
-            vs_version = '14.0'
-            print('found installed version of Visual Studio 2015')
-        else:
-            print('Making an attempt at calling vswhere')
-            vswhere_args = [
-                '%ProgramFiles(x86)%\\Microsoft Visual Studio\\Installer\\vswhere.exe',
-                '-legacy',
-                '-latest',
-                '-property',
-                'installationVersion']
-            vswhere_output = None
+        try:
+            # See which compiler python picks
+            compiler = distutils.ccompiler.new_compiler()
+            compiler.initialize()
 
-            try:
-                vswhere_output = subprocess.check_output(vswhere_args, shell=True)
-            except subprocess.CalledProcessError:
-                raise RuntimeError('No version of MSVC compiler could be found!')
+            # Look at compiler path to divine the Visual Studio version
+            if '\\Microsoft Visual Studio\\2019' in compiler.cc:
+                vs_version = 16
+                vs_year = 2019
+            elif '\\Microsoft Visual Studio\\2017' in compiler.cc:
+                vs_version = 15
+                vs_year = 2017
+            elif '\\Microsoft Visual Studio 14.0' in compiler.cc:
+                vs_version = 14
+                vs_year = 2015
+            assert(vs_version and vs_year)
+        except BaseException:
+            raise RuntimeError('No supported version of MSVC compiler could be found!')
 
-            if vswhere_output is not None:
-                for out in vswhere_output.split():
-                    vs_version = out.decode('utf-8')
-            else:
-                raise RuntimeError('No MSVC compiler could be found!')
+        print('Using Visual Studio', vs_version, vs_year)
 
-        vs_major_version = vs_version.split('.')[0]
+        vs_version_gen_str = "Visual Studio {} {}".format(vs_version, vs_year)
 
-        cmake_list_gen_args = ['cmake', '--help']
-        cmake_help_output = subprocess.check_output(cmake_list_gen_args)
+        if vs_year <= 2017:
+            # For VS2017 and earlier, architecture goes at end of generator string
+            if is_64bit():
+                vs_version_gen_str += " Win64"
+            return ['-G', vs_version_gen_str]
 
-        vs_version_gen_str = None
-        for out in cmake_help_output.splitlines():
-            trimmed_out = out.decode('utf-8').strip()
-            if 'Visual Studio' in trimmed_out and vs_major_version in trimmed_out:
-                print('selecting generator {}'.format(trimmed_out))
-                vs_version_gen_str = trimmed_out.split('[')[0].strip(' *')
-                break
+        # For VS2019 (and presumably later), architecture is passed via -A flag
+        arch_str = "x64" if is_64bit() else "Win32"
+        return ['-G', vs_version_gen_str, '-A', arch_str]
 
-        if vs_version_gen_str is None:
-            raise RuntimeError('CMake does not recognize an installed version of visual studio on your system.')
-
-        if is_64bit():
-            print('64bit version of python detected, using win64 builds')
-            vs_version_gen_str = vs_version_gen_str + ' Win64'
-
-        vs_version_gen_str = '-G' + vs_version_gen_str
-        print('Succesfully determined generator as \"{}\"'.format(vs_version_gen_str))
-        return vs_version_gen_str
-    return ''
+    return []
 
 
 class AwsLib(object):
@@ -144,16 +123,16 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
         build_type = 'Debug' if self.debug else 'Release'
 
         # cmake configure
-        cmake_args = [
-            'cmake',
-            determine_generator_string(),
-            determine_cross_compile_string(),
+        cmake_args = ['cmake']
+        cmake_args.extend(determine_generator_args())
+        cmake_args.extend(determine_cross_compile_args())
+        cmake_args.extend([
             '-DCMAKE_PREFIX_PATH={}'.format(DEP_INSTALL_PATH),
             '-DCMAKE_INSTALL_PREFIX={}'.format(DEP_INSTALL_PATH),
             '-DBUILD_SHARED_LIBS=OFF',
             '-DCMAKE_BUILD_TYPE={}'.format(build_type),
             '-DBUILD_TESTING=OFF',
-        ]
+        ])
         if self.include_dirs:
             cmake_args.append('-DCMAKE_INCLUDE_PATH={}'.format(';'.join(self.include_dirs)))
         if self.library_dirs:
