@@ -18,6 +18,7 @@ from concurrent.futures import Future
 import ssl
 from test import NativeResourceTest
 import threading
+import unittest
 
 # Use a built-in Python HTTP server to test the awscrt's HTTP client
 try:
