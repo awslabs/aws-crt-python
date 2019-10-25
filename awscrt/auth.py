@@ -110,7 +110,7 @@ class CredentialsProvider(CredentialsProviderBase):
         def _on_complete(error_code, access_key_id, secret_access_key, session_token):
             try:
                 if error_code:
-                    future.set_exception(error_code)
+                    future.set_exception(Exception(error_code))  # TODO: Actual exceptions for error_codes
                 else:
                     credentials = Credentials(access_key_id, secret_access_key, session_token)
                     future.set_result(credentials)
