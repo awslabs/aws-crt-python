@@ -102,6 +102,8 @@ class CredentialsProvider(CredentialsProviderBase):
         Do not instantiate directly, use CredentialsProvider.new_XYZ() functions.
         """
         assert binding.__class__.__name__ == 'PyCapsule'
+
+        super(CredentialsProvider, self).__init__()
         self._binding = binding
 
     def get_credentials(self):
