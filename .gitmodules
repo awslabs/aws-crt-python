@@ -21,4 +21,4 @@
 	url = git://github.com/awslabs/aws-c-compression
 [submodule "aws-c-auth"]
 	path = aws-c-auth
-	url = git@github.com:awslabs/aws-c-auth.git
+	url = git://github.com/awslabs/aws-c-auth
