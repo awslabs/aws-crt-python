@@ -16,7 +16,6 @@
  */
 #include "module.h"
 
-
 PyObject *aws_py_credentials_provider_get_credentials(PyObject *self, PyObject *args);
 PyObject *aws_py_credentials_provider_shutdown(PyObject *self, PyObject *args);
 
