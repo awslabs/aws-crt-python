@@ -99,6 +99,7 @@ AWS_LIBS.append(AwsLib('aws-c-io'))
 AWS_LIBS.append(AwsLib('aws-c-cal'))
 AWS_LIBS.append(AwsLib('aws-c-compression'))
 AWS_LIBS.append(AwsLib('aws-c-http'))
+AWS_LIBS.append(AwsLib('aws-c-auth'))
 AWS_LIBS.append(AwsLib('aws-c-mqtt'))
 
 
