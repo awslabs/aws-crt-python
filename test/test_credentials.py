@@ -12,7 +12,7 @@
 # permissions and limitations under the License.
 
 from __future__ import absolute_import
-from awscrt.auth import CredentialsProvider
+from awscrt.auth import DefaultCredentialsProviderChain, StaticCredentialsProvider
 from awscrt.io import ClientBootstrap, EventLoopGroup
 import os
 from test import NativeResourceTest
@@ -41,7 +41,7 @@ class TestProvider(NativeResourceTest):
     example_session_token = 'example_session_token'
 
     def test_static_provider(self):
-        provider = CredentialsProvider.new_static(
+        provider = StaticCredentialsProvider(
             self.example_access_key_id,
             self.example_secret_access_key,
             self.example_session_token)
@@ -57,7 +57,7 @@ class TestProvider(NativeResourceTest):
     # aws_byte_cursor by value/pointer in aws-c-auth APIs.
     #
     # def test_static_provider_no_session_token(self):
-    #     provider = awscrt.auth.CredentialsProvider.new_static(
+    #     provider = StaticCredentialsProvider(
     #         self.example_access_key_id,
     #         self.example_secret_access_key)
 
@@ -74,7 +74,7 @@ class TestProvider(NativeResourceTest):
 
         event_loop_group = EventLoopGroup()
         bootstrap = ClientBootstrap(event_loop_group)
-        provider = CredentialsProvider.new_default_chain(bootstrap)
+        provider = DefaultCredentialsProviderChain(bootstrap)
 
         future = provider.get_credentials()
         credentials = future.result()

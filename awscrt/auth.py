@@ -38,8 +38,6 @@ class Credentials(object):
 class CredentialsProviderBase(NativeResource):
     """
     Base class for providers that source the Credentials needed to sign an authenticated AWS request.
-
-    Custom subclasses are not currently supported.
     """
 
     def get_credentials(self):
@@ -49,64 +47,6 @@ class CredentialsProviderBase(NativeResource):
         Returns a Future which will contain Credentials (or an exception)
         when the call completes. The call may complete on a different thread.
         """
-        raise NotImplementedError
-
-    def close(self):
-        """
-        Signal a provider (and all linked providers) to cancel pending queries and
-        stop accepting new ones.  Useful to hasten shutdown time if you know the provider
-        is going away.
-        """
-        raise NotImplementedError
-
-
-class CredentialsProvider(CredentialsProviderBase):
-    """
-    Providers source the Credentials needed to sign an authenticated AWS request.
-
-    The `CredentialsProvider` class wraps native implementations supplied by awscrt.
-    Instantiate with factory functions such as `new_default_chain()`.
-    """
-
-    @classmethod
-    def new_default_chain(cls, client_bootstrap):
-        """
-        Creates the default provider chain used by most AWS SDKs.
-
-        Generally:
-
-        (1) Environment
-        (2) Profile
-        (3) (conditional, off by default) ECS
-        (4) (conditional, on by default) EC2 Instance Metadata
-        """
-        assert isinstance(client_bootstrap, ClientBootstrap)
-
-        binding = _awscrt.credentials_provider_new_chain_default(client_bootstrap)
-        return cls(binding)
-
-    @classmethod
-    def new_static(cls, access_key_id, secret_access_key, session_token=None):
-        """
-        Create a simple provider that just returns a fixed set of credentials
-        """
-        assert isinstance_str(access_key_id)
-        assert isinstance_str(secret_access_key)
-        assert isinstance_str(session_token) or session_token is None
-
-        binding = _awscrt.credentials_provider_new_static(access_key_id, secret_access_key, session_token)
-        return cls(binding)
-
-    def __init__(self, binding):
-        """
-        Do not instantiate directly, use CredentialsProvider.new_XYZ() functions.
-        """
-        assert binding.__class__.__name__ == 'PyCapsule'
-
-        super(CredentialsProvider, self).__init__()
-        self._binding = binding
-
-    def get_credentials(self):
         future = Future()
 
         def _on_complete(error_code, access_key_id, secret_access_key, session_token):
@@ -128,4 +68,44 @@ class CredentialsProvider(CredentialsProviderBase):
         return future
 
     def close(self):
+        """
+        Signal a provider (and all linked providers) to cancel pending queries and
+        stop accepting new ones.  Useful to hasten shutdown time if you know the provider
+        is going away.
+        """
         _awscrt.credentials_provider_shutdown(self._binding)
+
+
+class DefaultCredentialsProviderChain(CredentialsProviderBase):
+    """
+    Providers source the Credentials needed to sign an authenticated AWS request.
+    This is the default provider chain used by most AWS SDKs.
+
+    Generally:
+
+    (1) Environment
+    (2) Profile
+    (3) (conditional, off by default) ECS
+    (4) (conditional, on by default) EC2 Instance Metadata
+    """
+
+    def __init__(self, client_bootstrap):
+        assert isinstance(client_bootstrap, ClientBootstrap)
+
+        super(DefaultCredentialsProviderChain, self).__init__()
+        self._binding = _awscrt.credentials_provider_new_chain_default(client_bootstrap)
+
+
+class StaticCredentialsProvider(CredentialsProviderBase):
+    """
+    Providers source the Credentials needed to sign an authenticated AWS request.
+    This is a simple provider that just returns a fixed set of credentials
+    """
+
+    def __init__(self, access_key_id, secret_access_key, session_token=None):
+        assert isinstance_str(access_key_id)
+        assert isinstance_str(secret_access_key)
+        assert isinstance_str(session_token) or session_token is None
+
+        super(StaticCredentialsProvider, self).__init__()
+        self._binding = _awscrt.credentials_provider_new_static(access_key_id, secret_access_key, session_token)
