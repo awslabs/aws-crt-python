@@ -13,18 +13,20 @@
  * permissions and limitations under the License.
  */
 #include "module.h"
+
+#include "auth.h"
 #include "crypto.h"
 #include "http.h"
 #include "io.h"
 #include "mqtt_client.h"
 #include "mqtt_client_connection.h"
 
+#include <aws/auth/auth.h>
 #include <aws/common/byte_buf.h>
+#include <aws/http/http.h>
 #include <aws/io/io.h>
 #include <aws/io/logging.h>
 #include <aws/io/tls_channel_handler.h>
-
-#include <aws/http/http.h>
 #include <aws/mqtt/mqtt.h>
 
 #include <memoryobject.h>
@@ -277,6 +279,12 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(http_client_stream_new, METH_VARARGS),
     AWS_PY_METHOD_DEF(http_request_new, METH_VARARGS),
 
+    /* Auth */
+    AWS_PY_METHOD_DEF(credentials_provider_get_credentials, METH_VARARGS),
+    AWS_PY_METHOD_DEF(credentials_provider_shutdown, METH_VARARGS),
+    AWS_PY_METHOD_DEF(credentials_provider_new_chain_default, METH_VARARGS),
+    AWS_PY_METHOD_DEF(credentials_provider_new_static, METH_VARARGS),
+
     {NULL, NULL, 0, NULL},
 };
 
@@ -297,6 +305,7 @@ static void s_module_free(void *userdata) {
         aws_logger_clean_up(&s_logger);
     }
     aws_mqtt_library_clean_up();
+    aws_auth_library_clean_up();
     aws_http_library_clean_up();
 }
 
@@ -323,6 +332,7 @@ PyMODINIT_FUNC INIT_FN(void) {
 #endif /* PY_MAJOR_VERSION */
 
     aws_http_library_init(aws_py_get_allocator());
+    aws_auth_library_init(aws_py_get_allocator());
     aws_mqtt_library_init(aws_py_get_allocator());
 
     if (!PyEval_ThreadsInitialized()) {

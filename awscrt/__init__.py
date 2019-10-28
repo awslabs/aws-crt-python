@@ -14,7 +14,13 @@
 from sys import version_info
 from weakref import WeakSet
 
-__all__ = ['io', 'mqtt', 'crypto', 'http']
+__all__ = [
+    'auth',
+    'crypto',
+    'http',
+    'io',
+    'mqtt',
+]
 
 
 class NativeResource(object):
