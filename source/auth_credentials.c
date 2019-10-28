@@ -36,11 +36,15 @@ struct credentials_provider_binding {
 /* Runs when the GC destroys the capsule containing the binding */
 static void s_credentials_provider_capsule_destructor(PyObject *capsule) {
     struct credentials_provider_binding *provider = PyCapsule_GetPointer(capsule, s_capsule_name_credentials_provider);
+
+    /* Note that destructor might run due to setup failing, and some/all members might still be NULL. */
+
     if (provider->native) {
         aws_credentials_provider_release(provider->native);
     }
 
     Py_XDECREF(provider->bootstrap);
+    aws_mem_release(aws_py_get_allocator(), provider);
 }
 
 struct aws_credentials_provider *aws_py_get_credentials_provider(PyObject *credentials_provider) {
