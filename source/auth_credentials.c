@@ -71,7 +71,7 @@ int s_aws_string_to_cstr_and_ssize(const struct aws_string *source, const char *
         if (source->len > PY_SSIZE_T_MAX) {
             return aws_raise_error(AWS_ERROR_OVERFLOW_DETECTED);
         }
-        *out_cstr = (const char *)source->bytes;
+        *out_cstr = aws_string_c_str(source);
         *out_ssize = source->len;
     }
     return AWS_OP_SUCCESS;
