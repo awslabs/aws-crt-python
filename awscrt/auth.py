@@ -14,8 +14,10 @@
 from __future__ import absolute_import
 import _awscrt
 from awscrt import isinstance_str, NativeResource
+from awscrt.http import HttpRequest
 from awscrt.io import ClientBootstrap
 from concurrent.futures import Future
+from enum import IntEnum
 
 
 class Credentials(object):
@@ -109,3 +111,29 @@ class StaticCredentialsProvider(CredentialsProviderBase):
 
         super(StaticCredentialsProvider, self).__init__()
         self._binding = _awscrt.credentials_provider_new_static(access_key_id, secret_access_key, session_token)
+
+
+class AwsSigningAlgorithm(IntEnum):
+    Sigv4Headers = 0
+    Sigv4QueryParam = 1
+
+
+class AwsSigningConfig(object):
+    def __init__(self):
+        self.algorithm = None  # typing.Optional[str]
+        self.credentials = None  # typing.Optional[Credentials]
+        self.region = None  # typing.Optional[str]
+
+
+class AwsSigv4HttpRequestSigningPipeline(NativeResource):
+    def __init__(self, credentials_provider):
+        assert isinstance(credentials_provider, CredentialsProviderBase)
+
+        super(AwsSigv4HttpRequestSigningPipeline, self).__init__()
+        raise NotImplementedError
+
+    def sign_request(self, http_request, aws_signing_config):
+        assert isinstance(http_request, HttpRequest)
+        assert isinstance(aws_signing_config, AwsSigningConfig)
+
+        raise NotImplementedError
