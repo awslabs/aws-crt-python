@@ -113,27 +113,106 @@ class StaticCredentialsProvider(CredentialsProviderBase):
         self._binding = _awscrt.credentials_provider_new_static(access_key_id, secret_access_key, session_token)
 
 
-class AwsSigningAlgorithm(IntEnum):
+# class HttpRequestSignerBase(object):
+#     """
+#     Base for classes that synchronously signs HTTP requests.
+#     """
+
+#     def sign_request(self, http_request, signing_config):
+#         """
+#         Synchronous method to use a signing process to transform an http request.
+#         """
+#         raise NotImplementedError
+
+
+# class HttpRequestSigningPipelineBase(object):
+#     """
+#     Base for classes that asynchronously sign HTTP requests.
+#     """
+
+#     def sign_request(self, http_request, signing_config):
+#         """
+#         Asynchronous method to use a signing process/pipeline to transform an http request.
+#         Returns a future.
+#         """
+#         raise NotImplementedError
+
+
+class SigningAlgorithm(IntEnum):
     Sigv4Headers = 0
     Sigv4QueryParam = 1
 
 
-class AwsSigningConfig(object):
+class SigningConfig(object):
+    def __init__(self,
+                 algorithm=SigningAlgorithm.Sigv4Headers,  # type: Optional[SigningAlgorithm]
+                 credentials=None,  # type: Optional[Credentials]
+                 region=None,  # type: Optional[str]
+                 service=None,  # type: Optional[str]
+                 date=None,  # type: Optional[datetime.datetime]
+                 should_sign_header=None,  # type: Optional[Callable[[str], bool]]
+                 use_double_uri_encode=False,  # type: bool
+                 should_normalize_uri_path=True,  # type: bool
+                 sign_body=True  # type: bool
+                 ):
+        # type: (...) -> None
+
+        self.algorithm = algorithm  # type: Optional[SigningAlgorithm]
+        self.credentials = credentials  # type: Optional[Credentials]
+        self.region = region  # type: Optional[str]
+        self.service = service  # type: Optional[str]
+        self.date = date  # type: Optional[datetime.datetime]
+        self.should_sign_header = should_sign_header  # type: Optional[Callable[[str], bool]]
+        self.use_double_uri_encode = use_double_uri_encode  # type: bool
+        self.should_normalize_uri_path = should_normalize_uri_path  # type: bool
+        self.sign_body = sign_body  # type: bool
+
+
+class Signer(NativeResource):
+    """
+    A signer that performs AWS http request signing.
+
+    This signer currently supports only the sigv4 algorithm.
+
+    When using this signer to sign AWS http requests:
+
+      (1) Do not add the following headers to requests before signing, they may be added by the signer:
+         x-amz-content-sha256,
+         X-Amz-Date,
+         Authorization
+
+      (2) Do not add the following query params to requests before signing, they may be added by the signer:
+         X-Amz-Signature,
+         X-Amz-Date,
+         X-Amz-Credential,
+         X-Amz-Algorithm,
+         X-Amz-SignedHeaders
+    """
+
     def __init__(self):
-        self.algorithm = None  # typing.Optional[str]
-        self.credentials = None  # typing.Optional[Credentials]
-        self.region = None  # typing.Optional[str]
+        self._binding = _awscrt.signer_new_aws()
+
+    def sign_request(self, http_request, signing_config):
+        """
+        Synchronously transform the HttpRequest according to the signing algorithm.
+        """
+        assert isinstance(http_request, HttpRequest)
+        assert isinstance(signing_config, SigningConfig)
+        _awscrt.signer_sign_request(self._binding, http_request, signing_config)
 
 
-class AwsSigv4HttpRequestSigningPipeline(NativeResource):
+class SigningPipeline(NativeResource):
+    """
+    Pipeline that asynchronously signs HttpRequests with Credentials sourced from a CredentialsProvider.
+    """
     def __init__(self, credentials_provider):
         assert isinstance(credentials_provider, CredentialsProviderBase)
 
-        super(AwsSigv4HttpRequestSigningPipeline, self).__init__()
+        super(SigningPipeline, self).__init__()
         raise NotImplementedError
 
     def sign_request(self, http_request, aws_signing_config):
         assert isinstance(http_request, HttpRequest)
-        assert isinstance(aws_signing_config, AwsSigningConfig)
+        assert isinstance(aws_signing_config, SigningConfig)
 
         raise NotImplementedError

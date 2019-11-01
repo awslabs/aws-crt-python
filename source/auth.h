@@ -22,9 +22,13 @@ PyObject *aws_py_credentials_provider_shutdown(PyObject *self, PyObject *args);
 PyObject *aws_py_credentials_provider_new_chain_default(PyObject *self, PyObject *args);
 PyObject *aws_py_credentials_provider_new_static(PyObject *self, PyObject *args);
 
+PyObject *aws_py_signer_new_aws(PyObject *self, PyObject *args);
+PyObject *aws_py_signer_sign_request(PyObject *self, PyObject *args);
+
 /* Given a python object, return a pointer to its underlying native type.
  * If NULL is returned, a python error has been set */
 
 struct aws_credentials_provider *aws_py_get_credentials_provider(PyObject *credentials_provider);
+struct aws_signer *aws_py_get_signer(PyObject *signer);
 
 #endif // AWS_CRT_PYTHON_AUTH_H
