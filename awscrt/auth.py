@@ -113,31 +113,6 @@ class StaticCredentialsProvider(CredentialsProviderBase):
         self._binding = _awscrt.credentials_provider_new_static(access_key_id, secret_access_key, session_token)
 
 
-# class HttpRequestSignerBase(object):
-#     """
-#     Base for classes that synchronously signs HTTP requests.
-#     """
-
-#     def sign_request(self, http_request, signing_config):
-#         """
-#         Synchronous method to use a signing process to transform an http request.
-#         """
-#         raise NotImplementedError
-
-
-# class HttpRequestSigningPipelineBase(object):
-#     """
-#     Base for classes that asynchronously sign HTTP requests.
-#     """
-
-#     def sign_request(self, http_request, signing_config):
-#         """
-#         Asynchronous method to use a signing process/pipeline to transform an http request.
-#         Returns a future.
-#         """
-#         raise NotImplementedError
-
-
 class SigningAlgorithm(IntEnum):
     Sigv4Headers = 0
     Sigv4QueryParam = 1
@@ -205,6 +180,7 @@ class SigningPipeline(NativeResource):
     """
     Pipeline that asynchronously signs HttpRequests with Credentials sourced from a CredentialsProvider.
     """
+
     def __init__(self, credentials_provider):
         assert isinstance(credentials_provider, CredentialsProviderBase)
 
