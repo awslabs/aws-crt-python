@@ -25,6 +25,7 @@
 #include <aws/common/common.h>
 
 struct aws_byte_buf;
+struct aws_string;
 
 #if PY_MAJOR_VERSION >= 3
 #    define PyString_FromStringAndSize PyUnicode_FromStringAndSize
@@ -36,6 +37,7 @@ struct aws_byte_buf;
 /* AWS Specific Helpers */
 #define PyBool_FromAwsResult(result) PyBool_FromLong((result) == AWS_OP_SUCCESS)
 #define PyString_FromAwsByteCursor(cursor) PyString_FromStringAndSize((const char *)(cursor)->ptr, (cursor)->len)
+PyObject *PyString_FromAwsString(const struct aws_string *aws_str);
 
 int PyIntEnum_Check(PyObject *int_enum_obj);
 long PyIntEnum_AsLong(PyObject *int_enum_obj);

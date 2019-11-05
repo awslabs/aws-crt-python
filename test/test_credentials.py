@@ -12,10 +12,14 @@
 # permissions and limitations under the License.
 
 from __future__ import absolute_import
-from awscrt.auth import DefaultCredentialsProviderChain, StaticCredentialsProvider
+from awscrt.auth import Credentials, DefaultCredentialsProviderChain, StaticCredentialsProvider
 from awscrt.io import ClientBootstrap, EventLoopGroup
 import os
 from test import NativeResourceTest
+
+EXAMPLE_ACCESS_KEY_ID = 'example_access_key_id'
+EXAMPLE_SECRET_ACCESS_KEY = 'example_secret_access_key'
+EXAMPLE_SESSION_TOKEN = 'example_session_token'
 
 
 class ScopedEnvironmentVariable(object):
@@ -34,24 +38,34 @@ class ScopedEnvironmentVariable(object):
         else:
             os.environ[self.key] = self.prev_value
 
+class TestCredentials(NativeResourceTest):
+    def test_create(self):
+        credentials = Credentials.create(EXAMPLE_ACCESS_KEY_ID, EXAMPLE_SECRET_ACCESS_KEY, EXAMPLE_SESSION_TOKEN)
+        self.assertEqual(EXAMPLE_ACCESS_KEY_ID, credentials.access_key_id)
+        self.assertEqual(EXAMPLE_SECRET_ACCESS_KEY, credentials.secret_access_key)
+        self.assertEqual(EXAMPLE_SESSION_TOKEN, credentials.session_token)
+
+    def test_create_no_session_token(self):
+        credentials = Credentials.create(EXAMPLE_ACCESS_KEY_ID, EXAMPLE_SECRET_ACCESS_KEY)
+        self.assertEqual(EXAMPLE_ACCESS_KEY_ID, credentials.access_key_id)
+        self.assertEqual(EXAMPLE_SECRET_ACCESS_KEY, credentials.secret_access_key)
+        self.assertIsNone(credentials.session_token)
+
+
 
 class TestProvider(NativeResourceTest):
-    example_access_key_id = 'example_access_key_id'
-    example_secret_access_key = 'example_secret_access_key'
-    example_session_token = 'example_session_token'
-
     def test_static_provider(self):
         provider = StaticCredentialsProvider(
-            self.example_access_key_id,
-            self.example_secret_access_key,
-            self.example_session_token)
+            EXAMPLE_ACCESS_KEY_ID,
+            EXAMPLE_SECRET_ACCESS_KEY,
+            EXAMPLE_SESSION_TOKEN)
 
         future = provider.get_credentials()
         credentials = future.result()
 
-        self.assertEqual(self.example_access_key_id, credentials.access_key_id)
-        self.assertEqual(self.example_secret_access_key, credentials.secret_access_key)
-        self.assertEqual(self.example_session_token, credentials.session_token)
+        self.assertEqual(EXAMPLE_ACCESS_KEY_ID, credentials.access_key_id)
+        self.assertEqual(EXAMPLE_SECRET_ACCESS_KEY, credentials.secret_access_key)
+        self.assertEqual(EXAMPLE_SESSION_TOKEN, credentials.session_token)
 
     # TODO: test currently broken because None session_token comes back as empty string do to inconsistent use of
     # aws_byte_cursor by value/pointer in aws-c-auth APIs.

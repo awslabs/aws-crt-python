@@ -20,7 +20,162 @@
 #include <aws/auth/credentials.h>
 #include <aws/common/string.h>
 
+static const char *s_capsule_name_credentials = "aws_credentials";
 static const char *s_capsule_name_credentials_provider = "aws_credentials_provider";
+
+/**
+ * Binds python Credentials to native aws_credentials.
+ */
+struct credentials_binding {
+    struct aws_credentials *native;
+};
+
+static void s_credentials_capsule_destructor(PyObject *capsule) {
+    struct credentials_binding *binding = PyCapsule_GetPointer(capsule, s_capsule_name_credentials);
+
+    if (binding->native) {
+        aws_credentials_destroy(binding->native);
+    }
+
+    aws_mem_release(aws_py_get_allocator(), binding);
+}
+
+static PyObject *s_new_credentials_capsule_and_binding(struct credentials_binding **out_binding) {
+    struct credentials_binding *binding = aws_mem_calloc(aws_py_get_allocator(), 1, sizeof(struct credentials_binding));
+    if (!binding) {
+        return PyErr_AwsLastError();
+    }
+
+    PyObject *capsule = PyCapsule_New(binding, s_capsule_name_credentials, s_credentials_capsule_destructor);
+    if (!capsule) {
+        aws_mem_release(aws_py_get_allocator(), binding);
+        return NULL;
+    }
+
+    *out_binding = binding;
+    return capsule;
+}
+
+PyObject *aws_py_credentials_new(PyObject *self, PyObject *args) {
+    (void)self;
+
+    struct aws_byte_cursor access_key_id;
+    struct aws_byte_cursor secret_access_key;
+    struct aws_byte_cursor session_token; /* session_token is optional */
+    if (!PyArg_ParseTuple(
+            args,
+            "s#s#z#",
+            &access_key_id.ptr,
+            &access_key_id.len,
+            &secret_access_key.ptr,
+            &secret_access_key.len,
+            &session_token.ptr,
+            &session_token.len)) {
+        return NULL;
+    }
+
+    struct credentials_binding *binding;
+    PyObject *capsule = s_new_credentials_capsule_and_binding(&binding);
+    if (!capsule) {
+        return NULL;
+    }
+
+    /* From hereon, we need to clean up if errors occur.
+     * Fortunately, the capsule destructor will clean up anything stored inside the binding */
+
+    binding->native = aws_credentials_new_from_cursors(
+        aws_py_get_allocator(), &access_key_id, &secret_access_key, session_token.ptr ? &session_token : NULL);
+    if (!binding->native) {
+        PyErr_SetAwsLastError();
+        goto error;
+    }
+
+    return capsule;
+
+error:
+    Py_DECREF(capsule);
+    return NULL;
+}
+
+PyObject *aws_py_credentials_new_binding_capsule(struct aws_credentials *owned_credentials) {
+    struct credentials_binding *binding;
+    PyObject *capsule = s_new_credentials_capsule_and_binding(&binding);
+    if (!capsule) {
+        return NULL;
+    }
+
+    binding->native = owned_credentials;
+    return capsule;
+}
+
+struct aws_credentials *aws_py_get_credentials(PyObject *credentials) {
+    struct aws_credentials *native = NULL;
+
+    PyObject *capsule = PyObject_GetAttrString(credentials, "_binding");
+    if (capsule) {
+        struct credentials_binding *binding = PyCapsule_GetPointer(capsule, s_capsule_name_credentials);
+        if (binding) {
+            native = binding->native;
+        }
+        Py_DECREF(capsule);
+    }
+
+    return native;
+}
+
+enum credentials_member {
+    CREDENTIALS_MEMBER_ACCESS_KEY_ID,
+    CREDENTIALS_MEMBER_SECRET_ACCESS_KEY,
+    CREDENTIALS_MEMBER_SESSION_TOKEN,
+};
+
+static PyObject *s_credentials_get_member_str(PyObject *args, enum credentials_member member) {
+    PyObject *capsule;
+    if (!PyArg_ParseTuple(args, "O", &capsule)) {
+        return NULL;
+    }
+
+    const struct credentials_binding *binding = PyCapsule_GetPointer(capsule, s_capsule_name_credentials);
+    if (!binding) {
+        return NULL;
+    }
+
+    const struct aws_string *str;
+    switch (member) {
+        case CREDENTIALS_MEMBER_ACCESS_KEY_ID:
+            str = binding->native->access_key_id;
+            break;
+        case CREDENTIALS_MEMBER_SECRET_ACCESS_KEY:
+            str = binding->native->secret_access_key;
+            break;
+        case CREDENTIALS_MEMBER_SESSION_TOKEN:
+            str = binding->native->session_token;
+            break;
+        default:
+            AWS_FATAL_ASSERT(0);
+    }
+
+    if (!str) {
+        Py_RETURN_NONE;
+    }
+
+    return PyString_FromAwsString(str);
+}
+
+PyObject *aws_py_credentials_access_key_id(PyObject *self, PyObject *args) {
+    (void)self;
+    return s_credentials_get_member_str(args, CREDENTIALS_MEMBER_ACCESS_KEY_ID);
+}
+
+PyObject *aws_py_credentials_secret_access_key(PyObject *self, PyObject *args) {
+    (void)self;
+    return s_credentials_get_member_str(args, CREDENTIALS_MEMBER_SECRET_ACCESS_KEY);
+}
+
+PyObject *aws_py_credentials_session_token(PyObject *self, PyObject *args) {
+    (void)self;
+    return s_credentials_get_member_str(args, CREDENTIALS_MEMBER_SESSION_TOKEN);
+}
 
 /**
  * Binds a Python CredentialsProvider to a native aws_credentials_provider.
@@ -82,45 +237,21 @@ static void s_on_get_credentials_complete(struct aws_credentials *credentials, v
     PyObject *on_complete_cb = user_data;
 
     /* NOTE: This callback doesn't currently supply an error_code, but it should. */
-    int error_code = AWS_ERROR_UNKNOWN;
-
-    /* Note that we don't actually bind the native aws_credentials to the python Credentials class,
-     * we simply copy the contents back and forth. */
-    const char *access_key_id = NULL;
-    Py_ssize_t access_key_id_len = 0;
-    const char *secret_access_key = NULL;
-    Py_ssize_t secret_access_key_len = 0;
-    const char *session_token = NULL;
-    Py_ssize_t session_token_len = 0;
-
-    if (credentials) {
-        error_code = AWS_ERROR_SUCCESS;
-
-        if (s_aws_string_to_cstr_and_ssize(credentials->access_key_id, &access_key_id, &access_key_id_len)) {
-            error_code = aws_last_error();
-        }
-        if (s_aws_string_to_cstr_and_ssize(
-                credentials->secret_access_key, &secret_access_key, &secret_access_key_len)) {
-            error_code = aws_last_error();
-        }
-        if (s_aws_string_to_cstr_and_ssize(credentials->session_token, &session_token, &session_token_len)) {
-            error_code = aws_last_error();
-        }
-    }
+    int error_code = credentials ? AWS_ERROR_SUCCESS : AWS_ERROR_UNKNOWN;
 
     /*************** GIL ACQUIRE ***************/
     PyGILState_STATE state = PyGILState_Ensure();
 
-    PyObject *result = PyObject_CallFunction(
-        on_complete_cb,
-        "(is#s#s#)",
-        error_code,
-        access_key_id,
-        access_key_id_len,
-        secret_access_key,
-        secret_access_key_len,
-        session_token,
-        session_token_len);
+    PyObject *credentials_binding_capsule = NULL;
+    if (credentials) {
+        credentials_binding_capsule = aws_py_credentials_new_binding_capsule(credentials);
+        if (!credentials_binding_capsule) {
+            error_code = aws_py_raise_error();
+            aws_credentials_destroy(credentials);
+        }
+    }
+
+    PyObject *result = PyObject_CallFunction(on_complete_cb, "(iO)", error_code, credentials_binding_capsule);
     if (result) {
         Py_DECREF(result);
     } else {
@@ -128,6 +259,7 @@ static void s_on_get_credentials_complete(struct aws_credentials *credentials, v
     }
 
     Py_DECREF(on_complete_cb);
+    Py_XDECREF(credentials_binding_capsule);
 
     PyGILState_Release(state);
     /*************** GIL RELEASE ***************/
@@ -274,7 +406,7 @@ PyObject *aws_py_credentials_provider_new_static(PyObject *self, PyObject *args)
         allocator,
         aws_byte_cursor_from_array(access_key_id, access_key_id_len),
         aws_byte_cursor_from_array(secret_access_key, secret_access_key_len),
-        aws_byte_cursor_from_array(session_token, session_token_len));
+        aws_byte_cursor_from_array(session_token, session_token ? session_token_len : 0));
 
     if (!binding->native) {
         PyErr_SetAwsLastError();
