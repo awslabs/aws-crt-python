@@ -99,6 +99,10 @@ struct aws_byte_cursor aws_byte_cursor_from_pystring(PyObject *str) {
     return aws_byte_cursor_from_array(NULL, 0);
 }
 
+PyObject *PyString_FromAwsString(const struct aws_string *aws_str) {
+    return PyString_FromStringAndSize(aws_string_c_str(aws_str), aws_str->len);
+}
+
 int PyIntEnum_Check(PyObject *int_enum_obj) {
 #if PY_MAJOR_VERSION == 2
     return PyInt_Check(int_enum_obj);
@@ -280,6 +284,10 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(http_request_new, METH_VARARGS),
 
     /* Auth */
+    AWS_PY_METHOD_DEF(credentials_new, METH_VARARGS),
+    AWS_PY_METHOD_DEF(credentials_access_key_id, METH_VARARGS),
+    AWS_PY_METHOD_DEF(credentials_secret_access_key, METH_VARARGS),
+    AWS_PY_METHOD_DEF(credentials_session_token, METH_VARARGS),
     AWS_PY_METHOD_DEF(credentials_provider_get_credentials, METH_VARARGS),
     AWS_PY_METHOD_DEF(credentials_provider_shutdown, METH_VARARGS),
     AWS_PY_METHOD_DEF(credentials_provider_new_chain_default, METH_VARARGS),

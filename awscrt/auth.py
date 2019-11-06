@@ -18,21 +18,32 @@ from awscrt.io import ClientBootstrap
 from concurrent.futures import Future
 
 
-class Credentials(object):
+class Credentials(NativeResource):
     """
     Credentials are the public/private data needed to sign an authenticated AWS request.
     """
 
-    __slots__ = ('access_key_id', 'secret_access_key', 'session_token')
+    __slots__ = ()
 
     def __init__(self, access_key_id, secret_access_key, session_token=None):
         assert isinstance_str(access_key_id)
         assert isinstance_str(secret_access_key)
         assert isinstance_str(session_token) or session_token is None
 
-        self.access_key_id = access_key_id
-        self.secret_access_key = secret_access_key
-        self.session_token = session_token
+        super(Credentials, self).__init__()
+        self._binding = _awscrt.credentials_new(access_key_id, secret_access_key, session_token)
+
+    @property
+    def access_key_id(self):
+        return _awscrt.credentials_access_key_id(self._binding)
+
+    @property
+    def secret_access_key(self):
+        return _awscrt.credentials_secret_access_key(self._binding)
+
+    @property
+    def session_token(self):
+        return _awscrt.credentials_session_token(self._binding)
 
 
 class CredentialsProviderBase(NativeResource):

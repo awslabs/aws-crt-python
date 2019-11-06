@@ -16,6 +16,13 @@
  */
 #include "module.h"
 
+struct aws_credentials;
+
+PyObject *aws_py_credentials_new(PyObject *self, PyObject *args);
+PyObject *aws_py_credentials_access_key_id(PyObject *self, PyObject *args);
+PyObject *aws_py_credentials_secret_access_key(PyObject *self, PyObject *args);
+PyObject *aws_py_credentials_session_token(PyObject *self, PyObject *args);
+
 PyObject *aws_py_credentials_provider_get_credentials(PyObject *self, PyObject *args);
 PyObject *aws_py_credentials_provider_shutdown(PyObject *self, PyObject *args);
 
@@ -25,6 +32,7 @@ PyObject *aws_py_credentials_provider_new_static(PyObject *self, PyObject *args)
 /* Given a python object, return a pointer to its underlying native type.
  * If NULL is returned, a python error has been set */
 
+struct aws_credentials *aws_py_get_credentials(PyObject *credentials);
 struct aws_credentials_provider *aws_py_get_credentials_provider(PyObject *credentials_provider);
 
 #endif // AWS_CRT_PYTHON_AUTH_H
