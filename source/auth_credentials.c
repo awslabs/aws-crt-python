@@ -23,37 +23,11 @@
 static const char *s_capsule_name_credentials = "aws_credentials";
 static const char *s_capsule_name_credentials_provider = "aws_credentials_provider";
 
-/**
- * Binds python Credentials to native aws_credentials.
- */
-struct credentials_binding {
-    struct aws_credentials *native;
-};
+/* Credentials capsule contains raw aws_credentials struct. There is no intermediate binding struct. */
 
 static void s_credentials_capsule_destructor(PyObject *capsule) {
-    struct credentials_binding *binding = PyCapsule_GetPointer(capsule, s_capsule_name_credentials);
-
-    if (binding->native) {
-        aws_credentials_destroy(binding->native);
-    }
-
-    aws_mem_release(aws_py_get_allocator(), binding);
-}
-
-static PyObject *s_new_credentials_capsule_and_binding(struct credentials_binding **out_binding) {
-    struct credentials_binding *binding = aws_mem_calloc(aws_py_get_allocator(), 1, sizeof(struct credentials_binding));
-    if (!binding) {
-        return PyErr_AwsLastError();
-    }
-
-    PyObject *capsule = PyCapsule_New(binding, s_capsule_name_credentials, s_credentials_capsule_destructor);
-    if (!capsule) {
-        aws_mem_release(aws_py_get_allocator(), binding);
-        return NULL;
-    }
-
-    *out_binding = binding;
-    return capsule;
+    struct aws_credentials *credentials = PyCapsule_GetPointer(capsule, s_capsule_name_credentials);
+    aws_credentials_destroy(credentials);
 }
 
 PyObject *aws_py_credentials_new(PyObject *self, PyObject *args) {
@@ -74,37 +48,18 @@ PyObject *aws_py_credentials_new(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    struct credentials_binding *binding;
-    PyObject *capsule = s_new_credentials_capsule_and_binding(&binding);
-    if (!capsule) {
-        return NULL;
-    }
-
-    /* From hereon, we need to clean up if errors occur.
-     * Fortunately, the capsule destructor will clean up anything stored inside the binding */
-
-    binding->native = aws_credentials_new_from_cursors(
+    struct aws_credentials *credentials = aws_credentials_new_from_cursors(
         aws_py_get_allocator(), &access_key_id, &secret_access_key, session_token.ptr ? &session_token : NULL);
-    if (!binding->native) {
-        PyErr_SetAwsLastError();
-        goto error;
+    if (!credentials) {
+        return PyErr_AwsLastError();
     }
 
-    return capsule;
-
-error:
-    Py_DECREF(capsule);
-    return NULL;
-}
-
-PyObject *aws_py_credentials_new_binding_capsule(struct aws_credentials *owned_credentials) {
-    struct credentials_binding *binding;
-    PyObject *capsule = s_new_credentials_capsule_and_binding(&binding);
+    PyObject *capsule = PyCapsule_New(credentials, s_capsule_name_credentials, s_credentials_capsule_destructor);
     if (!capsule) {
+        aws_credentials_destroy(credentials);
         return NULL;
     }
 
-    binding->native = owned_credentials;
     return capsule;
 }
 
@@ -113,10 +68,7 @@ struct aws_credentials *aws_py_get_credentials(PyObject *credentials) {
 
     PyObject *capsule = PyObject_GetAttrString(credentials, "_binding");
     if (capsule) {
-        struct credentials_binding *binding = PyCapsule_GetPointer(capsule, s_capsule_name_credentials);
-        if (binding) {
-            native = binding->native;
-        }
+        native = PyCapsule_GetPointer(capsule, s_capsule_name_credentials);
         Py_DECREF(capsule);
     }
 
@@ -135,21 +87,21 @@ static PyObject *s_credentials_get_member_str(PyObject *args, enum credentials_m
         return NULL;
     }
 
-    const struct credentials_binding *binding = PyCapsule_GetPointer(capsule, s_capsule_name_credentials);
-    if (!binding) {
+    const struct aws_credentials *credentials = PyCapsule_GetPointer(capsule, s_capsule_name_credentials);
+    if (!credentials) {
         return NULL;
     }
 
     const struct aws_string *str;
     switch (member) {
         case CREDENTIALS_MEMBER_ACCESS_KEY_ID:
-            str = binding->native->access_key_id;
+            str = credentials->access_key_id;
             break;
         case CREDENTIALS_MEMBER_SECRET_ACCESS_KEY:
-            str = binding->native->secret_access_key;
+            str = credentials->secret_access_key;
             break;
         case CREDENTIALS_MEMBER_SESSION_TOKEN:
-            str = binding->native->session_token;
+            str = credentials->session_token;
             break;
         default:
             AWS_FATAL_ASSERT(0);

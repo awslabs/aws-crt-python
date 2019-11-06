@@ -19,13 +19,6 @@
 struct aws_credentials;
 
 PyObject *aws_py_credentials_new(PyObject *self, PyObject *args);
-
-/**
- * Create Capsule to own pre-existing aws_credentials struct.
- * The aws_credentials are destroyed when the capsule is destroyed.
- */
-PyObject *aws_py_credentials_new_binding_capsule(struct aws_credentials *owned_credentials);
-
 PyObject *aws_py_credentials_access_key_id(PyObject *self, PyObject *args);
 PyObject *aws_py_credentials_secret_access_key(PyObject *self, PyObject *args);
 PyObject *aws_py_credentials_session_token(PyObject *self, PyObject *args);

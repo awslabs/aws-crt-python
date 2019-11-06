@@ -30,6 +30,7 @@ class Credentials(NativeResource):
         assert isinstance_str(secret_access_key)
         assert isinstance_str(session_token) or session_token is None
 
+        super(Credentials, self).__init__()
         self._binding = _awscrt.credentials_new(access_key_id, secret_access_key, session_token)
 
     @property
