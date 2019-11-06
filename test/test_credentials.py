@@ -38,6 +38,7 @@ class ScopedEnvironmentVariable(object):
         else:
             os.environ[self.key] = self.prev_value
 
+
 class TestCredentials(NativeResourceTest):
     def test_create(self):
         credentials = Credentials(EXAMPLE_ACCESS_KEY_ID, EXAMPLE_SECRET_ACCESS_KEY, EXAMPLE_SESSION_TOKEN)
@@ -50,7 +51,6 @@ class TestCredentials(NativeResourceTest):
         self.assertEqual(EXAMPLE_ACCESS_KEY_ID, credentials.access_key_id)
         self.assertEqual(EXAMPLE_SECRET_ACCESS_KEY, credentials.secret_access_key)
         self.assertIsNone(credentials.session_token)
-
 
 
 class TestProvider(NativeResourceTest):
