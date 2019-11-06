@@ -40,13 +40,13 @@ class ScopedEnvironmentVariable(object):
 
 class TestCredentials(NativeResourceTest):
     def test_create(self):
-        credentials = Credentials.create(EXAMPLE_ACCESS_KEY_ID, EXAMPLE_SECRET_ACCESS_KEY, EXAMPLE_SESSION_TOKEN)
+        credentials = Credentials(EXAMPLE_ACCESS_KEY_ID, EXAMPLE_SECRET_ACCESS_KEY, EXAMPLE_SESSION_TOKEN)
         self.assertEqual(EXAMPLE_ACCESS_KEY_ID, credentials.access_key_id)
         self.assertEqual(EXAMPLE_SECRET_ACCESS_KEY, credentials.secret_access_key)
         self.assertEqual(EXAMPLE_SESSION_TOKEN, credentials.session_token)
 
     def test_create_no_session_token(self):
-        credentials = Credentials.create(EXAMPLE_ACCESS_KEY_ID, EXAMPLE_SECRET_ACCESS_KEY)
+        credentials = Credentials(EXAMPLE_ACCESS_KEY_ID, EXAMPLE_SECRET_ACCESS_KEY)
         self.assertEqual(EXAMPLE_ACCESS_KEY_ID, credentials.access_key_id)
         self.assertEqual(EXAMPLE_SECRET_ACCESS_KEY, credentials.secret_access_key)
         self.assertIsNone(credentials.session_token)

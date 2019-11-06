@@ -25,19 +25,12 @@ class Credentials(NativeResource):
 
     __slots__ = ()
 
-    @classmethod
-    def create(cls, access_key_id, secret_access_key, session_token=None):
+    def __init__(self, access_key_id, secret_access_key, session_token=None):
         assert isinstance_str(access_key_id)
         assert isinstance_str(secret_access_key)
         assert isinstance_str(session_token) or session_token is None
 
-        return cls._from_binding(_awscrt.credentials_new(access_key_id, secret_access_key, session_token))
-
-    @classmethod
-    def _from_binding(cls, credentials_binding):
-        credentials = cls()
-        credentials._binding = credentials_binding
-        return credentials
+        self._binding = _awscrt.credentials_new(access_key_id, secret_access_key, session_token)
 
     @property
     def access_key_id(self):
@@ -66,12 +59,12 @@ class CredentialsProviderBase(NativeResource):
         """
         future = Future()
 
-        def _on_complete(error_code, credentials_binding):
+        def _on_complete(error_code, access_key_id, secret_access_key, session_token):
             try:
                 if error_code:
                     future.set_exception(Exception(error_code))  # TODO: Actual exceptions for error_codes
                 else:
-                    credentials = Credentials._from_binding(credentials_binding)
+                    credentials = Credentials(access_key_id, secret_access_key, session_token)
                     future.set_result(credentials)
 
             except Exception as e:

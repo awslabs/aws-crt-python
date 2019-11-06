@@ -237,21 +237,43 @@ static void s_on_get_credentials_complete(struct aws_credentials *credentials, v
     PyObject *on_complete_cb = user_data;
 
     /* NOTE: This callback doesn't currently supply an error_code, but it should. */
-    int error_code = credentials ? AWS_ERROR_SUCCESS : AWS_ERROR_UNKNOWN;
+    int error_code = AWS_ERROR_UNKNOWN;
+
+    const char *access_key_id = NULL;
+    Py_ssize_t access_key_id_len = 0;
+    const char *secret_access_key = NULL;
+    Py_ssize_t secret_access_key_len = 0;
+    const char *session_token = NULL;
+    Py_ssize_t session_token_len = 0;
+
+    if (credentials) {
+        error_code = AWS_ERROR_SUCCESS;
+
+        if (s_aws_string_to_cstr_and_ssize(credentials->access_key_id, &access_key_id, &access_key_id_len)) {
+            error_code = aws_last_error();
+        }
+        if (s_aws_string_to_cstr_and_ssize(
+                credentials->secret_access_key, &secret_access_key, &secret_access_key_len)) {
+            error_code = aws_last_error();
+        }
+        if (s_aws_string_to_cstr_and_ssize(credentials->session_token, &session_token, &session_token_len)) {
+            error_code = aws_last_error();
+        }
+    }
 
     /*************** GIL ACQUIRE ***************/
     PyGILState_STATE state = PyGILState_Ensure();
 
-    PyObject *credentials_binding_capsule = NULL;
-    if (credentials) {
-        credentials_binding_capsule = aws_py_credentials_new_binding_capsule(credentials);
-        if (!credentials_binding_capsule) {
-            error_code = aws_py_raise_error();
-            aws_credentials_destroy(credentials);
-        }
-    }
-
-    PyObject *result = PyObject_CallFunction(on_complete_cb, "(iO)", error_code, credentials_binding_capsule);
+    PyObject *result = PyObject_CallFunction(
+        on_complete_cb,
+        "(is#s#s#)",
+        error_code,
+        access_key_id,
+        access_key_id_len,
+        secret_access_key,
+        secret_access_key_len,
+        session_token,
+        session_token_len);
     if (result) {
         Py_DECREF(result);
     } else {
@@ -259,7 +281,6 @@ static void s_on_get_credentials_complete(struct aws_credentials *credentials, v
     }
 
     Py_DECREF(on_complete_cb);
-    Py_XDECREF(credentials_binding_capsule);
 
     PyGILState_Release(state);
     /*************** GIL RELEASE ***************/
