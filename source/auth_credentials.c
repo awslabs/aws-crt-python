@@ -427,7 +427,7 @@ PyObject *aws_py_credentials_provider_new_static(PyObject *self, PyObject *args)
         allocator,
         aws_byte_cursor_from_array(access_key_id, access_key_id_len),
         aws_byte_cursor_from_array(secret_access_key, secret_access_key_len),
-        aws_byte_cursor_from_array(session_token, session_token ? session_token_len : 0));
+        aws_byte_cursor_from_array(session_token, session_token_len));
 
     if (!binding->native) {
         PyErr_SetAwsLastError();
