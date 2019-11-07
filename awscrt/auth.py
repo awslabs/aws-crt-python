@@ -154,11 +154,11 @@ class AwsSigningConfig(NativeResource):
                    'use_double_uri_encode', 'should_normalize_uri_path', 'sign_body')
 
     def __init__(self,
-                 algorithm=AwsSigningAlgorithm.Sigv4Header,  # type: AwsSigningAlgorithm
-                 credentials_provider=None,  # type: Optional[AwsCredentialsProviderBase]
-                 region=None,  # type: Optional[str]
-                 service=None,  # type: Optional[str]
-                 date=datetime.datetime.now(datetime.timezone.utc),  # type: Optional[datetime.datetime]
+                 algorithm,  # type: AwsSigningAlgorithm
+                 credentials_provider,  # type: AwsCredentialsProviderBase
+                 region,  # type: str
+                 service,  # type: str
+                 date=datetime.datetime.now(datetime.timezone.utc),  # type: datetime.datetime
                  should_sign_param=None,  # type: Optional[Callable[[str], bool]]
                  use_double_uri_encode=False,  # type: bool
                  should_normalize_uri_path=True,  # type: bool
@@ -166,18 +166,14 @@ class AwsSigningConfig(NativeResource):
                  ):
         # type: (...) -> None
 
+        assert isinstance(algorithm, AwsSigningAlgorithm)
+        assert isinstance(credentials_provider, AwsCredentialsProviderBase)
+        assert isinstance_str(region)
+        assert isinstance_str(service)
+        assert isinstance(date, datetime.datetime)
         assert callable(should_sign_param) or should_sign_param is None
 
         super(AwsSigningConfig, self).__init__()
-        self._binding = _awscrt.signing_config_new()
-        _awscrt.signing_config_set_algorithm(self._binding, algorithm)
-        _awscrt.signing_config_set_credentials_provider(self._binding, credentials_provider)
-        _awscrt.signing_config_set_region(self._binding, region)
-        _awscrt.signing_config_set_service(self._binding, service)
-        _awscrt.signing_config_set_should_sign_param(self._binding, should_sign_param)
-        _awscrt.signing_config_set_use_double_uri_encode(self._binding, use_double_uri_encode)
-        _awscrt.signing_config_set_should_normalize_uri_path(self._binding, should_normalize_uri_path)
-        _awscrt.signing_config_set_sign_body(self._binding, sign_body)
 
         try:
             timestamp = date.timestamp()
@@ -190,7 +186,17 @@ class AwsSigningConfig(NativeResource):
             epoch = datetime.datetime(1970, 1, 1, tzinfo=datetime.timezone.utc)
             timestamp = (date - epoch).total_seconds()
 
-        _awscrt.signing_config_set_date(self._binding, date, timestamp)
+        self._binding = _awscrt.signing_config_new(
+            algorithm,
+            credentials_provider,
+            region,
+            service,
+            date,
+            timestamp,
+            should_sign_param,
+            use_double_uri_encode,
+            should_normalize_uri_path,
+            sign_body)
 
     def replace(self, **kwargs):
         """
@@ -305,5 +311,5 @@ class AwsSigner(NativeResource):
             except Exception as e:
                 future.set_exception(e)
 
-        _awscrt.signer_sign_request(self._binding, http_request, signing_config, _on_complete)
+        _awscrt.signer_sign_request(self, http_request, signing_config, _on_complete)
         return future

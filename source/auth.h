@@ -30,23 +30,14 @@ PyObject *aws_py_credentials_provider_new_static(PyObject *self, PyObject *args)
 
 PyObject *aws_py_signing_config_new(PyObject *self, PyObject *args);
 PyObject *aws_py_signing_config_get_algorithm(PyObject *self, PyObject *args);
-PyObject *aws_py_signing_config_set_algorithm(PyObject *self, PyObject *args);
 PyObject *aws_py_signing_config_get_credentials_provider(PyObject *self, PyObject *args);
-PyObject *aws_py_signing_config_set_credentials_provider(PyObject *self, PyObject *args);
 PyObject *aws_py_signing_config_get_region(PyObject *self, PyObject *args);
-PyObject *aws_py_signing_config_set_region(PyObject *self, PyObject *args);
 PyObject *aws_py_signing_config_get_service(PyObject *self, PyObject *args);
-PyObject *aws_py_signing_config_set_service(PyObject *self, PyObject *args);
 PyObject *aws_py_signing_config_get_date(PyObject *self, PyObject *args);
-PyObject *aws_py_signing_config_set_date(PyObject *self, PyObject *args);
 PyObject *aws_py_signing_config_get_should_sign_param(PyObject *self, PyObject *args);
-PyObject *aws_py_signing_config_set_should_sign_param(PyObject *self, PyObject *args);
 PyObject *aws_py_signing_config_get_use_double_uri_encode(PyObject *self, PyObject *args);
-PyObject *aws_py_signing_config_set_use_double_uri_encode(PyObject *self, PyObject *args);
 PyObject *aws_py_signing_config_get_should_normalize_uri_path(PyObject *self, PyObject *args);
-PyObject *aws_py_signing_config_set_should_normalize_uri_path(PyObject *self, PyObject *args);
 PyObject *aws_py_signing_config_get_sign_body(PyObject *self, PyObject *args);
-PyObject *aws_py_signing_config_set_sign_body(PyObject *self, PyObject *args);
 
 PyObject *aws_py_signer_new_aws(PyObject *self, PyObject *args);
 PyObject *aws_py_signer_sign_request(PyObject *self, PyObject *args);

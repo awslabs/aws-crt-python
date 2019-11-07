@@ -105,21 +105,7 @@ class TestProvider(NativeResourceTest):
 
 
 class TestSigningConfig(NativeResourceTest):
-    def test_create_default(self):
-        # use default constructor
-        cfg = awscrt.auth.AwsSigningConfig()
-        self.assertIs(awscrt.auth.AwsSigningAlgorithm.Sigv4Header, cfg.algorithm)  # assert IS enum, not just EQUAL
-        self.assertIsNone(cfg.credentials_provider)
-        self.assertIsNone(cfg.region)
-        self.assertIsNone(cfg.service)
-        self.assertTrue(isinstance(cfg.date, datetime.datetime))
-        self.assertIsNone(cfg.should_sign_param)
-        self.assertFalse(cfg.use_double_uri_encode)
-        self.assertTrue(cfg.should_normalize_uri_path)
-        self.assertTrue(cfg.sign_body)
-
-    def test_create_specialized(self):
-        # pass non-default value to every constructor arg
+    def test_create(self):
         algorithm = awscrt.auth.AwsSigningAlgorithm.Sigv4QueryParam
         credentials_provider = awscrt.auth.StaticAwsCredentialsProvider(
             EXAMPLE_ACCESS_KEY_ID, EXAMPLE_SECRET_ACCESS_KEY)
