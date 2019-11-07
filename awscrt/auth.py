@@ -24,6 +24,7 @@ from enum import IntEnum
 class AwsCredentials(NativeResource):
     """
     AwsCredentials are the public/private data needed to sign an authenticated AWS request.
+    AwsCredentials are immutable.
     """
     __slots__ = ()
 
