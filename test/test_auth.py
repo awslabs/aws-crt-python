@@ -108,7 +108,7 @@ class TestSigningConfig(NativeResourceTest):
     def test_create_default(self):
         # use default constructor
         cfg = awscrt.auth.AwsSigningConfig()
-        self.assertIs(awscrt.auth.AwsSigningAlgorithm.Sigv4Headers, cfg.algorithm)  # assert IS enum, not just EQUAL
+        self.assertIs(awscrt.auth.AwsSigningAlgorithm.Sigv4Header, cfg.algorithm)  # assert IS enum, not just EQUAL
         self.assertIsNone(cfg.credentials_provider)
         self.assertIsNone(cfg.region)
         self.assertIsNone(cfg.service)
@@ -124,9 +124,12 @@ class TestSigningConfig(NativeResourceTest):
         credentials_provider = awscrt.auth.StaticAwsCredentialsProvider(
             EXAMPLE_ACCESS_KEY_ID, EXAMPLE_SECRET_ACCESS_KEY)
         region = 'us-west-2'
-        service = 'aws-suborbital-ion-canon'
-        date = datetime.datetime.now()
-        def should_sign_param(name): return not name.tolower().startswith('x-do-not-sign')
+        service = 'aws-suborbital-ion-cannon'
+        date = datetime.datetime(year=2000, month=1, day=1)
+
+        def should_sign_param(name):
+            return not name.tolower().startswith('x-do-not-sign')
+
         use_double_uri_encode = True
         should_normalize_uri_path = False
         sign_body = False
@@ -150,3 +153,113 @@ class TestSigningConfig(NativeResourceTest):
         self.assertEqual(use_double_uri_encode, cfg.use_double_uri_encode)
         self.assertEqual(should_normalize_uri_path, cfg.should_normalize_uri_path)
         self.assertEqual(sign_body, cfg.sign_body)
+
+    def test_replace(self):
+        credentials_provider = awscrt.auth.StaticAwsCredentialsProvider(
+            EXAMPLE_ACCESS_KEY_ID, EXAMPLE_SECRET_ACCESS_KEY)
+
+        # nondefault values, to be sure they're carried over correctly
+        orig_cfg = awscrt.auth.AwsSigningConfig(algorithm=awscrt.auth.AwsSigningAlgorithm.Sigv4QueryParam,
+                                                credentials_provider=credentials_provider,
+                                                region='us-west-1',
+                                                service='aws-suborbital-ion-cannon',
+                                                date=datetime.datetime(year=2000, month=1, day=1),
+                                                should_sign_param=lambda x: False,
+                                                use_double_uri_encode=True,
+                                                should_normalize_uri_path=False,
+                                                sign_body=False)
+
+        # Call replace on single attribute, then assert that ONLY the one attribute differs
+        def _replace_attr(name, value):
+            new_cfg = orig_cfg.replace(**{name: value})
+            self.assertIsNot(orig_cfg, new_cfg)  # must return new object
+
+            self.assertEqual(value, getattr(new_cfg, name))  # must replace specified value
+
+            # check that only the one attribute differs
+            for attr in awscrt.auth.AwsSigningConfig._attributes:
+                if attr == name:
+                    self.assertNotEqual(getattr(orig_cfg, attr), getattr(new_cfg, attr),
+                                        "replaced value should not match original")
+                else:
+                    self.assertEqual(getattr(orig_cfg, attr), getattr(new_cfg, attr),
+                                     "value should match original")
+
+        _replace_attr('algorithm', awscrt.auth.AwsSigningAlgorithm.Sigv4Header)
+        _replace_attr('credentials_provider',
+                      awscrt.auth.StaticAwsCredentialsProvider(EXAMPLE_ACCESS_KEY_ID, EXAMPLE_SECRET_ACCESS_KEY))
+        _replace_attr('region', 'us-west-2')
+        _replace_attr('service', 'aws-nothing-but-bees')
+        _replace_attr('date', datetime.datetime(year=2001, month=1, day=1))
+        _replace_attr('should_sign_param', lambda x: True)
+        _replace_attr('use_double_uri_encode', False)
+        _replace_attr('should_normalize_uri_path', True)
+        _replace_attr('sign_body', True)
+
+        # check that we can replace multiple values at once
+        new_cfg = orig_cfg.replace(region='us-west-3', service='aws-slow-blinking')
+        self.assertEqual('us-west-3', new_cfg.region)
+        self.assertEqual('aws-slow-blinking', new_cfg.service)
+        self.assertEqual(orig_cfg.should_sign_param, new_cfg.should_sign_param)
+
+
+# Test values copied from aws-c-auth/tests/aws-sig-v4-test-suite/get-vanilla"
+SIGV4TEST_ACCESS_KEY_ID = 'AKIDEXAMPLE'
+SIGV4TEST_SECRET_ACCESS_KEY = 'wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY'
+SIGV4TEST_SESSION_TOKEN = '6e86291e8372ff2a2260956d9b8aae1d763fbf315fa00fa31553b73ebf194267'
+SIGV4TEST_SERVICE = 'service'
+SIGV4TEST_REGION = 'us-east-1'
+SIGV4TEST_METHOD = 'GET'
+SIGV4TEST_PATH = '/'
+SIGV4TEST_UNSIGNED_HEADERS = [
+    ('Host', 'example.amazonaws.com'),
+    ('X-Amz-Date', '20150830T123600Z')]
+SIGV4TEST_SIGNED_HEADERS = [
+    ('Host',
+     'example.amazonaws.com'),
+    ('X-Amz-Date',
+     '20150830T123600Z'),
+    ('Authorization',
+     'AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/service/aws4_request, SignedHeaders=host;x-amz-date, Signature=5fa00fa31553b73ebf1942676e86291e8372ff2a2260956d9b8aae1d763fbf31')]
+
+
+class TestSigner(NativeResourceTest):
+
+    def test_create(self):
+        signer = awscrt.auth.AwsSigner()
+
+    def test_signing_sigv4_headers(self):
+        signer = awscrt.auth.AwsSigner()
+
+        credentials_provider = awscrt.auth.StaticAwsCredentialsProvider(
+            SIGV4TEST_ACCESS_KEY_ID, SIGV4TEST_SECRET_ACCESS_KEY, SIGV4TEST_SESSION_TOKEN)
+
+        signing_config = awscrt.auth.AwsSigningConfig(
+            algorithm=awscrt.auth.AwsSigningAlgorithm.Sigv4Header,
+            credentials_provider=credentials_provider,
+            region=SIGV4TEST_REGION,
+            service=SIGV4TEST_SERVICE)
+
+        http_request = awscrt.http.HttpRequest(
+            method=SIGV4TEST_METHOD,
+            path=SIGV4TEST_PATH,
+            headers=SIGV4TEST_UNSIGNED_HEADERS)
+
+        signing_future = signer.sign_request(http_request, signing_config)
+
+        signing_result = signing_future.result(10)
+
+        self.assertIs(http_request, signing_result)  # should be same object
+
+        # everything should be the same EXCEPT the addition of the Authorization header
+        self.assertEqual(SIGV4TEST_METHOD, http_request.method)
+        self.assertEqual(SIGV4TEST_PATH, http_request.path)
+
+        expected_headers = list(SIGV4TEST_UNSIGNED_HEADERS)
+        for signed_header in http_request.headers:
+            self.assertIn(signed_header, expected_headers,
+                          'Unexpected header in signed request: {}'.format(signed_header))
+            expected_headers.remove(signed_header)
+
+        self.assertEqual(0, len(expected_headers),
+                         "Expected headers not found in signed request: {}".format(expected_headers))

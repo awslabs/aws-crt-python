@@ -25,7 +25,6 @@ class AwsCredentials(NativeResource):
     """
     AwsCredentials are the public/private data needed to sign an authenticated AWS request.
     """
-
     __slots__ = ()
 
     def __init__(self, access_key_id, secret_access_key, session_token=None):
@@ -48,11 +47,16 @@ class AwsCredentials(NativeResource):
     def session_token(self):
         return _awscrt.credentials_session_token(self._binding)
 
+    def __deepcopy__(self, memo):
+        # AwsCredentials is immutable, so just return self.
+        return self
+
 
 class AwsCredentialsProviderBase(NativeResource):
     """
     Base class for providers that source the AwsCredentials needed to sign an authenticated AWS request.
     """
+    __slots__ = ()
 
     def get_credentials(self):
         """
@@ -102,6 +106,7 @@ class DefaultAwsCredentialsProviderChain(AwsCredentialsProviderBase):
     (3) (conditional, off by default) ECS
     (4) (conditional, on by default) EC2 Instance Metadata
     """
+    __slots__ = ()
 
     def __init__(self, client_bootstrap):
         assert isinstance(client_bootstrap, ClientBootstrap)
@@ -115,6 +120,7 @@ class StaticAwsCredentialsProvider(AwsCredentialsProviderBase):
     Providers source the AwsCredentials needed to sign an authenticated AWS request.
     This is a simple provider that just returns a fixed set of credentials
     """
+    __slots__ = ()
 
     def __init__(self, access_key_id, secret_access_key, session_token=None):
         assert isinstance_str(access_key_id)
@@ -126,13 +132,29 @@ class StaticAwsCredentialsProvider(AwsCredentialsProviderBase):
 
 
 class AwsSigningAlgorithm(IntEnum):
-    Sigv4Headers = 0
+    """
+    Which signing algorithm to use.
+
+    Sigv4Header: Use Signature Version 4 to sign headers.
+    Sigv4QueryParam: Use Signature Version 4 to sign query parameters.
+    """
+    Sigv4Header = 0
     Sigv4QueryParam = 1
 
 
 class AwsSigningConfig(NativeResource):
+    """
+    Configuration for use in AWS-related signing.
+    AwsSigningConfig is immutable.
+    It is good practice to use a new config for each signature, or the date might get too old.
+    """
+    __slots__ = ()
+
+    _attributes = ('algorithm', 'credentials_provider', 'region', 'service', 'date', 'should_sign_param',
+                   'use_double_uri_encode', 'should_normalize_uri_path', 'sign_body')
+
     def __init__(self,
-                 algorithm=AwsSigningAlgorithm.Sigv4Headers,  # type: AwsSigningAlgorithm
+                 algorithm=AwsSigningAlgorithm.Sigv4Header,  # type: AwsSigningAlgorithm
                  credentials_provider=None,  # type: Optional[AwsCredentialsProviderBase]
                  region=None,  # type: Optional[str]
                  service=None,  # type: Optional[str]
@@ -143,61 +165,20 @@ class AwsSigningConfig(NativeResource):
                  sign_body=True  # type: bool
                  ):
         # type: (...) -> None
+
+        assert callable(should_sign_param) or should_sign_param is None
+
         super(AwsSigningConfig, self).__init__()
         self._binding = _awscrt.signing_config_new()
-        self.algorithm = algorithm
-        self.credentials_provider = credentials_provider
-        self.region = region
-        self.service = service
-        self.date = date
-        self.should_sign_param = should_sign_param
-        self.use_double_uri_encode = use_double_uri_encode
-        self.should_normalize_uri_path = should_normalize_uri_path
-        self.sign_body = sign_body
-
-    @property
-    def algorithm(self):
-        """Which AwsSigningAlgorithm to invoke"""
-        return AwsSigningAlgorithm(_awscrt.signing_config_get_algorithm(self._binding))
-
-    @algorithm.setter
-    def algorithm(self, algorithm):
         _awscrt.signing_config_set_algorithm(self._binding, algorithm)
-
-    @property
-    def credentials_provider(self):
-        """AwsCredentialsProvider to fetch signing credentials with"""
-        return _awscrt.signing_config_get_credentials_provider(self._binding)
-
-    @credentials_provider.setter
-    def credentials_provider(self, credentials_provider):
         _awscrt.signing_config_set_credentials_provider(self._binding, credentials_provider)
-
-    @property
-    def region(self):
-        """The region to sign against"""
-        return _awscrt.signing_config_get_region(self._binding)
-
-    @region.setter
-    def region(self, region):
         _awscrt.signing_config_set_region(self._binding, region)
-
-    @property
-    def service(self):
-        """Name of service to sign a request for"""
-        return _awscrt.signing_config_get_service(self._binding)
-
-    @service.setter
-    def service(self, service):
         _awscrt.signing_config_set_service(self._binding, service)
+        _awscrt.signing_config_set_should_sign_param(self._binding, should_sign_param)
+        _awscrt.signing_config_set_use_double_uri_encode(self._binding, use_double_uri_encode)
+        _awscrt.signing_config_set_should_normalize_uri_path(self._binding, should_normalize_uri_path)
+        _awscrt.signing_config_set_sign_body(self._binding, sign_body)
 
-    @property
-    def date(self):
-        """datetime.datetime to use during the signing process"""
-        return _awscrt.signing_config_get_date(self._binding)
-
-    @date.setter
-    def date(self, date):
         try:
             timestamp = date.timestamp()
         except AttributeError:
@@ -210,6 +191,39 @@ class AwsSigningConfig(NativeResource):
             timestamp = (date - epoch).total_seconds()
 
         _awscrt.signing_config_set_date(self._binding, date, timestamp)
+
+    def replace(self, **kwargs):
+        """
+        Return an AwsSigningConfig with the same attributes, except for those
+        attributes given new values by whichever keyword arguments are specified.
+        """
+        args = {x: kwargs.get(x, getattr(self, x)) for x in AwsSigningConfig._attributes}
+        return AwsSigningConfig(**args)
+
+    @property
+    def algorithm(self):
+        """Which AwsSigningAlgorithm to invoke"""
+        return AwsSigningAlgorithm(_awscrt.signing_config_get_algorithm(self._binding))
+
+    @property
+    def credentials_provider(self):
+        """AwsCredentialsProvider to fetch signing credentials with"""
+        return _awscrt.signing_config_get_credentials_provider(self._binding)
+
+    @property
+    def region(self):
+        """The region to sign against"""
+        return _awscrt.signing_config_get_region(self._binding)
+
+    @property
+    def service(self):
+        """Name of service to sign a request for"""
+        return _awscrt.signing_config_get_service(self._binding)
+
+    @property
+    def date(self):
+        """datetime.datetime to use during the signing process"""
+        return _awscrt.signing_config_get_date(self._binding)
 
     @property
     def should_sign_param(self):
@@ -224,11 +238,6 @@ class AwsSigningConfig(NativeResource):
         """
         return _awscrt.signing_config_get_should_sign_param(self._binding)
 
-    @should_sign_param.setter
-    def should_sign_param(self, should_sign_param):
-        assert callable(should_sign_param) or should_sign_param is None
-        _awscrt.signing_config_set_should_sign_param(self._binding, should_sign_param)
-
     @property
     def use_double_uri_encode(self):
         """
@@ -238,18 +247,10 @@ class AwsSigningConfig(NativeResource):
         """
         return _awscrt.signing_config_get_use_double_uri_encode(self._binding)
 
-    @use_double_uri_encode.setter
-    def use_double_uri_encode(self, use_double_uri_encode):
-        _awscrt.signing_config_set_use_double_uri_encode(self._binding, use_double_uri_encode)
-
     @property
     def should_normalize_uri_path(self):
         """Controls whether or not the uri paths should be normalized when building the canonical request"""
         return _awscrt.signing_config_get_should_normalize_uri_path(self._binding)
-
-    @should_normalize_uri_path.setter
-    def should_normalize_uri_path(self, should_normalize_uri_path):
-        _awscrt.signing_config_set_should_normalize_uri_path(self._binding, should_normalize_uri_path)
 
     @property
     def sign_body(self):
@@ -259,27 +260,10 @@ class AwsSigningConfig(NativeResource):
         """
         return _awscrt.signing_config_get_sign_body(self._binding)
 
-    @sign_body.setter
-    def sign_body(self, sign_body):
-        _awscrt.signing_config_set_sign_body(self._binding, sign_body)
-
-    def __copy__(self):
-        return AwsSigningConfig(algorithm=self.algorithm,
-                                credentials_provider=self.credentials_provider,
-                                region=self.region,
-                                service=self.service,
-                                date=self.date,
-                                should_sign_param=self.should_sign_param,
-                                use_double_uri_encode=self.use_double_uri_encode,
-                                should_normalize_uri_path=self.should_normalize_uri_path,
-                                sign_body=self.sign_body)
-
 
 class AwsSigner(NativeResource):
     """
     A signer that performs AWS http request signing.
-
-    This signer currently supports only the sigv4 algorithm.
 
     When using this signer to sign AWS http requests:
 
@@ -304,6 +288,8 @@ class AwsSigner(NativeResource):
         """
         Asynchronously transform the HttpRequest according to the signing algorithm.
         Returns a Future whose result will be the signed HttpRequest.
+
+        It is good practice to use a new config for each signature, or the date might get too old.
         """
         assert isinstance(http_request, HttpRequest)
         assert isinstance(signing_config, AwsSigningConfig)

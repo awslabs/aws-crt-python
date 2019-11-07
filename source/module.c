@@ -311,6 +311,8 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(signing_config_set_should_normalize_uri_path, METH_VARARGS),
     AWS_PY_METHOD_DEF(signing_config_get_sign_body, METH_VARARGS),
     AWS_PY_METHOD_DEF(signing_config_set_sign_body, METH_VARARGS),
+    AWS_PY_METHOD_DEF(signer_new_aws, METH_VARARGS),
+    AWS_PY_METHOD_DEF(signer_sign_request, METH_VARARGS),
 
     {NULL, NULL, 0, NULL},
 };
