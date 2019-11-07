@@ -231,7 +231,7 @@ class TestSigner(NativeResourceTest):
             path=SIGV4TEST_PATH,
             headers=SIGV4TEST_UNSIGNED_HEADERS)
 
-        signing_future = signer.sign_request(http_request, signing_config)
+        signing_future = signer.sign(http_request, signing_config)
 
         signing_result = signing_future.result(10)
 

@@ -291,7 +291,7 @@ class AwsSigner(NativeResource):
         super(AwsSigner, self).__init__()
         self._binding = _awscrt.signer_new_aws()
 
-    def sign_request(self, http_request, signing_config):
+    def sign(self, http_request, signing_config):
         """
         Asynchronously transform the HttpRequest according to the signing algorithm.
         Returns a Future whose result will be the signed HttpRequest.
