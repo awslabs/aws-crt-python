@@ -69,6 +69,7 @@ PyObject *aws_py_signer_new_aws(PyObject *self, PyObject *args) {
 struct async_signing_data {
     PyObject *py_signer;
     PyObject *py_http_request;
+    struct aws_http_message *http_request; /* owned by py_http_request, do not clean up. */
     PyObject *py_signing_config;
     PyObject *py_on_complete;
     struct aws_signable *signable;
@@ -87,25 +88,16 @@ static void s_async_signing_data_destroy(struct async_signing_data *async_data) 
 static void s_signing_complete(struct aws_signing_result *signing_result, int error_code, void *userdata) {
     struct async_signing_data *async_data = userdata;
 
+    if (!error_code) {
+        struct aws_allocator *allocator = aws_py_get_allocator();
+
+        if (aws_apply_signing_result_to_http_request(async_data->http_request, allocator, signing_result)) {
+            error_code = aws_last_error();
+        }
+    }
+
     /*************** GIL ACQUIRE ***************/
     PyGILState_STATE state = PyGILState_Ensure();
-
-    if (error_code) {
-        goto done;
-    }
-
-    struct aws_http_message *http_request = aws_py_get_http_message(async_data->py_http_request);
-    if (!http_request) {
-        error_code = AWS_ERROR_UNKNOWN;
-        goto done;
-    }
-
-    if (aws_apply_signing_result_to_http_request(http_request, aws_py_get_allocator(), signing_result)) {
-        error_code = aws_last_error();
-        goto done;
-    }
-
-done:;
 
     PyObject *py_result = PyObject_CallFunction(async_data->py_on_complete, "(i)", error_code);
     if (py_result) {
@@ -163,6 +155,8 @@ PyObject *aws_py_signer_sign_request(PyObject *self, PyObject *args) {
 
     async_data->py_http_request = py_http_request;
     Py_INCREF(async_data->py_http_request);
+
+    async_data->http_request = http_request;
 
     async_data->py_signing_config = py_signing_config;
     Py_INCREF(async_data->py_signing_config);
