@@ -169,7 +169,9 @@ class AwsSigningConfig(NativeResource):
     """
     Configuration for use in AWS-related signing.
     AwsSigningConfig is immutable.
+
     It is good practice to use a new config for each signature, or the date might get too old.
+    Naive dates (lacking timezone info) are assumed to be in local time.
     """
     __slots__ = ()
 
