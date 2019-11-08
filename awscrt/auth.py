@@ -19,7 +19,25 @@ from awscrt.io import ClientBootstrap
 from concurrent.futures import Future
 import datetime
 from enum import IntEnum
+import time
 
+try:
+    _utc = datetime.timezone.utc
+except AttributeError:
+    # Python 2 lacks the datetime.timestamp() method.
+    # We can do the timestamp math ourselves, but only if datetime.tzinfo is set.
+    # Python 2 also lacks any predefined tzinfo classes (ex: datetime.timezone.utc),
+    # so we must define our own.
+    class _UTC(datetime.tzinfo):
+        ZERO = datetime.timedelta(0)
+        def utcoffset(self, dt):
+            return _UTC.ZERO
+        def tzname(self, dt):
+            return "UTC"
+        def dst(self, dt):
+            return _UTC.ZERO
+
+    _utc = _UTC()
 
 class AwsCredentials(NativeResource):
     """
@@ -159,7 +177,7 @@ class AwsSigningConfig(NativeResource):
                  credentials_provider,  # type: AwsCredentialsProviderBase
                  region,  # type: str
                  service,  # type: str
-                 date=datetime.datetime.now(datetime.timezone.utc),  # type: datetime.datetime
+                 date=datetime.datetime.now(_utc),  # type: datetime.datetime
                  should_sign_param=None,  # type: Optional[Callable[[str], bool]]
                  use_double_uri_encode=False,  # type: bool
                  should_normalize_uri_path=True,  # type: bool
@@ -182,10 +200,10 @@ class AwsSigningConfig(NativeResource):
             # Python 2 doesn't have datetime.timestamp() function.
             # If it did we could just call it from binding code instead of calculating it here.
             if date.tzinfo is None:
-                raise TypeError('offset-aware datetime is required')
-
-            epoch = datetime.datetime(1970, 1, 1, tzinfo=datetime.timezone.utc)
-            timestamp = (date - epoch).total_seconds()
+                timestamp = time.mktime(date.timetuple())
+            else:
+                epoch = datetime.datetime(1970, 1, 1, tzinfo=_utc)
+                timestamp = (date - epoch).total_seconds()
 
         self._binding = _awscrt.signing_config_new(
             algorithm,
