@@ -30,14 +30,18 @@ except AttributeError:
     # so we must define our own.
     class _UTC(datetime.tzinfo):
         ZERO = datetime.timedelta(0)
+
         def utcoffset(self, dt):
             return _UTC.ZERO
+
         def tzname(self, dt):
             return "UTC"
+
         def dst(self, dt):
             return _UTC.ZERO
 
     _utc = _UTC()
+
 
 class AwsCredentials(NativeResource):
     """
