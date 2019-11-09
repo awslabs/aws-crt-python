@@ -28,7 +28,7 @@ struct config_binding {
     struct aws_byte_buf string_storage;
 
     /**
-     * Python objects that must must outlive this.
+     * Python objects that must outlive this.
      * These all wrap values referenced from the native aws_signing_config_aws.
      * For example, the python AwsCredentialsProvider whose native resource is referenced by
      * native.credentials_provider. These values are never NULL (unless construction failed), they are Py_None if they
