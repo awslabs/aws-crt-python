@@ -254,9 +254,9 @@ class HttpHeaders(NativeResource):
 
     @classmethod
     def _from_binding(self, binding):
-        # wrap pre-existing native object
-        self = HttpHeaders.__new__()
-        super(HttpHeaders, self).__init__()
+        """Construct from a pre-existing native object"""
+        self = HttpHeaders.__new__() # avoid class's default __init__()
+        super(HttpHeaders, self).__init__() # just invoke parent class's __init__()
         self._binding = binding
 
     def add(self, name, value):

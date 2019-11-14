@@ -28,6 +28,7 @@ static const char *s_capsule_name_elg = "aws_event_loop_group";
 static const char *s_capsule_name_host_resolver = "aws_host_resolver";
 static const char *s_capsule_name_tls_ctx = "aws_client_tls_ctx";
 static const char *s_capsule_name_tls_conn_options = "aws_tls_connection_options";
+static const char *s_capsule_name_input_stream = "aws_input_stream";
 
 bool aws_py_socket_options_init(struct aws_socket_options *socket_options, PyObject *py_socket_options) {
     AWS_ZERO_STRUCT(*socket_options);
@@ -734,7 +735,7 @@ static struct aws_input_stream_vtable s_aws_input_stream_py_vtable = {
     .destroy = s_aws_input_stream_py_destroy,
 };
 
-struct aws_input_stream *aws_input_stream_new_from_py(PyObject *io) {
+static struct aws_input_stream *aws_input_stream_new_from_py(PyObject *io) {
 
     if (!io || (io == Py_None)) {
         aws_raise_error(AWS_ERROR_INVALID_ARGUMENT);
@@ -754,4 +755,51 @@ struct aws_input_stream *aws_input_stream_new_from_py(PyObject *io) {
     Py_INCREF(impl->io);
 
     return &impl->base;
+}
+
+/**
+ * Begin aws_input_stream <--> InputStream binding code.
+ * This is distinct from the aws_input_stream_from_pyobject() code because
+ * we might someday have an InputStream in python that is wrapping an
+ * aws_input_stream that was not initially created from python, and is not
+ * backed by a python I/O object.
+ */
+
+static void s_input_stream_capsule_destructor(PyObject *py_capsule) {
+    struct aws_input_stream *stream = PyCapsule_GetPointer(py_capsule, s_capsule_name_input_stream);
+    aws_input_stream_destroy(stream);
+}
+
+PyObject *aws_py_input_stream_new(PyObject *self, PyObject *args) {
+    (void)self;
+
+    PyObject *py_io;
+    if (!PyArg_ParseTuple(args, "O", &py_io)) {
+        return NULL;
+    }
+
+    struct aws_input_stream *stream = aws_input_stream_from_pyobject(py_io);
+    if (!stream) {
+        return PyErr_AwsLastError();
+    }
+
+    PyObject *py_capsule = PyCapsule_New(stream, s_capsule_name_input_stream, s_input_stream_capsule_destructor);
+    if (!py_capsule) {
+        aws_input_stream_destroy(stream);
+        return NULL;
+    }
+
+    return py_capsule;
+}
+
+struct aws_input_stream *aws_py_get_input_stream(PyObject *input_stream) {
+    struct aws_input_stream *native = NULL;
+
+    PyObject *py_capsule = PyObject_GetAttrString(input_stream, "_binding");
+    if (py_capsule) {
+        native = PyCapsule_GetPointer(py_capsule, s_capsule_name_input_stream);
+        Py_DECREF(py_capsule);
+    }
+
+    return native;
 }

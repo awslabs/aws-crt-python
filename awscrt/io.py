@@ -283,7 +283,9 @@ class TlsConnectionOptions(NativeResource):
     def set_server_name(self, server_name):
         _awscrt.tls_connection_options_set_server_name(self, server_name)
 
+
 class InputStream(NativeResource):
+    """InputStream allows awscrt native code to read from Python I/O classes"""
     __slots__ = ()
     # TODO: Implement IOBase interface so Python can read from this class as well.
 
@@ -304,4 +306,3 @@ class InputStream(NativeResource):
         if stream is None and allow_none:
             return None
         raise TypeError('I/O stream type expected')
-

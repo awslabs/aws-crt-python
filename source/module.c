@@ -253,6 +253,7 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(tls_connection_options_set_alpn_list, METH_VARARGS),
     AWS_PY_METHOD_DEF(tls_connection_options_set_server_name, METH_VARARGS),
     AWS_PY_METHOD_DEF(init_logging, METH_VARARGS),
+    AWS_PY_METHOD_DEF(input_stream_new, METH_VARARGS),
 
     /* MQTT Client */
     AWS_PY_METHOD_DEF(mqtt_client_new, METH_VARARGS),
