@@ -294,6 +294,8 @@ class InputStream(NativeResource):
     def __init__(self, stream):
         assert isinstance(stream, io.IOBase)
         assert not isinstance(stream, InputStream)
+
+        super(InputStream, self).__init__()
         self._binding = _awscrt.input_stream_new(stream)
 
     @classmethod
