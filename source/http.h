@@ -16,6 +16,8 @@
  */
 #include "module.h"
 
+struct aws_http_headers;
+
 /**
  * Close the connection if it's open.
  */
@@ -34,7 +36,27 @@ PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args);
 
 PyObject *aws_py_http_client_stream_new(PyObject *self, PyObject *args);
 
-PyObject *aws_py_http_request_new(PyObject *self, PyObject *args);
+PyObject *aws_py_http_message_new_request(PyObject *self, PyObject *args);
+PyObject *aws_py_http_message_get_request_method(PyObject *self, PyObject *args);
+PyObject *aws_py_http_message_set_request_method(PyObject *self, PyObject *args);
+PyObject *aws_py_http_message_get_request_path(PyObject *self, PyObject *args);
+PyObject *aws_py_http_message_set_request_path(PyObject *self, PyObject *args);
+
+/* Create capsule to bind existing aws_http_headers struct. */
+PyObject *aws_py_http_headers_new_from_native(struct aws_http_headers *headers);
+
+/* Create capsule around new aws_http_headers struct */
+PyObject *aws_py_http_headers_new(PyObject *self, PyObject *args);
+
+PyObject *aws_py_http_headers_add(PyObject *self, PyObject *args);
+PyObject *aws_py_http_headers_add_pairs(PyObject *self, PyObject *args);
+PyObject *aws_py_http_headers_set(PyObject *self, PyObject *args);
+PyObject *aws_py_http_headers_get(PyObject *self, PyObject *args);
+PyObject *aws_py_http_headers_get_index(PyObject *self, PyObject *args);
+PyObject *aws_py_http_headers_count(PyObject *self, PyObject *args);
+PyObject *aws_py_http_headers_remove(PyObject *self, PyObject *args);
+PyObject *aws_py_http_headers_remove_value(PyObject *self, PyObject *args);
+PyObject *aws_py_http_headers_clear(PyObject *self, PyObject *args);
 
 /* Given a python object, return a pointer to its underlying native type.
  * If NULL is returned, a python error has been set */
@@ -42,5 +64,6 @@ PyObject *aws_py_http_request_new(PyObject *self, PyObject *args);
 struct aws_http_connection *aws_py_get_http_connection(PyObject *connection);
 struct aws_http_stream *aws_py_get_http_stream(PyObject *stream);
 struct aws_http_message *aws_py_get_http_message(PyObject *http_message);
+struct aws_http_headers *aws_py_get_http_headers(PyObject *http_headers);
 
 #endif /* AWS_CRT_PYTHON_HTTP_H */

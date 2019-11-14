@@ -30,9 +30,6 @@ static const char *s_capsule_name_http_message = "aws_http_message";
 struct http_message_binding {
     struct aws_http_message *native;
 
-    /* Weak reference proxy to python self. */
-    PyObject *self_proxy;
-
     /* Native input stream to read from HttpMessage._body_stream */
     struct aws_input_stream *native_body_stream;
 };
@@ -41,125 +38,14 @@ static void s_http_message_capsule_destructor(PyObject *capsule) {
     struct http_message_binding *message = PyCapsule_GetPointer(capsule, s_capsule_name_http_message);
 
     /* Note that destructor may be cleaning up a message that failed part-way through initialization */
-    aws_http_message_destroy(message->native);
+    aws_http_message_release(message->native);
     aws_input_stream_destroy(message->native_body_stream);
-    Py_XDECREF(message->self_proxy);
 
     aws_mem_release(aws_py_get_allocator(), message);
 }
 
-/**
- * Update the aws_http_message based on its HttpRequest/HttpResponse Python self.
- * Returns false and sets python error if failure occurred.
- * Note that if failure occurred the aws_http_message might be in a
- * "partially copied" state and should not be used.
- */
-static bool s_http_message_update_from_py(struct http_message_binding *message) {
-
-    bool success = false;
-
-    /* Objects that need to be cleaned up whether or not we succeed */
-    PyObject *message_self = NULL;
-    PyObject *headers = NULL;
-    PyObject *map = NULL;
-    PyObject *method = NULL;
-    PyObject *path = NULL;
-
-    /* Doing a lot of queries so grab a hard reference */
-    message_self = PyWeakref_GetObject(message->self_proxy);
-    if (message_self == Py_None) {
-        PyErr_SetString(PyExc_RuntimeError, "HttpMessageBase destroyed");
-        goto done;
-    }
-    Py_INCREF(message_self);
-
-    headers = PyObject_GetAttrString(message_self, "headers");
-    if (!headers) {
-        goto done;
-    }
-
-    map = PyObject_GetAttrString(headers, "_map");
-    if (!map) {
-        goto done;
-    }
-
-    /* Clear existing headers, before adding the new values. */
-    size_t num_headers = aws_http_message_get_header_count(message->native);
-    for (size_t i = num_headers; i > 0; --i) { /* erase from back to front */
-        aws_http_message_erase_header(message->native, i - 1);
-    }
-
-    /* Copy in new header values */
-    struct aws_http_header header;
-    Py_ssize_t map_pos = 0;
-    PyObject *header_name = NULL;
-    PyObject *values_list = NULL;
-    while (PyDict_Next(map, &map_pos, &header_name, &values_list)) {
-        header.name = aws_byte_cursor_from_pystring(header_name);
-        if (!header.name.ptr) {
-            PyErr_SetString(PyExc_TypeError, "Header name is invalid");
-            goto done;
-        }
-
-        if (!PyList_Check(values_list)) {
-            PyErr_SetString(PyExc_TypeError, "Header values should be in a list");
-        }
-
-        Py_ssize_t num_values = PyList_GET_SIZE(values_list);
-        for (Py_ssize_t value_i = 0; value_i < num_values; ++value_i) {
-            PyObject *name_value_pair = PyList_GET_ITEM(values_list, value_i); /* CANNOT fail, just checked length */
-
-            PyObject *header_value = PyTuple_GetItem(name_value_pair, 1); /* CAN fail, assuming item is 2-tuple */
-            if (!header_value) {
-                goto done;
-            }
-            header.value = aws_byte_cursor_from_pystring(header_value);
-            if (!header.value.ptr) {
-                PyErr_SetString(PyExc_TypeError, "Header value is invalid");
-                goto done;
-            }
-
-            if (aws_http_message_add_header(message->native, header)) {
-                PyErr_SetAwsLastError();
-                goto done;
-            }
-        }
-    }
-
-    /* HttpRequest subclass */
-    if (aws_http_message_is_request(message->native)) {
-        method = PyObject_GetAttrString(message_self, "method");
-        struct aws_byte_cursor method_cur = aws_byte_cursor_from_pystring(method);
-        if (!method_cur.ptr) {
-            PyErr_SetString(PyExc_TypeError, "HttpRequest.method is invalid");
-            goto done;
-        }
-        if (aws_http_message_set_request_method(message->native, method_cur)) {
-            PyErr_SetAwsLastError();
-            goto done;
-        }
-
-        path = PyObject_GetAttrString(message_self, "path");
-        struct aws_byte_cursor path_cur = aws_byte_cursor_from_pystring(path);
-        if (!path_cur.ptr) {
-            PyErr_SetString(PyExc_TypeError, "HttpRequest.path is invalid");
-            goto done;
-        }
-        if (aws_http_message_set_request_path(message->native, path_cur)) {
-            PyErr_SetAwsLastError();
-            goto done;
-        }
-    }
-
-    success = true;
-done:
-    Py_XDECREF(message_self);
-    Py_XDECREF(headers);
-    Py_XDECREF(map);
-    Py_XDECREF(method);
-    Py_XDECREF(path);
-
-    return success;
+static aws_http_message s_binding_from_capsule(PyObject *capsule) {
+    return PyCapsule_GetPointer(capsule, s_capsule_name_http_message);
 }
 
 struct aws_http_message *aws_py_get_http_message(PyObject *http_message) {
@@ -167,13 +53,9 @@ struct aws_http_message *aws_py_get_http_message(PyObject *http_message) {
 
     PyObject *capsule = PyObject_GetAttrString(http_message, "_binding");
     if (capsule) {
-        struct http_message_binding *message_binding = PyCapsule_GetPointer(capsule, s_capsule_name_http_message);
+        struct http_message_binding *message_binding = s_binding_from_capsule(capsule);
         if (message_binding) {
-            /* Update contents of aws_http_message before returning it */
-            if (s_http_message_update_from_py(message_binding)) {
-                native = message_binding->native;
-                AWS_FATAL_ASSERT(native);
-            }
+            native = message_binding->native;
         }
         Py_DECREF(capsule);
     }
@@ -184,7 +66,6 @@ struct aws_http_message *aws_py_get_http_message(PyObject *http_message) {
 PyObject *aws_py_http_request_new(PyObject *self, PyObject *args) {
     (void)self;
 
-    PyObject *py_request;
     PyObject *py_body_stream;
     if (!PyArg_ParseTuple(args, "OO", &py_request, &py_body_stream)) {
         return NULL;
@@ -200,6 +81,8 @@ PyObject *aws_py_http_request_new(PyObject *self, PyObject *args) {
 
     /* From hereon, we need to clean up if errors occur.
      * Fortunately, the capsule destructor will clean up anything stored inside the binding */
+
+    PyObject *headers_capsule = NULL;
 
     PyObject *capsule = PyCapsule_New(request, s_capsule_name_http_message, s_http_message_capsule_destructor);
     if (!capsule) {
@@ -228,13 +111,56 @@ PyObject *aws_py_http_request_new(PyObject *self, PyObject *args) {
         aws_http_message_set_body_stream(request->native, request->native_body_stream);
     }
 
-    return capsule;
+    /* In C, the aws_http_message owns an aws_http_headers.
+     * Likewise, in Python, the HttpMessageBase class owns an HttpHeaders.
+     * Create the capsule for each of these classes here. */
+    headers_capsule = aws_py_http_headers_new_from_native(aws_http_message_get_headers(request->native));
+    if (!headers_capsule) {
+        goto error;
+    }
+
+    /* Return (capsule, headers_capsule) */
+    PyObject *return_tuple = PyTuple_New(2);
+    if (!return_tuple) {
+        goto error;
+    }
+
+    PyTuple_SET_ITEM(return_tuple, 0, capsule);
+    PyTuple_SET_ITEM(return_tuple, 1, headers_tuple);
+    return return_tuple;
 
 error:
+    Py_XDECREF(headers_capsule);
     if (capsule) {
         Py_DECREF(capsule);
     } else {
         aws_mem_release(alloc, request);
     }
+    return NULL;
+}
+
+PyObject *aws_py_http_message_get_request_method(PyObject *self, PyObject *args) {
+
+
+    (void)self;
+    (void)args;
+    return NULL;
+}
+
+PyObject *aws_py_http_message_set_request_method(PyObject *self, PyObject *args) {
+    (void)self;
+    (void)args;
+    return NULL;
+}
+
+PyObject *aws_py_http_message_get_request_path(PyObject *self, PyObject *args) {
+    (void)self;
+    (void)args;
+    return NULL;
+}
+
+PyObject *aws_py_http_message_set_request_path(PyObject *self, PyObject *args) {
+    (void)self;
+    (void)args;
     return NULL;
 }

@@ -282,6 +282,16 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(http_client_connection_new, METH_VARARGS),
     AWS_PY_METHOD_DEF(http_client_stream_new, METH_VARARGS),
     AWS_PY_METHOD_DEF(http_request_new, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http_headers_new, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http_headers_add, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http_headers_add_pairs, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http_headers_set, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http_headers_get, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http_headers_get_index, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http_headers_count, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http_headers_remove, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http_headers_remove_value, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http_headers_clear, METH_VARARGS),
 
     /* Auth */
     AWS_PY_METHOD_DEF(credentials_new, METH_VARARGS),

@@ -14,6 +14,7 @@
 import _awscrt
 from awscrt import NativeResource, isinstance_str
 from enum import IntEnum
+from io import IOBase
 
 
 class LogLevel(IntEnum):
@@ -281,3 +282,26 @@ class TlsConnectionOptions(NativeResource):
 
     def set_server_name(self, server_name):
         _awscrt.tls_connection_options_set_server_name(self, server_name)
+
+class InputStream(NativeResource):
+    __slots__ = ()
+    # TODO: Implement IOBase interface so Python can read from this class as well.
+
+    def init(self, stream):
+        assert isinstance(stream, IOBase)
+        self._binding = _awscrt.input_stream_new(stream)
+
+    @classmethod
+    def wrap(cls, stream, allow_none=False):
+        """
+        If stream is already an awscrt.io.InputStream, return it.
+        Otherwise, return an awscrt.io.InputStream which wraps the stream.
+        """
+        if isinstance(stream, InputStream):
+            return stream
+        if isinstance(stream, IOBase):
+            return cls(stream)
+        if stream is None and allow_none:
+            return None
+        raise TypeError('I/O stream type expected')
+

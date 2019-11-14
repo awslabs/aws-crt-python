@@ -21,14 +21,14 @@ class TestHttpHeaders(unittest.TestCase):
         h = HttpHeaders()
         h.add('Host', 'example.org')
         self.assertEqual('example.org', h.get('Host'))
-        self.assertEqual(['example.org'], h.get_values('Host'))
+        self.assertEqual(['example.org'], list(h.get_values('Host')))
 
     def test_add_multi_values(self):
         h = HttpHeaders()
         h.add('Cookie', 'a=1')
         h.add('Cookie', 'b=2')
         self.assertEqual('a=1', h.get('Cookie'))
-        self.assertEqual(['a=1', 'b=2'], h.get_values('Cookie'))
+        self.assertEqual(['a=1', 'b=2'], list(h.get_values('Cookie')))
 
     def test_add_pairs(self):
         h = HttpHeaders()
@@ -38,30 +38,30 @@ class TestHttpHeaders(unittest.TestCase):
             ('Cookie', 'b=2'),
         ])
         self.assertEqual('example.org', h.get('Host'))
-        self.assertEqual(['a=1', 'b=2'], h.get_values('Cookie'))
+        self.assertEqual(['a=1', 'b=2'], list(h.get_values('Cookie')))
 
     def test_set(self):
         h = HttpHeaders()
 
         # create
         h.set('Host', 'example.org')
-        self.assertEqual(['example.org'], h.get_values('Host'))
+        self.assertEqual(['example.org'], list(h.get_values('Host')))
 
         # replace
         h.set('Host', 'example2.org')
-        self.assertEqual(['example2.org'], h.get_values('Host'))
+        self.assertEqual(['example2.org'], list(h.get_values('Host')))
 
         # replace many
         h.add('Host', 'example3.org')
         h.add('Host', 'example4.org')
         h.set('Host', 'example5.org')
-        self.assertEqual(['example5.org'], h.get_values('Host'))
+        self.assertEqual(['example5.org'], list(h.get_values('Host')))
 
     def test_get_none(self):
         h = HttpHeaders()
         self.assertIsNone(h.get('Non-Existent'))
         self.assertEqual('Banana', h.get('Non-Existent', 'Banana'))
-        self.assertEqual([], h.get_values('Non-Existent'))
+        self.assertEqual([], list(h.get_values('Non-Existent')))
 
     def test_get_is_case_insensitive(self):
         h = HttpHeaders()
@@ -69,7 +69,7 @@ class TestHttpHeaders(unittest.TestCase):
         h.add_pairs([('cookie', 'b=2'), ('COOKIE', 'c=3')])
         h.add(u'CoOkIe', 'd=4')  # note: unicode
         self.assertEqual('a=1', h.get(u'COOKIE'))
-        self.assertEqual(['a=1', 'b=2', 'c=3', 'd=4'], h.get_values('Cookie'))
+        self.assertEqual(['a=1', 'b=2', 'c=3', 'd=4'], list(h.get_values('Cookie')))
 
     def test_iter(self):
         # test that we iterate over everything we put in
@@ -111,7 +111,7 @@ class TestHttpHeaders(unittest.TestCase):
         # pluck out a duplicate value [1,2,2] -> [1,2]
         h.add_pairs([('Dupes', '1'), ('DUPES', '2'), ('dupes', '2')])
         h.remove_value('Dupes', '2')
-        self.assertEqual(['1', '2'], h.get_values('Dupes'))
+        self.assertEqual(['1', '2'], list(h.get_values('Dupes')))
 
     def test_clear(self):
         h = HttpHeaders([('Host', 'example.org'), ('Cookie', 'a=1'), ('cookie', 'b=2')])
