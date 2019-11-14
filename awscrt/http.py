@@ -185,7 +185,7 @@ class HttpMessageBase(NativeResource):
         self._binding = binding
         self._headers = HttpHeaders._from_binding(headers_binding)
         if header_pairs:
-            self._headers.add_pairs(header_pairs)
+            self.headers.add_pairs(header_pairs)
 
         if body_stream:
             self.body_stream = body_stream
@@ -213,7 +213,7 @@ class HttpRequest(HttpMessageBase):
     __slots__ = ()
 
     def __init__(self, method='GET', path='/', headers=None, body_stream=None):
-        binding, headers_binding = _awscrt.http_request_new(body_stream)
+        binding, headers_binding = _awscrt.http_request_new()
         super(HttpRequest, self).__init__(binding, headers_binding, headers, body_stream)
 
     @property
