@@ -11,11 +11,13 @@
 # express or implied. See the License for the specific language governing
 # permissions and limitations under the License.
 
-from awscrt.http import HttpHeaders
+from awscrt.http import HttpHeaders, HttpRequest
+import awscrt.io
+from test import NativeResourceTest
 import unittest
 
 
-class TestHttpHeaders(unittest.TestCase):
+class TestHttpHeaders(NativeResourceTest):
 
     def test_add(self):
         h = HttpHeaders()
@@ -117,6 +119,36 @@ class TestHttpHeaders(unittest.TestCase):
         h = HttpHeaders([('Host', 'example.org'), ('Cookie', 'a=1'), ('cookie', 'b=2')])
         h.clear()
         self.assertEqual([], [pair for pair in h])
+
+
+class TestHttpMessage(NativeResourceTest):
+    def test_request_create_default(self):
+        request = HttpRequest()
+        self.assertEqual("GET", request.method)
+        self.assertEqual("/", request.path)
+        self.assertEqual([], list(request.headers))
+        self.assertIsNone(request.body_stream)
+
+    def test_request_create_nondefault(self):
+        src_headers = [('Cookie', 'a=1'), ('Cookie', 'b=2')]
+        body_stream = open('test/test_http_headers.py', 'rb')
+        request = HttpRequest(method="PUT",
+                              path="/upload",
+                              headers=src_headers,
+                              body_stream=body_stream)
+
+        self.assertEqual("PUT", request.method)
+        self.assertEqual("/upload", request.path)
+        self.assertEqual(src_headers, list(request.headers))
+        self.assertIsNotNone(request.body_stream)
+        body_stream.close()
+
+    def test_headers_live_after_message_del(self):
+        request = HttpRequest()
+        headers = request.headers
+        del request
+        headers.add('Cookie', 'a=1')
+        self.assertEqual([('Cookie', 'a=1')], list(headers))
 
 
 if __name__ == '__main__':

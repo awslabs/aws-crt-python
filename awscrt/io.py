@@ -289,7 +289,7 @@ class InputStream(NativeResource):
     __slots__ = ()
     # TODO: Implement IOBase interface so Python can read from this class as well.
 
-    def init(self, stream):
+    def __init__(self, stream):
         assert isinstance(stream, IOBase)
         assert not isinstance(stream, InputStream)
         self._binding = _awscrt.input_stream_new(stream)

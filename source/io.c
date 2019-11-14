@@ -778,7 +778,7 @@ PyObject *aws_py_input_stream_new(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    struct aws_input_stream *stream = aws_input_stream_from_pyobject(py_io);
+    struct aws_input_stream *stream = aws_input_stream_new_from_py(py_io);
     if (!stream) {
         return PyErr_AwsLastError();
     }

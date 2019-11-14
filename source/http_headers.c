@@ -49,7 +49,7 @@ PyObject *aws_py_http_headers_new_from_native(struct aws_http_headers *headers) 
         return NULL;
     }
 
-    aws_http_headers_acquire_hold(headers);
+    aws_http_headers_acquire(headers);
     return py_capsule;
 }
 
@@ -221,7 +221,6 @@ PyObject *aws_py_http_headers_count(PyObject *self, PyObject *args) {
     if (!headers) {
         return NULL;
     }
-
 
     return PyLong_FromSize_t(aws_http_headers_count(headers));
 }

@@ -180,12 +180,12 @@ class HttpMessageBase(NativeResource):
     """
     __slots__ = ('_headers')
 
-    def __init__(self, binding, headers_binding, header_pairs=None, body_stream=None):
+    def __init__(self, binding, headers_binding, headers=None, body_stream=None):
         super(HttpMessageBase, self).__init__()
         self._binding = binding
         self._headers = HttpHeaders._from_binding(headers_binding)
-        if header_pairs:
-            self.headers.add_pairs(header_pairs)
+        if headers:
+            self.headers.add_pairs(headers)
 
         if body_stream:
             self.body_stream = body_stream
@@ -201,7 +201,7 @@ class HttpMessageBase(NativeResource):
     @body_stream.setter
     def body_stream(self, stream):
         stream = InputStream.wrap(stream)
-        return _awscrt.http_message_set_body_stream(stream)
+        return _awscrt.http_message_set_body_stream(self._binding, stream)
 
 
 class HttpRequest(HttpMessageBase):
@@ -213,8 +213,10 @@ class HttpRequest(HttpMessageBase):
     __slots__ = ()
 
     def __init__(self, method='GET', path='/', headers=None, body_stream=None):
-        binding, headers_binding = _awscrt.http_request_new()
+        binding, headers_binding = _awscrt.http_message_new_request()
         super(HttpRequest, self).__init__(binding, headers_binding, headers, body_stream)
+        self.method = method
+        self.path = path
 
     @property
     def method(self):
@@ -253,11 +255,12 @@ class HttpHeaders(NativeResource):
             self.add_pairs(name_value_pairs)
 
     @classmethod
-    def _from_binding(self, binding):
+    def _from_binding(cls, binding):
         """Construct from a pre-existing native object"""
-        self = HttpHeaders.__new__() # avoid class's default __init__()
-        super(HttpHeaders, self).__init__() # just invoke parent class's __init__()
-        self._binding = binding
+        headers = cls.__new__(cls)  # avoid class's default __init__()
+        super(cls, headers).__init__()  # just invoke parent class's __init__()
+        headers._binding = binding
+        return headers
 
     def add(self, name, value):
         """
