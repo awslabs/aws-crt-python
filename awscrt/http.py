@@ -257,7 +257,7 @@ class HttpHeaders(NativeResource):
     @classmethod
     def _from_binding(cls, binding):
         """Construct from a pre-existing native object"""
-        headers = cls.__new__(cls)  # avoid class's default __init__()
+        headers = cls.__new__(cls)  # avoid class's default constructor
         super(cls, headers).__init__()  # just invoke parent class's __init__()
         headers._binding = binding
         return headers

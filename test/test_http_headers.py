@@ -13,6 +13,7 @@
 
 from awscrt.http import HttpHeaders, HttpRequest
 import awscrt.io
+from io import open  # Python2's built-in open() doesn't return a stream
 from test import NativeResourceTest
 import unittest
 

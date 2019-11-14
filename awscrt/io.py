@@ -11,10 +11,12 @@
 # express or implied. See the License for the specific language governing
 # permissions and limitations under the License.
 
+from __future__ import absolute_import
 import _awscrt
 from awscrt import NativeResource, isinstance_str
 from enum import IntEnum
-from io import IOBase
+import io as this_io  # rename THIS io module so Python2 can import built-in io module
+import io
 
 
 class LogLevel(IntEnum):
@@ -290,7 +292,7 @@ class InputStream(NativeResource):
     # TODO: Implement IOBase interface so Python can read from this class as well.
 
     def __init__(self, stream):
-        assert isinstance(stream, IOBase)
+        assert isinstance(stream, io.IOBase)
         assert not isinstance(stream, InputStream)
         self._binding = _awscrt.input_stream_new(stream)
 
@@ -302,7 +304,7 @@ class InputStream(NativeResource):
         """
         if isinstance(stream, InputStream):
             return stream
-        if isinstance(stream, IOBase):
+        if isinstance(stream, io.IOBase):
             return cls(stream)
         if stream is None and allow_none:
             return None

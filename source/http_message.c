@@ -32,7 +32,7 @@ struct http_message_binding {
     /* Dependencies that must outlive this */
 
     /* InputStream for aws_http_message's aws_input_stream.
-     * This is Py_None (not NULL) when no stream is set */
+     * This is Py_None when no stream is set */
     PyObject *py_body_stream;
 };
 
