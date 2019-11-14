@@ -15,7 +15,6 @@ from __future__ import absolute_import
 import _awscrt
 from awscrt import NativeResource, isinstance_str
 from enum import IntEnum
-import io as this_io  # rename THIS io module so Python2 can import built-in io module
 import io
 
 
