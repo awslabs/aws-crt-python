@@ -17,6 +17,7 @@ from awscrt.mqtt import Client, Connection
 from test import NativeResourceTest
 import os
 import unittest
+import boto3
 
 class MqttClientTest(NativeResourceTest):
     def test_lifetime(self):
