@@ -700,6 +700,36 @@ PyObject *aws_py_mqtt_client_connection_subscribe(PyObject *self, PyObject *args
     return PyLong_FromUnsignedLong(msg_id);
 }
 
+PyObject *aws_py_mqtt_client_connection_subscribe_to_any(PyObject *self, PyObject *args) {
+    (void)self;
+
+    PyObject *impl_capsule;
+    uint8_t qos_val;
+    PyObject *callback;
+    if (!PyArg_ParseTuple(args, "ObO", &impl_capsule, &qos_val, &callback)) {
+        return NULL;
+    }
+
+    struct mqtt_connection_binding *py_connection =
+        PyCapsule_GetPointer(impl_capsule, s_capsule_name_mqtt_client_connection);
+    if (!py_connection) {
+        return NULL;
+    }
+
+    Py_INCREF(callback);
+    uint16_t msg_id = aws_mqtt_client_connection_set_on_any_publish_handler(
+        py_connection->native,
+        s_subscribe_callback,
+        callback);
+
+    if (msg_id == 0) {
+        Py_DECREF(callback);
+        return PyErr_AwsLastError();
+    }
+
+    return PyLong_FromUnsignedLong(msg_id);
+}
+
 /*******************************************************************************
  * Unsubscribe
  ******************************************************************************/

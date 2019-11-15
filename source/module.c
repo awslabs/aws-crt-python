@@ -264,6 +264,7 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(mqtt_client_connection_reconnect, METH_VARARGS),
     AWS_PY_METHOD_DEF(mqtt_client_connection_publish, METH_VARARGS),
     AWS_PY_METHOD_DEF(mqtt_client_connection_subscribe, METH_VARARGS),
+    AWS_PY_METHOD_DEF(mqtt_client_connection_subscribe_to_any, METH_VARARGS),
     AWS_PY_METHOD_DEF(mqtt_client_connection_resubscribe_existing_topics, METH_VARARGS),
     AWS_PY_METHOD_DEF(mqtt_client_connection_unsubscribe, METH_VARARGS),
     AWS_PY_METHOD_DEF(mqtt_client_connection_disconnect, METH_VARARGS),
