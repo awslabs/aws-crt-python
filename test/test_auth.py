@@ -106,7 +106,7 @@ class TestProvider(NativeResourceTest):
 
 class TestSigningConfig(NativeResourceTest):
     def test_create(self):
-        algorithm = awscrt.auth.AwsSigningAlgorithm.Sigv4QueryParam
+        algorithm = awscrt.auth.AwsSigningAlgorithm.SigV4QueryParam
         credentials_provider = awscrt.auth.StaticAwsCredentialsProvider(
             EXAMPLE_ACCESS_KEY_ID, EXAMPLE_SECRET_ACCESS_KEY)
         region = 'us-west-2'
@@ -145,7 +145,7 @@ class TestSigningConfig(NativeResourceTest):
             EXAMPLE_ACCESS_KEY_ID, EXAMPLE_SECRET_ACCESS_KEY)
 
         # nondefault values, to be sure they're carried over correctly
-        orig_cfg = awscrt.auth.AwsSigningConfig(algorithm=awscrt.auth.AwsSigningAlgorithm.Sigv4QueryParam,
+        orig_cfg = awscrt.auth.AwsSigningConfig(algorithm=awscrt.auth.AwsSigningAlgorithm.SigV4QueryParam,
                                                 credentials_provider=credentials_provider,
                                                 region='us-west-1',
                                                 service='aws-suborbital-ion-cannon',
@@ -171,7 +171,7 @@ class TestSigningConfig(NativeResourceTest):
                     self.assertEqual(getattr(orig_cfg, attr), getattr(new_cfg, attr),
                                      "value should match original")
 
-        _replace_attr('algorithm', awscrt.auth.AwsSigningAlgorithm.Sigv4Header)
+        _replace_attr('algorithm', awscrt.auth.AwsSigningAlgorithm.SigV4Header)
         _replace_attr('credentials_provider',
                       awscrt.auth.StaticAwsCredentialsProvider(EXAMPLE_ACCESS_KEY_ID, EXAMPLE_SECRET_ACCESS_KEY))
         _replace_attr('region', 'us-west-2')
@@ -221,7 +221,7 @@ class TestSigner(NativeResourceTest):
             SIGV4TEST_ACCESS_KEY_ID, SIGV4TEST_SECRET_ACCESS_KEY, SIGV4TEST_SESSION_TOKEN)
 
         signing_config = awscrt.auth.AwsSigningConfig(
-            algorithm=awscrt.auth.AwsSigningAlgorithm.Sigv4Header,
+            algorithm=awscrt.auth.AwsSigningAlgorithm.SigV4Header,
             credentials_provider=credentials_provider,
             region=SIGV4TEST_REGION,
             service=SIGV4TEST_SERVICE)

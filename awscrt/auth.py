@@ -158,11 +158,11 @@ class AwsSigningAlgorithm(IntEnum):
     """
     Which signing algorithm to use.
 
-    Sigv4Header: Use Signature Version 4 to sign headers.
-    Sigv4QueryParam: Use Signature Version 4 to sign query parameters.
+    SigV4Header: Use Signature Version 4 to sign headers.
+    SigV4QueryParam: Use Signature Version 4 to sign query parameters.
     """
-    Sigv4Header = 0
-    Sigv4QueryParam = 1
+    SigV4Header = 0
+    SigV4QueryParam = 1
 
 
 class AwsSigningConfig(NativeResource):
