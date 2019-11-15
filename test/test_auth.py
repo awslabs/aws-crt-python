@@ -192,14 +192,15 @@ class TestSigningConfig(NativeResourceTest):
 # Test values copied from aws-c-auth/tests/aws-sig-v4-test-suite/get-vanilla"
 SIGV4TEST_ACCESS_KEY_ID = 'AKIDEXAMPLE'
 SIGV4TEST_SECRET_ACCESS_KEY = 'wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY'
-SIGV4TEST_SESSION_TOKEN = '6e86291e8372ff2a2260956d9b8aae1d763fbf315fa00fa31553b73ebf194267'
+SIGV4TEST_SESSION_TOKEN = None
 SIGV4TEST_SERVICE = 'service'
 SIGV4TEST_REGION = 'us-east-1'
 SIGV4TEST_METHOD = 'GET'
 SIGV4TEST_PATH = '/'
+SIGV4TEST_DATE = datetime.datetime(year=2015, month=8, day=30, hour=12, minute=36, second=0, tzinfo=awscrt.auth._utc)
 SIGV4TEST_UNSIGNED_HEADERS = [
     ('Host', 'example.amazonaws.com'),
-    ('X-Amz-Date', '20150830T123600Z')]
+]
 SIGV4TEST_SIGNED_HEADERS = [
     ('Host',
      'example.amazonaws.com'),
@@ -224,7 +225,9 @@ class TestSigner(NativeResourceTest):
             algorithm=awscrt.auth.AwsSigningAlgorithm.SigV4Header,
             credentials_provider=credentials_provider,
             region=SIGV4TEST_REGION,
-            service=SIGV4TEST_SERVICE)
+            service=SIGV4TEST_SERVICE,
+            date=SIGV4TEST_DATE,
+            sign_body=False)
 
         http_request = awscrt.http.HttpRequest(
             method=SIGV4TEST_METHOD,
@@ -237,15 +240,13 @@ class TestSigner(NativeResourceTest):
 
         self.assertIs(http_request, signing_result)  # should be same object
 
-        # everything should be the same EXCEPT the addition of the Authorization header
         self.assertEqual(SIGV4TEST_METHOD, http_request.method)
         self.assertEqual(SIGV4TEST_PATH, http_request.path)
 
-        expected_headers = list(SIGV4TEST_UNSIGNED_HEADERS)
-        for signed_header in http_request.headers:
-            self.assertIn(signed_header, expected_headers,
-                          'Unexpected header in signed request: {}'.format(signed_header))
-            expected_headers.remove(signed_header)
+        # existing headers should remain
+        for prev_header in SIGV4TEST_UNSIGNED_HEADERS:
+            self.assertIn(prev_header, http_request.headers)
 
-        self.assertEqual(0, len(expected_headers),
-                         "Expected headers not found in signed request: {}".format(expected_headers))
+        # signed headers must be present
+        for signed_header in SIGV4TEST_SIGNED_HEADERS:
+            self.assertIn(signed_header, http_request.headers)
