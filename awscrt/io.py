@@ -11,9 +11,11 @@
 # express or implied. See the License for the specific language governing
 # permissions and limitations under the License.
 
+from __future__ import absolute_import
 import _awscrt
 from awscrt import NativeResource, isinstance_str
 from enum import IntEnum
+import io
 
 
 class LogLevel(IntEnum):
@@ -281,3 +283,30 @@ class TlsConnectionOptions(NativeResource):
 
     def set_server_name(self, server_name):
         _awscrt.tls_connection_options_set_server_name(self, server_name)
+
+
+class InputStream(NativeResource):
+    """InputStream allows awscrt native code to read from Python I/O classes"""
+    __slots__ = ()
+    # TODO: Implement IOBase interface so Python can read from this class as well.
+
+    def __init__(self, stream):
+        assert isinstance(stream, io.IOBase)
+        assert not isinstance(stream, InputStream)
+
+        super(InputStream, self).__init__()
+        self._binding = _awscrt.input_stream_new(stream)
+
+    @classmethod
+    def wrap(cls, stream, allow_none=False):
+        """
+        If stream is already an awscrt.io.InputStream, return it.
+        Otherwise, return an awscrt.io.InputStream which wraps the stream.
+        """
+        if isinstance(stream, InputStream):
+            return stream
+        if isinstance(stream, io.IOBase):
+            return cls(stream)
+        if stream is None and allow_none:
+            return None
+        raise TypeError('I/O stream type expected')

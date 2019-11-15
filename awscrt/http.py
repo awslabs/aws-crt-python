@@ -14,10 +14,8 @@
 from __future__ import absolute_import
 import _awscrt
 from concurrent.futures import Future
-from collections import defaultdict
-from io import IOBase
 from awscrt import NativeResource, isinstance_str
-from awscrt.io import ClientBootstrap, EventLoopGroup, DefaultHostResolver, TlsConnectionOptions, SocketOptions
+from awscrt.io import ClientBootstrap, EventLoopGroup, DefaultHostResolver, InputStream, TlsConnectionOptions, SocketOptions
 
 
 class HttpConnectionBase(NativeResource):
@@ -179,14 +177,17 @@ class HttpMessageBase(NativeResource):
     """
     Base for HttpRequest and HttpResponse classes.
     """
-    __slots__ = ('_headers', '_body_stream')
+    __slots__ = ('_headers')
 
-    def __init__(self, headers=None, body_stream=None):
-        assert isinstance(body_stream, IOBase) or body_stream is None
-
+    def __init__(self, binding, headers_binding, headers=None, body_stream=None):
         super(HttpMessageBase, self).__init__()
-        self._headers = HttpHeaders(headers)
-        self._body_stream = body_stream
+        self._binding = binding
+        self._headers = HttpHeaders._from_binding(headers_binding)
+        if headers:
+            self.headers.add_pairs(headers)
+
+        if body_stream:
+            self.body_stream = body_stream
 
     @property
     def headers(self):
@@ -194,7 +195,12 @@ class HttpMessageBase(NativeResource):
 
     @property
     def body_stream(self):
-        return self._body_stream
+        return _awscrt.http_message_get_body_stream(self._binding)
+
+    @body_stream.setter
+    def body_stream(self, stream):
+        stream = InputStream.wrap(stream)
+        return _awscrt.http_message_set_body_stream(self._binding, stream)
 
 
 class HttpRequest(HttpMessageBase):
@@ -203,16 +209,32 @@ class HttpRequest(HttpMessageBase):
     The request may be transformed (ex: signing the request) before its data is eventually sent.
     """
 
-    __slots__ = ('method', 'path')
+    __slots__ = ()
 
     def __init__(self, method='GET', path='/', headers=None, body_stream=None):
-        super(HttpRequest, self).__init__(headers, body_stream)
+        binding, headers_binding = _awscrt.http_message_new_request()
+        super(HttpRequest, self).__init__(binding, headers_binding, headers, body_stream)
         self.method = method
         self.path = path
-        self._binding = _awscrt.http_request_new(self, self._body_stream)
+
+    @property
+    def method(self):
+        return _awscrt.http_message_get_request_method(self._binding)
+
+    @method.setter
+    def method(self, method):
+        _awscrt.http_message_set_request_method(self._binding, method)
+
+    @property
+    def path(self):
+        return _awscrt.http_message_get_request_path(self._binding)
+
+    @path.setter
+    def path(self, path):
+        return _awscrt.http_message_set_request_path(self._binding, path)
 
 
-class HttpHeaders(object):
+class HttpHeaders(NativeResource):
     """
     Collection of HTTP headers.
     A given header name may have multiple values.
@@ -220,15 +242,24 @@ class HttpHeaders(object):
     HttpHeaders can be iterated over as (name,value) pairs.
     """
 
-    __slots__ = ('_map')
+    __slots__ = ()
 
     def __init__(self, name_value_pairs=None):
         """
         Construct from a collection of (name,value) pairs.
         """
-        self._map = defaultdict(list)
+        super(HttpHeaders, self).__init__()
+        self._binding = _awscrt.http_headers_new()
         if name_value_pairs:
             self.add_pairs(name_value_pairs)
+
+    @classmethod
+    def _from_binding(cls, binding):
+        """Construct from a pre-existing native object"""
+        headers = cls.__new__(cls)  # avoid class's default constructor
+        super(cls, headers).__init__()  # just invoke parent class's __init__()
+        headers._binding = binding
+        return headers
 
     def add(self, name, value):
         """
@@ -236,15 +267,13 @@ class HttpHeaders(object):
         """
         assert isinstance_str(name)
         assert isinstance_str(value)
-        self._map[name.lower()].append((name, value))
+        _awscrt.http_headers_add(self._binding, name, value)
 
     def add_pairs(self, name_value_pairs):
         """
         Add list of (name,value) pairs.
         """
-        for pair in name_value_pairs:
-            assert len(pair) == 2
-            self.add(pair[0], pair[1])
+        _awscrt.http_headers_add_pairs(self._binding, name_value_pairs)
 
     def set(self, name, value):
         """
@@ -252,65 +281,56 @@ class HttpHeaders(object):
         """
         assert isinstance_str(name)
         assert isinstance_str(value)
-        self._map[name.lower()] = [(name, value)]
+        _awscrt.http_headers_set(self._binding, name, value)
 
     def get_values(self, name):
         """
-        Get the list of values for this name.
-        Returns an empty list if no values exist.
+        Return an iterator over the values for this name.
         """
-        values = self._map.get(name.lower())
-        if values:
-            return [pair[1] for pair in values]
-        return []
+        assert isinstance_str(name)
+        name = name.lower()
+        for i in range(_awscrt.http_headers_count(self._binding)):
+            name_i, value_i = _awscrt.http_headers_get_index(self._binding, i)
+            if name_i.lower() == name:
+                yield value_i
 
     def get(self, name, default=None):
         """
         Get the first value for this name, ignoring any additional values.
         Returns `default` if no values exist.
         """
-        values = self._map.get(name.lower())
-        if values:
-            return values[0][1]
-        return default
+        assert isinstance_str(name)
+        return _awscrt.http_headers_get(self._binding, name, default)
 
     def remove(self, name):
         """
         Remove all values for this name.
         Raises a KeyError if name not found.
         """
-        del self._map[name.lower()]
+        assert isinstance_str(name)
+        _awscrt.http_headers_remove(self._binding, name)
 
     def remove_value(self, name, value):
         """
         Remove a specific value for this name.
         Raises a ValueError if value not found.
         """
-        lower_name = name.lower()
-        values = self._map[lower_name]
-        if values:
-            for i, pair in enumerate(values):
-                if pair[1] == value:
-                    if len(values) == 1:
-                        del self._map[lower_name]
-                    else:
-                        del values[i]
-                    return
-        raise ValueError("HttpHeaders.remove_value(name,value): value not found")
+        assert isinstance_str(name)
+        assert isinstance_str(value)
+        _awscrt.http_headers_remove_value(self._binding, name, value)
 
     def clear(self):
         """
         Clear all headers
         """
-        self._map.clear()
+        _awscrt.http_headers_clear(self._binding)
 
     def __iter__(self):
         """
         Iterate over all (name,value) pairs.
         """
-        for values in self._map.values():
-            for pair in values:
-                yield pair
+        for i in range(_awscrt.http_headers_count(self._binding)):
+            yield _awscrt.http_headers_get_index(self._binding, i)
 
     def __str__(self):
         return self.__class__.__name__ + "(" + str([pair for pair in self]) + ")"

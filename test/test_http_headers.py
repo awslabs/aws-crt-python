@@ -11,24 +11,27 @@
 # express or implied. See the License for the specific language governing
 # permissions and limitations under the License.
 
-from awscrt.http import HttpHeaders
+from awscrt.http import HttpHeaders, HttpRequest
+import awscrt.io
+from io import open  # Python2's built-in open() doesn't return a stream
+from test import NativeResourceTest
 import unittest
 
 
-class TestHttpHeaders(unittest.TestCase):
+class TestHttpHeaders(NativeResourceTest):
 
     def test_add(self):
         h = HttpHeaders()
         h.add('Host', 'example.org')
         self.assertEqual('example.org', h.get('Host'))
-        self.assertEqual(['example.org'], h.get_values('Host'))
+        self.assertEqual(['example.org'], list(h.get_values('Host')))
 
     def test_add_multi_values(self):
         h = HttpHeaders()
         h.add('Cookie', 'a=1')
         h.add('Cookie', 'b=2')
         self.assertEqual('a=1', h.get('Cookie'))
-        self.assertEqual(['a=1', 'b=2'], h.get_values('Cookie'))
+        self.assertEqual(['a=1', 'b=2'], list(h.get_values('Cookie')))
 
     def test_add_pairs(self):
         h = HttpHeaders()
@@ -38,30 +41,30 @@ class TestHttpHeaders(unittest.TestCase):
             ('Cookie', 'b=2'),
         ])
         self.assertEqual('example.org', h.get('Host'))
-        self.assertEqual(['a=1', 'b=2'], h.get_values('Cookie'))
+        self.assertEqual(['a=1', 'b=2'], list(h.get_values('Cookie')))
 
     def test_set(self):
         h = HttpHeaders()
 
         # create
         h.set('Host', 'example.org')
-        self.assertEqual(['example.org'], h.get_values('Host'))
+        self.assertEqual(['example.org'], list(h.get_values('Host')))
 
         # replace
         h.set('Host', 'example2.org')
-        self.assertEqual(['example2.org'], h.get_values('Host'))
+        self.assertEqual(['example2.org'], list(h.get_values('Host')))
 
         # replace many
         h.add('Host', 'example3.org')
         h.add('Host', 'example4.org')
         h.set('Host', 'example5.org')
-        self.assertEqual(['example5.org'], h.get_values('Host'))
+        self.assertEqual(['example5.org'], list(h.get_values('Host')))
 
     def test_get_none(self):
         h = HttpHeaders()
         self.assertIsNone(h.get('Non-Existent'))
         self.assertEqual('Banana', h.get('Non-Existent', 'Banana'))
-        self.assertEqual([], h.get_values('Non-Existent'))
+        self.assertEqual([], list(h.get_values('Non-Existent')))
 
     def test_get_is_case_insensitive(self):
         h = HttpHeaders()
@@ -69,7 +72,7 @@ class TestHttpHeaders(unittest.TestCase):
         h.add_pairs([('cookie', 'b=2'), ('COOKIE', 'c=3')])
         h.add(u'CoOkIe', 'd=4')  # note: unicode
         self.assertEqual('a=1', h.get(u'COOKIE'))
-        self.assertEqual(['a=1', 'b=2', 'c=3', 'd=4'], h.get_values('Cookie'))
+        self.assertEqual(['a=1', 'b=2', 'c=3', 'd=4'], list(h.get_values('Cookie')))
 
     def test_iter(self):
         # test that we iterate over everything we put in
@@ -111,12 +114,42 @@ class TestHttpHeaders(unittest.TestCase):
         # pluck out a duplicate value [1,2,2] -> [1,2]
         h.add_pairs([('Dupes', '1'), ('DUPES', '2'), ('dupes', '2')])
         h.remove_value('Dupes', '2')
-        self.assertEqual(['1', '2'], h.get_values('Dupes'))
+        self.assertEqual(['1', '2'], list(h.get_values('Dupes')))
 
     def test_clear(self):
         h = HttpHeaders([('Host', 'example.org'), ('Cookie', 'a=1'), ('cookie', 'b=2')])
         h.clear()
         self.assertEqual([], [pair for pair in h])
+
+
+class TestHttpMessage(NativeResourceTest):
+    def test_request_create_default(self):
+        request = HttpRequest()
+        self.assertEqual("GET", request.method)
+        self.assertEqual("/", request.path)
+        self.assertEqual([], list(request.headers))
+        self.assertIsNone(request.body_stream)
+
+    def test_request_create_nondefault(self):
+        src_headers = [('Cookie', 'a=1'), ('Cookie', 'b=2')]
+        body_stream = open('test/test_http_headers.py', 'rb')
+        request = HttpRequest(method="PUT",
+                              path="/upload",
+                              headers=src_headers,
+                              body_stream=body_stream)
+
+        self.assertEqual("PUT", request.method)
+        self.assertEqual("/upload", request.path)
+        self.assertEqual(src_headers, list(request.headers))
+        self.assertIsNotNone(request.body_stream)
+        body_stream.close()
+
+    def test_headers_live_after_message_del(self):
+        request = HttpRequest()
+        headers = request.headers
+        del request
+        headers.add('Cookie', 'a=1')
+        self.assertEqual([('Cookie', 'a=1')], list(headers))
 
 
 if __name__ == '__main__':
