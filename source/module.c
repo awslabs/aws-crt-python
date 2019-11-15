@@ -253,6 +253,7 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(tls_connection_options_set_alpn_list, METH_VARARGS),
     AWS_PY_METHOD_DEF(tls_connection_options_set_server_name, METH_VARARGS),
     AWS_PY_METHOD_DEF(init_logging, METH_VARARGS),
+    AWS_PY_METHOD_DEF(input_stream_new, METH_VARARGS),
 
     /* MQTT Client */
     AWS_PY_METHOD_DEF(mqtt_client_new, METH_VARARGS),
@@ -281,7 +282,23 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(http_connection_is_open, METH_VARARGS),
     AWS_PY_METHOD_DEF(http_client_connection_new, METH_VARARGS),
     AWS_PY_METHOD_DEF(http_client_stream_new, METH_VARARGS),
-    AWS_PY_METHOD_DEF(http_request_new, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http_message_new_request, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http_message_get_request_method, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http_message_set_request_method, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http_message_get_request_path, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http_message_set_request_path, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http_message_get_body_stream, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http_message_set_body_stream, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http_headers_new, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http_headers_add, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http_headers_add_pairs, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http_headers_set, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http_headers_get, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http_headers_get_index, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http_headers_count, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http_headers_remove, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http_headers_remove_value, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http_headers_clear, METH_VARARGS),
 
     /* Auth */
     AWS_PY_METHOD_DEF(credentials_new, METH_VARARGS),
