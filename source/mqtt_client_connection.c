@@ -54,8 +54,8 @@ struct mqtt_connection_binding {
 static void s_mqtt_python_connection_finish_destruction(struct mqtt_connection_binding *py_connection) {
     aws_mqtt_client_connection_destroy(py_connection->native);
 
-    Py_DECREF(py_connection->on_connection_interrupted);
-    Py_DECREF(py_connection->on_connection_resumed);
+    Py_XDECREF(py_connection->on_connection_interrupted);
+    Py_XDECREF(py_connection->on_connection_resumed);
     Py_DECREF(py_connection->client);
 
     aws_mem_release(aws_py_get_allocator(), py_connection);
@@ -183,10 +183,8 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
 
     /* From hereon, nothing will fail */
 
-    py_connection->on_connection_interrupted = on_connection_interrupted;
-    Py_INCREF(py_connection->on_connection_interrupted);
-    py_connection->on_connection_resumed = on_connection_resumed;
-    Py_INCREF(py_connection->on_connection_resumed);
+    py_connection->on_connection_interrupted = PyWeakref_NewProxy(on_connection_interrupted, NULL);
+    py_connection->on_connection_resumed = PyWeakref_NewProxy(on_connection_resumed, NULL);
     py_connection->client = client_py;
     Py_INCREF(py_connection->client);
 

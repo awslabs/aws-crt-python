@@ -66,7 +66,7 @@ class Client(NativeResource):
 
 
 class Connection(NativeResource):
-    __slots__ = ('client', '_on_connection_interrupted_cb', '_on_connection_resumed_cb')
+    __slots__ = ('client')
 
     def __init__(self,
                  client,
@@ -85,22 +85,19 @@ class Connection(NativeResource):
 
         super(Connection, self).__init__()
         self.client = client
-        self._on_connection_interrupted_cb = on_connection_interrupted
-        self._on_connection_resumed_cb = on_connection_resumed
+
+        def _on_connection_interrupted(error_code):
+            if on_connection_interrupted:
+                on_connection_interrupted(self, error_code)
+        def _on_connection_resumed(error_code, session_present):
+            if on_connection_resumed:
+                on_connection_resumed(self, error_code, session_present)
 
         self._binding = _awscrt.mqtt_client_connection_new(
             client,
-            self._on_connection_interrupted,
-            self._on_connection_resumed,
+            _on_connection_interrupted,
+            _on_connection_resumed,
         )
-
-    def _on_connection_interrupted(self, error_code):
-        if self._on_connection_interrupted_cb:
-            self._on_connection_interrupted_cb(self, error_code)
-
-    def _on_connection_resumed(self, error_code, session_present):
-        if self._on_connection_resumed_cb:
-            self._on_connection_resumed_cb(self, error_code, session_present)
 
     def connect(self,
                 client_id,
