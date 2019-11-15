@@ -243,4 +243,7 @@ setuptools.setup(
     ext_modules=[awscrt_ext()],
     cmdclass={'build_ext': awscrt_build_ext},
     test_suite='test',
+    tests_require=[
+        'boto3'
+    ],
 )
