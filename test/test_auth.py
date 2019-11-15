@@ -59,7 +59,7 @@ class TestCredentials(NativeResourceTest):
 
 class TestProvider(NativeResourceTest):
     def test_static_provider(self):
-        provider = awscrt.auth.StaticAwsCredentialsProvider(
+        provider = awscrt.auth.AwsCredentialsProvider.new_static(
             EXAMPLE_ACCESS_KEY_ID,
             EXAMPLE_SECRET_ACCESS_KEY,
             EXAMPLE_SESSION_TOKEN)
@@ -75,7 +75,7 @@ class TestProvider(NativeResourceTest):
     # aws_byte_cursor by value/pointer in aws-c-auth APIs.
     #
     # def test_static_provider_no_session_token(self):
-    #     provider = StaticAwsCredentialsProvider(
+    #     provider = AwsCredentialsProvider.new_static(
     #         self.example_access_key_id,
     #         self.example_secret_access_key)
 
@@ -92,7 +92,7 @@ class TestProvider(NativeResourceTest):
 
         event_loop_group = awscrt.io.EventLoopGroup()
         bootstrap = awscrt.io.ClientBootstrap(event_loop_group)
-        provider = awscrt.auth.DefaultAwsCredentialsProviderChain(bootstrap)
+        provider = awscrt.auth.AwsCredentialsProvider.new_default_chain(bootstrap)
 
         future = provider.get_credentials()
         credentials = future.result()
@@ -107,7 +107,7 @@ class TestProvider(NativeResourceTest):
 class TestSigningConfig(NativeResourceTest):
     def test_create(self):
         algorithm = awscrt.auth.AwsSigningAlgorithm.SigV4QueryParam
-        credentials_provider = awscrt.auth.StaticAwsCredentialsProvider(
+        credentials_provider = awscrt.auth.AwsCredentialsProvider.new_static(
             EXAMPLE_ACCESS_KEY_ID, EXAMPLE_SECRET_ACCESS_KEY)
         region = 'us-west-2'
         service = 'aws-suborbital-ion-cannon'
@@ -141,7 +141,7 @@ class TestSigningConfig(NativeResourceTest):
         self.assertEqual(sign_body, cfg.sign_body)
 
     def test_replace(self):
-        credentials_provider = awscrt.auth.StaticAwsCredentialsProvider(
+        credentials_provider = awscrt.auth.AwsCredentialsProvider.new_static(
             EXAMPLE_ACCESS_KEY_ID, EXAMPLE_SECRET_ACCESS_KEY)
 
         # nondefault values, to be sure they're carried over correctly
@@ -173,7 +173,7 @@ class TestSigningConfig(NativeResourceTest):
 
         _replace_attr('algorithm', awscrt.auth.AwsSigningAlgorithm.SigV4Header)
         _replace_attr('credentials_provider',
-                      awscrt.auth.StaticAwsCredentialsProvider(EXAMPLE_ACCESS_KEY_ID, EXAMPLE_SECRET_ACCESS_KEY))
+                      awscrt.auth.AwsCredentialsProvider.new_static(EXAMPLE_ACCESS_KEY_ID, EXAMPLE_SECRET_ACCESS_KEY))
         _replace_attr('region', 'us-west-2')
         _replace_attr('service', 'aws-nothing-but-bees')
         _replace_attr('date', datetime.datetime(year=2001, month=1, day=1))
@@ -218,7 +218,7 @@ class TestSigner(NativeResourceTest):
     def test_signing_sigv4_headers(self):
         signer = awscrt.auth.AwsSigner()
 
-        credentials_provider = awscrt.auth.StaticAwsCredentialsProvider(
+        credentials_provider = awscrt.auth.AwsCredentialsProvider.new_static(
             SIGV4TEST_ACCESS_KEY_ID, SIGV4TEST_SECRET_ACCESS_KEY, SIGV4TEST_SESSION_TOKEN)
 
         signing_config = awscrt.auth.AwsSigningConfig(
