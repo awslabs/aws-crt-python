@@ -689,7 +689,7 @@ PyObject *aws_py_mqtt_client_connection_subscribe(PyObject *self, PyObject *args
     if (suback_callback) {
         Py_INCREF(suback_callback);
     }
-    
+
     struct aws_byte_cursor topic_filter = aws_byte_cursor_from_array(topic, topic_len);
     uint16_t msg_id = aws_mqtt_client_connection_subscribe(
         py_connection->native,
