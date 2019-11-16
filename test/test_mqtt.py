@@ -12,7 +12,7 @@
 # permissions and limitations under the License.
 
 from __future__ import absolute_import
-from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions
+from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions, LogLevel, init_logging
 from awscrt.mqtt import Client, Connection, QoS
 from test import NativeResourceTest
 from concurrent.futures import Future
@@ -64,6 +64,10 @@ class MqttConnectionTest(NativeResourceTest):
     def _test_connection(self):
         try:
             config = Config.get()
+        except Exception as ex:
+            return self.skipTest("No credentials")
+        
+        try:
             tls_opts = TlsContextOptions.create_client_with_mtls(config.cert, config.key)
             if config.ca:
                 tls_opts.override_default_trust_store(config.ca)
@@ -76,6 +80,7 @@ class MqttConnectionTest(NativeResourceTest):
             self.assertFalse(ex)
 
     def test_connect_disconnect(self):
+        init_logging(LogLevel.Trace, 'stderr')
         connection = self._test_connection()
         connection.disconnect().result()
 
