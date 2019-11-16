@@ -17,6 +17,13 @@
 #include "module.h"
 
 struct aws_http_headers;
+struct aws_http_proxy_options;
+
+/**
+ *  Init aws_http_proxy_options from HttpProxyOptions.
+ *  Returns false and sets python exception if error occurred.
+ */
+bool aws_py_http_proxy_options_init(struct aws_http_proxy_options *proxy_options, PyObject *py_proxy_options);
 
 /**
  * Close the connection if it's open.

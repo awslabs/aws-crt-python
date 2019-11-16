@@ -150,19 +150,13 @@ PyObject *aws_py_http_message_set_request_method(PyObject *self, PyObject *args)
     (void)self;
 
     PyObject *py_capsule;
-    PyObject *py_method;
-    if (!PyArg_ParseTuple(args, "OO", &py_capsule, &py_method)) {
+    struct aws_byte_cursor method;
+    if (!PyArg_ParseTuple(args, "Os#", &py_capsule, &method.ptr, &method.len)) {
         return NULL;
     }
 
     struct http_message_binding *binding = s_binding_from_capsule(py_capsule);
     if (!binding) {
-        return NULL;
-    }
-
-    struct aws_byte_cursor method = aws_byte_cursor_from_pystring(py_method);
-    if (method.len == 0) {
-        PyErr_SetString(PyExc_TypeError, "invalid method string");
         return NULL;
     }
 
@@ -190,19 +184,13 @@ PyObject *aws_py_http_message_set_request_path(PyObject *self, PyObject *args) {
     (void)self;
 
     PyObject *py_capsule;
-    PyObject *py_path;
-    if (!PyArg_ParseTuple(args, "OO", &py_capsule, &py_path)) {
+    struct aws_byte_cursor path;
+    if (!PyArg_ParseTuple(args, "Os#", &py_capsule, &path.ptr, &path.len)) {
         return NULL;
     }
 
     struct http_message_binding *binding = s_binding_from_capsule(py_capsule);
     if (!binding) {
-        return NULL;
-    }
-
-    struct aws_byte_cursor path = aws_byte_cursor_from_pystring(py_path);
-    if (path.len == 0) {
-        PyErr_SetString(PyExc_TypeError, "invalid path string");
         return NULL;
     }
 

@@ -16,6 +16,7 @@ import _awscrt
 from concurrent.futures import Future
 from awscrt import NativeResource, isinstance_str
 from awscrt.io import ClientBootstrap, EventLoopGroup, DefaultHostResolver, InputStream, TlsConnectionOptions, SocketOptions
+from enum import IntEnum
 
 
 class HttpConnectionBase(NativeResource):
@@ -61,7 +62,14 @@ class HttpClientConnection(HttpConnectionBase):
     __slots__ = ('_host_name', '_port')
 
     @classmethod
-    def new(cls, host_name, port, socket_options=SocketOptions(), tls_connection_options=None, bootstrap=None):
+    def new(
+            cls,
+            host_name,
+            port,
+            socket_options=SocketOptions(),
+            tls_connection_options=None,
+            bootstrap=None,
+            proxy_options=None):
         """
         Initiates a new connection to host_name and port using socket_options and tls_connection_options if supplied.
         if tls_connection_options is None, then the connection will be attempted over plain-text.
@@ -69,13 +77,14 @@ class HttpClientConnection(HttpConnectionBase):
         Returns a future where the result is a new instance to HttpClientConnection, once the connection has completed
         and is ready for use.
         """
+        assert isinstance(bootstrap, ClientBootstrap) or bootstrap is None
+        assert isinstance_str(host_name)
+        assert isinstance(tls_connection_options, TlsConnectionOptions) or tls_connection_options is None
+        assert isinstance(socket_options, SocketOptions)
+        assert isinstance(HttpProxyOptions, proxy_options) or proxy_options is None
+
         future = Future()
         try:
-            assert isinstance(bootstrap, ClientBootstrap) or bootstrap is None
-            assert isinstance_str(host_name)
-            assert isinstance(tls_connection_options, TlsConnectionOptions) or tls_connection_options is None
-            assert isinstance(socket_options, SocketOptions)
-
             if not bootstrap:
                 event_loop_group = EventLoopGroup(1)
                 host_resolver = DefaultHostResolver(event_loop_group)
@@ -99,7 +108,8 @@ class HttpClientConnection(HttpConnectionBase):
                 host_name,
                 port,
                 socket_options,
-                tls_connection_options)
+                tls_connection_options,
+                proxy_options)
 
         except Exception as e:
             future.set_exception(e)
@@ -334,3 +344,43 @@ class HttpHeaders(NativeResource):
 
     def __str__(self):
         return self.__class__.__name__ + "(" + str([pair for pair in self]) + ")"
+
+
+class HttpProxyAuthenticationType(enum.IntEnum):
+    """
+    Which proxy authentication type to use.
+
+    Nothing: no authentication
+    Basic: username and password
+    """
+    Nothing = 0
+    Basic = 1
+
+
+class HttpProxyOptions(object):
+    """
+    Proxy options for HTTP clients.
+
+    host_name: Name of the proxy server to connect through.
+    port: Port number of the proxy server to connect through.
+    tls_connection_options: Optional TlsConnectionOptions for the Local <-> Proxy connection.
+                            Must be distinct from the TlsConnectionOptions provided to the HTTP connection.
+    auth_type: Type of proxy authentication to use. Default is HttpProxyAuthenticationType.Nothing.
+    basic_auth_username: Username to use when auth_type is HttpProxyAuthenticationType.Basic.
+    basic_auth_password: Username to use when auth_type is HttpProxyAuthenticationType.Basic.
+    """
+
+    def __init__(self,
+                 host_name,
+                 port,
+                 tls_connection_options=None,
+                 auth_type=HttpProxyAuthenticationType.Nothing,
+                 auth_username=None,
+                 auth_password=None):
+
+        self.host_name = host_name
+        self.port = port
+        self.tls_connection_options = tls_connection_options
+        self.auth_type = auth_type
+        self.auth_username = auth_username
+        self.auth_password = auth_password
