@@ -13,8 +13,9 @@
 
 from __future__ import absolute_import
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions
-from awscrt.mqtt import Client, Connection
+from awscrt.mqtt import Client, Connection, QoS
 from test import NativeResourceTest
+from concurrent.futures import Future
 import os
 import unittest
 import boto3
@@ -38,35 +39,63 @@ class Config:
 
     @staticmethod
     def get():
-        try:
-            secrets = boto3.client('secretsmanager')
-            response = secrets.get_secret_value(SecretId='unit-test/endpoint')
-            endpoint = response['SecretString']
-            response = secrets.get_secret_value(SecretId='unit-test/certificate')
-            cert = bytes(response['SecretString'], 'utf8')
-            response = secrets.get_secret_value(SecretId='unit-test/privatekey')
-            key = bytes(response['SecretString'], 'utf8')
-            response = secrets.get_secret_value(SecretId='unit-test/ca')
-            ca = bytes(response['SecretString'], 'utf8')
-            return Config(endpoint, cert, key, ca)
-        except:
-            pass
+        # boto3 caches the HTTPS connection for the API calls, which appears to the unit test
+        # framework as a leak, so ignore it, that's not what we're testing here
+        warnings.simplefilter('ignore', ResourceWarning)
+        
+        secrets = boto3.client('secretsmanager')
+        response = secrets.get_secret_value(SecretId='unit-test/endpoint')
+        endpoint = response['SecretString']
+        response = secrets.get_secret_value(SecretId='unit-test/certificate')
+        cert = bytes(response['SecretString'], 'utf8')
+        response = secrets.get_secret_value(SecretId='unit-test/privatekey')
+        key = bytes(response['SecretString'], 'utf8')
+        response = secrets.get_secret_value(SecretId='unit-test/ca')
+        ca = bytes(response['SecretString'], 'utf8')
+        return Config(endpoint, cert, key, ca)
+        
 
 class MqttConnectionTest(NativeResourceTest):
+    TEST_TOPIC = '/test/me/senpai'
+    TEST_MSG = 'NOTICE ME!'
+
     def _test_connection(self):
-        config = Config.get()
-        tls_opts = TlsContextOptions.create_client_with_mtls(config.cert, config.key)
-        if config.ca:
-            tls_opts.override_default_trust_store(config.ca)
-        tls = ClientTlsContext(tls_opts)
-        client = Client(ClientBootstrap(EventLoopGroup()), tls)
-        connection = Connection(client)
-        connection.connect('aws-crt-python-unit-test-'.format(time.gmtime()), config.endpoint, 8883).result()
+        try:
+            config = Config.get()
+            tls_opts = TlsContextOptions.create_client_with_mtls(config.cert, config.key)
+            if config.ca:
+                tls_opts.override_default_trust_store(config.ca)
+            tls = ClientTlsContext(tls_opts)
+            client = Client(ClientBootstrap(EventLoopGroup()), tls)
+            connection = Connection(client)
+            connection.connect('aws-crt-python-unit-test-'.format(time.gmtime()), config.endpoint, 8883).result()
+            return connection
+        except Exception as ex:
+            self.assertFalse(ex)
+
+    def test_connect_disconnect(self):
+        connection = self._test_connection()
         connection.disconnect().result()
 
-    def test_iot_service(self):
-        warnings.simplefilter('ignore', ResourceWarning)
-        self._test_connection()
+    def test_pub_sub(self):
+        connection = self._test_connection()
+        disconnected = Future()
+        def on_disconnect(result):
+            disconnected.set_result(True)
+
+        def on_message(topic, payload):
+            self.assertEqual(self.TEST_TOPIC, topic)
+            self.assertEqual(self.TEST_MSG, str(payload, 'utf8'))
+            connection.unsubscribe(self.TEST_TOPIC)
+            connection.disconnect().add_done_callback(on_disconnect)
+
+        def do_publish(result):
+            connection.publish(self.TEST_TOPIC, bytes(self.TEST_MSG, 'utf8'), QoS.AT_LEAST_ONCE)
+
+        subscribed, packet_id = connection.subscribe(self.TEST_TOPIC, QoS.AT_LEAST_ONCE, on_message)
+        subscribed.add_done_callback(do_publish)
+
+        disconnected.result()
 
 if __name__ == 'main':
     unittest.main()
