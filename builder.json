@@ -84,7 +84,7 @@
     ],
     "test": [
         ["{python}", "-m", "pip", "install", "virtualenv"],
-        ["virtualenv", "venv"],
+        ["{python}", "-m", "virtualenv", "venv"],
         ["venv/bin/python", "setup.py", "test", "--verbose"],
         ["venv/bin/python", "aws-c-http/integration-testing/http_client_test.py", "{python}", "elasticurl.py"],
         ["venv/bin/python", "-m", "pip", "install", "autopep8"],
