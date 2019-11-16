@@ -20,8 +20,12 @@ struct aws_http_headers;
 struct aws_http_proxy_options;
 
 /**
- *  Init aws_http_proxy_options from HttpProxyOptions.
- *  Returns false and sets python exception if error occurred.
+ * Init aws_http_proxy_options from HttpProxyOptions.
+ * Returns false and sets python exception if error occurred.
+ *
+ * NOTE: The native struct must be used immediately because it's cursors
+ * reference memory from strings in the PyObject.
+ * If we need this to be a long-lived object, we'll need to do a full binding.
  */
 bool aws_py_http_proxy_options_init(struct aws_http_proxy_options *proxy_options, PyObject *py_proxy_options);
 

@@ -62,8 +62,7 @@ class HttpClientConnection(HttpConnectionBase):
     __slots__ = ('_host_name', '_port')
 
     @classmethod
-    def new(
-            cls,
+    def new(cls,
             host_name,
             port,
             socket_options=SocketOptions(),
@@ -79,9 +78,10 @@ class HttpClientConnection(HttpConnectionBase):
         """
         assert isinstance(bootstrap, ClientBootstrap) or bootstrap is None
         assert isinstance_str(host_name)
+        assert isinstance(port, int)
         assert isinstance(tls_connection_options, TlsConnectionOptions) or tls_connection_options is None
         assert isinstance(socket_options, SocketOptions)
-        assert isinstance(HttpProxyOptions, proxy_options) or proxy_options is None
+        assert isinstance(proxy_options, HttpProxyOptions) or proxy_options is None
 
         future = Future()
         try:
@@ -346,7 +346,7 @@ class HttpHeaders(NativeResource):
         return self.__class__.__name__ + "(" + str([pair for pair in self]) + ")"
 
 
-class HttpProxyAuthenticationType(enum.IntEnum):
+class HttpProxyAuthenticationType(IntEnum):
     """
     Which proxy authentication type to use.
 
@@ -377,7 +377,6 @@ class HttpProxyOptions(object):
                  auth_type=HttpProxyAuthenticationType.Nothing,
                  auth_username=None,
                  auth_password=None):
-
         self.host_name = host_name
         self.port = port
         self.tls_connection_options = tls_connection_options

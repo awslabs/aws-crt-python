@@ -179,10 +179,11 @@ PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args) {
     uint16_t port_number;
     PyObject *socket_options_py;
     PyObject *tls_options_py;
+    PyObject *proxy_options_py;
 
     if (!PyArg_ParseTuple(
             args,
-            "OOOs#HOO",
+            "OOOs#HOOO",
             &bootstrap_py,
             &on_connection_setup_py,
             &shutdown_future_py,
@@ -190,7 +191,8 @@ PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args) {
             &host_name_len,
             &port_number,
             &socket_options_py,
-            &tls_options_py)) {
+            &tls_options_py,
+            &proxy_options_py)) {
         return NULL;
     }
 
@@ -224,10 +226,21 @@ PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args) {
         goto error;
     }
 
+    /* proxy options are optional */
+    struct aws_http_proxy_options proxy_options_storage;
+    struct aws_http_proxy_options *proxy_options = NULL;
+    if (proxy_options_py != Py_None) {
+        proxy_options = &proxy_options_storage;
+        if (!aws_py_http_proxy_options_init(proxy_options, proxy_options_py)) {
+            goto error;
+        }
+    }
+
     struct aws_http_client_connection_options http_options = {
         .self_size = sizeof(http_options),
         .bootstrap = bootstrap,
         .tls_options = tls_options,
+        .proxy_options = proxy_options,
         .allocator = allocator,
         .user_data = connection,
         .host_name = aws_byte_cursor_from_array((const uint8_t *)host_name, host_name_len),
