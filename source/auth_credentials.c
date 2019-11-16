@@ -171,7 +171,11 @@ struct aws_credentials_provider *aws_py_get_credentials_provider(PyObject *crede
     return native;
 }
 
-int s_aws_string_to_cstr_and_ssize(const struct aws_string *source, const char **out_cstr, Py_ssize_t *out_ssize) {
+static int s_aws_string_to_cstr_and_ssize(
+    const struct aws_string *source,
+    const char **out_cstr,
+    Py_ssize_t *out_ssize) {
+
     *out_cstr = NULL;
     *out_ssize = 0;
     if (source) {
@@ -280,7 +284,7 @@ PyObject *aws_py_credentials_provider_shutdown(PyObject *self, PyObject *args) {
 
 /* Create binding and capsule.
  * Helper function for every aws_py_credentials_provider_new_XYZ() function */
-PyObject *s_new_credentials_provider_binding_and_capsule(struct credentials_provider_binding **out_binding) {
+static PyObject *s_new_credentials_provider_binding_and_capsule(struct credentials_provider_binding **out_binding) {
     *out_binding = NULL;
 
     struct credentials_provider_binding *binding =
