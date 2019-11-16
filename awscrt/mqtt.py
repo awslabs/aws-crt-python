@@ -89,6 +89,7 @@ class Connection(NativeResource):
         def _on_connection_interrupted(error_code):
             if on_connection_interrupted:
                 on_connection_interrupted(self, error_code)
+
         def _on_connection_resumed(error_code, session_present):
             if on_connection_resumed:
                 on_connection_resumed(self, error_code, session_present)
@@ -222,7 +223,7 @@ class Connection(NativeResource):
             future.set_result(True)
         except Exception as e:
             future.set_exception(e)
-        
+
         return future
 
     def unsubscribe(self, topic):

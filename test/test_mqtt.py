@@ -22,9 +22,11 @@ import boto3
 import time
 import warnings
 
+
 class MqttClientTest(NativeResourceTest):
     def test_lifetime(self):
         client = Client(ClientBootstrap(EventLoopGroup()))
+
 
 class Config:
     def __init__(self, endpoint, cert, key, ca=None):
@@ -34,7 +36,7 @@ class Config:
             self.ca = ca
             self.endpoint = endpoint
             self.valid = True
-        except:
+        except BaseException:
             self.valid = False
 
     @staticmethod
@@ -42,7 +44,7 @@ class Config:
         # boto3 caches the HTTPS connection for the API calls, which appears to the unit test
         # framework as a leak, so ignore it, that's not what we're testing here
         warnings.simplefilter('ignore', ResourceWarning)
-        
+
         secrets = boto3.client('secretsmanager')
         response = secrets.get_secret_value(SecretId='unit-test/endpoint')
         endpoint = response['SecretString']
@@ -53,7 +55,7 @@ class Config:
         response = secrets.get_secret_value(SecretId='unit-test/ca')
         ca = bytes(response['SecretString'], 'utf8')
         return Config(endpoint, cert, key, ca)
-        
+
 
 class MqttConnectionTest(NativeResourceTest):
     TEST_TOPIC = '/test/me/senpai'
@@ -80,6 +82,7 @@ class MqttConnectionTest(NativeResourceTest):
     def test_pub_sub(self):
         connection = self._test_connection()
         disconnected = Future()
+
         def on_disconnect(result):
             disconnected.set_result(True)
 
@@ -113,7 +116,6 @@ class MqttConnectionTest(NativeResourceTest):
         def do_publish(result):
             connection.publish(self.TEST_TOPIC, bytes(self.TEST_MSG, 'utf8'), QoS.AT_LEAST_ONCE)
 
-
         connection.subscribe_to_any(on_message).result()
         subscribed, packet_id = connection.subscribe(self.TEST_TOPIC, QoS.AT_LEAST_ONCE)
         subscribed.add_done_callback(do_publish)
@@ -123,11 +125,3 @@ class MqttConnectionTest(NativeResourceTest):
 
 if __name__ == 'main':
     unittest.main()
-
-        
-        
-
-        
-        
-
-
