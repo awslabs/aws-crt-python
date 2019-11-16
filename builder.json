@@ -85,10 +85,9 @@
     "test": [
         ["{python}", "-m", "pip", "install", "virtualenv"],
         ["virtualenv", "venv"],
-        [".", "venv/bin/activate"],
-        ["{python}", "setup.py", "test", "--verbose"],
-        ["{python}", "aws-c-http/integration-testing/http_client_test.py", "{python}", "elasticurl.py"],
-        ["{python}", "-m", "pip", "install", "autopep8"],
-        ["{python}", "-m", "autopep8", "--exit-code", "--diff", "--recursive", "awscrt", "test", "setup.py"]
+        ["venv/bin/python", "setup.py", "test", "--verbose"],
+        ["venv/bin/python", "aws-c-http/integration-testing/http_client_test.py", "{python}", "elasticurl.py"],
+        ["venv/bin/python", "-m", "pip", "install", "autopep8"],
+        ["venv/bin/python", "-m", "autopep8", "--exit-code", "--diff", "--recursive", "awscrt", "test", "setup.py"]
     ]
 }
