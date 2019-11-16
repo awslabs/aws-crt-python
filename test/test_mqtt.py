@@ -80,7 +80,7 @@ class MqttConnectionTest(NativeResourceTest):
             self.assertFalse(ex)
 
     def test_connect_disconnect(self):
-        init_logging(LogLevel.Trace, 'stderr')
+        init_logging(LogLevel.Trace, 'stdout')
         connection = self._test_connection()
         connection.disconnect().result()
 
