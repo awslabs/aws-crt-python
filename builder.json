@@ -83,6 +83,9 @@
         ["{python}", "setup.py", "--verbose", "build_ext", "--include-dirs{openssl_include}", "--library-dirs{openssl_lib}", "install"]
     ],
     "test": [
+        ["{python}", "-m", "pip", "install", "virtualenv"],
+        ["virtualenv", "venv"],
+        ["source", "venv/bin/activate"],
         ["{python}", "setup.py", "test", "--verbose"],
         ["{python}", "aws-c-http/integration-testing/http_client_test.py", "{python}", "elasticurl.py"],
         ["{python}", "-m", "pip", "install", "autopep8"],
