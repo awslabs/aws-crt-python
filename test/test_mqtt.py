@@ -83,6 +83,7 @@ class MqttConnectionTest(NativeResourceTest):
         init_logging(LogLevel.Trace, 'stdout')
         connection = self._test_connection()
         connection.disconnect().result()
+        init_logging(LogLevel.NoLogs, 'stdout')
 
     def test_pub_sub(self):
         connection = self._test_connection()

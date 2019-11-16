@@ -38,7 +38,8 @@ PyObject *aws_py_init_logging(PyObject *self, PyObject *args) {
     (void)self;
 
     if (s_logger_init) {
-        Py_RETURN_NONE;
+        aws_logger_set(NULL);
+        aws_logger_clean_up(&s_logger);
     }
 
     s_logger_init = true;
