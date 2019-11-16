@@ -215,7 +215,6 @@ class Connection(NativeResource):
 
     def subscribe_to_any(self, callback):
         future = Future()
-        packet_id = 0
 
         try:
             assert callable(callback)
