@@ -97,6 +97,30 @@ class MqttConnectionTest(NativeResourceTest):
 
         disconnected.result()
 
+    def test_sub_to_any(self):
+        connection = self._test_connection()
+        disconnected = Future()
+
+        def on_disconnect(result):
+            disconnected.set_result(True)
+
+        def on_message(topic, payload):
+            self.assertEqual(self.TEST_TOPIC, topic)
+            self.assertEqual(self.TEST_MSG, str(payload, 'utf8'))
+            connection.unsubscribe(self.TEST_TOPIC)
+            connection.disconnect().add_done_callback(on_disconnect)
+
+        def do_publish(result):
+            connection.publish(self.TEST_TOPIC, bytes(self.TEST_MSG, 'utf8'), QoS.AT_LEAST_ONCE)
+
+
+        connection.subscribe_to_any(on_message).result()
+        subscribed, packet_id = connection.subscribe(self.TEST_TOPIC, QoS.AT_LEAST_ONCE)
+        subscribed.add_done_callback(do_publish)
+
+        disconnected.result()
+
+
 if __name__ == 'main':
     unittest.main()
 

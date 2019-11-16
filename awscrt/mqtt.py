@@ -181,7 +181,7 @@ class Connection(NativeResource):
 
         return future
 
-    def subscribe(self, topic, qos, callback):
+    def subscribe(self, topic, qos, callback=None):
         """
         callback: callback with signature (topic, message)
         """
@@ -204,13 +204,26 @@ class Connection(NativeResource):
                     ))
 
         try:
-            assert callable(callback)
+            assert callable(callback) or callback is None
             assert isinstance(qos, QoS)
             packet_id = _awscrt.mqtt_client_connection_subscribe(self._binding, topic, qos.value, callback, suback)
         except Exception as e:
             future.set_exception(e)
 
         return future, packet_id
+
+    def subscribe_to_any(self, callback):
+        future = Future()
+        packet_id = 0
+
+        try:
+            assert callable(callback)
+            _awscrt.mqtt_client_connection_subscribe_to_any(self._binding, callback)
+            future.set_result(True)
+        except Exception as e:
+            future.set_exception(e)
+        
+        return future
 
     def unsubscribe(self, topic):
         future = Future()

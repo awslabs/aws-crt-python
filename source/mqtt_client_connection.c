@@ -601,9 +601,12 @@ static void s_subscribe_callback(
 
     (void)connection;
 
-    PyGILState_STATE state = PyGILState_Ensure();
-
     PyObject *callback = user_data;
+    if (!callback) {
+        return;
+    }
+
+    PyGILState_STATE state = PyGILState_Ensure();
 
     PyObject *result = PyObject_CallFunction(
         callback,
@@ -641,6 +644,10 @@ static void s_suback_callback(
     (void)connection;
 
     PyObject *callback = userdata;
+    if (!callback) {
+        return;
+    }
+
     PyGILState_STATE state = PyGILState_Ensure();
 
     const char *topic_str = (const char *)topic->ptr;
@@ -676,8 +683,13 @@ PyObject *aws_py_mqtt_client_connection_subscribe(PyObject *self, PyObject *args
         return NULL;
     }
 
-    Py_INCREF(callback);
-    Py_INCREF(suback_callback);
+    if (callback) {
+        Py_INCREF(callback);
+    }
+    if (suback_callback) {
+        Py_INCREF(suback_callback);
+    }
+    
     struct aws_byte_cursor topic_filter = aws_byte_cursor_from_array(topic, topic_len);
     uint16_t msg_id = aws_mqtt_client_connection_subscribe(
         py_connection->native,
@@ -690,8 +702,12 @@ PyObject *aws_py_mqtt_client_connection_subscribe(PyObject *self, PyObject *args
         suback_callback);
 
     if (msg_id == 0) {
-        Py_DECREF(callback);
-        Py_DECREF(suback_callback);
+        if (callback) {
+            Py_DECREF(callback);
+        }
+        if (suback_callback) {
+            Py_DECREF(suback_callback);
+        }
         return PyErr_AwsLastError();
     }
 
@@ -702,9 +718,8 @@ PyObject *aws_py_mqtt_client_connection_subscribe_to_any(PyObject *self, PyObjec
     (void)self;
 
     PyObject *impl_capsule;
-    uint8_t qos_val;
     PyObject *callback;
-    if (!PyArg_ParseTuple(args, "ObO", &impl_capsule, &qos_val, &callback)) {
+    if (!PyArg_ParseTuple(args, "OO", &impl_capsule, &callback)) {
         return NULL;
     }
 
@@ -714,18 +729,13 @@ PyObject *aws_py_mqtt_client_connection_subscribe_to_any(PyObject *self, PyObjec
         return NULL;
     }
 
-    Py_INCREF(callback);
-    uint16_t msg_id = aws_mqtt_client_connection_set_on_any_publish_handler(
-        py_connection->native,
-        s_subscribe_callback,
-        callback);
-
-    if (msg_id == 0) {
+    callback = PyWeakref_NewProxy(callback, NULL);
+    if (aws_mqtt_client_connection_set_on_any_publish_handler(py_connection->native, s_subscribe_callback, callback)) {
         Py_DECREF(callback);
         return PyErr_AwsLastError();
     }
 
-    return PyLong_FromUnsignedLong(msg_id);
+    Py_RETURN_NONE;
 }
 
 /*******************************************************************************
