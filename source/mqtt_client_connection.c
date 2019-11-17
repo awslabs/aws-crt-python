@@ -43,19 +43,20 @@ static const char *s_capsule_name_mqtt_client_connection = "aws_mqtt_client_conn
 struct mqtt_connection_binding {
     struct aws_mqtt_client_connection *native;
 
+    /* Weak reference proxy to python self.
+     * Lets us invoke callbacks on the python object without preventing the GC from cleaning it up. */
+    PyObject *self_proxy;
+
     PyObject *on_connect;
 
     /* Dependencies that must outlive this */
-    PyObject *on_connection_interrupted;
-    PyObject *on_connection_resumed;
     PyObject *client;
 };
 
 static void s_mqtt_python_connection_finish_destruction(struct mqtt_connection_binding *py_connection) {
     aws_mqtt_client_connection_destroy(py_connection->native);
 
-    Py_DECREF(py_connection->on_connection_interrupted);
-    Py_DECREF(py_connection->on_connection_resumed);
+    Py_DECREF(py_connection->self_proxy);
     Py_DECREF(py_connection->client);
 
     aws_mem_release(aws_py_get_allocator(), py_connection);
@@ -93,17 +94,17 @@ static void s_on_connection_interrupted(struct aws_mqtt_client_connection *conne
 
     struct mqtt_connection_binding *py_connection = userdata;
 
-    if (py_connection->on_connection_interrupted == Py_None) {
-        return;
-    }
-
     PyGILState_STATE state = PyGILState_Ensure();
 
-    PyObject *result = PyObject_CallFunction(py_connection->on_connection_interrupted, "(i)", error_code);
-    if (result) {
-        Py_DECREF(result);
-    } else {
-        PyErr_WriteUnraisable(PyErr_Occurred());
+    /* Ensure that python class is still alive */
+    PyObject *self = PyWeakref_GetObject(py_connection->self_proxy); /* borrowed reference */
+    if (self != Py_None) {
+        PyObject *result = PyObject_CallMethod(self, "_on_connection_interrupted", "(i)", error_code);
+        if (result) {
+            Py_DECREF(result);
+        } else {
+            PyErr_WriteUnraisable(PyErr_Occurred());
+        }
     }
 
     PyGILState_Release(state);
@@ -121,12 +122,15 @@ static void s_on_connection_resumed(
 
     PyGILState_STATE state = PyGILState_Ensure();
 
-    PyObject *result = PyObject_CallFunction(
-        py_connection->on_connection_resumed, "(iN)", return_code, PyBool_FromLong(session_present));
-    if (result) {
-        Py_DECREF(result);
-    } else {
-        PyErr_WriteUnraisable(PyErr_Occurred());
+    /* Ensure that python class is still alive */
+    PyObject *self = PyWeakref_GetObject(py_connection->self_proxy); /* borrowed reference */
+    if (self != Py_None) {
+        PyObject *result = PyObject_CallMethod(self, "_on_connection_resumed", "(iN)", return_code, PyBool_FromLong(session_present));
+        if (result) {
+            Py_DECREF(result);
+        } else {
+            PyErr_WriteUnraisable(PyErr_Occurred());
+        }
     }
 
     PyGILState_Release(state);
@@ -137,10 +141,9 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
 
     struct aws_allocator *allocator = aws_py_get_allocator();
 
+    PyObject *self_py;
     PyObject *client_py;
-    PyObject *on_connection_interrupted;
-    PyObject *on_connection_resumed;
-    if (!PyArg_ParseTuple(args, "OOO", &client_py, &on_connection_interrupted, &on_connection_resumed)) {
+    if (!PyArg_ParseTuple(args, "OO", &self_py, &client_py)) {
         return NULL;
     }
 
@@ -175,6 +178,11 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
         goto set_interruption_failed;
     }
 
+    PyObject *self_proxy = PyWeakref_NewProxy(self_py, NULL);
+    if (!self_proxy) {
+        goto proxy_new_failed;
+    }
+
     PyObject *capsule =
         PyCapsule_New(py_connection, s_capsule_name_mqtt_client_connection, s_mqtt_python_connection_destructor);
     if (!capsule) {
@@ -183,16 +191,16 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
 
     /* From hereon, nothing will fail */
 
-    py_connection->on_connection_interrupted = on_connection_interrupted;
-    Py_INCREF(py_connection->on_connection_interrupted);
-    py_connection->on_connection_resumed = on_connection_resumed;
-    Py_INCREF(py_connection->on_connection_resumed);
+    py_connection->self_proxy = self_proxy;
+
     py_connection->client = client_py;
     Py_INCREF(py_connection->client);
 
     return capsule;
 
 capsule_new_failed:
+    Py_DECREF(self_proxy);
+proxy_new_failed:
 set_interruption_failed:
     aws_mqtt_client_connection_destroy(py_connection->native);
 connection_new_failed:
