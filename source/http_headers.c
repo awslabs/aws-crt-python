@@ -49,6 +49,7 @@ PyObject *aws_py_http_headers_new_from_native(struct aws_http_headers *headers) 
         return NULL;
     }
 
+    /* Acquire hold so aws_http_headers object lives at least as long as the binding */
     aws_http_headers_acquire(headers);
     return py_capsule;
 }

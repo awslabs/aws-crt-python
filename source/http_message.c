@@ -65,10 +65,8 @@ struct aws_http_message *aws_py_get_http_message(PyObject *http_message) {
     return native;
 }
 
-PyObject *aws_py_http_message_new_request(PyObject *self, PyObject *args) {
-    (void)self;
-    (void)args;
-
+/* Common logic for creating a binding around a new request or existing request */
+static PyObject *s_common_new_binding(struct aws_http_message *native_request) {
     struct aws_allocator *alloc = aws_py_get_allocator();
     struct http_message_binding *request = aws_mem_calloc(alloc, 1, sizeof(struct http_message_binding));
     if (!request) {
@@ -84,11 +82,6 @@ PyObject *aws_py_http_message_new_request(PyObject *self, PyObject *args) {
 
     py_message_capsule = PyCapsule_New(request, s_capsule_name_http_message, s_http_message_capsule_destructor);
     if (!py_message_capsule) {
-        goto error;
-    }
-
-    request->native = aws_http_message_new_request(alloc);
-    if (!request->native) {
         goto error;
     }
 
@@ -111,6 +104,11 @@ PyObject *aws_py_http_message_new_request(PyObject *self, PyObject *args) {
     }
     PyTuple_SET_ITEM(py_return_tuple, 0, py_message_capsule);
     PyTuple_SET_ITEM(py_return_tuple, 1, py_headers_capsule);
+
+    /* Don't set native reference until we're sure NOTHING can go wrong in this fn.
+     * Otherwise, if an error occurs the capsule destructor will release() it */
+    request->native = native_request;
+
     return py_return_tuple;
 
 error:
@@ -121,6 +119,35 @@ error:
     }
     Py_XDECREF(py_headers_capsule);
     return NULL;
+}
+
+PyObject *aws_py_http_message_new_request(PyObject *self, PyObject *args) {
+    (void)self;
+    (void)args;
+
+    struct aws_http_message *request = aws_http_message_new_request(aws_py_get_allocator());
+    if (!request) {
+        return PyErr_AwsLastError();
+    }
+
+    PyObject *py_return_tuple = aws_py_http_message_new_request_from_native(request);
+    if (!py_return_tuple) {
+        aws_http_message_release(request);
+        return NULL;
+    }
+
+    return py_return_tuple;
+}
+
+PyObject *aws_py_http_message_new_request_from_native(struct aws_http_message *request) {
+    PyObject *py_return_tuple = aws_py_http_message_new_request_from_native(request);
+    if (!py_return_tuple) {
+        return NULL;
+    }
+
+    /* Acquire hold so aws_http_headers object lives at least as long as the binding */
+    aws_http_message_acquire(request);
+    return py_return_tuple;
 }
 
 static struct http_message_binding *s_get_binding_from_capsule_arg(PyObject *self, PyObject *args) {

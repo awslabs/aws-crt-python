@@ -25,7 +25,7 @@ struct aws_http_proxy_options;
  *
  * NOTE: The native struct must be used immediately because it's cursors
  * reference memory from strings in the PyObject.
- * If we need this to be a long-lived object, we'll need to do a full binding.
+ * If we need this struct to be a long-lived object, we'll need to do a full binding.
  */
 bool aws_py_http_proxy_options_init(struct aws_http_proxy_options *proxy_options, PyObject *py_proxy_options);
 
@@ -54,6 +54,11 @@ PyObject *aws_py_http_client_stream_new(PyObject *self, PyObject *args);
  * The caller must bind these to an HttpRequest class, and an HttpHeaders class, respectively.
  */
 PyObject *aws_py_http_message_new_request(PyObject *self, PyObject *args);
+
+/* Create capsules to bind an existing request-style aws_http_message and its headers.
+ * Returns pair: (request_binding_capsule, headers_binding_capsule) */
+PyObject *aws_py_http_message_new_request_from_native(struct aws_http_message *request);
+
 PyObject *aws_py_http_message_get_request_method(PyObject *self, PyObject *args);
 PyObject *aws_py_http_message_set_request_method(PyObject *self, PyObject *args);
 PyObject *aws_py_http_message_get_request_path(PyObject *self, PyObject *args);

@@ -227,6 +227,17 @@ class HttpRequest(HttpMessageBase):
         self.method = method
         self.path = path
 
+    @classmethod
+    def _from_binding(cls, binding_pair):
+        """Construct from a pre-existing native object"""
+        request_binding, headers_binding = binding_pair
+
+        # avoid class's default constructor
+        # just invoke parent class's __init__()
+        request = cls.__new__(cls)
+        super(cls, request).__init__(request_binding, headers_binding)
+        return request
+
     @property
     def method(self):
         return _awscrt.http_message_get_request_method(self._binding)
