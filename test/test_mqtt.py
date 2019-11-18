@@ -29,6 +29,8 @@ class MqttClientTest(NativeResourceTest):
 
 
 class Config:
+    cache = None
+
     def __init__(self, endpoint, cert, key, ca=None):
         try:
             self.cert = cert
@@ -41,6 +43,9 @@ class Config:
 
     @staticmethod
     def get():
+        if Config.cache:
+            return Config.cache
+
         # boto3 caches the HTTPS connection for the API calls, which appears to the unit test
         # framework as a leak, so ignore it, that's not what we're testing here
         warnings.simplefilter('ignore', ResourceWarning)
@@ -54,7 +59,8 @@ class Config:
         key = bytes(response['SecretString'], 'utf8')
         response = secrets.get_secret_value(SecretId='unit-test/ca')
         ca = bytes(response['SecretString'], 'utf8')
-        return Config(endpoint, cert, key, ca)
+        Config.cache = Config(endpoint, cert, key, ca)
+        return Config.cache
 
 
 class MqttConnectionTest(NativeResourceTest):
@@ -80,12 +86,11 @@ class MqttConnectionTest(NativeResourceTest):
             self.assertFalse(ex)
 
     def test_connect_disconnect(self):
-        init_logging(LogLevel.Trace, 'stdout')
         connection = self._test_connection()
         connection.disconnect().result()
-        init_logging(LogLevel.NoLogs, 'stdout')
 
     def test_pub_sub(self):
+        init_logging(LogLevel.Debug, 'stdout')
         connection = self._test_connection()
         disconnected = Future()
 
@@ -105,6 +110,7 @@ class MqttConnectionTest(NativeResourceTest):
         subscribed.add_done_callback(do_publish)
 
         disconnected.result()
+        init_logging(LogLevel.NoLogs, 'stdout')
 
     def test_sub_to_any(self):
         connection = self._test_connection()
