@@ -93,6 +93,7 @@
         ["{python}", "-m", "pip", "install", "--upgrade", "pip"],
         ["{python}", "-m", "pip", "install", "virtualenv"],
         ["{python}", "-m", "virtualenv", "venv"],
+        ["{venv_python}", "-m", "pip", "--trusted-host", "pypi.org", "--trusted-host", "files.pythonhosted.org", "pip", "setuptools", "boto3"],
         ["{venv_python}", "setup.py", "test", "--verbose"],
         ["{venv_python}", "aws-c-http/integration-testing/http_client_test.py", "{python}", "elasticurl.py"],
         ["{venv_python}", "-m", "pip", "install", "autopep8"],
