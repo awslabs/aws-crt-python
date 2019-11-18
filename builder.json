@@ -10,7 +10,8 @@
             },
             "variables": {
                 "openssl_include": "=/opt/openssl/include",
-                "openssl_lib": "=/opt/openssl/lib"
+                "openssl_lib": "=/opt/openssl/lib",
+                "venv_python": "venv/bin/python"
             }
         },
         "al2012": {
@@ -24,7 +25,8 @@
         "manylinux": {
             "variables": {
                 "openssl_include": "=/opt/openssl/include",
-                "openssl_lib": "=/opt/openssl/lib"
+                "openssl_lib": "=/opt/openssl/lib",
+                "venv_python": "venv/bin/python"
             },
             "post_build_steps": [
                 ["echo", "------ Python 3.6 ------"],
@@ -48,6 +50,11 @@
                 ["/opt/python/cp27-cp27mu/bin/python", "setup.py", "test", "--verbose"],
                 ["/opt/python/cp37-cp37m/bin/python", "aws-c-http/integration-testing/http_client_test.py", "/opt/python/cp27-cp27mu/bin/python", "elasticurl.py"]
             ]
+        },
+        "windows" : {
+            "variables": {
+                "venv_python": "venv\\Scripts\\Python.exe"
+            }
         }
     },
     "targets": {
@@ -85,9 +92,9 @@
     "test": [
         ["{python}", "-m", "pip", "install", "virtualenv"],
         ["{python}", "-m", "virtualenv", "venv"],
-        ["venv/bin/python", "setup.py", "test", "--verbose"],
-        ["venv/bin/python", "aws-c-http/integration-testing/http_client_test.py", "{python}", "elasticurl.py"],
-        ["venv/bin/python", "-m", "pip", "install", "autopep8"],
-        ["venv/bin/python", "-m", "autopep8", "--exit-code", "--diff", "--recursive", "awscrt", "test", "setup.py"]
+        ["{venv_python}", "setup.py", "test", "--verbose"],
+        ["{venv_python}", "aws-c-http/integration-testing/http_client_test.py", "{python}", "elasticurl.py"],
+        ["{venv_python}", "-m", "pip", "install", "autopep8"],
+        ["{venv_python}", "-m", "autopep8", "--exit-code", "--diff", "--recursive", "awscrt", "test", "setup.py"]
     ]
 }
