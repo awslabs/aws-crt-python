@@ -66,7 +66,7 @@ class MqttConnectionTest(NativeResourceTest):
             config = Config.get()
         except Exception as ex:
             return self.skipTest("No credentials")
-        
+
         try:
             tls_opts = TlsContextOptions.create_client_with_mtls(config.cert, config.key)
             if config.ca:
