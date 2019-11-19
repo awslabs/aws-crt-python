@@ -733,6 +733,8 @@ PyObject *aws_py_mqtt_client_connection_on_message(PyObject *self, PyObject *arg
         return PyErr_AwsLastError();
     }
 
+    py_connection->on_any_publish = callback;
+
     Py_RETURN_NONE;
 }
 
