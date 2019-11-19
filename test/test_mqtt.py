@@ -78,6 +78,10 @@ class MqttConnectionTest(NativeResourceTest):
             if config.ca:
                 tls_opts.override_default_trust_store(config.ca)
             tls = ClientTlsContext(tls_opts)
+        except Exception as ex:
+            return self.skipTest("Local TLS issues")
+
+        try:
             client = Client(ClientBootstrap(EventLoopGroup()), tls)
             connection = Connection(client)
             connection.connect('aws-crt-python-unit-test-'.format(time.gmtime()), config.endpoint, 8883).result()
