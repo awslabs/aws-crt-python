@@ -683,12 +683,8 @@ PyObject *aws_py_mqtt_client_connection_subscribe(PyObject *self, PyObject *args
         return NULL;
     }
 
-    if (callback) {
-        Py_INCREF(callback);
-    }
-    if (suback_callback) {
-        Py_INCREF(suback_callback);
-    }
+    Py_XINCREF(callback);
+    Py_XINCREF(suback_callback);
 
     struct aws_byte_cursor topic_filter = aws_byte_cursor_from_array(topic, topic_len);
     uint16_t msg_id = aws_mqtt_client_connection_subscribe(
@@ -702,12 +698,8 @@ PyObject *aws_py_mqtt_client_connection_subscribe(PyObject *self, PyObject *args
         suback_callback);
 
     if (msg_id == 0) {
-        if (callback) {
-            Py_DECREF(callback);
-        }
-        if (suback_callback) {
-            Py_DECREF(suback_callback);
-        }
+        Py_XDECREF(callback);
+        Py_XDECREF(suback_callback);
         return PyErr_AwsLastError();
     }
 
