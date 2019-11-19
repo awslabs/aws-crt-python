@@ -31,11 +31,10 @@ class MqttClientTest(NativeResourceTest):
 class Config:
     cache = None
 
-    def __init__(self, endpoint, cert, key, ca=None):
+    def __init__(self, endpoint, cert, key):
         try:
             self.cert = cert
             self.key = key
-            self.ca = ca
             self.endpoint = endpoint
             self.valid = True
         except BaseException:
@@ -57,9 +56,7 @@ class Config:
         cert = bytes(response['SecretString'], 'utf8')
         response = secrets.get_secret_value(SecretId='unit-test/privatekey')
         key = bytes(response['SecretString'], 'utf8')
-        response = secrets.get_secret_value(SecretId='unit-test/ca')
-        ca = bytes(response['SecretString'], 'utf8')
-        Config.cache = Config(endpoint, cert, key, ca)
+        Config.cache = Config(endpoint, cert, key)
         return Config.cache
 
 
@@ -75,13 +72,7 @@ class MqttConnectionTest(NativeResourceTest):
 
         try:
             tls_opts = TlsContextOptions.create_client_with_mtls(config.cert, config.key)
-            if config.ca:
-                tls_opts.override_default_trust_store(config.ca)
             tls = ClientTlsContext(tls_opts)
-        except Exception as ex:
-            return self.skipTest("Local TLS issues")
-
-        try:
             client = Client(ClientBootstrap(EventLoopGroup()), tls)
             connection = Connection(client)
             connection.connect('aws-crt-python-unit-test-'.format(time.gmtime()), config.endpoint, 8883).result()
