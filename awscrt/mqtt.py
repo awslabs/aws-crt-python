@@ -68,12 +68,7 @@ class Client(NativeResource):
 
 
 class Connection(NativeResource):
-    __slots__ = (
-        'client',
-        '_on_connection_interrupted_cb',
-        '_on_connection_resumed_cb',
-        '_ws_handshake_transform_cb',
-        '_ws_handshake_validator_cb')
+    __slots__ = ('client', '_on_connection_interrupted_cb', '_on_connection_resumed_cb', '_ws_handshake_transform_cb')
 
     def __init__(self,
                  client,
@@ -149,7 +144,6 @@ class Connection(NativeResource):
                 use_websocket=False,
                 websocket_proxy_options=None,
                 websocket_handshake_transform=None,
-                websocket_handshake_validator=None,
                 **kwargs):
         """
         client_id: Client ID string to place in CONNECT packet.
@@ -192,13 +186,6 @@ class Connection(NativeResource):
                 If provided, function is called each time a websocket connection
                 is attempted. The function may modify the websocket handshake
                 request. See WebsocketHandshakeTransformArgs for more info.
-
-        websocket_handshake_validator: optional function with signature:
-                (WebsocketHandshakeValidatorArgs) -> bool
-                If provided, function is called each time a websocket
-                connection is established and may return True to accept
-                the websocket handshake response or False to reject it.
-                See WebsocketHandshakeValidatorArgs for more info.
         """
 
         future = Future()
@@ -220,10 +207,8 @@ class Connection(NativeResource):
             assert will is None or isinstance(will, Will)
             assert isinstance(socket_options, SocketOptions)
             assert websocket_handshake_transform is None or isinstance(websocket_handshake_transform, callable)
-            assert websocket_handshake_validator is None or isinstance(websocket_handshake_validator, callable)
 
             self._ws_handshake_transform = websocket_handshake_transform
-            self._ws_handshake_validator = websocket_handshake_validator
 
             _awscrt.mqtt_client_connection_connect(
                 self._binding,
@@ -241,8 +226,6 @@ class Connection(NativeResource):
                 on_connect,
                 use_websocket,
                 websocket_proxy_options,
-                bool(websocket_handshake_transform),
-                bool(websocket_handshake_validator),
             )
 
         except Exception as e:
@@ -419,28 +402,6 @@ class Connection(NativeResource):
                 self._done_future.set_result(None)
             else:
                 self._done_future.set_exception(exception)
-
-    class WebsocketHandshakeValidatorArgs(object):
-        """
-        Argument to a websocket_handshake_validator function.
-
-        -- Attributes --
-        mqtt_connection: awscrt.mqtt.Connection this handshake is for
-        http_headers: awscrt.http.HttpHeaders from the handshake response
-
-        A validator function has signature:
-        (WebsocketHandshakeValidator) -> bool
-        The implementor should return True to accept the websocket handshake
-        response, or False to reject it.
-
-        Before the validator function is invoked, all required headers have
-        already been verified as correct (ex: "Sec-Websocket-Accept"),
-        but optional headers (Ex: "Sec-Websocket-Protocol") have not been examined.
-        """
-
-        def __init__(self, mqtt_connection, http_headers):
-            self.mqtt_connection = mqtt_connection
-            self.http_headers = http_headers
 
 
 class SubscribeError(Exception):

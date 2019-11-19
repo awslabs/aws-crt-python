@@ -457,77 +457,6 @@ PyObject *aws_py_mqtt_ws_handshake_transform_complete(PyObject *self, PyObject *
     Py_RETURN_NONE;
 }
 
-/* Invoke user's websocket handshake response validator function */
-static int s_ws_handshake_validator(
-    struct aws_mqtt_client_connection *connection,
-    const struct aws_http_header *header_array,
-    size_t num_headers,
-    void *userdata) {
-
-    (void)connection;
-    struct mqtt_connection_binding *connection_binding = userdata;
-
-    /* Create an aws_http_headers object to hold the header array.
-     * We'll be passing an HttpHeaders binding to the callback. */
-    struct aws_http_headers *headers = aws_http_headers_new(aws_py_get_allocator());
-    if (!headers) {
-        return AWS_OP_ERR;
-    }
-    if (aws_http_headers_add_array(headers, header_array, num_headers)) {
-        aws_http_headers_release(headers);
-        return AWS_OP_ERR;
-    }
-
-    bool success = false;
-    PyObject *headers_binding = NULL;
-
-    /*************** GIL ACQUIRE ***************
-     * If error occurs, ensure an aws error is raised and goto done */
-    PyGILState_STATE state = PyGILState_Ensure();
-
-    /* Create binding for headers */
-    headers_binding = aws_py_http_headers_new_from_native(headers);
-    if (!headers_binding) {
-        aws_py_raise_error();
-        goto done;
-    }
-
-    /* Ensure python mqtt connection object is still alive */
-    PyObject *connection_py = PyWeakref_GetObject(connection_binding->self_proxy); /* borrowed reference */
-    if (connection_py == Py_None) {
-        aws_raise_error(AWS_ERROR_INVALID_STATE);
-        goto done;
-    }
-
-    /* Invoke callback. Result is whether or not user accepts the response */
-    PyObject *result = PyObject_CallMethod(connection_py, "_ws_handshake_validator", "(O)", headers_binding);
-    if (result) {
-        success = PyObject_IsTrue(result);
-        Py_DECREF(result);
-
-        if (!success) {
-            aws_raise_error(AWS_ERROR_HTTP_CALLBACK_FAILURE);
-            goto done;
-        }
-    } else {
-        aws_py_raise_error();
-        goto done;
-    }
-
-done:
-
-    if (headers_binding) {
-        Py_DECREF(headers_binding);
-    } else {
-        aws_http_headers_release(headers);
-    }
-
-    PyGILState_Release(state);
-    /*************** GIL RELEASE ***************/
-
-    return success ? AWS_OP_SUCCESS : AWS_OP_ERR;
-}
-
 PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) {
     (void)self;
 
@@ -550,11 +479,9 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
     PyObject *on_connect;
     PyObject *use_websocket_py;
     PyObject *ws_proxy_options_py;
-    PyObject *has_ws_transform;
-    PyObject *has_ws_validator;
     if (!PyArg_ParseTuple(
             args,
-            "Os#s#HOOHIOz#z#OOOOOO",
+            "Os#s#HOOHIOz#z#OOOO",
             &impl_capsule,
             &client_id,
             &client_id_len,
@@ -573,9 +500,7 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
             &is_clean_session,
             &on_connect,
             &use_websocket_py,
-            &ws_proxy_options_py,
-            &has_ws_transform,
-            &has_ws_validator)) {
+            &ws_proxy_options_py)) {
         return NULL;
     }
 
@@ -622,10 +547,10 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
     if (PyObject_IsTrue(use_websocket_py)) {
         if (aws_mqtt_client_connection_use_websockets(
                 py_connection->native,
-                PyObject_IsTrue(has_ws_transform) ? s_ws_handshake_transform : NULL,
-                py_connection /* transform userdata */,
-                PyObject_IsTrue(has_ws_validator) ? s_ws_handshake_validator : NULL,
-                py_connection /* validator userdata */)) {
+                s_ws_handshake_transform,
+                py_connection /*transform userdata*/,
+                NULL /*validator*/,
+                NULL /*validator userdata*/)) {
             return PyErr_AwsLastError();
         }
 
