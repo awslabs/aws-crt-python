@@ -16,8 +16,9 @@ import warnings
 from concurrent.futures import Future
 from enum import IntEnum
 from awscrt import NativeResource
-from awscrt.http import HttpHeaders, HttpProxyOptions
+from awscrt.http import HttpHeaders, HttpProxyOptions, HttpRequest
 from awscrt.io import ClientBootstrap, ClientTlsContext, SocketOptions
+import traceback
 
 
 class QoS(IntEnum):
@@ -107,7 +108,7 @@ class Connection(NativeResource):
         if self._on_connection_resumed_cb:
             self._on_connection_resumed_cb(self, error_code, session_present)
 
-    def _ws_handshake_transform(self, http_request, native_userdata):
+    def _ws_handshake_transform(self, http_request_bindings, native_userdata):
         if self._ws_handshake_transform_cb is None:
             _awscrt.mqtt_ws_handshake_transform_complete(None, native_userdata)
             return
@@ -117,19 +118,23 @@ class Connection(NativeResource):
 
         future = Future()
         future.add_done_callback(_on_complete)
+        http_request = HttpRequest._from_bindings(http_request_bindings)
         transform_args = WebsocketHandshakeTransformArgs(self, http_request, future)
         try:
             self._ws_handshake_transform_cb(transform_args)
         except Exception as e:
-            # ensure transformation is marked complete,
-            # even if user forgot
+            traceback.print_exc()
+            # Call set_done() in case user failed to do so before uncaught exception was raised,
+            # there's a chance the callback wasn't callable and user has no idea we tried to hand them the baton.
+            # (it's safe to call set_done() multiple times).
             transform_args.set_done(e)
 
-    def _ws_handshake_validator(self, header_pairs):
+    def _ws_handshake_validator(self, headers_binding):
         if not self._ws_handshake_validator_cb:
             return True
 
-        validator_args = WebsocketHandshakeValidatorArgs(self, HttpHeaders(header_pairs))
+        headers = HttpHeaders._from_binding(headers_binding)
+        validator_args = WebsocketHandshakeValidatorArgs(self, headers)
         return self._ws_handshake_validator_cb(validator_args)
 
     def connect(self,
@@ -236,6 +241,8 @@ class Connection(NativeResource):
                 on_connect,
                 use_websocket,
                 websocket_proxy_options,
+                bool(websocket_handshake_transform),
+                bool(websocket_handshake_validator),
             )
 
         except Exception as e:
@@ -403,6 +410,11 @@ class Connection(NativeResource):
             self._done_future = done_future
 
         def set_done(self, exception=None):
+            """
+            Mark the transformation complete.
+            If exception is passed in, the handshake is canceled.
+            This function is idempotent (safe to call multiple times).
+            """
             if exception is None:
                 self._done_future.set_result(None)
             else:

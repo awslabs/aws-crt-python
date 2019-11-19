@@ -21,6 +21,7 @@
 #include <aws/mqtt/client.h>
 
 #include <aws/http/connection.h>
+#include <aws/http/request_response.h>
 
 #include <aws/io/channel.h>
 #include <aws/io/channel_bootstrap.h>
@@ -322,13 +323,29 @@ done:
 /* Data to live for duration of websocket handshake transform callback.
  * Implementations can be async, but must call the complete_fn when they are done */
 struct ws_handshake_transform_data {
+    struct aws_http_message *request;
+    aws_mqtt_transform_websocket_handshake_complete_fn *complete_fn;
+    void *complete_ctx;
+
     /* Strong reference to Connection object, so it can't go out of scope during transform */
     PyObject *connection_py;
 
-    struct aws_http_request *request;
-    aws_mqtt_transform_websocket_handshake_complete_fn *complete_fn;
-    void *complete_ctx;
+    /* Python bindings we created to wrap the native request */
+    PyObject *request_bindings_py;
 };
+
+static const char *s_capsule_name_ws_handshake_transform_data = "aws_ws_handshake_transform_data";
+
+void s_ws_handshake_transform_data_destructor(PyObject *capsule) {
+    struct ws_handshake_transform_data *ws_data =
+        PyCapsule_GetPointer(capsule, s_capsule_name_ws_handshake_transform_data);
+
+    /* Note that binding may be only partially constructed, if error occurred during setup */
+    Py_XDECREF(ws_data->connection_py);
+    Py_XDECREF(ws_data->request_bindings_py);
+
+    aws_mem_release(aws_py_get_allocator(), ws_data);
+}
 
 /* Invoke user's websocket handshake transform function */
 static void s_ws_handshake_transform(
@@ -337,50 +354,108 @@ static void s_ws_handshake_transform(
     aws_mqtt_transform_websocket_handshake_complete_fn *complete_fn,
     void *complete_ctx) {
 
-    struct mqtt_connection_binding *binding = user_data;
-    bool success = false;
-    PyObject *connection_py = NULL;
-    struct ws_handshake_transform_data *transform_data = NULL;
+    struct mqtt_connection_binding *connection_binding = user_data;
 
-    /**** GIL ACQUIRE ****
-     * If error occurs, ensure aws error is raised and goto done */
+    bool success = false;
+
+    /* We'll create a ws_handshake_transform_data object, place it in a capsule, and pass it to callback */
+    struct ws_handshake_transform_data *ws_transform_data = NULL;
+    PyObject *ws_transform_capsule = NULL;
+
+    /*************** GIL ACQUIRE ***************
+     * If error occurs, ensure an aws error is raised and goto done */
     PyGILState_STATE state = PyGILState_Ensure();
 
-    /* Ensure python object is still alive */
-    connection_py = PyWeakref_GetObject(binding->self_proxy); /* borrowed reference */
-    Py_INCREF(connection_py);
+    /* Ensure python mqtt connection object is still alive */
+    PyObject *connection_py = PyWeakref_GetObject(connection_binding->self_proxy); /* borrowed reference */
     if (connection_py == Py_None) {
         aws_raise_error(AWS_ERROR_INVALID_STATE);
         goto done;
     }
 
-    transform_data = aws_mem_calloc(aws_py_get_allocator(), 1, sizeof(struct ws_handshake_transform_data));
-    if (!transform_data) {
+    ws_transform_data = aws_mem_calloc(aws_py_get_allocator(), 1, sizeof(struct ws_handshake_transform_data));
+    if (!ws_transform_data) {
         goto done;
     }
-    transform_data->connection_py = connection_py;
-    transform_data->request = request;
-    transform_data->complete_fn = complete_fn;
-    transform_data->complete_ctx = complete_ctx;
 
-    PyObject *result = PyObject_CallMethod(connection_py, "_ws_handshake_transform", "()",
+    ws_transform_capsule = PyCapsule_New(
+        ws_transform_data, s_capsule_name_ws_handshake_transform_data, s_ws_handshake_transform_data_destructor);
+    if (!ws_transform_capsule) {
+        aws_py_raise_error();
+        goto done;
+    }
 
-    success = false;
-done:
+    /* From hereon, capsule destructor will clean up anything stored within it */
+
+    ws_transform_data->request = request;
+    ws_transform_data->complete_fn = complete_fn;
+    ws_transform_data->complete_ctx = complete_ctx;
+
+    ws_transform_data->connection_py = connection_py;
+    Py_INCREF(ws_transform_data->connection_py);
+
+    ws_transform_data->request_bindings_py = aws_py_http_message_new_request_from_native(request);
+    if (!ws_transform_data->request_bindings_py) {
+        aws_py_raise_error();
+        goto done;
+    }
+
+    PyObject *result = PyObject_CallMethod(
+        connection_py, "_ws_handshake_transform", "(OO)", ws_transform_data->request_bindings_py, ws_transform_capsule);
+    if (result) {
+        Py_DECREF(result);
+    } else {
+        aws_py_raise_error();
+        goto done;
+    }
+
+    success = true;
+done:;
+    /* Save off error code, so it doesn't got stomped before we pass it to callback*/
+    int error_code = aws_last_error();
+
+    if (ws_transform_capsule) {
+        Py_DECREF(ws_transform_capsule);
+    } else if (ws_transform_data) {
+        aws_mem_release(aws_py_get_allocator(), ws_transform_data);
+    }
+
     PyGILState_Release(state);
-    /**** GIL RELEASE ****/
+    /*************** GIL RELEASE ***************/
 
+    /* Invoke completion cb if we failed to pass data to user. */
     if (!success) {
-        Py_XDECREF(connection_py);
-        if (transform_data) {
-            aws_mem_release(aws_py_get_allocator(), transform_data);
-        }
-        complete_fn(request, aws_last_error(), complete_ctx);
+        complete_fn(request, error_code, complete_ctx);
     }
 }
 
 /* Called when user finishes performing their websocket handshake transform */
-PyObject *aws_py_mqtt_ws_handshake_transform_complete(PyObject *self, PyObject *args) {}
+PyObject *aws_py_mqtt_ws_handshake_transform_complete(PyObject *self, PyObject *args) {
+    (void)self;
+
+    PyObject *exception_py;
+    PyObject *ws_transform_capsule;
+    if (!PyArg_ParseTuple(args, "OO", &exception_py, &ws_transform_capsule)) {
+        return NULL;
+    }
+
+    int error_code = AWS_ERROR_SUCCESS;
+    if (exception_py != Py_None) {
+        /* TODO: Translate Python exception to aws error. In the meantime here's a catch-all. */
+        error_code = AWS_ERROR_HTTP_CALLBACK_FAILURE;
+    }
+
+    struct ws_handshake_transform_data *ws_transform_data =
+        PyCapsule_GetPointer(ws_transform_capsule, s_capsule_name_ws_handshake_transform_data);
+    if (!ws_transform_data) {
+        return NULL;
+    }
+
+    /* Invoke complete_fn*/
+    ws_transform_data->complete_fn(ws_transform_data->request, error_code, ws_transform_data->complete_ctx);
+
+    Py_RETURN_NONE;
+}
 
 /* Invoke user's websocket handshake response validator function */
 static int s_ws_handshake_validator(
@@ -388,11 +463,69 @@ static int s_ws_handshake_validator(
     const struct aws_http_header *header_array,
     size_t num_headers,
     void *userdata) {
+
     (void)connection;
-    (void)header_array;
-    (void)num_headers;
-    (void)userdata;
-    return AWS_OP_SUCCESS;
+    struct mqtt_connection_binding *connection_binding = userdata;
+
+    /* Create an aws_http_headers object to hold the header array.
+     * We'll be passing an HttpHeaders binding to the callback. */
+    struct aws_http_headers *headers = aws_http_headers_new(aws_py_get_allocator());
+    if (!headers) {
+        return AWS_OP_ERR;
+    }
+    if (aws_http_headers_add_array(headers, header_array, num_headers)) {
+        aws_http_headers_release(headers);
+        return AWS_OP_ERR;
+    }
+
+    bool success = false;
+    PyObject *headers_binding = NULL;
+
+    /*************** GIL ACQUIRE ***************
+     * If error occurs, ensure an aws error is raised and goto done */
+    PyGILState_STATE state = PyGILState_Ensure();
+
+    /* Create binding for headers */
+    headers_binding = aws_py_http_headers_new_from_native(headers);
+    if (!headers_binding) {
+        aws_py_raise_error();
+        goto done;
+    }
+
+    /* Ensure python mqtt connection object is still alive */
+    PyObject *connection_py = PyWeakref_GetObject(connection_binding->self_proxy); /* borrowed reference */
+    if (connection_py == Py_None) {
+        aws_raise_error(AWS_ERROR_INVALID_STATE);
+        goto done;
+    }
+
+    /* Invoke callback. Result is whether or not user accepts the response */
+    PyObject *result = PyObject_CallMethod(connection_py, "_ws_handshake_validator", "(O)", headers_binding);
+    if (result) {
+        success = PyObject_IsTrue(result);
+        Py_DECREF(result);
+
+        if (!success) {
+            aws_raise_error(AWS_ERROR_HTTP_CALLBACK_FAILURE);
+            goto done;
+        }
+    } else {
+        aws_py_raise_error();
+        goto done;
+    }
+
+done:
+
+    if (headers_binding) {
+        Py_DECREF(headers_binding);
+    } else {
+        aws_http_headers_release(headers);
+    }
+
+    PyGILState_Release(state);
+    /*************** GIL RELEASE ***************/
+
+    return success ? AWS_OP_SUCCESS : AWS_OP_ERR;
 }
 
 PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) {
@@ -413,13 +546,15 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
     Py_ssize_t username_len;
     const char *password;
     Py_ssize_t password_len;
-    int is_clean_session;
+    PyObject *is_clean_session;
     PyObject *on_connect;
     PyObject *use_websocket_py;
     PyObject *ws_proxy_options_py;
+    PyObject *has_ws_transform;
+    PyObject *has_ws_validator;
     if (!PyArg_ParseTuple(
             args,
-            "Os#s#HOOHIOz#z#pOOO",
+            "Os#s#HOOHIOz#z#OOOOOO",
             &impl_capsule,
             &client_id,
             &client_id_len,
@@ -438,7 +573,9 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
             &is_clean_session,
             &on_connect,
             &use_websocket_py,
-            &ws_proxy_options_py)) {
+            &ws_proxy_options_py,
+            &has_ws_transform,
+            &has_ws_validator)) {
         return NULL;
     }
 
@@ -485,9 +622,9 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
     if (PyObject_IsTrue(use_websocket_py)) {
         if (aws_mqtt_client_connection_use_websockets(
                 py_connection->native,
-                s_ws_handshake_transform,
+                PyObject_IsTrue(has_ws_transform) ? s_ws_handshake_transform : NULL,
                 py_connection /* transform userdata */,
-                s_ws_handshake_validator,
+                PyObject_IsTrue(has_ws_validator) ? s_ws_handshake_validator : NULL,
                 py_connection /* validator userdata */)) {
             return PyErr_AwsLastError();
         }
@@ -540,7 +677,7 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
         .ping_timeout_ms = ping_timeout,
         .on_connection_complete = s_on_connect,
         .user_data = py_connection,
-        .clean_session = is_clean_session,
+        .clean_session = PyObject_IsTrue(is_clean_session),
     };
     if (aws_mqtt_client_connection_connect(py_connection->native, &options)) {
         PyErr_SetAwsLastError();

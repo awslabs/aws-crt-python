@@ -17,6 +17,7 @@
 #include "module.h"
 
 struct aws_http_headers;
+struct aws_http_message;
 struct aws_http_proxy_options;
 
 /**
