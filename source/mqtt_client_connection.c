@@ -714,7 +714,7 @@ PyObject *aws_py_mqtt_client_connection_subscribe(PyObject *self, PyObject *args
     return PyLong_FromUnsignedLong(msg_id);
 }
 
-PyObject *aws_py_mqtt_client_connection_subscribe_to_any(PyObject *self, PyObject *args) {
+PyObject *aws_py_mqtt_client_connection_on_message(PyObject *self, PyObject *args) {
     (void)self;
 
     PyObject *impl_capsule;

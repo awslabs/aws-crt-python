@@ -116,7 +116,7 @@ class MqttConnectionTest(NativeResourceTest):
         disconnected.result()
         init_logging(LogLevel.NoLogs, 'stdout')
 
-    def test_sub_to_any(self):
+    def test_on_message(self):
         connection = self._test_connection()
         disconnected = Future()
 
@@ -132,7 +132,7 @@ class MqttConnectionTest(NativeResourceTest):
         def do_publish(result):
             connection.publish(self.TEST_TOPIC, bytes(self.TEST_MSG, 'utf8'), QoS.AT_LEAST_ONCE)
 
-        connection.subscribe_to_any(on_message).result()
+        connection.on_message(on_message).result()
         subscribed, packet_id = connection.subscribe(self.TEST_TOPIC, QoS.AT_LEAST_ONCE)
         subscribed.add_done_callback(do_publish)
 

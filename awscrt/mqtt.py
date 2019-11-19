@@ -213,12 +213,12 @@ class Connection(NativeResource):
 
         return future, packet_id
 
-    def subscribe_to_any(self, callback):
+    def on_message(self, callback):
         future = Future()
 
         try:
             assert callable(callback)
-            _awscrt.mqtt_client_connection_subscribe_to_any(self._binding, callback)
+            _awscrt.mqtt_client_connection_on_message(self._binding, callback)
             future.set_result(True)
         except Exception as e:
             future.set_exception(e)
