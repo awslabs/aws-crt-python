@@ -606,10 +606,6 @@ static void s_subscribe_callback(
     (void)connection;
 
     PyObject *callback = user_data;
-    if (!callback) {
-        return;
-    }
-
     PyGILState_STATE state = PyGILState_Ensure();
 
     PyObject *result = PyObject_CallFunction(
@@ -725,9 +721,15 @@ PyObject *aws_py_mqtt_client_connection_on_message(PyObject *self, PyObject *arg
         return NULL;
     }
 
+    Py_CLEAR(py_connection->on_any_publish);
+
+    if (callback == Py_None) {
+        Py_RETURN_NONE;
+    }
+
     callback = PyWeakref_NewProxy(callback, NULL);
     AWS_FATAL_ASSERT(callback);
-    Py_CLEAR(py_connection->on_any_publish);
+
     if (aws_mqtt_client_connection_set_on_any_publish_handler(py_connection->native, s_subscribe_callback, callback)) {
         Py_DECREF(callback);
         return PyErr_AwsLastError();
