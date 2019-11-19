@@ -727,7 +727,7 @@ PyObject *aws_py_mqtt_client_connection_on_message(PyObject *self, PyObject *arg
 
     callback = PyWeakref_NewProxy(callback, NULL);
     AWS_FATAL_ASSERT(callback);
-    Py_XDECREF(py_connection->on_any_publish);
+    Py_CLEAR(py_connection->on_any_publish);
     if (aws_mqtt_client_connection_set_on_any_publish_handler(py_connection->native, s_subscribe_callback, callback)) {
         Py_DECREF(callback);
         return PyErr_AwsLastError();
