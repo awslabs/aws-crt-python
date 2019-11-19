@@ -724,6 +724,7 @@ PyObject *aws_py_mqtt_client_connection_on_message(PyObject *self, PyObject *arg
     Py_CLEAR(py_connection->on_any_publish);
 
     if (callback == Py_None) {
+        aws_mqtt_client_connection_set_on_any_publish_handler(py_connection->native, NULL, NULL);
         Py_RETURN_NONE;
     }
 
