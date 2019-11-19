@@ -38,7 +38,8 @@ PyObject *aws_py_init_logging(PyObject *self, PyObject *args) {
     (void)self;
 
     if (s_logger_init) {
-        Py_RETURN_NONE;
+        aws_logger_set(NULL);
+        aws_logger_clean_up(&s_logger);
     }
 
     s_logger_init = true;
@@ -264,6 +265,7 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(mqtt_client_connection_reconnect, METH_VARARGS),
     AWS_PY_METHOD_DEF(mqtt_client_connection_publish, METH_VARARGS),
     AWS_PY_METHOD_DEF(mqtt_client_connection_subscribe, METH_VARARGS),
+    AWS_PY_METHOD_DEF(mqtt_client_connection_on_message, METH_VARARGS),
     AWS_PY_METHOD_DEF(mqtt_client_connection_resubscribe_existing_topics, METH_VARARGS),
     AWS_PY_METHOD_DEF(mqtt_client_connection_unsubscribe, METH_VARARGS),
     AWS_PY_METHOD_DEF(mqtt_client_connection_disconnect, METH_VARARGS),

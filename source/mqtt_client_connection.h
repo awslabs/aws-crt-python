@@ -26,6 +26,7 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args);
 PyObject *aws_py_mqtt_client_connection_reconnect(PyObject *self, PyObject *args);
 PyObject *aws_py_mqtt_client_connection_publish(PyObject *self, PyObject *args);
 PyObject *aws_py_mqtt_client_connection_subscribe(PyObject *self, PyObject *args);
+PyObject *aws_py_mqtt_client_connection_on_message(PyObject *self, PyObject *args);
 PyObject *aws_py_mqtt_client_connection_unsubscribe(PyObject *self, PyObject *args);
 PyObject *aws_py_mqtt_client_connection_resubscribe_existing_topics(PyObject *self, PyObject *args);
 PyObject *aws_py_mqtt_client_connection_disconnect(PyObject *self, PyObject *args);
