@@ -20,6 +20,7 @@ import os
 import unittest
 import boto3
 import time
+import uuid
 import warnings
 
 
@@ -75,7 +76,7 @@ class MqttConnectionTest(NativeResourceTest):
             tls = ClientTlsContext(tls_opts)
             client = Client(ClientBootstrap(EventLoopGroup()), tls)
             connection = Connection(client)
-            connection.connect('aws-crt-python-unit-test-'.format(time.gmtime()), config.endpoint, 8883).result()
+            connection.connect('aws-crt-python-unit-test-{0}'.format(uuid.uuid4()), config.endpoint, 8883).result()
             return connection
         except Exception as ex:
             self.assertFalse(ex)
