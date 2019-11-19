@@ -214,16 +214,8 @@ class Connection(NativeResource):
         return future, packet_id
 
     def on_message(self, callback):
-        future = Future()
-
-        try:
-            assert callable(callback)
-            _awscrt.mqtt_client_connection_on_message(self._binding, callback)
-            future.set_result(True)
-        except Exception as e:
-            future.set_exception(e)
-
-        return future
+        assert callable(callback)
+        _awscrt.mqtt_client_connection_on_message(self._binding, callback)
 
     def unsubscribe(self, topic):
         future = Future()
