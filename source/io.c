@@ -167,16 +167,7 @@ elg_init_failed:
 }
 
 struct aws_event_loop_group *aws_py_get_event_loop_group(PyObject *event_loop_group) {
-    struct aws_event_loop_group *native = NULL;
-
-    PyObject *elg_capsule = PyObject_GetAttrString(event_loop_group, "_binding");
-    if (elg_capsule) {
-        native = PyCapsule_GetPointer(elg_capsule, s_capsule_name_elg);
-        assert(native);
-        Py_DECREF(elg_capsule);
-    }
-
-    return native;
+    return aws_py_get_binding(event_loop_group, s_capsule_name_elg, "EventLoopGroup");
 }
 
 struct host_resolver_binding {
@@ -248,19 +239,8 @@ resolver_init_failed:
 }
 
 struct aws_host_resolver *aws_py_get_host_resolver(PyObject *host_resolver) {
-    struct aws_host_resolver *native = NULL;
-
-    PyObject *binding_capsule = PyObject_GetAttrString(host_resolver, "_binding");
-    if (binding_capsule) {
-        struct host_resolver_binding *binding = PyCapsule_GetPointer(binding_capsule, s_capsule_name_host_resolver);
-        if (binding) {
-            native = &binding->native;
-            assert(native);
-        }
-        Py_DECREF(binding_capsule);
-    }
-
-    return native;
+    AWS_PY_RETURN_NATIVE_REF_FROM_BINDING(
+        host_resolver, s_capsule_name_host_resolver, "HostResolverBase", host_resolver_binding);
 }
 
 struct client_bootstrap_binding {
@@ -340,20 +320,8 @@ bootstrap_new_failed:
 }
 
 struct aws_client_bootstrap *aws_py_get_client_bootstrap(PyObject *client_bootstrap) {
-    struct aws_client_bootstrap *native = NULL;
-
-    PyObject *binding_capsule = PyObject_GetAttrString(client_bootstrap, "_binding");
-    if (binding_capsule) {
-        struct client_bootstrap_binding *binding =
-            PyCapsule_GetPointer(binding_capsule, s_capsule_name_client_bootstrap);
-        if (binding) {
-            native = binding->native;
-            assert(native);
-        }
-        Py_DECREF(binding_capsule);
-    }
-
-    return native;
+    AWS_PY_RETURN_NATIVE_FROM_BINDING(
+        client_bootstrap, s_capsule_name_client_bootstrap, "ClientBootstrap", client_bootstrap_binding);
 }
 
 static void s_tls_ctx_destructor(PyObject *tls_ctx_capsule) {
@@ -472,16 +440,7 @@ ctx_options_failure:
 }
 
 struct aws_tls_ctx *aws_py_get_tls_ctx(PyObject *tls_ctx) {
-    struct aws_tls_ctx *native = NULL;
-
-    PyObject *capsule = PyObject_GetAttrString(tls_ctx, "_binding");
-    if (capsule) {
-        native = PyCapsule_GetPointer(capsule, s_capsule_name_tls_ctx);
-        assert(native);
-        Py_DECREF(capsule);
-    }
-
-    return native;
+    return aws_py_get_binding(tls_ctx, s_capsule_name_tls_ctx, "TlsContextBase");
 }
 
 struct tls_connection_options_binding {
@@ -550,20 +509,11 @@ capsule_new_failed:
 }
 
 struct aws_tls_connection_options *aws_py_get_tls_connection_options(PyObject *tls_connection_options) {
-    struct aws_tls_connection_options *native = NULL;
-
-    PyObject *binding_capsule = PyObject_GetAttrString(tls_connection_options, "_binding");
-    if (binding_capsule) {
-        struct tls_connection_options_binding *binding =
-            PyCapsule_GetPointer(binding_capsule, s_capsule_name_tls_conn_options);
-        if (binding) {
-            native = &binding->native;
-            assert(native);
-        }
-        Py_DECREF(binding_capsule);
-    }
-
-    return native;
+    AWS_PY_RETURN_NATIVE_REF_FROM_BINDING(
+        tls_connection_options,
+        s_capsule_name_tls_conn_options,
+        "TlsConnectionOptions",
+        tls_connection_options_binding);
 }
 
 PyObject *aws_py_tls_connection_options_set_alpn_list(PyObject *self, PyObject *args) {
@@ -793,13 +743,5 @@ PyObject *aws_py_input_stream_new(PyObject *self, PyObject *args) {
 }
 
 struct aws_input_stream *aws_py_get_input_stream(PyObject *input_stream) {
-    struct aws_input_stream *native = NULL;
-
-    PyObject *py_capsule = PyObject_GetAttrString(input_stream, "_binding");
-    if (py_capsule) {
-        native = PyCapsule_GetPointer(py_capsule, s_capsule_name_input_stream);
-        Py_DECREF(py_capsule);
-    }
-
-    return native;
+    return aws_py_get_binding(input_stream, s_capsule_name_input_stream, "InputStream");
 }
