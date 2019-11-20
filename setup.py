@@ -113,19 +113,19 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
         prev_cwd = os.getcwd()  # restore cwd at end of function
         lib_source_dir = os.path.join(PROJECT_DIR, aws_lib.name)
 
+        build_type = 'Debug' if self.debug else 'RelWithDebInfo'
+
         # Skip library if it wasn't pulled
         if not os.path.exists(os.path.join(lib_source_dir, 'CMakeLists.txt')):
             print("--- Skipping dependency: '{}' source not found ---".format(aws_lib.name))
             return
 
-        print("--- Building dependency: {} ---".format(aws_lib.name))
+        print("--- Building dependency: {} ({}) ---".format(aws_lib.name, build_type))
         lib_build_dir = os.path.join(DEP_BUILD_DIR, aws_lib.name)
         if not os.path.exists(lib_build_dir):
             os.makedirs(lib_build_dir)
 
         os.chdir(lib_build_dir)
-
-        build_type = 'Debug'  # if self.debug else 'RelWithDebInfo'
 
         # cmake configure
         cmake_args = ['cmake']
