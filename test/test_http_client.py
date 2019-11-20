@@ -65,7 +65,7 @@ class TestRequestHandler(SimpleHTTPRequestHandler):
         self.end_headers()
 
 
-class TestClient(unittest.TestCase):  # NativeResourceTest):
+class TestClient(NativeResourceTest):
     hostname = 'localhost'
     timeout = 10  # seconds
 
@@ -73,9 +73,9 @@ class TestClient(unittest.TestCase):  # NativeResourceTest):
         # HTTP/1.0 closes the connection at the end of each request
         # HTTP/1.1 will keep the connection alive
         if http_1_0:
-            HTTPServer.protocol_version = "HTTP/1.0"
+            TestRequestHandler.protocol_version = "HTTP/1.0"
         else:
-            HTTPServer.protocol_version = "HTTP/1.1"
+            TestRequestHandler.protocol_version = "HTTP/1.1"
 
         self.server = HTTPServer((self.hostname, 0), TestRequestHandler)
         if secure:
@@ -267,16 +267,10 @@ class TestClient(unittest.TestCase):  # NativeResourceTest):
     def test_stream_lives_until_complete_https(self):
         self._test_stream_lives_until_complete(secure=True)
 
-    def _test_proxy(self, secure):
-        self._test_get(secure, HttpProxyOptions(host_name=PROXY_HOST, port=PROXY_PORT))
-
-    @unittest.skipIf(PROXY_HOST is None, "set proxyhost and proxyport env vars")
+    @unittest.skipIf(PROXY_HOST is None, 'requires "proxyhost" and "proxyport" env vars')
     def test_proxy_http(self):
-        self._test_proxy(secure=False)
-
-    @unittest.skipIf(PROXY_HOST is None, "set proxyhost and proxyport env vars")
-    def test_proxy_https(self):
-        self._test_proxy(secure=True)
+        proxy_options = HttpProxyOptions(host_name=PROXY_HOST, port=PROXY_PORT)
+        self._test_get(secure=False, proxy_options=proxy_options)
 
 
 if __name__ == '__main__':

@@ -157,10 +157,12 @@ class Connection(NativeResource):
 
         keep_alive: The keep alive value, in seconds, to place in the CONNECT
                 packet, a PING will automatically be sent at this interval as
-                well. This value must be higher than ping_timeout.
+                well. The default is for a ping to be sent once per hour.
+                This value must be higher than ping_timeout.
 
         ping_timeout: Network connection is re-established if a ping response
                 is not received within this amount of time (seconds).
+                The default value is 3 seconds.
                 This value must be less than keep_alive.
                 Alternatively, tcp keep-alive may be away to accomplish this
                 in a more efficient (low-power) scenario, but keep-alive options
