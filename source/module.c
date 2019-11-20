@@ -230,7 +230,7 @@ PyObject *aws_py_memory_view_from_byte_buffer(struct aws_byte_buf *buf) {
 
 void *aws_py_get_binding(PyObject *obj, const char *capsule_name, const char *class_name) {
     if (!obj || obj == Py_None) {
-        return PyErr_Format(PyExc_TypeError, "Excepted '%s', received 'NoneType'");
+        return PyErr_Format(PyExc_TypeError, "Excepted '%s', received 'NoneType'", class_name);
     }
 
     PyObject *py_binding = PyObject_GetAttrString(obj, "_binding"); /* new reference */
