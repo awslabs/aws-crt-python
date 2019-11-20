@@ -193,6 +193,7 @@ def awscrt_ext():
     if sys.platform == 'win32':
         # the windows apis being used under the hood. Since we're static linking we have to follow the entire chain down
         libraries += ['Secur32', 'Crypt32', 'Advapi32', 'BCrypt', 'Kernel32', 'Ws2_32', 'Shlwapi']
+        extra_link_args += ['/DEBUG']
 
     elif sys.platform == 'darwin':
         extra_link_args += ['-framework', 'Security']
