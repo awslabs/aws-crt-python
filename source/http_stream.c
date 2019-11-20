@@ -42,7 +42,7 @@ struct http_stream_binding {
 };
 
 struct aws_http_stream *aws_py_get_http_stream(PyObject *stream) {
-    AWS_PY_RETURN_NATIVE_FROM_BINDING(stream, s_capsule_name_http_stream, http_stream_binding);
+    AWS_PY_RETURN_NATIVE_FROM_BINDING(stream, s_capsule_name_http_stream, "HttpStreamBase", http_stream_binding);
 }
 
 static int s_on_incoming_headers(

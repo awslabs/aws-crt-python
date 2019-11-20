@@ -203,7 +203,8 @@ connection_new_failed:
 }
 
 struct aws_mqtt_client_connection *aws_py_get_mqtt_client_connection(PyObject *mqtt_connection) {
-    AWS_PY_RETURN_NATIVE_FROM_BINDING(mqtt_connection, s_capsule_name_mqtt_client_connection, mqtt_connection_binding);
+    AWS_PY_RETURN_NATIVE_FROM_BINDING(
+        mqtt_connection, s_capsule_name_mqtt_client_connection, "Connection", mqtt_connection_binding);
 }
 
 /*******************************************************************************

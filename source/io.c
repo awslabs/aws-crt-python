@@ -167,7 +167,7 @@ elg_init_failed:
 }
 
 struct aws_event_loop_group *aws_py_get_event_loop_group(PyObject *event_loop_group) {
-    return aws_py_get_binding(event_loop_group, s_capsule_name_elg);
+    return aws_py_get_binding(event_loop_group, s_capsule_name_elg, "EventLoopGroup");
 }
 
 struct host_resolver_binding {
@@ -239,11 +239,8 @@ resolver_init_failed:
 }
 
 struct aws_host_resolver *aws_py_get_host_resolver(PyObject *host_resolver) {
-    struct host_resolver_binding *binding = aws_py_get_binding(host_resolver, s_capsule_name_host_resolver);
-    if (!binding) {
-        return NULL;
-    }
-    return &binding->native;
+    AWS_PY_RETURN_NATIVE_REF_FROM_BINDING(
+        host_resolver, s_capsule_name_host_resolver, "HostResolverBase", host_resolver_binding);
 }
 
 struct client_bootstrap_binding {
@@ -323,7 +320,8 @@ bootstrap_new_failed:
 }
 
 struct aws_client_bootstrap *aws_py_get_client_bootstrap(PyObject *client_bootstrap) {
-    AWS_PY_RETURN_NATIVE_FROM_BINDING(client_bootstrap, s_capsule_name_client_bootstrap, client_bootstrap_binding);
+    AWS_PY_RETURN_NATIVE_FROM_BINDING(
+        client_bootstrap, s_capsule_name_client_bootstrap, "ClientBootstrap", client_bootstrap_binding);
 }
 
 static void s_tls_ctx_destructor(PyObject *tls_ctx_capsule) {
@@ -442,7 +440,7 @@ ctx_options_failure:
 }
 
 struct aws_tls_ctx *aws_py_get_tls_ctx(PyObject *tls_ctx) {
-    return aws_py_get_binding(tls_ctx, s_capsule_name_tls_ctx);
+    return aws_py_get_binding(tls_ctx, s_capsule_name_tls_ctx, "TlsContextBase");
 }
 
 struct tls_connection_options_binding {
@@ -511,12 +509,11 @@ capsule_new_failed:
 }
 
 struct aws_tls_connection_options *aws_py_get_tls_connection_options(PyObject *tls_connection_options) {
-    struct tls_connection_options_binding *binding =
-        aws_py_get_binding(tls_connection_options, s_capsule_name_tls_conn_options);
-    if (!binding) {
-        return NULL;
-    }
-    return &binding->native;
+    AWS_PY_RETURN_NATIVE_REF_FROM_BINDING(
+        tls_connection_options,
+        s_capsule_name_tls_conn_options,
+        "TlsConnectionOptions",
+        tls_connection_options_binding);
 }
 
 PyObject *aws_py_tls_connection_options_set_alpn_list(PyObject *self, PyObject *args) {
@@ -746,5 +743,5 @@ PyObject *aws_py_input_stream_new(PyObject *self, PyObject *args) {
 }
 
 struct aws_input_stream *aws_py_get_input_stream(PyObject *input_stream) {
-    return aws_py_get_binding(input_stream, s_capsule_name_input_stream);
+    return aws_py_get_binding(input_stream, s_capsule_name_input_stream, "InputStream");
 }

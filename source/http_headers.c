@@ -32,7 +32,7 @@ static void s_headers_capsule_destructor(PyObject *py_capsule) {
 }
 
 struct aws_http_headers *aws_py_get_http_headers(PyObject *http_headers) {
-    return aws_py_get_binding(http_headers, s_capsule_name_headers);
+    return aws_py_get_binding(http_headers, s_capsule_name_headers, "HttpHeaders");
 }
 
 PyObject *aws_py_http_headers_new_from_native(struct aws_http_headers *headers) {

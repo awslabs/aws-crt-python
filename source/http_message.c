@@ -51,7 +51,8 @@ static struct http_message_binding *s_binding_from_capsule(PyObject *capsule) {
 }
 
 struct aws_http_message *aws_py_get_http_message(PyObject *http_message) {
-    AWS_PY_RETURN_NATIVE_FROM_BINDING(http_message, s_capsule_name_http_message, http_message_binding);
+    AWS_PY_RETURN_NATIVE_FROM_BINDING(
+        http_message, s_capsule_name_http_message, "HttpMessageBase", http_message_binding);
 }
 
 PyObject *aws_py_http_message_new_request(PyObject *self, PyObject *args) {

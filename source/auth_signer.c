@@ -31,7 +31,7 @@ static void s_signer_capsule_destructor(PyObject *py_capsule) {
 }
 
 struct aws_signer *aws_py_get_signer(PyObject *py_signer) {
-    return aws_py_get_binding(py_signer, s_capsule_name_signer);
+    return aws_py_get_binding(py_signer, s_capsule_name_signer, "AwsSigner");
 }
 
 PyObject *aws_py_signer_new_aws(PyObject *self, PyObject *args) {

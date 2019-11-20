@@ -87,9 +87,5 @@ client_init_failed:
 }
 
 struct aws_mqtt_client *aws_py_get_mqtt_client(PyObject *mqtt_client) {
-    struct mqtt_client_binding *binding = aws_py_get_binding(mqtt_client, s_capsule_name_mqtt_client);
-    if (!binding) {
-        return NULL;
-    }
-    return &binding->native;
+    AWS_PY_RETURN_NATIVE_REF_FROM_BINDING(mqtt_client, s_capsule_name_mqtt_client, "Client", mqtt_client_binding);
 }

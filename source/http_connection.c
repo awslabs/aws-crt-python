@@ -56,7 +56,8 @@ static void s_connection_destroy(struct http_connection_binding *connection) {
 }
 
 struct aws_http_connection *aws_py_get_http_connection(PyObject *connection) {
-    AWS_PY_RETURN_NATIVE_FROM_BINDING(connection, s_capsule_name_http_connection, http_connection_binding);
+    AWS_PY_RETURN_NATIVE_FROM_BINDING(
+        connection, s_capsule_name_http_connection, "HttpConnectionBase", http_connection_binding);
 }
 
 static void s_connection_release(struct http_connection_binding *connection) {

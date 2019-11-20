@@ -64,7 +64,7 @@ PyObject *aws_py_credentials_new(PyObject *self, PyObject *args) {
 }
 
 struct aws_credentials *aws_py_get_credentials(PyObject *credentials) {
-    return aws_py_get_binding(credentials, s_capsule_name_credentials);
+    return aws_py_get_binding(credentials, s_capsule_name_credentials, "AwsCredentials");
 }
 
 enum credentials_member {
@@ -148,7 +148,10 @@ static void s_credentials_provider_capsule_destructor(PyObject *capsule) {
 
 struct aws_credentials_provider *aws_py_get_credentials_provider(PyObject *credentials_provider) {
     AWS_PY_RETURN_NATIVE_FROM_BINDING(
-        credentials_provider, s_capsule_name_credentials_provider, credentials_provider_binding);
+        credentials_provider,
+        s_capsule_name_credentials_provider,
+        "AwsCredentialsProviderBase",
+        credentials_provider_binding);
 }
 
 static int s_aws_string_to_cstr_and_ssize(
