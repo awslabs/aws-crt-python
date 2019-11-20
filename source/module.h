@@ -69,4 +69,28 @@ PyObject *aws_py_memory_view_from_byte_buffer(struct aws_byte_buf *buf);
 /* Allocator that calls into PyObject_[Malloc|Free|Realloc] */
 struct aws_allocator *aws_py_get_allocator(void);
 
+/* Return the capsule ptr from obj._binding
+ * On error, NULL is returned and a python exception is set. */
+void *aws_py_get_binding(PyObject *obj, const char *capsule_name, const char *class_name);
+
+/* Contents of aws_py_get_XYZ() function where obj._binding->native is returned.
+ * NOTE: only works where native is stored by ptr. */
+#define AWS_PY_RETURN_NATIVE_FROM_BINDING(PYOBJ, CAPSULE_NAME, CLASS_NAME, BINDING_TYPE)                               \
+    struct BINDING_TYPE *binding = aws_py_get_binding((PYOBJ), (CAPSULE_NAME), (CLASS_NAME));                          \
+    if (binding) {                                                                                                     \
+        if (binding->native) {                                                                                         \
+            return binding->native;                                                                                    \
+        }                                                                                                              \
+        PyErr_Format(PyExc_TypeError, "Expected valid '%s', but '_binding.native' is NULL", (CLASS_NAME));             \
+    }                                                                                                                  \
+    return NULL
+
+/* Shorthand for `return &obj._binding->native;` */
+#define AWS_PY_RETURN_NATIVE_REF_FROM_BINDING(PYOBJ, CAPSULE_NAME, CLASS_NAME, BINDING_TYPE)                           \
+    struct BINDING_TYPE *binding = aws_py_get_binding((PYOBJ), (CAPSULE_NAME), (CLASS_NAME));                          \
+    if (!binding) {                                                                                                    \
+        return NULL;                                                                                                   \
+    }                                                                                                                  \
+    return &binding->native
+
 #endif /* AWS_CRT_PYTHON_MODULE_H */

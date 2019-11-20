@@ -56,19 +56,8 @@ static void s_connection_destroy(struct http_connection_binding *connection) {
 }
 
 struct aws_http_connection *aws_py_get_http_connection(PyObject *connection) {
-    struct aws_http_connection *native = NULL;
-
-    PyObject *capsule = PyObject_GetAttrString(connection, "_binding");
-    if (capsule) {
-        struct http_connection_binding *binding = PyCapsule_GetPointer(capsule, s_capsule_name_http_connection);
-        if (binding) {
-            native = binding->native;
-            AWS_FATAL_ASSERT(native);
-        }
-        Py_DECREF(capsule);
-    }
-
-    return native;
+    AWS_PY_RETURN_NATIVE_FROM_BINDING(
+        connection, s_capsule_name_http_connection, "HttpConnectionBase", http_connection_binding);
 }
 
 static void s_connection_release(struct http_connection_binding *connection) {
@@ -214,7 +203,8 @@ PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args) {
         }
 
         connection->tls_ctx = PyObject_GetAttrString(tls_options_py, "tls_ctx"); /* Creates new reference */
-        if (!connection->tls_ctx) {
+        if (!connection->tls_ctx || connection->tls_ctx == Py_None) {
+            PyErr_SetString(PyExc_TypeError, "tls_connection_options.tls_ctx is invalid");
             goto error;
         }
     }

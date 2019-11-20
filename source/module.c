@@ -228,6 +228,46 @@ PyObject *aws_py_memory_view_from_byte_buffer(struct aws_byte_buf *buf) {
 #endif /* PY_MAJOR_VERSION */
 }
 
+void *aws_py_get_binding(PyObject *obj, const char *capsule_name, const char *class_name) {
+    if (!obj || obj == Py_None) {
+        return PyErr_Format(PyExc_TypeError, "Excepted '%s', received 'NoneType'", class_name);
+    }
+
+    PyObject *py_binding = PyObject_GetAttrString(obj, "_binding"); /* new reference */
+    if (!py_binding) {
+        return PyErr_Format(
+            PyExc_AttributeError,
+            "Expected valid '%s', received '%s' (no '_binding' attribute)",
+            class_name,
+            Py_TYPE(obj)->tp_name);
+    }
+
+    void *binding = NULL;
+    if (!PyCapsule_CheckExact(py_binding)) {
+        PyErr_Format(
+            PyExc_TypeError,
+            "Expected valid '%s', received '%s' ('_binding' attribute is not a capsule)",
+            class_name,
+            Py_TYPE(obj)->tp_name);
+        goto done;
+    }
+
+    binding = PyCapsule_GetPointer(py_binding, capsule_name);
+    if (!binding) {
+        PyErr_Format(
+            PyExc_TypeError,
+            "Expected valid '%s', received '%s' ('_binding' attribute does not contain '%s')",
+            class_name,
+            Py_TYPE(obj)->tp_name,
+            capsule_name);
+        goto done;
+    }
+
+done:
+    Py_DECREF(py_binding);
+    return binding;
+}
+
 /*******************************************************************************
  * Allocator
  ******************************************************************************/
