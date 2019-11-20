@@ -38,7 +38,8 @@ PyObject *aws_py_init_logging(PyObject *self, PyObject *args) {
     (void)self;
 
     if (s_logger_init) {
-        Py_RETURN_NONE;
+        aws_logger_set(NULL);
+        aws_logger_clean_up(&s_logger);
     }
 
     s_logger_init = true;
@@ -227,6 +228,46 @@ PyObject *aws_py_memory_view_from_byte_buffer(struct aws_byte_buf *buf) {
 #endif /* PY_MAJOR_VERSION */
 }
 
+void *aws_py_get_binding(PyObject *obj, const char *capsule_name, const char *class_name) {
+    if (!obj || obj == Py_None) {
+        return PyErr_Format(PyExc_TypeError, "Excepted '%s', received 'NoneType'", class_name);
+    }
+
+    PyObject *py_binding = PyObject_GetAttrString(obj, "_binding"); /* new reference */
+    if (!py_binding) {
+        return PyErr_Format(
+            PyExc_AttributeError,
+            "Expected valid '%s', received '%s' (no '_binding' attribute)",
+            class_name,
+            Py_TYPE(obj)->tp_name);
+    }
+
+    void *binding = NULL;
+    if (!PyCapsule_CheckExact(py_binding)) {
+        PyErr_Format(
+            PyExc_TypeError,
+            "Expected valid '%s', received '%s' ('_binding' attribute is not a capsule)",
+            class_name,
+            Py_TYPE(obj)->tp_name);
+        goto done;
+    }
+
+    binding = PyCapsule_GetPointer(py_binding, capsule_name);
+    if (!binding) {
+        PyErr_Format(
+            PyExc_TypeError,
+            "Expected valid '%s', received '%s' ('_binding' attribute does not contain '%s')",
+            class_name,
+            Py_TYPE(obj)->tp_name,
+            capsule_name);
+        goto done;
+    }
+
+done:
+    Py_DECREF(py_binding);
+    return binding;
+}
+
 /*******************************************************************************
  * Allocator
  ******************************************************************************/
@@ -264,6 +305,7 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(mqtt_client_connection_reconnect, METH_VARARGS),
     AWS_PY_METHOD_DEF(mqtt_client_connection_publish, METH_VARARGS),
     AWS_PY_METHOD_DEF(mqtt_client_connection_subscribe, METH_VARARGS),
+    AWS_PY_METHOD_DEF(mqtt_client_connection_on_message, METH_VARARGS),
     AWS_PY_METHOD_DEF(mqtt_client_connection_resubscribe_existing_topics, METH_VARARGS),
     AWS_PY_METHOD_DEF(mqtt_client_connection_unsubscribe, METH_VARARGS),
     AWS_PY_METHOD_DEF(mqtt_client_connection_disconnect, METH_VARARGS),

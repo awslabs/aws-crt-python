@@ -124,20 +124,12 @@ class Connection(NativeResource):
             # (it's safe to call set_done() multiple times).
             transform_args.set_done(e)
 
-    def _ws_handshake_validator(self, headers_binding):
-        if not self._ws_handshake_validator_cb:
-            return True
-
-        headers = HttpHeaders._from_binding(headers_binding)
-        validator_args = WebsocketHandshakeValidatorArgs(self, headers)
-        return self._ws_handshake_validator_cb(validator_args)
-
     def connect(self,
                 client_id,
                 host_name, port,
                 clean_session=True,
                 keep_alive=3600,
-                ping_timeout=3,
+                ping_timeout=3.0,
                 will=None,
                 username=None, password=None,
                 socket_options=SocketOptions(),
@@ -208,9 +200,10 @@ class Connection(NativeResource):
         try:
             assert will is None or isinstance(will, Will)
             assert isinstance(socket_options, SocketOptions)
+            assert websocket_proxy_options is None or isinstance(websocket_proxy_options, HttpProxyOptions)
             assert websocket_handshake_transform is None or isinstance(websocket_handshake_transform, callable)
 
-            self._ws_handshake_transform = websocket_handshake_transform
+            self._ws_handshake_transform_cb = websocket_handshake_transform
 
             _awscrt.mqtt_client_connection_connect(
                 self._binding,
@@ -220,7 +213,7 @@ class Connection(NativeResource):
                 socket_options,
                 self.client.tls_ctx,
                 keep_alive,
-                ping_timeout * 1000,
+                int(ping_timeout * 1000),
                 will,
                 username,
                 password,
@@ -265,9 +258,9 @@ class Connection(NativeResource):
 
         return future
 
-    def subscribe(self, topic, qos, callback):
+    def subscribe(self, topic, qos, callback=None):
         """
-        callback: callback with signature (topic, message)
+        callback: optional callback with signature (topic, message)
         """
 
         future = Future()
@@ -288,13 +281,20 @@ class Connection(NativeResource):
                     ))
 
         try:
-            assert callable(callback)
+            assert callable(callback) or callback is None
             assert isinstance(qos, QoS)
             packet_id = _awscrt.mqtt_client_connection_subscribe(self._binding, topic, qos.value, callback, suback)
         except Exception as e:
             future.set_exception(e)
 
         return future, packet_id
+
+    def on_message(self, callback):
+        """
+        callback: callback with signature (topic, message), or None to disable.
+        """
+        assert callable(callback) or callback is None
+        _awscrt.mqtt_client_connection_on_message(self._binding, callback)
 
     def unsubscribe(self, topic):
         future = Future()

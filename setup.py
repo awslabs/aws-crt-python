@@ -224,7 +224,7 @@ def awscrt_ext():
 
 setuptools.setup(
     name="awscrt",
-    version="0.3.3",
+    version="0.4.1",
     author="Amazon Web Services, Inc",
     author_email="aws-sdk-common-runtime@amazon.com",
     description="A common runtime for AWS Python projects",
@@ -243,4 +243,7 @@ setuptools.setup(
     ext_modules=[awscrt_ext()],
     cmdclass={'build_ext': awscrt_build_ext},
     test_suite='test',
+    tests_require=[
+        'boto3'
+    ],
 )

@@ -55,6 +55,7 @@ struct mqtt_connection_binding {
 
     /* Dependencies that must outlive this */
     PyObject *client;
+    PyObject *on_any_publish;
 };
 
 static void s_mqtt_python_connection_finish_destruction(struct mqtt_connection_binding *py_connection) {
@@ -62,6 +63,7 @@ static void s_mqtt_python_connection_finish_destruction(struct mqtt_connection_b
 
     Py_DECREF(py_connection->self_proxy);
     Py_DECREF(py_connection->client);
+    Py_XDECREF(py_connection->on_any_publish);
 
     aws_mem_release(aws_py_get_allocator(), py_connection);
 }
@@ -214,20 +216,8 @@ connection_new_failed:
 }
 
 struct aws_mqtt_client_connection *aws_py_get_mqtt_client_connection(PyObject *mqtt_connection) {
-    struct aws_mqtt_client_connection *native = NULL;
-
-    PyObject *binding_capsule = PyObject_GetAttrString(mqtt_connection, "_binding");
-    if (binding_capsule) {
-        struct mqtt_connection_binding *binding =
-            PyCapsule_GetPointer(binding_capsule, s_capsule_name_mqtt_client_connection);
-        if (binding) {
-            native = binding->native;
-            assert(native);
-        }
-        Py_DECREF(binding_capsule);
-    }
-
-    return native;
+    AWS_PY_RETURN_NATIVE_FROM_BINDING(
+        mqtt_connection, s_capsule_name_mqtt_client_connection, "Connection", mqtt_connection_binding);
 }
 
 /*******************************************************************************
@@ -778,9 +768,12 @@ static void s_subscribe_callback(
 
     (void)connection;
 
-    PyGILState_STATE state = PyGILState_Ensure();
-
     PyObject *callback = user_data;
+    if (callback == Py_None) {
+        return;
+    }
+
+    PyGILState_STATE state = PyGILState_Ensure();
 
     PyObject *result = PyObject_CallFunction(
         callback,
@@ -788,11 +781,11 @@ static void s_subscribe_callback(
         PyString_FromAwsByteCursor(topic),
         PyBytes_FromStringAndSize((const char *)payload->ptr, (Py_ssize_t)payload->len));
 
-    if (!result) {
+    if (result) {
+        Py_DECREF(result);
+    } else {
         PyErr_WriteUnraisable(PyErr_Occurred());
-        abort();
     }
-    Py_XDECREF(result);
 
     PyGILState_Release(state);
 }
@@ -818,6 +811,8 @@ static void s_suback_callback(
     (void)connection;
 
     PyObject *callback = userdata;
+    AWS_FATAL_ASSERT(callback && callback != Py_None);
+
     PyGILState_STATE state = PyGILState_Ensure();
 
     const char *topic_str = (const char *)topic->ptr;
@@ -855,6 +850,7 @@ PyObject *aws_py_mqtt_client_connection_subscribe(PyObject *self, PyObject *args
 
     Py_INCREF(callback);
     Py_INCREF(suback_callback);
+
     struct aws_byte_cursor topic_filter = aws_byte_cursor_from_array(topic, topic_len);
     uint16_t msg_id = aws_mqtt_client_connection_subscribe(
         py_connection->native,
@@ -873,6 +869,41 @@ PyObject *aws_py_mqtt_client_connection_subscribe(PyObject *self, PyObject *args
     }
 
     return PyLong_FromUnsignedLong(msg_id);
+}
+
+PyObject *aws_py_mqtt_client_connection_on_message(PyObject *self, PyObject *args) {
+    (void)self;
+
+    PyObject *impl_capsule;
+    PyObject *callback;
+    if (!PyArg_ParseTuple(args, "OO", &impl_capsule, &callback)) {
+        return NULL;
+    }
+
+    struct mqtt_connection_binding *py_connection =
+        PyCapsule_GetPointer(impl_capsule, s_capsule_name_mqtt_client_connection);
+    if (!py_connection) {
+        return NULL;
+    }
+
+    Py_CLEAR(py_connection->on_any_publish);
+
+    if (callback == Py_None) {
+        aws_mqtt_client_connection_set_on_any_publish_handler(py_connection->native, NULL, NULL);
+        Py_RETURN_NONE;
+    }
+
+    callback = PyWeakref_NewProxy(callback, NULL);
+    AWS_FATAL_ASSERT(callback);
+
+    if (aws_mqtt_client_connection_set_on_any_publish_handler(py_connection->native, s_subscribe_callback, callback)) {
+        Py_DECREF(callback);
+        return PyErr_AwsLastError();
+    }
+
+    py_connection->on_any_publish = callback;
+
+    Py_RETURN_NONE;
 }
 
 /*******************************************************************************
