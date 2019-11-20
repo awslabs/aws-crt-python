@@ -228,6 +228,40 @@ PyObject *aws_py_memory_view_from_byte_buffer(struct aws_byte_buf *buf) {
 #endif /* PY_MAJOR_VERSION */
 }
 
+void *aws_py_get_binding(PyObject *obj, const char *capsule_name) {
+    AWS_FATAL_ASSERT(obj);
+
+    PyObject *py_binding = PyObject_GetAttrString(obj, "_binding"); /* new reference */
+    if (!py_binding) {
+        return PyErr_Format(PyExc_AttributeError, "'%s' object has no attribute '_bindings'", Py_TYPE(obj)->tp_name);
+    }
+
+    void *binding = NULL;
+    if (!PyCapsule_CheckExact(py_binding)) {
+        PyErr_Format(
+            PyExc_TypeError,
+            "'%s._binding must be a capsule, not '%s'",
+            Py_TYPE(obj)->tp_name,
+            Py_TYPE(py_binding)->tp_name);
+        goto done;
+    }
+
+    binding = PyCapsule_GetPointer(py_binding, capsule_name);
+    if (!binding) {
+        PyErr_Format(
+            PyExc_TypeError,
+            "'%s._binding' must contain '%s', not '%s'",
+            Py_TYPE(obj)->tp_name,
+            capsule_name,
+            PyCapsule_GetName(py_binding));
+        goto done;
+    }
+
+done:
+    Py_DECREF(py_binding);
+    return binding;
+}
+
 /*******************************************************************************
  * Allocator
  ******************************************************************************/

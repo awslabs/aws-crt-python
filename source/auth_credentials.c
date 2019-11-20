@@ -64,15 +64,7 @@ PyObject *aws_py_credentials_new(PyObject *self, PyObject *args) {
 }
 
 struct aws_credentials *aws_py_get_credentials(PyObject *credentials) {
-    struct aws_credentials *native = NULL;
-
-    PyObject *capsule = PyObject_GetAttrString(credentials, "_binding");
-    if (capsule) {
-        native = PyCapsule_GetPointer(capsule, s_capsule_name_credentials);
-        Py_DECREF(capsule);
-    }
-
-    return native;
+    return aws_py_get_binding(credentials, s_capsule_name_credentials);
 }
 
 enum credentials_member {
@@ -155,20 +147,15 @@ static void s_credentials_provider_capsule_destructor(PyObject *capsule) {
 }
 
 struct aws_credentials_provider *aws_py_get_credentials_provider(PyObject *credentials_provider) {
-    struct aws_credentials_provider *native = NULL;
-
-    PyObject *capsule = PyObject_GetAttrString(credentials_provider, "_binding");
-    if (capsule) {
-        struct credentials_provider_binding *binding =
-            PyCapsule_GetPointer(capsule, s_capsule_name_credentials_provider);
-        if (binding) {
-            native = binding->native;
-            AWS_FATAL_ASSERT(native);
+    struct credentials_provider_binding *binding =
+        aws_py_get_binding(credentials_provider, s_capsule_name_credentials_provider);
+    if (binding) {
+        if (binding->native) {
+            return binding->native;
         }
-        Py_DECREF(capsule);
+        PyErr_Format(PyExc_TypeError, "%s._binding.native is NULL", Py_TYPE(credentials_provider)->tp_name);
     }
-
-    return native;
+    return NULL;
 }
 
 static int s_aws_string_to_cstr_and_ssize(
