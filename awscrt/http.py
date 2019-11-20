@@ -81,8 +81,6 @@ class HttpClientConnection(HttpConnectionBase):
                 host_resolver = DefaultHostResolver(event_loop_group)
                 bootstrap = ClientBootstrap(event_loop_group, host_resolver)
 
-            self._bootstrap = bootstrap
-
             connection = cls()
             connection._host_name = host_name
             connection._port = port
