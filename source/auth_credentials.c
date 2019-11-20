@@ -147,15 +147,8 @@ static void s_credentials_provider_capsule_destructor(PyObject *capsule) {
 }
 
 struct aws_credentials_provider *aws_py_get_credentials_provider(PyObject *credentials_provider) {
-    struct credentials_provider_binding *binding =
-        aws_py_get_binding(credentials_provider, s_capsule_name_credentials_provider);
-    if (binding) {
-        if (binding->native) {
-            return binding->native;
-        }
-        PyErr_Format(PyExc_TypeError, "%s._binding.native is NULL", Py_TYPE(credentials_provider)->tp_name);
-    }
-    return NULL;
+    AWS_PY_RETURN_NATIVE_FROM_BINDING(
+        credentials_provider, s_capsule_name_credentials_provider, credentials_provider_binding);
 }
 
 static int s_aws_string_to_cstr_and_ssize(

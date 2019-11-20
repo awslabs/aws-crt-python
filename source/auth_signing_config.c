@@ -178,19 +178,11 @@ error:
 }
 
 struct aws_signing_config_aws *aws_py_get_signing_config(PyObject *py_signing_config) {
-    struct aws_signing_config_aws *native = NULL;
-
-    PyObject *py_capsule = PyObject_GetAttrString(py_signing_config, "_binding");
-    if (py_capsule) {
-        struct config_binding *binding = PyCapsule_GetPointer(py_capsule, s_capsule_name_signing_config);
-        if (binding) {
-            native = &binding->native;
-            AWS_FATAL_ASSERT(native);
-        }
-        Py_DECREF(py_capsule);
+    struct config_binding *binding = aws_py_get_binding(py_signing_config, s_capsule_name_signing_config);
+    if (!binding) {
+        return NULL;
     }
-
-    return native;
+    return &binding->native;
 }
 
 /**

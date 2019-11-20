@@ -42,19 +42,7 @@ struct http_stream_binding {
 };
 
 struct aws_http_stream *aws_py_get_http_stream(PyObject *stream) {
-    struct aws_http_stream *native = NULL;
-
-    PyObject *capsule = PyObject_GetAttrString(stream, "_binding");
-    if (capsule) {
-        struct http_stream_binding *binding = PyCapsule_GetPointer(capsule, s_capsule_name_http_stream);
-        if (binding) {
-            native = binding->native;
-            AWS_FATAL_ASSERT(native);
-        }
-        Py_DECREF(capsule);
-    }
-
-    return native;
+    AWS_PY_RETURN_NATIVE_FROM_BINDING(stream, s_capsule_name_http_stream, http_stream_binding);
 }
 
 static int s_on_incoming_headers(

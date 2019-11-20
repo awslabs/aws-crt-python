@@ -32,15 +32,7 @@ static void s_headers_capsule_destructor(PyObject *py_capsule) {
 }
 
 struct aws_http_headers *aws_py_get_http_headers(PyObject *http_headers) {
-    struct aws_http_headers *native = NULL;
-
-    PyObject *py_capsule = PyObject_GetAttrString(http_headers, "_binding");
-    if (py_capsule) {
-        native = s_headers_from_capsule(py_capsule);
-        Py_DECREF(py_capsule);
-    }
-
-    return native;
+    return aws_py_get_binding(http_headers, s_capsule_name_headers);
 }
 
 PyObject *aws_py_http_headers_new_from_native(struct aws_http_headers *headers) {

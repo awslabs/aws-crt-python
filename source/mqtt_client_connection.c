@@ -203,20 +203,7 @@ connection_new_failed:
 }
 
 struct aws_mqtt_client_connection *aws_py_get_mqtt_client_connection(PyObject *mqtt_connection) {
-    struct aws_mqtt_client_connection *native = NULL;
-
-    PyObject *binding_capsule = PyObject_GetAttrString(mqtt_connection, "_binding");
-    if (binding_capsule) {
-        struct mqtt_connection_binding *binding =
-            PyCapsule_GetPointer(binding_capsule, s_capsule_name_mqtt_client_connection);
-        if (binding) {
-            native = binding->native;
-            assert(native);
-        }
-        Py_DECREF(binding_capsule);
-    }
-
-    return native;
+    AWS_PY_RETURN_NATIVE_FROM_BINDING(mqtt_connection, s_capsule_name_mqtt_client_connection, mqtt_connection_binding);
 }
 
 /*******************************************************************************

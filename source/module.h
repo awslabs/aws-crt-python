@@ -69,26 +69,19 @@ PyObject *aws_py_memory_view_from_byte_buffer(struct aws_byte_buf *buf);
 /* Allocator that calls into PyObject_[Malloc|Free|Realloc] */
 struct aws_allocator *aws_py_get_allocator(void);
 
-/* Return the capsule contents of obj._binding
- * On error, NULL is returned and a python exception is set.
- * This should be used ONLY be used by other aws_py_get_XYZ() functions */
+/* Return the capsule ptr from obj._binding
+ * On error, NULL is returned and a python exception is set. */
 void *aws_py_get_binding(PyObject *obj, const char *capsule_name);
 
-/* Contents of an aws_py_get_XYZ() function where a binding struct is used */
-#define AWS_PY_RETURN_BINDING_ARROW_NATIVE(PYOBJ, CAPSULE_NAME, BINDING_TYPE)                                          \
+/* Contents of aws_py_get_XYZ() function where obj._binding->native is returned.
+ * NOTE: only works where native is stored by ptr. */
+#define AWS_PY_RETURN_NATIVE_FROM_BINDING(PYOBJ, CAPSULE_NAME, BINDING_TYPE)                                           \
     struct BINDING_TYPE *binding = aws_py_get_binding((PYOBJ), (CAPSULE_NAME));                                        \
     if (binding) {                                                                                                     \
         if (binding->native) {                                                                                         \
             return binding->native;                                                                                    \
         }                                                                                                              \
         PyErr_Format(PyExc_TypeError, "%s._binding.native is NULL", Py_TYPE(PYOBJ)->tp_name);                          \
-    }                                                                                                                  \
-    return NULL;
-
-#define AWS_PY_RETURN_BINDING_DOT_NATIVE(PYOBJ, CAPSULE_NAME, BINDING_TYPE)                                            \
-    struct BINDING_TYPE *binding = aws_py_get_binding((PYOBJ), (CAPSULE_NAME));                                        \
-    if (binding) {                                                                                                     \
-        return &binding.native;                                                                                        \
     }                                                                                                                  \
     return NULL;
 
