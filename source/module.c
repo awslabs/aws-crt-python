@@ -23,6 +23,7 @@
 
 #include <aws/auth/auth.h>
 #include <aws/common/byte_buf.h>
+#include <aws/common/system_info.h>
 #include <aws/http/http.h>
 #include <aws/io/io.h>
 #include <aws/io/logging.h>
@@ -236,6 +237,45 @@ struct aws_allocator *aws_py_get_allocator(void) {
     return aws_default_allocator();
 }
 
+
+/*******************************************************************************
+ * Crash handler
+ ******************************************************************************/
+#if defined(_WIN32)
+#    include <windows.h>
+static LONG WINAPI s_print_stack_trace(struct _EXCEPTION_POINTERS *exception_pointers) {
+    aws_backtrace_print(stderr, exception_pointers);
+    return EXCEPTION_EXECUTE_HANDLER;
+}
+#elif defined(AWS_HAVE_EXECINFO)
+#    include <signal.h>
+static void s_print_stack_trace(int sig, siginfo_t *sig_info, void *user_data) {
+    (void)sig;
+    (void)sig_info;
+    (void)user_data;
+    aws_backtrace_print(stderr, sig_info);
+    exit(-1);
+}
+#endif
+
+static void s_install_crash_handler(void) {
+#if defined(_WIN32)
+    SetUnhandledExceptionFilter(s_print_stack_trace);
+#elif defined(AWS_HAVE_EXECINFO)
+    struct sigaction sa;
+    memset(&sa, 0, sizeof(struct sigaction));
+    sigemptyset(&sa.sa_mask);
+
+    sa.sa_flags = SA_NODEFER;
+    sa.sa_sigaction = s_print_stack_trace;
+
+    sigaction(SIGSEGV, &sa, NULL);
+    sigaction(SIGABRT, &sa, NULL);
+    sigaction(SIGILL, &sa, NULL);
+    sigaction(SIGBUS, &sa, NULL);
+#endif
+}
+
 /*******************************************************************************
  * Definitions
  ******************************************************************************/
@@ -351,6 +391,8 @@ static void s_module_free(void *userdata) {
 #endif /* PY_MAJOR_VERSION == 3 */
 
 PyMODINIT_FUNC INIT_FN(void) {
+
+    s_install_crash_handler();
 
 #if PY_MAJOR_VERSION == 3
     static struct PyModuleDef s_module_def = {
