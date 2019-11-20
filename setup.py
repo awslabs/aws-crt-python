@@ -125,7 +125,7 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
 
         os.chdir(lib_build_dir)
 
-        build_type = 'Debug' #if self.debug else 'RelWithDebInfo'
+        build_type = 'Debug'  # if self.debug else 'RelWithDebInfo'
 
         # cmake configure
         cmake_args = ['cmake']
