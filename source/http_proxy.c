@@ -38,12 +38,16 @@ bool aws_py_http_proxy_options_init(struct aws_http_proxy_options *proxy_options
         goto done;
     }
 
+    long port_val = -1;
     py_port = PyObject_GetAttrString(py_proxy_options, "port");
-    long port_val = PyLong_AsLong(py_port); /* returns -1 on error */
+    if (PyLongOrInt_Check(py_port)) {
+        port_val = PyLong_AsLong(py_port); /* returns -1 on error */
+    }
     if (port_val < 0 || port_val > UINT16_MAX) {
         PyErr_SetString(PyExc_TypeError, "HttpProxyOptions.port is not a valid number");
         goto done;
     }
+    proxy_options->port = (uint16_t)port_val;
 
     py_tls_options = PyObject_GetAttrString(py_proxy_options, "tls_connection_options");
     if (py_tls_options != Py_None) {
@@ -56,18 +60,11 @@ bool aws_py_http_proxy_options_init(struct aws_http_proxy_options *proxy_options
     }
 
     py_auth_type = PyObject_GetAttrString(py_proxy_options, "auth_type");
-    long auth_type_val = PyIntEnum_AsLong(py_auth_type);
-    switch (auth_type_val) {
-        case AWS_HPAT_NONE:
-            proxy_options->auth_type = AWS_HPAT_NONE;
-            break;
-        case AWS_HPAT_BASIC:
-            proxy_options->auth_type = AWS_HPAT_BASIC;
-            break;
-        default:
-            PyErr_SetString(PyExc_TypeError, "HttpProxyOptions.auth_type is not a valid HttpProxyAuthenticationType");
-            goto done;
+    if (!PyIntEnum_Check(py_auth_type)) {
+        PyErr_SetString(PyExc_TypeError, "HttpProxyOptions.auth_type is not a valid HttpProxyAuthenticationType");
+        goto done;
     }
+    proxy_options->auth_type = PyIntEnum_AsLong(py_auth_type);
 
     py_username = PyObject_GetAttrString(py_proxy_options, "auth_username");
     if (py_username != Py_None) {

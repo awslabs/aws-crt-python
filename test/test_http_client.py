@@ -12,10 +12,11 @@
 # permissions and limitations under the License.
 
 from __future__ import absolute_import
-from awscrt.http import HttpClientConnection, HttpClientStream, HttpHeaders, HttpRequest
+from awscrt.http import HttpClientConnection, HttpClientStream, HttpHeaders, HttpProxyOptions, HttpRequest
 from awscrt.io import TlsContextOptions, ClientTlsContext, TlsConnectionOptions
 from concurrent.futures import Future
 from io import open  # Python2's built-in open() doesn't return a stream
+import os
 import ssl
 from test import NativeResourceTest
 import threading
@@ -31,6 +32,9 @@ except ImportError:
     from SimpleHTTPServer import SimpleHTTPRequestHandler
     import SocketServer
     HTTPServer = SocketServer.TCPServer
+
+PROXY_HOST = os.environ.get('proxyhost')
+PROXY_PORT = int(os.environ.get('proxyport', '0'))
 
 
 class Response(object):
@@ -52,10 +56,6 @@ class Response(object):
 class TestRequestHandler(SimpleHTTPRequestHandler):
     """Request handler for test server"""
 
-    # default was HTTP/1.0.
-    # specifying HTTP/1.1 keeps connection alive after handling 1 request
-    protocol_version = "HTTP/1.1"
-
     def do_PUT(self):
         content_length = int(self.headers['Content-Length'])
         # store put request on the server object
@@ -65,11 +65,18 @@ class TestRequestHandler(SimpleHTTPRequestHandler):
         self.end_headers()
 
 
-class TestClient(NativeResourceTest):
+class TestClient(unittest.TestCase):  # NativeResourceTest):
     hostname = 'localhost'
     timeout = 10  # seconds
 
-    def _start_server(self, secure):
+    def _start_server(self, secure, http_1_0=False):
+        # HTTP/1.0 closes the connection at the end of each request
+        # HTTP/1.1 will keep the connection alive
+        if http_1_0:
+            HTTPServer.protocol_version = "HTTP/1.0"
+        else:
+            HTTPServer.protocol_version = "HTTP/1.1"
+
         self.server = HTTPServer((self.hostname, 0), TestRequestHandler)
         if secure:
             self.server.socket = ssl.wrap_socket(self.server.socket,
@@ -89,7 +96,7 @@ class TestClient(NativeResourceTest):
         self.server.server_close()
         self.server_thread.join()
 
-    def _new_client_connection(self, secure):
+    def _new_client_connection(self, secure, proxy_options=None):
         if secure:
             tls_ctx_opt = TlsContextOptions()
             tls_ctx_opt.override_default_trust_store_from_path(None, 'test/resources/unittests.crt')
@@ -99,7 +106,10 @@ class TestClient(NativeResourceTest):
         else:
             tls_conn_opt = None
 
-        connection_future = HttpClientConnection.new(self.hostname, self.port, tls_connection_options=tls_conn_opt)
+        connection_future = HttpClientConnection.new(self.hostname,
+                                                     self.port,
+                                                     tls_connection_options=tls_conn_opt,
+                                                     proxy_options=proxy_options)
         return connection_future.result(self.timeout)
 
     def _test_connect(self, secure):
@@ -160,9 +170,14 @@ class TestClient(NativeResourceTest):
         self._test_connection_closes_on_zero_refcount(secure=True)
 
     # GET request receives this very file from the server. Super meta.
-    def _test_get(self, secure):
-        self._start_server(secure)
-        connection = self._new_client_connection(secure)
+    def _test_get(self, secure, proxy_options=None):
+
+        # Use HTTP/1.0 in proxy tests or server will keep connection with proxy alive
+        # and refuse to shut down for 1 minute at the end of each proxy test
+        http_1_0 = proxy_options is not None
+
+        self._start_server(secure, http_1_0)
+        connection = self._new_client_connection(secure, proxy_options)
 
         test_asset_path = 'test/test_http_client.py'
 
@@ -251,6 +266,17 @@ class TestClient(NativeResourceTest):
 
     def test_stream_lives_until_complete_https(self):
         self._test_stream_lives_until_complete(secure=True)
+
+    def _test_proxy(self, secure):
+        self._test_get(secure, HttpProxyOptions(host_name=PROXY_HOST, port=PROXY_PORT))
+
+    @unittest.skipIf(PROXY_HOST is None, "set proxyhost and proxyport env vars")
+    def test_proxy_http(self):
+        self._test_proxy(secure=False)
+
+    @unittest.skipIf(PROXY_HOST is None, "set proxyhost and proxyport env vars")
+    def test_proxy_https(self):
+        self._test_proxy(secure=True)
 
 
 if __name__ == '__main__':
