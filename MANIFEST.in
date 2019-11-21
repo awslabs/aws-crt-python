@@ -5,6 +5,7 @@ graft aws-c-compression
 graft s2n
 graft aws-c-mqtt
 graft aws-c-cal
+graft aws-c-auth
 graft aws-c-http
 global-exclude .git* 
 global-exclude .travis*
