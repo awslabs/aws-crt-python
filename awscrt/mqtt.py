@@ -16,7 +16,7 @@ import warnings
 from concurrent.futures import Future
 from enum import IntEnum
 from awscrt import NativeResource
-from awscrt.http import HttpHeaders, HttpProxyOptions, HttpRequest
+from awscrt.http import HttpProxyOptions, HttpRequest
 from awscrt.io import ClientBootstrap, ClientTlsContext, SocketOptions
 import traceback
 

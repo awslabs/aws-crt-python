@@ -52,10 +52,10 @@ struct mqtt_connection_binding {
     PyObject *self_proxy;
 
     PyObject *on_connect;
+    PyObject *on_any_publish;
 
     /* Dependencies that must outlive this */
     PyObject *client;
-    PyObject *on_any_publish;
 };
 
 static void s_mqtt_python_connection_finish_destruction(struct mqtt_connection_binding *py_connection) {
