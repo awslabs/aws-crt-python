@@ -232,7 +232,7 @@ class TestSigner(NativeResourceTest):
         http_request = awscrt.http.HttpRequest(
             method=SIGV4TEST_METHOD,
             path=SIGV4TEST_PATH,
-            headers=SIGV4TEST_UNSIGNED_HEADERS)
+            headers=awscrt.http.HttpHeaders(SIGV4TEST_UNSIGNED_HEADERS))
 
         signing_future = signer.sign(http_request, signing_config)
 

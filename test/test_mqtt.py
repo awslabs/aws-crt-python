@@ -19,6 +19,7 @@ from concurrent.futures import Future
 import os
 import unittest
 import boto3
+import botocore.exceptions
 import time
 import uuid
 import warnings
@@ -33,13 +34,9 @@ class Config:
     cache = None
 
     def __init__(self, endpoint, cert, key):
-        try:
-            self.cert = cert
-            self.key = key
-            self.endpoint = endpoint
-            self.valid = True
-        except BaseException:
-            self.valid = False
+        self.cert = cert
+        self.key = key
+        self.endpoint = endpoint
 
     @staticmethod
     def get():
@@ -48,85 +45,101 @@ class Config:
 
         # boto3 caches the HTTPS connection for the API calls, which appears to the unit test
         # framework as a leak, so ignore it, that's not what we're testing here
-        warnings.simplefilter('ignore', ResourceWarning)
+        try:
+            warnings.simplefilter('ignore', ResourceWarning)
+        except NameError:  # Python 2 has no ResourceWarning
+            pass
 
         secrets = boto3.client('secretsmanager')
         response = secrets.get_secret_value(SecretId='unit-test/endpoint')
         endpoint = response['SecretString']
         response = secrets.get_secret_value(SecretId='unit-test/certificate')
-        cert = bytes(response['SecretString'], 'utf8')
+        cert = response['SecretString'].encode('utf8')
         response = secrets.get_secret_value(SecretId='unit-test/privatekey')
-        key = bytes(response['SecretString'], 'utf8')
+        key = response['SecretString'].encode('utf8')
         Config.cache = Config(endpoint, cert, key)
         return Config.cache
 
 
 class MqttConnectionTest(NativeResourceTest):
     TEST_TOPIC = '/test/me/senpai'
-    TEST_MSG = 'NOTICE ME!'
+    TEST_MSG = 'NOTICE ME!'.encode('utf8')
+    TIMEOUT = 10.0
 
     def _test_connection(self):
         try:
             config = Config.get()
-        except Exception as ex:
+        except (botocore.exceptions.BotoCoreError, botocore.exceptions.ClientError) as ex:
             return self.skipTest("No credentials")
 
-        try:
-            tls_opts = TlsContextOptions.create_client_with_mtls(config.cert, config.key)
-            tls = ClientTlsContext(tls_opts)
-            client = Client(ClientBootstrap(EventLoopGroup()), tls)
-            connection = Connection(client)
-            connection.connect('aws-crt-python-unit-test-{0}'.format(uuid.uuid4()), config.endpoint, 8883).result()
-            return connection
-        except Exception as ex:
-            self.assertFalse(ex)
+        tls_opts = TlsContextOptions.create_client_with_mtls(config.cert, config.key)
+        tls = ClientTlsContext(tls_opts)
+        client = Client(ClientBootstrap(EventLoopGroup()), tls)
+        connection = Connection(client)
+        connection.connect('aws-crt-python-unit-test-{0}'.format(uuid.uuid4()),
+                           config.endpoint, 8883).result(self.TIMEOUT)
+        return connection
 
     def test_connect_disconnect(self):
         connection = self._test_connection()
-        connection.disconnect().result()
+        connection.disconnect().result(self.TIMEOUT)
 
     def test_pub_sub(self):
         connection = self._test_connection()
-        disconnected = Future()
-
-        def on_disconnect(result):
-            disconnected.set_result(True)
+        received = Future()
 
         def on_message(topic, payload):
-            self.assertEqual(self.TEST_TOPIC, topic)
-            self.assertEqual(self.TEST_MSG, str(payload, 'utf8'))
-            connection.unsubscribe(self.TEST_TOPIC)
-            connection.disconnect().add_done_callback(on_disconnect)
+            received.set_result((topic, payload))
 
-        def do_publish(result):
-            connection.publish(self.TEST_TOPIC, bytes(self.TEST_MSG, 'utf8'), QoS.AT_LEAST_ONCE)
-
+        # subscribe
         subscribed, packet_id = connection.subscribe(self.TEST_TOPIC, QoS.AT_LEAST_ONCE, on_message)
-        subscribed.add_done_callback(do_publish)
+        suback = subscribed.result(self.TIMEOUT)
+        self.assertEqual(packet_id, suback['packet_id'])
+        self.assertEqual(self.TEST_TOPIC, suback['topic'])
+        self.assertIs(QoS.AT_LEAST_ONCE, suback['qos'])
 
-        disconnected.result()
+        # publish
+        published, packet_id = connection.publish(self.TEST_TOPIC, self.TEST_MSG, QoS.AT_LEAST_ONCE)
+        puback = published.result(self.TIMEOUT)
+        self.assertEqual(packet_id, puback['packet_id'])
+
+        # receive message
+        rcv_topic, rcv_payload = received.result(self.TIMEOUT)
+        self.assertEqual(self.TEST_TOPIC, rcv_topic)
+        self.assertEqual(self.TEST_MSG, rcv_payload)
+
+        # unsubscribe
+        unsubscribed, packet_id = connection.unsubscribe(self.TEST_TOPIC)
+        unsuback = unsubscribed.result(self.TIMEOUT)
+        self.assertEqual(packet_id, unsuback['packet_id'])
+
+        # disconnect
+        connection.disconnect().result(self.TIMEOUT)
 
     def test_on_message(self):
         connection = self._test_connection()
-        disconnected = Future()
-
-        def on_disconnect(result):
-            disconnected.set_result(True)
+        received = Future()
 
         def on_message(topic, payload):
-            self.assertEqual(self.TEST_TOPIC, topic)
-            self.assertEqual(self.TEST_MSG, str(payload, 'utf8'))
-            connection.unsubscribe(self.TEST_TOPIC)
-            connection.disconnect().add_done_callback(on_disconnect)
-
-        def do_publish(result):
-            connection.publish(self.TEST_TOPIC, bytes(self.TEST_MSG, 'utf8'), QoS.AT_LEAST_ONCE)
+            received.set_result((topic, payload))
 
         connection.on_message(on_message)
-        subscribed, packet_id = connection.subscribe(self.TEST_TOPIC, QoS.AT_LEAST_ONCE)
-        subscribed.add_done_callback(do_publish)
 
-        disconnected.result()
+        # subscribe without callback
+        subscribed, packet_id = connection.subscribe(self.TEST_TOPIC, QoS.AT_LEAST_ONCE)
+        subscribed.result(self.TIMEOUT)
+
+        # publish
+        published, packet_id = connection.publish(self.TEST_TOPIC, self.TEST_MSG, QoS.AT_LEAST_ONCE)
+        puback = published.result(self.TIMEOUT)
+
+        # receive message
+        rcv_topic, rcv_payload = received.result(self.TIMEOUT)
+        self.assertEqual(self.TEST_TOPIC, rcv_topic)
+        self.assertEqual(self.TEST_MSG, rcv_payload)
+
+        # disconnect
+        connection.disconnect().result(self.TIMEOUT)
 
 
 if __name__ == 'main':

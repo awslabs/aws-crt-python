@@ -17,6 +17,18 @@
 #include "module.h"
 
 struct aws_http_headers;
+struct aws_http_message;
+struct aws_http_proxy_options;
+
+/**
+ * Init aws_http_proxy_options from HttpProxyOptions.
+ * Returns false and sets python exception if error occurred.
+ *
+ * NOTE: The native struct must be used immediately because it's cursors
+ * reference memory from strings in the PyObject.
+ * If we need this struct to be a long-lived object, we'll need to do a full binding.
+ */
+bool aws_py_http_proxy_options_init(struct aws_http_proxy_options *proxy_options, PyObject *py_proxy_options);
 
 /**
  * Close the connection if it's open.
@@ -36,13 +48,12 @@ PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args);
 
 PyObject *aws_py_http_client_stream_new(PyObject *self, PyObject *args);
 
-/**
- * Create a new request-style aws_http_message.
- * aws_http_message is weird in that it has an aws_http_headers member that always lives within it.
- * This function returns a pair: (request_binding_capsule, headers_binding_capsule)
- * The caller must bind these to an HttpRequest class, and an HttpHeaders class, respectively.
- */
+/* Create capsule around new request-style aws_http_message struct */
 PyObject *aws_py_http_message_new_request(PyObject *self, PyObject *args);
+
+/* Create capsule to bind existing request-style aws_http_message struct. */
+PyObject *aws_py_http_message_new_request_from_native(struct aws_http_message *request);
+
 PyObject *aws_py_http_message_get_request_method(PyObject *self, PyObject *args);
 PyObject *aws_py_http_message_set_request_method(PyObject *self, PyObject *args);
 PyObject *aws_py_http_message_get_request_path(PyObject *self, PyObject *args);

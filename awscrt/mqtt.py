@@ -16,6 +16,7 @@ import warnings
 from concurrent.futures import Future
 from enum import IntEnum
 from awscrt import NativeResource
+from awscrt.http import HttpProxyOptions, HttpRequest
 from awscrt.io import ClientBootstrap, ClientTlsContext, SocketOptions
 
 
@@ -66,7 +67,7 @@ class Client(NativeResource):
 
 
 class Connection(NativeResource):
-    __slots__ = ('client')
+    __slots__ = ('client', '_on_connection_interrupted_cb', '_on_connection_resumed_cb', '_ws_handshake_transform_cb')
 
     def __init__(self,
                  client,
@@ -85,31 +86,99 @@ class Connection(NativeResource):
 
         super(Connection, self).__init__()
         self.client = client
-
-        def _on_connection_interrupted(error_code):
-            if on_connection_interrupted:
-                on_connection_interrupted(self, error_code)
-
-        def _on_connection_resumed(error_code, session_present):
-            if on_connection_resumed:
-                on_connection_resumed(self, error_code, session_present)
+        self._on_connection_interrupted_cb = on_connection_interrupted
+        self._on_connection_resumed_cb = on_connection_resumed
 
         self._binding = _awscrt.mqtt_client_connection_new(
+            self,
             client,
-            _on_connection_interrupted,
-            _on_connection_resumed,
         )
+
+    def _on_connection_interrupted(self, error_code):
+        if self._on_connection_interrupted_cb:
+            self._on_connection_interrupted_cb(self, error_code)
+
+    def _on_connection_resumed(self, error_code, session_present):
+        if self._on_connection_resumed_cb:
+            self._on_connection_resumed_cb(self, error_code, session_present)
+
+    def _ws_handshake_transform(self, http_request_binding, http_headers_binding, native_userdata):
+        if self._ws_handshake_transform_cb is None:
+            _awscrt.mqtt_ws_handshake_transform_complete(None, native_userdata)
+            return
+
+        def _on_complete(f):
+            _awscrt.mqtt_ws_handshake_transform_complete(f.exception(), native_userdata)
+
+        future = Future()
+        future.add_done_callback(_on_complete)
+        http_request = HttpRequest._from_bindings(http_request_binding, http_headers_binding)
+        transform_args = WebsocketHandshakeTransformArgs(self, http_request, future)
+        try:
+            self._ws_handshake_transform_cb(transform_args)
+        except Exception as e:
+            # Call set_done() if user failed to do so before uncaught exception was raised,
+            # there's a chance the callback wasn't callable and user has no idea we tried to hand them the baton.
+            if not future.done():
+                transform_args.set_done(e)
 
     def connect(self,
                 client_id,
                 host_name, port,
-                use_websocket=False,
-                clean_session=True, keep_alive=0,
-                ping_timeout=0,
+                clean_session=True,
+                keep_alive=3600,
+                ping_timeout=3.0,
                 will=None,
                 username=None, password=None,
                 socket_options=SocketOptions(),
+                use_websocket=False,
+                websocket_proxy_options=None,
+                websocket_handshake_transform=None,
                 **kwargs):
+        """
+        client_id: Client ID string to place in CONNECT packet.
+        host_name: Server name to connect to.
+        port: Port number on the server to connect to
+        clean_session: Set True to discard any server session state.
+                Set False to request that the server resume an existing session,
+                or start a new session that may be resumed after a connection loss.
+                The session_present bool in the connection callback informs
+                whether an existing session was successfully resumed.
+
+        keep_alive: The keep alive value, in seconds, to place in the CONNECT
+                packet, a PING will automatically be sent at this interval as
+                well. The default is for a ping to be sent once per hour.
+                This value must be higher than ping_timeout.
+
+        ping_timeout: Network connection is re-established if a ping response
+                is not received within this amount of time (seconds).
+                The default value is 3 seconds.
+                This value must be less than keep_alive.
+                Alternatively, tcp keep-alive may be away to accomplish this
+                in a more efficient (low-power) scenario, but keep-alive options
+                may not work the same way on every platform and OS version.
+
+        will: awscrt.mqtt.Will to send with CONNECT packet. The will is
+                published by the server when its connection to the client
+                is unexpectedly lost.
+
+        username: Username to connect with
+
+        password: Password to connect with
+
+        socket_options: awscrt.io.SocketOptions
+
+        use_websocket: If true, connect to MQTT over websockets.
+
+        websocket_proxy_options: optional awscrt.http.HttpProxyOptions for
+                websocket connections.
+
+        websocket_handshake_transform: optional function with signature:
+                (WebsocketHandshakeTransformArgs) -> None
+                If provided, function is called each time a websocket connection
+                is attempted. The function may modify the websocket handshake
+                request. See WebsocketHandshakeTransformArgs for more info.
+        """
 
         future = Future()
 
@@ -129,7 +198,10 @@ class Connection(NativeResource):
         try:
             assert will is None or isinstance(will, Will)
             assert isinstance(socket_options, SocketOptions)
-            assert use_websocket == False
+            assert websocket_proxy_options is None or isinstance(websocket_proxy_options, HttpProxyOptions)
+            assert websocket_handshake_transform is None or isinstance(websocket_handshake_transform, callable)
+
+            self._ws_handshake_transform_cb = websocket_handshake_transform
 
             _awscrt.mqtt_client_connection_connect(
                 self._binding,
@@ -139,12 +211,14 @@ class Connection(NativeResource):
                 socket_options,
                 self.client.tls_ctx,
                 keep_alive,
-                ping_timeout,
+                int(ping_timeout * 1000),
                 will,
                 username,
                 password,
                 clean_session,
                 on_connect,
+                use_websocket,
+                websocket_proxy_options,
             )
 
         except Exception as e:
@@ -184,7 +258,7 @@ class Connection(NativeResource):
 
     def subscribe(self, topic, qos, callback=None):
         """
-        callback: callback with signature (topic, message)
+        callback: optional callback with signature (topic, message)
         """
 
         future = Future()
@@ -214,7 +288,10 @@ class Connection(NativeResource):
         return future, packet_id
 
     def on_message(self, callback):
-        assert callable(callback)
+        """
+        callback: callback with signature (topic, message), or None to disable.
+        """
+        assert callable(callback) or callback is None
         _awscrt.mqtt_client_connection_on_message(self._binding, callback)
 
     def unsubscribe(self, topic):
@@ -283,6 +360,47 @@ class Connection(NativeResource):
             future.set_exception(e)
 
         return future, packet_id
+
+    class WebsocketHandshakeTransformArgs(object):
+        """
+        Argument to a "websocket_handshake_transform" function.
+
+        -- Attributes --
+        mqtt_connection: awscrt.mqtt.Connection this handshake is for.
+        http_request: awscrt.http.HttpRequest for this handshake.
+
+        A websocket_handshake_transform function has signature:
+        (WebsocketHandshakeTransformArgs) -> None
+
+        The function implementer may modify transform_args.http_request as desired.
+        They MUST call transform_args.set_done() when complete, passing an
+        exception if something went wrong. Failure to call set_done()
+        will hang the application.
+
+        The implementor may do asynchronous work before calling transform_args.set_done(),
+        they are not required to call set_done() within the scope of the transform function.
+        An example of async work would be to fetch credentials from another service,
+        sign the request headers, and finally call set_done() to mark the transform complete.
+
+        The default websocket handshake request uses path "/mqtt".
+        All required headers are present,
+        plus the optional header "Sec-WebSocket-Protocol: mqtt".
+        """
+
+        def __init__(self, mqtt_connection, http_request, done_future):
+            self.mqtt_connection = mqtt_connection
+            self.http_request = http_request
+            self._done_future = done_future
+
+        def set_done(self, exception=None):
+            """
+            Mark the transformation complete.
+            If exception is passed in, the handshake is canceled.
+            """
+            if exception is None:
+                self._done_future.set_result(None)
+            else:
+                self._done_future.set_exception(exception)
 
 
 class SubscribeError(Exception):
