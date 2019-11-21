@@ -189,12 +189,12 @@ class HttpMessageBase(NativeResource):
     """
     __slots__ = ('_headers')
 
-    def __init__(self, binding_pair, headers=None, body_stream=None):
+    def __init__(self, binding, headers, body_stream=None):
+        assert isinstance(headers, HttpHeaders)
+
         super(HttpMessageBase, self).__init__()
-        self._binding = binding_pair[0]
-        self._headers = HttpHeaders._from_binding(binding_pair[1])
-        if headers:
-            self.headers.add_pairs(headers)
+        self._binding = binding
+        self._headers = headers
 
         if body_stream:
             self.body_stream = body_stream
@@ -222,19 +222,25 @@ class HttpRequest(HttpMessageBase):
     __slots__ = ()
 
     def __init__(self, method='GET', path='/', headers=None, body_stream=None):
-        binding_pair = _awscrt.http_message_new_request()
-        super(HttpRequest, self).__init__(binding_pair, headers, body_stream)
+        assert isinstance(headers, HttpHeaders) or headers is None
+
+        if headers is None:
+            headers = HttpHeaders()
+
+        binding = _awscrt.http_message_new_request(headers)
+        super(HttpRequest, self).__init__(binding, headers, body_stream)
         self.method = method
         self.path = path
 
     @classmethod
-    def _from_bindings(cls, binding_pair):
+    def _from_bindings(cls, request_binding, headers_binding):
         """Construct HttpRequest and its HttpHeaders from pre-existing native objects"""
 
         # avoid class's default constructor
         # just invoke parent class's __init__()
         request = cls.__new__(cls)
-        super(cls, request).__init__(binding_pair)
+        headers = HttpHeaders._from_binding(headers_binding)
+        super(cls, request).__init__(request_binding, headers)
         return request
 
     @property

@@ -135,7 +135,7 @@ class TestHttpMessage(NativeResourceTest):
         body_stream = open('test/test_http_headers.py', 'rb')
         request = HttpRequest(method="PUT",
                               path="/upload",
-                              headers=src_headers,
+                              headers=HttpHeaders(src_headers),
                               body_stream=body_stream)
 
         self.assertEqual("PUT", request.method)

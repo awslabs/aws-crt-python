@@ -47,8 +47,8 @@ class Config:
         # framework as a leak, so ignore it, that's not what we're testing here
         try:
             warnings.simplefilter('ignore', ResourceWarning)
-        except NameError:  # Python 2 does not define ResourceWarning
-            warnings.simplefilter('ignore', Warning)
+        except NameError:  # Python 2 has no ResourceWarning
+            pass
 
         secrets = boto3.client('secretsmanager')
         response = secrets.get_secret_value(SecretId='unit-test/endpoint')

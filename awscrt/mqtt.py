@@ -103,7 +103,7 @@ class Connection(NativeResource):
         if self._on_connection_resumed_cb:
             self._on_connection_resumed_cb(self, error_code, session_present)
 
-    def _ws_handshake_transform(self, http_request_bindings, native_userdata):
+    def _ws_handshake_transform(self, http_request_binding, http_headers_binding, native_userdata):
         if self._ws_handshake_transform_cb is None:
             _awscrt.mqtt_ws_handshake_transform_complete(None, native_userdata)
             return
@@ -113,7 +113,7 @@ class Connection(NativeResource):
 
         future = Future()
         future.add_done_callback(_on_complete)
-        http_request = HttpRequest._from_bindings(http_request_bindings)
+        http_request = HttpRequest._from_bindings(http_request_binding, http_headers_binding)
         transform_args = WebsocketHandshakeTransformArgs(self, http_request, future)
         try:
             self._ws_handshake_transform_cb(transform_args)

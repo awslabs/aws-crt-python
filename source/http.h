@@ -48,16 +48,10 @@ PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args);
 
 PyObject *aws_py_http_client_stream_new(PyObject *self, PyObject *args);
 
-/**
- * Create a new request-style aws_http_message.
- * aws_http_message is weird in that it has an aws_http_headers member that always lives within it.
- * This function returns a pair: (request_binding_capsule, headers_binding_capsule)
- * The caller must bind these to an HttpRequest class, and an HttpHeaders class, respectively.
- */
+/* Create capsule around new request-style aws_http_message struct */
 PyObject *aws_py_http_message_new_request(PyObject *self, PyObject *args);
 
-/* Create capsules to bind an existing request-style aws_http_message and its headers.
- * Returns pair: (request_binding_capsule, headers_binding_capsule) */
+/* Create capsule to bind existing request-style aws_http_message struct. */
 PyObject *aws_py_http_message_new_request_from_native(struct aws_http_message *request);
 
 PyObject *aws_py_http_message_get_request_method(PyObject *self, PyObject *args);

@@ -55,75 +55,63 @@ struct aws_http_message *aws_py_get_http_message(PyObject *http_message) {
         http_message, s_capsule_name_http_message, "HttpMessageBase", http_message_binding);
 }
 
-/* Common logic for creating a binding around a new request or existing request */
-static PyObject *s_common_new_binding(struct aws_http_message *existing_request) {
+PyObject *aws_py_http_message_new_request_from_native(struct aws_http_message *request) {
     struct aws_allocator *alloc = aws_py_get_allocator();
-    struct http_message_binding *request = aws_mem_calloc(alloc, 1, sizeof(struct http_message_binding));
-    if (!request) {
+    struct http_message_binding *binding = aws_mem_calloc(alloc, 1, sizeof(struct http_message_binding));
+    if (!binding) {
         return PyErr_AwsLastError();
     }
 
     /* From hereon, we need to clean up if errors occur.
-     * Fortunately, the capsule destructors will clean up anything stored inside them.
-     *
-     * This function will return BOTH the request-binding-capsule AND the headers-binding-capsule */
-    PyObject *py_message_capsule = NULL;
-    PyObject *py_headers_capsule = NULL;
-
-    py_message_capsule = PyCapsule_New(request, s_capsule_name_http_message, s_http_message_capsule_destructor);
-    if (!py_message_capsule) {
+     * Fortunately, the capsule destructors will clean up anything stored inside them. */
+    PyObject *py_capsule = PyCapsule_New(binding, s_capsule_name_http_message, s_http_message_capsule_destructor);
+    if (!py_capsule) {
         goto error;
     }
 
-    if (existing_request) {
-        request->native = existing_request;
-        aws_http_message_acquire(request->native);
-    } else {
-        request->native = aws_http_message_new_request(alloc);
-        if (!request->native) {
-            goto error;
-        }
-    }
+    binding->native = request;
+    aws_http_message_acquire(binding->native);
 
     /* Default py_body_stream ref to None, not NULL */
-    request->py_body_stream = Py_None;
-    Py_INCREF(request->py_body_stream);
+    binding->py_body_stream = Py_None;
+    Py_INCREF(binding->py_body_stream);
 
-    /* In C, the aws_http_message owns an aws_http_headers.
-     * Likewise, in Python, the HttpMessageBase class owns an HttpHeaders.
-     * Create the capsule for each of these classes here. */
-    py_headers_capsule = aws_py_http_headers_new_from_native(aws_http_message_get_headers(request->native));
-    if (!py_headers_capsule) {
-        goto error;
-    }
-
-    /* Return (capsule, headers_capsule) */
-    PyObject *py_return_tuple = PyTuple_New(2);
-    if (!py_return_tuple) {
-        goto error;
-    }
-    PyTuple_SET_ITEM(py_return_tuple, 0, py_message_capsule);
-    PyTuple_SET_ITEM(py_return_tuple, 1, py_headers_capsule);
-    return py_return_tuple;
+    return py_capsule;
 
 error:
-    if (py_message_capsule) {
-        Py_DECREF(py_message_capsule);
+    if (py_capsule) {
+        Py_DECREF(py_capsule);
     } else {
-        aws_mem_release(alloc, request);
+        aws_mem_release(alloc, binding);
     }
-    Py_XDECREF(py_headers_capsule);
     return NULL;
 }
 
 PyObject *aws_py_http_message_new_request(PyObject *self, PyObject *args) {
     (void)self;
-    (void)args;
-    return s_common_new_binding(NULL);
-}
 
-PyObject *aws_py_http_message_new_request_from_native(struct aws_http_message *request) {
-    return s_common_new_binding(request);
+    PyObject *py_headers;
+    if (!PyArg_ParseTuple(args, "O", &py_headers)) {
+        return NULL;
+    }
+
+    struct aws_http_headers *headers = aws_py_get_http_headers(py_headers);
+    if (!headers) {
+        return NULL;
+    }
+
+    struct aws_http_message *request = aws_http_message_new_request_with_headers(aws_py_get_allocator(), headers);
+    if (!request) {
+        return PyErr_AwsLastError();
+    }
+
+    PyObject *py_capsule = aws_py_http_message_new_request_from_native(request);
+    if (!py_capsule) {
+        aws_http_message_release(request);
+        return NULL;
+    }
+
+    return py_capsule;
 }
 
 static struct http_message_binding *s_get_binding_from_capsule_arg(PyObject *self, PyObject *args) {

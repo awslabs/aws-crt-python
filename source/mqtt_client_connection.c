@@ -321,7 +321,8 @@ struct ws_handshake_transform_data {
     PyObject *connection_py;
 
     /* Python bindings we created to wrap the native request */
-    PyObject *request_bindings_py;
+    PyObject *request_binding_py;
+    PyObject *headers_binding_py;
 };
 
 static const char *s_capsule_name_ws_handshake_transform_data = "aws_ws_handshake_transform_data";
@@ -332,7 +333,8 @@ void s_ws_handshake_transform_data_destructor(PyObject *capsule) {
 
     /* Note that binding may be only partially constructed, if error occurred during setup */
     Py_XDECREF(ws_data->connection_py);
-    Py_XDECREF(ws_data->request_bindings_py);
+    Py_XDECREF(ws_data->request_binding_py);
+    Py_XDECREF(ws_data->headers_binding_py);
 
     aws_mem_release(aws_py_get_allocator(), ws_data);
 }
@@ -384,14 +386,25 @@ static void s_ws_handshake_transform(
     ws_transform_data->connection_py = connection_py;
     Py_INCREF(ws_transform_data->connection_py);
 
-    ws_transform_data->request_bindings_py = aws_py_http_message_new_request_from_native(request);
-    if (!ws_transform_data->request_bindings_py) {
+    ws_transform_data->request_binding_py = aws_py_http_message_new_request_from_native(request);
+    if (!ws_transform_data->request_binding_py) {
+        aws_py_raise_error();
+        goto done;
+    }
+
+    ws_transform_data->headers_binding_py = aws_py_http_headers_new_from_native(aws_http_message_get_headers(request));
+    if (!ws_transform_data->headers_binding_py) {
         aws_py_raise_error();
         goto done;
     }
 
     PyObject *result = PyObject_CallMethod(
-        connection_py, "_ws_handshake_transform", "(OO)", ws_transform_data->request_bindings_py, ws_transform_capsule);
+        connection_py,
+        "_ws_handshake_transform",
+        "(OOO)",
+        ws_transform_data->request_binding_py,
+        ws_transform_data->headers_binding_py,
+        ws_transform_capsule);
     if (result) {
         Py_DECREF(result);
     } else {
