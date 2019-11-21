@@ -18,7 +18,6 @@ from enum import IntEnum
 from awscrt import NativeResource
 from awscrt.http import HttpProxyOptions, HttpRequest
 from awscrt.io import ClientBootstrap, ClientTlsContext, SocketOptions
-import traceback
 
 
 class QoS(IntEnum):
@@ -118,11 +117,10 @@ class Connection(NativeResource):
         try:
             self._ws_handshake_transform_cb(transform_args)
         except Exception as e:
-            traceback.print_exc()
-            # Call set_done() in case user failed to do so before uncaught exception was raised,
+            # Call set_done() if user failed to do so before uncaught exception was raised,
             # there's a chance the callback wasn't callable and user has no idea we tried to hand them the baton.
-            # (it's safe to call set_done() multiple times).
-            transform_args.set_done(e)
+            if not future.done():
+                transform_args.set_done(e)
 
     def connect(self,
                 client_id,
@@ -390,7 +388,7 @@ class Connection(NativeResource):
         """
 
         def __init__(self, mqtt_connection, http_request, done_future):
-            self.mqtt_connection
+            self.mqtt_connection = mqtt_connection
             self.http_request = http_request
             self._done_future = done_future
 
@@ -398,7 +396,6 @@ class Connection(NativeResource):
             """
             Mark the transformation complete.
             If exception is passed in, the handshake is canceled.
-            This function is idempotent (safe to call multiple times).
             """
             if exception is None:
                 self._done_future.set_result(None)
