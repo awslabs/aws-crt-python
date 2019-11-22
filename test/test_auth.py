@@ -212,11 +212,7 @@ SIGV4TEST_SIGNED_HEADERS = [
 
 class TestSigner(NativeResourceTest):
 
-    def test_create(self):
-        signer = awscrt.auth.AwsSigner()
-
     def test_signing_sigv4_headers(self):
-        signer = awscrt.auth.AwsSigner()
 
         credentials_provider = awscrt.auth.AwsCredentialsProvider.new_static(
             SIGV4TEST_ACCESS_KEY_ID, SIGV4TEST_SECRET_ACCESS_KEY, SIGV4TEST_SESSION_TOKEN)
@@ -234,7 +230,7 @@ class TestSigner(NativeResourceTest):
             path=SIGV4TEST_PATH,
             headers=awscrt.http.HttpHeaders(SIGV4TEST_UNSIGNED_HEADERS))
 
-        signing_future = signer.sign(http_request, signing_config)
+        signing_future = awscrt.auth.aws_sign_request(http_request, signing_config)
 
         signing_result = signing_future.result(10)
 

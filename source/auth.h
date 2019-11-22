@@ -24,7 +24,6 @@ PyObject *aws_py_credentials_secret_access_key(PyObject *self, PyObject *args);
 PyObject *aws_py_credentials_session_token(PyObject *self, PyObject *args);
 
 PyObject *aws_py_credentials_provider_get_credentials(PyObject *self, PyObject *args);
-PyObject *aws_py_credentials_provider_shutdown(PyObject *self, PyObject *args);
 PyObject *aws_py_credentials_provider_new_chain_default(PyObject *self, PyObject *args);
 PyObject *aws_py_credentials_provider_new_static(PyObject *self, PyObject *args);
 
@@ -39,8 +38,7 @@ PyObject *aws_py_signing_config_get_use_double_uri_encode(PyObject *self, PyObje
 PyObject *aws_py_signing_config_get_should_normalize_uri_path(PyObject *self, PyObject *args);
 PyObject *aws_py_signing_config_get_sign_body(PyObject *self, PyObject *args);
 
-PyObject *aws_py_signer_new_aws(PyObject *self, PyObject *args);
-PyObject *aws_py_signer_sign_request(PyObject *self, PyObject *args);
+PyObject *aws_py_sign_request_aws(PyObject *self, PyObject *args);
 
 /* Given a python object, return a pointer to its underlying native type.
  * If NULL is returned, a python error has been set */
@@ -48,6 +46,5 @@ PyObject *aws_py_signer_sign_request(PyObject *self, PyObject *args);
 struct aws_credentials *aws_py_get_credentials(PyObject *credentials);
 struct aws_credentials_provider *aws_py_get_credentials_provider(PyObject *credentials_provider);
 struct aws_signing_config_aws *aws_py_get_signing_config(PyObject *signing_config);
-struct aws_signer *aws_py_get_signer(PyObject *signer);
 
 #endif // AWS_CRT_PYTHON_AUTH_H
