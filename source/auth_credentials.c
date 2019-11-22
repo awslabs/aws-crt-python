@@ -145,16 +145,16 @@ static void s_credentials_provider_shutdown_complete(void *user_data) {
 
 /* Runs when the GC destroys the capsule containing the binding */
 static void s_credentials_provider_capsule_destructor(PyObject *capsule) {
-    struct credentials_provider_binding *provider = PyCapsule_GetPointer(capsule, s_capsule_name_credentials_provider);
+    struct credentials_provider_binding *binding = PyCapsule_GetPointer(capsule, s_capsule_name_credentials_provider);
 
     /* Note that destructor might run due to setup failing, and some/all members might still be NULL. */
-    if (provider->native) {
-        /* Release the credentials provider, the bindings will be cleaned up by the shutdown-complete callback. */
-        aws_credentials_provider_release(provider->native);
-        provider->native = NULL;
+    if (binding->native) {
+        /* Release the credentials provider, the binding will be cleaned up by the shutdown-complete callback.
+         * Note that binding might be deleted as an immediate side-effect of this call, so don't touch it anymore. */
+        aws_credentials_provider_release(binding->native);
     } else {
         /* Finish clean-up immediately */
-        s_credentials_provider_binding_clean_up(provider);
+        s_credentials_provider_binding_clean_up(binding);
     }
 }
 
