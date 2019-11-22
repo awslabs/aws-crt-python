@@ -99,14 +99,6 @@ class AwsCredentialsProviderBase(NativeResource):
         """
         raise NotImplementedError()
 
-    def close(self):
-        """
-        Signal a provider (and all linked providers) to cancel pending queries and
-        stop accepting new ones.  Useful to hasten shutdown time if you know the provider
-        is going away.
-        """
-        pass
-
 
 class AwsCredentialsProvider(AwsCredentialsProviderBase):
     """
@@ -166,14 +158,6 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
 
         return future
 
-    def close(self):
-        """
-        Signal a provider (and all linked providers) to cancel pending queries and
-        stop accepting new ones.  Useful to hasten shutdown time if you know the provider
-        is going away.
-        """
-        _awscrt.credentials_provider_shutdown(self._binding)
-
 
 class AwsSigningAlgorithm(IntEnum):
     """
@@ -204,7 +188,7 @@ class AwsSigningConfig(NativeResource):
                  credentials_provider,  # type: AwsCredentialsProviderBase
                  region,  # type: str
                  service,  # type: str
-                 date=datetime.datetime.now(_utc),  # type: datetime.datetime
+                 date=None,  # type: Optional[datetime.datetime]
                  should_sign_param=None,  # type: Optional[Callable[[str], bool]]
                  use_double_uri_encode=False,  # type: bool
                  should_normalize_uri_path=True,  # type: bool
@@ -216,10 +200,13 @@ class AwsSigningConfig(NativeResource):
         assert isinstance(credentials_provider, AwsCredentialsProviderBase)
         assert isinstance_str(region)
         assert isinstance_str(service)
-        assert isinstance(date, datetime.datetime)
+        assert isinstance(date, datetime.datetime) or date is None
         assert callable(should_sign_param) or should_sign_param is None
 
         super(AwsSigningConfig, self).__init__()
+
+        if date is None:
+            date = datetime.datetime.now(_utc)
 
         try:
             timestamp = date.timestamp()
@@ -274,7 +261,10 @@ class AwsSigningConfig(NativeResource):
 
     @property
     def date(self):
-        """datetime.datetime to use during the signing process"""
+        """
+        datetime.datetime to use during the signing process.
+        If None is provided to constructor then datetime.datetime.now(datetime.timezone.utc) is used.
+        """
         return _awscrt.signing_config_get_date(self._binding)
 
     @property
@@ -313,18 +303,22 @@ class AwsSigningConfig(NativeResource):
         return _awscrt.signing_config_get_sign_body(self._binding)
 
 
-class AwsSigner(NativeResource):
+def aws_sign_request(http_request, signing_config):
     """
-    A signer that performs AWS http request signing.
+    Perform AWS HTTP request signing.
+    The HttpRequest is transformed asynchronously, according to the AwsSigningConfig.
+    Returns a Future whose result will be the signed HttpRequest.
 
-    When using this signer to sign AWS http requests:
+    When signing:
 
-      (1) Do not add the following headers to requests before signing, they may be added by the signer:
+      (1) It is good practice to use a new config for each signature, or the date might get too old.
+
+      (2) Do not add the following headers to requests before signing, they may be added by the signer:
          x-amz-content-sha256,
          X-Amz-Date,
          Authorization
 
-      (2) Do not add the following query params to requests before signing, they may be added by the signer:
+      (3) Do not add the following query params to requests before signing, they may be added by the signer:
          X-Amz-Signature,
          X-Amz-Date,
          X-Amz-Credential,
@@ -332,30 +326,19 @@ class AwsSigner(NativeResource):
          X-Amz-SignedHeaders
     """
 
-    def __init__(self):
-        super(AwsSigner, self).__init__()
-        self._binding = _awscrt.signer_new_aws()
+    assert isinstance(http_request, HttpRequest)
+    assert isinstance(signing_config, AwsSigningConfig)
 
-    def sign(self, http_request, signing_config):
-        """
-        Asynchronously transform the HttpRequest according to the signing algorithm.
-        Returns a Future whose result will be the signed HttpRequest.
+    future = Future()
 
-        It is good practice to use a new config for each signature, or the date might get too old.
-        """
-        assert isinstance(http_request, HttpRequest)
-        assert isinstance(signing_config, AwsSigningConfig)
+    def _on_complete(error_code):
+        try:
+            if error_code:
+                future.set_exception(Exception(error_code))  # TODO: Actual exceptions for error_codes
+            else:
+                future.set_result(http_request)
+        except Exception as e:
+            future.set_exception(e)
 
-        future = Future()
-
-        def _on_complete(error_code):
-            try:
-                if error_code:
-                    future.set_exception(Exception(error_code))  # TODO: Actual exceptions for error_codes
-                else:
-                    future.set_result(http_request)
-            except Exception as e:
-                future.set_exception(e)
-
-        _awscrt.signer_sign_request(self, http_request, signing_config, _on_complete)
-        return future
+    _awscrt.sign_request_aws(http_request, signing_config, _on_complete)
+    return future

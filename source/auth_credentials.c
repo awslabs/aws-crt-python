@@ -132,18 +132,30 @@ struct credentials_provider_binding {
     PyObject *bootstrap;
 };
 
+/* Finally clean up binding (after capsule destructor runs and credentials provider shutdown completes) */
+static void s_credentials_provider_binding_clean_up(struct credentials_provider_binding *binding) {
+    Py_XDECREF(binding->bootstrap);
+    aws_mem_release(aws_py_get_allocator(), binding);
+}
+
+/* Runs after the credentials provider has finished shutting down */
+static void s_credentials_provider_shutdown_complete(void *user_data) {
+    s_credentials_provider_binding_clean_up(user_data);
+}
+
 /* Runs when the GC destroys the capsule containing the binding */
 static void s_credentials_provider_capsule_destructor(PyObject *capsule) {
     struct credentials_provider_binding *provider = PyCapsule_GetPointer(capsule, s_capsule_name_credentials_provider);
 
     /* Note that destructor might run due to setup failing, and some/all members might still be NULL. */
-
     if (provider->native) {
+        /* Release the credentials provider, the bindings will be cleaned up by the shutdown-complete callback. */
         aws_credentials_provider_release(provider->native);
+        provider->native = NULL;
+    } else {
+        /* Finish clean-up immediately */
+        s_credentials_provider_binding_clean_up(provider);
     }
-
-    Py_XDECREF(provider->bootstrap);
-    aws_mem_release(aws_py_get_allocator(), provider);
 }
 
 struct aws_credentials_provider *aws_py_get_credentials_provider(PyObject *credentials_provider) {
@@ -249,22 +261,6 @@ PyObject *aws_py_credentials_provider_get_credentials(PyObject *self, PyObject *
     Py_RETURN_NONE;
 }
 
-PyObject *aws_py_credentials_provider_shutdown(PyObject *self, PyObject *args) {
-    (void)self;
-    PyObject *capsule;
-    if (!PyArg_ParseTuple(args, "O", &capsule)) {
-        return NULL;
-    }
-
-    struct credentials_provider_binding *provider = PyCapsule_GetPointer(capsule, s_capsule_name_credentials_provider);
-    if (!provider) {
-        return NULL;
-    }
-
-    aws_credentials_provider_shutdown(provider->native);
-    Py_RETURN_NONE;
-}
-
 /* Create binding and capsule.
  * Helper function for every aws_py_credentials_provider_new_XYZ() function */
 static PyObject *s_new_credentials_provider_binding_and_capsule(struct credentials_provider_binding **out_binding) {
@@ -314,6 +310,7 @@ PyObject *aws_py_credentials_provider_new_chain_default(PyObject *self, PyObject
 
     struct aws_credentials_provider_chain_default_options options = {
         .bootstrap = bootstrap,
+        .shutdown_options = {s_credentials_provider_shutdown_complete, binding},
     };
 
     binding->native = aws_credentials_provider_new_chain_default(aws_py_get_allocator(), &options);
@@ -331,25 +328,20 @@ error:
 
 PyObject *aws_py_credentials_provider_new_static(PyObject *self, PyObject *args) {
     (void)self;
-
     struct aws_allocator *allocator = aws_py_get_allocator();
 
-    const char *access_key_id;
-    Py_ssize_t access_key_id_len;
-    const char *secret_access_key;
-    Py_ssize_t secret_access_key_len;
-    const char *session_token; /* optional */
-    Py_ssize_t session_token_len;
-
+    struct aws_byte_cursor access_key_id;
+    struct aws_byte_cursor secret_access_key;
+    struct aws_byte_cursor session_token; /* optional */
     if (!PyArg_ParseTuple(
             args,
             "s#s#z#",
-            &access_key_id,
-            &access_key_id_len,
-            &secret_access_key,
-            &secret_access_key_len,
-            &session_token,
-            &session_token_len)) {
+            &access_key_id.ptr,
+            &access_key_id.len,
+            &secret_access_key.ptr,
+            &secret_access_key.len,
+            &session_token.ptr,
+            &session_token.len)) {
         return NULL;
     }
 
@@ -362,12 +354,14 @@ PyObject *aws_py_credentials_provider_new_static(PyObject *self, PyObject *args)
     /* From hereon, we need to clean up if errors occur.
      * Fortunately, the capsule destructor will clean up anything stored inside the binding */
 
-    binding->native = aws_credentials_provider_new_static(
-        allocator,
-        aws_byte_cursor_from_array(access_key_id, access_key_id_len),
-        aws_byte_cursor_from_array(secret_access_key, secret_access_key_len),
-        aws_byte_cursor_from_array(session_token, session_token_len));
+    struct aws_credentials_provider_static_options options = {
+        .access_key_id = access_key_id,
+        .secret_access_key = secret_access_key,
+        .session_token = session_token,
+        .shutdown_options = {s_credentials_provider_shutdown_complete, binding},
+    };
 
+    binding->native = aws_credentials_provider_new_static(allocator, &options);
     if (!binding->native) {
         PyErr_SetAwsLastError();
         goto error;

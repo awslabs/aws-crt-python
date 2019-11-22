@@ -18,48 +18,10 @@
 #include "http.h"
 
 #include <aws/auth/signable.h>
-#include <aws/auth/signer.h>
-
-static const char *s_capsule_name_signer = "aws_signer";
-
-/* Signer capsule contains raw aws_signer struct. There is no intermediate binding struct. */
-
-/* Runs when GC destroys the capsule containing the binding */
-static void s_signer_capsule_destructor(PyObject *py_capsule) {
-    struct aws_signer *signer = PyCapsule_GetPointer(py_capsule, s_capsule_name_signer);
-    aws_signer_destroy(signer);
-}
-
-struct aws_signer *aws_py_get_signer(PyObject *py_signer) {
-    return aws_py_get_binding(py_signer, s_capsule_name_signer, "AwsSigner");
-}
-
-PyObject *aws_py_signer_new_aws(PyObject *self, PyObject *args) {
-    (void)self;
-
-    if (!PyArg_ParseTuple(args, "")) {
-        return NULL;
-    }
-
-    struct aws_signer *signer = aws_signer_new_aws(aws_py_get_allocator());
-    if (!signer) {
-        return PyErr_AwsLastError();
-    }
-
-    /* From hereon, we need to clean up if errors occur. */
-
-    PyObject *py_capsule = PyCapsule_New(signer, s_capsule_name_signer, s_signer_capsule_destructor);
-    if (!py_capsule) {
-        aws_signer_destroy(signer);
-        return NULL;
-    }
-
-    return py_capsule;
-}
+#include <aws/auth/signing.h>
 
 /* Object that stays alive for duration async signing operation */
 struct async_signing_data {
-    PyObject *py_signer;
     PyObject *py_http_request;
     struct aws_http_message *http_request; /* owned by py_http_request, do not clean up. */
     PyObject *py_signing_config;
@@ -69,7 +31,6 @@ struct async_signing_data {
 
 static void s_async_signing_data_destroy(struct async_signing_data *async_data) {
     if (async_data) {
-        Py_XDECREF(async_data->py_signer);
         Py_XDECREF(async_data->py_http_request);
         Py_XDECREF(async_data->py_signing_config);
         Py_XDECREF(async_data->py_on_complete);
@@ -104,19 +65,13 @@ static void s_signing_complete(struct aws_signing_result *signing_result, int er
     /*************** GIL RELEASE ***************/
 }
 
-PyObject *aws_py_signer_sign_request(PyObject *self, PyObject *args) {
+PyObject *aws_py_sign_request_aws(PyObject *self, PyObject *args) {
     (void)self;
 
-    PyObject *py_signer;
     PyObject *py_http_request;
     PyObject *py_signing_config;
     PyObject *py_on_complete;
-    if (!PyArg_ParseTuple(args, "OOOO", &py_signer, &py_http_request, &py_signing_config, &py_on_complete)) {
-        return NULL;
-    }
-
-    struct aws_signer *signer = aws_py_get_signer(py_signer);
-    if (!signer) {
+    if (!PyArg_ParseTuple(args, "OOO", &py_http_request, &py_signing_config, &py_on_complete)) {
         return NULL;
     }
 
@@ -142,9 +97,6 @@ PyObject *aws_py_signer_sign_request(PyObject *self, PyObject *args) {
     /* From hereon, we need to clean up if anything goes wrong.
      * Fortunately async_data's destroy fn will clean up anything stored inside of it. */
 
-    async_data->py_signer = py_signer;
-    Py_INCREF(async_data->py_signer);
-
     async_data->py_http_request = py_http_request;
     Py_INCREF(async_data->py_http_request);
 
@@ -161,8 +113,8 @@ PyObject *aws_py_signer_sign_request(PyObject *self, PyObject *args) {
         goto error;
     }
 
-    if (aws_signer_sign_request(
-            signer,
+    if (aws_sign_request_aws(
+            alloc,
             async_data->signable,
             (struct aws_signing_config_base *)signing_config,
             s_signing_complete,
