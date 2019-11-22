@@ -65,7 +65,7 @@ class HttpClientConnection(HttpConnectionBase):
     def new(cls,
             host_name,
             port,
-            socket_options=SocketOptions(),
+            socket_options=None,
             tls_connection_options=None,
             bootstrap=None,
             proxy_options=None):
@@ -80,11 +80,14 @@ class HttpClientConnection(HttpConnectionBase):
         assert isinstance_str(host_name)
         assert isinstance(port, int)
         assert isinstance(tls_connection_options, TlsConnectionOptions) or tls_connection_options is None
-        assert isinstance(socket_options, SocketOptions)
+        assert isinstance(socket_options, SocketOptions) or socket_options is None
         assert isinstance(proxy_options, HttpProxyOptions) or proxy_options is None
 
         future = Future()
         try:
+            if not socket_options:
+                socket_options = SocketOptions()
+
             if not bootstrap:
                 event_loop_group = EventLoopGroup(1)
                 host_resolver = DefaultHostResolver(event_loop_group)
