@@ -166,10 +166,9 @@ class Connection(NativeResource):
         All arguments to connect() are deprecated.
         Set these properties on the instance before calling connect().
         """
-        #TODO backwards compatibility with old connect() call that took a bunch of args
+        # TODO backwards compatibility with old connect() call that took a bunch of args
 
         future = Future()
-
 
         def on_connect(error_code, return_code, session_present):
             if error_code == 0 and return_code == 0:
@@ -339,46 +338,47 @@ class Connection(NativeResource):
 
         return future, packet_id
 
-    class WebsocketHandshakeTransformArgs(object):
+
+class WebsocketHandshakeTransformArgs(object):
+    """
+    Argument to a "websocket_handshake_transform" function.
+
+    -- Attributes --
+    mqtt_connection: awscrt.mqtt.Connection this handshake is for.
+    http_request: awscrt.http.HttpRequest for this handshake.
+
+    A websocket_handshake_transform function has signature:
+    (WebsocketHandshakeTransformArgs) -> None
+
+    The function implementer may modify transform_args.http_request as desired.
+    They MUST call transform_args.set_done() when complete, passing an
+    exception if something went wrong. Failure to call set_done()
+    will hang the application.
+
+    The implementor may do asynchronous work before calling transform_args.set_done(),
+    they are not required to call set_done() within the scope of the transform function.
+    An example of async work would be to fetch credentials from another service,
+    sign the request headers, and finally call set_done() to mark the transform complete.
+
+    The default websocket handshake request uses path "/mqtt".
+    All required headers are present,
+    plus the optional header "Sec-WebSocket-Protocol: mqtt".
+    """
+
+    def __init__(self, mqtt_connection, http_request, done_future):
+        self.mqtt_connection = mqtt_connection
+        self.http_request = http_request
+        self._done_future = done_future
+
+    def set_done(self, exception=None):
         """
-        Argument to a "websocket_handshake_transform" function.
-
-        -- Attributes --
-        mqtt_connection: awscrt.mqtt.Connection this handshake is for.
-        http_request: awscrt.http.HttpRequest for this handshake.
-
-        A websocket_handshake_transform function has signature:
-        (WebsocketHandshakeTransformArgs) -> None
-
-        The function implementer may modify transform_args.http_request as desired.
-        They MUST call transform_args.set_done() when complete, passing an
-        exception if something went wrong. Failure to call set_done()
-        will hang the application.
-
-        The implementor may do asynchronous work before calling transform_args.set_done(),
-        they are not required to call set_done() within the scope of the transform function.
-        An example of async work would be to fetch credentials from another service,
-        sign the request headers, and finally call set_done() to mark the transform complete.
-
-        The default websocket handshake request uses path "/mqtt".
-        All required headers are present,
-        plus the optional header "Sec-WebSocket-Protocol: mqtt".
+        Mark the transformation complete.
+        If exception is passed in, the handshake is canceled.
         """
-
-        def __init__(self, mqtt_connection, http_request, done_future):
-            self.mqtt_connection = mqtt_connection
-            self.http_request = http_request
-            self._done_future = done_future
-
-        def set_done(self, exception=None):
-            """
-            Mark the transformation complete.
-            If exception is passed in, the handshake is canceled.
-            """
-            if exception is None:
-                self._done_future.set_result(None)
-            else:
-                self._done_future.set_exception(exception)
+        if exception is None:
+            self._done_future.set_result(None)
+        else:
+            self._done_future.set_exception(exception)
 
 
 class SubscribeError(Exception):

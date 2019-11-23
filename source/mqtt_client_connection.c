@@ -173,7 +173,6 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    printf("got here A\n");
     /* From hereon, we need to clean up if errors occur */
 
     py_connection->native = aws_mqtt_client_connection_new(client);
@@ -192,7 +191,6 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
         PyErr_SetAwsLastError();
         goto set_interruption_failed;
     }
-    printf("got here B\n");
 
     if (PyObject_IsTrue(use_websocket_py)) {
         if (aws_mqtt_client_connection_use_websockets(
@@ -206,7 +204,6 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
             goto use_websockets_failed;
         }
     }
-    printf("got here C\n");
 
     PyObject *self_proxy = PyWeakref_NewProxy(self_py, NULL);
     if (!self_proxy) {

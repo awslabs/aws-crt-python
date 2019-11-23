@@ -134,7 +134,7 @@ def websockets_with_default_aws_signing(region, credentials_provider=None, webso
     if credentials_provider is None:
         credentials_provider = awscrt.auth.AwsCredentialsProvider.new_default_chain(kwargs.get('client_bootstrap'))
 
-    def _should_sign_params(name):
+    def _should_sign_param(name):
         blacklist = ['x-amz-date', 'x-amz-security-token']
         return not (name.lower() in blacklist)
 
