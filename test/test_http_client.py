@@ -206,6 +206,8 @@ class TestClient(NativeResourceTest):
         shutdown_error = connection.shutdown_future.exception(self.timeout)
         self.assertIsInstance(shutdown_error, awscrt.exceptions.AwsCrtError)
 
+        self._stop_server()
+
     def test_shutdown_error_http(self):
         return self._test_shutdown_error(secure=False)
 
