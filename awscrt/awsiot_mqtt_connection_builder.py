@@ -1,3 +1,83 @@
+"""
+Builder functions to create a awscrt.mqtt.Connection, configured for use with AWS IoT.
+The following arguments are common to all builder functions:
+
+Required Arguments:
+
+    endpoint (str): Name of AWS IoT endpoint.
+
+    client_bootstrap (awscrt.io.ClientBootstrap): Client bootstrap used to establish connection.
+
+    client_id (str): ID to place in CONNECT packet. Must be unique across all devices/clients.
+            If an ID is already in use, the other client will be disconnected.
+
+Optional Arguments:
+
+    on_connection_interrupted (function): Callback with signature:
+            (awscrt.mqtt.Connection, awscrt.exceptions.AwsCrtError) -> None
+            Invoked when the MQTT connection is lost.
+            The MQTT client will automatically attempt to reconnect.
+
+    on_connection_resumed (function): Callback with signature:
+            (awscrt.mqtt.Connection, awscrt.mqtt.ConnectReturnCode, session_present: bool) -> None
+            Invoked when the MQTT connection is automatically resumed.
+
+    clean_session (bool): Whether or not to start a clean session with each reconnect.
+            Default is true, the server will forget all subscriptions with each reconnect.
+            Set False to request that the server resume an existing session
+            or start a new session that may be resumed after a connection loss.
+            The `session_present` bool in the connection callback informs
+            whether an existing session was successfully resumed.
+            If an existing session is resumed, the server remembers previous subscriptions
+            and sends mesages (with QoS1 or higher) that were published while the client was offline.
+
+    reconnect_min_timeout_secs (int): Minimum time to wait between reconnect attempts.
+        Wait starts at min and doubles with each attempt until max is reached.
+
+    reconnect_max_timeout_secs (int): Maximum time to wait between reconnect attempts.
+        Wait starts at min and doubles with each attempt until max is reached.
+
+    keep_alive_secs (int): The keep alive value, in seconds, to send in CONNECT packet.
+                A PING will automatically be sent at this interval.
+                The server will assume the connection is lost if no PING is received after 1.5X this value.
+                Default is 3600 (1 hour). This value must be higher than ping_timeout_ms.
+
+    ping_timeout_ms (int): Milliseconds to wait for ping response before client assumes
+                the connection is invalid and attempts to reconnect.
+                Default is 3000ms (3 seconds). This value must be less than keep_alive.
+                Alternatively, TCP keep-alive may accomplish this in a more efficient (low-power) scenario,
+                but keep-alive options may not work the same way on every platform and OS version.
+
+    will (awscrt.mqtt.Will): Will to send with CONNECT packet. The will is
+                published by the server when its connection to the client
+                is unexpectedly lost.
+
+    username (str): Username to connect with.
+
+    password (str): Password to connect with.
+
+    port (int): Override the default port number on the server to connect to.
+
+    tcp_connect_timeout_ms (int): Milliseconds to wait for TCP connect response. Default is 3000ms (3 seconds).
+
+    tcp_keepalive (bool): Whether to use TCP keep-alive. Default is False. If True, periodically transmit messages
+            for detecting a disconnected peer.
+
+    tcp_keepalive_interval_secs (int): Interval, in seconds, for TCP keep-alive.
+
+    tcp_keepalive_timeout_secs (int): Timeout, in seconds, for TCP keep-alive.
+
+    tcp_keepalive_max_probes (int): Number of probes allowed to fail before the connection is considered lost.
+
+    ca_filepath (str): Override default trust store with CA certificates from this PEM formatted file.
+
+    ca_dirpath (str): Override default trust store with CA certificates loaded from this directory (Unix only).
+
+    ca_bytes (bytes): Override default trust store with CA certificates from these PEM formatted bytes.
+
+    enable_metrics_collection (bool): Whether to send the SDK version number in the CONNECT packet. Default is True.
+"""
+
 # Copyright 2010-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License").
@@ -14,38 +94,6 @@
 import awscrt.auth
 import awscrt.io
 import awscrt.mqtt
-
-"""
-Required Arguments:
-    endpoint
-    client_bootstrap
-    client_id
-
-Optional Arguments:
-    ca_filepath,
-    ca_dirpath,
-    ca_bytes,
-
-    port
-    on_connection_interrupted
-    on_connection_resumed
-    reconnect_min_timeout_secs
-    reconnect_max_timeout_secs
-    clean_session
-    keep_alive_secs
-    ping_timeout_ms
-    will
-    username
-    password
-
-    tcp_connect_timeout_ms: 3000 (3 seconds) by default
-    tcp_keepalive
-    tcp_keepalive_timeout_secs
-    tcp_keepalive_interval_secs
-    tcp_keepalive_max_probes
-
-    enable_metrics_collection
-"""
 
 
 def _check_required_kwargs(**kwargs):
@@ -138,22 +186,54 @@ def _builder(
 
 
 def mtls_from_path(cert_filepath, pri_key_filepath, **kwargs):
+    """
+    This builder creates an awscrt.mqtt.Connection, configured for an mTLS MQTT connection to AWS IoT.
+    TLS arguments are passed as filepaths.
+
+    Arguments:
+        cert_filepath (str): Path to certificate file.
+
+        pri_key_filepath (str): Path to private key file.
+
+        All other required and optional arguments are explained in this module's docs.
+    """
     _check_required_kwargs(**kwargs)
     tls_ctx_options = awscrt.io.TlsContextOptions.create_client_with_mtls_from_path(cert_filepath, pri_key_filepath)
     return _builder(tls_ctx_options, **kwargs)
 
 
 def mtls_from_bytes(cert_bytes, pri_key_bytes, **kwargs):
+    """
+    This builder creates an awscrt.mqtt.Connection, configured for an mTLS MQTT connection to AWS IoT.
+    TLS arguments are passed as in-memory bytes.
+
+    Arguments:
+        cert_bytes (bytes): Certificate file.
+
+        pri_key_bytes (bytes): Private key.
+
+        All other required and optional arguments are explained in this module's docs.
+    """
     _check_required_kwargs(**kwargs)
     tls_ctx_options = awscrt.io.TlsContextOptions.create_client_with_mtls(cert_bytes, pri_key_bytes)
     return _builder(tls_ctx_options, **kwargs)
 
 
-def websockets_with_default_aws_signing(region, credentials_provider=None, websocket_proxy_options=None, **kwargs):
-    _check_required_kwargs(**kwargs)
+def websockets_with_default_aws_signing(region, credentials_provider, websocket_proxy_options=None, **kwargs):
+    """
+    This builder creates an awscrt.mqtt.Connection, configured for an MQTT connection over websockets to AWS IoT.
+    The websocket handshake is signed using credentials from the credentials_provider.
 
-    if credentials_provider is None:
-        credentials_provider = awscrt.auth.AwsCredentialsProvider.new_default_chain(kwargs.get('client_bootstrap'))
+    Arguments:
+        region (str): AWS region to use when signing.
+
+        credentials_provider (awscrt.auth.AwsCredentialsProviderBase): Source of AWS credentials to use when signing.
+
+        websocket_proxy_options (awscrt.http.HttpProxyOptions): If specified, a proxy is used when connecting.
+
+        All other required and optional arguments are explained in this module's docs.
+    """
+    _check_required_kwargs(**kwargs)
 
     def _should_sign_param(name):
         blacklist = ['x-amz-date', 'x-amz-security-token']
@@ -179,6 +259,21 @@ def websockets_with_default_aws_signing(region, credentials_provider=None, webso
 
 
 def websockets_with_custom_handshake(websocket_handshake_transform, websocket_proxy_options=None, **kwargs):
+    """
+    This builder creates an awscrt.mqtt.Connection, configured for an MQTT connection over websockets,
+    with a custom function to transform the websocket handshake request before it is sent to the server.
+
+    Arguments:
+        websocket_handshake_transform: Function with signature:
+                (awscrt.mqtt.WebsocketHandshakeTransformArgs) -> None
+                Function is called each time a websocket connection is attempted.
+                The function may modify the websocket handshake request, and MUST call set_done() when complete.
+                See awscrt.mqtt.WebsocketHandshakeTransformArgs for more info.
+
+        websocket_proxy_options (awscrt.http.HttpProxyOptions): If specified, a proxy is used when connecting.
+
+        All other required and optional arguments are explained in this module's docs.
+    """
     _check_required_kwargs(**kwargs)
     tls_ctx_options = awscrt.io.TlsContextOptions()
     return _builder(tls_ctx_options=tls_ctx_options,

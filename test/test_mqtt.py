@@ -13,6 +13,7 @@
 
 from __future__ import absolute_import
 from awscrt import awsiot_mqtt_connection_builder
+from awscrt.auth import AwsCredentialsProvider
 from awscrt.http import HttpProxyOptions
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions, LogLevel, init_logging
 from awscrt.mqtt import Client, Connection, QoS
@@ -160,28 +161,28 @@ class MqttConnectionTest(NativeResourceTest):
 
 
 class MqttBuilderTest(NativeResourceTest):
-    def _create_bootstrap(self):
-        elg = EventLoopGroup(1)
-        resolver = DefaultHostResolver(elg)
-        bootstrap = ClientBootstrap(elg, resolver)
-        return bootstrap
-
     def _test_connection(self, connection):
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
     def test_mtls_from_bytes(self):
         config = Config.get()
+        elg = EventLoopGroup()
+        resolver = DefaultHostResolver(elg)
+        bootstrap = ClientBootstrap(elg, resolver)
         connection = awsiot_mqtt_connection_builder.mtls_from_bytes(
             cert_bytes=config.cert,
             pri_key_bytes=config.key,
             endpoint=config.endpoint,
             client_id=create_client_id(),
-            client_bootstrap=self._create_bootstrap())
+            client_bootstrap=bootstrap)
         self._test_connection(connection)
 
     def test_mtls_from_path(self):
         config = Config.get()
+        elg = EventLoopGroup()
+        resolver = DefaultHostResolver(elg)
+        bootstrap = ClientBootstrap(elg, resolver)
 
         # test "from path" builder by writing secrets to tempfiles
         with tempfile.NamedTemporaryFile() as cert_file:
@@ -197,28 +198,38 @@ class MqttBuilderTest(NativeResourceTest):
                     pri_key_filepath=key_file.name,
                     endpoint=config.endpoint,
                     client_id=create_client_id(),
-                    client_bootstrap=self._create_bootstrap())
+                    client_bootstrap=bootstrap)
 
         self._test_connection(connection)
 
     def test_websockets_default(self):
         config = Config.get()
+        elg = EventLoopGroup()
+        resolver = DefaultHostResolver(elg)
+        bootstrap = ClientBootstrap(elg, resolver)
+        cred_provider = AwsCredentialsProvider.new_default_chain(bootstrap)
         connection = awsiot_mqtt_connection_builder.websockets_with_default_aws_signing(
-            endpoint=config.endpoint,
             region=config.region,
+            credentials_provider=cred_provider,
+            endpoint=config.endpoint,
             client_id=create_client_id(),
-            client_bootstrap=self._create_bootstrap())
+            client_bootstrap=bootstrap)
         self._test_connection(connection)
 
     @unittest.skipIf(PROXY_HOST is None, 'requires "proxyhost" and "proxyport" env vars')
     def test_websockets_proxy(self):
         config = Config.get()
+        elg = EventLoopGroup()
+        resolver = DefaultHostResolver(elg)
+        bootstrap = ClientBootstrap(elg, resolver)
+        cred_provider = AwsCredentialsProvider.new_default_chain(bootstrap)
         connection = awsiot_mqtt_connection_builder.websockets_with_default_aws_signing(
+            credentials_provider=cred_provider,
             websocket_proxy_options=HttpProxyOptions(PROXY_HOST, PROXY_PORT),
             endpoint=config.endpoint,
             region=config.region,
             client_id=create_client_id(),
-            client_bootstrap=self._create_bootstrap())
+            client_bootstrap=bootstrap)
         self._test_connection(connection)
 
 

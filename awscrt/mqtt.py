@@ -71,12 +71,12 @@ class Connection(NativeResource):
 
     def __init__(self,
                  client,
+                 host_name,
+                 port,
+                 client_id,
+                 clean_session=True,
                  on_connection_interrupted=None,
                  on_connection_resumed=None,
-                 client_id=None,
-                 host_name=None,
-                 port=None,
-                 clean_session=True,
                  reconnect_min_timeout_secs=5,
                  reconnect_max_timeout_secs=60,
                  keep_alive_secs=3600,
@@ -90,8 +90,71 @@ class Connection(NativeResource):
                  websocket_handshake_transform=None,
                  ):
         """
-        on_connection_interrupted: optional callback, with signature (connection, error_code)
-        on_connection_resumed: optional callback, with signature (connection, error_code, session_present)
+        Arguments:
+            client (Client): MQTT Client
+
+            host_name (str): Server name to connect to.
+
+            port (int): Server port to connect to.
+
+            client_id (str): ID to place in CONNECT packet. Must be unique across all devices/clients.
+                    If an ID is already in use, the other client will be disconnected.
+
+            clean_session (bool): Whether or not to start a clean session with each reconnect.
+                    If True, the server will forget all subscriptions with each reconnect.
+                    Set False to request that the server resume an existing session
+                    or start a new session that may be resumed after a connection loss.
+                    The `session_present` bool in the connection callback informs
+                    whether an existing session was successfully resumed.
+                    If an existing session is resumed, the server remembers previous subscriptions
+                    and sends mesages (with QoS1 or higher) that were published while the client was offline.
+
+            on_connection_interrupted (function): Optional callback with signature:
+                    (Connection, awscrt.exceptions.AwsCrtError) -> None
+                    Invoked when the MQTT connection is lost.
+                    The MQTT client will automatically attempt to reconnect.
+
+            on_connection_resumed (function): Optional callback with signature:
+                    (Connection, ConnectReturnCode, session_present: bool) -> None
+                    Invoked when the MQTT connection is automatically resumed.
+
+            reconnect_min_timeout_secs (int): Minimum time to wait between reconnect attempts.
+                Wait starts at min and doubles with each attempt until max is reached.
+
+            reconnect_max_timeout_secs (int): Maximum time to wait between reconnect attempts.
+                Wait starts at min and doubles with each attempt until max is reached.
+
+            keep_alive_secs (int): The keep alive value, in seconds, to send in CONNECT packet.
+                        A PING will automatically be sent at this interval.
+                        The server will assume the connection is lost if no PING is received after 1.5X this value.
+                        This value must be higher than ping_timeout_ms.
+
+            ping_timeout_ms (int): Milliseconds to wait for ping response before client assumes
+                        the connection is invalid and attempts to reconnect.
+                        This value must be less than keep_alive.
+                        Alternatively, TCP keep-alive may accomplish this in a more efficient (low-power) scenario,
+                        but keep-alive options may not work the same way on every platform and OS version.
+
+            will (awscrt.mqtt.Will): Will to send with CONNECT packet. The will is
+                        published by the server when its connection to the client
+                        is unexpectedly lost.
+
+            username (str): Username to connect with.
+
+            password (str): Password to connect with.
+
+            socket_options: awscrt.io.SocketOptions
+
+            use_websocket: If true, connect to MQTT over websockets.
+
+            websocket_proxy_options: optional awscrt.http.HttpProxyOptions for
+                    websocket connections.
+
+            websocket_handshake_transform: optional function with signature:
+                    (WebsocketHandshakeTransformArgs) -> None
+                    If provided, function is called each time a websocket connection
+                    is attempted. The function may modify the websocket handshake
+                    request. See WebsocketHandshakeTransformArgs for more info.
         """
 
         assert isinstance(client, Client)
@@ -160,13 +223,11 @@ class Connection(NativeResource):
             if not future.done():
                 transform_args.set_done(e)
 
-    def connect(self,
-                **kwargs):
+    def connect(self):
         """
         All arguments to connect() are deprecated.
         Set these properties on the instance before calling connect().
         """
-        # TODO backwards compatibility with old connect() call that took a bunch of args
 
         future = Future()
 
@@ -177,10 +238,6 @@ class Connection(NativeResource):
                 future.set_exception(Exception("Error during connect: err={} rc={}".format(error_code, return_code)))
 
         try:
-            assert self.client_id is not None
-            assert self.host_name is not None
-            assert self.port is not None
-
             _awscrt.mqtt_client_connection_connect(
                 self._binding,
                 self.client_id,
