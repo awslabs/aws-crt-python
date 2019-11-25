@@ -70,10 +70,15 @@ def _builder(
     elif ca_filepath or ca_dirpath:
         tls_ctx_options.override_default_trust_store_from_path(ca_dirpath, ca_filepath)
 
-    port = 443 if use_websockets else 8883
-    if awscrt.io.is_alpn_available():
+    if use_websockets:
         port = 443
-        tls_ctx_options.alpn_list = ['x-amzn-mqtt-ca']
+        if awscrt.io.is_alpn_available():
+            tls_ctx_options.alpn_list = ['http/1.1']
+    else:
+        port = 8883
+        if awscrt.io.is_alpn_available():
+            port = 443
+            tls_ctx_options.alpn_list = ['x-amzn-mqtt-ca']
 
     port = kwargs.get('port', port)
 

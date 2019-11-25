@@ -13,6 +13,7 @@
 
 from __future__ import absolute_import
 from awscrt import awsiot_mqtt_connection_builder
+from awscrt.http import HttpProxyOptions
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions, LogLevel, init_logging
 from awscrt.mqtt import Client, Connection, QoS
 from test import NativeResourceTest
@@ -27,6 +28,8 @@ import uuid
 import warnings
 
 TIMEOUT = 10.0
+PROXY_HOST = os.environ.get('proxyhost')
+PROXY_PORT = int(os.environ.get('proxyport', '0'))
 
 
 class MqttClientTest(NativeResourceTest):
@@ -156,7 +159,7 @@ class MqttConnectionTest(NativeResourceTest):
         connection.disconnect().result(TIMEOUT)
 
 
-class MqttBuilderTest(unittest.TestCase):# DO NOT COMMIT THIS LINE (NativeResourceTest):
+class MqttBuilderTest(NativeResourceTest):
     def _create_bootstrap(self):
         elg = EventLoopGroup(1)
         resolver = DefaultHostResolver(elg)
@@ -201,6 +204,17 @@ class MqttBuilderTest(unittest.TestCase):# DO NOT COMMIT THIS LINE (NativeResour
     def test_websockets_default(self):
         config = Config.get()
         connection = awsiot_mqtt_connection_builder.websockets_with_default_aws_signing(
+            endpoint=config.endpoint,
+            region=config.region,
+            client_id=create_client_id(),
+            client_bootstrap=self._create_bootstrap())
+        self._test_connection(connection)
+
+    @unittest.skipIf(PROXY_HOST is None, 'requires "proxyhost" and "proxyport" env vars')
+    def test_websockets_proxy(self):
+        config = Config.get()
+        connection = awsiot_mqtt_connection_builder.websockets_with_default_aws_signing(
+            websocket_proxy_options=HttpProxyOptions(PROXY_HOST, PROXY_PORT),
             endpoint=config.endpoint,
             region=config.region,
             client_id=create_client_id(),
