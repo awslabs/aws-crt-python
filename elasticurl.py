@@ -125,7 +125,7 @@ if scheme == 'https':
 
 # invoked up on the connection closing
 def on_connection_shutdown(shutdown_future):
-    print('connection close with error: {}'.format(shutdown_future.exception())
+    print('connection close with error: {}'.format(shutdown_future.exception()))
 
 
 # invoked by the http request call as the response body is received in chunks
