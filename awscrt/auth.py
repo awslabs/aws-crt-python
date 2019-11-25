@@ -14,6 +14,7 @@
 from __future__ import absolute_import
 import _awscrt
 from awscrt import isinstance_str, NativeResource
+import awscrt.exceptions
 from awscrt.http import HttpRequest
 from awscrt.io import ClientBootstrap
 from concurrent.futures import Future
@@ -143,7 +144,7 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
         def _on_complete(error_code, access_key_id, secret_access_key, session_token):
             try:
                 if error_code:
-                    future.set_exception(Exception(error_code))  # TODO: Actual exceptions for error_codes
+                    future.set_exception(awscrt.exceptions.from_code(error_code))
                 else:
                     credentials = AwsCredentials(access_key_id, secret_access_key, session_token)
                     future.set_result(credentials)
@@ -334,7 +335,7 @@ def aws_sign_request(http_request, signing_config):
     def _on_complete(error_code):
         try:
             if error_code:
-                future.set_exception(Exception(error_code))  # TODO: Actual exceptions for error_codes
+                future.set_exception(awscrt.exceptions.from_code(error_code))
             else:
                 future.set_result(http_request)
         except Exception as e:

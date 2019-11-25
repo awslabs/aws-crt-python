@@ -12,6 +12,7 @@
 # permissions and limitations under the License.
 
 from __future__ import absolute_import
+import awscrt.exceptions
 from awscrt.http import HttpClientConnection, HttpClientStream, HttpHeaders, HttpProxyOptions, HttpRequest
 from awscrt.io import TlsContextOptions, ClientTlsContext, TlsConnectionOptions
 from concurrent.futures import Future
@@ -116,22 +117,12 @@ class TestClient(NativeResourceTest):
         self._start_server(secure)
         connection = self._new_client_connection(secure)
 
-        # register shutdown callback
-        shutdown_callback_results = []
-
-        def shutdown_callback(error_code):
-            shutdown_callback_results.append(error_code)
-
-        connection.add_shutdown_callback(shutdown_callback)
-
         # close connection
-        shutdown_error_code_from_close_future = connection.close().result(self.timeout)
+        shutdown_error_from_close_future = connection.close().exception(self.timeout)
 
-        # assert that error code was reported via close_future and shutdown callback
-        # error_code should be 0 (normal shutdown)
-        self.assertEqual(0, shutdown_error_code_from_close_future)
-        self.assertEqual(1, len(shutdown_callback_results))
-        self.assertEqual(0, shutdown_callback_results[0])
+        # assert that error was reported via close_future and shutdown callback
+        # error should be None (normal shutdown)
+        self.assertEqual(None, shutdown_error_from_close_future)
         self.assertFalse(connection.is_open())
 
         self._stop_server()
@@ -148,19 +139,14 @@ class TestClient(NativeResourceTest):
 
         connection = self._new_client_connection(secure)
 
-        # Subscribing for the shutdown callback shouldn't affect the refcount of the HttpClientConnection.
-        close_future = Future()
-
-        def on_close(error_code):
-            close_future.set_result(error_code)
-
-        connection.add_shutdown_callback(on_close)
+        # referencing the shutdown_future does not keep the connection alive
+        close_future = connection.shutdown_future
 
         # This should cause the GC to collect the HttpClientConnection
         del connection
 
-        close_code = close_future.result(self.timeout)
-        self.assertEqual(0, close_code)
+        close_error = close_future.exception(self.timeout)
+        self.assertEqual(None, close_error)
         self._stop_server()
 
     def test_connection_closes_on_zero_refcount_http(self):
@@ -195,7 +181,7 @@ class TestClient(NativeResourceTest):
             test_asset_bytes = test_asset.read()
             self.assertEqual(test_asset_bytes, response.body)
 
-        self.assertEqual(0, connection.close().result(self.timeout))
+        self.assertEqual(None, connection.close().exception(self.timeout))
 
         self._stop_server()
 
@@ -205,7 +191,31 @@ class TestClient(NativeResourceTest):
     def test_get_https(self):
         self._test_get(secure=True)
 
+    def _test_shutdown_error(self, secure):
+        # Use HTTP/1.0 connection to force a SOCKET_CLOSED error after request completes
+        self._start_server(secure, http_1_0=True)
+        connection = self._new_client_connection(secure)
+
+        # Send request, don't care what happens
+        request = HttpRequest('GET', '/')
+        response = Response()
+        stream = connection.request(request, response.on_response, response.on_body)
+        stream.completion_future.result(self.timeout)
+
+        # Wait for server to hang up, which should be immediate since it's using HTTP/1.0
+        shutdown_error = connection.shutdown_future.exception(self.timeout)
+        self.assertIsInstance(shutdown_error, awscrt.exceptions.AwsCrtError)
+
+        self._stop_server()
+
+    def test_shutdown_error_http(self):
+        return self._test_shutdown_error(secure=False)
+
+    def test_shutdown_error_https(self):
+        return self._test_shutdown_error(secure=True)
+
     # PUT request sends this very file to the server.
+
     def _test_put(self, secure):
         self._start_server(secure)
         connection = self._new_client_connection(secure)
@@ -234,7 +244,7 @@ class TestClient(NativeResourceTest):
             self.assertIsNotNone(server_received)
             self.assertEqual(server_received, outgoing_body_bytes)
 
-        self.assertEqual(0, connection.close().result(self.timeout))
+        self.assertEqual(None, connection.close().result(self.timeout))
         self._stop_server()
 
     def test_put_http(self):
