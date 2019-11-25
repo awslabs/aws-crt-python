@@ -15,7 +15,6 @@ import awscrt.auth
 import awscrt.io
 import awscrt.mqtt
 
-
 """
 Required Arguments:
     endpoint
@@ -52,7 +51,26 @@ Optional Arguments:
 def _check_required_kwargs(**kwargs):
     for required in ['client_bootstrap', 'endpoint', 'client_id']:
         if not kwargs.get(required):
-            raise TypeError("Builder needs keyword-only argument 'client_bootstrap'")
+            raise TypeError("Builder needs keyword-only argument '{}'".format(required))
+
+
+_metrics_str = None
+
+
+def _get_metrics_str():
+    global _metrics_str
+    if _metrics_str is None:
+        try:
+            import pkg_resources
+            try:
+                version = pkg_resources.get_distribution("awscrt").version
+                _metrics_str = "?SDK=PythonV2&Version={}".format(version)
+            except pkg_resources.DistributionNotFound:
+                _metrics_str = "?SDK=PythonV2&Version=dev"
+        except BaseException:
+            _metrics_str = ""
+
+    return _metrics_str
 
 
 def _builder(
@@ -91,9 +109,7 @@ def _builder(
 
     username = kwargs.get('username', '')
     if kwargs.get('enable_metrics_collection', True):
-        username += '?SDK=PythonV2&Version=0.4.1'  # TODO: read version from somewhere. pkg_resources?
-
-    # TODO: auto resubscribe for them via callback interception
+        username += _get_metrics_str()
 
     client_bootstrap = kwargs.get('client_bootstrap')
     tls_ctx = awscrt.io.ClientTlsContext(tls_ctx_options)
