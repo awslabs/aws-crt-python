@@ -124,8 +124,8 @@ if scheme == 'https':
         tls_connection_options.set_alpn_list(args.alpn)
 
 # invoked up on the connection closing
-def on_connection_shutdown(err_code):
-    print('connection close with error code {}'.format(err_code))
+def on_connection_shutdown(shutdown_future):
+    print('connection close with error: {}'.format(shutdown_future.exception())
 
 
 # invoked by the http request call as the response body is received in chunks
@@ -152,7 +152,7 @@ hostname = url.hostname
 connect_future = http.HttpClientConnection.new(hostname, port, socket_options,
                                                tls_connection_options, client_bootstrap)
 connection = connect_future.result(10)
-connection.add_shutdown_callback(on_connection_shutdown)
+connection.shutdown_future.add_done_callback(on_connection_shutdown)
 
 request = http.HttpRequest(args.method, body_stream=data_stream)
 

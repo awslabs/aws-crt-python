@@ -43,3 +43,6 @@ class AwsCrtError(Exception):
     def __repr__(self):
         return "{0}(name={1}, message={2}, code={3})".format(
             self.__class__.__name__, repr(self.name), repr(self.message), self.code)
+
+    def __str__(self):
+        return self.__repr__()
