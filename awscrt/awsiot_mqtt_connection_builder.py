@@ -4,7 +4,7 @@ The following arguments are common to all builder functions:
 
 Required Arguments:
 
-    endpoint (str): Name of AWS IoT endpoint.
+    endpoint (str): Host name of AWS IoT server.
 
     client_bootstrap (awscrt.io.ClientBootstrap): Client bootstrap used to establish connection.
 
@@ -56,7 +56,9 @@ Optional Arguments:
 
     password (str): Password to connect with.
 
-    port (int): Override the default port number on the server to connect to.
+    port (int): Override default server port.
+            Default port is 443 if system supports ALPN or websockets are being used.
+            Otherwise, default port is 8883.
 
     tcp_connect_timeout_ms (int): Milliseconds to wait for TCP connect response. Default is 3000ms (3 seconds).
 
