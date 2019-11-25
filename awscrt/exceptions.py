@@ -41,5 +41,5 @@ class AwsCrtError(Exception):
         self.message = message
 
     def __repr__(self):
-        return "{}(code={}, name={}, message={})".format(
-            self.__class__.__name__, self.code, repr(self.name), repr(self.message))
+        return "{0}(name={1}, message={2}, code={3})".format(
+            self.__class__.__name__, repr(self.name), repr(self.message), self.code)
