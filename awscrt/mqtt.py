@@ -67,8 +67,6 @@ class Client(NativeResource):
 
 
 class Connection(NativeResource):
-    """ TODO: document all attributes """
-
     def __init__(self,
                  client,
                  host_name,
@@ -224,11 +222,6 @@ class Connection(NativeResource):
                 transform_args.set_done(e)
 
     def connect(self):
-        """
-        All arguments to connect() are deprecated.
-        Set these properties on the instance before calling connect().
-        """
-
         future = Future()
 
         def on_connect(error_code, return_code, session_present):
