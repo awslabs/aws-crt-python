@@ -12,7 +12,6 @@
 # permissions and limitations under the License.
 
 import _awscrt
-import warnings
 from concurrent.futures import Future
 from enum import IntEnum
 from awscrt import NativeResource

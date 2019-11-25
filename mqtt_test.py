@@ -97,13 +97,13 @@ mqtt_client = mqtt.Client(client_bootstrap, tls_context)
 print("Connecting to {}:{} with client-id:{}".format(args.endpoint, port, CLIENT_ID))
 mqtt_connection = mqtt.Connection(
     client=mqtt_client,
+    host_name=args.endpoint,
+    port=port,
+    client_id=CLIENT_ID,
     on_connection_interrupted=on_connection_interrupted,
     on_connection_resumed=on_connection_resumed)
 
-connect_results = mqtt_connection.connect(
-    client_id=CLIENT_ID,
-    host_name=args.endpoint,
-    port=port).result(TIMEOUT)
+connect_results = mqtt_connection.connect().result(TIMEOUT)
 assert(connect_results['session_present'] == False)
 
 # Subscribe
