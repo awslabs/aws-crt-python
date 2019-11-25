@@ -144,16 +144,20 @@ PyObject *PyErr_AwsLastError(void) {
     return PyErr_Format(PyExc_RuntimeError, "%d (%s): %s", err, name, msg);
 }
 
-/* Key is `PyObject*` of Python exception type, value is `int` of AWS_ERROR_ enum (cast to void*) */
+/* Mappings between Python built-in exception types and AWS_ERROR_ codes
+ * Stored in hashtables as `PyObject*` of Python exception type, and `int` of AWS_ERROR_ enum (cast to void*) */
 static struct aws_hash_table s_py_to_aws_error_map;
+static struct aws_hash_table s_aws_to_py_error_map;
 
-static void s_py_to_aws_error_map_init(void) {
+static void s_error_map_init(void) {
     struct error_pair {
         PyObject *py_exception_type;
         int aws_error_code;
     };
 
-    struct error_pair s_py_to_aws_error_array[] = {
+    /* If the same key is listed multiple times, later entries overwrite earlier entries
+     * Ex: Both TypeError and ValueError map to INVALID_ARG, but INVALID_ARG only maps to ValueError. */
+    struct error_pair s_error_array[] = {
         {PyExc_IndexError, AWS_ERROR_INVALID_INDEX},
         {PyExc_MemoryError, AWS_ERROR_OOM},
         {PyExc_NotImplementedError, AWS_ERROR_UNIMPLEMENTED},
@@ -170,7 +174,7 @@ static void s_py_to_aws_error_map_init(void) {
     if (aws_hash_table_init(
             &s_py_to_aws_error_map,
             aws_py_get_allocator(),
-            AWS_ARRAY_SIZE(s_py_to_aws_error_array),
+            AWS_ARRAY_SIZE(s_error_array),
             aws_hash_ptr,
             aws_ptr_eq,
             NULL /*destroy_key_fn*/,
@@ -178,10 +182,24 @@ static void s_py_to_aws_error_map_init(void) {
         AWS_FATAL_ASSERT(0);
     }
 
-    for (size_t i = 0; i < AWS_ARRAY_SIZE(s_py_to_aws_error_array); ++i) {
-        const void *key = s_py_to_aws_error_array[i].py_exception_type;
-        void *value = (void *)(size_t)s_py_to_aws_error_array[i].aws_error_code;
-        if (aws_hash_table_put(&s_py_to_aws_error_map, key, value, NULL)) {
+    if (aws_hash_table_init(
+            &s_aws_to_py_error_map,
+            aws_py_get_allocator(),
+            AWS_ARRAY_SIZE(s_error_array),
+            aws_hash_ptr,
+            aws_ptr_eq,
+            NULL /*destroy_key_fn*/,
+            NULL /*destroy_value_fn*/)) {
+        AWS_FATAL_ASSERT(0);
+    }
+
+    for (size_t i = 0; i < AWS_ARRAY_SIZE(s_error_array); ++i) {
+        void *py_exc = s_error_array[i].py_exception_type;
+        void *aws_err = (void *)(size_t)s_error_array[i].aws_error_code;
+        if (aws_hash_table_put(&s_py_to_aws_error_map, py_exc, aws_err, NULL)) {
+            AWS_FATAL_ASSERT(0);
+        }
+        if (aws_hash_table_put(&s_aws_to_py_error_map, aws_err, py_exc, NULL)) {
             AWS_FATAL_ASSERT(0);
         }
     }
@@ -204,6 +222,46 @@ int aws_py_raise_error(void) {
     fprintf(stderr, "Treating Python exception as error %d(%s)\n", aws_error_code, aws_error_name(aws_error_code));
 
     return aws_raise_error(aws_error_code);
+}
+
+PyObject *aws_py_get_corresponding_builtin_exception(PyObject *self, PyObject *args) {
+    (void)self;
+    int error_code;
+    if (!PyArg_ParseTuple(args, "i", &error_code)) {
+        return NULL;
+    }
+
+    struct aws_hash_element *found;
+    aws_hash_table_find(&s_aws_to_py_error_map, (void *)(size_t)error_code, &found);
+    if (!found) {
+        Py_RETURN_NONE;
+    }
+
+    PyObject *py_exception_type = found->value;
+    Py_INCREF(py_exception_type);
+    return py_exception_type;
+}
+
+PyObject *aws_py_get_error_name(PyObject *self, PyObject *args) {
+    (void)self;
+    int error_code;
+    if (!PyArg_ParseTuple(args, "i", &error_code)) {
+        return NULL;
+    }
+
+    const char *name = aws_error_name(error_code);
+    return PyString_FromString(name);
+}
+
+PyObject *aws_py_get_error_message(PyObject *self, PyObject *args) {
+    (void)self;
+    int error_code;
+    if (!PyArg_ParseTuple(args, "i", &error_code)) {
+        return NULL;
+    }
+
+    const char *name = aws_error_str(error_code);
+    return PyString_FromString(name);
 }
 
 PyObject *aws_py_memory_view_from_byte_buffer(struct aws_byte_buf *buf) {
@@ -323,6 +381,11 @@ static void s_install_crash_handler(void) {
     { #NAME, aws_py_##NAME, (FLAGS), NULL }
 
 static PyMethodDef s_module_methods[] = {
+    /* Common */
+    AWS_PY_METHOD_DEF(get_error_name, METH_VARARGS),
+    AWS_PY_METHOD_DEF(get_error_message, METH_VARARGS),
+    AWS_PY_METHOD_DEF(get_corresponding_builtin_exception, METH_VARARGS),
+
     /* IO */
     AWS_PY_METHOD_DEF(is_alpn_available, METH_NOARGS),
     AWS_PY_METHOD_DEF(event_loop_group_new, METH_VARARGS),
@@ -417,6 +480,7 @@ static void s_module_free(void *userdata) {
     (void)userdata;
 
     aws_hash_table_clean_up(&s_py_to_aws_error_map);
+    aws_hash_table_clean_up(&s_aws_to_py_error_map);
 
     if (s_logger_init) {
         aws_logger_clean_up(&s_logger);
@@ -458,7 +522,7 @@ PyMODINIT_FUNC INIT_FN(void) {
         PyEval_InitThreads();
     }
 
-    s_py_to_aws_error_map_init();
+    s_error_map_init();
 
 #if PY_MAJOR_VERSION == 3
     return m;

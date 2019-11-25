@@ -15,6 +15,7 @@ from __future__ import absolute_import
 import _awscrt
 from concurrent.futures import Future
 from awscrt import NativeResource, isinstance_str
+import awscrt.exceptions
 from awscrt.io import ClientBootstrap, EventLoopGroup, DefaultHostResolver, InputStream, TlsConnectionOptions, SocketOptions
 from enum import IntEnum
 
@@ -34,15 +35,17 @@ class HttpConnectionBase(NativeResource):
         """
         Close the connection.
         Returns a future which will have a result when the connection has finished shutting down.
-        The result will an int indicating why shutdown occurred.
+        The result will be None, or an AwsCrtError indicating why shutdown occurred.
+        Note that this future will never raise an exception,
+        if there is an error it is returned from the result() call.
         """
         _awscrt.http_connection_close(self._binding)
         return self._shutdown_future
 
     def add_shutdown_callback(self, fn):
         """
-        fn(error_code: int) will be called when the connection shuts down.
-        error_code indicates the reason that shutdown occurred.
+        fn(error) will be called when the connection shuts down.
+        The error argument will be None, or an AwsCrtError indicating why shutdown occurred.
         Note that the connection may have been garbage collected by the time fn is finally called.
         """
         self._shutdown_future.add_done_callback(lambda future: fn(future.result()))
@@ -102,12 +105,20 @@ class HttpClientConnection(HttpConnectionBase):
                     connection._binding = binding
                     future.set_result(connection)
                 else:
-                    future.set_exception(Exception("Error during connect: err={}".format(error_code)))
+                    future.set_exception(awscrt.exceptions.from_code(error_code))
+
+            # on_shutdown MUST NOT reference the connection itself, just the _shutdown_future within it.
+            # Otherwise we create a circular reference that prevents the connection from getting GC'd.
+            shutdown_future = connection._shutdown_future
+
+            def on_shutdown(error_code):
+                error = None if error_code == 0 else awscrt.exceptions.from_code(error_code)
+                shutdown_future.set_result(error)
 
             _awscrt.http_client_connection_new(
                 bootstrap,
                 on_connection_setup,
-                connection._shutdown_future,
+                on_shutdown,
                 host_name,
                 port,
                 socket_options,
@@ -183,7 +194,7 @@ class HttpClientStream(HttpStreamBase):
         if error_code == 0:
             self._completion_future.set_result(self._response_status_code)
         else:
-            self._completion_future.set_exception(Exception(error_code))  # TODO: Actual exceptions for error_codes
+            self._completion_future.set_exception(awscrt.exceptions.from_code(error_code))
 
 
 class HttpMessageBase(NativeResource):

@@ -16,6 +16,7 @@ import warnings
 from concurrent.futures import Future
 from enum import IntEnum
 from awscrt import NativeResource
+import awscrt.exceptions
 from awscrt.http import HttpProxyOptions, HttpRequest
 from awscrt.io import ClientBootstrap, ClientTlsContext, SocketOptions
 
@@ -76,8 +77,8 @@ class Connection(NativeResource):
                  reconnect_min_timeout_sec=5.0,
                  reconnect_max_timeout_sec=60.0):
         """
-        on_connection_interrupted: optional callback, with signature (connection, error_code)
-        on_connection_resumed: optional callback, with signature (connection, error_code, session_present)
+        on_connection_interrupted: optional callback, with signature (connection, error)
+        on_connection_resumed: optional callback, with signature (connection, return_code, session_present)
         """
 
         assert isinstance(client, Client)
@@ -96,11 +97,11 @@ class Connection(NativeResource):
 
     def _on_connection_interrupted(self, error_code):
         if self._on_connection_interrupted_cb:
-            self._on_connection_interrupted_cb(self, error_code)
+            self._on_connection_interrupted_cb(self, awscrt.exceptions.from_code(error_code))
 
-    def _on_connection_resumed(self, error_code, session_present):
+    def _on_connection_resumed(self, return_code, session_present):
         if self._on_connection_resumed_cb:
-            self._on_connection_resumed_cb(self, error_code, session_present)
+            self._on_connection_resumed_cb(self, ConnectReturnCode(return_code), session_present)
 
     def _ws_handshake_transform(self, http_request_binding, http_headers_binding, native_userdata):
         if self._ws_handshake_transform_cb is None:
@@ -190,10 +191,12 @@ class Connection(NativeResource):
             socket_options.connect_timeout_ms = kwargs['connect_timeout_sec'] * 1000
 
         def on_connect(error_code, return_code, session_present):
-            if error_code == 0 and return_code == 0:
-                future.set_result(dict(session_present=session_present))
+            if return_code:
+                future.set_exception(Exception(ConnectReturnCode(return_code)))
+            elif error_code:
+                future.set_exception(awscrt.exceptions.from_code(error_code))
             else:
-                future.set_exception(Exception("Error during connect: err={} rc={}".format(error_code, return_code)))
+                future.set_result(dict(session_present=session_present))
 
         try:
             assert will is None or isinstance(will, Will)
@@ -230,10 +233,12 @@ class Connection(NativeResource):
         future = Future()
 
         def on_connect(error_code, return_code, session_present):
-            if error_code == 0 and return_code == 0:
-                future.set_result(dict(session_present=session_present))
+            if return_code:
+                future.set_exception(Exception(ConnectReturnCode(return_code)))
+            elif error_code:
+                future.set_exception(awscrt.exceptions.from_code(error_code))
             else:
-                future.set_exception(Exception("Error during reconnect"))
+                future.set_result(dict(session_present=session_present))
 
         try:
             _awscrt.mqtt_client_connection_reconnect(self._binding, on_connect)
@@ -266,7 +271,7 @@ class Connection(NativeResource):
 
         def suback(packet_id, topic, qos, error_code):
             if error_code:
-                future.set_exception(Exception(error_code))  # TODO: Actual exceptions for error_codes
+                future.set_exception(awscrt.exceptions.from_code(error_code))
             else:
                 qos = _try_qos(qos)
                 if qos is None:
@@ -327,7 +332,7 @@ class Connection(NativeResource):
 
         def on_suback(packet_id, topic_qos_tuples, error_code):
             if error_code:
-                future.set_exception(Exception(error_code))  # TODO: Actual exceptions for error_codes
+                future.set_exception(awscrt.exceptions.from_code(error_code))
             else:
                 future.set_result(dict(
                     packet_id=packet_id,

@@ -38,8 +38,8 @@ struct http_connection_binding {
     /* Setup callback, reference cleared after invoking */
     PyObject *on_setup;
 
-    /* Shutdown future, reference cleared after setting result */
-    PyObject *shutdown_future;
+    /* Shutdown callback, reference cleared after setting result */
+    PyObject *on_shutdown;
 
     /* Dependencies that must outlive this */
     PyObject *bootstrap;
@@ -48,7 +48,7 @@ struct http_connection_binding {
 
 static void s_connection_destroy(struct http_connection_binding *connection) {
     Py_XDECREF(connection->on_setup);
-    Py_XDECREF(connection->shutdown_future);
+    Py_XDECREF(connection->on_shutdown);
     Py_XDECREF(connection->bootstrap);
     Py_XDECREF(connection->tls_ctx);
 
@@ -89,8 +89,8 @@ static void s_on_connection_shutdown(struct aws_http_connection *native_connecti
 
     bool destroy_after_shutdown = connection->release_called;
 
-    /* Set result of shutdown_future, then clear our reference to shutdown_future. */
-    PyObject *result = PyObject_CallMethod(connection->shutdown_future, "set_result", "(i)", error_code);
+    /* Invoke on_shutdown, then clear our reference to it */
+    PyObject *result = PyObject_CallFunction(connection->on_shutdown, "(i)", error_code);
     if (result) {
         Py_DECREF(result);
     } else {
@@ -98,7 +98,7 @@ static void s_on_connection_shutdown(struct aws_http_connection *native_connecti
         /* Note: We used to FATAL_ASSERT here, since this future really must succeed.
          * But the assert would trigger occasionally during application shutdown, so removing it for now. */
     }
-    Py_CLEAR(connection->shutdown_future);
+    Py_CLEAR(connection->on_shutdown);
 
     if (destroy_after_shutdown) {
         s_connection_destroy(connection);
@@ -162,7 +162,7 @@ PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args) {
 
     PyObject *bootstrap_py;
     PyObject *on_connection_setup_py;
-    PyObject *shutdown_future_py;
+    PyObject *on_shutdown_py;
     const char *host_name;
     Py_ssize_t host_name_len;
     uint16_t port_number;
@@ -175,7 +175,7 @@ PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args) {
             "OOOs#HOOO",
             &bootstrap_py,
             &on_connection_setup_py,
-            &shutdown_future_py,
+            &on_shutdown_py,
             &host_name,
             &host_name_len,
             &port_number,
@@ -243,8 +243,8 @@ PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args) {
 
     connection->on_setup = on_connection_setup_py;
     Py_INCREF(connection->on_setup);
-    connection->shutdown_future = shutdown_future_py;
-    Py_INCREF(connection->shutdown_future);
+    connection->on_shutdown = on_shutdown_py;
+    Py_INCREF(connection->on_shutdown);
     connection->bootstrap = bootstrap_py;
     Py_INCREF(connection->bootstrap);
 

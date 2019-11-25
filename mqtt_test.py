@@ -34,8 +34,8 @@ parser.add_argument('--root-ca', help="File path to root certificate authority, 
 
 io.init_logging(LogLevel.Trace, 'stderr')
 
-def on_connection_interrupted(connection, error_code):
-    print("Connection has been interrupted with error code", error_code)
+def on_connection_interrupted(connection, error):
+    print("Connection has been interrupted with error", error)
 
 def on_connection_resumed(connection, return_code, session_present):
     print("Connection has been resumed with return code", return_code, "and session present:", session_present)

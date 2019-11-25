@@ -29,6 +29,7 @@ struct aws_string;
 
 #if PY_MAJOR_VERSION >= 3
 #    define PyString_FromStringAndSize PyUnicode_FromStringAndSize
+#    define PyString_FromString PyUnicode_FromString
 #    define READABLE_BYTES_FORMAT_STR "y#"
 #else
 #    define READABLE_BYTES_FORMAT_STR "s#"
@@ -64,6 +65,16 @@ PyObject *PyErr_AwsLastError(void);
  *
  * The Python error indicator MUST be set and the GIL MUST be held when calling this function. */
 int aws_py_raise_error(void);
+
+/**
+ * Return built-in Python exception type corresponding to an AWS_ERROR_ code.
+ * Ex: AWS_ERROR_OOM -> MemoryError.
+ * Returns None if there is no match.
+ */
+PyObject *aws_py_get_corresponding_builtin_exception(PyObject *self, PyObject *args);
+
+PyObject *aws_py_get_error_name(PyObject *self, PyObject *args);
+PyObject *aws_py_get_error_message(PyObject *self, PyObject *args);
 
 /* Create a write-only memoryview from the remaining free space in an aws_byte_buf */
 PyObject *aws_py_memory_view_from_byte_buffer(struct aws_byte_buf *buf);

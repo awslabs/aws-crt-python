@@ -119,19 +119,19 @@ class TestClient(NativeResourceTest):
         # register shutdown callback
         shutdown_callback_results = []
 
-        def shutdown_callback(error_code):
-            shutdown_callback_results.append(error_code)
+        def shutdown_callback(error):
+            shutdown_callback_results.append(error)
 
         connection.add_shutdown_callback(shutdown_callback)
 
         # close connection
-        shutdown_error_code_from_close_future = connection.close().result(self.timeout)
+        shutdown_error_from_close_future = connection.close().result(self.timeout)
 
-        # assert that error code was reported via close_future and shutdown callback
-        # error_code should be 0 (normal shutdown)
-        self.assertEqual(0, shutdown_error_code_from_close_future)
+        # assert that error was reported via close_future and shutdown callback
+        # error should be None (normal shutdown)
+        self.assertEqual(None, shutdown_error_from_close_future)
         self.assertEqual(1, len(shutdown_callback_results))
-        self.assertEqual(0, shutdown_callback_results[0])
+        self.assertEqual(None, shutdown_callback_results[0])
         self.assertFalse(connection.is_open())
 
         self._stop_server()
@@ -151,16 +151,16 @@ class TestClient(NativeResourceTest):
         # Subscribing for the shutdown callback shouldn't affect the refcount of the HttpClientConnection.
         close_future = Future()
 
-        def on_close(error_code):
-            close_future.set_result(error_code)
+        def on_close(error):
+            close_future.set_result(error)
 
         connection.add_shutdown_callback(on_close)
 
         # This should cause the GC to collect the HttpClientConnection
         del connection
 
-        close_code = close_future.result(self.timeout)
-        self.assertEqual(0, close_code)
+        close_error = close_future.result(self.timeout)
+        self.assertEqual(None, close_error)
         self._stop_server()
 
     def test_connection_closes_on_zero_refcount_http(self):
@@ -195,7 +195,7 @@ class TestClient(NativeResourceTest):
             test_asset_bytes = test_asset.read()
             self.assertEqual(test_asset_bytes, response.body)
 
-        self.assertEqual(0, connection.close().result(self.timeout))
+        self.assertEqual(None, connection.close().result(self.timeout))
 
         self._stop_server()
 
@@ -234,7 +234,7 @@ class TestClient(NativeResourceTest):
             self.assertIsNotNone(server_received)
             self.assertEqual(server_received, outgoing_body_bytes)
 
-        self.assertEqual(0, connection.close().result(self.timeout))
+        self.assertEqual(None, connection.close().result(self.timeout))
         self._stop_server()
 
     def test_put_http(self):
