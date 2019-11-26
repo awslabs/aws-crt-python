@@ -237,8 +237,9 @@ def websockets_with_default_aws_signing(region, credentials_provider, websocket_
     """
     _check_required_kwargs(**kwargs)
 
-    def _should_sign_param(name):
+    def _should_sign_param(**kwargs):
         blacklist = ['x-amz-date', 'x-amz-security-token']
+        name = kwargs['name']
         return not (name.lower() in blacklist)
 
     def _sign_websocket_handshake_request(handshake_args):

@@ -113,8 +113,8 @@ class MqttConnectionTest(NativeResourceTest):
         connection = self._test_connection()
         received = Future()
 
-        def on_message(topic, payload):
-            received.set_result((topic, payload))
+        def on_message(**kwargs):
+            received.set_result(kwargs)
 
         # subscribe
         subscribed, packet_id = connection.subscribe(self.TEST_TOPIC, QoS.AT_LEAST_ONCE, on_message)
@@ -129,9 +129,9 @@ class MqttConnectionTest(NativeResourceTest):
         self.assertEqual(packet_id, puback['packet_id'])
 
         # receive message
-        rcv_topic, rcv_payload = received.result(TIMEOUT)
-        self.assertEqual(self.TEST_TOPIC, rcv_topic)
-        self.assertEqual(self.TEST_MSG, rcv_payload)
+        rcv = received.result(TIMEOUT)
+        self.assertEqual(self.TEST_TOPIC, rcv['topic'])
+        self.assertEqual(self.TEST_MSG, rcv['payload'])
 
         # unsubscribe
         unsubscribed, packet_id = connection.unsubscribe(self.TEST_TOPIC)
@@ -145,7 +145,7 @@ class MqttConnectionTest(NativeResourceTest):
         connection = self._test_connection()
         received = Future()
 
-        def on_message(topic, payload):
+        def on_message(**kwargs):
             received.set_result((topic, payload))
 
         connection.on_message(on_message)

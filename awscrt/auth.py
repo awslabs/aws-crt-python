@@ -220,6 +220,12 @@ class AwsSigningConfig(NativeResource):
                 epoch = datetime.datetime(1970, 1, 1, tzinfo=_utc)
                 timestamp = (date - epoch).total_seconds()
 
+        if should_sign_param:
+            def should_sign_param_wrapper(name):
+                return should_sign_param(name=name)
+        else:
+            should_sign_param_wrapper = None
+
         self._binding = _awscrt.signing_config_new(
             algorithm,
             credentials_provider,
@@ -227,7 +233,7 @@ class AwsSigningConfig(NativeResource):
             service,
             date,
             timestamp,
-            should_sign_param,
+            should_sign_param_wrapper,
             use_double_uri_encode,
             should_normalize_uri_path,
             sign_body)

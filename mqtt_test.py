@@ -59,8 +59,8 @@ def on_connection_resumed(connection, return_code, session_present):
 
 receive_results = {}
 receive_event = threading.Event()
-def on_receive_message(topic, message):
-    receive_results.update(locals())
+def on_receive_message(**kwargs):
+    receive_results.update(kwargs)
     receive_event.set()
 
 # Run
@@ -133,7 +133,7 @@ assert(publish_results['packet_id'] == publish_packet_id)
 print("Waiting to receive messsage")
 assert(receive_event.wait(TIMEOUT))
 assert(receive_results['topic'] == TOPIC)
-assert(receive_results['message'].decode() == MESSAGE)
+assert(receive_results['payload'].decode() == MESSAGE)
 
 # Unsubscribe
 print("Unsubscribing from topic")
