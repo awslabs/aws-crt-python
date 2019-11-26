@@ -202,6 +202,7 @@ class MqttBuilderTest(NativeResourceTest):
 
         self._test_connection(connection)
 
+    @unittest.skip("Build machines not set up to run this yet")
     def test_websockets_default(self):
         config = Config.get()
         elg = EventLoopGroup()
@@ -216,6 +217,7 @@ class MqttBuilderTest(NativeResourceTest):
             client_bootstrap=bootstrap)
         self._test_connection(connection)
 
+    @unittest.skip("Build machines not set up to run this yet")
     @unittest.skipIf(PROXY_HOST is None, 'requires "proxyhost" and "proxyport" env vars')
     def test_websockets_proxy(self):
         config = Config.get()
