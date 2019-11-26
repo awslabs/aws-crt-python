@@ -35,7 +35,10 @@ PROXY_PORT = int(os.environ.get('proxyport', '0'))
 
 class MqttClientTest(NativeResourceTest):
     def test_lifetime(self):
-        client = Client(ClientBootstrap(EventLoopGroup()))
+        elg = EventLoopGroup()
+        resolver = DefaultHostResolver(elg)
+        bootstrap = ClientBootstrap(elg, resolver)
+        client = Client(bootstrap)
 
 
 class Config:
@@ -86,10 +89,14 @@ class MqttConnectionTest(NativeResourceTest):
 
     def _test_connection(self):
         config = Config.get()
+        elg = EventLoopGroup()
+        resolver = DefaultHostResolver(elg)
+        bootstrap = ClientBootstrap(elg, resolver)
 
         tls_opts = TlsContextOptions.create_client_with_mtls(config.cert, config.key)
         tls = ClientTlsContext(tls_opts)
-        client = Client(ClientBootstrap(EventLoopGroup()), tls)
+
+        client = Client(bootstrap, tls)
         connection = Connection(
             client=client,
             client_id=create_client_id(),
