@@ -38,6 +38,12 @@
 
 #include <string.h>
 
+static void s_ws_handshake_transform(
+    struct aws_http_message *request,
+    void *user_data,
+    aws_mqtt_transform_websocket_handshake_complete_fn *complete_fn,
+    void *complete_ctx);
+
 static const char *s_capsule_name_mqtt_client_connection = "aws_mqtt_client_connection";
 
 /*******************************************************************************
@@ -150,7 +156,8 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
 
     PyObject *self_py;
     PyObject *client_py;
-    if (!PyArg_ParseTuple(args, "OO", &self_py, &client_py)) {
+    PyObject *use_websocket_py;
+    if (!PyArg_ParseTuple(args, "OOO", &self_py, &client_py, &use_websocket_py)) {
         return NULL;
     }
 
@@ -185,6 +192,19 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
         goto set_interruption_failed;
     }
 
+    if (PyObject_IsTrue(use_websocket_py)) {
+        if (aws_mqtt_client_connection_use_websockets(
+                py_connection->native,
+                s_ws_handshake_transform,
+                py_connection /*transform userdata*/,
+                NULL /*validator*/,
+                NULL /*validator userdata*/)) {
+
+            PyErr_SetAwsLastError();
+            goto use_websockets_failed;
+        }
+    }
+
     PyObject *self_proxy = PyWeakref_NewProxy(self_py, NULL);
     if (!self_proxy) {
         goto proxy_new_failed;
@@ -208,6 +228,7 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
 capsule_new_failed:
     Py_DECREF(self_proxy);
 proxy_new_failed:
+use_websockets_failed:
 set_interruption_failed:
     aws_mqtt_client_connection_destroy(py_connection->native);
 connection_new_failed:
@@ -480,11 +501,10 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
     Py_ssize_t password_len;
     PyObject *is_clean_session;
     PyObject *on_connect;
-    PyObject *use_websocket_py;
     PyObject *ws_proxy_options_py;
     if (!PyArg_ParseTuple(
             args,
-            "Os#s#HOOHIOz#z#OOOO",
+            "Os#s#HOOHIOz#z#OOO",
             &impl_capsule,
             &client_id,
             &client_id_len,
@@ -502,7 +522,6 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
             &password_len,
             &is_clean_session,
             &on_connect,
-            &use_websocket_py,
             &ws_proxy_options_py)) {
         return NULL;
     }
@@ -547,24 +566,13 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
         }
     }
 
-    if (PyObject_IsTrue(use_websocket_py)) {
-        if (aws_mqtt_client_connection_use_websockets(
-                py_connection->native,
-                s_ws_handshake_transform,
-                py_connection /*transform userdata*/,
-                NULL /*validator*/,
-                NULL /*validator userdata*/)) {
-            return PyErr_AwsLastError();
+    if (ws_proxy_options_py != Py_None) {
+        struct aws_http_proxy_options proxy_options;
+        if (!aws_py_http_proxy_options_init(&proxy_options, ws_proxy_options_py)) {
+            return NULL;
         }
-
-        if (ws_proxy_options_py != Py_None) {
-            struct aws_http_proxy_options proxy_options;
-            if (!aws_py_http_proxy_options_init(&proxy_options, ws_proxy_options_py)) {
-                return NULL;
-            }
-            if (aws_mqtt_client_connection_set_websocket_proxy_options(py_connection->native, &proxy_options)) {
-                return PyErr_AwsLastError();
-            }
+        if (aws_mqtt_client_connection_set_websocket_proxy_options(py_connection->native, &proxy_options)) {
+            return PyErr_AwsLastError();
         }
     }
 
