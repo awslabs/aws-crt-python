@@ -83,9 +83,11 @@ if args.verbose:
 # you only want one of these.
 event_loop_group = io.EventLoopGroup(1)
 
+host_resolver = io.DefaultHostResolver(event_loop_group)
+
  # client bootstrap knows how to connect all the pieces. In this case it also has the default dns resolver
 # baked in.
-client_bootstrap = io.ClientBootstrap(event_loop_group)
+client_bootstrap = io.ClientBootstrap(event_loop_group, host_resolver)
 
 url = urlparse(args.url)
 port = 443
@@ -149,8 +151,13 @@ socket_options = io.SocketOptions()
 socket_options.connect_timeout_ms = args.connect_timeout
 
 hostname = url.hostname
-connect_future = http.HttpClientConnection.new(hostname, port, socket_options,
-                                               tls_connection_options, client_bootstrap)
+connect_future = http.HttpClientConnection.new(
+    host_name=hostname,
+    port=port,
+    socket_options=socket_options,
+    tls_connection_options=tls_connection_options,
+    bootstrap=client_bootstrap)
+
 connection = connect_future.result(10)
 connection.shutdown_future.add_done_callback(on_connection_shutdown)
 

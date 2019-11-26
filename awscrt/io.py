@@ -77,14 +77,11 @@ class DefaultHostResolver(HostResolverBase):
 class ClientBootstrap(NativeResource):
     __slots__ = ()
 
-    def __init__(self, event_loop_group, host_resolver=None):
+    def __init__(self, event_loop_group, host_resolver):
         assert isinstance(event_loop_group, EventLoopGroup)
-        assert isinstance(host_resolver, HostResolverBase) or host_resolver is None
+        assert isinstance(host_resolver, HostResolverBase)
 
         super(ClientBootstrap, self).__init__()
-
-        if host_resolver is None:
-            host_resolver = DefaultHostResolver(event_loop_group)
 
         self._binding = _awscrt.client_bootstrap_new(event_loop_group, host_resolver)
 

@@ -91,7 +91,8 @@ class TestProvider(NativeResourceTest):
         scoped_env = ScopedEnvironmentVariable('AWS_SHARED_CREDENTIALS_FILE', 'test/resources/credentials_test')
 
         event_loop_group = awscrt.io.EventLoopGroup()
-        bootstrap = awscrt.io.ClientBootstrap(event_loop_group)
+        host_resolver = awscrt.io.DefaultHostResolver(event_loop_group)
+        bootstrap = awscrt.io.ClientBootstrap(event_loop_group, host_resolver)
         provider = awscrt.auth.AwsCredentialsProvider.new_default_chain(bootstrap)
 
         future = provider.get_credentials()

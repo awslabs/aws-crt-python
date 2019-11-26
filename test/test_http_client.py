@@ -14,7 +14,7 @@
 from __future__ import absolute_import
 import awscrt.exceptions
 from awscrt.http import HttpClientConnection, HttpClientStream, HttpHeaders, HttpProxyOptions, HttpRequest
-from awscrt.io import TlsContextOptions, ClientTlsContext, TlsConnectionOptions
+from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions
 from concurrent.futures import Future
 from io import open  # Python2's built-in open() doesn't return a stream
 import os
@@ -107,8 +107,12 @@ class TestClient(NativeResourceTest):
         else:
             tls_conn_opt = None
 
-        connection_future = HttpClientConnection.new(self.hostname,
-                                                     self.port,
+        event_loop_group = EventLoopGroup()
+        host_resolver = DefaultHostResolver(event_loop_group)
+        bootstrap = ClientBootstrap(event_loop_group, host_resolver)
+        connection_future = HttpClientConnection.new(host_name=self.hostname,
+                                                     port=self.port,
+                                                     bootstrap=bootstrap,
                                                      tls_connection_options=tls_conn_opt,
                                                      proxy_options=proxy_options)
         return connection_future.result(self.timeout)

@@ -62,9 +62,9 @@ class HttpClientConnection(HttpConnectionBase):
     def new(cls,
             host_name,
             port,
+            bootstrap,
             socket_options=None,
             tls_connection_options=None,
-            bootstrap=None,
             proxy_options=None):
         """
         Initiates a new connection to host_name and port using socket_options and tls_connection_options if supplied.
