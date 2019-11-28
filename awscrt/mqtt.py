@@ -351,7 +351,7 @@ class Connection(NativeResource):
 
         if callback:
             def callback_wrapper(topic, payload):
-                callable(topic=topic, payload=payload)
+                callback(topic=topic, payload=payload)
         else:
             callback_wrapper = None
 
