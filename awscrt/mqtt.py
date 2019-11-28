@@ -202,11 +202,11 @@ class Connection(NativeResource):
 
     def _on_connection_interrupted(self, error_code):
         if self._on_connection_interrupted_cb:
-            self._on_connection_interrupted_cb(self, awscrt.exceptions.from_code(error_code))
+            self._on_connection_interrupted_cb(connection=self, error=awscrt.exceptions.from_code(error_code))
 
     def _on_connection_resumed(self, return_code, session_present):
         if self._on_connection_resumed_cb:
-            self._on_connection_resumed_cb(self, ConnectReturnCode(return_code), session_present)
+            self._on_connection_resumed_cb(connection=self, error=connectionConnectReturnCode(return_code), session_present=session_present)
 
     def _ws_handshake_transform(self, http_request_binding, http_headers_binding, native_userdata):
         if self._ws_handshake_transform_cb is None:
@@ -221,7 +221,7 @@ class Connection(NativeResource):
         http_request = HttpRequest._from_bindings(http_request_binding, http_headers_binding)
         transform_args = WebsocketHandshakeTransformArgs(self, http_request, future)
         try:
-            self._ws_handshake_transform_cb(transform_args)
+            self._ws_handshake_transform_cb(transform_args=transform_args)
         except Exception as e:
             # Call set_done() if user failed to do so before uncaught exception was raised,
             # there's a chance the callback wasn't callable and user has no idea we tried to hand them the baton.

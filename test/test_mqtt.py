@@ -146,7 +146,7 @@ class MqttConnectionTest(NativeResourceTest):
         received = Future()
 
         def on_message(**kwargs):
-            received.set_result((topic, payload))
+            received.set_result(kwargs)
 
         connection.on_message(on_message)
 

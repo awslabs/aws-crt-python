@@ -243,16 +243,6 @@ PyObject *aws_py_signing_config_get_date(PyObject *self, PyObject *args) {
     return binding->py_date;
 }
 
-PyObject *aws_py_signing_config_get_should_sign_param(PyObject *self, PyObject *args) {
-    struct config_binding *binding = s_common_get(self, args);
-    if (!binding) {
-        return NULL;
-    }
-
-    Py_INCREF(binding->py_should_sign_param_fn);
-    return binding->py_should_sign_param_fn;
-}
-
 PyObject *aws_py_signing_config_get_use_double_uri_encode(PyObject *self, PyObject *args) {
     struct config_binding *binding = s_common_get(self, args);
     if (!binding) {

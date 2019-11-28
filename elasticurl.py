@@ -131,8 +131,8 @@ def on_connection_shutdown(shutdown_future):
 
 
 # invoked by the http request call as the response body is received in chunks
-def on_incoming_body(http_stream, body_data):
-    output.write(body_data)
+def on_incoming_body(http_stream, chunk):
+    output.write(chunk)
 
 
 data_len = 0

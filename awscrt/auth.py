@@ -192,7 +192,7 @@ class AwsSigningConfig(NativeResource):
     It is good practice to use a new config for each signature, or the date might get too old.
     Naive dates (lacking timezone info) are assumed to be in local time.
     """
-    __slots__ = ()
+    __slots__ = ('_priv_should_sign_cb')
 
     _attributes = ('algorithm', 'credentials_provider', 'region', 'service', 'date', 'should_sign_param',
                    'use_double_uri_encode', 'should_normalize_uri_path', 'body_signing_type')
@@ -234,7 +234,9 @@ class AwsSigningConfig(NativeResource):
                 epoch = datetime.datetime(1970, 1, 1, tzinfo=_utc)
                 timestamp = (date - epoch).total_seconds()
 
-        if should_sign_param:
+        self._priv_should_sign_cb = should_sign_param
+
+        if should_sign_param is not None:
             def should_sign_param_wrapper(name):
                 return should_sign_param(name=name)
         else:
@@ -299,7 +301,7 @@ class AwsSigningConfig(NativeResource):
         supplements it.  In particular, a header will get signed if and only if it returns true to both
         the internal check (skips x-amzn-trace-id, user-agent) and this function (if defined).
         """
-        return _awscrt.signing_config_get_should_sign_param(self._binding)
+        return self._priv_should_sign_cb    
 
     @property
     def use_double_uri_encode(self):
@@ -323,7 +325,7 @@ class AwsSigningConfig(NativeResource):
 
         BodySigningOn: The body will be signed and x-amz-content-sha256 will contain
         the value of the signature
-        
+
         UnsignedPayload: The body will not be signed, but x-amz-content-sha256 will contain
         the value UNSIGNED-PAYLOAD. This value is currently only used for Amazon S3.
         """

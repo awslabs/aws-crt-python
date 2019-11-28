@@ -136,7 +136,7 @@ class TestSigningConfig(NativeResourceTest):
         self.assertEqual(region, cfg.region)
         self.assertEqual(service, cfg.service)
         self.assertEqual(date, cfg.date)
-        #self.assertIs(should_sign_param, cfg.should_sign_param)
+        self.assertIs(should_sign_param, cfg.should_sign_param)
         self.assertEqual(use_double_uri_encode, cfg.use_double_uri_encode)
         self.assertEqual(should_normalize_uri_path, cfg.should_normalize_uri_path)
         self.assertEqual(body_signing_type, cfg.body_signing_type)       
@@ -168,7 +168,7 @@ class TestSigningConfig(NativeResourceTest):
                 if attr == name:
                     self.assertNotEqual(getattr(orig_cfg, attr), getattr(new_cfg, attr),
                                         "replaced value should not match original")
-                elif attr != 'should_sign_param':
+                else:
                     self.assertEqual(getattr(orig_cfg, attr), getattr(new_cfg, attr),
                                      "value should match original")
 
@@ -178,7 +178,7 @@ class TestSigningConfig(NativeResourceTest):
         _replace_attr('region', 'us-west-2')
         _replace_attr('service', 'aws-nothing-but-bees')
         _replace_attr('date', datetime.datetime(year=2001, month=1, day=1))
-        #_replace_attr('should_sign_param', lambda x: True)
+        _replace_attr('should_sign_param', lambda x: True)
         _replace_attr('use_double_uri_encode', False)
         _replace_attr('should_normalize_uri_path', True)
         _replace_attr('body_signing_type', awscrt.auth.AwsBodySigningConfigType.BodySigningOn)
@@ -188,7 +188,7 @@ class TestSigningConfig(NativeResourceTest):
         self.assertEqual('us-west-3', new_cfg.region)
         self.assertEqual('aws-slow-blinking', new_cfg.service)
         
-        #self.assertEqual(orig_cfg.should_sign_param, new_cfg.should_sign_param)
+        self.assertEqual(orig_cfg.should_sign_param, new_cfg.should_sign_param)
 
 
 # Test values copied from aws-c-auth/tests/aws-sig-v4-test-suite/get-vanilla"
