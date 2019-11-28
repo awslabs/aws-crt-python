@@ -159,9 +159,9 @@ class MqttConnectionTest(NativeResourceTest):
         puback = published.result(TIMEOUT)
 
         # receive message
-        rcv_topic, rcv_payload = received.result(TIMEOUT)
-        self.assertEqual(self.TEST_TOPIC, rcv_topic)
-        self.assertEqual(self.TEST_MSG, rcv_payload)
+        rcv = received.result(TIMEOUT)
+        self.assertEqual(self.TEST_TOPIC, rcv['topic'])
+        self.assertEqual(self.TEST_MSG, rcv['payload'])
 
         # disconnect
         connection.disconnect().result(TIMEOUT)
