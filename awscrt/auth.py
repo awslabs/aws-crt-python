@@ -171,6 +171,21 @@ class AwsSigningAlgorithm(IntEnum):
     SigV4QueryParam = 1
 
 
+class AwsBodySigningConfigType(IntEnum):
+    """Body Signing config
+
+    BodySigningOff: No attempts will be made to sign the payload, and no
+    x-amz-content-sha256 header will be added to the request.
+    BodySigningOn: The body will be signed and x-amz-content-sha256 will contain
+    the value of the signature
+    UnsignedPayload: The body will not be signed, but x-amz-content-sha256 will contain
+    the value UNSIGNED-PAYLOAD. This value is currently only used for Amazon S3.
+    """
+    BodySigningOff = 0
+    BodySigningOn = 1
+    UnsignedPayload = 2
+
+
 class AwsSigningConfig(NativeResource):
     """
     Configuration for use in AWS-related signing.
@@ -179,10 +194,10 @@ class AwsSigningConfig(NativeResource):
     It is good practice to use a new config for each signature, or the date might get too old.
     Naive dates (lacking timezone info) are assumed to be in local time.
     """
-    __slots__ = ()
+    __slots__ = ('_priv_should_sign_cb')
 
     _attributes = ('algorithm', 'credentials_provider', 'region', 'service', 'date', 'should_sign_param',
-                   'use_double_uri_encode', 'should_normalize_uri_path', 'sign_body')
+                   'use_double_uri_encode', 'should_normalize_uri_path', 'body_signing_type')
 
     def __init__(self,
                  algorithm,  # type: AwsSigningAlgorithm
@@ -193,7 +208,7 @@ class AwsSigningConfig(NativeResource):
                  should_sign_param=None,  # type: Optional[Callable[[str], bool]]
                  use_double_uri_encode=False,  # type: bool
                  should_normalize_uri_path=True,  # type: bool
-                 sign_body=True  # type: bool
+                 body_signing_type=AwsBodySigningConfigType.BodySigningOn  # type: AwsBodySigningConfigType
                  ):
         # type: (...) -> None
 
@@ -203,6 +218,7 @@ class AwsSigningConfig(NativeResource):
         assert isinstance_str(service)
         assert isinstance(date, datetime.datetime) or date is None
         assert callable(should_sign_param) or should_sign_param is None
+        assert isinstance(body_signing_type, AwsBodySigningConfigType)
 
         super(AwsSigningConfig, self).__init__()
 
@@ -220,6 +236,14 @@ class AwsSigningConfig(NativeResource):
                 epoch = datetime.datetime(1970, 1, 1, tzinfo=_utc)
                 timestamp = (date - epoch).total_seconds()
 
+        self._priv_should_sign_cb = should_sign_param
+
+        if should_sign_param is not None:
+            def should_sign_param_wrapper(name):
+                return should_sign_param(name=name)
+        else:
+            should_sign_param_wrapper = None
+
         self._binding = _awscrt.signing_config_new(
             algorithm,
             credentials_provider,
@@ -227,10 +251,10 @@ class AwsSigningConfig(NativeResource):
             service,
             date,
             timestamp,
-            should_sign_param,
+            should_sign_param_wrapper,
             use_double_uri_encode,
             should_normalize_uri_path,
-            sign_body)
+            body_signing_type)
 
     def replace(self, **kwargs):
         """
@@ -279,7 +303,7 @@ class AwsSigningConfig(NativeResource):
         supplements it.  In particular, a header will get signed if and only if it returns true to both
         the internal check (skips x-amzn-trace-id, user-agent) and this function (if defined).
         """
-        return _awscrt.signing_config_get_should_sign_param(self._binding)
+        return self._priv_should_sign_cb
 
     @property
     def use_double_uri_encode(self):
@@ -296,12 +320,18 @@ class AwsSigningConfig(NativeResource):
         return _awscrt.signing_config_get_should_normalize_uri_path(self._binding)
 
     @property
-    def sign_body(self):
+    def body_signing_type(self):
         """
-        If true adds the x-amz-content-sha256 header (with appropriate value) to the canonical request,
-        otherwise does nothing
+        BodySigningOff: No attempts will be made to sign the payload, and no
+        x-amz-content-sha256 header will be added to the request.
+
+        BodySigningOn: The body will be signed and x-amz-content-sha256 will contain
+        the value of the signature
+
+        UnsignedPayload: The body will not be signed, but x-amz-content-sha256 will contain
+        the value UNSIGNED-PAYLOAD. This value is currently only used for Amazon S3.
         """
-        return _awscrt.signing_config_get_sign_body(self._binding)
+        return AwsBodySigningConfigType(_awscrt.signing_config_get_body_signing_type(self._binding))
 
 
 def aws_sign_request(http_request, signing_config):

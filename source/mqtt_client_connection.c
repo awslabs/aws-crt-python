@@ -914,14 +914,12 @@ PyObject *aws_py_mqtt_client_connection_on_message(PyObject *self, PyObject *arg
         Py_RETURN_NONE;
     }
 
-    callback = PyWeakref_NewProxy(callback, NULL);
-    AWS_FATAL_ASSERT(callback);
-
     if (aws_mqtt_client_connection_set_on_any_publish_handler(py_connection->native, s_subscribe_callback, callback)) {
         Py_DECREF(callback);
         return PyErr_AwsLastError();
     }
 
+    Py_INCREF(callback);
     py_connection->on_any_publish = callback;
 
     Py_RETURN_NONE;

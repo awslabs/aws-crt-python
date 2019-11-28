@@ -107,14 +107,21 @@ class Connection(NativeResource):
                     If an existing session is resumed, the server remembers previous subscriptions
                     and sends mesages (with QoS1 or higher) that were published while the client was offline.
 
-            on_connection_interrupted (function): Optional callback with signature:
-                    (Connection, awscrt.exceptions.AwsCrtError) -> None
-                    Invoked when the MQTT connection is lost.
+            on_connection_interrupted (function): Optional callback invoked whenever the MQTT connection is lost.
                     The MQTT client will automatically attempt to reconnect.
+                    The function should take **kwargs and return nothing.
+                    The kwargs contain:
+                        'connection': This MQTT Connection
+                        'error': awscrt.exceptions.AwsCrtError
 
-            on_connection_resumed (function): Optional callback with signature:
-                    (Connection, ConnectReturnCode, session_present: bool) -> None
-                    Invoked when the MQTT connection is automatically resumed.
+            on_connection_resumed (function): Optional callback invoked whenever the MQTT connection
+                    is automatically resumed. Function should take **kwargs and return nothing.
+                    The kwargs contain:
+                        'connection': This MQTT Connection
+                        'return_code': ConnectReturnCode received from the server.
+                        'session_present': True if resuming existing session. False if new session.
+                                Note that the server has forgotten all previous subscriptions if this is False.
+                                Subscriptions can be re-established via resubscribe_existing_topics().
 
             reconnect_min_timeout_secs (int): Minimum time to wait between reconnect attempts.
                 Wait starts at min and doubles with each attempt until max is reached.
@@ -195,11 +202,14 @@ class Connection(NativeResource):
 
     def _on_connection_interrupted(self, error_code):
         if self._on_connection_interrupted_cb:
-            self._on_connection_interrupted_cb(self, awscrt.exceptions.from_code(error_code))
+            self._on_connection_interrupted_cb(connection=self, error=awscrt.exceptions.from_code(error_code))
 
     def _on_connection_resumed(self, return_code, session_present):
         if self._on_connection_resumed_cb:
-            self._on_connection_resumed_cb(self, ConnectReturnCode(return_code), session_present)
+            self._on_connection_resumed_cb(
+                connection=self,
+                error=connectionConnectReturnCode(return_code),
+                session_present=session_present)
 
     def _ws_handshake_transform(self, http_request_binding, http_headers_binding, native_userdata):
         if self._ws_handshake_transform_cb is None:
@@ -214,7 +224,7 @@ class Connection(NativeResource):
         http_request = HttpRequest._from_bindings(http_request_binding, http_headers_binding)
         transform_args = WebsocketHandshakeTransformArgs(self, http_request, future)
         try:
-            self._ws_handshake_transform_cb(transform_args)
+            self._ws_handshake_transform_cb(transform_args=transform_args)
         except Exception as e:
             # Call set_done() if user failed to do so before uncaught exception was raised,
             # there's a chance the callback wasn't callable and user has no idea we tried to hand them the baton.
@@ -289,11 +299,21 @@ class Connection(NativeResource):
 
     def subscribe(self, topic, qos, callback=None):
         """
-        callback: optional callback with signature (topic, message)
+        callback: Optional callback invoked when message received.
+                Function should take **kwargs and return nothing.
+                The kwargs contain:
+                    'topic' (str): Topic receiving message.
+                    'payload' (bytes): Payload of message.
         """
 
         future = Future()
         packet_id = 0
+
+        if callback:
+            def callback_wrapper(topic, payload):
+                callback(topic=topic, payload=payload)
+        else:
+            callback_wrapper = None
 
         def suback(packet_id, topic, qos, error_code):
             if error_code:
@@ -312,7 +332,8 @@ class Connection(NativeResource):
         try:
             assert callable(callback) or callback is None
             assert isinstance(qos, QoS)
-            packet_id = _awscrt.mqtt_client_connection_subscribe(self._binding, topic, qos.value, callback, suback)
+            packet_id = _awscrt.mqtt_client_connection_subscribe(
+                self._binding, topic, qos.value, callback_wrapper, suback)
         except Exception as e:
             future.set_exception(e)
 
@@ -320,10 +341,21 @@ class Connection(NativeResource):
 
     def on_message(self, callback):
         """
-        callback: callback with signature (topic, message), or None to disable.
+        callback: Callback invoked when message received, or None to disable.
+                Function should take **kwargs and return nothing.
+                The kwargs contain:
+                    'topic' (str): Topic receiving message.
+                    'payload' (bytes): Payload of message.
         """
         assert callable(callback) or callback is None
-        _awscrt.mqtt_client_connection_on_message(self._binding, callback)
+
+        if callback:
+            def callback_wrapper(topic, payload):
+                callback(topic=topic, payload=payload)
+        else:
+            callback_wrapper = None
+
+        _awscrt.mqtt_client_connection_on_message(self._binding, callback_wrapper)
 
     def unsubscribe(self, topic):
         future = Future()

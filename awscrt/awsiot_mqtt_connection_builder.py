@@ -237,8 +237,9 @@ def websockets_with_default_aws_signing(region, credentials_provider, websocket_
     """
     _check_required_kwargs(**kwargs)
 
-    def _should_sign_param(name):
+    def _should_sign_param(**kwargs):
         blacklist = ['x-amz-date', 'x-amz-security-token']
+        name = kwargs['name']
         return not (name.lower() in blacklist)
 
     def _sign_websocket_handshake_request(handshake_args):
@@ -250,7 +251,7 @@ def websockets_with_default_aws_signing(region, credentials_provider, websocket_
                 region=region,
                 service='iotdevicegateway',
                 should_sign_param=_should_sign_param,
-                sign_body=False)
+                body_signing_type=awscrt.auth.AwsBodySigningConfigType.BodySigningOff)
 
             signing_future = awscrt.auth.aws_sign_request(handshake_args.http_request, signing_config)
             signing_future.add_done_callback(lambda x: handshake_args.set_done(x.exception()))
