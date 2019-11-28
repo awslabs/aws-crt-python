@@ -206,7 +206,10 @@ class Connection(NativeResource):
 
     def _on_connection_resumed(self, return_code, session_present):
         if self._on_connection_resumed_cb:
-            self._on_connection_resumed_cb(connection=self, error=connectionConnectReturnCode(return_code), session_present=session_present)
+            self._on_connection_resumed_cb(
+                connection=self,
+                error=connectionConnectReturnCode(return_code),
+                session_present=session_present)
 
     def _ws_handshake_transform(self, http_request_binding, http_headers_binding, native_userdata):
         if self._ws_handshake_transform_cb is None:
@@ -329,7 +332,8 @@ class Connection(NativeResource):
         try:
             assert callable(callback) or callback is None
             assert isinstance(qos, QoS)
-            packet_id = _awscrt.mqtt_client_connection_subscribe(self._binding, topic, qos.value, callback_wrapper, suback)
+            packet_id = _awscrt.mqtt_client_connection_subscribe(
+                self._binding, topic, qos.value, callback_wrapper, suback)
         except Exception as e:
             future.set_exception(e)
 

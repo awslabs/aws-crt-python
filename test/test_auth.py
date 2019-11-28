@@ -139,7 +139,7 @@ class TestSigningConfig(NativeResourceTest):
         self.assertIs(should_sign_param, cfg.should_sign_param)
         self.assertEqual(use_double_uri_encode, cfg.use_double_uri_encode)
         self.assertEqual(should_normalize_uri_path, cfg.should_normalize_uri_path)
-        self.assertEqual(body_signing_type, cfg.body_signing_type)       
+        self.assertEqual(body_signing_type, cfg.body_signing_type)
 
     def test_replace(self):
         credentials_provider = awscrt.auth.AwsCredentialsProvider.new_static(
@@ -187,7 +187,7 @@ class TestSigningConfig(NativeResourceTest):
         new_cfg = orig_cfg.replace(region='us-west-3', service='aws-slow-blinking')
         self.assertEqual('us-west-3', new_cfg.region)
         self.assertEqual('aws-slow-blinking', new_cfg.service)
-        
+
         self.assertEqual(orig_cfg.should_sign_param, new_cfg.should_sign_param)
 
 

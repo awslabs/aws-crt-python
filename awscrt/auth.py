@@ -170,10 +170,11 @@ class AwsSigningAlgorithm(IntEnum):
     SigV4Header = 0
     SigV4QueryParam = 1
 
+
 class AwsBodySigningConfigType(IntEnum):
     """Body Signing config
-    
-    BodySigningOff: No attempts will be made to sign the payload, and no 
+
+    BodySigningOff: No attempts will be made to sign the payload, and no
     x-amz-content-sha256 header will be added to the request.
     BodySigningOn: The body will be signed and x-amz-content-sha256 will contain
     the value of the signature
@@ -183,6 +184,7 @@ class AwsBodySigningConfigType(IntEnum):
     BodySigningOff = 0
     BodySigningOn = 1
     UnsignedPayload = 2
+
 
 class AwsSigningConfig(NativeResource):
     """
@@ -301,7 +303,7 @@ class AwsSigningConfig(NativeResource):
         supplements it.  In particular, a header will get signed if and only if it returns true to both
         the internal check (skips x-amzn-trace-id, user-agent) and this function (if defined).
         """
-        return self._priv_should_sign_cb    
+        return self._priv_should_sign_cb
 
     @property
     def use_double_uri_encode(self):
@@ -320,7 +322,7 @@ class AwsSigningConfig(NativeResource):
     @property
     def body_signing_type(self):
         """
-        BodySigningOff: No attempts will be made to sign the payload, and no 
+        BodySigningOff: No attempts will be made to sign the payload, and no
         x-amz-content-sha256 header will be added to the request.
 
         BodySigningOn: The body will be signed and x-amz-content-sha256 will contain
