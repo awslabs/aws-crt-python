@@ -251,7 +251,7 @@ def websockets_with_default_aws_signing(region, credentials_provider, websocket_
                 region=region,
                 service='iotdevicegateway',
                 should_sign_param=_should_sign_param,
-                sign_body=False)
+                body_signing_type=awscrt.auth.AwsBodySigningConfigType.BodySigningOff)
 
             signing_future = awscrt.auth.aws_sign_request(handshake_args.http_request, signing_config)
             signing_future.add_done_callback(lambda x: handshake_args.set_done(x.exception()))

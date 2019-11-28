@@ -84,10 +84,10 @@ PyObject *aws_py_signing_config_new(PyObject *self, PyObject *args) {
     PyObject *py_should_sign_param_fn;
     PyObject *py_use_double_uri_encode;
     PyObject *py_should_normalize_uri_path;
-    PyObject *py_sign_body;
+    int py_body_signing_config;
     if (!PyArg_ParseTuple(
             args,
-            "iOs#s#OdOOOO",
+            "iOs#s#OdOOOi",
             &algorithm,
             &py_credentials_provider,
             &region.ptr,
@@ -99,7 +99,7 @@ PyObject *aws_py_signing_config_new(PyObject *self, PyObject *args) {
             &py_should_sign_param_fn,
             &py_use_double_uri_encode,
             &py_should_normalize_uri_path,
-            &py_sign_body)) {
+            &py_body_signing_config)) {
 
         return NULL;
     }
@@ -123,7 +123,7 @@ PyObject *aws_py_signing_config_new(PyObject *self, PyObject *args) {
     binding->native.algorithm = algorithm;
     binding->native.use_double_uri_encode = PyObject_IsTrue(py_use_double_uri_encode);
     binding->native.should_normalize_uri_path = PyObject_IsTrue(py_should_normalize_uri_path);
-    binding->native.sign_body = PyObject_IsTrue(py_sign_body);
+    binding->native.body_signing_type = py_body_signing_config;
 
     /* credentials_provider */
     binding->native.credentials_provider = aws_py_get_credentials_provider(py_credentials_provider);
@@ -271,11 +271,11 @@ PyObject *aws_py_signing_config_get_should_normalize_uri_path(PyObject *self, Py
     return PyBool_FromLong(binding->native.should_normalize_uri_path);
 }
 
-PyObject *aws_py_signing_config_get_sign_body(PyObject *self, PyObject *args) {
+PyObject *aws_py_signing_config_get_body_signing_type(PyObject *self, PyObject *args) {
     struct config_binding *binding = s_common_get(self, args);
     if (!binding) {
         return NULL;
     }
 
-    return PyBool_FromLong(binding->native.sign_body);
+    return PyLong_FromLong(binding->native.body_signing_type);
 }

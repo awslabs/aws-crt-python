@@ -157,7 +157,7 @@ class HttpStreamBase(NativeResource):
 
     def _on_body(self, chunk):
         if self._on_body_cb:
-            self._on_body_cb(stream=self, chunk=data)
+            self._on_body_cb(stream=self, chunk=chunk)
 
 
 class HttpClientStream(HttpStreamBase):
@@ -184,7 +184,7 @@ class HttpClientStream(HttpStreamBase):
         self._response_status_code = status_code
 
         if self._on_response_cb:
-            self._on_response_cb(self, status_code=status_code, headers=name_value_pairs)
+            self._on_response_cb(status_code=status_code, headers=name_value_pairs)
 
     def _on_complete(self, error_code):
         if error_code == 0:

@@ -36,7 +36,7 @@ PyObject *aws_py_signing_config_get_date(PyObject *self, PyObject *args);
 PyObject *aws_py_signing_config_get_should_sign_param(PyObject *self, PyObject *args);
 PyObject *aws_py_signing_config_get_use_double_uri_encode(PyObject *self, PyObject *args);
 PyObject *aws_py_signing_config_get_should_normalize_uri_path(PyObject *self, PyObject *args);
-PyObject *aws_py_signing_config_get_sign_body(PyObject *self, PyObject *args);
+PyObject *aws_py_signing_config_get_body_signing_type(PyObject *self, PyObject *args);
 
 PyObject *aws_py_sign_request_aws(PyObject *self, PyObject *args);
 

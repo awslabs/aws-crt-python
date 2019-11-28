@@ -170,6 +170,19 @@ class AwsSigningAlgorithm(IntEnum):
     SigV4Header = 0
     SigV4QueryParam = 1
 
+class AwsBodySigningConfigType(IntEnum):
+    """Body Signing config
+    
+    BodySigningOff: No attempts will be made to sign the payload, and no 
+    x-amz-content-sha256 header will be added to the request.
+    BodySigningOn: The body will be signed and x-amz-content-sha256 will contain
+    the value of the signature
+    UnsignedPayload: The body will not be signed, but x-amz-content-sha256 will contain
+    the value UNSIGNED-PAYLOAD. This value is currently only used for Amazon S3.
+    """
+    BodySigningOff = 0
+    BodySigningOn = 1
+    UnsignedPayload = 2
 
 class AwsSigningConfig(NativeResource):
     """
@@ -182,7 +195,7 @@ class AwsSigningConfig(NativeResource):
     __slots__ = ()
 
     _attributes = ('algorithm', 'credentials_provider', 'region', 'service', 'date', 'should_sign_param',
-                   'use_double_uri_encode', 'should_normalize_uri_path', 'sign_body')
+                   'use_double_uri_encode', 'should_normalize_uri_path', 'body_signing_type')
 
     def __init__(self,
                  algorithm,  # type: AwsSigningAlgorithm
@@ -193,7 +206,7 @@ class AwsSigningConfig(NativeResource):
                  should_sign_param=None,  # type: Optional[Callable[[str], bool]]
                  use_double_uri_encode=False,  # type: bool
                  should_normalize_uri_path=True,  # type: bool
-                 sign_body=True  # type: bool
+                 body_signing_type=AwsBodySigningConfigType.BodySigningOn  # type: AwsBodySigningConfigType
                  ):
         # type: (...) -> None
 
@@ -203,6 +216,7 @@ class AwsSigningConfig(NativeResource):
         assert isinstance_str(service)
         assert isinstance(date, datetime.datetime) or date is None
         assert callable(should_sign_param) or should_sign_param is None
+        assert isinstance(body_signing_type, AwsBodySigningConfigType)
 
         super(AwsSigningConfig, self).__init__()
 
@@ -236,7 +250,7 @@ class AwsSigningConfig(NativeResource):
             should_sign_param_wrapper,
             use_double_uri_encode,
             should_normalize_uri_path,
-            sign_body)
+            body_signing_type)
 
     def replace(self, **kwargs):
         """
@@ -302,12 +316,18 @@ class AwsSigningConfig(NativeResource):
         return _awscrt.signing_config_get_should_normalize_uri_path(self._binding)
 
     @property
-    def sign_body(self):
+    def body_signing_type(self):
         """
-        If true adds the x-amz-content-sha256 header (with appropriate value) to the canonical request,
-        otherwise does nothing
+        BodySigningOff: No attempts will be made to sign the payload, and no 
+        x-amz-content-sha256 header will be added to the request.
+
+        BodySigningOn: The body will be signed and x-amz-content-sha256 will contain
+        the value of the signature
+        
+        UnsignedPayload: The body will not be signed, but x-amz-content-sha256 will contain
+        the value UNSIGNED-PAYLOAD. This value is currently only used for Amazon S3.
         """
-        return _awscrt.signing_config_get_sign_body(self._binding)
+        return AwsBodySigningConfigType(_awscrt.signing_config_get_body_signing_type(self._binding))
 
 
 def aws_sign_request(http_request, signing_config):
