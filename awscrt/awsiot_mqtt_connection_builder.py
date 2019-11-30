@@ -242,8 +242,8 @@ def websockets_with_default_aws_signing(region, credentials_provider, websocket_
         name = kwargs['name']
         return not (name.lower() in blacklist)
 
-    def _sign_websocket_handshake_request(handshake_args):
-        # handshake_args need to know when transform is done
+    def _sign_websocket_handshake_request(transform_args):
+        # transform_args need to know when transform is done
         try:
             signing_config = awscrt.auth.AwsSigningConfig(
                 algorithm=awscrt.auth.AwsSigningAlgorithm.SigV4QueryParam,
@@ -253,10 +253,10 @@ def websockets_with_default_aws_signing(region, credentials_provider, websocket_
                 should_sign_param=_should_sign_param,
                 body_signing_type=awscrt.auth.AwsBodySigningConfigType.BodySigningOff)
 
-            signing_future = awscrt.auth.aws_sign_request(handshake_args.http_request, signing_config)
-            signing_future.add_done_callback(lambda x: handshake_args.set_done(x.exception()))
+            signing_future = awscrt.auth.aws_sign_request(transform_args.http_request, signing_config)
+            signing_future.add_done_callback(lambda x: transform_args.set_done(x.exception()))
         except Exception as e:
-            handshake_args.set_done(e)
+            transform_args.set_done(e)
 
     return websockets_with_custom_handshake(_sign_websocket_handshake_request, websocket_proxy_options, **kwargs)
 

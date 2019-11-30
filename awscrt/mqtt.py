@@ -208,7 +208,7 @@ class Connection(NativeResource):
         if self._on_connection_resumed_cb:
             self._on_connection_resumed_cb(
                 connection=self,
-                error=connectionConnectReturnCode(return_code),
+                error=ConnectReturnCode(return_code),
                 session_present=session_present)
 
     def _ws_handshake_transform(self, http_request_binding, http_headers_binding, native_userdata):
