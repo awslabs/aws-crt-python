@@ -243,7 +243,6 @@ def websockets_with_default_aws_signing(region, credentials_provider, websocket_
         return not (name.lower() in blacklist)
 
     def _sign_websocket_handshake_request(transform_args):
-        print("inside callback\n")
         # transform_args need to know when transform is done
         try:
             signing_config = awscrt.auth.AwsSigningConfig(

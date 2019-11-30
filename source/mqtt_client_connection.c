@@ -572,7 +572,7 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
         if (!aws_py_http_proxy_options_init(&proxy_options, ws_proxy_options_py)) {
             return NULL;
         }
-        
+
         if (aws_mqtt_client_connection_set_websocket_proxy_options(py_connection->native, &proxy_options)) {
             return PyErr_AwsLastError();
         }
