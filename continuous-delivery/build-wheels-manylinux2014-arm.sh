@@ -14,5 +14,8 @@ auditwheel repair --plat manylinux2014_aarch64 dist/awscrt-*cp37*.whl
 /usr/local/bin/python3.8 setup.py sdist bdist_wheel
 auditwheel repair --plat manylinux2014_aarch64 dist/awscrt-*cp38*.whl
 
+rm dist/*.whl
+cp -r wheelhouse/* dist/
+
 #now you just need to run twine (that's in a different script)
 
