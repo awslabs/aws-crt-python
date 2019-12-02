@@ -34,10 +34,10 @@ parser.add_argument('--root-ca', help="File path to root certificate authority, 
 
 io.init_logging(LogLevel.Trace, 'stderr')
 
-def on_connection_interrupted(connection, error):
+def on_connection_interrupted(connection, error, **kwargs):
     print("Connection has been interrupted with error", error)
 
-def on_connection_resumed(connection, return_code, session_present):
+def on_connection_resumed(connection, return_code, session_present, **kwargs):
     print("Connection has been resumed with return code", return_code, "and session present:", session_present)
 
     if not session_present:
@@ -59,8 +59,8 @@ def on_connection_resumed(connection, return_code, session_present):
 
 receive_results = {}
 receive_event = threading.Event()
-def on_receive_message(**kwargs):
-    receive_results.update(kwargs)
+def on_receive_message(topic, payload, **kwargs):
+    receive_results.update(locals())
     receive_event.set()
 
 # Run

@@ -237,12 +237,11 @@ def websockets_with_default_aws_signing(region, credentials_provider, websocket_
     """
     _check_required_kwargs(**kwargs)
 
-    def _should_sign_param(**kwargs):
+    def _should_sign_param(name, **kwargs):
         blacklist = ['x-amz-date', 'x-amz-security-token']
-        name = kwargs['name']
         return not (name.lower() in blacklist)
 
-    def _sign_websocket_handshake_request(transform_args):
+    def _sign_websocket_handshake_request(transform_args, **kwargs):
         # transform_args need to know when transform is done
         try:
             signing_config = awscrt.auth.AwsSigningConfig(

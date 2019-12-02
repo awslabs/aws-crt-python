@@ -171,7 +171,7 @@ def on_connection_shutdown(shutdown_future):
 
 
 # invoked by the http request call as the response body is received in chunks
-def on_incoming_body(http_stream, chunk):
+def on_incoming_body(http_stream, chunk, **kwargs):
     output.write(chunk)
 
 
@@ -232,7 +232,7 @@ if args.header:
 # invoked as soon as the response headers are received
 
 
-def response_received_cb(http_stream, status_code, headers):
+def response_received_cb(http_stream, status_code, headers, **kwargs):
     if args.include:
         print('Response Code: {}'.format(status_code))
         print_header_list(headers)

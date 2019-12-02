@@ -109,19 +109,19 @@ class Connection(NativeResource):
 
             on_connection_interrupted (function): Optional callback invoked whenever the MQTT connection is lost.
                     The MQTT client will automatically attempt to reconnect.
-                    The function should take **kwargs and return nothing.
-                    The kwargs contain:
-                        'connection': This MQTT Connection
-                        'error': awscrt.exceptions.AwsCrtError
+                    The function should take the following arguments return nothing.
+                        connection (Connection): This MQTT Connection.
+                        error (awscrt.exceptions.AwsCrtError): Exception which caused connection loss.
+                        **kwargs (dict): Forward-compatibility kwargs.
 
             on_connection_resumed (function): Optional callback invoked whenever the MQTT connection
-                    is automatically resumed. Function should take **kwargs and return nothing.
-                    The kwargs contain:
-                        'connection': This MQTT Connection
-                        'return_code': ConnectReturnCode received from the server.
-                        'session_present': True if resuming existing session. False if new session.
+                    is automatically resumed. Function should take the following arguments and return nothing:
+                        connection (Connection): This MQTT Connection
+                        return_code (ConnectReturnCode): Connect return code received from the server.
+                        session_present (bool): True if resuming existing session. False if new session.
                                 Note that the server has forgotten all previous subscriptions if this is False.
                                 Subscriptions can be re-established via resubscribe_existing_topics().
+                        **kwargs (dict): Forward-compatibility kwargs.
 
             reconnect_min_timeout_secs (int): Minimum time to wait between reconnect attempts.
                 Wait starts at min and doubles with each attempt until max is reached.
@@ -155,11 +155,14 @@ class Connection(NativeResource):
             websocket_proxy_options: optional awscrt.http.HttpProxyOptions for
                     websocket connections.
 
-            websocket_handshake_transform: optional function with signature:
-                    (WebsocketHandshakeTransformArgs) -> None
-                    If provided, function is called each time a websocket connection
-                    is attempted. The function may modify the websocket handshake
-                    request. See WebsocketHandshakeTransformArgs for more info.
+            websocket_handshake_transform: optional function to transform websocket handshake request.
+                    If provided, function is called each time a websocket connection is attempted.
+                    The function may modify the request before it is sent to the server.
+                    See WebsocketHandshakeTransformArgs for more info.
+                    Function should take the following arguments and return nothing:
+                        transform_args (WebsocketHandshakeTransformArgs): Contains request to be transformed.
+                                Function must call transform_args.done() when complete.
+                        **kwargs (dict): Forward-compatibility kwargs.
         """
 
         assert isinstance(client, Client)
@@ -300,10 +303,10 @@ class Connection(NativeResource):
     def subscribe(self, topic, qos, callback=None):
         """
         callback: Optional callback invoked when message received.
-                Function should take **kwargs and return nothing.
-                The kwargs contain:
-                    'topic' (str): Topic receiving message.
-                    'payload' (bytes): Payload of message.
+                Function should take the following arguments and return nothing:
+                    topic (str): Topic receiving message.
+                    payload (bytes): Payload of message.
+                    **kwargs (dict): Forward-compatibility kwargs.
         """
 
         future = Future()
@@ -342,10 +345,10 @@ class Connection(NativeResource):
     def on_message(self, callback):
         """
         callback: Callback invoked when message received, or None to disable.
-                Function should take **kwargs and return nothing.
-                The kwargs contain:
-                    'topic' (str): Topic receiving message.
-                    'payload' (bytes): Payload of message.
+                Function should take the following arguments and return nothing:
+                    topic (str): Topic receiving message.
+                    payload (bytes): Payload of message.
+                    **kwargs (dict): Forward-compatibility kwargs.
         """
         assert callable(callback) or callback is None
 

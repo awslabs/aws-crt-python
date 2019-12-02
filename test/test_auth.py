@@ -139,7 +139,7 @@ class TestSigningConfig(NativeResourceTest):
         self.assertIs(should_sign_param, cfg.should_sign_param)
         self.assertEqual(use_double_uri_encode, cfg.use_double_uri_encode)
         self.assertEqual(should_normalize_uri_path, cfg.should_normalize_uri_path)
-        self.assertEqual(body_signing_type, cfg.body_signing_type)
+        self.assertIs(body_signing_type, cfg.body_signing_type)
 
     def test_replace(self):
         credentials_provider = awscrt.auth.AwsCredentialsProvider.new_static(

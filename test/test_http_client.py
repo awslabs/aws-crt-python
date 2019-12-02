@@ -46,12 +46,12 @@ class Response(object):
         self.headers = None
         self.body = bytearray()
 
-    def on_response(self, **kwargs):
-        self.status_code = kwargs['status_code']
-        self.headers = HttpHeaders(kwargs['headers'])
+    def on_response(self, http_stream, status_code, headers, **kwargs):
+        self.status_code = status_code
+        self.headers = HttpHeaders(headers)
 
-    def on_body(self, **kwargs):
-        self.body.extend(kwargs['chunk'])
+    def on_body(self, http_stream, chunk, **kwargs):
+        self.body.extend(chunk)
 
 
 class TestRequestHandler(SimpleHTTPRequestHandler):
