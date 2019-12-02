@@ -13,7 +13,9 @@ phases:
       - mkdir dist
       - cp -r $CODEBUILD_SRC_DIR_manylinux1_x86_64/dist/* dist/
       - cp -r $CODEBUILD_SRC_DIR_manylinux1_x86/dist/* dist/
-  post_build:
+      - cp -r $CODEBUILD_SRC_DIR_manylinux2014_arm/* dist/
+      - cp -r $CODEBUILD_SRC_DIR_manylinux2014_x86_64/* dist/  
+    post_build:
     commands:
       - echo Build completed on `date`
 
