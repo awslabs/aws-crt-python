@@ -60,7 +60,8 @@ def on_connection_resumed(connection, return_code, session_present, **kwargs):
 receive_results = {}
 receive_event = threading.Event()
 def on_receive_message(topic, payload, **kwargs):
-    receive_results.update(locals())
+    receive_results['topic'] = topic
+    receive_results['payload'] = payload
     receive_event.set()
 
 # Run
