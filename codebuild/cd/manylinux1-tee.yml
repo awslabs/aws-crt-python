@@ -10,11 +10,12 @@ phases:
   build:
     commands:
       - echo Build started on `date`
-      - mkdir dist
-      - cp -r $CODEBUILD_SRC_DIR_manylinux1_x86_64/dist/* dist/
-      - cp -r $CODEBUILD_SRC_DIR_manylinux1_x86/dist/* dist/
-      - cp -r $CODEBUILD_SRC_DIR_manylinux2014_arm/* dist/
-      - cp -r $CODEBUILD_SRC_DIR_manylinux2014_x86_64/* dist/
+      - mkdir $CODEBUILD_SRC_DIR/dist
+      - cp -r $CODEBUILD_SRC_DIR_manylinux1_x86_64/dist/* $CODEBUILD_SRC_DIR/dist/
+      - cp -r $CODEBUILD_SRC_DIR_manylinux1_x86/dist/* $CODEBUILD_SRC_DIR/dist/
+      - cp -r $CODEBUILD_SRC_DIR_manylinux2014_arm/* $CODEBUILD_SRC_DIR/dist/
+      - cp -r $CODEBUILD_SRC_DIR_manylinux2014_x86_64/* $CODEBUILD_SRC_DIR/dist/
+      - ls $CODEBUILD_SRC_DIR/dist/  
     post_build:
     commands:
       - echo Build completed on `date`
