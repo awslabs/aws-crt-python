@@ -16,7 +16,7 @@ import awscrt.auth
 import awscrt.io
 import datetime
 import os
-from test import NativeResourceTest
+from test import NativeResourceTest, TIMEOUT
 
 EXAMPLE_ACCESS_KEY_ID = 'example_access_key_id'
 EXAMPLE_SECRET_ACCESS_KEY = 'example_secret_access_key'
@@ -65,7 +65,7 @@ class TestProvider(NativeResourceTest):
             EXAMPLE_SESSION_TOKEN)
 
         future = provider.get_credentials()
-        credentials = future.result()
+        credentials = future.result(TIMEOUT)
 
         self.assertEqual(EXAMPLE_ACCESS_KEY_ID, credentials.access_key_id)
         self.assertEqual(EXAMPLE_SECRET_ACCESS_KEY, credentials.secret_access_key)
@@ -80,7 +80,7 @@ class TestProvider(NativeResourceTest):
     #         self.example_secret_access_key)
 
     #     future = provider.get_credentials()
-    #     credentials = future.result()
+    #     credentials = future.result(TIMEOUT)
 
     #     self.assertEqual(self.example_access_key_id, credentials.access_key_id)
     #     self.assertEqual(self.example_secret_access_key, credentials.secret_access_key)
@@ -96,7 +96,7 @@ class TestProvider(NativeResourceTest):
         provider = awscrt.auth.AwsCredentialsProvider.new_default_chain(bootstrap)
 
         future = provider.get_credentials()
-        credentials = future.result()
+        credentials = future.result(TIMEOUT)
 
         self.assertEqual('credentials_test_access_key_id', credentials.access_key_id)
         self.assertEqual('credentials_test_secret_access_key', credentials.secret_access_key)
@@ -234,7 +234,7 @@ class TestSigner(NativeResourceTest):
 
         signing_future = awscrt.auth.aws_sign_request(http_request, signing_config)
 
-        signing_result = signing_future.result(10)
+        signing_result = signing_future.result(TIMEOUT)
 
         self.assertIs(http_request, signing_result)  # should be same object
 

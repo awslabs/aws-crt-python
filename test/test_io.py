@@ -13,7 +13,7 @@
 
 from __future__ import absolute_import
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions
-from test import NativeResourceTest
+from test import NativeResourceTest, TIMEOUT
 import unittest
 
 
@@ -32,10 +32,15 @@ class DefaultHostResolverTest(NativeResourceTest):
 
 
 class ClientBootstrapTest(NativeResourceTest):
-    def test_init(self):
+    def test_create_destroy(self):
         event_loop_group = EventLoopGroup()
         host_resolver = DefaultHostResolver(event_loop_group)
         bootstrap = ClientBootstrap(event_loop_group, host_resolver)
+
+        # ensure shutdown_event fires
+        bootstrap_shutdown_event = bootstrap.shutdown_event
+        del bootstrap
+        self.assertTrue(bootstrap_shutdown_event.wait(TIMEOUT))
 
 
 class ClientTlsContextTest(NativeResourceTest):

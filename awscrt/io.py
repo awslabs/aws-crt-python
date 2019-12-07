@@ -16,6 +16,7 @@ import _awscrt
 from awscrt import NativeResource, isinstance_str
 from enum import IntEnum
 import io
+import threading
 
 
 class LogLevel(IntEnum):
@@ -75,7 +76,7 @@ class DefaultHostResolver(HostResolverBase):
 
 
 class ClientBootstrap(NativeResource):
-    __slots__ = ()
+    __slots__ = ('shutdown_event')
 
     def __init__(self, event_loop_group, host_resolver):
         assert isinstance(event_loop_group, EventLoopGroup)
@@ -83,7 +84,13 @@ class ClientBootstrap(NativeResource):
 
         super(ClientBootstrap, self).__init__()
 
-        self._binding = _awscrt.client_bootstrap_new(event_loop_group, host_resolver)
+        shutdown_event = threading.Event()
+
+        def on_shutdown():
+            shutdown_event.set()
+
+        self.shutdown_event = shutdown_event
+        self._binding = _awscrt.client_bootstrap_new(event_loop_group, host_resolver, on_shutdown)
 
 
 def _read_binary_file(filepath):

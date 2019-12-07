@@ -20,6 +20,7 @@ import time
 import types
 import unittest
 
+TIMEOUT = 10.0
 
 class NativeResourceTest(unittest.TestCase):
     """
@@ -33,8 +34,9 @@ class NativeResourceTest(unittest.TestCase):
         gc.collect()
 
         # Native resources might need a few more ticks to finish cleaning themselves up.
-        if NativeResource._living:
-            time.sleep(1)
+        wait_until = time.time() + TIMEOUT
+        while NativeResource._living and time.time() < wait_until:
+            time.sleep(0.1)
 
         # Print out debugging info on leaking resources
         if NativeResource._living:
