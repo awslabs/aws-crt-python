@@ -22,6 +22,7 @@ import unittest
 
 TIMEOUT = 10.0
 
+
 class NativeResourceTest(unittest.TestCase):
     """
     Test fixture asserts there are no living NativeResources when a test completes.
