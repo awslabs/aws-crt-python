@@ -252,7 +252,7 @@ struct client_bootstrap_binding {
     PyObject *shutdown_complete;
 };
 
-/* Fires after the last hold on client bootstrap has been released and it's finished shutting down. */
+/* Fires after the native client bootstrap finishes shutting down. */
 static void s_client_bootstrap_on_shutdown_complete(void *user_data) {
     struct client_bootstrap_binding *bootstrap = user_data;
     PyObject *shutdown_complete = bootstrap->shutdown_complete;
@@ -279,12 +279,12 @@ static void s_client_bootstrap_on_shutdown_complete(void *user_data) {
     /*************** GIL RELEASE ***************/
 }
 
-/* Fires when python capsule is GC'd. */
+/* Fires when python capsule is GC'd.
+ * Note that bootstrap shutdown is async, we can't release dependencies until it completes */
 static void s_client_bootstrap_capsule_destructor(PyObject *bootstrap_capsule) {
     struct client_bootstrap_binding *bootstrap =
         PyCapsule_GetPointer(bootstrap_capsule, s_capsule_name_client_bootstrap);
 
-    /* Release native bootstrap. We don't delete the binding until on_shutdown_complete fires */
     aws_client_bootstrap_release(bootstrap->native);
 }
 
