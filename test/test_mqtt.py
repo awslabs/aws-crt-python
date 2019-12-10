@@ -23,6 +23,7 @@ import os
 import unittest
 import boto3
 import botocore.exceptions
+import shutil
 import tempfile
 import time
 import uuid
@@ -192,20 +193,25 @@ class MqttBuilderTest(NativeResourceTest):
         bootstrap = ClientBootstrap(elg, resolver)
 
         # test "from path" builder by writing secrets to tempfiles
-        with tempfile.NamedTemporaryFile() as cert_file:
-            with tempfile.NamedTemporaryFile() as key_file:
+        tmp_dirpath = tempfile.mkdtemp()
+        try:
+            cert_filepath = os.path.join(tmp_dirpath, 'cert')
+            with open(cert_filepath, 'wb') as cert_file:
                 cert_file.write(config.cert)
-                cert_file.flush()
 
+            key_filepath = os.path.join(tmp_dirpath, 'key')
+            with open(key_filepath, 'wb') as key_file:
                 key_file.write(config.key)
-                key_file.flush()
 
-                connection = awsiot_mqtt_connection_builder.mtls_from_path(
-                    cert_filepath=cert_file.name,
-                    pri_key_filepath=key_file.name,
-                    endpoint=config.endpoint,
-                    client_id=create_client_id(),
-                    client_bootstrap=bootstrap)
+            connection = awsiot_mqtt_connection_builder.mtls_from_path(
+                cert_filepath=cert_filepath,
+                pri_key_filepath=key_filepath,
+                endpoint=config.endpoint,
+                client_id=create_client_id(),
+                client_bootstrap=bootstrap)
+
+        finally:
+            shutil.rmtree(tmp_dirpath)
 
         self._test_connection(connection)
 

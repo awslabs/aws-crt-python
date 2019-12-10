@@ -249,16 +249,43 @@ struct client_bootstrap_binding {
     /* Dependencies that must outlive this */
     PyObject *event_loop_group;
     PyObject *host_resolver;
+    PyObject *shutdown_complete;
 };
 
-static void s_client_bootstrap_destructor(PyObject *bootstrap_capsule) {
+/* Fires after the native client bootstrap finishes shutting down. */
+static void s_client_bootstrap_on_shutdown_complete(void *user_data) {
+    struct client_bootstrap_binding *bootstrap = user_data;
+    PyObject *shutdown_complete = bootstrap->shutdown_complete;
+
+    /*************** GIL ACQUIRE ***************/
+    PyGILState_STATE state = PyGILState_Ensure();
+
+    Py_XDECREF(bootstrap->host_resolver);
+    Py_XDECREF(bootstrap->event_loop_group);
+
+    aws_mem_release(aws_py_get_allocator(), bootstrap);
+
+    if (shutdown_complete) {
+        PyObject *result = PyObject_CallFunction(shutdown_complete, "()");
+        if (result) {
+            Py_DECREF(result);
+        } else {
+            PyErr_WriteUnraisable(PyErr_Occurred());
+        }
+        Py_DECREF(shutdown_complete);
+    }
+
+    PyGILState_Release(state);
+    /*************** GIL RELEASE ***************/
+}
+
+/* Fires when python capsule is GC'd.
+ * Note that bootstrap shutdown is async, we can't release dependencies until it completes */
+static void s_client_bootstrap_capsule_destructor(PyObject *bootstrap_capsule) {
     struct client_bootstrap_binding *bootstrap =
         PyCapsule_GetPointer(bootstrap_capsule, s_capsule_name_client_bootstrap);
-    assert(bootstrap);
-    Py_DECREF(bootstrap->host_resolver);
-    Py_DECREF(bootstrap->event_loop_group);
+
     aws_client_bootstrap_release(bootstrap->native);
-    aws_mem_release(aws_py_get_allocator(), bootstrap);
 }
 
 PyObject *aws_py_client_bootstrap_new(PyObject *self, PyObject *args) {
@@ -268,8 +295,9 @@ PyObject *aws_py_client_bootstrap_new(PyObject *self, PyObject *args) {
 
     PyObject *elg_py;
     PyObject *host_resolver_py;
+    PyObject *shutdown_complete_py;
 
-    if (!PyArg_ParseTuple(args, "OO", &elg_py, &host_resolver_py)) {
+    if (!PyArg_ParseTuple(args, "OOO", &elg_py, &host_resolver_py, &shutdown_complete_py)) {
         return NULL;
     }
 
@@ -291,15 +319,22 @@ PyObject *aws_py_client_bootstrap_new(PyObject *self, PyObject *args) {
 
     /* From hereon, we need to clean up if errors occur */
 
-    bootstrap->native = aws_client_bootstrap_new(allocator, elg, host_resolver, NULL);
-    if (!bootstrap->native) {
-        PyErr_SetAwsLastError();
-        goto bootstrap_new_failed;
+    PyObject *capsule =
+        PyCapsule_New(bootstrap, s_capsule_name_client_bootstrap, s_client_bootstrap_capsule_destructor);
+    if (!capsule) {
+        goto error;
     }
 
-    PyObject *capsule = PyCapsule_New(bootstrap, s_capsule_name_client_bootstrap, s_client_bootstrap_destructor);
-    if (!capsule) {
-        goto capsule_new_failed;
+    struct aws_client_bootstrap_options bootstrap_options = {
+        .event_loop_group = elg,
+        .host_resolver = host_resolver,
+        .on_shutdown_complete = s_client_bootstrap_on_shutdown_complete,
+        .user_data = bootstrap,
+    };
+    bootstrap->native = aws_client_bootstrap_new(allocator, &bootstrap_options);
+    if (!bootstrap->native) {
+        PyErr_SetAwsLastError();
+        goto error;
     }
 
     /* From hereon, nothing will fail */
@@ -310,12 +345,17 @@ PyObject *aws_py_client_bootstrap_new(PyObject *self, PyObject *args) {
     bootstrap->host_resolver = host_resolver_py;
     Py_INCREF(host_resolver_py);
 
+    bootstrap->shutdown_complete = shutdown_complete_py;
+    Py_INCREF(bootstrap->shutdown_complete);
+
     return capsule;
 
-capsule_new_failed:
-    aws_client_bootstrap_release(bootstrap->native);
-bootstrap_new_failed:
-    aws_mem_release(allocator, bootstrap);
+error:
+    if (capsule) {
+        Py_DECREF(capsule);
+    } else {
+        aws_mem_release(allocator, bootstrap);
+    }
     return NULL;
 }
 
