@@ -20,12 +20,9 @@ class TestAppExit(unittest.TestCase):
     """Test that the application can exit with at any moment without native code somehow crashing python"""
 
     def _run_to_stage(self, module_name, stage):
-        args = "{python} -m {module_name} {stage}".format(
-            python=sys.executable,
-            module_name=module_name,
-            stage=stage.name)
+        args = [sys.executable, '-m', module_name, stage.name]
 
-        print(args)
+        print(subprocess.list2cmdline(args))
 
         process = subprocess.Popen(
             args,
