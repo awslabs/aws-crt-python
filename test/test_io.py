@@ -24,6 +24,12 @@ class EventLoopGroupTest(NativeResourceTest):
     def test_1_thread(self):
         event_loop_group = EventLoopGroup(1)
 
+    def test_shutdown_complete(self):
+        event_loop_group = EventLoopGroup()
+        shutdown_event = event_loop_group.shutdown_event
+        del event_loop_group
+        self.assertTrue(shutdown_event.wait(TIMEOUT))
+
 
 class DefaultHostResolverTest(NativeResourceTest):
     def test_init(self):
