@@ -16,6 +16,7 @@ import awscrt.http
 import awscrt.io
 import enum
 import sys
+import threading
 
 # Application for use with the test_appexit unit tests.
 # Performs an HTTP request and shuts everything down,
@@ -31,6 +32,7 @@ Stage = enum.Enum('Stage', [
     'HttpClientConnected',
     'HttpStreamStart',
     'HttpStreamReceivingBody',
+    'HttpStreamReceivingBodyMainThread',
     'HttpStreamDone',
     'HttpConnectionClose',
     'HttpConnectionDone',
@@ -43,7 +45,7 @@ Stage = enum.Enum('Stage', [
 
 
 EXIT_STAGE = Stage.Done
-TIMEOUT = 10.0
+TIMEOUT = 30.0
 REQUEST_HOST = 's3.amazonaws.com'
 REQUEST_PATH = '/code-sharing-aws-crt/elastigirl.png'
 REQUEST_PORT = 443
@@ -98,11 +100,19 @@ if __name__ == '__main__':
     request = awscrt.http.HttpRequest(path=REQUEST_PATH)
     request.headers.add('Host', REQUEST_HOST)
 
+    receiving_body_event = threading.Event()
+
     def on_incoming_body(http_stream, chunk):
+        # HttpStreamReceivingBody: Exit from event-loop thread while receiving body
         set_stage(Stage.HttpStreamReceivingBody)
+        receiving_body_event.set()
 
     http_stream = http_connection.request(request, on_body=on_incoming_body)
     set_stage(Stage.HttpStreamStart)
+
+    # HttpStreamReceivingBodyMainThread: Exit from main thread while receiving body
+    assert receiving_body_event.wait(TIMEOUT)
+    set_stage(Stage.HttpStreamReceivingBodyMainThread)
 
     # HttpStreamDone
     status_code = http_stream.completion_future.result(TIMEOUT)
@@ -111,12 +121,12 @@ if __name__ == '__main__':
     set_stage(Stage.HttpStreamDone)
 
     # HttpConnectionClose
-    shutdown_future = http_connection.close()
+    connection_shutdown_future = http_connection.close()
     set_stage(Stage.HttpConnectionClose)
 
     # HttpConnectionDone
     del http_connection
-    shutdown_future.result(TIMEOUT)
+    connection_shutdown_future.result(TIMEOUT)
     set_stage(Stage.HttpConnectionDone)
 
     # TlsConnectionOptionsDone
@@ -126,9 +136,9 @@ if __name__ == '__main__':
     set_stage(Stage.TlsConnectionOptionsDone)
 
     # ClientBootstrapDone
-    shutdown_event = bootstrap.shutdown_event
+    bootstrap_shutdown_event = bootstrap.shutdown_event
     del bootstrap
-    shutdown_event.wait(TIMEOUT)
+    assert bootstrap_shutdown_event.wait(TIMEOUT)
     set_stage(Stage.ClientBootstrapDone)
 
     # HostResolverDone
@@ -136,9 +146,9 @@ if __name__ == '__main__':
     set_stage(Stage.HostResolverDone)
 
     # EventLoopGroupDone
-    shutdown_event = elg.shutdown_event
+    elg_shutdown_event = elg.shutdown_event
     del elg
-    shutdown_event.wait(TIMEOUT)
+    assert elg_shutdown_event.wait(TIMEOUT)
     set_stage(Stage.EventLoopGroupDone)
 
     # Done
