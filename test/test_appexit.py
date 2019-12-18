@@ -11,6 +11,7 @@
 # express or implied. See the License for the specific language governing
 # permissions and limitations under the License.
 
+from __future__ import absolute_import, print_function
 import subprocess
 import sys
 import unittest
@@ -22,8 +23,6 @@ class TestAppExit(unittest.TestCase):
     def _run_to_stage(self, module_name, stage):
         args = [sys.executable, '-m', module_name, stage.name]
 
-        print(subprocess.list2cmdline(args))
-
         process = subprocess.Popen(
             args,
             stdout=subprocess.PIPE,
@@ -33,8 +32,11 @@ class TestAppExit(unittest.TestCase):
 
         # only print output if test failed
         if process.returncode != 0:
+            print(subprocess.list2cmdline(args))
+
             for line in output.splitlines():
                 print(line.decode())
+
             self.assertEqual(0, process.returncode)
 
     def test_http(self):
