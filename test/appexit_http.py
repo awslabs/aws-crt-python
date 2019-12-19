@@ -85,7 +85,7 @@ if __name__ == '__main__':
     set_stage(Stage.TlsConnectionOptionsStart)
 
     # HttpClientStart
-    connection_future = awscrt.http.HttpClientConnection.new(
+    http_connection = awscrt.http.HttpClientConnection.new(
         host_name=REQUEST_HOST,
         port=REQUEST_PORT,
         bootstrap=bootstrap,
@@ -93,7 +93,7 @@ if __name__ == '__main__':
     set_stage(Stage.HttpClientStart)
 
     # HttpClientConnected
-    http_connection = connection_future.result(TIMEOUT)
+    http_connection = http_connection.result(TIMEOUT)
     set_stage(Stage.HttpClientConnected)
 
     # HttpStreamStart
@@ -118,6 +118,7 @@ if __name__ == '__main__':
     status_code = http_stream.completion_future.result(TIMEOUT)
     assert(status_code == 200)
     del http_stream
+    del request
     set_stage(Stage.HttpStreamDone)
 
     # HttpConnectionClose
