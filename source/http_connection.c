@@ -94,9 +94,8 @@ static void s_on_connection_shutdown(struct aws_http_connection *native_connecti
     if (result) {
         Py_DECREF(result);
     } else {
+        /* Callback might fail during application shutdown */
         PyErr_WriteUnraisable(PyErr_Occurred());
-        /* Note: We used to FATAL_ASSERT here, since this future really must succeed.
-         * But the assert would trigger occasionally during application shutdown, so removing it for now. */
     }
     Py_CLEAR(connection->on_shutdown);
 
@@ -131,13 +130,13 @@ static void s_on_client_connection_setup(
 
     /* Invoke on_setup, then clear our reference to it */
     PyObject *result = PyObject_CallFunction(connection->on_setup, "(Oi)", capsule ? capsule : Py_None, error_code);
-    if (!result) {
-        /* This function must succeed. Can't leave a Future incomplete. */
+    if (result) {
+        Py_DECREF(result);
+    } else {
+        /* Callback might fail during application shutdown */
         PyErr_WriteUnraisable(PyErr_Occurred());
-        AWS_FATAL_ASSERT(0);
     }
 
-    Py_DECREF(result);
     Py_CLEAR(connection->on_setup);
 
     if (native_connection) {

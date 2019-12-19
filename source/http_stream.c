@@ -199,12 +199,12 @@ static void s_on_stream_complete(struct aws_http_stream *native_stream, int erro
     stream->native = native_stream;
 
     PyObject *result = PyObject_CallMethod(stream->self_proxy, "_on_complete", "(i)", error_code);
-    if (!result) {
-        /* This function must succeed. Can't leave a Future incomplete. */
+    if (result) {
+        Py_DECREF(result);
+    } else {
+        /* Callback might fail during application shutdown */
         PyErr_WriteUnraisable(PyErr_Occurred());
-        AWS_FATAL_ASSERT(0);
     }
-    Py_DECREF(result);
 
     /* DECREF python self, we don't need to force it to stay alive any longer. */
     PyObject *self = PyWeakref_GetObject(stream->self_proxy);
