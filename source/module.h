@@ -43,8 +43,12 @@ PyObject *PyString_FromAwsString(const struct aws_string *aws_str);
 int PyIntEnum_Check(PyObject *int_enum_obj);
 long PyIntEnum_AsLong(PyObject *int_enum_obj);
 
-/* Python 2/3 compatible check. Return whether object is a PyLong (OR PyInt in python2). */
-int PyLongOrInt_Check(PyObject *obj);
+/* Return the named attribute, converted to the specified type.
+ * If conversion cannot occur a python exception is set (check PyExc_Occurred()) */
+uint32_t PyObject_GetAttrAsUint32(PyObject *o, const char *class_name, const char *attr_name);
+uint16_t PyObject_GetAttrAsUint16(PyObject *o, const char *class_name, const char *attr_name);
+bool PyObject_GetAttrAsBool(PyObject *o, const char *class_name, const char *attr_name);
+int PyObject_GetAttrAsIntEnum(PyObject *o, const char *class_name, const char *attr_name);
 
 /* Create cursor from PyString, PyBytes, or PyUnicode.
  * If conversion cannot occur, cursor->ptr will be NULL but no python exception is set */

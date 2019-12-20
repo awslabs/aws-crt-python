@@ -284,9 +284,7 @@ bool s_set_will(struct aws_mqtt_client_connection *connection, PyObject *will) {
 
     /* These references all need to be cleaned up before function returns */
     PyObject *py_topic = NULL;
-    PyObject *py_qos = NULL;
     PyObject *py_payload = NULL;
-    PyObject *py_retain = NULL;
 
     py_topic = PyObject_GetAttrString(will, "topic");
     struct aws_byte_cursor topic = aws_byte_cursor_from_pystring(py_topic);
@@ -295,12 +293,10 @@ bool s_set_will(struct aws_mqtt_client_connection *connection, PyObject *will) {
         goto done;
     }
 
-    py_qos = PyObject_GetAttrString(will, "qos");
-    if (!py_qos || !PyIntEnum_Check(py_qos)) {
-        PyErr_SetString(PyExc_TypeError, "Will.qos is invalid");
+    enum aws_mqtt_qos qos = PyObject_GetAttrAsIntEnum(will, "Will", "qos");
+    if (PyErr_Occurred()) {
         goto done;
     }
-    enum aws_mqtt_qos qos = (enum aws_mqtt_qos)PyIntEnum_AsLong(py_qos);
 
     py_payload = PyObject_GetAttrString(will, "payload");
     struct aws_byte_cursor payload = aws_byte_cursor_from_pystring(py_payload);
@@ -309,12 +305,10 @@ bool s_set_will(struct aws_mqtt_client_connection *connection, PyObject *will) {
         goto done;
     }
 
-    py_retain = PyObject_GetAttrString(will, "retain");
-    if (!PyBool_Check(py_retain)) {
-        PyErr_SetString(PyExc_TypeError, "Will.retain is invalid");
+    bool retain = PyObject_GetAttrAsBool(will, "Will", "retain");
+    if (PyErr_Occurred()) {
         goto done;
     }
-    bool retain = py_retain == Py_True;
 
     if (aws_mqtt_client_connection_set_will(connection, &topic, qos, retain, &payload)) {
         PyErr_SetAwsLastError();
@@ -325,9 +319,7 @@ bool s_set_will(struct aws_mqtt_client_connection *connection, PyObject *will) {
 
 done:
     Py_XDECREF(py_topic);
-    Py_XDECREF(py_qos);
     Py_XDECREF(py_payload);
-    Py_XDECREF(py_retain);
     return success;
 }
 

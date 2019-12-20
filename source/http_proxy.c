@@ -25,9 +25,7 @@ bool aws_py_http_proxy_options_init(struct aws_http_proxy_options *proxy_options
 
     /* These references all need to be cleaned up before function returns */
     PyObject *py_host_name = NULL;
-    PyObject *py_port = NULL;
     PyObject *py_tls_options = NULL;
-    PyObject *py_auth_type = NULL;
     PyObject *py_username = NULL;
     PyObject *py_password = NULL;
 
@@ -38,16 +36,10 @@ bool aws_py_http_proxy_options_init(struct aws_http_proxy_options *proxy_options
         goto done;
     }
 
-    long port_val = -1;
-    py_port = PyObject_GetAttrString(py_proxy_options, "port");
-    if (PyLongOrInt_Check(py_port)) {
-        port_val = PyLong_AsLong(py_port); /* returns -1 on error */
-    }
-    if (port_val < 0 || port_val > UINT16_MAX) {
-        PyErr_SetString(PyExc_TypeError, "HttpProxyOptions.port is not a valid number");
+    proxy_options->port = PyObject_GetAttrAsUint16(py_proxy_options, "HttpProxyOptions", "port");
+    if (PyErr_Occurred()) {
         goto done;
     }
-    proxy_options->port = (uint16_t)port_val;
 
     py_tls_options = PyObject_GetAttrString(py_proxy_options, "tls_connection_options");
     if (py_tls_options != Py_None) {
@@ -59,12 +51,10 @@ bool aws_py_http_proxy_options_init(struct aws_http_proxy_options *proxy_options
         }
     }
 
-    py_auth_type = PyObject_GetAttrString(py_proxy_options, "auth_type");
-    if (!PyIntEnum_Check(py_auth_type)) {
-        PyErr_SetString(PyExc_TypeError, "HttpProxyOptions.auth_type is not a valid HttpProxyAuthenticationType");
+    proxy_options->auth_type = PyObject_GetAttrAsIntEnum(py_proxy_options, "HttpProxyOptions", "auth_type");
+    if (PyErr_Occurred()) {
         goto done;
     }
-    proxy_options->auth_type = PyIntEnum_AsLong(py_auth_type);
 
     py_username = PyObject_GetAttrString(py_proxy_options, "auth_username");
     if (py_username != Py_None) {
@@ -87,9 +77,7 @@ bool aws_py_http_proxy_options_init(struct aws_http_proxy_options *proxy_options
     success = true;
 done:
     Py_XDECREF(py_host_name);
-    Py_XDECREF(py_port);
     Py_XDECREF(py_tls_options);
-    Py_XDECREF(py_auth_type);
     Py_XDECREF(py_username);
     Py_XDECREF(py_password);
     if (!success) {

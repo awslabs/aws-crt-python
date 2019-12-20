@@ -121,16 +121,110 @@ long PyIntEnum_AsLong(PyObject *int_enum_obj) {
 #endif
 }
 
-int PyLongOrInt_Check(PyObject *obj) {
-    if (PyLong_Check(obj)) {
-        return 1;
+uint32_t PyObject_GetAttrAsUint32(PyObject *o, const char *class_name, const char *attr_name) {
+    uint32_t result = UINT32_MAX;
+
+    PyObject *attr = PyObject_GetAttrString(o, attr_name);
+    if (!attr) {
+        PyErr_Format(PyExc_AttributeError, "'%s.%s' attribute not found", class_name, attr_name);
+        return result;
     }
-#if PY_MAJOR_VERSION == 2
-    if (PyInt_Check(obj)) {
-        return 1;
+
+    /* Using PyLong_AsLongLong() because it will convert floating point numbers (PyLong_AsUnsignedLong() will not).
+     * By using "long long" (not just "long") we can be sure to fit the whole range of 32bit numbers. */
+    long long val = PyLong_AsLongLong(attr);
+    if (PyErr_Occurred()) {
+        PyErr_Format(PyErr_Occurred(), "Cannot convert %s.%s to a C uint32_t", class_name, attr_name);
+        goto done;
     }
-#endif
-    return 0;
+
+    if (val < 0) {
+        PyErr_Format(PyExc_OverflowError, "%s.%s cannot be negative", class_name, attr_name);
+        goto done;
+    }
+
+    if (val > UINT32_MAX) {
+        PyErr_Format(PyExc_OverflowError, "%s.%s too large to convert to C uint32_t", class_name, attr_name);
+        goto done;
+    }
+
+    result = (uint32_t)val;
+done:
+    Py_DECREF(attr);
+    return result;
+}
+
+uint16_t PyObject_GetAttrAsUint16(PyObject *o, const char *class_name, const char *attr_name) {
+    uint16_t result = UINT16_MAX;
+
+    PyObject *attr = PyObject_GetAttrString(o, attr_name);
+    if (!attr) {
+        PyErr_Format(PyExc_AttributeError, "'%s.%s' attribute not found", class_name, attr_name);
+        return result;
+    }
+
+    /* Using PyLong_AsLong() because it will convert floating point numbers (PyLong_AsUnsignedLong() will not) */
+    long val = PyLong_AsLong(attr);
+    if (PyErr_Occurred()) {
+        PyErr_Format(PyErr_Occurred(), "Cannot convert %s.%s to C uint16_t", class_name, attr_name);
+        goto done;
+    }
+
+    if (val < 0) {
+        PyErr_Format(PyExc_OverflowError, "%s.%s cannot be negative", class_name, attr_name);
+        goto done;
+    }
+
+    if (val > UINT16_MAX) {
+        PyErr_Format(PyExc_OverflowError, "%s.%s too large to convert to C uint16_t", class_name, attr_name);
+        goto done;
+    }
+
+    result = (uint16_t)val;
+done:
+    Py_DECREF(attr);
+    return result;
+}
+
+bool PyObject_GetAttrAsBool(PyObject *o, const char *class_name, const char *attr_name) {
+    bool result = false;
+
+    PyObject *attr = PyObject_GetAttrString(o, attr_name);
+    if (!attr) {
+        PyErr_Format(PyExc_AttributeError, "'%s.%s' attribute not found", class_name, attr_name);
+        return result;
+    }
+
+    int val = PyObject_IsTrue(attr);
+    if (val == -1) {
+        PyErr_Format(PyExc_TypeError, "Cannot convert %s.%s to bool", class_name, attr_name);
+        goto done;
+    }
+
+    result = val != 0;
+done:
+    Py_DECREF(attr);
+    return result;
+}
+
+int PyObject_GetAttrAsIntEnum(PyObject *o, const char *class_name, const char *attr_name) {
+    int result = -1;
+
+    PyObject *attr = PyObject_GetAttrString(o, attr_name);
+    if (!attr) {
+        PyErr_Format(PyExc_AttributeError, "'%s.%s' attribute not found", class_name, attr_name);
+        return result;
+    }
+
+    if (!PyIntEnum_Check(attr)) {
+        PyErr_Format(PyExc_TypeError, "%s.%s is not a valid enum", class_name, attr_name);
+        goto done;
+    }
+
+    result = PyIntEnum_AsLong(attr);
+done:
+    Py_DECREF(attr);
+    return result;
 }
 
 void PyErr_SetAwsLastError(void) {

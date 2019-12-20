@@ -35,75 +35,48 @@ bool aws_py_socket_options_init(struct aws_socket_options *socket_options, PyObj
 
     bool success = false;
 
-    /* These references all need to be cleaned up before function returns */
-    PyObject *sock_domain = NULL;
-    PyObject *sock_type = NULL;
-    PyObject *connect_timeout_ms = NULL;
-    PyObject *keep_alive = NULL;
-    PyObject *keep_alive_interval = NULL;
-    PyObject *keep_alive_timeout = NULL;
-    PyObject *keep_alive_max_probes = NULL;
-
-    sock_domain = PyObject_GetAttrString(py_socket_options, "domain");
-    if (!PyIntEnum_Check(sock_domain)) {
-        PyErr_SetString(PyExc_TypeError, "SocketOptions.domain is invalid");
+    socket_options->domain = PyObject_GetAttrAsIntEnum(py_socket_options, "SocketOptions", "domain");
+    if (PyErr_Occurred()) {
         goto done;
     }
-    socket_options->domain = (enum aws_socket_domain)PyIntEnum_AsLong(sock_domain);
 
-    sock_type = PyObject_GetAttrString(py_socket_options, "type");
-    if (!PyIntEnum_Check(sock_type)) {
-        PyErr_SetString(PyExc_TypeError, "SocketOptions.type is invalid");
+    socket_options->type = PyObject_GetAttrAsIntEnum(py_socket_options, "SocketOptions", "type");
+    if (PyErr_Occurred()) {
         goto done;
     }
-    socket_options->type = (enum aws_socket_type)PyIntEnum_AsLong(sock_type);
 
-    connect_timeout_ms = PyObject_GetAttrString(py_socket_options, "connect_timeout_ms");
-    if (!PyLongOrInt_Check(connect_timeout_ms)) {
-        PyErr_SetString(PyExc_TypeError, "SocketOptions.connect_timeout_ms is invalid");
+    socket_options->connect_timeout_ms =
+        PyObject_GetAttrAsUint32(py_socket_options, "SocketOptions", "connect_timeout_ms");
+    if (PyErr_Occurred()) {
         goto done;
     }
-    socket_options->connect_timeout_ms = (uint32_t)PyLong_AsLong(connect_timeout_ms);
 
-    keep_alive = PyObject_GetAttrString(py_socket_options, "keep_alive");
-    if (!keep_alive) {
-        PyErr_SetString(PyExc_TypeError, "SocketOptions.keep_alive is invalid");
+    socket_options->keepalive = PyObject_GetAttrAsBool(py_socket_options, "SocketOptions", "keep_alive");
+    if (PyErr_Occurred()) {
         goto done;
     }
-    socket_options->keepalive = (bool)PyObject_IsTrue(keep_alive);
 
-    keep_alive_interval = PyObject_GetAttrString(py_socket_options, "keep_alive_interval_secs");
-    if (!PyLongOrInt_Check(keep_alive_interval)) {
-        PyErr_SetString(PyExc_TypeError, "SocketOptions.keep_alive_interval_secs is invalid");
+    socket_options->keep_alive_interval_sec =
+        PyObject_GetAttrAsUint16(py_socket_options, "SocketOptions", "keep_alive_interval_secs");
+    if (PyErr_Occurred()) {
         goto done;
     }
-    socket_options->keep_alive_interval_sec = (uint16_t)PyLong_AsLong(keep_alive_interval);
 
-    keep_alive_timeout = PyObject_GetAttrString(py_socket_options, "keep_alive_timeout_secs");
-    if (!PyLongOrInt_Check(keep_alive_timeout)) {
-        PyErr_SetString(PyExc_TypeError, "SocketOptions.keep_alive_timeout_secs is invalid");
+    socket_options->keep_alive_timeout_sec =
+        PyObject_GetAttrAsUint16(py_socket_options, "SocketOptions", "keep_alive_timeout_secs");
+    if (PyErr_Occurred()) {
         goto done;
     }
-    socket_options->keep_alive_timeout_sec = (uint16_t)PyLong_AsLong(keep_alive_timeout);
 
-    keep_alive_max_probes = PyObject_GetAttrString(py_socket_options, "keep_alive_max_probes");
-    if (!PyLongOrInt_Check(keep_alive_timeout)) {
-        PyErr_SetString(PyExc_TypeError, "SocketOptions.keep_alive_max_probes is invalid");
+    socket_options->keep_alive_max_failed_probes =
+        PyObject_GetAttrAsUint16(py_socket_options, "SocketOptions", "keep_alive_max_probes");
+    if (PyErr_Occurred()) {
         goto done;
     }
-    socket_options->keep_alive_max_failed_probes = (uint16_t)PyLong_AsLong(keep_alive_max_probes);
 
     success = true;
 
 done:
-    Py_DECREF(sock_domain);
-    Py_DECREF(sock_type);
-    Py_DECREF(connect_timeout_ms);
-    Py_DECREF(keep_alive);
-    Py_DECREF(keep_alive_interval);
-    Py_DECREF(keep_alive_timeout);
-    Py_DECREF(keep_alive_max_probes);
-
     if (!success) {
         AWS_ZERO_STRUCT(*socket_options);
     }
