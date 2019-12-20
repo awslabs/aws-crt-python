@@ -208,7 +208,8 @@ class MqttBuilderTest(NativeResourceTest):
                 pri_key_filepath=key_filepath,
                 endpoint=config.endpoint,
                 client_id=create_client_id(),
-                client_bootstrap=bootstrap)
+                client_bootstrap=bootstrap,
+                tcp_connect_timeout_ms=TIMEOUT * 1000)
 
         finally:
             shutil.rmtree(tmp_dirpath)
@@ -227,7 +228,8 @@ class MqttBuilderTest(NativeResourceTest):
             credentials_provider=cred_provider,
             endpoint=config.endpoint,
             client_id=create_client_id(),
-            client_bootstrap=bootstrap)
+            client_bootstrap=bootstrap,
+            tcp_connect_timeout_ms=TIMEOUT * 1000)
         self._test_connection(connection)
 
     @unittest.skip("Build machines not set up to run this yet")
@@ -244,7 +246,8 @@ class MqttBuilderTest(NativeResourceTest):
             endpoint=config.endpoint,
             region=config.region,
             client_id=create_client_id(),
-            client_bootstrap=bootstrap)
+            client_bootstrap=bootstrap,
+            tcp_connect_timeout_ms=TIMEOUT * 1000)
         self._test_connection(connection)
 
 
