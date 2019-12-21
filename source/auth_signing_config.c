@@ -56,7 +56,10 @@ static bool s_should_sign_param(const struct aws_byte_cursor *name, void *userda
     AWS_FATAL_ASSERT(binding->py_should_sign_param_fn != Py_None);
 
     /*************** GIL ACQUIRE ***************/
-    PyGILState_STATE state = PyGILState_Ensure();
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return should_sign; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
 
     PyObject *py_result = PyObject_CallFunction(binding->py_should_sign_param_fn, "(s#)", name->ptr, name->len);
     if (py_result) {

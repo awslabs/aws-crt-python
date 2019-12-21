@@ -381,6 +381,15 @@ PyObject *aws_py_memory_view_from_byte_buffer(struct aws_byte_buf *buf) {
 #endif /* PY_MAJOR_VERSION */
 }
 
+int aws_py_gilstate_ensure(PyGILState_STATE *out_state) {
+    if (AWS_LIKELY(Py_IsInitialized())) {
+        *out_state = PyGILState_Ensure();
+        return AWS_OP_SUCCESS;
+    }
+
+    return aws_raise_error(AWS_ERROR_INVALID_STATE);
+}
+
 void *aws_py_get_binding(PyObject *obj, const char *capsule_name, const char *class_name) {
     if (!obj || obj == Py_None) {
         return PyErr_Format(PyExc_TypeError, "Excepted '%s', received 'NoneType'", class_name);

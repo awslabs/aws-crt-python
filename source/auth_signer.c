@@ -50,7 +50,10 @@ static void s_signing_complete(struct aws_signing_result *signing_result, int er
     }
 
     /*************** GIL ACQUIRE ***************/
-    PyGILState_STATE state = PyGILState_Ensure();
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
 
     PyObject *py_result = PyObject_CallFunction(async_data->py_on_complete, "(i)", error_code);
     if (py_result) {

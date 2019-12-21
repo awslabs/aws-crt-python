@@ -86,6 +86,20 @@ PyObject *aws_py_memory_view_from_byte_buffer(struct aws_byte_buf *buf);
 /* Allocator that calls into PyObject_[Malloc|Free|Realloc] */
 struct aws_allocator *aws_py_get_allocator(void);
 
+/**
+ * Acquire GIL, unless it is impossible to do so because the application is shutting down.
+ * Returns AWS_OP_ERR and raises AWS error if GIL cannot be acquired.
+ *
+ * Late in application shutdown, attempting to acquire GIL can crash the application.
+ * We encounter this situation if native resources are still running when the application exits.
+ * Python programmers are allowed to exist without shutting everything down, it does not make them criminals.
+ *
+ * If we encounter this situation, we must not crash the application while it finishes terminating.
+ * Do not interact with Python! It's ok not to fulfill promises (ex: it's ok if a completion callback never fires)
+ * because the user clearly no longer cares about the results.
+ */
+int aws_py_gilstate_ensure(PyGILState_STATE *out_state);
+
 /* Return the capsule ptr from obj._binding
  * On error, NULL is returned and a python exception is set. */
 void *aws_py_get_binding(PyObject *obj, const char *capsule_name, const char *class_name);

@@ -110,7 +110,10 @@ static void s_elg_native_cleanup_complete(void *user_data) {
     aws_mem_release(aws_py_get_allocator(), elg_binding);
 
     /*************** GIL ACQUIRE ***************/
-    PyGILState_STATE state = PyGILState_Ensure();
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
 
     PyObject *result = PyObject_CallFunction(shutdown_complete, "()");
     if (result) {
@@ -268,7 +271,10 @@ static void s_client_bootstrap_on_shutdown_complete(void *user_data) {
     PyObject *shutdown_complete = bootstrap->shutdown_complete;
 
     /*************** GIL ACQUIRE ***************/
-    PyGILState_STATE state = PyGILState_Ensure();
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
 
     Py_XDECREF(bootstrap->host_resolver);
     Py_XDECREF(bootstrap->event_loop_group);
@@ -644,7 +650,10 @@ static int s_aws_input_stream_py_seek(
     PyObject *method_result = NULL;
 
     /*************** GIL ACQUIRE ***************/
-    PyGILState_STATE state = PyGILState_Ensure();
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return AWS_OP_ERR; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
 
     method_result = PyObject_CallMethod(impl->io, "seek", "(li)", &offset, &basis);
     if (!method_result) {
@@ -671,7 +680,10 @@ int s_aws_input_stream_py_read(struct aws_input_stream *stream, struct aws_byte_
     PyObject *method_result = NULL;
 
     /*************** GIL ACQUIRE ***************/
-    PyGILState_STATE state = PyGILState_Ensure();
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return AWS_OP_ERR; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
 
     memory_view = aws_py_memory_view_from_byte_buffer(dest);
     if (!memory_view) {

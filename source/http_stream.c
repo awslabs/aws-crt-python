@@ -95,7 +95,10 @@ static int s_on_incoming_header_block_done(
     int aws_result = AWS_OP_SUCCESS;
 
     /*************** GIL ACQUIRE ***************/
-    PyGILState_STATE state = PyGILState_Ensure();
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return AWS_OP_ERR; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
 
     /* Set this just in case callback fires before aws_http_connection_make_request() has even returned */
     stream->native = native_stream;
@@ -171,7 +174,10 @@ static int s_on_incoming_body(
     int aws_result = AWS_OP_SUCCESS;
 
     /*************** GIL ACQUIRE ***************/
-    PyGILState_STATE state = PyGILState_Ensure();
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return AWS_OP_ERR; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
 
     PyObject *result = PyObject_CallMethod(
         stream->self_proxy, "_on_body", "(" READABLE_BYTES_FORMAT_STR ")", (const char *)data->ptr, data_len);
@@ -193,7 +199,10 @@ static void s_on_stream_complete(struct aws_http_stream *native_stream, int erro
     struct http_stream_binding *stream = user_data;
 
     /*************** GIL ACQUIRE ***************/
-    PyGILState_STATE state = PyGILState_Ensure();
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
 
     /* Set this just in case callback fires before aws_http_connection_make_request() has even returned */
     stream->native = native_stream;

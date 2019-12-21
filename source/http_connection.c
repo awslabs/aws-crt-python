@@ -83,7 +83,10 @@ static void s_on_connection_shutdown(struct aws_http_connection *native_connecti
     struct http_connection_binding *connection = user_data;
     AWS_FATAL_ASSERT(!connection->shutdown_called);
 
-    PyGILState_STATE state = PyGILState_Ensure();
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
 
     connection->shutdown_called = true;
 
@@ -117,7 +120,10 @@ static void s_on_client_connection_setup(
 
     connection->native = native_connection;
 
-    PyGILState_STATE state = PyGILState_Ensure();
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
 
     /* If setup was successful, encapsulate binding so we can pass it to python */
     PyObject *capsule = NULL;
