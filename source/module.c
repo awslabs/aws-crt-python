@@ -596,9 +596,9 @@ PyMODINIT_FUNC INIT_FN(void) {
         s_module_doc,
         -1, /* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */
         s_module_methods,
-        NULL, /* slots for multi-phase initialization */
-        NULL, /* traversal fn to call during GC traversal */
-        NULL, /* clear fn to call during GC clear */
+        NULL,          /* slots for multi-phase initialization */
+        NULL,          /* traversal fn to call during GC traversal */
+        NULL,          /* clear fn to call during GC clear */
         s_module_free, /* fn to call during deallocation of the module object */
     };
     PyObject *m = PyModule_Create(&s_module_def);
