@@ -81,11 +81,9 @@ PyObject *aws_py_init_logging(PyObject *self, PyObject *args) {
 }
 
 #if PY_MAJOR_VERSION == 3
-#    define INIT_FN PyInit__awscrt
 #    define UNICODE_GET_BYTES_FN PyUnicode_DATA
 #    define UNICODE_GET_BYTE_LEN_FN PyUnicode_GET_LENGTH
 #elif PY_MAJOR_VERSION == 2
-#    define INIT_FN init_awscrt
 #    define UNICODE_GET_BYTES_FN PyUnicode_AS_DATA
 #    define UNICODE_GET_BYTE_LEN_FN PyUnicode_GET_DATA_SIZE
 #endif /* PY_MAJOR_VERSION */
@@ -577,10 +575,7 @@ PyDoc_STRVAR(s_module_doc, "C extension for binding AWS implementations of MQTT,
  * Module Init
  ******************************************************************************/
 
-#if PY_MAJOR_VERSION == 3
-static void s_module_free(void *userdata) {
-    (void)userdata;
-
+static void s_module_free(void) {
     aws_hash_table_clean_up(&s_py_to_aws_error_map);
     aws_hash_table_clean_up(&s_aws_to_py_error_map);
 
@@ -592,29 +587,8 @@ static void s_module_free(void *userdata) {
     aws_http_library_clean_up();
 }
 
-#endif /* PY_MAJOR_VERSION == 3 */
-
-PyMODINIT_FUNC INIT_FN(void) {
-
+static void s_module_init(void) {
     s_install_crash_handler();
-
-#if PY_MAJOR_VERSION == 3
-    static struct PyModuleDef s_module_def = {
-        PyModuleDef_HEAD_INIT,
-        s_module_name,
-        s_module_doc,
-        -1, /* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */
-        s_module_methods,
-        NULL,          /* slots for multi-phase initialization */
-        NULL,          /* traversal fn to call during GC traversal */
-        NULL,          /* clear fn to call during GC clear */
-        s_module_free, /* fn to call during deallocation of the module object */
-    };
-    PyObject *m = PyModule_Create(&s_module_def);
-#elif PY_MAJOR_VERSION == 2
-    PyObject *m = Py_InitModule3(s_module_name, s_module_methods, s_module_doc);
-    (void)m;
-#endif /* PY_MAJOR_VERSION */
 
     aws_http_library_init(aws_py_get_allocator());
     aws_auth_library_init(aws_py_get_allocator());
@@ -625,8 +599,52 @@ PyMODINIT_FUNC INIT_FN(void) {
     }
 
     s_error_map_init();
+}
 
 #if PY_MAJOR_VERSION == 3
-    return m;
-#endif /* PY_MAJOR_VERSION */
+
+static void s_py3_module_free(void *userdata) {
+    (void)userdata;
+    s_module_free();
 }
+
+PyMODINIT_FUNC PyInit__awscrt(void) {
+    static struct PyModuleDef s_module_def = {
+        PyModuleDef_HEAD_INIT,
+        s_module_name,
+        s_module_doc,
+        -1, /* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */
+        s_module_methods,
+        NULL,              /* slots for multi-phase initialization */
+        NULL,              /* traversal fn to call during GC traversal */
+        NULL,              /* clear fn to call during GC clear */
+        s_py3_module_free, /* fn to call during deallocation of the module object */
+    };
+
+    PyObject *m = PyModule_Create(&s_module_def);
+    if (!m) {
+        return NULL;
+    }
+
+    s_module_init();
+    return m;
+}
+
+#elif PY_MAJOR_VERSION == 2
+
+PyMODINIT_FUNC PyInit__awscrt(void) {
+    if (!Py_InitModule3(s_module_name, s_module_methods, s_module_doc)) {
+        AWS_FATAL_ASSERT(0 && "Failed to initialize _awscrt");
+    }
+
+    /* Python 2 doesn't let us pass a module-free fn to the module-create fn, so register a global at-exit fn. */
+    if (Py_AtExit(s_module_free) == -1) {
+        AWS_FATAL_ASSERT(0 && "Failed to register atexit function for _awscrt");
+    }
+
+    s_module_init();
+}
+
+#else
+#    error Unsupported Python version
+#endif /* PY_MAJOR_VERSION */
