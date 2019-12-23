@@ -576,12 +576,13 @@ PyDoc_STRVAR(s_module_doc, "C extension for binding AWS implementations of MQTT,
  ******************************************************************************/
 
 static void s_module_free(void) {
-    aws_hash_table_clean_up(&s_py_to_aws_error_map);
-    aws_hash_table_clean_up(&s_aws_to_py_error_map);
-
     if (s_logger_init) {
         aws_logger_clean_up(&s_logger);
     }
+
+    aws_hash_table_clean_up(&s_py_to_aws_error_map);
+    aws_hash_table_clean_up(&s_aws_to_py_error_map);
+
     aws_mqtt_library_clean_up();
     aws_auth_library_clean_up();
     aws_http_library_clean_up();
