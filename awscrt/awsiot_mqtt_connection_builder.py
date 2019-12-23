@@ -60,7 +60,7 @@ Optional Arguments:
             Default port is 443 if system supports ALPN or websockets are being used.
             Otherwise, default port is 8883.
 
-    tcp_connect_timeout_ms (int): Milliseconds to wait for TCP connect response. Default is 3000ms (3 seconds).
+    tcp_connect_timeout_ms (int): Milliseconds to wait for TCP connect response. Default is 5000ms (5 seconds).
 
     tcp_keepalive (bool): Whether to use TCP keep-alive. Default is False. If True, periodically transmit messages
             for detecting a disconnected peer.
@@ -151,7 +151,7 @@ def _builder(
     port = kwargs.get('port', port)
 
     socket_options = awscrt.io.SocketOptions()
-    socket_options.connect_timeout_ms = kwargs.get('tcp_connect_timeout_ms', 3000)
+    socket_options.connect_timeout_ms = kwargs.get('tcp_connect_timeout_ms', 5000)
     socket_options.keep_alive = kwargs.get('tcp_keepalive', False)
     socket_options.keep_alive_timeout_secs = kwargs.get('tcp_keepalive_timeout_secs', 0)
     socket_options.keep_alive_interval_secs = kwargs.get('tcp_keep_alive_interval_secs', 0)

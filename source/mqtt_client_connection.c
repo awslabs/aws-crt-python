@@ -81,7 +81,11 @@ static void s_mqtt_python_connection_destructor_on_disconnect(
     (void)connection;
     struct mqtt_connection_binding *py_connection = userdata;
 
-    PyGILState_STATE state = PyGILState_Ensure();
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
+
     s_mqtt_python_connection_finish_destruction(py_connection);
     PyGILState_Release(state);
 }
@@ -106,7 +110,10 @@ static void s_on_connection_interrupted(struct aws_mqtt_client_connection *conne
 
     struct mqtt_connection_binding *py_connection = userdata;
 
-    PyGILState_STATE state = PyGILState_Ensure();
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
 
     /* Ensure that python class is still alive */
     PyObject *self = PyWeakref_GetObject(py_connection->self_proxy); /* borrowed reference */
@@ -132,7 +139,10 @@ static void s_on_connection_resumed(
 
     struct mqtt_connection_binding *py_connection = userdata;
 
-    PyGILState_STATE state = PyGILState_Ensure();
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
 
     /* Ensure that python class is still alive */
     PyObject *self = PyWeakref_GetObject(py_connection->self_proxy); /* borrowed reference */
@@ -257,7 +267,10 @@ static void s_on_connect(
     struct mqtt_connection_binding *py_connection = user_data;
 
     if (py_connection->on_connect) {
-        PyGILState_STATE state = PyGILState_Ensure();
+        PyGILState_STATE state;
+        if (aws_py_gilstate_ensure(&state)) {
+            return; /* Python has shut down. Nothing matters anymore, but don't crash */
+        }
 
         PyObject *callback = py_connection->on_connect;
         py_connection->on_connect = NULL;
@@ -284,9 +297,7 @@ bool s_set_will(struct aws_mqtt_client_connection *connection, PyObject *will) {
 
     /* These references all need to be cleaned up before function returns */
     PyObject *py_topic = NULL;
-    PyObject *py_qos = NULL;
     PyObject *py_payload = NULL;
-    PyObject *py_retain = NULL;
 
     py_topic = PyObject_GetAttrString(will, "topic");
     struct aws_byte_cursor topic = aws_byte_cursor_from_pystring(py_topic);
@@ -295,12 +306,10 @@ bool s_set_will(struct aws_mqtt_client_connection *connection, PyObject *will) {
         goto done;
     }
 
-    py_qos = PyObject_GetAttrString(will, "qos");
-    if (!py_qos || !PyIntEnum_Check(py_qos)) {
-        PyErr_SetString(PyExc_TypeError, "Will.qos is invalid");
+    enum aws_mqtt_qos qos = PyObject_GetAttrAsIntEnum(will, "Will", "qos");
+    if (PyErr_Occurred()) {
         goto done;
     }
-    enum aws_mqtt_qos qos = (enum aws_mqtt_qos)PyIntEnum_AsLong(py_qos);
 
     py_payload = PyObject_GetAttrString(will, "payload");
     struct aws_byte_cursor payload = aws_byte_cursor_from_pystring(py_payload);
@@ -309,12 +318,10 @@ bool s_set_will(struct aws_mqtt_client_connection *connection, PyObject *will) {
         goto done;
     }
 
-    py_retain = PyObject_GetAttrString(will, "retain");
-    if (!PyBool_Check(py_retain)) {
-        PyErr_SetString(PyExc_TypeError, "Will.retain is invalid");
+    bool retain = PyObject_GetAttrAsBool(will, "Will", "retain");
+    if (PyErr_Occurred()) {
         goto done;
     }
-    bool retain = py_retain == Py_True;
 
     if (aws_mqtt_client_connection_set_will(connection, &topic, qos, retain, &payload)) {
         PyErr_SetAwsLastError();
@@ -325,9 +332,7 @@ bool s_set_will(struct aws_mqtt_client_connection *connection, PyObject *will) {
 
 done:
     Py_XDECREF(py_topic);
-    Py_XDECREF(py_qos);
     Py_XDECREF(py_payload);
-    Py_XDECREF(py_retain);
     return success;
 }
 
@@ -377,7 +382,10 @@ static void s_ws_handshake_transform(
 
     /*************** GIL ACQUIRE ***************
      * If error occurs, ensure an aws error is raised and goto done */
-    PyGILState_STATE state = PyGILState_Ensure();
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
 
     /* Ensure python mqtt connection object is still alive */
     PyObject *connection_py = PyWeakref_GetObject(connection_binding->self_proxy); /* borrowed reference */
@@ -690,7 +698,10 @@ static void s_publish_complete(
     struct publish_complete_userdata *metadata = userdata;
     assert(metadata);
 
-    PyGILState_STATE state = PyGILState_Ensure();
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
 
     if (metadata->callback != Py_None) {
         PyObject *result = PyObject_CallFunction(metadata->callback, "(H)", packet_id);
@@ -796,7 +807,10 @@ static void s_subscribe_callback(
         return;
     }
 
-    PyGILState_STATE state = PyGILState_Ensure();
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
 
     PyObject *result = PyObject_CallFunction(
         callback,
@@ -816,7 +830,10 @@ static void s_subscribe_callback(
 static void s_callback_cleanup(void *userdata) {
     PyObject *callback = userdata;
 
-    PyGILState_STATE state = PyGILState_Ensure();
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
 
     Py_DECREF(callback);
 
@@ -836,7 +853,10 @@ static void s_suback_callback(
     PyObject *callback = userdata;
     AWS_FATAL_ASSERT(callback && callback != Py_None);
 
-    PyGILState_STATE state = PyGILState_Ensure();
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
 
     const char *topic_str = (const char *)topic->ptr;
     Py_ssize_t topic_len = topic->len;
@@ -941,7 +961,10 @@ static void s_unsuback_callback(
 
     PyObject *callback = userdata;
 
-    PyGILState_STATE state = PyGILState_Ensure();
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
 
     PyObject *result = PyObject_CallFunction(callback, "(H)", packet_id);
     if (result) {
@@ -1003,7 +1026,10 @@ static void s_suback_multi_callback(
     PyObject *callback_result = NULL;
     PyObject *topic_qos_list = NULL;
 
-    PyGILState_STATE state = PyGILState_Ensure();
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
 
     if (error_code) {
         goto done_prepping_args;
@@ -1098,7 +1124,10 @@ static void s_on_disconnect(struct aws_mqtt_client_connection *connection, void 
     PyObject *on_disconnect = user_data;
 
     if (on_disconnect) {
-        PyGILState_STATE state = PyGILState_Ensure();
+        PyGILState_STATE state;
+        if (aws_py_gilstate_ensure(&state)) {
+            return; /* Python has shut down. Nothing matters anymore, but don't crash */
+        }
 
         PyObject *result = PyObject_CallFunction(on_disconnect, "()");
         if (result) {

@@ -213,7 +213,10 @@ static void s_on_get_credentials_complete(struct aws_credentials *credentials, v
     }
 
     /*************** GIL ACQUIRE ***************/
-    PyGILState_STATE state = PyGILState_Ensure();
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
 
     PyObject *result = PyObject_CallFunction(
         on_complete_cb,

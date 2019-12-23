@@ -81,11 +81,9 @@ PyObject *aws_py_init_logging(PyObject *self, PyObject *args) {
 }
 
 #if PY_MAJOR_VERSION == 3
-#    define INIT_FN PyInit__awscrt
 #    define UNICODE_GET_BYTES_FN PyUnicode_DATA
 #    define UNICODE_GET_BYTE_LEN_FN PyUnicode_GET_LENGTH
 #elif PY_MAJOR_VERSION == 2
-#    define INIT_FN init_awscrt
 #    define UNICODE_GET_BYTES_FN PyUnicode_AS_DATA
 #    define UNICODE_GET_BYTE_LEN_FN PyUnicode_GET_DATA_SIZE
 #endif /* PY_MAJOR_VERSION */
@@ -121,16 +119,110 @@ long PyIntEnum_AsLong(PyObject *int_enum_obj) {
 #endif
 }
 
-int PyLongOrInt_Check(PyObject *obj) {
-    if (PyLong_Check(obj)) {
-        return 1;
+uint32_t PyObject_GetAttrAsUint32(PyObject *o, const char *class_name, const char *attr_name) {
+    uint32_t result = UINT32_MAX;
+
+    PyObject *attr = PyObject_GetAttrString(o, attr_name);
+    if (!attr) {
+        PyErr_Format(PyExc_AttributeError, "'%s.%s' attribute not found", class_name, attr_name);
+        return result;
     }
-#if PY_MAJOR_VERSION == 2
-    if (PyInt_Check(obj)) {
-        return 1;
+
+    /* Using PyLong_AsLongLong() because it will convert floating point numbers (PyLong_AsUnsignedLong() will not).
+     * By using "long long" (not just "long") we can be sure to fit the whole range of 32bit numbers. */
+    long long val = PyLong_AsLongLong(attr);
+    if (PyErr_Occurred()) {
+        PyErr_Format(PyErr_Occurred(), "Cannot convert %s.%s to a C uint32_t", class_name, attr_name);
+        goto done;
     }
-#endif
-    return 0;
+
+    if (val < 0) {
+        PyErr_Format(PyExc_OverflowError, "%s.%s cannot be negative", class_name, attr_name);
+        goto done;
+    }
+
+    if (val > UINT32_MAX) {
+        PyErr_Format(PyExc_OverflowError, "%s.%s too large to convert to C uint32_t", class_name, attr_name);
+        goto done;
+    }
+
+    result = (uint32_t)val;
+done:
+    Py_DECREF(attr);
+    return result;
+}
+
+uint16_t PyObject_GetAttrAsUint16(PyObject *o, const char *class_name, const char *attr_name) {
+    uint16_t result = UINT16_MAX;
+
+    PyObject *attr = PyObject_GetAttrString(o, attr_name);
+    if (!attr) {
+        PyErr_Format(PyExc_AttributeError, "'%s.%s' attribute not found", class_name, attr_name);
+        return result;
+    }
+
+    /* Using PyLong_AsLong() because it will convert floating point numbers (PyLong_AsUnsignedLong() will not) */
+    long val = PyLong_AsLong(attr);
+    if (PyErr_Occurred()) {
+        PyErr_Format(PyErr_Occurred(), "Cannot convert %s.%s to C uint16_t", class_name, attr_name);
+        goto done;
+    }
+
+    if (val < 0) {
+        PyErr_Format(PyExc_OverflowError, "%s.%s cannot be negative", class_name, attr_name);
+        goto done;
+    }
+
+    if (val > UINT16_MAX) {
+        PyErr_Format(PyExc_OverflowError, "%s.%s too large to convert to C uint16_t", class_name, attr_name);
+        goto done;
+    }
+
+    result = (uint16_t)val;
+done:
+    Py_DECREF(attr);
+    return result;
+}
+
+bool PyObject_GetAttrAsBool(PyObject *o, const char *class_name, const char *attr_name) {
+    bool result = false;
+
+    PyObject *attr = PyObject_GetAttrString(o, attr_name);
+    if (!attr) {
+        PyErr_Format(PyExc_AttributeError, "'%s.%s' attribute not found", class_name, attr_name);
+        return result;
+    }
+
+    int val = PyObject_IsTrue(attr);
+    if (val == -1) {
+        PyErr_Format(PyExc_TypeError, "Cannot convert %s.%s to bool", class_name, attr_name);
+        goto done;
+    }
+
+    result = val != 0;
+done:
+    Py_DECREF(attr);
+    return result;
+}
+
+int PyObject_GetAttrAsIntEnum(PyObject *o, const char *class_name, const char *attr_name) {
+    int result = -1;
+
+    PyObject *attr = PyObject_GetAttrString(o, attr_name);
+    if (!attr) {
+        PyErr_Format(PyExc_AttributeError, "'%s.%s' attribute not found", class_name, attr_name);
+        return result;
+    }
+
+    if (!PyIntEnum_Check(attr)) {
+        PyErr_Format(PyExc_TypeError, "%s.%s is not a valid enum", class_name, attr_name);
+        goto done;
+    }
+
+    result = PyIntEnum_AsLong(attr);
+done:
+    Py_DECREF(attr);
+    return result;
 }
 
 void PyErr_SetAwsLastError(void) {
@@ -285,6 +377,15 @@ PyObject *aws_py_memory_view_from_byte_buffer(struct aws_byte_buf *buf) {
 
     return PyMemoryView_FromBuffer(&py_buf);
 #endif /* PY_MAJOR_VERSION */
+}
+
+int aws_py_gilstate_ensure(PyGILState_STATE *out_state) {
+    if (AWS_LIKELY(Py_IsInitialized())) {
+        *out_state = PyGILState_Ensure();
+        return AWS_OP_SUCCESS;
+    }
+
+    return aws_raise_error(AWS_ERROR_INVALID_STATE);
 }
 
 void *aws_py_get_binding(PyObject *obj, const char *capsule_name, const char *class_name) {
@@ -474,44 +575,21 @@ PyDoc_STRVAR(s_module_doc, "C extension for binding AWS implementations of MQTT,
  * Module Init
  ******************************************************************************/
 
-#if PY_MAJOR_VERSION == 3
-static void s_module_free(void *userdata) {
-    (void)userdata;
+static void s_module_free(void) {
+    if (s_logger_init) {
+        aws_logger_clean_up(&s_logger);
+    }
 
     aws_hash_table_clean_up(&s_py_to_aws_error_map);
     aws_hash_table_clean_up(&s_aws_to_py_error_map);
 
-    if (s_logger_init) {
-        aws_logger_clean_up(&s_logger);
-    }
     aws_mqtt_library_clean_up();
     aws_auth_library_clean_up();
     aws_http_library_clean_up();
 }
 
-#endif /* PY_MAJOR_VERSION == 3 */
-
-PyMODINIT_FUNC INIT_FN(void) {
-
+static void s_module_init(void) {
     s_install_crash_handler();
-
-#if PY_MAJOR_VERSION == 3
-    static struct PyModuleDef s_module_def = {
-        PyModuleDef_HEAD_INIT,
-        s_module_name,
-        s_module_doc,
-        -1, /* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */
-        s_module_methods,
-        NULL,
-        NULL,
-        NULL,
-        s_module_free,
-    };
-    PyObject *m = PyModule_Create(&s_module_def);
-#elif PY_MAJOR_VERSION == 2
-    PyObject *m = Py_InitModule3(s_module_name, s_module_methods, s_module_doc);
-    (void)m;
-#endif /* PY_MAJOR_VERSION */
 
     aws_http_library_init(aws_py_get_allocator());
     aws_auth_library_init(aws_py_get_allocator());
@@ -522,8 +600,52 @@ PyMODINIT_FUNC INIT_FN(void) {
     }
 
     s_error_map_init();
+}
 
 #if PY_MAJOR_VERSION == 3
-    return m;
-#endif /* PY_MAJOR_VERSION */
+
+static void s_py3_module_free(void *userdata) {
+    (void)userdata;
+    s_module_free();
 }
+
+PyMODINIT_FUNC PyInit__awscrt(void) {
+    static struct PyModuleDef s_module_def = {
+        PyModuleDef_HEAD_INIT,
+        s_module_name,
+        s_module_doc,
+        -1, /* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */
+        s_module_methods,
+        NULL,              /* slots for multi-phase initialization */
+        NULL,              /* traversal fn to call during GC traversal */
+        NULL,              /* clear fn to call during GC clear */
+        s_py3_module_free, /* fn to call during deallocation of the module object */
+    };
+
+    PyObject *m = PyModule_Create(&s_module_def);
+    if (!m) {
+        return NULL;
+    }
+
+    s_module_init();
+    return m;
+}
+
+#elif PY_MAJOR_VERSION == 2
+
+PyMODINIT_FUNC init_awscrt(void) {
+    if (!Py_InitModule3(s_module_name, s_module_methods, s_module_doc)) {
+        AWS_FATAL_ASSERT(0 && "Failed to initialize _awscrt");
+    }
+
+    /* Python 2 doesn't let us pass a module-free fn to the module-create fn, so register a global at-exit fn. */
+    if (Py_AtExit(s_module_free) == -1) {
+        AWS_FATAL_ASSERT(0 && "Failed to register atexit function for _awscrt");
+    }
+
+    s_module_init();
+}
+
+#else
+#    error Unsupported Python version
+#endif /* PY_MAJOR_VERSION */

@@ -43,8 +43,12 @@ PyObject *PyString_FromAwsString(const struct aws_string *aws_str);
 int PyIntEnum_Check(PyObject *int_enum_obj);
 long PyIntEnum_AsLong(PyObject *int_enum_obj);
 
-/* Python 2/3 compatible check. Return whether object is a PyLong (OR PyInt in python2). */
-int PyLongOrInt_Check(PyObject *obj);
+/* Return the named attribute, converted to the specified type.
+ * If conversion cannot occur a python exception is set (check PyExc_Occurred()) */
+uint32_t PyObject_GetAttrAsUint32(PyObject *o, const char *class_name, const char *attr_name);
+uint16_t PyObject_GetAttrAsUint16(PyObject *o, const char *class_name, const char *attr_name);
+bool PyObject_GetAttrAsBool(PyObject *o, const char *class_name, const char *attr_name);
+int PyObject_GetAttrAsIntEnum(PyObject *o, const char *class_name, const char *attr_name);
 
 /* Create cursor from PyString, PyBytes, or PyUnicode.
  * If conversion cannot occur, cursor->ptr will be NULL but no python exception is set */
@@ -81,6 +85,20 @@ PyObject *aws_py_memory_view_from_byte_buffer(struct aws_byte_buf *buf);
 
 /* Allocator that calls into PyObject_[Malloc|Free|Realloc] */
 struct aws_allocator *aws_py_get_allocator(void);
+
+/**
+ * Acquire GIL, unless it is impossible to do so because the application is shutting down.
+ * Returns AWS_OP_ERR and raises AWS error if GIL cannot be acquired.
+ *
+ * Late in application shutdown, attempting to acquire GIL can crash the application.
+ * We encounter this situation if native resources are still running when the application exits.
+ * Python programmers are allowed to exist without shutting everything down, it does not make them criminals.
+ *
+ * If we encounter this situation, we must not crash the application while it finishes terminating.
+ * Do not interact with Python! It's ok not to fulfill promises (ex: it's ok if a completion callback never fires)
+ * because the user clearly no longer cares about the results.
+ */
+int aws_py_gilstate_ensure(PyGILState_STATE *out_state);
 
 /* Return the capsule ptr from obj._binding
  * On error, NULL is returned and a python exception is set. */

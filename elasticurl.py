@@ -40,7 +40,7 @@ parser.add_argument(
     required=False,
     type=int,
     help='INT: time in milliseconds to wait for a connection.',
-    default=3000)
+    default=5000)
 parser.add_argument(
     '-H',
     '--header',

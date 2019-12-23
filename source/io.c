@@ -35,75 +35,48 @@ bool aws_py_socket_options_init(struct aws_socket_options *socket_options, PyObj
 
     bool success = false;
 
-    /* These references all need to be cleaned up before function returns */
-    PyObject *sock_domain = NULL;
-    PyObject *sock_type = NULL;
-    PyObject *connect_timeout_ms = NULL;
-    PyObject *keep_alive = NULL;
-    PyObject *keep_alive_interval = NULL;
-    PyObject *keep_alive_timeout = NULL;
-    PyObject *keep_alive_max_probes = NULL;
-
-    sock_domain = PyObject_GetAttrString(py_socket_options, "domain");
-    if (!PyIntEnum_Check(sock_domain)) {
-        PyErr_SetString(PyExc_TypeError, "SocketOptions.domain is invalid");
+    socket_options->domain = PyObject_GetAttrAsIntEnum(py_socket_options, "SocketOptions", "domain");
+    if (PyErr_Occurred()) {
         goto done;
     }
-    socket_options->domain = (enum aws_socket_domain)PyIntEnum_AsLong(sock_domain);
 
-    sock_type = PyObject_GetAttrString(py_socket_options, "type");
-    if (!PyIntEnum_Check(sock_type)) {
-        PyErr_SetString(PyExc_TypeError, "SocketOptions.type is invalid");
+    socket_options->type = PyObject_GetAttrAsIntEnum(py_socket_options, "SocketOptions", "type");
+    if (PyErr_Occurred()) {
         goto done;
     }
-    socket_options->type = (enum aws_socket_type)PyIntEnum_AsLong(sock_type);
 
-    connect_timeout_ms = PyObject_GetAttrString(py_socket_options, "connect_timeout_ms");
-    if (!PyLongOrInt_Check(connect_timeout_ms)) {
-        PyErr_SetString(PyExc_TypeError, "SocketOptions.connect_timeout_ms is invalid");
+    socket_options->connect_timeout_ms =
+        PyObject_GetAttrAsUint32(py_socket_options, "SocketOptions", "connect_timeout_ms");
+    if (PyErr_Occurred()) {
         goto done;
     }
-    socket_options->connect_timeout_ms = (uint32_t)PyLong_AsLong(connect_timeout_ms);
 
-    keep_alive = PyObject_GetAttrString(py_socket_options, "keep_alive");
-    if (!keep_alive) {
-        PyErr_SetString(PyExc_TypeError, "SocketOptions.keep_alive is invalid");
+    socket_options->keepalive = PyObject_GetAttrAsBool(py_socket_options, "SocketOptions", "keep_alive");
+    if (PyErr_Occurred()) {
         goto done;
     }
-    socket_options->keepalive = (bool)PyObject_IsTrue(keep_alive);
 
-    keep_alive_interval = PyObject_GetAttrString(py_socket_options, "keep_alive_interval_secs");
-    if (!PyLongOrInt_Check(keep_alive_interval)) {
-        PyErr_SetString(PyExc_TypeError, "SocketOptions.keep_alive_interval_secs is invalid");
+    socket_options->keep_alive_interval_sec =
+        PyObject_GetAttrAsUint16(py_socket_options, "SocketOptions", "keep_alive_interval_secs");
+    if (PyErr_Occurred()) {
         goto done;
     }
-    socket_options->keep_alive_interval_sec = (uint16_t)PyLong_AsLong(keep_alive_interval);
 
-    keep_alive_timeout = PyObject_GetAttrString(py_socket_options, "keep_alive_timeout_secs");
-    if (!PyLongOrInt_Check(keep_alive_timeout)) {
-        PyErr_SetString(PyExc_TypeError, "SocketOptions.keep_alive_timeout_secs is invalid");
+    socket_options->keep_alive_timeout_sec =
+        PyObject_GetAttrAsUint16(py_socket_options, "SocketOptions", "keep_alive_timeout_secs");
+    if (PyErr_Occurred()) {
         goto done;
     }
-    socket_options->keep_alive_timeout_sec = (uint16_t)PyLong_AsLong(keep_alive_timeout);
 
-    keep_alive_max_probes = PyObject_GetAttrString(py_socket_options, "keep_alive_max_probes");
-    if (!PyLongOrInt_Check(keep_alive_timeout)) {
-        PyErr_SetString(PyExc_TypeError, "SocketOptions.keep_alive_max_probes is invalid");
+    socket_options->keep_alive_max_failed_probes =
+        PyObject_GetAttrAsUint16(py_socket_options, "SocketOptions", "keep_alive_max_probes");
+    if (PyErr_Occurred()) {
         goto done;
     }
-    socket_options->keep_alive_max_failed_probes = (uint16_t)PyLong_AsLong(keep_alive_max_probes);
 
     success = true;
 
 done:
-    Py_DECREF(sock_domain);
-    Py_DECREF(sock_type);
-    Py_DECREF(connect_timeout_ms);
-    Py_DECREF(keep_alive);
-    Py_DECREF(keep_alive_interval);
-    Py_DECREF(keep_alive_timeout);
-    Py_DECREF(keep_alive_max_probes);
-
     if (!success) {
         AWS_ZERO_STRUCT(*socket_options);
     }
@@ -118,18 +91,48 @@ PyObject *aws_py_is_alpn_available(PyObject *self, PyObject *args) {
     return PyBool_FromLong(aws_tls_is_alpn_available());
 }
 
+/*******************************************************************************
+ * AWS_EVENT_LOOP_GROUP
+ ******************************************************************************/
+
+struct event_loop_group_binding {
+    struct aws_event_loop_group native;
+
+    /* Dependencies that must outlive this */
+    PyObject *shutdown_complete;
+};
+
 /* Callback when native event-loop-group finishes its async cleanup */
-static void s_elg_native_cleanup_complete(void *elg_memory) {
-    aws_mem_release(aws_py_get_allocator(), elg_memory);
+static void s_elg_native_cleanup_complete(void *user_data) {
+    struct event_loop_group_binding *elg_binding = user_data;
+    PyObject *shutdown_complete = elg_binding->shutdown_complete;
+
+    aws_mem_release(aws_py_get_allocator(), elg_binding);
+
+    /*************** GIL ACQUIRE ***************/
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
+
+    PyObject *result = PyObject_CallFunction(shutdown_complete, "()");
+    if (result) {
+        Py_DECREF(result);
+    } else {
+        PyErr_WriteUnraisable(PyErr_Occurred());
+    }
+    Py_DECREF(shutdown_complete);
+
+    PyGILState_Release(state);
+    /*************** GIL RELEASE ***************/
 }
 
 static void s_elg_capsule_destructor(PyObject *elg_capsule) {
-    struct aws_event_loop_group *elg = PyCapsule_GetPointer(elg_capsule, s_capsule_name_elg);
-    assert(elg);
+    struct event_loop_group_binding *elg_binding = PyCapsule_GetPointer(elg_capsule, s_capsule_name_elg);
 
     /* Must use async cleanup.
      * We could deadlock if we ran the synchronous cleanup from an event-loop thread. */
-    aws_event_loop_group_clean_up_async(elg, s_elg_native_cleanup_complete, elg);
+    aws_event_loop_group_clean_up_async(&elg_binding->native, s_elg_native_cleanup_complete, elg_binding);
 }
 
 PyObject *aws_py_event_loop_group_new(PyObject *self, PyObject *args) {
@@ -138,37 +141,47 @@ PyObject *aws_py_event_loop_group_new(PyObject *self, PyObject *args) {
     struct aws_allocator *allocator = aws_py_get_allocator();
 
     uint16_t num_threads;
-    if (!PyArg_ParseTuple(args, "H", &num_threads)) {
+    PyObject *shutdown_complete_py;
+    if (!PyArg_ParseTuple(args, "HO", &num_threads, &shutdown_complete_py)) {
         return NULL;
     }
 
-    struct aws_event_loop_group *elg = aws_mem_calloc(allocator, 1, sizeof(struct aws_event_loop_group));
-    if (!elg) {
+    struct event_loop_group_binding *binding = aws_mem_calloc(allocator, 1, sizeof(struct event_loop_group_binding));
+    if (!binding) {
         return PyErr_AwsLastError();
     }
 
-    if (aws_event_loop_group_default_init(elg, allocator, num_threads)) {
+    if (aws_event_loop_group_default_init(&binding->native, allocator, num_threads)) {
         PyErr_SetAwsLastError();
         goto elg_init_failed;
     }
 
-    PyObject *capsule = PyCapsule_New(elg, s_capsule_name_elg, s_elg_capsule_destructor);
+    PyObject *capsule = PyCapsule_New(binding, s_capsule_name_elg, s_elg_capsule_destructor);
     if (!capsule) {
         goto capsule_new_failed;
     }
 
+    AWS_FATAL_ASSERT(shutdown_complete_py != Py_None);
+    binding->shutdown_complete = shutdown_complete_py;
+    Py_INCREF(binding->shutdown_complete);
+
     return capsule;
 
 capsule_new_failed:
-    aws_event_loop_group_clean_up(elg);
+    aws_event_loop_group_clean_up(&binding->native);
 elg_init_failed:
-    aws_mem_release(allocator, elg);
+    aws_mem_release(allocator, binding);
     return NULL;
 }
 
 struct aws_event_loop_group *aws_py_get_event_loop_group(PyObject *event_loop_group) {
-    return aws_py_get_binding(event_loop_group, s_capsule_name_elg, "EventLoopGroup");
+    AWS_PY_RETURN_NATIVE_REF_FROM_BINDING(
+        event_loop_group, s_capsule_name_elg, "EventLoopGroup", event_loop_group_binding);
 }
+
+/*******************************************************************************
+ * AWS_HOST_RESOLVER
+ ******************************************************************************/
 
 struct host_resolver_binding {
     struct aws_host_resolver native;
@@ -258,7 +271,10 @@ static void s_client_bootstrap_on_shutdown_complete(void *user_data) {
     PyObject *shutdown_complete = bootstrap->shutdown_complete;
 
     /*************** GIL ACQUIRE ***************/
-    PyGILState_STATE state = PyGILState_Ensure();
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
 
     Py_XDECREF(bootstrap->host_resolver);
     Py_XDECREF(bootstrap->event_loop_group);
@@ -634,7 +650,10 @@ static int s_aws_input_stream_py_seek(
     PyObject *method_result = NULL;
 
     /*************** GIL ACQUIRE ***************/
-    PyGILState_STATE state = PyGILState_Ensure();
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return AWS_OP_ERR; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
 
     method_result = PyObject_CallMethod(impl->io, "seek", "(li)", &offset, &basis);
     if (!method_result) {
@@ -661,7 +680,10 @@ int s_aws_input_stream_py_read(struct aws_input_stream *stream, struct aws_byte_
     PyObject *method_result = NULL;
 
     /*************** GIL ACQUIRE ***************/
-    PyGILState_STATE state = PyGILState_Ensure();
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return AWS_OP_ERR; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
 
     memory_view = aws_py_memory_view_from_byte_buffer(dest);
     if (!memory_view) {

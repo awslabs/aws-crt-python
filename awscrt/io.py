@@ -51,14 +51,21 @@ class EventLoopGroup(NativeResource):
     Classes that need to do async work will ask the EventLoopGroup for an event-loop to use.
     """
 
-    __slots__ = ()
+    __slots__ = ('shutdown_event')
 
     def __init__(self, num_threads=0):
         """
         num_threads: Number of event-loops to create. Pass 0 to create one for each processor on the machine.
         """
         super(EventLoopGroup, self).__init__()
-        self._binding = _awscrt.event_loop_group_new(num_threads)
+
+        shutdown_event = threading.Event()
+
+        def on_shutdown():
+            shutdown_event.set()
+
+        self.shutdown_event = shutdown_event
+        self._binding = _awscrt.event_loop_group_new(num_threads, on_shutdown)
 
 
 class HostResolverBase(NativeResource):
