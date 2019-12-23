@@ -632,7 +632,7 @@ PyMODINIT_FUNC PyInit__awscrt(void) {
 
 #elif PY_MAJOR_VERSION == 2
 
-PyMODINIT_FUNC PyInit__awscrt(void) {
+PyMODINIT_FUNC init_awscrt(void) {
     if (!Py_InitModule3(s_module_name, s_module_methods, s_module_doc)) {
         AWS_FATAL_ASSERT(0 && "Failed to initialize _awscrt");
     }
