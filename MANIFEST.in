@@ -8,6 +8,8 @@ global-exclude codebuild/**
 global-exclude .cbmc-batch/**
 global-exclude aws-common-runtime/*/docs/**
 global-exclude docker-images/**
+prune aws-common-runtime/aws-c-auth/tests/aws-sig-v4-test-suite
+prune aws-common-runtime/aws-c-auth/tests/fuzz/corpus
 prune aws-common-runtime/s2n/tests/fuzz/corpus
 prune aws-common-runtime/s2n/tests/ctverif
 prune aws-common-runtime/s2n/tests/pems
@@ -15,3 +17,4 @@ prune aws-common-runtime/s2n/tests/saw
 prune aws-common-runtime/s2n/tests/sidetrail
 prune aws-common-runtime/s2n/tests/integration/trust-store
 prune aws-common-runtime/s2n/tests/integration/data
+prune aws-common-runtime/s2n/tests/unit/kats
