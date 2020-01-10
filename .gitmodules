@@ -1,0 +1,24 @@
+[submodule "aws-common-runtime/aws-c-common"]
+	path = aws-common-runtime/aws-c-common
+	url = https://github.com/awslabs/aws-c-common.git
+[submodule "aws-common-runtime/aws-c-io"]
+	path = aws-common-runtime/aws-c-io
+	url = https://github.com/awslabs/aws-c-io.git
+[submodule "aws-common-runtime/aws-c-mqtt"]
+	path = aws-common-runtime/aws-c-mqtt
+	url = https://github.com/awslabs/aws-c-mqtt.git
+[submodule "aws-common-runtime/s2n"]
+	path = aws-common-runtime/s2n
+	url = https://github.com/awslabs/s2n.git
+[submodule "aws-common-runtime/aws-c-cal"]
+	path = aws-common-runtime/aws-c-cal
+	url = https://github.com/awslabs/aws-c-cal.git
+[submodule "aws-common-runtime/aws-c-http"]
+	path = aws-common-runtime/aws-c-http
+	url = https://github.com/awslabs/aws-c-http.git
+[submodule "aws-common-runtime/aws-c-compression"]
+	path = aws-common-runtime/aws-c-compression
+	url = https://github.com/awslabs/aws-c-compression.git
+[submodule "aws-common-runtime/aws-c-auth"]
+	path = aws-common-runtime/aws-c-auth
+	url = https://github.com/awslabs/aws-c-auth.git
