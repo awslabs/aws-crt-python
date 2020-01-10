@@ -1,24 +1,24 @@
-[submodule "aws-c-common"]
-	path = aws-c-common
-	url = git://github.com/awslabs/aws-c-common.git
-[submodule "aws-c-io"]
-	path = aws-c-io
-	url = git://github.com/awslabs/aws-c-io.git
-[submodule "aws-c-mqtt"]
-	path = aws-c-mqtt
-	url = git://github.com/awslabs/aws-c-mqtt.git
-[submodule "s2n"]
-	path = s2n
-	url = git://github.com/awslabs/s2n
-[submodule "aws-c-cal"]
-	path = aws-c-cal
-	url = git://github.com/awslabs/aws-c-cal.git
-[submodule "aws-c-http"]
-	path = aws-c-http
-	url = git://github.com/awslabs/aws-c-http
-[submodule "aws-c-compression"]
-	path = aws-c-compression
-	url = git://github.com/awslabs/aws-c-compression
-[submodule "aws-c-auth"]
-	path = aws-c-auth
-	url = git://github.com/awslabs/aws-c-auth
+[submodule "aws-common-runtime/aws-c-common"]
+	path = aws-common-runtime/aws-c-common
+	url = https://github.com/awslabs/aws-c-common.git
+[submodule "aws-common-runtime/aws-c-io"]
+	path = aws-common-runtime/aws-c-io
+	url = https://github.com/awslabs/aws-c-io.git
+[submodule "aws-common-runtime/aws-c-mqtt"]
+	path = aws-common-runtime/aws-c-mqtt
+	url = https://github.com/awslabs/aws-c-mqtt.git
+[submodule "aws-common-runtime/s2n"]
+	path = aws-common-runtime/s2n
+	url = https://github.com/awslabs/s2n.git
+[submodule "aws-common-runtime/aws-c-cal"]
+	path = aws-common-runtime/aws-c-cal
+	url = https://github.com/awslabs/aws-c-cal.git
+[submodule "aws-common-runtime/aws-c-http"]
+	path = aws-common-runtime/aws-c-http
+	url = https://github.com/awslabs/aws-c-http.git
+[submodule "aws-common-runtime/aws-c-compression"]
+	path = aws-common-runtime/aws-c-compression
+	url = https://github.com/awslabs/aws-c-compression.git
+[submodule "aws-common-runtime/aws-c-auth"]
+	path = aws-common-runtime/aws-c-auth
+	url = https://github.com/awslabs/aws-c-auth.git
