@@ -111,7 +111,7 @@ DEP_INSTALL_PATH = os.environ.get('AWS_C_INSTALL', os.path.join(DEP_BUILD_DIR, '
 class awscrt_build_ext(setuptools.command.build_ext.build_ext):
     def _build_dependency(self, aws_lib):
         prev_cwd = os.getcwd()  # restore cwd at end of function
-        lib_source_dir = os.path.join(PROJECT_DIR, aws_lib.name)
+        lib_source_dir = os.path.join(PROJECT_DIR, 'aws-common-runtime', aws_lib.name)
 
         build_type = 'Debug' if self.debug else 'RelWithDebInfo'
 
