@@ -1,26 +1,17 @@
 graft source
-graft aws-c-common
-graft aws-c-io
-graft aws-c-compression
-graft s2n
-graft aws-c-mqtt
-graft aws-c-cal
-graft aws-c-auth
-graft aws-c-http
-global-exclude .git* 
+graft aws-common-runtime
+global-exclude .git*
+global-exclude .git*/**
 global-exclude .travis*
-recursive-exclude **/codebuild *
-recursive-exclude .git *
-recursive-exclude **/.git *
-recursive-exclude **/.github *
-prune s2n/.travis
-prune s2n/tests/fuzz/corpus
-prune s2n/tests/ctverif
-prune s2n/tests/pems
-prune s2n/tests/saw 
-prune s2n/tests/sidetrail
-prune s2n/tests/integration/trust-store
-prune s2n/tests/integration/data
-prune aws-c-io/docs
-prune aws-c-common/.cbmc-batch
-
+global-exclude .travis/**
+global-exclude codebuild/**
+global-exclude .cbmc-batch/**
+global-exclude aws-common-runtime/*/docs/**
+global-exclude docker-images/**
+prune aws-common-runtime/s2n/tests/fuzz/corpus
+prune aws-common-runtime/s2n/tests/ctverif
+prune aws-common-runtime/s2n/tests/pems
+prune aws-common-runtime/s2n/tests/saw
+prune aws-common-runtime/s2n/tests/sidetrail
+prune aws-common-runtime/s2n/tests/integration/trust-store
+prune aws-common-runtime/s2n/tests/integration/data
