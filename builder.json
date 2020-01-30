@@ -73,6 +73,9 @@
     },
     "upstream": [],
     "downstream": [],
+    "pre_build_steps": [
+        "{python}", "-m", "pip", "install", "setuptools"
+    ],
     "build": [
         ["git", "submodule", "update", "--init", "--recursive"],
         ["{python}", "setup.py", "--verbose", "build_ext", "--include-dirs{openssl_include}", "--library-dirs{openssl_lib}", "install"]
