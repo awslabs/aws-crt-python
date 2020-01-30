@@ -73,17 +73,15 @@
     },
     "upstream": [],
     "downstream": [],
-    "build_env": [
-        {
-            "PYTHONPATH": "./install"
-        }
-    ],
+    "build_env": {
+        "PYTHONPATH": "{cwd}/install"
+    },
     "pre_build_steps": [
         ["{python}", "-m", "pip", "install", "setuptools", "autopep8", "boto3"]
     ],
     "build": [
         ["git", "submodule", "update", "--init", "--recursive"],
-        ["{python}", "setup.py", "--verbose", "build_ext", "--include-dirs{openssl_include}", "--library-dirs{openssl_lib}", "install", "--install-dir=./install"]
+        ["{python}", "setup.py", "--verbose", "build_ext", "--include-dirs{openssl_include}", "--library-dirs{openssl_lib}", "install", "--prefix=./install"]
     ],
     "test": [
         ["{python}", "-m", "pip", "install", "--upgrade", "--trusted-host", "pypi.org", "--trusted-host", "files.pythonhosted.org", "pip", "setuptools", "boto3", "autopep8"],
