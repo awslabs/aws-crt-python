@@ -79,7 +79,7 @@
     ],
     "build": [
         ["git", "submodule", "update", "--init", "--recursive"],
-        ["{python}", "-m", "pip", "install", ".", "--install-option=\"--include-dirs{openssl_include}\"", "--install-option=\"--library-dirs{openssl_lib}\""]
+        ["{python}", "-m", "pip", "install", ".", "--install-option=--include-dirs{openssl_include}", "--install-option=--library-dirs{openssl_lib}"]
     ],
     "test": [
         ["{python}", "-m", "pip", "install", "--upgrade", "--trusted-host", "pypi.org", "--trusted-host", "files.pythonhosted.org", "pip", "setuptools", "boto3", "autopep8"],
