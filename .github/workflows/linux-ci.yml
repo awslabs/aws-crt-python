@@ -15,4 +15,4 @@ jobs:
       run: |
         export CODEBUILD_SRC_DIR=$(pwd)
         python3 -c "from urllib.request import urlretrieve; urlretrieve('https://raw.githubusercontent.com/awslabs/aws-c-common/builder2/codebuild/builder.py', 'builder.py')"
-        python3 builder.py build linux-clang-9-linux-x64 --dump-config
+        python3 builder.py build linux-clang-9-linux-x64
