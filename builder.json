@@ -77,7 +77,8 @@
         "PYTHONPATH": "{cwd}/install"
     },
     "pre_build_steps": [
-        ["{python}", "-m", "pip", "install", "setuptools", "autopep8", "boto3"]
+        ["{python}", "-m", "pip", "install", "setuptools"],
+        ["{python}", "-m", "pip", "install", "autopep8", "boto3"]
     ],
     "build": [
         ["git", "submodule", "update", "--init", "--recursive"],
