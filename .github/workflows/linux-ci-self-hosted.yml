@@ -5,7 +5,7 @@ on: [push]
 jobs:
   Ubuntu:
 
-    runs-on: [self-hosted, ubuntu-16-x64]
+    runs-on: [self-hosted, linux]
 
     steps:
     - name: Checkout Source
