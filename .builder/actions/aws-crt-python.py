@@ -9,7 +9,7 @@ class AWSCrtPython(Builder.Action):
 
         actions = [
             ['git', 'submodule', 'update', '--init', '--recursive'],
-            ['{python}', '-m', 'pip', 'install', '--upgrade', 'pip', 'setuptools', 'virtualenv'],
+            ['sudo', '{python}', '-m', 'pip', 'install', '--upgrade', 'pip', 'setuptools', 'virtualenv'],
             ['{python}', '-m', 'virtualenv', 'venv'],
             [venv_python, '-m', 'pip', 'install', '--upgrade', 'autopep8', 'boto3'],
             [venv_python, '-m', 'pip', 'install', '.', '--install-option=--verbose', '--install-option=build_ext', '--install-option=--include-dirs{openssl_include}', '--install-option=--library-dirs{openssl_lib}'],
