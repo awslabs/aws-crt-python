@@ -154,9 +154,15 @@ def _builder(
     socket_options.connect_timeout_ms = kwargs.get('tcp_connect_timeout_ms', 5000)
     # These have been inconsistent between keepalive/keep_alive. Resolve both for now to ease transition.
     socket_options.keep_alive = kwargs.get('tcp_keep_alive', kwargs.get('tcp_keepalive', False))
-    socket_options.keep_alive_timeout_secs = kwargs.get('tcp_keep_alive_timeout_secs', kwargs.get('tcp_keepalive_timeout_secs', 0))
-    socket_options.keep_alive_interval_secs = kwargs.get('tcp_keep_alive_interval_secs', kwargs.get('tcp_keepalive_interval_secs', 0))
-    socket_options.keep_alive_max_probes = kwargs.get('tcp_keep_alive_max_probes', kwargs.get('tcp_keepalive_max_probes', 0))
+    socket_options.keep_alive_timeout_secs = kwargs.get(
+        'tcp_keep_alive_timeout_secs', kwargs.get(
+            'tcp_keepalive_timeout_secs', 0))
+    socket_options.keep_alive_interval_secs = kwargs.get(
+        'tcp_keep_alive_interval_secs', kwargs.get(
+            'tcp_keepalive_interval_secs', 0))
+    socket_options.keep_alive_max_probes = kwargs.get(
+        'tcp_keep_alive_max_probes', kwargs.get(
+            'tcp_keepalive_max_probes', 0))
 
     username = kwargs.get('username', '')
     if kwargs.get('enable_metrics_collection', True):
