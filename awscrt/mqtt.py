@@ -214,7 +214,6 @@ class Connection(NativeResource):
                 return_code=ConnectReturnCode(return_code),
                 session_present=session_present)
 
-
     def _ws_handshake_transform(self, http_request_binding, http_headers_binding, native_userdata):
         if self._ws_handshake_transform_cb is None:
             _awscrt.mqtt_ws_handshake_transform_complete(None, native_userdata)
