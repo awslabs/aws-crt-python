@@ -62,14 +62,14 @@ Optional Arguments:
 
     tcp_connect_timeout_ms (int): Milliseconds to wait for TCP connect response. Default is 5000ms (5 seconds).
 
-    tcp_keepalive (bool): Whether to use TCP keep-alive. Default is False. If True, periodically transmit messages
+    tcp_keep_alive (bool): Whether to use TCP keep-alive. Default is False. If True, periodically transmit messages
             for detecting a disconnected peer.
 
-    tcp_keepalive_interval_secs (int): Interval, in seconds, for TCP keep-alive.
+    tcp_keep_alive_interval_secs (int): Interval, in seconds, for TCP keep-alive.
 
-    tcp_keepalive_timeout_secs (int): Timeout, in seconds, for TCP keep-alive.
+    tcp_keep_alive_timeout_secs (int): Timeout, in seconds, for TCP keep-alive.
 
-    tcp_keepalive_max_probes (int): Number of probes allowed to fail before the connection is considered lost.
+    tcp_keep_alive_max_probes (int): Number of probes allowed to fail before the connection is considered lost.
 
     ca_filepath (str): Override default trust store with CA certificates from this PEM formatted file.
 
@@ -152,10 +152,11 @@ def _builder(
 
     socket_options = awscrt.io.SocketOptions()
     socket_options.connect_timeout_ms = kwargs.get('tcp_connect_timeout_ms', 5000)
-    socket_options.keep_alive = kwargs.get('tcp_keepalive', False)
-    socket_options.keep_alive_timeout_secs = kwargs.get('tcp_keepalive_timeout_secs', 0)
-    socket_options.keep_alive_interval_secs = kwargs.get('tcp_keep_alive_interval_secs', 0)
-    socket_options.keep_alive_max_probes = kwargs.get('tcp_keep_alive_max_probes', 0)
+    # These have been inconsistent between keepalive/keep_alive. Resolve both for now to ease transition.
+    socket_options.keep_alive = kwargs.get('tcp_keep_alive', kwargs.get('tcp_keepalive', False))
+    socket_options.keep_alive_timeout_secs = kwargs.get('tcp_keep_alive_timeout_secs', kwargs.get('tcp_keepalive_timeout_secs', 0))
+    socket_options.keep_alive_interval_secs = kwargs.get('tcp_keep_alive_interval_secs', kwargs.get('tcp_keepalive_interval_secs', 0))
+    socket_options.keep_alive_max_probes = kwargs.get('tcp_keep_alive_max_probes', kwargs.get('tcp_keepalive_max_probes', 0))
 
     username = kwargs.get('username', '')
     if kwargs.get('enable_metrics_collection', True):
