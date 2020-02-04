@@ -1,4 +1,4 @@
-name: CI (Ubuntu Docker)
+name: CI (Ubuntu 16 x64)
 
 on: [push]
 
