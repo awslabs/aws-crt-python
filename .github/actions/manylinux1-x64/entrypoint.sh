@@ -6,5 +6,5 @@ python=/opt/python/cp37-cp37m/bin/python
 
 cd $GITHUB_WORKSPACE
 $python -c "from urllib.request import urlretrieve; urlretrieve('https://raw.githubusercontent.com/awslabs/aws-c-common/builder2/codebuild/builder.py', 'builder.py')"
-$python builder.py run $1
+$python builder.py --spec manylinux-default-default-linux-x64 run $1
 
