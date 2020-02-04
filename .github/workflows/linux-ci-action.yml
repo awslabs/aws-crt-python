@@ -14,5 +14,7 @@ jobs:
     - name: Build and test
       run: |
         export CODEBUILD_SRC_DIR=$(pwd)
+        python3 -m pip install --upgrade virtualenv
+        python3 -m virtualenv venv
         python3 -c "from urllib.request import urlretrieve; urlretrieve('https://raw.githubusercontent.com/awslabs/aws-c-common/builder2/codebuild/builder.py', 'builder.py')"
-        python3 builder.py run aws-crt-python
+        ./venv/bin/python builder.py run aws-crt-python
