@@ -8,7 +8,15 @@ jobs:
     
     steps:
     - name: Checkout Source
-      uses: actions/checkout@v1
+      uses: actions/checkout@v2
+
+    - uses: actions/checkout@v2
+    - name: Checkout submodules
+      shell: bash
+      run: |
+        auth_header="$(git config --local --get http.https://github.com/.extraheader)"
+        git submodule sync --recursive
+        git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1
     
     - uses: ./.github/actions/manylinux1-x64
       name: Build and Test
@@ -20,7 +28,15 @@ jobs:
     
     steps:
     - name: Checkout Source
-      uses: actions/checkout@v1
+      uses: actions/checkout@v2
+
+    - uses: actions/checkout@v2
+    - name: Checkout submodules
+      shell: bash
+      run: |
+        auth_header="$(git config --local --get http.https://github.com/.extraheader)"
+        git submodule sync --recursive
+        git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1
     
     - uses: ./.github/actions/manylinux1-x86
       name: Build and Test
@@ -32,9 +48,17 @@ jobs:
 
     steps:
     - name: Checkout Source
-      uses: actions/checkout@v1
+      uses: actions/checkout@v2
+
+    - uses: actions/checkout@v2
+    - name: Checkout submodules
+      shell: bash
+      run: |
+        auth_header="$(git config --local --get http.https://github.com/.extraheader)"
+        git submodule sync --recursive
+        git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1
     
-    - name: Build and test
+    - name: Build and Test
       run: |
         export CODEBUILD_SRC_DIR=$(pwd)
         python3 -m pip install --upgrade virtualenv
@@ -47,7 +71,15 @@ jobs:
 
     steps:
     - name: Checkout Source
-      uses: actions/checkout@v1
+      uses: actions/checkout@v2
+
+    - uses: actions/checkout@v2
+    - name: Checkout submodules
+      shell: bash
+      run: |
+        auth_header="$(git config --local --get http.https://github.com/.extraheader)"
+        git submodule sync --recursive
+        git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1
     
     - uses: ./.github/actions/ubuntu-16-x64
       name: Build and Test
@@ -59,14 +91,22 @@ jobs:
 
     steps:
     - name: Checkout Source
-      uses: actions/checkout@v1
+      uses: actions/checkout@v2
+
+    - uses: actions/checkout@v2
+    - name: Checkout submodules
+      shell: bash
+      run: |
+        auth_header="$(git config --local --get http.https://github.com/.extraheader)"
+        git submodule sync --recursive
+        git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1
     
     - name: Install Dependencies
       run: |
         brew install llvm
         export PATH=$(brew --prefix llvm)/bin:$PATH
     
-    - name: Build and test
+    - name: Build and Test
       run: |
         export CODEBUILD_SRC_DIR=$(pwd)
         python3 -c "from urllib.request import urlretrieve; urlretrieve('https://raw.githubusercontent.com/awslabs/aws-c-common/builder2/codebuild/builder.py', 'builder.py')"
@@ -77,9 +117,17 @@ jobs:
 
     steps:
     - name: Checkout Source
-      uses: actions/checkout@v1
+      uses: actions/checkout@v2
+
+    - uses: actions/checkout@v2
+    - name: Checkout submodules
+      shell: bash
+      run: |
+        auth_header="$(git config --local --get http.https://github.com/.extraheader)"
+        git submodule sync --recursive
+        git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1
     
-    - name: Build and test
+    - name: Build and Test
       run: |
         export CODEBUILD_SRC_DIR=$(pwd)
         python3 -c "from urllib.request import urlretrieve; urlretrieve('https://raw.githubusercontent.com/awslabs/aws-c-common/builder2/codebuild/builder.py', 'builder.py')"
@@ -90,9 +138,17 @@ jobs:
 
     steps:
     - name: Checkout Source
-      uses: actions/checkout@v1
+      uses: actions/checkout@v2
+
+    - uses: actions/checkout@v2
+    - name: Checkout submodules
+      shell: bash
+      run: |
+        auth_header="$(git config --local --get http.https://github.com/.extraheader)"
+        git submodule sync --recursive
+        git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1
     
-    - name: Build and test
+    - name: Build and Test
       run: |
         export CODEBUILD_SRC_DIR=$(pwd)
         python3 -m pip install --upgrade virtualenv
