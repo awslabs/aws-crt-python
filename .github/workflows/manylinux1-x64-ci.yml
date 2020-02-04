@@ -1,4 +1,4 @@
-name: CI (Ubuntu 16 x64)
+name: CI (manylinux1 x64)
 
 on: [push]
 
@@ -13,5 +13,5 @@ jobs:
     - uses: ./.github/actions/manylinux1-x64
       name: Build and Test
       with:
-          spec: linux-clang-9-linux-x64
+          action: manylinux1-ci
     
