@@ -27,8 +27,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y install \
 ###############################################################################
 # Python/AWS CLI
 ###############################################################################
-RUN pip3 install --upgrade pip \
-    && pip3 install awscli \
+RUN python3 -m pip install --upgrade pip setuptools virtualenv \
+    && python3 -m pip install --upgrade awscli \
     && aws --version
 
 ###############################################################################
