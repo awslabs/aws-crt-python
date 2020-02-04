@@ -1,0 +1,12 @@
+name: 'manylinux1 x64'
+description: 'Builds on manylinux1 with every version of Python'
+inputs:
+    action:
+        description: 'Build action for builder.py'
+        required: false
+        default: 'manylinux1-ci'
+runs:
+    using: 'docker'
+    image: 'Dockerfile'
+    args:
+        - ${{ inputs.action }}
