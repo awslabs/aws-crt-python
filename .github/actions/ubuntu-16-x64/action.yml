@@ -1,0 +1,12 @@
+name: 'Ubuntu 16 x64'
+description: 'Builds on Ubuntu 16 x64'
+inputs:
+    spec:
+        description: 'Build spec for builder.py'
+        required: false
+        default: 'linux-clang-9-linux-x64'
+runs:
+    using: 'docker'
+    image: 'Dockerfile'
+        args:
+            - ${{ inputs.spec }}
