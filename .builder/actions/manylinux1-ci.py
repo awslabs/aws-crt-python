@@ -3,7 +3,7 @@ import Builder
 import os, sys
 
 pythons = (
-    'cp34-cp34m',
+    #'cp34-cp34m',
     'cp35-cp35m',
     'cp36-cp36m',
     'cp37-cp37m',
@@ -54,7 +54,7 @@ class ManyLinux1CI(Builder.Action):
                 [python, '-m', 'pip', 'install', '.',
                     '--install-option=--verbose', '--install-option=build_ext', '--install-option=--include-dirs{openssl_include}',
                     '--install-option=--library-dirs{openssl_lib}'],
-                [python3, 'aws-common-runtime/aws-c-http/integration-testing/http_client_test.py', python3, 'elasticurl.py'],
+                [python3, 'aws-common-runtime/aws-c-http/integration-testing/http_client_test.py', python, 'elasticurl.py'],
                 [python3, '-m', 'autopep8', '--exit-code', '--diff', '--recursive', 'awscrt', 'test', 'setup.py'],
             ]
             steps.append(Builder.Script(actions, name=python))
