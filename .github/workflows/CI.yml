@@ -18,6 +18,10 @@ jobs:
         git submodule sync --recursive
         git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1
     
+    - name: Login to GitHub Docker
+      run: |
+        echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u awslabs --passwword-stdin
+      
     - uses: ./.github/actions/manylinux1-x64
       name: Build and Test
       with:
@@ -37,6 +41,10 @@ jobs:
         auth_header="$(git config --local --get http.https://github.com/.extraheader)"
         git submodule sync --recursive
         git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1
+
+    - name: Login to GitHub Docker
+      run: |
+        echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u awslabs --passwword-stdin
     
     - uses: ./.github/actions/manylinux1-x86
       name: Build and Test
