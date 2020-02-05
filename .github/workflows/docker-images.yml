@@ -1,0 +1,41 @@
+name: Docker Images
+
+on: [push]
+
+jobs:
+    manylinux1-x64:
+
+        runs-on: ubuntu-latest
+
+        steps:
+        - name: Checkout Sources
+        uses: actions/checkout@v1
+        
+        - uses: whoan/docker-build-with-cache-action@v3
+            with:
+                username: "awslabs"
+                password: "${{ secrets.GITHUB_TOKEN }}"
+                image_name: awslabs/awscrt/manylinux1
+                image_tag: x64
+                registry: docker.pkg.github.com
+                context: .github/actions/manylinux1-x64/Dockerfile
+                build_extra_args: "--compress=true"  
+
+    manylinux1-x86:
+
+        runs-on: ubuntu-latest
+
+        steps:
+        - name: Checkout Sources
+        uses: actions/checkout@v1
+        
+        - uses: whoan/docker-build-with-cache-action@v3
+            with:
+                username: "awslabs"
+                password: "${{ secrets.GITHUB_TOKEN }}"
+                image_name: awslabs/awscrt/manylinux1
+                image_tag: x86
+                registry: docker.pkg.github.com
+                context: .github/actions/manylinux1-x86/Dockerfile
+                build_extra_args: "--compress=true"  
+    
