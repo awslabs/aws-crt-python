@@ -53,7 +53,7 @@ jobs:
     - name: Checkout Sources
       uses: actions/checkout@v1
     
-    - name: Build manylinux1-x64 image
+    - name: Build Ubuntu-16-x64 image
       uses: whoan/docker-build-with-cache-action@v3
       with:
         username: "awslabs"
