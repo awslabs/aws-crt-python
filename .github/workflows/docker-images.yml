@@ -20,7 +20,7 @@ jobs:
       with:
         username: "awslabs"
         password: "${{ secrets.GITHUB_TOKEN }}"
-        image_name: awslabs/awscrt/manylinux1
+        image_name: awslabs/aws-crt-python/manylinux1
         image_tag: x64
         registry: docker.pkg.github.com
         context: .github/actions/manylinux1-x64
@@ -39,7 +39,7 @@ jobs:
       with:
         username: "awslabs"
         password: "${{ secrets.GITHUB_TOKEN }}"
-        image_name: awslabs/awscrt/manylinux1
+        image_name: awslabs/aws-crt-python/manylinux1
         image_tag: x86
         registry: docker.pkg.github.com
         context: .github/actions/manylinux1-x86
