@@ -42,6 +42,7 @@ class ManyLinux1CI(Builder.Action):
     def run(self, env):
         python3 = default_python()
 
+        steps = []
         for version in pythons:
             python = python_path(version)
             
