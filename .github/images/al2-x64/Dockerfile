@@ -18,7 +18,9 @@ RUN yum -y install \
     make \
     cmake3 \
     gcc \
-    gcc-c++
+    gcc-c++ \
+    && ln -s `which cmake3` /usr/bin/cmake \
+    && cmake --version
 
 ###############################################################################
 # Python/AWS CLI
