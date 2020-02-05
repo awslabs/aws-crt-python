@@ -63,3 +63,22 @@ jobs:
         registry: docker.pkg.github.com
         context: .github/images/ubuntu-16-x64
         build_extra_args: "--compress=true"  
+
+  AL2-x64:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Sources
+      uses: actions/checkout@v1
+    
+    - name: Build AL2-x64 image
+      uses: whoan/docker-build-with-cache-action@v3
+      with:
+        username: "awslabs"
+        password: "${{ secrets.GITHUB_TOKEN }}"
+        image_name: awslabs/aws-crt-python/al2
+        image_tag: x64
+        registry: docker.pkg.github.com
+        context: .github/images/al2-x64
+        build_extra_args: "--compress=true"
