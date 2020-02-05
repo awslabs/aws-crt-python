@@ -58,7 +58,7 @@ jobs:
       with:
         username: "awslabs"
         password: "${{ secrets.GITHUB_TOKEN }}"
-        image_name: awslabs/aws-crt-python/ubuntu16
+        image_name: awslabs/aws-crt-python/ubuntu-16
         image_tag: x64
         registry: docker.pkg.github.com
         context: .github/images/ubuntu-16-x64
