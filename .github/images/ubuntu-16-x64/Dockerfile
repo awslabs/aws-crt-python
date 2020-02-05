@@ -61,6 +61,3 @@ RUN set -ex \
     && apt-get update -qq \
     && apt-get clean \
     && rm -rf /tmp/*
-
-COPY entrypoint.sh /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
