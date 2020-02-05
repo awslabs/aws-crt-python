@@ -1,7 +1,7 @@
 
 import Builder
 import os, sys
-from . import aws_crt_python
+from aws_crt_python import InstallPythonReqs
 
 pythons = (
     #'cp34-cp34m',
@@ -24,7 +24,7 @@ class ManyLinux1Package(Builder.Action):
         for version in pythons:
             python = python_path(version)
             actions = [
-                aws_crt_python.InstallPythonReqs(python=python),
+                InstallPythonReqs(python=python),
                 [python, '-m', 'pip', 'install', '.', '--install-option=--verbose', '--install-option=sdist', '--install-option=bdist_wheel'],
                 ['auditwheel', 'repair', '--plat', 'manylinux1_x86_64', 'dist/awscrt-*{}-linux_x86_64.whl'.format(python)],
             ]
@@ -48,7 +48,7 @@ class ManyLinux1CI(Builder.Action):
             python = python_path(version)
             
             actions = [
-                aws_crt_python.InstallPythonReqs(python=python, deps=['boto3'], trust_hosts=True),
+                InstallPythonReqs(python=python, deps=['boto3'], trust_hosts=True),
                 [python, '-m', 'pip', 'install', '.',
                     '--install-option=--verbose', '--install-option=build_ext', '--install-option=--include-dirs{openssl_include}',
                     '--install-option=--library-dirs{openssl_lib}'],
