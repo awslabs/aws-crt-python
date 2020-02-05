@@ -71,7 +71,7 @@ jobs:
         export CODEBUILD_SRC_DIR=$(pwd)
         python3 -m pip install --upgrade virtualenv
         python3 -m virtualenv venv
-        python3 -c "from urllib.request import urlretrieve; urlretrieve('https://raw.githubusercontent.com/awslabs/aws-c-common/builder2/codebuild/builder.py', 'builder.py')"
+        python3 -c "from urllib.request import urlretrieve; urlretrieve('https://raw.githubusercontent.com/awslabs/aws-c-common/master/codebuild/builder.py', 'builder.py')"
         ./venv/bin/python builder.py run aws-crt-python
 
   Ubuntu-16-x64:
@@ -92,7 +92,7 @@ jobs:
     - name: Login to GitHub Docker
       run: |
         echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u awslabs --password-stdin
-        
+
     - uses: ./.github/actions/ubuntu-16-x64
       name: Build and Test
       with:
@@ -121,7 +121,7 @@ jobs:
     - name: Build and Test
       run: |
         export CODEBUILD_SRC_DIR=$(pwd)
-        python3 -c "from urllib.request import urlretrieve; urlretrieve('https://raw.githubusercontent.com/awslabs/aws-c-common/builder2/codebuild/builder.py', 'builder.py')"
+        python3 -c "from urllib.request import urlretrieve; urlretrieve('https://raw.githubusercontent.com/awslabs/aws-c-common/master/codebuild/builder.py', 'builder.py')"
         python3 builder.py build macos-default-default-macos-x64
 
   Ubuntu-old-style-build:
@@ -142,7 +142,7 @@ jobs:
     - name: Build and Test
       run: |
         export CODEBUILD_SRC_DIR=$(pwd)
-        python3 -c "from urllib.request import urlretrieve; urlretrieve('https://raw.githubusercontent.com/awslabs/aws-c-common/builder2/codebuild/builder.py', 'builder.py')"
+        python3 -c "from urllib.request import urlretrieve; urlretrieve('https://raw.githubusercontent.com/awslabs/aws-c-common/master/codebuild/builder.py', 'builder.py')"
         python3 builder.py build linux-clang-9-linux-x64
 
   Ubuntu-new-style-action:
@@ -165,5 +165,5 @@ jobs:
         export CODEBUILD_SRC_DIR=$(pwd)
         python3 -m pip install --upgrade virtualenv
         python3 -m virtualenv venv
-        python3 -c "from urllib.request import urlretrieve; urlretrieve('https://raw.githubusercontent.com/awslabs/aws-c-common/builder2/codebuild/builder.py', 'builder.py')"
+        python3 -c "from urllib.request import urlretrieve; urlretrieve('https://raw.githubusercontent.com/awslabs/aws-c-common/master/codebuild/builder.py', 'builder.py')"
         ./venv/bin/python builder.py run aws-crt-python
