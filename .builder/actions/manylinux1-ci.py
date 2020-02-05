@@ -26,9 +26,6 @@ class ManyLinux1Package(Builder.Action):
                 [python, '-m', 'pip', 'install', '--upgrade', 'autopep8', 'boto3'],
                 [python, '-m', 'pip', 'install', '.', '--install-option=--verbose', '--install-option=sdist', '--install-option=bdist_wheel'],
                 ['auditwheel', 'repair', '--plat', 'manylinux1_x86_64', 'dist/awscrt-*{}-linux_x86_64.whl'.format(python)],
-                
-                [venv_python, 'aws-common-runtime/aws-c-http/integration-testing/http_client_test.py', venv_python, 'elasticurl.py'],
-                [venv_python, '-m', 'autopep8', '--exit-code', '--diff', '--recursive', 'awscrt', 'test', 'setup.py'],
             ]
             steps.append(Builder.Script(actions, name=python))
 
@@ -43,19 +40,19 @@ class ManyLinux1Package(Builder.Action):
 
 class ManyLinux1CI(Builder.Action):
     def run(self, env):
-        steps = []
+        python3 = default_python()
+
         for version in pythons:
             python = python_path(version)
-            python3 = default_python()
+            
             actions = [
                 [python, '-m', 'pip', 'install', '--upgrade',
                     "--trusted-host", "pypi.org", "--trusted-host", "files.pythonhosted.org",
-                    "pip", "setuptools", "boto3", "autopep8"],
+                    "pip", "setuptools", "boto3"],
                 [python, '-m', 'pip', 'install', '.',
                     '--install-option=--verbose', '--install-option=build_ext', '--install-option=--include-dirs{openssl_include}',
                     '--install-option=--library-dirs{openssl_lib}'],
                 [python3, 'aws-common-runtime/aws-c-http/integration-testing/http_client_test.py', python, 'elasticurl.py'],
-                [python3, '-m', 'autopep8', '--exit-code', '--diff', '--recursive', 'awscrt', 'test', 'setup.py'],
             ]
             steps.append(Builder.Script(actions, name=python))
 
