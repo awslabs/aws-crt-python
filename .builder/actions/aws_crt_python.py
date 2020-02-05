@@ -30,7 +30,7 @@ class AWSCrtPython(Builder.Action):
         python = sys.executable
 
         actions = [
-            InstallPythonReqs(deps=['autopep8', 'boto3'])
+            InstallPythonReqs(deps=['autopep8', 'boto3']),
             [python, '-m', 'pip', 'install', '.', '--install-option=--verbose', '--install-option=build_ext', '--install-option=--include-dirs{openssl_include}', '--install-option=--library-dirs{openssl_lib}'],
             [python, '-m', 'unittest', 'discover', '--verbose'],
             [python, 'aws-common-runtime/aws-c-http/integration-testing/http_client_test.py', python, 'elasticurl.py'],
