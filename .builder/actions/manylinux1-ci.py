@@ -1,7 +1,7 @@
 
 import Builder
 import os, sys
-from aws_crt_python import InstallPythonReqs
+from .aws_crt_python import InstallPythonReqs
 
 pythons = (
     #'cp34-cp34m',
