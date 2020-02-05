@@ -1,6 +1,10 @@
 name: Docker Images
 
-on: [push]
+on: 
+  push:
+    paths:
+      - '.github/actions/*'
+      - '.github/workflows/docker-images.yml'
 
 jobs:
   manylinux1-x64:
@@ -19,7 +23,7 @@ jobs:
         image_name: awslabs/awscrt/manylinux1
         image_tag: x64
         registry: docker.pkg.github.com
-        context: .github/actions/manylinux1-x64/Dockerfile
+        context: .github/actions/manylinux1-x64
         build_extra_args: "--compress=true"  
 
   manylinux1-x86:
@@ -38,6 +42,6 @@ jobs:
         image_name: awslabs/awscrt/manylinux1
         image_tag: x86
         registry: docker.pkg.github.com
-        context: .github/actions/manylinux1-x86/Dockerfile
+        context: .github/actions/manylinux1-x86
         build_extra_args: "--compress=true"  
   
