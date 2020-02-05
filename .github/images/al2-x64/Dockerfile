@@ -19,7 +19,7 @@ RUN yum -y install \
     cmake3 \
     gcc \
     gcc-c++ \
-    && ln -s `which cmake3` /usr/bin/cmake \
+    && ln -s /usr/bin/cmake3 /usr/bin/cmake \
     && cmake --version
 
 ###############################################################################
