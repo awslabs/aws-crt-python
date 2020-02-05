@@ -4,7 +4,7 @@ inputs:
     spec:
         description: 'Build spec for builder.py'
         required: false
-        default: 'al2012-gcc-7-linux-x64'
+        default: 'al2012-default-default-linux-x64'
 runs:
     using: 'docker'
     image: 'Dockerfile'

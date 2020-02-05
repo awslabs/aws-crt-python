@@ -14,8 +14,6 @@
             }
         },
         "al2012": {
-            "enabled": false,
-            "_comment": "al2012 can't currently pull builder.py from github. SSL: CERTIFICATE_VERIFY_FAILED",
             "variables": {
                 "openssl_include": "=/opt/openssl/include",
                 "openssl_lib": "=/opt/openssl/lib"
