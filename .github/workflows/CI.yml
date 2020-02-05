@@ -119,8 +119,6 @@ jobs:
 
     - uses: ./.github/actions/al2-x64
       name: Build and Test
-      with:
-          spec: linux-default-default-linux-x64
   
   OSX:
     runs-on: macOS-10.14
