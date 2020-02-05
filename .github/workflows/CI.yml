@@ -97,6 +97,30 @@ jobs:
       name: Build and Test
       with:
           spec: linux-clang-9-linux-x64
+
+  AL2-x64:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Source
+      uses: actions/checkout@v2
+
+    - uses: actions/checkout@v2
+    - name: Checkout submodules
+      shell: bash
+      run: |
+        auth_header="$(git config --local --get http.https://github.com/.extraheader)"
+        git submodule sync --recursive
+        git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1
+    
+    - name: Login to GitHub Docker
+      run: |
+        echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u awslabs --password-stdin
+
+    - uses: ./.github/actions/al2-x64
+      name: Build and Test
+      with:
+          spec: linux-default-default-linux-x64
   
   OSX:
     runs-on: macOS-10.14

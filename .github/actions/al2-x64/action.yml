@@ -1,0 +1,12 @@
+name: 'Amazon Linux 2 x64'
+description: 'Builds on AL2 x64'
+inputs:
+    spec:
+        description: 'Build spec for builder.py'
+        required: false
+        default: 'linux-default-default-linux-x64'
+runs:
+    using: 'docker'
+    image: 'Dockerfile'
+    args:
+        - ${{ inputs.spec }}
