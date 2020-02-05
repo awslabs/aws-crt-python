@@ -89,6 +89,10 @@ jobs:
         git submodule sync --recursive
         git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1
     
+    - name: Login to GitHub Docker
+      run: |
+        echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u awslabs --password-stdin
+        
     - uses: ./.github/actions/ubuntu-16-x64
       name: Build and Test
       with:
