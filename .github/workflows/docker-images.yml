@@ -3,7 +3,7 @@ name: Docker Images
 on: 
   push:
     paths:
-      - '.github/actions/*'
+      - '.github/images/*'
       - '.github/workflows/docker-images.yml'
 
 jobs:
@@ -23,7 +23,7 @@ jobs:
         image_name: awslabs/aws-crt-python/manylinux1
         image_tag: x64
         registry: docker.pkg.github.com
-        context: .github/actions/manylinux1-x64
+        context: .github/images/manylinux1-x64
         build_extra_args: "--compress=true"  
 
   manylinux1-x86:
@@ -42,6 +42,24 @@ jobs:
         image_name: awslabs/aws-crt-python/manylinux1
         image_tag: x86
         registry: docker.pkg.github.com
-        context: .github/actions/manylinux1-x86
+        context: .github/images/manylinux1-x86
         build_extra_args: "--compress=true"  
   
+  Ubuntu-16-x64:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Sources
+      uses: actions/checkout@v1
+    
+    - name: Build manylinux1-x64 image
+      uses: whoan/docker-build-with-cache-action@v3
+      with:
+        username: "awslabs"
+        password: "${{ secrets.GITHUB_TOKEN }}"
+        image_name: awslabs/aws-crt-python/ubuntu16
+        image_tag: x64
+        registry: docker.pkg.github.com
+        context: .github/images/ubuntu-16-x64
+        build_extra_args: "--compress=true"  
