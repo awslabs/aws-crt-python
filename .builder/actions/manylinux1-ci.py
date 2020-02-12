@@ -1,5 +1,6 @@
 
-import Builder
+from action import Action
+from builder.actions import Script
 import os
 import sys
 from aws_crt_python import InstallPythonReqs
@@ -22,7 +23,7 @@ def default_python():
     return sys.executable
 
 
-class ManyLinux1Package(Builder.Action):
+class ManyLinux1Package(Action):
     def run(self, env):
         steps = []
         for version in pythons:
@@ -42,7 +43,7 @@ class ManyLinux1Package(Builder.Action):
                         'manylinux1_x86_64',
                         'dist/awscrt-*{}-linux_x86_64.whl'.format(python)],
                        ]
-            steps.append(Builder.Script(actions, name=python))
+            steps.append(Script(actions, name=python))
 
         copy_steps = [
             ['cp', '-r', 'wheelhouse' '../dist']
@@ -51,10 +52,10 @@ class ManyLinux1Package(Builder.Action):
 
         steps += copy_steps
 
-        return Builder.Script(steps, name='manylinux1-package')
+        return Script(steps, name='manylinux1-package')
 
 
-class ManyLinux1CI(Builder.Action):
+class ManyLinux1CI(Action):
     def run(self, env):
         python3 = default_python()
 
@@ -69,6 +70,6 @@ class ManyLinux1CI(Builder.Action):
                     '--install-option=--library-dirs{openssl_lib}'],
                 [python3, 'aws-common-runtime/aws-c-http/integration-testing/http_client_test.py', python, 'elasticurl.py'],
             ]
-            steps.append(Builder.Script(actions, name=python))
+            steps.append(Script(actions, name=python))
 
-        return Builder.Script(steps, name='manylinux1-ci')
+        return Script(steps, name='manylinux1-ci')
