@@ -19,6 +19,12 @@
                 "openssl_lib": "=/opt/openssl/lib"
             }
         },
+        "al2": {
+            "variables": {
+                "openssl_include": "=/opt/openssl/include",
+                "openssl_lib": "=/opt/openssl/lib"
+            }
+        },
         "manylinux": {
             "variables": {
                 "openssl_include": "=/opt/openssl/include",
