@@ -38,16 +38,6 @@
             "_comment": "disabled until we have a reason to support python on android"
         }
     },
-    "compilers": {
-        "gcc": {
-            "versions": {
-                "4.8": {
-                    "enabled": false,
-                    "_comment": "on ubuntu 16, python was passing unrecognized flag '-Wdate-time' to gcc 4 (flag doesn't exist until gcc 5). This flag is coming from 'PY_CORE_CFLAGS' defined in /usr/lib/python3.5/plat-x86_64-linux-gnu/_sysconfigdata_m.py"
-                }
-            }
-        }
-    },
     "upstream": [],
     "downstream": [],
     "pre_build_steps": [
