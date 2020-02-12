@@ -1,11 +1,9 @@
 
-import builder.actions import Script
-from action import Action
-from host import current_platform
+import Builder
 import os
 import sys
 
-class InstallPythonReqs(Action):
+class InstallPythonReqs(Builder.Action):
     def __init__(self, **kwargs):
         self.trust_hosts = kwargs.get('trust_hosts', False)
         self.core = ('pip', 'setuptools', 'virtualenv')
@@ -24,16 +22,16 @@ class InstallPythonReqs(Action):
         for deps in (self.core, self.deps):
             steps.append([self.python, '-m', 'pip', 'install', '--upgrade', *trusted_hosts, *deps])
 
-        return Script(steps, name='install-python-reqs')
+        return Builder.Script(steps, name='install-python-reqs')
 
 
-class AWSCrtPython(Action):
+class AWSCrtPython(Builder.Action):
     def run(self, env):        
         # Once the virtualenv is set up, we must use that python, so that the venv is used
         python = sys.executable
 
         install_options = []
-        if 'linux' == current_platform():
+        if 'linux' == Builder.Host.current_platform():
             install_options = [
                 '--install-option=--include-dirs{openssl_include}',
                 '--install-option=--library-dirs{openssl_lib}']
@@ -46,4 +44,4 @@ class AWSCrtPython(Action):
             [python, '-m', 'autopep8', '--exit-code', '--diff', '--recursive', 'awscrt', 'test', 'setup.py'],
         ]
 
-        return Script(actions, name='aws-crt-python')
+        return Builder.Script(actions, name='aws-crt-python')
