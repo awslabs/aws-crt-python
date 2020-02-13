@@ -4,6 +4,12 @@
         "android": {
             "enabled": false,
             "_comment": "disabled until we have a reason to support python on android"
+        },
+        "linux": {
+            "variables": {
+                "openssl_include": "/opt/openssl/include",
+                "openssl_lib": "/opt/openssl/lib"
+            }
         }
     },
     "upstream": [],

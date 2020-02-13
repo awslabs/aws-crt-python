@@ -30,13 +30,20 @@ class ManyLinuxPackage(Builder.Action):
             if not os.path.isfile(python):
                 print('Skipping {} as it is not installed'.format(python))
                 continue
-            
+
+            install_options = []
+            if 'linux' == Builder.Host.current_platform():
+                install_options = [
+                    '--install-option=--include-dirs={openssl_include}',
+                    '--install-option=--library-dirs={openssl_lib}']
+
             actions = [
                 InstallPythonReqs(python=python),
                 [python,'-m', 'pip', 'install', '.',
                     '--install-option=--verbose',
                     '--install-option=sdist',
-                    '--install-option=bdist_wheel'],
+                    '--install-option=bdist_wheel',
+                    *install_options],
                 ['auditwheel', 'repair', '--plat', 'manylinux1_x86_64',
                     'dist/awscrt-*{}-linux_x86_64.whl'.format(python)],
             ]
@@ -63,11 +70,16 @@ class ManyLinuxCI(Builder.Action):
                 print('Skipping {} as it is not installed'.format(python))
                 continue
 
+            install_options = []
+            if 'linux' == Builder.Host.current_platform():
+                install_options = [
+                    '--install-option=--include-dirs={openssl_include}',
+                    '--install-option=--library-dirs={openssl_lib}']
+
             actions = [
                 InstallPythonReqs(python=python, deps=['boto3'], trust_hosts=True),
                 [python, '-m', 'pip', 'install', '.',
-                    '--install-option=--verbose', '--install-option=build_ext', '--install-option=--include-dirs{openssl_include}',
-                    '--install-option=--library-dirs{openssl_lib}'],
+                    '--install-option=--verbose', '--install-option=build_ext', *install_options],
                 [python3, 'aws-common-runtime/aws-c-http/integration-testing/http_client_test.py', python, 'elasticurl.py'],
             ]
             steps.append(Builder.Script(actions, name=python))
