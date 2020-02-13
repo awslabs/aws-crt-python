@@ -75,7 +75,7 @@ jobs:
     steps:
     - name: Build ${{ env.PACKAGE_NAME }} + consumers
       run: |
-        python -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_VERSION }}/builder?run=${{ env.GITHUB_RUN_ID }}-${{ env.GITHUB_RUN_NUMBER }}', 'builder.pyz')"
+        python -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_VERSION }}/builder?run=$GITHUB_RUN_ID-$GITHUB_RUN_NUMBER', 'builder.pyz')"
         python builder.pyz -p ${{ env.PACKAGE_NAME }} run aws-crt-python
 
   osx:
@@ -83,7 +83,7 @@ jobs:
     steps:
     - name: Build ${{ env.PACKAGE_NAME }} + consumers
       run: |
-        python3 -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_VERSION }}/builder?run=${{ env.GITHUB_RUN_ID }}-${{ env.GITHUB_RUN_NUMBER }}', 'builder')"
+        python3 -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_VERSION }}/builder?run=$GITHUB_RUN_ID-$GITHUB_RUN_NUMBER', 'builder')"
         chmod a+x builder
         ./builder -p ${{ env.PACKAGE_NAME }} run aws-crt-python
 
