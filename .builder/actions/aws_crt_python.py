@@ -4,11 +4,11 @@ import os
 import sys
 
 class InstallPythonReqs(Builder.Action):
-    def __init__(self, **kwargs):
-        self.trust_hosts = kwargs.get('trust_hosts', False)
+    def __init__(self, trust_hosts=False, deps=[], python=sys.executable):
+        self.trust_hosts = trust_hosts
         self.core = ('pip', 'setuptools', 'virtualenv')
-        self.deps = kwargs.get('deps', [])
-        self.python = kwargs.get('python', sys.executable)
+        self.deps = deps
+        self.python = python
 
     def run(self, env):
         trusted_hosts = []
