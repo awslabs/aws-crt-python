@@ -42,33 +42,33 @@ jobs:
         docker pull $DOCKER_IMAGE
         docker run --env GITHUB_REF $DOCKER_IMAGE -p ${{ env.PACKAGE_NAME }} run aws-crt-python
       
-#   clang-compat:
-#     runs-on: ubuntu-latest
-#     strategy:
-#       matrix:
-#         version: [3, 6, 8, 9]
-#     steps:
-#         # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
-#     - name: Build ${{ env.PACKAGE_NAME }}
-#       run: |
-#         echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u awslabs --password-stdin
-#         export DOCKER_IMAGE=docker.pkg.github.com/awslabs/aws-crt-builder/aws-crt-${{ env.LINUX_BASE_IMAGE }}:${{ env.BUILDER_VERSION }}
-#         docker pull $DOCKER_IMAGE
-#         docker run --env GITHUB_REF $DOCKER_IMAGE -p ${{ env.PACKAGE_NAME }} build linux-clang-${{ matrix.version }}-linux-x64
+  clang-compat:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        version: [3, 6, 8, 9]
+    steps:
+        # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
+    - name: Build ${{ env.PACKAGE_NAME }}
+      run: |
+        echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u awslabs --password-stdin
+        export DOCKER_IMAGE=docker.pkg.github.com/awslabs/aws-crt-builder/aws-crt-${{ env.LINUX_BASE_IMAGE }}:${{ env.BUILDER_VERSION }}
+        docker pull $DOCKER_IMAGE
+        docker run --env GITHUB_REF $DOCKER_IMAGE -p ${{ env.PACKAGE_NAME }} run aws-crt-python
 
-#   gcc-compat:
-#     runs-on: ubuntu-latest
-#     strategy:
-#       matrix:
-#         version: [4.8, 5, 6, 7, 8]      
-#     steps:
-#         # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
-#     - name: Build ${{ env.PACKAGE_NAME }}
-#       run: |
-#         echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u awslabs --password-stdin
-#         export DOCKER_IMAGE=docker.pkg.github.com/awslabs/aws-crt-builder/aws-crt-${{ env.LINUX_BASE_IMAGE }}:${{ env.BUILDER_VERSION }}
-#         docker pull $DOCKER_IMAGE
-#         docker run --env GITHUB_REF $DOCKER_IMAGE -p ${{ env.PACKAGE_NAME }} build linux-gcc-${{ matrix.version }}-linux-x64
+  gcc-compat:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        version: [4.8, 5, 6, 7, 8]      
+    steps:
+        # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
+    - name: Build ${{ env.PACKAGE_NAME }}
+      run: |
+        echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u awslabs --password-stdin
+        export DOCKER_IMAGE=docker.pkg.github.com/awslabs/aws-crt-builder/aws-crt-${{ env.LINUX_BASE_IMAGE }}:${{ env.BUILDER_VERSION }}
+        docker pull $DOCKER_IMAGE
+        docker run --env GITHUB_REF $DOCKER_IMAGE -p ${{ env.PACKAGE_NAME }} run aws-crt-python
 
   windows:
     runs-on: windows-latest
@@ -87,4 +87,3 @@ jobs:
         chmod a+x builder
         ./builder -p ${{ env.PACKAGE_NAME }} run aws-crt-python
 
-        

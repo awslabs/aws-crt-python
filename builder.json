@@ -1,37 +1,5 @@
 {
     "name": "aws-crt-python",
-    "hosts": {
-        "linux": {
-            "architectures": {
-                "x64": {
-                    "apt_packages": ["build-essential"],
-                    "_comment": "on ubuntu 16, python was using /bin/ld to link, which wasn't fully installed"
-                }
-            },
-            "variables": {
-                "openssl_include": "=/opt/openssl/include",
-                "openssl_lib": "=/opt/openssl/lib"
-            }
-        },
-        "al2012": {
-            "variables": {
-                "openssl_include": "=/opt/openssl/include",
-                "openssl_lib": "=/opt/openssl/lib"
-            }
-        },
-        "al2": {
-            "variables": {
-                "openssl_include": "=/opt/openssl/include",
-                "openssl_lib": "=/opt/openssl/lib"
-            }
-        },
-        "manylinux": {
-            "variables": {
-                "openssl_include": "=/opt/openssl/include",
-                "openssl_lib": "=/opt/openssl/lib"
-            }
-        }
-    },
     "targets": {
         "android": {
             "enabled": false,
@@ -39,18 +7,5 @@
         }
     },
     "upstream": [],
-    "downstream": [],
-    "pre_build_steps": [
-        ["{python}", "-m", "pip", "install", "--upgrade", "--trusted-host", "pypi.org", "--trusted-host", "files.pythonhosted.org", "pip", "setuptools"],
-        ["{python}", "-m", "pip", "install", "--upgrade", "--trusted-host", "pypi.org", "--trusted-host", "files.pythonhosted.org", "autopep8", "boto3"]
-    ],
-    "build": [
-        ["git", "submodule", "update", "--init", "--recursive"],
-        ["{python}", "-m", "pip", "install", ".", "--install-option=--verbose", "--install-option=build_ext", "--install-option=--include-dirs{openssl_include}", "--install-option=--library-dirs{openssl_lib}"]
-    ],
-    "test": [
-        ["{python}", "-m", "unittest", "discover", "--verbose"],
-        ["{python}", "aws-common-runtime/aws-c-http/integration-testing/http_client_test.py", "{python}", "elasticurl.py"],
-        ["{python}", "-m", "autopep8", "--exit-code", "--diff", "--recursive", "awscrt", "test", "setup.py"]
-    ]
+    "downstream": []
 }
