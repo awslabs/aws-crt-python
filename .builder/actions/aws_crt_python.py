@@ -37,11 +37,10 @@ class AWSCrtPython(Builder.Action):
                 '--install-option=--library-dirs={openssl_lib}']
 
         actions = [
-            InstallPythonReqs(deps=['autopep8', 'boto3']),
+            InstallPythonReqs(deps=['boto3']),
             [python, '-m', 'pip', 'install', '.', '--install-option=--verbose', '--install-option=build_ext', *install_options],
             [python, '-m', 'unittest', 'discover', '--verbose'],
             [python, 'aws-common-runtime/aws-c-http/integration-testing/http_client_test.py', python, 'elasticurl.py'],
-            [python, '-m', 'autopep8', '--exit-code', '--diff', '--recursive', 'awscrt', 'test', 'setup.py'],
         ]
 
         return Builder.Script(actions, name='aws-crt-python')
