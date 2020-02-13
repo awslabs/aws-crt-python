@@ -33,8 +33,8 @@ class AWSCrtPython(Builder.Action):
         install_options = []
         if 'linux' == Builder.Host.current_platform():
             install_options = [
-                '--install-option=--include-dirs{openssl_include}',
-                '--install-option=--library-dirs{openssl_lib}']
+                '--install-option=--include-dirs={openssl_include}',
+                '--install-option=--library-dirs={openssl_lib}']
 
         actions = [
             InstallPythonReqs(deps=['autopep8', 'boto3']),

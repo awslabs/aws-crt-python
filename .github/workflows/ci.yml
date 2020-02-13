@@ -54,7 +54,7 @@ jobs:
         echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u awslabs --password-stdin
         export DOCKER_IMAGE=docker.pkg.github.com/awslabs/aws-crt-builder/aws-crt-${{ env.LINUX_BASE_IMAGE }}:${{ env.BUILDER_VERSION }}
         docker pull $DOCKER_IMAGE
-        docker run --env GITHUB_REF $DOCKER_IMAGE -p ${{ env.PACKAGE_NAME }} run aws-crt-python
+        docker run --env GITHUB_REF $DOCKER_IMAGE -p ${{ env.PACKAGE_NAME }} run aws-crt-python --compiler=clang-${{ matrix.version }}
 
   gcc-compat:
     runs-on: ubuntu-latest
@@ -68,7 +68,7 @@ jobs:
         echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u awslabs --password-stdin
         export DOCKER_IMAGE=docker.pkg.github.com/awslabs/aws-crt-builder/aws-crt-${{ env.LINUX_BASE_IMAGE }}:${{ env.BUILDER_VERSION }}
         docker pull $DOCKER_IMAGE
-        docker run --env GITHUB_REF $DOCKER_IMAGE -p ${{ env.PACKAGE_NAME }} run aws-crt-python
+        docker run --env GITHUB_REF $DOCKER_IMAGE -p ${{ env.PACKAGE_NAME }} run aws-crt-python --compiler=gcc-${{ matrix.version }}
 
   windows:
     runs-on: windows-latest
