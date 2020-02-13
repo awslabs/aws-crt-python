@@ -27,21 +27,15 @@ class ManyLinuxPackage(Builder.Action):
         steps = []
         for version in pythons:
             python = python_path(version)
-            actions = [InstallPythonReqs(python=python),
-                       [python,
-                        '-m',
-                        'pip',
-                        'install',
-                        '.',
-                        '--install-option=--verbose',
-                        '--install-option=sdist',
-                        '--install-option=bdist_wheel'],
-                       ['auditwheel',
-                        'repair',
-                        '--plat',
-                        'manylinux1_x86_64',
-                        'dist/awscrt-*{}-linux_x86_64.whl'.format(python)],
-                       ]
+            actions = [
+                InstallPythonReqs(python=python),
+                [python,'-m', 'pip', 'install', '.',
+                    '--install-option=--verbose',
+                    '--install-option=sdist',
+                    '--install-option=bdist_wheel'],
+                ['auditwheel', 'repair', '--plat', 'manylinux1_x86_64',
+                    'dist/awscrt-*{}-linux_x86_64.whl'.format(python)],
+            ]
             steps.append(Builder.Script(actions, name=python))
 
         copy_steps = [
