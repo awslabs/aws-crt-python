@@ -27,6 +27,10 @@ class ManyLinuxPackage(Builder.Action):
         steps = []
         for version in pythons:
             python = python_path(version)
+            if not os.path.isfile(python):
+                print('Skipping {} as it is not installed'.format(python))
+                continue
+            
             actions = [
                 InstallPythonReqs(python=python),
                 [python,'-m', 'pip', 'install', '.',
@@ -55,6 +59,9 @@ class ManyLinuxCI(Builder.Action):
         steps = []
         for version in pythons:
             python = python_path(version)
+            if not os.path.isfile(python):
+                print('Skipping {} as it is not installed'.format(python))
+                continue
 
             actions = [
                 InstallPythonReqs(python=python, deps=['boto3'], trust_hosts=True),
