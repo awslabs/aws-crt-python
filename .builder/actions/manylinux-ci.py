@@ -5,7 +5,6 @@ import sys
 from aws_crt_python import InstallPythonReqs
 
 pythons = (
-    # 'cp34-cp34m',
     'cp35-cp35m',
     'cp36-cp36m',
     'cp37-cp37m',
