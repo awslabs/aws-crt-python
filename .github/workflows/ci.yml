@@ -87,4 +87,3 @@ jobs:
         python3 -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_VERSION }}/builder?run=${{ env.RUN }}', 'builder')"
         chmod a+x builder
         ./builder -p ${{ env.PACKAGE_NAME }} run aws-crt-python
-
