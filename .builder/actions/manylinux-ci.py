@@ -56,7 +56,7 @@ class ManyLinuxPackage(Builder.Action):
 
         steps += copy_steps
 
-        return Builder.Script(steps, name='manylinux1-package')
+        return Builder.Script(steps, name='manylinux-package')
 
 
 class ManyLinuxCI(Builder.Action):
@@ -84,4 +84,4 @@ class ManyLinuxCI(Builder.Action):
             ]
             steps.append(Builder.Script(actions, name=python))
 
-        return Builder.Script(steps, name='manylinux1-ci')
+        return Builder.Script(steps, name='manylinux-ci')
