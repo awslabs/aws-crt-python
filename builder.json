@@ -1,96 +1,17 @@
 {
     "name": "aws-crt-python",
-    "hosts": {
-        "linux": {
-            "architectures": {
-                "x64": {
-                    "apt_packages": ["build-essential"],
-                    "_comment": "on ubuntu 16, python was using /bin/ld to link, which wasn't fully installed"
-                }
-            },
-            "variables": {
-                "openssl_include": "=/opt/openssl/include",
-                "openssl_lib": "=/opt/openssl/lib"
-            }
-        },
-        "al2012": {
-            "enabled": false,
-            "_comment": "al2012 can't currently pull builder.py from github. SSL: CERTIFICATE_VERIFY_FAILED",
-            "variables": {
-                "openssl_include": "=/opt/openssl/include",
-                "openssl_lib": "=/opt/openssl/lib"
-            }
-        },
-        "manylinux": {
-            "variables": {
-                "openssl_include": "=/opt/openssl/include",
-                "openssl_lib": "=/opt/openssl/lib"
-            },
-            "post_build_steps": [
-                ["echo", "------ Python 3.6 ------"],
-                ["/opt/python/cp36-cp36m/bin/python", "-m", "pip", "install", "--upgrade", "--trusted-host", "pypi.org", "--trusted-host", "files.pythonhosted.org", "pip", "setuptools", "boto3", "autopep8"],
-                ["/opt/python/cp36-cp36m/bin/python", "setup.py", "--verbose", "build_ext", "--include-dirs{openssl_include}", "--library-dirs{openssl_lib}", "install"],
-                ["/opt/python/cp36-cp36m/bin/python", "-m", "unittest", "discover", "--verbose"],
-                ["/opt/python/cp37-cp37m/bin/python", "aws-common-runtime/aws-c-http/integration-testing/http_client_test.py", "/opt/python/cp36-cp36m/bin/python", "elasticurl.py"],
-                ["echo", "------ Python 3.5 ------"],
-                ["/opt/python/cp35-cp35m/bin/python", "-m", "pip", "install", "--upgrade", "--trusted-host", "pypi.org", "--trusted-host", "files.pythonhosted.org", "pip", "setuptools", "boto3", "autopep8"],
-                ["/opt/python/cp35-cp35m/bin/python", "setup.py", "--verbose", "build_ext", "--include-dirs{openssl_include}", "--library-dirs{openssl_lib}", "install"],
-                ["/opt/python/cp35-cp35m/bin/python", "-m", "unittest", "discover", "--verbose"],
-                ["/opt/python/cp37-cp37m/bin/python", "aws-common-runtime/aws-c-http/integration-testing/http_client_test.py", "/opt/python/cp35-cp35m/bin/python", "elasticurl.py"],
-                ["echo", "------ Python 3.4 ------"],
-                ["/opt/python/cp34-cp34m/bin/python", "-m", "pip", "install", "--upgrade", "--trusted-host", "pypi.org", "--trusted-host", "files.pythonhosted.org", "pip", "setuptools", "boto3", "autopep8"],
-                ["/opt/python/cp34-cp34m/bin/python", "setup.py", "--verbose", "build_ext", "--include-dirs{openssl_include}", "--library-dirs{openssl_lib}", "install"],
-                ["/opt/python/cp34-cp34m/bin/python", "-m", "unittest", "discover", "--verbose"],
-                ["/opt/python/cp37-cp37m/bin/python", "aws-common-runtime/aws-c-http/integration-testing/http_client_test.py", "/opt/python/cp34-cp34m/bin/python", "elasticurl.py"],
-                ["echo", "------ Python 2.7 narrow-unicode ------"],
-                ["/opt/python/cp27-cp27m/bin/python", "-m", "pip", "install", "--upgrade", "--trusted-host", "pypi.org", "--trusted-host", "files.pythonhosted.org", "pip", "setuptools", "boto3", "autopep8"],
-                ["/opt/python/cp27-cp27m/bin/python", "setup.py", "--verbose", "build_ext", "--include-dirs{openssl_include}", "--library-dirs{openssl_lib}", "install"],
-                ["/opt/python/cp27-cp27m/bin/python", "-m", "unittest", "discover", "--verbose"],
-                ["/opt/python/cp37-cp37m/bin/python", "aws-common-runtime/aws-c-http/integration-testing/http_client_test.py", "/opt/python/cp27-cp27m/bin/python", "elasticurl.py"],
-                ["echo", "------ Python 2.7 wide-unicode ------"],
-                ["/opt/python/cp27-cp27mu/bin/python", "-m", "pip", "install", "--upgrade", "--trusted-host", "pypi.org", "--trusted-host", "files.pythonhosted.org", "pip", "setuptools", "boto3", "autopep8"],
-                ["/opt/python/cp27-cp27mu/bin/python", "setup.py", "--verbose", "build_ext", "--include-dirs{openssl_include}", "--library-dirs{openssl_lib}", "install"],
-                ["/opt/python/cp27-cp27mu/bin/python", "-m", "unittest", "discover", "--verbose"],
-                ["/opt/python/cp37-cp37m/bin/python", "aws-common-runtime/aws-c-http/integration-testing/http_client_test.py", "/opt/python/cp27-cp27mu/bin/python", "elasticurl.py"]
-            ]
-        }
-    },
     "targets": {
         "android": {
             "enabled": false,
             "_comment": "disabled until we have a reason to support python on android"
-        }
-    },
-    "compilers": {
-        "clang": {
-            "!post_build_steps": [],
-            "_comment": "don't run clang-tidy until we find a way to generate compile_commands.json.",
-            "versions": {
-                "6": {
-                    "_comment": "nuking post_build_steps also nuked the format check. It's better as a pre-build step anyway.",
-                    "pre_build_steps": ["./format-check.sh"]
-                }
-            }
         },
-        "gcc": {
-            "versions": {
-                "4.8": {
-                    "enabled": false,
-                    "_comment": "on ubuntu 16, python was passing unrecognized flag '-Wdate-time' to gcc 4 (flag doesn't exist until gcc 5). This flag is coming from 'PY_CORE_CFLAGS' defined in /usr/lib/python3.5/plat-x86_64-linux-gnu/_sysconfigdata_m.py"
-                }
+        "linux": {
+            "variables": {
+                "openssl_include": "/opt/openssl/include",
+                "openssl_lib": "/opt/openssl/lib"
             }
         }
     },
     "upstream": [],
-    "downstream": [],
-    "build": [
-        ["git", "submodule", "update", "--init", "--recursive"],
-        ["{python}", "setup.py", "--verbose", "build_ext", "--include-dirs{openssl_include}", "--library-dirs{openssl_lib}", "install"]
-    ],
-    "test": [
-        ["{python}", "-m", "pip", "install", "--upgrade", "--trusted-host", "pypi.org", "--trusted-host", "files.pythonhosted.org", "pip", "setuptools", "boto3", "autopep8"],
-        ["{python}", "-m", "unittest", "discover", "--verbose"],
-        ["{python}", "aws-common-runtime/aws-c-http/integration-testing/http_client_test.py", "{python}", "elasticurl.py"],
-        ["{python}", "-m", "autopep8", "--exit-code", "--diff", "--recursive", "awscrt", "test", "setup.py"]
-    ]
+    "downstream": []
 }

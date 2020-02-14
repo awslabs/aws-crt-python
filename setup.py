@@ -137,6 +137,7 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
             '-DBUILD_SHARED_LIBS=OFF',
             '-DCMAKE_BUILD_TYPE={}'.format(build_type),
             '-DBUILD_TESTING=OFF',
+            '-DS2N_NO_PQ_ASM=ON',
         ])
         if self.include_dirs:
             cmake_args.append('-DCMAKE_INCLUDE_PATH={}'.format(';'.join(self.include_dirs)))
