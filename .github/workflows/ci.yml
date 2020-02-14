@@ -7,7 +7,7 @@ on:
       - '!master'
 
 env:
-  BUILDER_VERSION: python-fixes
+  BUILDER_VERSION: v0.4
   BUILDER_HOST: https://d19elf31gohf1l.cloudfront.net
   PACKAGE_NAME: aws-crt-python
   LINUX_BASE_IMAGE: ubuntu-16-x64
@@ -88,4 +88,3 @@ jobs:
         chmod a+x builder
         ./builder -p ${{ env.PACKAGE_NAME }} run aws-crt-python
 
-        
