@@ -82,6 +82,16 @@ def determine_generator_args():
 
     return []
 
+_cmake_found = False
+def check_cmake_installed():
+    global _cmake_found
+    if not _cmake_found:
+        try:
+            subprocess.check_call(['cmake', '--version'])
+            _cmake_found = True
+        except Exception:
+            raise Exception("'cmake' not found. cmake must be installed to build from source.")
+
 
 class AwsLib(object):
     def __init__(self, name, extra_cmake_args=[]):
@@ -110,6 +120,8 @@ DEP_INSTALL_PATH = os.environ.get('AWS_C_INSTALL', os.path.join(DEP_BUILD_DIR, '
 
 class awscrt_build_ext(setuptools.command.build_ext.build_ext):
     def _build_dependency(self, aws_lib):
+        check_cmake_installed()
+
         prev_cwd = os.getcwd()  # restore cwd at end of function
         lib_source_dir = os.path.join(PROJECT_DIR, 'aws-common-runtime', aws_lib.name)
 
