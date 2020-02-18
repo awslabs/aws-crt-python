@@ -77,7 +77,7 @@ class Connection(NativeResource):
                  on_connection_resumed=None,
                  reconnect_min_timeout_secs=5,
                  reconnect_max_timeout_secs=60,
-                 keep_alive_secs=3600,
+                 keep_alive_secs=1200,
                  ping_timeout_ms=3000,
                  will=None,
                  username=None,
@@ -172,6 +172,9 @@ class Connection(NativeResource):
         assert isinstance(socket_options, SocketOptions) or socket_options is None
         assert isinstance(websocket_proxy_options, HttpProxyOptions) or websocket_proxy_options is None
         assert callable(websocket_handshake_transform) or websocket_handshake_transform is None
+
+        if keep_alive_secs * 1000 <= ping_timeout_ms:
+            raise ValueError("'keep_alive_secs' must be longer than 'ping_timeout_ms'")
 
         super(Connection, self).__init__()
 
