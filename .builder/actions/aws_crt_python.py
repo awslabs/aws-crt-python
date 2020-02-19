@@ -3,6 +3,7 @@ import Builder
 import os
 import sys
 
+
 class InstallPythonReqs(Builder.Action):
     def __init__(self, trust_hosts=False, deps=[], python=sys.executable):
         self.trust_hosts = trust_hosts
@@ -26,10 +27,15 @@ class InstallPythonReqs(Builder.Action):
 
 
 class AWSCrtPython(Builder.Action):
-    def run(self, env):        
-        # Once the virtualenv is set up, we must use that python, so that the venv is used
-        python = sys.executable
+    def __init__(self, python=None):
+        """
+        Prefer the current python3 executable (so that venv is used),
+        but allow a custom python to be passed for installing and testing awscrt.
+        """
+        self.python3 = sys.executable
+        self.python = python if python else self.python3
 
+    def run(self, env):
         install_options = []
         if 'linux' == Builder.Host.current_platform():
             install_options = [
@@ -37,10 +43,12 @@ class AWSCrtPython(Builder.Action):
                 '--install-option=--library-dirs={openssl_lib}']
 
         actions = [
-            InstallPythonReqs(deps=['boto3']),
-            [python, '-m', 'pip', 'install', '.', '--install-option=--verbose', '--install-option=build_ext', *install_options],
-            [python, '-m', 'unittest', 'discover', '--verbose'],
-            [python, 'aws-common-runtime/aws-c-http/integration-testing/http_client_test.py', python, 'elasticurl.py'],
+            InstallPythonReqs(deps=['boto3'], python=self.python),
+            [self.python, '-m', 'pip', 'install', '.', '--install-option=--verbose',
+                '--install-option=build_ext', *install_options],
+            [self.python, '-m', 'unittest', 'discover', '--verbose'],
+            # http_client_test.py is python3-only, but launches external processes using the extra args
+            [self.python3, 'aws-common-runtime/aws-c-http/integration-testing/http_client_test.py', self.python, 'elasticurl.py'],
         ]
 
         return Builder.Script(actions, name='aws-crt-python')
