@@ -27,13 +27,13 @@ class InstallPythonReqs(Builder.Action):
 
 
 class AWSCrtPython(Builder.Action):
-    def __init__(self, python=None, name=None):
+    def __init__(self, custom_python=None, name=None):
         """
-        Prefer the current python3 executable (so that venv is used),
-        but allow a custom python to be passed for installing and testing awscrt.
+        Prefer the current python3 executable (so that venv is used).
+        But allow a custom python to be used for installing and testing awscrt on.
         """
         self.python3 = sys.executable
-        self.python = python if python else self.python3
+        self.custom_python = custom_python if custom_python else self.python3
         self.name = name if name else 'aws-crt-python'
 
     def run(self, env):
@@ -44,12 +44,13 @@ class AWSCrtPython(Builder.Action):
                 '--install-option=--library-dirs={openssl_lib}']
 
         actions = [
-            InstallPythonReqs(deps=['boto3'], python=self.python),
-            [self.python, '-m', 'pip', 'install', '.', '--install-option=--verbose',
+            InstallPythonReqs(deps=['boto3'], python=self.custom_python),
+            [self.custom_python, '-m', 'pip', 'install', '.', '--install-option=--verbose',
                 '--install-option=build_ext', *install_options],
-            [self.python, '-m', 'unittest', 'discover', '--verbose'],
-            # http_client_test.py is python3-only, but launches external processes using the extra args
-            [self.python3, 'aws-common-runtime/aws-c-http/integration-testing/http_client_test.py', self.python, 'elasticurl.py'],
+            [self.custom_python, '-m', 'unittest', 'discover', '--verbose'],
+            # http_client_test.py is python3-only. It launches external processes using the extra args
+            [self.python3, 'aws-common-runtime/aws-c-http/integration-testing/http_client_test.py',
+                self.custom_python, 'elasticurl.py'],
         ]
 
         return Builder.Script(actions, name=self.name)
