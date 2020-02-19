@@ -30,10 +30,13 @@ class ScopedEnvironmentVariable(object):
 
     def __init__(self, key, value):
         self.key = key
+        self.value = value
         self.prev_value = os.environ.get(key)
-        os.environ[key] = value
 
-    def __del__(self):
+    def __enter__(self):
+        os.environ[self.key] = self.value
+
+    def __exit__(self, type, value, tb):
         if self.prev_value is None:
             del os.environ[self.key]
         else:
@@ -87,22 +90,21 @@ class TestProvider(NativeResourceTest):
     #     self.assertIsNone(credentials.session_token)
 
     def test_default_provider(self):
-        # Use environment variable to force specific credentials file
-        scoped_env = ScopedEnvironmentVariable('AWS_SHARED_CREDENTIALS_FILE', 'test/resources/credentials_test')
+        # Default credentials provider should pick up environment variables.
+        with ScopedEnvironmentVariable('AWS_ACCESS_KEY_ID', EXAMPLE_ACCESS_KEY_ID), \
+                ScopedEnvironmentVariable('AWS_SECRET_ACCESS_KEY', EXAMPLE_SECRET_ACCESS_KEY):
 
-        event_loop_group = awscrt.io.EventLoopGroup()
-        host_resolver = awscrt.io.DefaultHostResolver(event_loop_group)
-        bootstrap = awscrt.io.ClientBootstrap(event_loop_group, host_resolver)
-        provider = awscrt.auth.AwsCredentialsProvider.new_default_chain(bootstrap)
+            event_loop_group = awscrt.io.EventLoopGroup()
+            host_resolver = awscrt.io.DefaultHostResolver(event_loop_group)
+            bootstrap = awscrt.io.ClientBootstrap(event_loop_group, host_resolver)
+            provider = awscrt.auth.AwsCredentialsProvider.new_default_chain(bootstrap)
 
-        future = provider.get_credentials()
-        credentials = future.result(TIMEOUT)
+            future = provider.get_credentials()
+            credentials = future.result(TIMEOUT)
 
-        self.assertEqual('credentials_test_access_key_id', credentials.access_key_id)
-        self.assertEqual('credentials_test_secret_access_key', credentials.secret_access_key)
-        self.assertIsNone(credentials.session_token)
-
-        del scoped_env
+            self.assertEqual(EXAMPLE_ACCESS_KEY_ID, credentials.access_key_id)
+            self.assertEqual(EXAMPLE_SECRET_ACCESS_KEY, credentials.secret_access_key)
+            self.assertIsNone(credentials.session_token)
 
 
 class TestSigningConfig(NativeResourceTest):
