@@ -82,13 +82,16 @@ def determine_generator_args():
 
     return []
 
-_cmake_found = False
+
+cmake_found = False
+
+
 def check_cmake_installed():
-    global _cmake_found
-    if not _cmake_found:
+    global cmake_found
+    if not cmake_found:
         try:
             subprocess.check_call(['cmake', '--version'])
-            _cmake_found = True
+            cmake_found = True
         except Exception:
             raise Exception("'cmake' not found. cmake must be installed to build from source.")
 
