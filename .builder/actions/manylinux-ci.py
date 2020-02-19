@@ -64,6 +64,6 @@ class ManyLinuxCI(Builder.Action):
                 continue
 
             # Run the usual AWSCrtPython build and test steps for this python
-            steps.append(Builder.Script(AWSCrtPython(python), name=python))
+            steps.append(AWSCrtPython(python=python, name=python))
 
         return Builder.Script(steps, name='manylinux-ci')

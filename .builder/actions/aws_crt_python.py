@@ -27,13 +27,14 @@ class InstallPythonReqs(Builder.Action):
 
 
 class AWSCrtPython(Builder.Action):
-    def __init__(self, python=None):
+    def __init__(self, python=None, name=None):
         """
         Prefer the current python3 executable (so that venv is used),
         but allow a custom python to be passed for installing and testing awscrt.
         """
         self.python3 = sys.executable
         self.python = python if python else self.python3
+        self.name = name if name else 'aws-crt-python'
 
     def run(self, env):
         install_options = []
@@ -51,4 +52,4 @@ class AWSCrtPython(Builder.Action):
             [self.python3, 'aws-common-runtime/aws-c-http/integration-testing/http_client_test.py', self.python, 'elasticurl.py'],
         ]
 
-        return Builder.Script(actions, name='aws-crt-python')
+        return Builder.Script(actions, name=self.name)
