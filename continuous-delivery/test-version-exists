@@ -12,6 +12,12 @@ if [ "$CURRENT_TAG" != "$CURRENT_TAG_VERSION" ]; then
     exit 1
 fi
 
+SETUP_PY_VERSION=$(python setup.py --version)
+if [ "$CURRENT_TAG" != "$SETUP_PY_VERSION" ]; then
+    echo "Current tag version does not match version in setup.py: $CURRENT_TAG != $SETUP_PY_VERSION"
+    exit 1
+fi
+
 if pip install --no-cache-dir -vvv awscrt==$CURRENT_TAG_VERSION; then
     echo "$CURRENT_TAG_VERSION is already in pypi, cut a new tag if you want to upload another version."
     exit 1
