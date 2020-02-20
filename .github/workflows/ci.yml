@@ -55,12 +55,10 @@ jobs:
         # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
     - name: Build ${{ env.PACKAGE_NAME }}
       run: |
-        export proxyhost=localhost
-        export proxyport=3128
         echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u awslabs --password-stdin
         export DOCKER_IMAGE=docker.pkg.github.com/awslabs/aws-crt-builder/aws-crt-${{ env.LINUX_BASE_IMAGE }}:${{ env.BUILDER_VERSION }}
         docker pull $DOCKER_IMAGE
-        docker run --env GITHUB_REF --env AWS_ACCESS_KEY_ID --env AWS_SECRET_ACCESS_KEY --env AWS_DEFAULT_REGION $DOCKER_IMAGE -p ${{ env.PACKAGE_NAME }} run aws-crt-python --compiler=clang-${{ matrix.version }}
+        docker run --env GITHUB_REF --env AWS_ACCESS_KEY_ID --env AWS_SECRET_ACCESS_KEY --env AWS_DEFAULT_REGION --env "proxyhost=localhost" --env "proxyport=3128" $DOCKER_IMAGE -p ${{ env.PACKAGE_NAME }} run aws-crt-python --compiler=clang-${{ matrix.version }}
 
   gcc-compat:
     runs-on: ubuntu-latest
