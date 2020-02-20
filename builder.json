@@ -9,8 +9,7 @@
             "variables": {
                 "openssl_include": "/opt/openssl/include",
                 "openssl_lib": "/opt/openssl/lib"
-            },
-            "packages": ["squid"]
+            }
         }
     },
     "upstream": [],
