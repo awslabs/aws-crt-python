@@ -40,11 +40,11 @@ Optional Arguments:
     keep_alive_secs (int): The keep alive value, in seconds, to send in CONNECT packet.
                 A PING will automatically be sent at this interval.
                 The server will assume the connection is lost if no PING is received after 1.5X this value.
-                Default is 3600 (1 hour). This value must be higher than ping_timeout_ms.
+                Default is 1200sec (20 minutes). This duration must be longer than ping_timeout_ms.
 
     ping_timeout_ms (int): Milliseconds to wait for ping response before client assumes
                 the connection is invalid and attempts to reconnect.
-                Default is 3000ms (3 seconds). This value must be less than keep_alive.
+                Default is 3000ms (3 seconds). This duration must be shorter than keep_alive_secs.
                 Alternatively, TCP keep-alive may accomplish this in a more efficient (low-power) scenario,
                 but keep-alive options may not work the same way on every platform and OS version.
 
@@ -182,7 +182,7 @@ def _builder(
         clean_session=kwargs.get('clean_session', False),
         reconnect_min_timeout_secs=kwargs.get('reconnect_min_timeout_secs', 5),
         reconnect_max_timeout_secs=kwargs.get('reconnect_max_timeout_secs', 60),
-        keep_alive_secs=kwargs.get('keep_alive_secs', 3600),
+        keep_alive_secs=kwargs.get('keep_alive_secs', 1200),
         ping_timeout_ms=kwargs.get('ping_timeout_ms', 3000),
         will=kwargs.get('will'),
         username=username,

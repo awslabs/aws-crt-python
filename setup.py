@@ -83,6 +83,19 @@ def determine_generator_args():
     return []
 
 
+cmake_found = False
+
+
+def check_cmake_installed():
+    global cmake_found
+    if not cmake_found:
+        try:
+            subprocess.check_call(['cmake', '--version'])
+            cmake_found = True
+        except Exception:
+            raise Exception("'cmake' not found. cmake must be installed to build from source.")
+
+
 class AwsLib(object):
     def __init__(self, name, extra_cmake_args=[]):
         self.name = name
@@ -110,6 +123,8 @@ DEP_INSTALL_PATH = os.environ.get('AWS_C_INSTALL', os.path.join(DEP_BUILD_DIR, '
 
 class awscrt_build_ext(setuptools.command.build_ext.build_ext):
     def _build_dependency(self, aws_lib):
+        check_cmake_installed()
+
         prev_cwd = os.getcwd()  # restore cwd at end of function
         lib_source_dir = os.path.join(PROJECT_DIR, 'aws-common-runtime', aws_lib.name)
 
@@ -229,7 +244,7 @@ def awscrt_ext():
 
 setuptools.setup(
     name="awscrt",
-    version="0.5.6",
+    version="0.5.7",
     author="Amazon Web Services, Inc",
     author_email="aws-sdk-common-runtime@amazon.com",
     description="A common runtime for AWS Python projects",

@@ -30,10 +30,13 @@ class ScopedEnvironmentVariable(object):
 
     def __init__(self, key, value):
         self.key = key
+        self.value = value
         self.prev_value = os.environ.get(key)
-        os.environ[key] = value
 
-    def __del__(self):
+    def __enter__(self):
+        os.environ[self.key] = self.value
+
+    def __exit__(self, type, value, tb):
         if self.prev_value is None:
             del os.environ[self.key]
         else:
@@ -46,15 +49,19 @@ class TestCredentials(NativeResourceTest):
             EXAMPLE_ACCESS_KEY_ID,
             EXAMPLE_SECRET_ACCESS_KEY,
             EXAMPLE_SESSION_TOKEN)
-        self.assertEqual(EXAMPLE_ACCESS_KEY_ID, credentials.access_key_id)
-        self.assertEqual(EXAMPLE_SECRET_ACCESS_KEY, credentials.secret_access_key)
-        self.assertEqual(EXAMPLE_SESSION_TOKEN, credentials.session_token)
+
+        # Don't use assertEqual(), which could log actual credentials if test fails.
+        self.assertTrue(EXAMPLE_ACCESS_KEY_ID == credentials.access_key_id)
+        self.assertTrue(EXAMPLE_SECRET_ACCESS_KEY == credentials.secret_access_key)
+        self.assertTrue(EXAMPLE_SESSION_TOKEN == credentials.session_token)
 
     def test_create_no_session_token(self):
         credentials = awscrt.auth.AwsCredentials(EXAMPLE_ACCESS_KEY_ID, EXAMPLE_SECRET_ACCESS_KEY)
-        self.assertEqual(EXAMPLE_ACCESS_KEY_ID, credentials.access_key_id)
-        self.assertEqual(EXAMPLE_SECRET_ACCESS_KEY, credentials.secret_access_key)
-        self.assertIsNone(credentials.session_token)
+
+        # Don't use assertEqual(), which could log actual credentials if test fails.
+        self.assertTrue(EXAMPLE_ACCESS_KEY_ID == credentials.access_key_id)
+        self.assertTrue(EXAMPLE_SECRET_ACCESS_KEY == credentials.secret_access_key)
+        self.assertTrue(credentials.session_token is None)
 
 
 class TestProvider(NativeResourceTest):
@@ -67,9 +74,10 @@ class TestProvider(NativeResourceTest):
         future = provider.get_credentials()
         credentials = future.result(TIMEOUT)
 
-        self.assertEqual(EXAMPLE_ACCESS_KEY_ID, credentials.access_key_id)
-        self.assertEqual(EXAMPLE_SECRET_ACCESS_KEY, credentials.secret_access_key)
-        self.assertEqual(EXAMPLE_SESSION_TOKEN, credentials.session_token)
+        # Don't use assertEqual(), which could log actual credentials if test fails.
+        self.assertTrue(EXAMPLE_ACCESS_KEY_ID == credentials.access_key_id)
+        self.assertTrue(EXAMPLE_SECRET_ACCESS_KEY == credentials.secret_access_key)
+        self.assertTrue(EXAMPLE_SESSION_TOKEN == credentials.session_token)
 
     # TODO: test currently broken because None session_token comes back as empty string do to inconsistent use of
     # aws_byte_cursor by value/pointer in aws-c-auth APIs.
@@ -82,27 +90,28 @@ class TestProvider(NativeResourceTest):
     #     future = provider.get_credentials()
     #     credentials = future.result(TIMEOUT)
 
-    #     self.assertEqual(self.example_access_key_id, credentials.access_key_id)
-    #     self.assertEqual(self.example_secret_access_key, credentials.secret_access_key)
-    #     self.assertIsNone(credentials.session_token)
+        # Don't use assertEqual(), which could log actual credentials if test fails.
+    #     self.assertTrue(self.example_access_key_id == credentials.access_key_id)
+    #     self.assertTrue(self.example_secret_access_key == credentials.secret_access_key)
+    #     self.assertTrue(credentials.session_token is None)
 
     def test_default_provider(self):
-        # Use environment variable to force specific credentials file
-        scoped_env = ScopedEnvironmentVariable('AWS_SHARED_CREDENTIALS_FILE', 'test/resources/credentials_test')
+        # Default credentials provider should pick up environment variables.
+        with ScopedEnvironmentVariable('AWS_ACCESS_KEY_ID', EXAMPLE_ACCESS_KEY_ID), \
+                ScopedEnvironmentVariable('AWS_SECRET_ACCESS_KEY', EXAMPLE_SECRET_ACCESS_KEY):
 
-        event_loop_group = awscrt.io.EventLoopGroup()
-        host_resolver = awscrt.io.DefaultHostResolver(event_loop_group)
-        bootstrap = awscrt.io.ClientBootstrap(event_loop_group, host_resolver)
-        provider = awscrt.auth.AwsCredentialsProvider.new_default_chain(bootstrap)
+            event_loop_group = awscrt.io.EventLoopGroup()
+            host_resolver = awscrt.io.DefaultHostResolver(event_loop_group)
+            bootstrap = awscrt.io.ClientBootstrap(event_loop_group, host_resolver)
+            provider = awscrt.auth.AwsCredentialsProvider.new_default_chain(bootstrap)
 
-        future = provider.get_credentials()
-        credentials = future.result(TIMEOUT)
+            future = provider.get_credentials()
+            credentials = future.result(TIMEOUT)
 
-        self.assertEqual('credentials_test_access_key_id', credentials.access_key_id)
-        self.assertEqual('credentials_test_secret_access_key', credentials.secret_access_key)
-        self.assertIsNone(credentials.session_token)
-
-        del scoped_env
+            # Don't use assertEqual(), which could log actual credentials if test fails.
+            self.assertTrue(EXAMPLE_ACCESS_KEY_ID == credentials.access_key_id)
+            self.assertTrue(EXAMPLE_SECRET_ACCESS_KEY == credentials.secret_access_key)
+            self.assertTrue(credentials.session_token is None)
 
 
 class TestSigningConfig(NativeResourceTest):

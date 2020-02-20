@@ -77,7 +77,7 @@ class Connection(NativeResource):
                  on_connection_resumed=None,
                  reconnect_min_timeout_secs=5,
                  reconnect_max_timeout_secs=60,
-                 keep_alive_secs=3600,
+                 keep_alive_secs=1200,
                  ping_timeout_ms=3000,
                  will=None,
                  username=None,
@@ -132,11 +132,11 @@ class Connection(NativeResource):
             keep_alive_secs (int): The keep alive value, in seconds, to send in CONNECT packet.
                         A PING will automatically be sent at this interval.
                         The server will assume the connection is lost if no PING is received after 1.5X this value.
-                        This value must be higher than ping_timeout_ms.
+                        This duration must be longer than ping_timeout_ms.
 
             ping_timeout_ms (int): Milliseconds to wait for ping response before client assumes
                         the connection is invalid and attempts to reconnect.
-                        This value must be less than keep_alive.
+                        This duration must be shorter than keep_alive_secs.
                         Alternatively, TCP keep-alive may accomplish this in a more efficient (low-power) scenario,
                         but keep-alive options may not work the same way on every platform and OS version.
 
@@ -172,6 +172,9 @@ class Connection(NativeResource):
         assert isinstance(socket_options, SocketOptions) or socket_options is None
         assert isinstance(websocket_proxy_options, HttpProxyOptions) or websocket_proxy_options is None
         assert callable(websocket_handshake_transform) or websocket_handshake_transform is None
+
+        if keep_alive_secs * 1000 <= ping_timeout_ms:
+            raise ValueError("'keep_alive_secs' duration must be longer than 'ping_timeout_ms'")
 
         super(Connection, self).__init__()
 
