@@ -21,7 +21,7 @@ class InstallPythonReqs(Builder.Action):
         # package database in time for the subsequent install and pip fails
         steps = []
         for deps in (self.core, self.deps):
-            steps.append([self.python, '-m', 'pip', 'install', '--upgrade', *trusted_hosts, *deps])
+            steps.append([self.python, '-m', 'pip', 'install', *trusted_hosts, *deps])
 
         return Builder.Script(steps, name='install-python-reqs')
 
