@@ -45,12 +45,12 @@ class AWSCrtPython(Builder.Action):
 
         actions = [
             InstallPythonReqs(deps=['boto3'], python=self.custom_python),
-            [self.custom_python, '-m', 'pip', 'install', '{source_dir}', '--install-option=--verbose',
+            [self.custom_python, '-m', 'pip', 'install', '--install-option=--verbose',
                 '--install-option=build_ext', *install_options],
-            [self.custom_python, '-m', 'unittest', 'discover', '--verbose', '{source_dir}'],
+            [self.custom_python, '-m', 'unittest', 'discover', '--verbose'],
             # http_client_test.py is python3-only. It launches external processes using the extra args
-            [self.python3, '{source_dir}/aws-common-runtime/aws-c-http/integration-testing/http_client_test.py',
-                self.custom_python, '{source_dir}/elasticurl.py'],
+            [self.python3, 'aws-common-runtime/aws-c-http/integration-testing/http_client_test.py',
+                self.custom_python, 'elasticurl.py'],
         ]
 
         return Builder.Script(actions, name=self.name)
