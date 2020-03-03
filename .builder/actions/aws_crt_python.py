@@ -7,7 +7,7 @@ import sys
 class InstallPythonReqs(Builder.Action):
     def __init__(self, trust_hosts=False, deps=[], python=sys.executable):
         self.trust_hosts = trust_hosts
-        self.core = ('pip', 'setuptools', 'virtualenv')
+        self.core = ('pip', 'setuptools')
         self.deps = deps
         self.python = python
 
