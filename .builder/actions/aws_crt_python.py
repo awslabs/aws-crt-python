@@ -45,7 +45,7 @@ class AWSCrtPython(Builder.Action):
 
         actions = [
             InstallPythonReqs(deps=['boto3'], python=self.custom_python),
-            [self.custom_python, '-m', 'pip', 'install', '--install-option=--verbose',
+            [self.custom_python, '-m', 'pip', 'install', '.', '--install-option=--verbose',
                 '--install-option=build_ext', *install_options],
             [self.custom_python, '-m', 'unittest', 'discover', '--verbose'],
             # http_client_test.py is python3-only. It launches external processes using the extra args
