@@ -7,7 +7,7 @@ import sys
 class InstallPythonReqs(Builder.Action):
     def __init__(self, trust_hosts=False, deps=[], python=sys.executable):
         self.trust_hosts = trust_hosts
-        self.core = ('pip', 'setuptools', 'virtualenv')
+        self.core = ('pip', 'setuptools')
         self.deps = deps
         self.python = python
 
@@ -21,7 +21,7 @@ class InstallPythonReqs(Builder.Action):
         # package database in time for the subsequent install and pip fails
         steps = []
         for deps in (self.core, self.deps):
-            steps.append([self.python, '-m', 'pip', 'install', '--upgrade', *trusted_hosts, *deps])
+            steps.append([self.python, '-m', 'pip', 'install', *trusted_hosts, *deps])
 
         return Builder.Script(steps, name='install-python-reqs')
 
@@ -38,7 +38,7 @@ class AWSCrtPython(Builder.Action):
 
     def run(self, env):
         install_options = []
-        if 'linux' == Builder.Host.current_platform():
+        if 'linux' == Builder.Host.current_os():
             install_options = [
                 '--install-option=--include-dirs={openssl_include}',
                 '--install-option=--library-dirs={openssl_lib}']

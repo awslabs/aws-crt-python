@@ -10,8 +10,16 @@
                 "openssl_include": "/opt/openssl/include",
                 "openssl_lib": "/opt/openssl/lib"
             }
+        },
+        "manylinux": {
+            "!build_steps": [
+                "manylinux-ci"
+            ]
         }
     },
+    "build_steps": [
+        "aws-crt-python"
+    ],
     "upstream": [],
     "downstream": []
 }
