@@ -290,6 +290,9 @@ class TestClient(NativeResourceTest):
 
         connection = self._new_client_connection(secure)
         stream = connection.request(HttpRequest('GET', '/test/test_http_client.py'))
+        # note we do NOT activate the stream
+
+        # delete local references, stream should clean itself up, connection should shut itself down
         del stream
         del connection
 
