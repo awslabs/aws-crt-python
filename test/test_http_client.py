@@ -174,6 +174,7 @@ class TestClient(NativeResourceTest):
         request = HttpRequest('GET', '/' + test_asset_path)
         response = Response()
         stream = connection.request(request, response.on_response, response.on_body)
+        stream.activate()
 
         # wait for stream to complete
         stream_completion_result = stream.completion_future.result(self.timeout)
@@ -204,6 +205,7 @@ class TestClient(NativeResourceTest):
         request = HttpRequest('GET', '/')
         response = Response()
         stream = connection.request(request, response.on_response, response.on_body)
+        stream.activate()
         stream.completion_future.result(self.timeout)
 
         # Wait for server to hang up, which should be immediate since it's using HTTP/1.0
@@ -236,7 +238,7 @@ class TestClient(NativeResourceTest):
             request = HttpRequest('PUT', '/' + test_asset_path, headers, outgoing_body_stream)
             response = Response()
             http_stream = connection.request(request, response.on_response, response.on_body)
-
+            http_stream.activate()
             # wait for stream to complete
             stream_completion_result = http_stream.completion_future.result(self.timeout)
 
@@ -264,6 +266,7 @@ class TestClient(NativeResourceTest):
 
         request = HttpRequest('GET', '/test/test_http_client.py')
         stream = connection.request(request)
+        stream.activate()
         completion_future = stream.completion_future
 
         # delete all local references

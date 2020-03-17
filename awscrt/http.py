@@ -180,6 +180,9 @@ class HttpClientStream(HttpStreamBase):
     def response_status_code(self):
         return self._response_status_code
 
+    def activate(self):
+        _awscrt.http_client_stream_activate(self) 
+
     def _on_response(self, status_code, name_value_pairs):
         self._response_status_code = status_code
 
@@ -191,7 +194,6 @@ class HttpClientStream(HttpStreamBase):
             self._completion_future.set_result(self._response_status_code)
         else:
             self._completion_future.set_exception(awscrt.exceptions.from_code(error_code))
-
 
 class HttpMessageBase(NativeResource):
     """

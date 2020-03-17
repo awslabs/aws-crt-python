@@ -108,6 +108,7 @@ if __name__ == '__main__':
         receiving_body_event.set()
 
     http_stream = http_connection.request(request, on_body=on_incoming_body)
+    http_stream.activate()
     set_stage(Stage.HttpStreamStart)
 
     # HttpStreamReceivingBodyMainThread: Exit from main thread while receiving body

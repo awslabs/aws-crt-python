@@ -327,3 +327,22 @@ error:
     }
     return NULL;
 }
+
+PyObject *aws_py_http_client_stream_activate(PyObject *self, PyObject *args) {
+    (void)self;
+
+    PyObject *py_stream = NULL;
+    if (!PyArg_ParseTuple(args, "O", &py_stream)) {
+        PyErr_SetString(PyExc_TypeError, "stream object must not be null");
+        Py_RETURN_FALSE;
+    }
+
+    struct aws_http_stream *native_stream = aws_py_get_http_stream(py_stream);
+
+    if (aws_http_stream_activate(native_stream)) {
+        PyErr_AwsLastError();
+        Py_RETURN_FALSE;
+    }
+
+    Py_RETURN_TRUE;
+}
