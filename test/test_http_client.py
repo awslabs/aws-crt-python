@@ -284,6 +284,23 @@ class TestClient(NativeResourceTest):
     def test_stream_lives_until_complete_https(self):
         self._test_stream_lives_until_complete(secure=True)
 
+    # If a stream is never activated, it should just clean itself up
+    def _test_stream_cleans_up_if_never_activated(self, secure):
+        self._start_server(secure)
+
+        connection = self._new_client_connection(secure)
+        stream = connection.request(HttpRequest('GET', '/test/test_http_client.py'))
+        del stream
+        del connection
+
+        self._stop_server()
+
+    def test_stream_cleans_up_if_never_activated_http(self):
+        self._test_stream_cleans_up_if_never_activated(secure=False)
+
+    def test_stream_cleans_up_if_never_activated_https(self):
+        self._test_stream_cleans_up_if_never_activated(secure=True)
+
     @unittest.skipIf(PROXY_HOST is None, 'requires "proxyhost" and "proxyport" env vars')
     def test_proxy_http(self):
         proxy_options = HttpProxyOptions(host_name=PROXY_HOST, port=PROXY_PORT)

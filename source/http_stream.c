@@ -27,7 +27,7 @@ struct http_stream_binding {
 
     /* Weak reference proxy to python self.
      * NOTE: The python self is forced to stay alive until on_complete fires.
-     * We do this by INCREFing when setup is successful, and DECREFing when on_complete fires. */
+     * We do this by INCREFing when activate() is called, and DECREFing when on_complete fires. */
     PyObject *self_proxy;
 
     /* Buffer up headers as they come in via repeated on_headers callacks.
@@ -99,9 +99,6 @@ static int s_on_incoming_header_block_done(
     if (aws_py_gilstate_ensure(&state)) {
         return AWS_OP_ERR; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
-
-    /* Set this just in case callback fires before aws_http_connection_make_request() has even returned */
-    stream->native = native_stream;
 
     /* Build up a list of (name,value) tuples,
      * extracting values from buffer of [name,value,name,value,...] null-terminated strings */
@@ -204,9 +201,6 @@ static void s_on_stream_complete(struct aws_http_stream *native_stream, int erro
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
-    /* Set this just in case callback fires before aws_http_connection_make_request() has even returned */
-    stream->native = native_stream;
-
     PyObject *result = PyObject_CallMethod(stream->self_proxy, "_on_complete", "(i)", error_code);
     if (result) {
         Py_DECREF(result);
@@ -289,12 +283,6 @@ PyObject *aws_py_http_client_stream_new(PyObject *self, PyObject *args) {
         goto error;
     }
 
-    /* NOTE: Callbacks might start firing before aws_http_connection_make_request() can even return.
-     * Therefore, we set `HttpClientStream._binding = capsule` now, instead of returning capsule to caller */
-    if (PyObject_SetAttrString(py_stream, "_binding", capsule) == -1) {
-        goto error;
-    }
-
     struct aws_http_make_request_options request_options = {
         .self_size = sizeof(request_options),
         .request = native_request,
@@ -311,13 +299,7 @@ PyObject *aws_py_http_client_stream_new(PyObject *self, PyObject *args) {
         goto error;
     }
 
-    /* From hereon, nothing will fail */
-
-    /* Force python self to stay alive until on_complete callback */
-    Py_INCREF(py_stream);
-
-    Py_DECREF(capsule);
-    Py_RETURN_NONE;
+    return capsule;
 
 error:
     if (capsule) {
@@ -333,16 +315,20 @@ PyObject *aws_py_http_client_stream_activate(PyObject *self, PyObject *args) {
 
     PyObject *py_stream = NULL;
     if (!PyArg_ParseTuple(args, "O", &py_stream)) {
-        PyErr_SetString(PyExc_TypeError, "stream object must not be null");
-        Py_RETURN_FALSE;
+        return NULL;
     }
 
     struct aws_http_stream *native_stream = aws_py_get_http_stream(py_stream);
-
-    if (aws_http_stream_activate(native_stream)) {
-        PyErr_AwsLastError();
-        Py_RETURN_FALSE;
+    if (!native_stream) {
+        return NULL;
     }
 
-    Py_RETURN_TRUE;
+    if (aws_http_stream_activate(native_stream)) {
+        return PyErr_AwsLastError();
+    }
+
+    /* Force python self to stay alive until on_complete callback */
+    Py_INCREF(py_stream);
+
+    Py_RETURN_NONE;
 }
