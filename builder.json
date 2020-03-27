@@ -15,6 +15,9 @@
             "!build_steps": [
                 "manylinux-ci"
             ]
+        },
+        "macos": {
+            "sudo": true
         }
     },
     "build_steps": [
