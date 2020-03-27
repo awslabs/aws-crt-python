@@ -23,9 +23,6 @@ from test import NativeResourceTest
 import threading
 import unittest
 
-from awscrt import io
-
-
 # Use a built-in Python HTTP server to test the awscrt's HTTP client
 try:
     from http.server import HTTPServer, SimpleHTTPRequestHandler
@@ -83,7 +80,6 @@ class TestClient(NativeResourceTest):
 
         self.server = HTTPServer((self.hostname, 0), TestRequestHandler)
         if secure:
-            io.init_logging(io.LogLevel.Trace, 'stdout')
             self.server.socket = ssl.wrap_socket(self.server.socket,
                                                  keyfile="test/resources/crt.unittests.key",
                                                  certfile='test/resources/crt.unittests.crt',
