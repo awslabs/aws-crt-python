@@ -27,5 +27,6 @@ jobs:
     - name: Build and Test
       run: |
         python3 -m pip install --upgrade setuptools
+        python3 -m pip install --upgrade wheel
         python3 -m pip install --upgrade autopep8
         python3 -m autopep8 --exit-code --diff --recursive awscrt test .builder setup.py

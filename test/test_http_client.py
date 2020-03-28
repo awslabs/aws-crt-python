@@ -81,8 +81,8 @@ class TestClient(NativeResourceTest):
         self.server = HTTPServer((self.hostname, 0), TestRequestHandler)
         if secure:
             self.server.socket = ssl.wrap_socket(self.server.socket,
-                                                 keyfile="test/resources/unittests.key",
-                                                 certfile='test/resources/unittests.crt',
+                                                 keyfile="test/resources/crt.unittests.key",
+                                                 certfile='test/resources/crt.unittests.crt',
                                                  server_side=True)
         self.port = self.server.server_address[1]
 
@@ -100,7 +100,7 @@ class TestClient(NativeResourceTest):
     def _new_client_connection(self, secure, proxy_options=None):
         if secure:
             tls_ctx_opt = TlsContextOptions()
-            tls_ctx_opt.override_default_trust_store_from_path(None, 'test/resources/unittests.crt')
+            tls_ctx_opt.override_default_trust_store_from_path(None, 'test/resources/ca.crt')
             tls_ctx = ClientTlsContext(tls_ctx_opt)
             tls_conn_opt = tls_ctx.new_connection_options()
             tls_conn_opt.set_server_name(self.hostname)
@@ -174,6 +174,7 @@ class TestClient(NativeResourceTest):
         request = HttpRequest('GET', '/' + test_asset_path)
         response = Response()
         stream = connection.request(request, response.on_response, response.on_body)
+        stream.activate()
 
         # wait for stream to complete
         stream_completion_result = stream.completion_future.result(self.timeout)
@@ -204,6 +205,7 @@ class TestClient(NativeResourceTest):
         request = HttpRequest('GET', '/')
         response = Response()
         stream = connection.request(request, response.on_response, response.on_body)
+        stream.activate()
         stream.completion_future.result(self.timeout)
 
         # Wait for server to hang up, which should be immediate since it's using HTTP/1.0
@@ -236,7 +238,7 @@ class TestClient(NativeResourceTest):
             request = HttpRequest('PUT', '/' + test_asset_path, headers, outgoing_body_stream)
             response = Response()
             http_stream = connection.request(request, response.on_response, response.on_body)
-
+            http_stream.activate()
             # wait for stream to complete
             stream_completion_result = http_stream.completion_future.result(self.timeout)
 
@@ -264,6 +266,7 @@ class TestClient(NativeResourceTest):
 
         request = HttpRequest('GET', '/test/test_http_client.py')
         stream = connection.request(request)
+        stream.activate()
         completion_future = stream.completion_future
 
         # delete all local references
@@ -280,6 +283,26 @@ class TestClient(NativeResourceTest):
 
     def test_stream_lives_until_complete_https(self):
         self._test_stream_lives_until_complete(secure=True)
+
+    # If a stream is never activated, it should just clean itself up
+    def _test_stream_cleans_up_if_never_activated(self, secure):
+        self._start_server(secure)
+
+        connection = self._new_client_connection(secure)
+        stream = connection.request(HttpRequest('GET', '/test/test_http_client.py'))
+        # note we do NOT activate the stream
+
+        # delete local references, stream should clean itself up, connection should shut itself down
+        del stream
+        del connection
+
+        self._stop_server()
+
+    def test_stream_cleans_up_if_never_activated_http(self):
+        self._test_stream_cleans_up_if_never_activated(secure=False)
+
+    def test_stream_cleans_up_if_never_activated_https(self):
+        self._test_stream_cleans_up_if_never_activated(secure=True)
 
     @unittest.skipIf(PROXY_HOST is None, 'requires "proxyhost" and "proxyport" env vars')
     def test_proxy_http(self):

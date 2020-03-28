@@ -174,11 +174,14 @@ class HttpClientStream(HttpStreamBase):
         self._on_response_cb = on_response
         self._response_status_code = None
 
-        _awscrt.http_client_stream_new(self, connection, request)
+        self._binding = _awscrt.http_client_stream_new(self, connection, request)
 
     @property
     def response_status_code(self):
         return self._response_status_code
+
+    def activate(self):
+        _awscrt.http_client_stream_activate(self)
 
     def _on_response(self, status_code, name_value_pairs):
         self._response_status_code = status_code

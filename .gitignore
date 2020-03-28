@@ -525,9 +525,9 @@ ASALocalRun/
 # End of https://www.gitignore.io/api/git,c++,cmake,python,visualstudio,visualstudiocode
 
 # credentials
-*.key
+.key
 *.pem
-*.crt
+.crt
 
 # deps from build-deps.sh
 deps/

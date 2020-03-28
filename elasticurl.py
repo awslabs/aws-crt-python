@@ -240,6 +240,7 @@ def response_received_cb(http_stream, status_code, headers, **kwargs):
 
 # make the request
 stream = connection.request(request, response_received_cb, on_incoming_body)
+stream.activate()
 
 # wait until the full response is finished
 stream.completion_future.result()
