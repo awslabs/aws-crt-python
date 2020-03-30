@@ -173,6 +173,9 @@ class Connection(NativeResource):
         assert isinstance(websocket_proxy_options, HttpProxyOptions) or websocket_proxy_options is None
         assert callable(websocket_handshake_transform) or websocket_handshake_transform is None
 
+        if reconnect_min_timeout_secs > reconnect_max_timeout_secs:
+            raise ValueError("'reconnect_min_timeout_secs' cannot exceed 'reconnect_max_timeout_secs'")
+
         if keep_alive_secs * 1000 <= ping_timeout_ms:
             raise ValueError("'keep_alive_secs' duration must be longer than 'ping_timeout_ms'")
 
@@ -190,6 +193,8 @@ class Connection(NativeResource):
         self.host_name = host_name
         self.port = port
         self.clean_session = clean_session
+        self.reconnect_min_timeout_secs = reconnect_min_timeout_secs
+        self.reconnect_max_timeout_secs = reconnect_max_timeout_secs
         self.keep_alive_secs = keep_alive_secs
         self.ping_timeout_ms = ping_timeout_ms
         self.will = will
@@ -197,8 +202,6 @@ class Connection(NativeResource):
         self.password = password
         self.socket_options = socket_options if socket_options else SocketOptions()
         self.websocket_proxy_options = websocket_proxy_options
-
-        # TODO: reconnect_min_timeout_secs & reconnect_max_timeout_secs currently unused
 
         self._binding = _awscrt.mqtt_client_connection_new(
             self,
@@ -256,6 +259,8 @@ class Connection(NativeResource):
                 self.port,
                 self.socket_options,
                 self.client.tls_ctx,
+                self.reconnect_min_timeout_secs,
+                self.reconnect_max_timeout_secs,
                 self.keep_alive_secs,
                 self.ping_timeout_ms,
                 self.will,

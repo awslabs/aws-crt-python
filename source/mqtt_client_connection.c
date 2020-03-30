@@ -501,6 +501,8 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
     uint16_t port_number;
     PyObject *socket_options_py;
     PyObject *tls_ctx_py;
+    uint64_t reconnect_min_timeout_secs;
+    uint64_t reconnect_max_timeout_secs;
     uint16_t keep_alive_time;
     uint32_t ping_timeout;
     PyObject *will;
@@ -513,7 +515,7 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
     PyObject *ws_proxy_options_py;
     if (!PyArg_ParseTuple(
             args,
-            "Os#s#HOOHIOz#z#OOO",
+            "Os#s#HOOKKHIOz#z#OOO",
             &impl_capsule,
             &client_id,
             &client_id_len,
@@ -522,6 +524,8 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
             &port_number,
             &socket_options_py,
             &tls_ctx_py,
+            &reconnect_min_timeout_secs,
+            &reconnect_max_timeout_secs,
             &keep_alive_time,
             &ping_timeout,
             &will,
@@ -552,6 +556,11 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
     }
 
     struct aws_byte_cursor server_name_cur = aws_byte_cursor_from_array(server_name, server_name_len);
+
+    if (aws_mqtt_client_connection_set_reconnect_timeout(
+            py_connection->native, reconnect_min_timeout_secs, reconnect_max_timeout_secs)) {
+        return PyErr_AwsLastError();
+    }
 
     if (will != Py_None) {
         if (!s_set_will(py_connection->native, will)) {
