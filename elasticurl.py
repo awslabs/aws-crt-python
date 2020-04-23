@@ -77,9 +77,20 @@ parser.add_argument('-t', '--trace', required=False, help='FILE: dumps logs to F
 parser.add_argument(
     '-p',
     '--alpn',
+    default=["h2", "http/1.1"],
     required=False,
     help='STRING: protocol for ALPN. May be specified multiple times.',
     action='append')
+parser.add_argument(
+    '--http2',
+    required=False,
+    help='HTTP/2 connection required',
+    action="store_true")
+parser.add_argument(
+    '--http1_1',
+    required=False,
+    help='HTTP/1.1 connection required',
+    action="store_true")
 parser.add_argument(
     '-v',
     '--verbose',
@@ -117,6 +128,16 @@ if args.verbose:
 
     io.init_logging(log_level, log_output)
 
+
+required_version = http.HttpVersion.HttpUnknown
+if args.http1_1:
+    required_version = http.HttpVersion.Http1_1
+    args.alpn = ["http/1.1"]
+if args.http2:
+    required_version = http.HttpVersion.Http2
+    args.alpn = ["h2"]
+
+
 # an event loop group is needed for IO operations. Unless you're a server or a client doing hundreds of connections
 # you only want one of these.
 event_loop_group = io.EventLoopGroup(1)
@@ -139,6 +160,8 @@ if url.port is not None:
 else:
     if scheme == 'http':
         port = 80
+        if args.http2:
+            sys.exit("Error, we don't support h2c, please use TLS for HTTP2 connection")
 
 
 tls_connection_options = None
@@ -200,6 +223,12 @@ connect_future = http.HttpClientConnection.new(
 
 connection = connect_future.result(10)
 connection.shutdown_future.add_done_callback(on_connection_shutdown)
+
+if required_version:
+    if connection.get_version() != required_version:
+        error_msg = "Error. The requested http version " + args.alpn[0] + " is not supported by the peer."
+        sys.exit(error_msg)
+
 
 request = http.HttpRequest(args.method, body_stream=data_stream)
 

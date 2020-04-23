@@ -50,6 +50,12 @@ class HttpConnectionBase(NativeResource):
         """
         return _awscrt.http_connection_is_open(self._binding)
 
+    def get_version(self):
+        """
+        Return the protocol version of the connection
+        """
+        return _awscrt.http_connection_get_version(self._binding)
+
 
 class HttpClientConnection(HttpConnectionBase):
     """
@@ -384,6 +390,16 @@ class HttpProxyAuthenticationType(IntEnum):
     """
     Nothing = 0
     Basic = 1
+
+
+class HttpVersion(IntEnum):
+    """
+    Which protcol version is used
+    """
+    HttpUnknown = 0
+    Http1_0 = 1
+    Http1_1 = 2
+    Http2 = 3
 
 
 class HttpProxyOptions(object):

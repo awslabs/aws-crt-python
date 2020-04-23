@@ -41,6 +41,11 @@ PyObject *aws_py_http_connection_close(PyObject *self, PyObject *args);
 PyObject *aws_py_http_connection_is_open(PyObject *self, PyObject *args);
 
 /**
+ * Retruns the version of connection, result value is the same as aws_http_version.
+ */
+PyObject *aws_py_http_connection_get_version(PyObject *self, PyObject *args);
+
+/**
  * Create a new connection. returns void. The on_setup callback will be invoked
  * upon either success or failure of the connection.
  */

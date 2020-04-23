@@ -298,3 +298,18 @@ PyObject *aws_py_http_connection_is_open(PyObject *self, PyObject *args) {
     }
     Py_RETURN_FALSE;
 }
+
+PyObject *aws_py_http_connection_get_version(PyObject *self, PyObject *args) {
+    (void)self;
+    PyObject *capsule;
+    if (!PyArg_ParseTuple(args, "O", &capsule)) {
+        return NULL;
+    }
+
+    struct http_connection_binding *connection = PyCapsule_GetPointer(capsule, s_capsule_name_http_connection);
+    if (!connection) {
+        return NULL;
+    }
+
+    return PyLong_FromLong(aws_http_connection_get_version(connection->native));
+}
