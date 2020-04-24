@@ -336,7 +336,7 @@ class TestClient(NativeResourceTest):
         url = urlparse("https://d1cz66xoahf9cl.cloudfront.net/http_test_doc.txt")
         connection = self._new_h2_client_connection(url)
         # check we set an h2 connection
-        self.assertEqual(connection.get_version(), HttpVersion.Http2)
+        self.assertEqual(connection.version, HttpVersion.Http2)
 
         request = HttpRequest('GET', url.path)
         request.headers.add('host', url.hostname)

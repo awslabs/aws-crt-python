@@ -129,7 +129,7 @@ if args.verbose:
     io.init_logging(log_level, log_output)
 
 
-required_version = http.HttpVersion.HttpUnknown
+required_version = http.HttpVersion.Unknown
 if args.http1_1:
     required_version = http.HttpVersion.Http1_1
     args.alpn = ["http/1.1"]
@@ -161,7 +161,7 @@ else:
     if scheme == 'http':
         port = 80
         if args.http2:
-            sys.exit("Error, we don't support h2c, please use TLS for HTTP2 connection")
+            sys.exit("Error, we don't support h2c, please use TLS for HTTP/2 connection")
 
 
 tls_connection_options = None
@@ -225,8 +225,8 @@ connection = connect_future.result(10)
 connection.shutdown_future.add_done_callback(on_connection_shutdown)
 
 if required_version:
-    if connection.get_version() != required_version:
-        error_msg = "Error. The requested http version " + args.alpn[0] + " is not supported by the peer."
+    if connection.version != required_version:
+        error_msg = "Error. The requested HTTP version " + args.alpn[0] + " is not supported by the peer."
         sys.exit(error_msg)
 
 

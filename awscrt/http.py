@@ -28,13 +28,18 @@ class HttpConnectionBase(NativeResource):
         shutdown_future (concurrent.futures.Future): Completes when the connection has finished shutting down.
                 Future will contain a result of None, or an exception indicating why shutdown occurred.
                 Note that the connection may have been garbage-collected before this future completes.
+        _version (HttpVersion): Protocol version the connection used.
     """
 
-    __slots__ = ('shutdown_future')
+    __slots__ = ('shutdown_future', '_version')
 
     def __init__(self):
         super(HttpConnectionBase, self).__init__()
         self.shutdown_future = Future()
+
+    @property
+    def version(self):
+        return self._version
 
     def close(self):
         """
@@ -49,12 +54,6 @@ class HttpConnectionBase(NativeResource):
         Returns True if the connection is open and usable, False otherwise.
         """
         return _awscrt.http_connection_is_open(self._binding)
-
-    def get_version(self):
-        """
-        Return the protocol version of the connection
-        """
-        return _awscrt.http_connection_get_version(self._binding)
 
 
 class HttpClientConnection(HttpConnectionBase):
@@ -100,9 +99,10 @@ class HttpClientConnection(HttpConnectionBase):
             connection._host_name = host_name
             connection._port = port
 
-            def on_connection_setup(binding, error_code):
+            def on_connection_setup(binding, error_code, http_version):
                 if error_code == 0:
                     connection._binding = binding
+                    connection._version = HttpVersion(http_version)
                     future.set_result(connection)
                 else:
                     future.set_exception(awscrt.exceptions.from_code(error_code))
@@ -393,10 +393,7 @@ class HttpProxyAuthenticationType(IntEnum):
 
 
 class HttpVersion(IntEnum):
-    """
-    Which protcol version is used
-    """
-    HttpUnknown = 0
+    Unknown = 0
     Http1_0 = 1
     Http1_1 = 2
     Http2 = 3

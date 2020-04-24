@@ -135,7 +135,13 @@ static void s_on_client_connection_setup(
     }
 
     /* Invoke on_setup, then clear our reference to it */
-    PyObject *result = PyObject_CallFunction(connection->on_setup, "(Oi)", capsule ? capsule : Py_None, error_code);
+    PyObject *result = PyObject_CallFunction(
+        connection->on_setup,
+        "(Oii)",
+        capsule ? capsule : Py_None,
+        error_code,
+        aws_http_connection_get_version(native_connection));
+    
     if (result) {
         Py_DECREF(result);
     } else {
@@ -297,19 +303,4 @@ PyObject *aws_py_http_connection_is_open(PyObject *self, PyObject *args) {
         Py_RETURN_TRUE;
     }
     Py_RETURN_FALSE;
-}
-
-PyObject *aws_py_http_connection_get_version(PyObject *self, PyObject *args) {
-    (void)self;
-    PyObject *capsule;
-    if (!PyArg_ParseTuple(args, "O", &capsule)) {
-        return NULL;
-    }
-
-    struct http_connection_binding *connection = PyCapsule_GetPointer(capsule, s_capsule_name_http_connection);
-    if (!connection) {
-        return NULL;
-    }
-
-    return PyLong_FromLong(aws_http_connection_get_version(connection->native));
 }
