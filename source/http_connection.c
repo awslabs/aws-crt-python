@@ -141,7 +141,7 @@ static void s_on_client_connection_setup(
         capsule ? capsule : Py_None,
         error_code,
         aws_http_connection_get_version(native_connection));
-    
+
     if (result) {
         Py_DECREF(result);
     } else {
