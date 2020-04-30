@@ -13,7 +13,7 @@
 
 from __future__ import absolute_import
 import awscrt.exceptions
-from awscrt.http import HttpClientConnection, HttpClientStream, HttpHeaders, HttpProxyOptions, HttpRequest
+from awscrt.http import HttpClientConnection, HttpClientStream, HttpHeaders, HttpProxyOptions, HttpRequest, HttpVersion
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions
 from concurrent.futures import Future
 from io import open  # Python2's built-in open() doesn't return a stream
@@ -21,6 +21,10 @@ import os
 import ssl
 from test import NativeResourceTest
 import threading
+try:
+    from urllib.parse import urlparse
+except ImportError:
+    from urlparse import urlparse
 import unittest
 
 # Use a built-in Python HTTP server to test the awscrt's HTTP client
@@ -308,6 +312,47 @@ class TestClient(NativeResourceTest):
     def test_proxy_http(self):
         proxy_options = HttpProxyOptions(host_name=PROXY_HOST, port=PROXY_PORT)
         self._test_get(secure=False, proxy_options=proxy_options)
+
+    def _new_h2_client_connection(self, url):
+        event_loop_group = EventLoopGroup()
+        host_resolver = DefaultHostResolver(event_loop_group)
+        bootstrap = ClientBootstrap(event_loop_group, host_resolver)
+
+        port = 443
+        scheme = 'https'
+        tls_ctx_options = TlsContextOptions()
+        tls_ctx = ClientTlsContext(tls_ctx_options)
+        tls_conn_opt = tls_ctx.new_connection_options()
+        tls_conn_opt.set_server_name(url.hostname)
+        tls_conn_opt.set_alpn_list(["h2"])
+
+        connection_future = HttpClientConnection.new(host_name=url.hostname,
+                                                     port=port,
+                                                     bootstrap=bootstrap,
+                                                     tls_connection_options=tls_conn_opt)
+        return connection_future.result(self.timeout)
+
+    def test_h2_client(self):
+        url = urlparse("https://d1cz66xoahf9cl.cloudfront.net/http_test_doc.txt")
+        connection = self._new_h2_client_connection(url)
+        # check we set an h2 connection
+        self.assertEqual(connection.version, HttpVersion.Http2)
+
+        request = HttpRequest('GET', url.path)
+        request.headers.add('host', url.hostname)
+        response = Response()
+        stream = connection.request(request, response.on_response, response.on_body)
+        stream.activate()
+
+        # wait for stream to complete
+        stream_completion_result = stream.completion_future.result(self.timeout)
+
+        # check result
+        self.assertEqual(200, response.status_code)
+        self.assertEqual(200, stream_completion_result)
+        self.assertEqual(14428801, len(response.body))
+
+        self.assertEqual(None, connection.close().exception(self.timeout))
 
 
 if __name__ == '__main__':
