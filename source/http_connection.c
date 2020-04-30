@@ -124,7 +124,7 @@ static void s_on_client_connection_setup(
     if (aws_py_gilstate_ensure(&state)) {
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
-
+    enum aws_http_version http_version = AWS_HTTP_VERSION_UNKNOWN;
     /* If setup was successful, encapsulate binding so we can pass it to python */
     PyObject *capsule = NULL;
     if (!error_code) {
@@ -132,15 +132,12 @@ static void s_on_client_connection_setup(
         if (!capsule) {
             error_code = AWS_ERROR_UNKNOWN;
         }
+        http_version = aws_http_connection_get_version(native_connection);
     }
 
     /* Invoke on_setup, then clear our reference to it */
-    PyObject *result = PyObject_CallFunction(
-        connection->on_setup,
-        "(Oii)",
-        capsule ? capsule : Py_None,
-        error_code,
-        aws_http_connection_get_version(native_connection));
+    PyObject *result =
+        PyObject_CallFunction(connection->on_setup, "(Oii)", capsule ? capsule : Py_None, error_code, http_version);
 
     if (result) {
         Py_DECREF(result);
