@@ -15,6 +15,7 @@ from __future__ import absolute_import
 import awscrt.auth
 import awscrt.io
 import datetime
+from io import BytesIO
 import os
 from test import NativeResourceTest, TIMEOUT
 
@@ -257,3 +258,32 @@ class TestSigner(NativeResourceTest):
         # signed headers must be present
         for signed_header in SIGV4TEST_SIGNED_HEADERS:
             self.assertIn(signed_header, http_request.headers)
+
+    def test_signing_sigv4_body(self):
+
+        credentials_provider = awscrt.auth.AwsCredentialsProvider.new_static(
+            SIGV4TEST_ACCESS_KEY_ID, SIGV4TEST_SECRET_ACCESS_KEY, SIGV4TEST_SESSION_TOKEN)
+
+        signing_config = awscrt.auth.AwsSigningConfig(
+            algorithm=awscrt.auth.AwsSigningAlgorithm.SigV4Header,
+            credentials_provider=credentials_provider,
+            region=SIGV4TEST_REGION,
+            service=SIGV4TEST_SERVICE,
+            date=SIGV4TEST_DATE,
+            body_signing_type=awscrt.auth.AwsBodySigningConfigType.BodySigningOn)
+
+        body_stream = BytesIO(b'hello')
+
+        http_request = awscrt.http.HttpRequest(
+            method='POST',
+            path='/',
+            headers=awscrt.http.HttpHeaders([('Host', 'example.amazonaws.com'), ('Content-Length', '5')]),
+            body_stream=body_stream)
+
+        signing_future = awscrt.auth.aws_sign_request(http_request, signing_config)
+
+        signing_result = signing_future.result(TIMEOUT)
+
+        self.assertIs(http_request, signing_result)  # should be same object
+
+        self.assertEqual(0, body_stream.tell())  # stream's position should be at beginning

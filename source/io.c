@@ -655,7 +655,7 @@ static int s_aws_input_stream_py_seek(
         return AWS_OP_ERR; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
-    method_result = PyObject_CallMethod(impl->io, "seek", "(li)", &offset, &basis);
+    method_result = PyObject_CallMethod(impl->io, "seek", "(li)", offset, basis);
     if (!method_result) {
         aws_result = aws_py_raise_error();
         goto done;
