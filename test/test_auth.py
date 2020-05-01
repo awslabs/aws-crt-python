@@ -15,6 +15,7 @@ from __future__ import absolute_import
 import awscrt.auth
 import awscrt.io
 import datetime
+from io import BytesIO
 import os
 from test import NativeResourceTest, TIMEOUT
 
@@ -257,3 +258,39 @@ class TestSigner(NativeResourceTest):
         # signed headers must be present
         for signed_header in SIGV4TEST_SIGNED_HEADERS:
             self.assertIn(signed_header, http_request.headers)
+
+    def test_signing_sigv4_body(self):
+
+        credentials_provider = awscrt.auth.AwsCredentialsProvider.new_static(
+            SIGV4TEST_ACCESS_KEY_ID, SIGV4TEST_SECRET_ACCESS_KEY, SIGV4TEST_SESSION_TOKEN)
+
+        signing_config = awscrt.auth.AwsSigningConfig(
+            algorithm=awscrt.auth.AwsSigningAlgorithm.SigV4Header,
+            credentials_provider=credentials_provider,
+            region=SIGV4TEST_REGION,
+            service=SIGV4TEST_SERVICE,
+            date=SIGV4TEST_DATE,
+            body_signing_type=awscrt.auth.AwsBodySigningConfigType.BodySigningOn)
+
+        body_stream = BytesIO(b'hello')
+
+        http_request = awscrt.http.HttpRequest(
+            method='POST',
+            path='/',
+            headers=awscrt.http.HttpHeaders([('Host', 'example.amazonaws.com'), ('Content-Length', '5')]),
+            body_stream=body_stream)
+
+        signing_future = awscrt.auth.aws_sign_request(http_request, signing_config)
+
+        signing_result = signing_future.result(TIMEOUT)
+
+        self.assertIs(http_request, signing_result)  # should be same object
+
+        self.assertEqual('2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824',
+                         signing_result.headers.get('x-amz-content-sha256'))
+        self.assertEqual(
+            'AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/service/aws4_request, SignedHeaders=content-length;host;x-amz-content-sha256;x-amz-date, Signature=8e17c5b22b7bb28da47f44b08691c087a0993d0965bfab053376360790d44d6c',
+            signing_result.headers.get('Authorization'))
+
+        # stream should be seeked back to initial position
+        self.assertEqual(0, body_stream.tell())
