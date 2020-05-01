@@ -288,7 +288,9 @@ class TestSigner(NativeResourceTest):
 
         self.assertEqual('2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824',
                          signing_result.headers.get('x-amz-content-sha256'))
-        self.assertIsNotNone(signing_result.headers.get('Authorization'))
+        self.assertEqual(
+            'AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/service/aws4_request, SignedHeaders=content-length;host;x-amz-content-sha256;x-amz-date, Signature=8e17c5b22b7bb28da47f44b08691c087a0993d0965bfab053376360790d44d6c',
+            signing_result.headers.get('Authorization'))
 
         # stream should be seeked back to initial position
         self.assertEqual(0, body_stream.tell())
