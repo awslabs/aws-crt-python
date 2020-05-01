@@ -286,9 +286,8 @@ class TestSigner(NativeResourceTest):
 
         self.assertIs(http_request, signing_result)  # should be same object
 
-        # don't have canonical headers to test against
-        # so just assert that these expected headers are present
-        self.assertIsNotNone(signing_result.headers.get('x-amz-content-sha256'))
+        self.assertEqual('2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824',
+                         signing_result.headers.get('x-amz-content-sha256'))
         self.assertIsNotNone(signing_result.headers.get('Authorization'))
 
         # stream should be seeked back to initial position
