@@ -263,30 +263,6 @@ class TestClient(NativeResourceTest):
     def test_put_https(self):
         self._test_put(secure=True)
 
-    def test_request_refcounts(self):
-        # Ensure HttpRequest and body InputStream stay alive until HttpClientStream completes (regression test)
-        self._start_server(secure=False)
-        connection = self._new_client_connection(secure=False)
-
-        request = HttpRequest(
-            method='POST',
-            path='/test/test_request_refcounts.txt',
-            headers=HttpHeaders([('Host', self.hostname), ('Content-Length', '5')]),
-            body_stream=BytesIO(b'hello'))
-
-        response = Response()
-        http_stream = connection.request(request, response.on_response, response.on_body)
-
-        # HttpClientStream should keep the dependencies (HttpRequest, HttpHeaders, InputStream)
-        # alive as long as it needs them
-        del request
-
-        http_stream.activate()
-        http_stream.completion_future.result(self.timeout)
-
-        self.assertEqual(None, connection.close().result(self.timeout))
-        self._stop_server()
-
     # Ensure that stream and connection classes stay alive until work is complete
     def _test_stream_lives_until_complete(self, secure):
         self._start_server(secure)
@@ -311,6 +287,37 @@ class TestClient(NativeResourceTest):
 
     def test_stream_lives_until_complete_https(self):
         self._test_stream_lives_until_complete(secure=True)
+
+    def _test_request_lives_until_stream_complete(self, secure):
+        # Ensure HttpRequest and body InputStream stay alive until HttpClientStream completes (regression test)
+        self._start_server(secure)
+        connection = self._new_client_connection(secure)
+
+        request = HttpRequest(
+            method='POST',
+            path='/test/test_request_refcounts.txt',
+            headers=HttpHeaders([('Host', self.hostname), ('Content-Length', '5')]),
+            body_stream=BytesIO(b'hello'))
+
+        response = Response()
+        http_stream = connection.request(request, response.on_response, response.on_body)
+
+        # HttpClientStream should keep the dependencies (HttpRequest, HttpHeaders, InputStream)
+        # alive as long as it needs them
+        del request
+
+        http_stream.activate()
+        http_stream.completion_future.result(self.timeout)
+
+        self.assertEqual(None, connection.close().result(self.timeout))
+        self._stop_server()
+
+    def test_request_lives_until_stream_complete_http(self):
+        return self._test_request_lives_until_stream_complete(secure=False)
+
+    def test_request_lives_until_stream_complete_https(self):
+        return self._test_request_lives_until_stream_complete(secure=True)
+
 
     # If a stream is never activated, it should just clean itself up
     def _test_stream_cleans_up_if_never_activated(self, secure):
