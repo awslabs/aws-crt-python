@@ -16,7 +16,7 @@ import awscrt.exceptions
 from awscrt.http import HttpClientConnection, HttpClientStream, HttpHeaders, HttpProxyOptions, HttpRequest, HttpVersion
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions
 from concurrent.futures import Future
-from io import open  # Python2's built-in open() doesn't return a stream
+from io import BytesIO, open  # Python2's built-in open() doesn't return a stream
 import os
 import ssl
 from test import NativeResourceTest
@@ -141,8 +141,8 @@ class TestClient(NativeResourceTest):
     def test_connect_https(self):
         self._test_connect(secure=True)
 
-    # The connection should shut itself down cleanly when the GC collects the HttpClientConnection Python object.
     def _test_connection_closes_on_zero_refcount(self, secure):
+        # The connection should shut itself down cleanly when the GC collects the HttpClientConnection Python object.
         self._start_server(secure)
 
         connection = self._new_client_connection(secure)
@@ -163,8 +163,8 @@ class TestClient(NativeResourceTest):
     def test_connection_closes_on_zero_refcount_https(self):
         self._test_connection_closes_on_zero_refcount(secure=True)
 
-    # GET request receives this very file from the server. Super meta.
     def _test_get(self, secure, proxy_options=None):
+        # GET request receives this very file from the server. Super meta.
 
         # Use HTTP/1.0 in proxy tests or server will keep connection with proxy alive
         # and refuse to shut down for 1 minute at the end of each proxy test
@@ -224,9 +224,8 @@ class TestClient(NativeResourceTest):
     def test_shutdown_error_https(self):
         return self._test_shutdown_error(secure=True)
 
-    # PUT request sends this very file to the server.
-
     def _test_put(self, secure):
+        # PUT request sends this very file to the server.
         self._start_server(secure)
         connection = self._new_client_connection(secure)
         test_asset_path = 'test/test_http_client.py'
@@ -263,8 +262,8 @@ class TestClient(NativeResourceTest):
     def test_put_https(self):
         self._test_put(secure=True)
 
-    # Ensure that stream and connection classes stay alive until work is complete
     def _test_stream_lives_until_complete(self, secure):
+        # Ensure that stream and connection classes stay alive until work is complete
         self._start_server(secure)
         connection = self._new_client_connection(secure)
 
@@ -288,8 +287,38 @@ class TestClient(NativeResourceTest):
     def test_stream_lives_until_complete_https(self):
         self._test_stream_lives_until_complete(secure=True)
 
-    # If a stream is never activated, it should just clean itself up
+    def _test_request_lives_until_stream_complete(self, secure):
+        # Ensure HttpRequest and body InputStream stay alive until HttpClientStream completes (regression test)
+        self._start_server(secure)
+        connection = self._new_client_connection(secure)
+
+        request = HttpRequest(
+            method='POST',
+            path='/test/test_request_refcounts.txt',
+            headers=HttpHeaders([('Host', self.hostname), ('Content-Length', '5')]),
+            body_stream=BytesIO(b'hello'))
+
+        response = Response()
+        http_stream = connection.request(request, response.on_response, response.on_body)
+
+        # HttpClientStream should keep the dependencies (HttpRequest, HttpHeaders, InputStream)
+        # alive as long as it needs them
+        del request
+
+        http_stream.activate()
+        http_stream.completion_future.result(self.timeout)
+
+        self.assertEqual(None, connection.close().result(self.timeout))
+        self._stop_server()
+
+    def test_request_lives_until_stream_complete_http(self):
+        return self._test_request_lives_until_stream_complete(secure=False)
+
+    def test_request_lives_until_stream_complete_https(self):
+        return self._test_request_lives_until_stream_complete(secure=True)
+
     def _test_stream_cleans_up_if_never_activated(self, secure):
+        # If a stream is never activated, it should just clean itself up
         self._start_server(secure)
 
         connection = self._new_client_connection(secure)
