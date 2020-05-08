@@ -167,7 +167,7 @@ class HttpStreamBase(NativeResource):
 
 
 class HttpClientStream(HttpStreamBase):
-    __slots__ = ('_response_status_code', '_on_response_cb', '_on_body_cb')
+    __slots__ = ('_response_status_code', '_on_response_cb', '_on_body_cb', '_request')
 
     def __init__(self, connection, request, on_response=None, on_body=None):
         assert isinstance(connection, HttpClientConnection)
@@ -179,6 +179,9 @@ class HttpClientStream(HttpStreamBase):
 
         self._on_response_cb = on_response
         self._response_status_code = None
+
+        # keep HttpRequest alive until stream completes
+        self._request = request
 
         self._binding = _awscrt.http_client_stream_new(self, connection, request)
 
@@ -196,6 +199,9 @@ class HttpClientStream(HttpStreamBase):
             self._on_response_cb(http_stream=self, status_code=status_code, headers=name_value_pairs)
 
     def _on_complete(self, error_code):
+        # done with HttpRequest, drop reference
+        self._request = None
+
         if error_code == 0:
             self._completion_future.set_result(self._response_status_code)
         else:
