@@ -16,7 +16,7 @@ import awscrt.exceptions
 from awscrt.http import HttpClientConnection, HttpClientStream, HttpHeaders, HttpProxyOptions, HttpRequest, HttpVersion
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions
 from concurrent.futures import Future
-from io import open  # Python2's built-in open() doesn't return a stream
+from io import BytesIO, open  # Python2's built-in open() doesn't return a stream
 import os
 import ssl
 from test import NativeResourceTest
@@ -262,6 +262,30 @@ class TestClient(NativeResourceTest):
 
     def test_put_https(self):
         self._test_put(secure=True)
+
+    def test_request_refcounts(self):
+        # Ensure HttpRequest and body InputStream stay alive until HttpClientStream completes (regression test)
+        self._start_server(secure=False)
+        connection = self._new_client_connection(secure=False)
+
+        request = HttpRequest(
+            method='POST',
+            path='/test/test_request_refcounts.txt',
+            headers=HttpHeaders([('Host', self.hostname), ('Content-Length', '5')]),
+            body_stream=BytesIO(b'hello'))
+
+        response = Response()
+        http_stream = connection.request(request, response.on_response, response.on_body)
+
+        # HttpClientStream should keep the dependencies (HttpRequest, HttpHeaders, InputStream)
+        # alive as long as it needs them
+        del request
+
+        http_stream.activate()
+        http_stream.completion_future.result(self.timeout)
+
+        self.assertEqual(None, connection.close().result(self.timeout))
+        self._stop_server()
 
     # Ensure that stream and connection classes stay alive until work is complete
     def _test_stream_lives_until_complete(self, secure):
