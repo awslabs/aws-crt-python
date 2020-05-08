@@ -21,7 +21,10 @@ from awscrt.io import ClientBootstrap, ClientTlsContext, SocketOptions
 
 
 class QoS(IntEnum):
-    """Quality of Service enumeration"""
+    """Quality of Service enumeration
+
+    [MQTT-4.3]
+    """
 
     AT_MOST_ONCE = 0
     """QoS 0 - At most once delivery
@@ -43,6 +46,9 @@ class QoS(IntEnum):
     This is the highest quality of service, for use when neither loss nor
     duplication of messages are acceptable. There is an increased overhead
     associated with this quality of service.
+
+    Note that, while this client supports QoS 2, the AWS IoT Core server
+    does not support QoS 2 at time of writing (May 2020).
     """
 
 
@@ -55,7 +61,10 @@ def _try_qos(qos_value):
 
 
 class ConnectReturnCode(IntEnum):
-    """Connect return code enumeration"""
+    """Connect return code enumeration.
+
+    [MQTT-3.2.2.3]
+    """
 
     ACCEPTED = 0
     """Connection Accepted."""
@@ -97,6 +106,8 @@ class Will(object):
     The Will message is stored on the server when a client connects.
     It is published if the client connection is lost without the server
     receiving a DISCONNECT packet.
+
+    [MQTT-3.1.2-8]
 
     Args:
         topic (str): Topic to publish Will message on.
@@ -187,9 +198,11 @@ class Connection(NativeResource):
             *   `**kwargs` (dict): Forward-compatibility kwargs.
 
         reconnect_min_timeout_secs (int): Minimum time to wait between reconnect attempts.
+            Must be <= `reconnect_max_timeout_secs`.
             Wait starts at min and doubles with each attempt until max is reached.
 
         reconnect_max_timeout_secs (int): Maximum time to wait between reconnect attempts.
+            Must be >= `reconnect_min_timeout_secs`.
             Wait starts at min and doubles with each attempt until max is reached.
 
         keep_alive_secs (int): The keep alive value, in seconds, to send in CONNECT packet.
@@ -642,7 +655,7 @@ class WebsocketHandshakeTransformArgs(object):
     exception if something went wrong. Failure to call `set_done()`
     will hang the application.
 
-    The implementor may do asynchronous work before calling `transform_args.set_done()`,
+    The implementer may do asynchronous work before calling `transform_args.set_done()`,
     they are not required to call `set_done()` within the scope of the transform function.
     An example of async work would be to fetch credentials from another service,
     sign the request headers, and finally call `set_done()` to mark the transform complete.
