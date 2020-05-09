@@ -1,0 +1,705 @@
+
+
+<!doctype html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>awscrt.io &#8212; awscrt  documentation</title>
+    <link rel="stylesheet" href="../_static/bizstyle.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../_static/bizstyle.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="awscrt.mqtt" href="mqtt.html" />
+    <link rel="prev" title="Welcome to awscrt’s documentation!" href="../index.html" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <!--[if lt IE 9]>
+    <script src="_static/css3-mediaqueries.js"></script>
+    <![endif]-->
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="mqtt.html" title="awscrt.mqtt"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="../index.html" title="Welcome to awscrt’s documentation!"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">awscrt  documentation</a> &#187;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="../index.html"
+                        title="previous chapter">Welcome to awscrt’s documentation!</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="mqtt.html"
+                        title="next chapter">awscrt.mqtt</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/api/io.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-awscrt.io">
+<span id="awscrt-io"></span><h1>awscrt.io<a class="headerlink" href="#module-awscrt.io" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt id="awscrt.io.LogLevel">
+<em class="property">class </em><code class="sig-prename descclassname">awscrt.io.</code><code class="sig-name descname">LogLevel</code><a class="headerlink" href="#awscrt.io.LogLevel" title="Permalink to this definition">¶</a></dt>
+<dd><p>An enumeration.</p>
+<dl class="py attribute">
+<dt id="awscrt.io.LogLevel.NoLogs">
+<code class="sig-name descname">NoLogs</code><em class="property"> = 0</em><a class="headerlink" href="#awscrt.io.LogLevel.NoLogs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="awscrt.io.LogLevel.Fatal">
+<code class="sig-name descname">Fatal</code><em class="property"> = 1</em><a class="headerlink" href="#awscrt.io.LogLevel.Fatal" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="awscrt.io.LogLevel.Error">
+<code class="sig-name descname">Error</code><em class="property"> = 2</em><a class="headerlink" href="#awscrt.io.LogLevel.Error" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="awscrt.io.LogLevel.Warn">
+<code class="sig-name descname">Warn</code><em class="property"> = 3</em><a class="headerlink" href="#awscrt.io.LogLevel.Warn" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="awscrt.io.LogLevel.Info">
+<code class="sig-name descname">Info</code><em class="property"> = 4</em><a class="headerlink" href="#awscrt.io.LogLevel.Info" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="awscrt.io.LogLevel.Debug">
+<code class="sig-name descname">Debug</code><em class="property"> = 5</em><a class="headerlink" href="#awscrt.io.LogLevel.Debug" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="awscrt.io.LogLevel.Trace">
+<code class="sig-name descname">Trace</code><em class="property"> = 6</em><a class="headerlink" href="#awscrt.io.LogLevel.Trace" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt id="awscrt.io.init_logging">
+<code class="sig-prename descclassname">awscrt.io.</code><code class="sig-name descname">init_logging</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">log_level</span></em>, <em class="sig-param"><span class="n">file_name</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.init_logging" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize logging in <cite>awscrt</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>log_level</strong> (<a class="reference internal" href="#awscrt.io.LogLevel" title="awscrt.io.LogLevel"><em>LogLevel</em></a>) – Display messages of this importance and higher.
+<cite>LogLevel.NoLogs</cite> will disable logging.</p></li>
+<li><p><strong>file_name</strong> (<em>str</em>) – Logging destination. To write to stdout or stderr pass
+‘stdout’ or ‘stderr’ as strings. Otherwise, a file path is assumed.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="awscrt.io.is_alpn_available">
+<code class="sig-prename descclassname">awscrt.io.</code><code class="sig-name descname">is_alpn_available</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.is_alpn_available" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True if Application Layer Protocol Negotiation (ALPN)
+is supported on this system.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="awscrt.io.EventLoopGroup">
+<em class="property">class </em><code class="sig-prename descclassname">awscrt.io.</code><code class="sig-name descname">EventLoopGroup</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">num_threads</span><span class="o">=</span><span class="default_value">0</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.EventLoopGroup" title="Permalink to this definition">¶</a></dt>
+<dd><p>A collection of event-loops.</p>
+<p>An event-loop is a thread for doing async work, such as I/O. Classes that
+need to do async work will ask the EventLoopGroup for an event-loop to use.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>num_threads</strong> (<em>int</em>) – Number of event-loops to create.
+Pass 0 to create one for each processor on the machine.</p>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt id="awscrt.io.EventLoopGroup.shutdown_event">
+<code class="sig-name descname">shutdown_event</code><a class="headerlink" href="#awscrt.io.EventLoopGroup.shutdown_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>Signals when EventLoopGroup’s threads
+have all finished shutting down. Shutdown begins when the
+EventLoopGroup object is destroyed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>threading.Event</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="awscrt.io.HostResolverBase">
+<em class="property">class </em><code class="sig-prename descclassname">awscrt.io.</code><code class="sig-name descname">HostResolverBase</code><a class="headerlink" href="#awscrt.io.HostResolverBase" title="Permalink to this definition">¶</a></dt>
+<dd><p>DNS host resolver.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="awscrt.io.DefaultHostResolver">
+<em class="property">class </em><code class="sig-prename descclassname">awscrt.io.</code><code class="sig-name descname">DefaultHostResolver</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">event_loop_group</span></em>, <em class="sig-param"><span class="n">max_hosts</span><span class="o">=</span><span class="default_value">16</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.DefaultHostResolver" title="Permalink to this definition">¶</a></dt>
+<dd><p>Default DNS host resolver.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>event_loop_group</strong> (<a class="reference internal" href="#awscrt.io.EventLoopGroup" title="awscrt.io.EventLoopGroup"><em>EventLoopGroup</em></a>) – EventLoopGroup to use.</p></li>
+<li><p><strong>max_hosts</strong> (<em>int</em>) – Max host names to cache.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt id="awscrt.io.ClientBootstrap">
+<em class="property">class </em><code class="sig-prename descclassname">awscrt.io.</code><code class="sig-name descname">ClientBootstrap</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">event_loop_group</span></em>, <em class="sig-param"><span class="n">host_resolver</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.ClientBootstrap" title="Permalink to this definition">¶</a></dt>
+<dd><p>Handles creation and setup of client socket connections.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>event_loop_group</strong> (<a class="reference internal" href="#awscrt.io.EventLoopGroup" title="awscrt.io.EventLoopGroup"><em>EventLoopGroup</em></a>) – EventLoopGroup to use.</p></li>
+<li><p><strong>host_resolver</strong> (<a class="reference internal" href="#awscrt.io.HostResolverBase" title="awscrt.io.HostResolverBase"><em>HostResolverBase</em></a>) – DNS host resolver to use.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt id="awscrt.io.ClientBootstrap.shutdown_event">
+<code class="sig-name descname">shutdown_event</code><a class="headerlink" href="#awscrt.io.ClientBootstrap.shutdown_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>Signals when the ClientBootstrap’s
+internal resources finish shutting down.
+Shutdown begins when the ClientBootstrap object is destroyed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>threading.Event</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="awscrt.io.SocketDomain">
+<em class="property">class </em><code class="sig-prename descclassname">awscrt.io.</code><code class="sig-name descname">SocketDomain</code><a class="headerlink" href="#awscrt.io.SocketDomain" title="Permalink to this definition">¶</a></dt>
+<dd><p>An enumeration.</p>
+<dl class="py attribute">
+<dt id="awscrt.io.SocketDomain.IPv4">
+<code class="sig-name descname">IPv4</code><em class="property"> = 0</em><a class="headerlink" href="#awscrt.io.SocketDomain.IPv4" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="awscrt.io.SocketDomain.IPv6">
+<code class="sig-name descname">IPv6</code><em class="property"> = 1</em><a class="headerlink" href="#awscrt.io.SocketDomain.IPv6" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="awscrt.io.SocketDomain.Local">
+<code class="sig-name descname">Local</code><em class="property"> = 2</em><a class="headerlink" href="#awscrt.io.SocketDomain.Local" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unix domain sockets (at at least something like them)</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="awscrt.io.SocketType">
+<em class="property">class </em><code class="sig-prename descclassname">awscrt.io.</code><code class="sig-name descname">SocketType</code><a class="headerlink" href="#awscrt.io.SocketType" title="Permalink to this definition">¶</a></dt>
+<dd><p>An enumeration.</p>
+<dl class="py attribute">
+<dt id="awscrt.io.SocketType.Stream">
+<code class="sig-name descname">Stream</code><em class="property"> = 0</em><a class="headerlink" href="#awscrt.io.SocketType.Stream" title="Permalink to this definition">¶</a></dt>
+<dd><p>A streaming socket sends reliable messages over a two-way connection.
+This means TCP when used with <cite>SocketDomain.IPv4/6</cite>,
+and Unix domain sockets when used with <cite>SocketDomain.Local</cite></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="awscrt.io.SocketType.DGram">
+<code class="sig-name descname">DGram</code><em class="property"> = 1</em><a class="headerlink" href="#awscrt.io.SocketType.DGram" title="Permalink to this definition">¶</a></dt>
+<dd><p>A datagram socket is connectionless and sends unreliable messages.
+This means UDP when used with <cite>SocketDomain.IPv4/6</cite>.
+<cite>SocketDomain.Local</cite> is not compatible with <cite>DGram</cite></p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="awscrt.io.SocketOptions">
+<em class="property">class </em><code class="sig-prename descclassname">awscrt.io.</code><code class="sig-name descname">SocketOptions</code><a class="headerlink" href="#awscrt.io.SocketOptions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Socket options.</p>
+<dl class="py attribute">
+<dt id="awscrt.io.SocketOptions.domain">
+<code class="sig-name descname">domain</code><a class="headerlink" href="#awscrt.io.SocketOptions.domain" title="Permalink to this definition">¶</a></dt>
+<dd><p>Socket domain.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#awscrt.io.SocketDomain" title="awscrt.io.SocketDomain">SocketDomain</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="awscrt.io.SocketOptions.type">
+<code class="sig-name descname">type</code><a class="headerlink" href="#awscrt.io.SocketOptions.type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Socket type.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#awscrt.io.SocketType" title="awscrt.io.SocketType">SocketType</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="awscrt.io.SocketOptions.connect_timeout_ms">
+<code class="sig-name descname">connect_timeout_ms</code><a class="headerlink" href="#awscrt.io.SocketOptions.connect_timeout_ms" title="Permalink to this definition">¶</a></dt>
+<dd><p>Connection timeout, in milliseconds.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="awscrt.io.SocketOptions.keep_alive">
+<code class="sig-name descname">keep_alive</code><a class="headerlink" href="#awscrt.io.SocketOptions.keep_alive" title="Permalink to this definition">¶</a></dt>
+<dd><p>If set True, periodically transmit keepalive messages
+for detecting a disconnected peer.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="awscrt.io.SocketOptions.keep_alive_timeout_secs">
+<code class="sig-name descname">keep_alive_timeout_secs</code><a class="headerlink" href="#awscrt.io.SocketOptions.keep_alive_timeout_secs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Duration, in seconds, between keepalive
+transmissions in idle condition. If 0, then a default value is used.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="awscrt.io.SocketOptions.keep_alive_interval_secs">
+<code class="sig-name descname">keep_alive_interval_secs</code><a class="headerlink" href="#awscrt.io.SocketOptions.keep_alive_interval_secs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Duration, in seconds, between keepalive
+retransmissions, if acknowledgement of previous keepalive transmission
+is not received. If 0, then a default value is used.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="awscrt.io.SocketOptions.keep_alive_max_probes">
+<code class="sig-name descname">keep_alive_max_probes</code><a class="headerlink" href="#awscrt.io.SocketOptions.keep_alive_max_probes" title="Permalink to this definition">¶</a></dt>
+<dd><p>If set, sets the number of keepalive probes
+allowed to fail before a connection is considered lost.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="awscrt.io.TlsVersion">
+<em class="property">class </em><code class="sig-prename descclassname">awscrt.io.</code><code class="sig-name descname">TlsVersion</code><a class="headerlink" href="#awscrt.io.TlsVersion" title="Permalink to this definition">¶</a></dt>
+<dd><p>An enumeration.</p>
+<dl class="py attribute">
+<dt id="awscrt.io.TlsVersion.SSLv3">
+<code class="sig-name descname">SSLv3</code><em class="property"> = 0</em><a class="headerlink" href="#awscrt.io.TlsVersion.SSLv3" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="awscrt.io.TlsVersion.TLSv1">
+<code class="sig-name descname">TLSv1</code><em class="property"> = 1</em><a class="headerlink" href="#awscrt.io.TlsVersion.TLSv1" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="awscrt.io.TlsVersion.TLSv1_1">
+<code class="sig-name descname">TLSv1_1</code><em class="property"> = 2</em><a class="headerlink" href="#awscrt.io.TlsVersion.TLSv1_1" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="awscrt.io.TlsVersion.TLSv1_2">
+<code class="sig-name descname">TLSv1_2</code><em class="property"> = 3</em><a class="headerlink" href="#awscrt.io.TlsVersion.TLSv1_2" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="awscrt.io.TlsVersion.TLSv1_3">
+<code class="sig-name descname">TLSv1_3</code><em class="property"> = 4</em><a class="headerlink" href="#awscrt.io.TlsVersion.TLSv1_3" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="awscrt.io.TlsVersion.DEFAULT">
+<code class="sig-name descname">DEFAULT</code><em class="property"> = 128</em><a class="headerlink" href="#awscrt.io.TlsVersion.DEFAULT" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="awscrt.io.TlsContextOptions">
+<em class="property">class </em><code class="sig-prename descclassname">awscrt.io.</code><code class="sig-name descname">TlsContextOptions</code><a class="headerlink" href="#awscrt.io.TlsContextOptions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Options to create a TLS context.</p>
+<p>The static <cite>TlsContextOptions.create_X()</cite> methods provide common TLS configurations.
+A default-initialized TlsContextOptions has <cite>verify_peer</cite> set True.</p>
+<dl class="py attribute">
+<dt id="awscrt.io.TlsContextOptions.min_tls_ver">
+<code class="sig-name descname">min_tls_ver</code><a class="headerlink" href="#awscrt.io.TlsContextOptions.min_tls_ver" title="Permalink to this definition">¶</a></dt>
+<dd><p>Minimum TLS version to use.
+System defaults are used by default.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#awscrt.io.TlsVersion" title="awscrt.io.TlsVersion">TlsVersion</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="awscrt.io.TlsContextOptions.verify_peer">
+<code class="sig-name descname">verify_peer</code><a class="headerlink" href="#awscrt.io.TlsContextOptions.verify_peer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Whether to validate the peer’s x.509 certificate.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="awscrt.io.TlsContextOptions.alpn_list">
+<code class="sig-name descname">alpn_list</code><a class="headerlink" href="#awscrt.io.TlsContextOptions.alpn_list" title="Permalink to this definition">¶</a></dt>
+<dd><p>If set, names to use in Application Layer
+Protocol Negotiation (ALPN). ALPN is not supported on all systems,
+see <a class="reference internal" href="#awscrt.io.is_alpn_available" title="awscrt.io.is_alpn_available"><code class="xref py py-meth docutils literal notranslate"><span class="pre">is_alpn_available()</span></code></a>. This can be customized per connection,
+via <a class="reference internal" href="#awscrt.io.TlsConnectionOptions.set_alpn_list" title="awscrt.io.TlsConnectionOptions.set_alpn_list"><code class="xref py py-meth docutils literal notranslate"><span class="pre">TlsConnectionOptions.set_alpn_list()</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Optional[List[str]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.io.TlsContextOptions.create_client_with_mtls_from_path">
+<em class="property">static </em><code class="sig-name descname">create_client_with_mtls_from_path</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">cert_filepath</span></em>, <em class="sig-param"><span class="n">pk_filepath</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.TlsContextOptions.create_client_with_mtls_from_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create options configured for use with mutual TLS in client mode.</p>
+<p>Both files are treated as PKCS #7 PEM armored.
+They are loaded from disk and stored in buffers internally.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cert_filepath</strong> (<em>str</em>) – Path to certificate file.</p></li>
+<li><p><strong>pk_filepath</strong> (<em>str</em>) – Path to private key file.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><em>TlsContextOptions</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.io.TlsContextOptions.create_client_with_mtls">
+<em class="property">static </em><code class="sig-name descname">create_client_with_mtls</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">cert_buffer</span></em>, <em class="sig-param"><span class="n">key_buffer</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.TlsContextOptions.create_client_with_mtls" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create options configured for use with mutual TLS in client mode.</p>
+<p>Both buffers are treated as PKCS #7 PEM armored.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cert_buffer</strong> (<em>bytes</em>) – Certificate contents</p></li>
+<li><p><strong>key_buffer</strong> (<em>bytes</em>) – Private key contents.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><em>TlsContextOptions</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.io.TlsContextOptions.create_client_with_mtls_pkcs12">
+<em class="property">static </em><code class="sig-name descname">create_client_with_mtls_pkcs12</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">pkcs12_filepath</span></em>, <em class="sig-param"><span class="n">pkcs12_password</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.TlsContextOptions.create_client_with_mtls_pkcs12" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create options configured for use with mutual TLS in client mode.</p>
+<p>NOTE: This configuration only works on Apple devices.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pkcs12_filepath</strong> (<em>str</em>) – Path to PKCS #12 file.
+The file is loaded from disk and stored internally.</p></li>
+<li><p><strong>pkcs12_password</strong> (<em>str</em>) – Password to PKCS #12 file.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><em>TlsContextOptions</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.io.TlsContextOptions.create_server_from_path">
+<em class="property">static </em><code class="sig-name descname">create_server_from_path</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">cert_filepath</span></em>, <em class="sig-param"><span class="n">pk_filepath</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.TlsContextOptions.create_server_from_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create options configured for use in server mode.</p>
+<p>Both files are treated as PKCS #7 PEM armored.
+They are loaded from disk and stored in buffers internally.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cert_filepath</strong> (<em>str</em>) – Path to certificate file.</p></li>
+<li><p><strong>pk_filepath</strong> (<em>str</em>) – Path to private key file.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><em>TlsContextOptions</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.io.TlsContextOptions.create_server">
+<em class="property">static </em><code class="sig-name descname">create_server</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">cert_buffer</span></em>, <em class="sig-param"><span class="n">key_buffer</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.TlsContextOptions.create_server" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create options configured for use in server mode.</p>
+<p>Both buffers are treated as PKCS #7 PEM armored.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cert_buffer</strong> (<em>bytes</em>) – Certificate contents.</p></li>
+<li><p><strong>key_buffer</strong> (<em>bytes</em>) – Private key contents.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><em>TlsContextOptions</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.io.TlsContextOptions.create_server_pkcs12">
+<em class="property">static </em><code class="sig-name descname">create_server_pkcs12</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">pkcs12_filepath</span></em>, <em class="sig-param"><span class="n">pkcs12_password</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.TlsContextOptions.create_server_pkcs12" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create options configured for use in server mode.</p>
+<p>NOTE: This configuration only works on Apple devices.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pkcs12_filepath</strong> (<em>str</em>) – Path to PKCS #12 file.</p></li>
+<li><p><strong>pkcs12_password</strong> (<em>str</em>) – Password to PKCS #12 file.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><em>TlsContextOptions</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.io.TlsContextOptions.override_default_trust_store_from_path">
+<code class="sig-name descname">override_default_trust_store_from_path</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ca_dirpath</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">ca_filepath</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.TlsContextOptions.override_default_trust_store_from_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Override default trust store.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ca_dirpath</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – Path to directory containing
+trusted certificates, which will overrides the default trust store.
+Only supported on Unix.</p></li>
+<li><p><strong>ca_filepath</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – Path to file containing PEM armored chain
+of trusted CA certificates.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.io.TlsContextOptions.override_default_trust_store">
+<code class="sig-name descname">override_default_trust_store</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">rootca_buffer</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.TlsContextOptions.override_default_trust_store" title="Permalink to this definition">¶</a></dt>
+<dd><p>Override default trust store.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>rootca_buffer</strong> (<em>bytes</em>) – PEM armored chain of trusted CA certificates.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="awscrt.io.ClientTlsContext">
+<em class="property">class </em><code class="sig-prename descclassname">awscrt.io.</code><code class="sig-name descname">ClientTlsContext</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">options</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.ClientTlsContext" title="Permalink to this definition">¶</a></dt>
+<dd><p>Client TLS context.</p>
+<p>A context is expensive, but can be used for the lifetime of the application
+by all outgoing connections that wish to use the same TLS configuration.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>options</strong> (<a class="reference internal" href="#awscrt.io.TlsContextOptions" title="awscrt.io.TlsContextOptions"><em>TlsContextOptions</em></a>) – Configuration options.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt id="awscrt.io.ClientTlsContext.new_connection_options">
+<code class="sig-name descname">new_connection_options</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.ClientTlsContext.new_connection_options" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a <a class="reference internal" href="#awscrt.io.TlsConnectionOptions" title="awscrt.io.TlsConnectionOptions"><code class="xref py py-class docutils literal notranslate"><span class="pre">TlsConnectionOptions</span></code></a> that makes use of this TLS context.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><em>TlsConnectionOptions</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="awscrt.io.TlsConnectionOptions">
+<em class="property">class </em><code class="sig-prename descclassname">awscrt.io.</code><code class="sig-name descname">TlsConnectionOptions</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">tls_ctx</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.TlsConnectionOptions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Connection-specific TLS options.</p>
+<p>Note that, while a TLS context is an expensive object, a <a class="reference internal" href="#awscrt.io.TlsConnectionOptions" title="awscrt.io.TlsConnectionOptions"><code class="xref py py-class docutils literal notranslate"><span class="pre">TlsConnectionOptions</span></code></a> is cheap.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>tls_ctx</strong> (<a class="reference internal" href="#awscrt.io.ClientTlsContext" title="awscrt.io.ClientTlsContext"><em>ClientTlsContext</em></a>) – TLS context. A context can be shared by many connections.</p>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt id="awscrt.io.TlsConnectionOptions.tls_ctx">
+<code class="sig-name descname">tls_ctx</code><a class="headerlink" href="#awscrt.io.TlsConnectionOptions.tls_ctx" title="Permalink to this definition">¶</a></dt>
+<dd><p>TLS context.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#awscrt.io.ClientTlsContext" title="awscrt.io.ClientTlsContext">ClientTlsContext</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.io.TlsConnectionOptions.set_alpn_list">
+<code class="sig-name descname">set_alpn_list</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">alpn_list</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.TlsConnectionOptions.set_alpn_list" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set names to use in Application Layer Protocol Negotiation (ALPN).</p>
+<p>This overrides any ALPN list on the TLS context, see <a class="reference internal" href="#awscrt.io.TlsContextOptions.alpn_list" title="awscrt.io.TlsContextOptions.alpn_list"><code class="xref py py-attr docutils literal notranslate"><span class="pre">TlsContextOptions.alpn_list</span></code></a>.
+ALPN is not supported on all systems, see <a class="reference internal" href="#awscrt.io.is_alpn_available" title="awscrt.io.is_alpn_available"><code class="xref py py-meth docutils literal notranslate"><span class="pre">is_alpn_available()</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>alpn_list</strong> (<em>List</em><em>[</em><em>str</em><em>]</em>) – List of protocol names.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.io.TlsConnectionOptions.set_server_name">
+<code class="sig-name descname">set_server_name</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">server_name</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.TlsConnectionOptions.set_server_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set server name.</p>
+<p>Sets name for TLS Server Name Indication (SNI).
+Name is also used for x.509 validation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>server_name</strong> (<em>str</em>) – Server name.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="awscrt.io.InputStream">
+<em class="property">class </em><code class="sig-prename descclassname">awscrt.io.</code><code class="sig-name descname">InputStream</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">stream</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.InputStream" title="Permalink to this definition">¶</a></dt>
+<dd><p>InputStream allows <cite>awscrt</cite> native code to read from Python I/O classes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>stream</strong> (<em>io.IOBase</em>) – Python I/O stream to wrap.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt id="awscrt.io.InputStream.wrap">
+<em class="property">classmethod </em><code class="sig-name descname">wrap</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">stream</span></em>, <em class="sig-param"><span class="n">allow_none</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.InputStream.wrap" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given some stream type, returns an <a class="reference internal" href="#awscrt.io.InputStream" title="awscrt.io.InputStream"><code class="xref py py-class docutils literal notranslate"><span class="pre">InputStream</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>stream</strong> (<em>Union</em><em>[</em><em>io.IOBase</em><em>, </em><a class="reference internal" href="#awscrt.io.InputStream" title="awscrt.io.InputStream"><em>InputStream</em></a><em>, </em><em>None</em><em>]</em>) – I/O stream to wrap.</p></li>
+<li><p><strong>allow_none</strong> (<em>bool</em>) – Whether to allow <cite>stream</cite> to be None.
+If False (default), and <cite>stream</cite> is None, an exception is raised.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><em>Union[InputStream, None]</em> – If <cite>stream</cite> is already an <a class="reference internal" href="#awscrt.io.InputStream" title="awscrt.io.InputStream"><code class="xref py py-class docutils literal notranslate"><span class="pre">InputStream</span></code></a>, it is returned.
+Otherwise, an <a class="reference internal" href="#awscrt.io.InputStream" title="awscrt.io.InputStream"><code class="xref py py-class docutils literal notranslate"><span class="pre">InputStream</span></code></a> which wraps the <cite>stream</cite> is returned.
+If <cite>allow_none</cite> is True, and <cite>stream</cite> is None, then None is returned.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="mqtt.html" title="awscrt.mqtt"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="../index.html" title="Welcome to awscrt’s documentation!"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">awscrt  documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Amazon Web Services, Inc.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 3.0.3.
+    </div>
+  </body>
+</html>
