@@ -1,0 +1,70 @@
+awscrt package
+==============
+
+Submodules
+----------
+
+awscrt.auth module
+------------------
+
+.. automodule:: awscrt.auth
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+awscrt.awsiot\_mqtt\_connection\_builder module
+-----------------------------------------------
+
+.. automodule:: awscrt.awsiot_mqtt_connection_builder
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+awscrt.crypto module
+--------------------
+
+.. automodule:: awscrt.crypto
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+awscrt.exceptions module
+------------------------
+
+.. automodule:: awscrt.exceptions
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+awscrt.http module
+------------------
+
+.. automodule:: awscrt.http
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+awscrt.io module
+----------------
+
+.. automodule:: awscrt.io
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+awscrt.mqtt module
+------------------
+
+.. automodule:: awscrt.mqtt
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: awscrt
+   :members:
+   :undoc-members:
+   :show-inheritance:
