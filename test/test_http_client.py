@@ -293,7 +293,7 @@ class TestClient(NativeResourceTest):
         connection = self._new_client_connection(secure)
 
         request = HttpRequest(
-            method='POST',
+            method='PUT',
             path='/test/test_request_refcounts.txt',
             headers=HttpHeaders([('Host', self.hostname), ('Content-Length', '5')]),
             body_stream=BytesIO(b'hello'))

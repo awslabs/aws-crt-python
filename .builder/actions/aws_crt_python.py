@@ -47,7 +47,9 @@ class AWSCrtPython(Builder.Action):
             InstallPythonReqs(deps=['boto3'], python=self.custom_python),
             [self.custom_python, '-m', 'pip', 'install', '.', '--install-option=--verbose',
                 '--install-option=build_ext', *install_options],
-            [self.custom_python, '-m', 'unittest', 'discover', '--verbose'],
+            # "--failfast" because, given how our leak-detection in tests currently works,
+            # once one test fails all the rest usually fail too.
+            [self.custom_python, '-m', 'unittest', 'discover', '--verbose', '--failfast'],
             # http_client_test.py is python3-only. It launches external processes using the extra args
             [self.python3, 'aws-common-runtime/aws-c-http/integration-testing/http_client_test.py',
                 self.custom_python, 'elasticurl.py'],
