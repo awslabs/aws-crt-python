@@ -1,3 +1,10 @@
+"""
+I/O library for `awscrt`.
+
+All networking in `awscrt` is asynchronous.
+Long-running event-loop threads are used for concurrency.
+"""
+
 # Copyright 2010-2017 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License").
@@ -42,12 +49,6 @@ def init_logging(log_level, file_name):
     assert file_name is not None
 
     _awscrt.init_logging(log_level, file_name)
-
-
-def is_alpn_available():
-    """Returns True if Application Layer Protocol Negotiation (ALPN)
-    is supported on this system."""
-    return _awscrt.is_alpn_available()
 
 
 class EventLoopGroup(NativeResource):
@@ -402,17 +403,6 @@ class TlsContextOptions(object):
         self.ca_buffer = rootca_buffer
 
 
-def _alpn_list_to_str(alpn_list):
-    """
-    Transform ['h2', 'http/1.1'] -> "h2;http/1.1"
-    None is returned if list is None or empty
-    """
-    if alpn_list:
-        assert not isinstance_str(alpn_list)
-        return ';'.join(alpn_list)
-    return None
-
-
 class ClientTlsContext(NativeResource):
     """Client TLS context.
 
@@ -490,6 +480,23 @@ class TlsConnectionOptions(NativeResource):
             server_name (str): Server name.
         """
         _awscrt.tls_connection_options_set_server_name(self, server_name)
+
+
+def _alpn_list_to_str(alpn_list):
+    """
+    Transform ['h2', 'http/1.1'] -> "h2;http/1.1"
+    None is returned if list is None or empty
+    """
+    if alpn_list:
+        assert not isinstance_str(alpn_list)
+        return ';'.join(alpn_list)
+    return None
+
+
+def is_alpn_available():
+    """Returns True if Application Layer Protocol Negotiation (ALPN)
+    is supported on this system."""
+    return _awscrt.is_alpn_available()
 
 
 class InputStream(NativeResource):

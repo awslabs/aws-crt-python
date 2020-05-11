@@ -1,6 +1,8 @@
 ## AWS CRT Python
 
-Python bindings for the AWS Common Runtime
+Python bindings for the AWS Common Runtime.
+
+API documentation: https://awslabs.github.io/aws-crt-python/
 
 ## License
 

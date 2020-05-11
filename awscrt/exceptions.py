@@ -15,7 +15,18 @@ import _awscrt
 
 
 def from_code(code):
-    """Given an AWS Common Runtime error-code, return an exception"""
+    """Given an AWS Common Runtime error code, return an exception.
+
+    Returns a common Python exception type, if it's appropriate.
+    For example, `code=1` aka `AWS_ERROR_OOM` will result in `MemoryError`.
+    Otherwise, an :class:`AwsCrtError` is returned.
+
+    Args:
+        code (int): error code.
+
+    Returns:
+        BaseException:
+    """
     builtin = _awscrt.get_corresponding_builtin_exception(code)
     if builtin:
         return builtin()
@@ -28,6 +39,11 @@ def from_code(code):
 class AwsCrtError(Exception):
     """
     Base exception class for AWS Common Runtime exceptions.
+
+    Args:
+        code (int): Int value of error.
+        name (str): Name of error.
+        message (str): Message about error.
 
     Attributes:
         code (int): Int value of error.

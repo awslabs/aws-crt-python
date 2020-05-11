@@ -70,6 +70,8 @@
             
   <div class="section" id="module-awscrt.mqtt">
 <span id="awscrt-mqtt"></span><h1>awscrt.mqtt<a class="headerlink" href="#module-awscrt.mqtt" title="Permalink to this headline">¶</a></h1>
+<p>MQTT client library.</p>
+<p>All network operations in <cite>awscrt.mqtt</cite> are asynchronous.</p>
 <dl class="py class">
 <dt id="awscrt.mqtt.QoS">
 <em class="property">class </em><code class="sig-prename descclassname">awscrt.mqtt.</code><code class="sig-name descname">QoS</code><a class="headerlink" href="#awscrt.mqtt.QoS" title="Permalink to this definition">¶</a></dt>
@@ -256,7 +258,7 @@ The MQTT client will automatically attempt to reconnect.
 The function should take the following arguments return nothing:</p>
 <ul>
 <li><p><cite>connection</cite> (<a class="reference internal" href="#awscrt.mqtt.Connection" title="awscrt.mqtt.Connection"><code class="xref py py-class docutils literal notranslate"><span class="pre">Connection</span></code></a>): This MQTT Connection.</p></li>
-<li><p><cite>error</cite> (<code class="xref py py-class docutils literal notranslate"><span class="pre">awscrt.exceptions.AwsCrtError</span></code>): Exception which caused connection loss.</p></li>
+<li><p><cite>error</cite> (<a class="reference internal" href="exceptions.html#awscrt.exceptions.AwsCrtError" title="awscrt.exceptions.AwsCrtError"><code class="xref py py-class docutils literal notranslate"><span class="pre">awscrt.exceptions.AwsCrtError</span></code></a>): Exception which caused connection loss.</p></li>
 <li><p><cite>**kwargs</cite> (dict): Forward-compatibility kwargs.</p></li>
 </ul>
 </p></li>
@@ -294,7 +296,7 @@ published by the server when its connection to the client is unexpectedly lost.<
 <li><p><strong>password</strong> (<em>str</em>) – Password to connect with.</p></li>
 <li><p><strong>socket_options</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="io.html#awscrt.io.SocketOptions" title="awscrt.io.SocketOptions"><em>awscrt.io.SocketOptions</em></a><em>]</em>) – Optional socket options.</p></li>
 <li><p><strong>use_websocket</strong> (<em>bool</em>) – If true, connect to MQTT over websockets.</p></li>
-<li><p><strong>websocket_proxy_options</strong> (<em>Optional</em><em>[</em><em>awscrt.http.HttpProxyOptions</em><em>]</em>) – Optional proxy options for websocket connections.</p></li>
+<li><p><strong>websocket_proxy_options</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="http.html#awscrt.http.HttpProxyOptions" title="awscrt.http.HttpProxyOptions"><em>awscrt.http.HttpProxyOptions</em></a><em>]</em>) – Optional proxy options for websocket connections.</p></li>
 <li><p><strong>websocket_handshake_transform</strong> – <p>Optional function to transform websocket handshake request.
 If provided, function is called each time a websocket connection is attempted.
 The function may modify the HTTP request before it is sent to the server.
@@ -501,7 +503,7 @@ plus the optional header “Sec-WebSocket-Protocol: mqtt”.</p>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>mqtt_connection</strong> (<a class="reference internal" href="#awscrt.mqtt.Connection" title="awscrt.mqtt.Connection"><em>Connection</em></a>) – Connection this handshake is for.</p></li>
-<li><p><strong>http_request</strong> (<em>awscrt.http.HttpRequest</em>) – HTTP request for this handshake.</p></li>
+<li><p><strong>http_request</strong> (<a class="reference internal" href="http.html#awscrt.http.HttpRequest" title="awscrt.http.HttpRequest"><em>awscrt.http.HttpRequest</em></a>) – HTTP request for this handshake.</p></li>
 <li><p><strong>done_future</strong> (<em>concurrent.futures.Future</em>) – Future to complete when the
 <a class="reference internal" href="#awscrt.mqtt.WebsocketHandshakeTransformArgs.set_done" title="awscrt.mqtt.WebsocketHandshakeTransformArgs.set_done"><code class="xref py py-meth docutils literal notranslate"><span class="pre">set_done()</span></code></a> is called. It will contain None if successful,
 or an exception will be set.</p></li>
@@ -525,7 +527,7 @@ or an exception will be set.</p></li>
 <dd><p>HTTP request for this handshake.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
-<dd class="field-odd"><p>awscrt.http.HttpRequest</p>
+<dd class="field-odd"><p><a class="reference internal" href="http.html#awscrt.http.HttpRequest" title="awscrt.http.HttpRequest">awscrt.http.HttpRequest</a></p>
 </dd>
 </dl>
 </dd></dl>
