@@ -7,10 +7,12 @@ phases:
   pre_build:
     commands:
       - export CC=gcc
+      - export PKG_VERSION=$(git describe --tags | cut -f2 -dv)
   build:
     commands:
       - echo Build started on `date`
       - cd aws-crt-python 
+      - sed --in-place -E "s/version='.+'/version='${PKG_VERSION}'/" setup.py
       - /opt/python/cp34-cp34m/bin/python setup.py sdist bdist_wheel
       - auditwheel repair --plat manylinux1_i686 dist/awscrt-*cp34-cp34m-linux_i686.whl
       - /opt/python/cp35-cp35m/bin/python setup.py sdist bdist_wheel
