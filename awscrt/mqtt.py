@@ -1,5 +1,5 @@
 """
-MQTT client library.
+MQTT
 
 All network operations in `awscrt.mqtt` are asynchronous.
 """

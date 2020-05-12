@@ -11,6 +11,7 @@ API Reference
 .. toctree::
    :maxdepth: 2
 
+   api/auth
    api/exceptions
    api/http
    api/io

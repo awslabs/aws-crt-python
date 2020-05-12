@@ -1,5 +1,5 @@
 """
-HTTP library.
+HTTP
 
 All network operations in `awscrt.http` are asynchronous.
 """
