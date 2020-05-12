@@ -1,3 +1,9 @@
+"""
+HTTP
+
+All network operations in `awscrt.http` are asynchronous.
+"""
+
 # Copyright 2010-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License").
@@ -20,46 +26,66 @@ from awscrt.io import ClientBootstrap, EventLoopGroup, DefaultHostResolver, Inpu
 from enum import IntEnum
 
 
+class HttpVersion(IntEnum):
+    """HTTP protocol version enumeration"""
+    Unknown = 0  #: Unknown
+    Http1_0 = 1  #: HTTP/1.0
+    Http1_1 = 2  #: HTTP/1.1
+    Http2 = 3  #: HTTP/2
+
+
 class HttpConnectionBase(NativeResource):
-    """
-    Base for HTTP connection classes.
+    """Base for HTTP connection classes."""
 
-    Attributes:
-        shutdown_future (concurrent.futures.Future): Completes when the connection has finished shutting down.
-                Future will contain a result of None, or an exception indicating why shutdown occurred.
-                Note that the connection may have been garbage-collected before this future completes.
-        _version (HttpVersion): Protocol version the connection used.
-    """
-
-    __slots__ = ('shutdown_future', '_version')
+    __slots__ = ('_shutdown_future', '_version')
 
     def __init__(self):
         super(HttpConnectionBase, self).__init__()
-        self.shutdown_future = Future()
+
+        self._shutdown_future = Future()
+
+    @property
+    def shutdown_future(self):
+        """
+        concurrent.futures.Future: Completes when this connection has finished shutting down.
+        Future will contain a result of None, or an exception indicating why shutdown occurred.
+        Note that the connection may have been garbage-collected before this future completes.
+        """
+        return self._shutdown_future
 
     @property
     def version(self):
+        """HttpVersion: Protocol used by this connection"""
         return self._version
 
     def close(self):
-        """
-        Close the connection.
-        Returns the connect's `shutdown_future`, which completes when shutdown has finished.
+        """Close the connection.
+
+        Shutdown is asynchronous. This call has no effect if the connection is already
+        closing.
+
+        Returns:
+            concurrent.futures.Future: This connection's :attr:`shutdown_future`,
+            which completes when shutdown has finished.
         """
         _awscrt.http_connection_close(self._binding)
         return self.shutdown_future
 
     def is_open(self):
         """
-        Returns True if the connection is open and usable, False otherwise.
+        Returns:
+            bool: True if this connection is open and usable, False otherwise.
+            Check :attr:`shutdown_future` to know when the connection is completely
+            finished shutting down.
         """
         return _awscrt.http_connection_is_open(self._binding)
 
 
 class HttpClientConnection(HttpConnectionBase):
     """
-    An HTTP client connection. All operations are async.
-    Use HttpClientConnection.new() to establish a new connection.
+    An HTTP client connection.
+
+    Use :meth:`HttpClientConnection.new()` to establish a new connection.
     """
     __slots__ = ('_host_name', '_port')
 
@@ -72,11 +98,29 @@ class HttpClientConnection(HttpConnectionBase):
             tls_connection_options=None,
             proxy_options=None):
         """
-        Initiates a new connection to host_name and port using socket_options and tls_connection_options if supplied.
-        if tls_connection_options is None, then the connection will be attempted over plain-text.
+        Asynchronously establish a new HttpClientConnection.
 
-        Returns a future where the result is a new instance to HttpClientConnection, once the connection has completed
-        and is ready for use.
+        Args:
+            host_name (str): Connect to host.
+
+            port (int): Connect to port.
+
+            bootstrap (ClientBootstrap): Client bootstrap to use when initiating socket connection.
+
+            socket_options (Optional[SocketOptions]): Optional socket options.
+                If None is provided, then default options are used.
+
+            tls_connection_options (Optional[TlsConnectionOptions]): Optional TLS
+                connection options. If None is provided, then the connection will
+                be attempted over plain-text.
+
+            proxy_options (Optional[HttpProxyOptions]): Optional proxy options.
+                If None is provided then a proxy is not used.
+
+        Returns:
+            concurrent.futures.Future: A Future which completes when connection succeeds or fails.
+            If successful, the Future will contain a new :class:`HttpClientConnection`.
+            Otherwise, it will contain an exception.
         """
         assert isinstance(bootstrap, ClientBootstrap) or bootstrap is None
         assert isinstance_str(host_name)
@@ -134,17 +178,61 @@ class HttpClientConnection(HttpConnectionBase):
 
     @property
     def host_name(self):
+        """Remote hostname"""
         return self._host_name
 
     @property
     def port(self):
+        """Remote port"""
         return self._port
 
     def request(self, request, on_response=None, on_body=None):
+        """Create :class:`HttpClientStream` to carry out the request/response exchange.
+
+        NOTE: The stream sends no data until :meth:`HttpClientStream.activate()`
+        is called. Call activate() when you're ready for callbacks and events to fire.
+
+        Args:
+            request (HttpRequest): Definition for outgoing request.
+
+            on_response: Optional callback invoked once main response headers are received.
+                The function should take the following arguments and return nothing:
+
+                *   `http_stream` (:class:`HttpClientStream`): Stream carrying
+                    out this request/response exchange.
+
+                *   `status_code` (int): Response status code.
+
+                *   `headers` (List[Tuple[str, str]]): Response headers as a
+                    list of (name,value) pairs.
+
+                *   `**kwargs` (dict): Forward compatibility kwargs.
+
+                An exception raise by this function will cause the stream to end in error.
+                This callback is always invoked on the connection's event-loop thread.
+
+            on_body: Optional callback invoked 0+ times as response body data is received.
+                The function should take the following arguments and return nothing:
+
+                *   `http_stream` (:class:`HttpClientStream`): Stream carrying
+                    out this request/response exchange.
+
+                *   `chunk` (buffer): Response body data (not necessarily
+                    a whole "chunk" of chunked encoding).
+
+                *   `**kwargs` (dict): Forward-compatibility kwargs.
+
+                An exception raise by this function will cause the stream to end in error.
+                This callback is always invoked on the connection's event-loop thread.
+
+        Returns:
+            HttpClientStream:
+        """
         return HttpClientStream(self, request, on_response, on_body)
 
 
 class HttpStreamBase(NativeResource):
+    """Base for HTTP stream classes"""
     __slots__ = ('_connection', '_completion_future', '_on_body_cb')
 
     def __init__(self, connection, on_body=None):
@@ -167,6 +255,21 @@ class HttpStreamBase(NativeResource):
 
 
 class HttpClientStream(HttpStreamBase):
+    """Stream that sends a request and receives a response.
+
+    Create an HttpClientStream with :meth:`HttpClientConnection.request()`.
+
+    NOTE: The stream sends no data until :meth:`HttpClientStream.activate()`
+    is called. Call activate() when you're ready for callbacks and events to fire.
+
+    Attributes:
+        connection (HttpClientConnection): This stream's connection.
+
+        completion_future (concurrent.futures.Future): Future that will contain
+            the response status code (int) when the request/response exchange
+            completes. If the exchange fails to complete, the Future will
+            contain an exception indicating why it failed.
+    """
     __slots__ = ('_response_status_code', '_on_response_cb', '_on_body_cb', '_request')
 
     def __init__(self, connection, request, on_response=None, on_body=None):
@@ -187,9 +290,17 @@ class HttpClientStream(HttpStreamBase):
 
     @property
     def response_status_code(self):
+        """int: The response status code.
+
+        This is None until a response arrives."""
         return self._response_status_code
 
     def activate(self):
+        """Begin sending the request.
+
+        The stream does nothing until this is called. Call activate() when you
+        are ready for its callbacks and events to fire.
+        """
         _awscrt.http_client_stream_activate(self)
 
     def _on_response(self, status_code, name_value_pairs):
@@ -226,10 +337,12 @@ class HttpMessageBase(NativeResource):
 
     @property
     def headers(self):
+        """HttpHeaders: Headers to send."""
         return self._headers
 
     @property
     def body_stream(self):
+        """InputStream: Stream of outgoing body."""
         return _awscrt.http_message_get_body_stream(self._binding)
 
     @body_stream.setter
@@ -241,7 +354,15 @@ class HttpMessageBase(NativeResource):
 class HttpRequest(HttpMessageBase):
     """
     Definition for an outgoing HTTP request.
+
     The request may be transformed (ex: signing the request) before its data is eventually sent.
+
+    Args:
+        method (str): HTTP request method (verb). Default value is "GET".
+        path (str): HTTP path-and-query value. Default value is "/".
+        headers (Optional[HttpHeaders]): Optional headers. If None specified,
+            an empty :class:`HttpHeaders` is created.
+        body_string(Optional[Union[InputStream, io.IOBase]]): Optional body as stream.
     """
 
     __slots__ = ()
@@ -270,6 +391,7 @@ class HttpRequest(HttpMessageBase):
 
     @property
     def method(self):
+        """str: HTTP request method (verb)."""
         return _awscrt.http_message_get_request_method(self._binding)
 
     @method.setter
@@ -278,6 +400,7 @@ class HttpRequest(HttpMessageBase):
 
     @property
     def path(self):
+        """str: HTTP path-and-query value."""
         return _awscrt.http_message_get_request_path(self._binding)
 
     @path.setter
@@ -288,17 +411,19 @@ class HttpRequest(HttpMessageBase):
 class HttpHeaders(NativeResource):
     """
     Collection of HTTP headers.
+
     A given header name may have multiple values.
     Header names are always treated in a case-insensitive manner.
     HttpHeaders can be iterated over as (name,value) pairs.
+
+    Args:
+        name_value_pairs (Optional[List[Tuple[str, str]]]): Construct from a
+            collection of (name,value) pairs.
     """
 
     __slots__ = ()
 
     def __init__(self, name_value_pairs=None):
-        """
-        Construct from a collection of (name,value) pairs.
-        """
         super(HttpHeaders, self).__init__()
         self._binding = _awscrt.http_headers_new()
         if name_value_pairs:
@@ -315,6 +440,10 @@ class HttpHeaders(NativeResource):
     def add(self, name, value):
         """
         Add a name-value pair.
+
+        Args:
+            name (str): Name.
+            value (str): Value.
         """
         assert isinstance_str(name)
         assert isinstance_str(value)
@@ -323,12 +452,19 @@ class HttpHeaders(NativeResource):
     def add_pairs(self, name_value_pairs):
         """
         Add list of (name,value) pairs.
+
+        Args:
+            name_value_pairs (List[Tuple[str, str]]): List of (name,value) pairs.
         """
         _awscrt.http_headers_add_pairs(self._binding, name_value_pairs)
 
     def set(self, name, value):
         """
         Set a name-value pair, any existing values for the name are removed.
+
+        Args:
+            name (str): Name.
+            value (str): Value.
         """
         assert isinstance_str(name)
         assert isinstance_str(value)
@@ -337,6 +473,12 @@ class HttpHeaders(NativeResource):
     def get_values(self, name):
         """
         Return an iterator over the values for this name.
+
+        Args:
+            name (str): Name.
+
+        Returns:
+            Iterator[Tuple[str, str]]:
         """
         assert isinstance_str(name)
         name = name.lower()
@@ -349,6 +491,13 @@ class HttpHeaders(NativeResource):
         """
         Get the first value for this name, ignoring any additional values.
         Returns `default` if no values exist.
+
+        Args:
+            name (str): Name.
+            default (Optional[str]): If `name` not found, this value is returned.
+                Defaults to None.
+        Returns:
+            str:
         """
         assert isinstance_str(name)
         return _awscrt.http_headers_get(self._binding, name, default)
@@ -357,6 +506,9 @@ class HttpHeaders(NativeResource):
         """
         Remove all values for this name.
         Raises a KeyError if name not found.
+
+        Args:
+            name (str): Header name.
         """
         assert isinstance_str(name)
         _awscrt.http_headers_remove(self._binding, name)
@@ -365,6 +517,10 @@ class HttpHeaders(NativeResource):
         """
         Remove a specific value for this name.
         Raises a ValueError if value not found.
+
+        Args:
+            name (str): Name.
+            value (str): Value.
         """
         assert isinstance_str(name)
         assert isinstance_str(value)
@@ -372,7 +528,7 @@ class HttpHeaders(NativeResource):
 
     def clear(self):
         """
-        Clear all headers
+        Clear all headers.
         """
         _awscrt.http_headers_clear(self._binding)
 
@@ -388,34 +544,55 @@ class HttpHeaders(NativeResource):
 
 
 class HttpProxyAuthenticationType(IntEnum):
-    """
-    Which proxy authentication type to use.
-
-    Nothing: no authentication
-    Basic: username and password
-    """
+    """Proxy authentication type enumeration."""
     Nothing = 0
+    """No authentication"""
+
     Basic = 1
-
-
-class HttpVersion(IntEnum):
-    Unknown = 0
-    Http1_0 = 1
-    Http1_1 = 2
-    Http2 = 3
+    """Username and password"""
 
 
 class HttpProxyOptions(object):
     """
     Proxy options for HTTP clients.
 
-    host_name: Name of the proxy server to connect through.
-    port: Port number of the proxy server to connect through.
-    tls_connection_options: Optional TlsConnectionOptions for the Local <-> Proxy connection.
-                            Must be distinct from the TlsConnectionOptions provided to the HTTP connection.
-    auth_type: Type of proxy authentication to use. Default is HttpProxyAuthenticationType.Nothing.
-    basic_auth_username: Username to use when auth_type is HttpProxyAuthenticationType.Basic.
-    basic_auth_password: Username to use when auth_type is HttpProxyAuthenticationType.Basic.
+    Args:
+        host_name (str): Name of the proxy server to connect through.
+
+        port (int): Port number of the proxy server to connect through.
+
+        tls_connection_options (Optional[TlsConnectionOptions]): Optional
+            `TlsConnectionOptions` for the Local to Proxy connection.
+            Must be distinct from the `TlsConnectionOptions`
+            provided to the HTTP connection.
+
+        auth_type (HttpProxyAuthenticationType): Type of proxy authentication to use.
+            Default is :const:`HttpProxyAuthenticationType.Nothing`.
+
+        auth_username (Optional[str]): Username to use when `auth_type` is
+            :const:`HttpProxyAuthenticationType.Basic`.
+
+        auth_password (Optional[str]): Username to use when `auth_type` is
+            :const:`HttpProxyAuthenticationType.Basic`.
+
+    Attributes:
+        host_name (str): Name of the proxy server to connect through.
+
+        port (int): Port number of the proxy server to connect through.
+
+        tls_connection_options (Optional[TlsConnectionOptions]): Optional
+            `TlsConnectionOptions` for the Local to Proxy connection.
+            Must be distinct from the `TlsConnectionOptions`
+            provided to the HTTP connection.
+
+        auth_type (HttpProxyAuthenticationType): Type of proxy authentication to use.
+
+        auth_username (Optional[str]): Username to use when `auth_type` is
+            :const:`HttpProxyAuthenticationType.Basic`.
+
+        auth_password (Optional[str]): Username to use when `auth_type` is
+            :const:`HttpProxyAuthenticationType.Basic`.
+
     """
 
     def __init__(self,

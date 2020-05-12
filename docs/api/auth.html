@@ -1,0 +1,471 @@
+
+
+<!doctype html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>awscrt.auth &#8212; awscrt  documentation</title>
+    <link rel="stylesheet" href="../_static/bizstyle.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../_static/bizstyle.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="awscrt.exceptions" href="exceptions.html" />
+    <link rel="prev" title="Welcome to awscrt’s documentation!" href="../index.html" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <!--[if lt IE 9]>
+    <script src="_static/css3-mediaqueries.js"></script>
+    <![endif]-->
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="exceptions.html" title="awscrt.exceptions"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="../index.html" title="Welcome to awscrt’s documentation!"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">awscrt  documentation</a> &#187;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="../index.html"
+                        title="previous chapter">Welcome to awscrt’s documentation!</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="exceptions.html"
+                        title="next chapter">awscrt.exceptions</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/api/auth.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-awscrt.auth">
+<span id="awscrt-auth"></span><h1>awscrt.auth<a class="headerlink" href="#module-awscrt.auth" title="Permalink to this headline">¶</a></h1>
+<p>AWS client-side authentication: standard credentials providers and signing.</p>
+<dl class="py class">
+<dt id="awscrt.auth.AwsCredentials">
+<em class="property">class </em><code class="sig-prename descclassname">awscrt.auth.</code><code class="sig-name descname">AwsCredentials</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">access_key_id</span></em>, <em class="sig-param"><span class="n">secret_access_key</span></em>, <em class="sig-param"><span class="n">session_token</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.auth.AwsCredentials" title="Permalink to this definition">¶</a></dt>
+<dd><p>AwsCredentials are the public/private data needed to sign an authenticated AWS request.</p>
+<p>AwsCredentials are immutable.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>access_key_id</strong> (<em>str</em>) – Access key ID</p></li>
+<li><p><strong>secret_access_key</strong> (<em>str</em>) – Secret access key</p></li>
+<li><p><strong>session_token</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – Session token</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt id="awscrt.auth.AwsCredentials.access_key_id">
+<code class="sig-name descname">access_key_id</code><a class="headerlink" href="#awscrt.auth.AwsCredentials.access_key_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>Access key ID</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="awscrt.auth.AwsCredentials.secret_access_key">
+<code class="sig-name descname">secret_access_key</code><a class="headerlink" href="#awscrt.auth.AwsCredentials.secret_access_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Secret access key</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="awscrt.auth.AwsCredentials.session_token">
+<code class="sig-name descname">session_token</code><a class="headerlink" href="#awscrt.auth.AwsCredentials.session_token" title="Permalink to this definition">¶</a></dt>
+<dd><p>Session token</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Optional[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="awscrt.auth.AwsCredentialsProviderBase">
+<em class="property">class </em><code class="sig-prename descclassname">awscrt.auth.</code><code class="sig-name descname">AwsCredentialsProviderBase</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">binding</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.auth.AwsCredentialsProviderBase" title="Permalink to this definition">¶</a></dt>
+<dd><p>Base class for providers that source the AwsCredentials needed to sign an authenticated AWS request.</p>
+<p>NOTE: Custom subclasses of AwsCredentialsProviderBase are not yet supported.</p>
+<dl class="py method">
+<dt id="awscrt.auth.AwsCredentialsProviderBase.get_credentials">
+<code class="sig-name descname">get_credentials</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.auth.AwsCredentialsProviderBase.get_credentials" title="Permalink to this definition">¶</a></dt>
+<dd><p>Asynchronously fetch AwsCredentials.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><em>concurrent.futures.Future</em> – A Future which will contain
+<a class="reference internal" href="#awscrt.auth.AwsCredentials" title="awscrt.auth.AwsCredentials"><code class="xref py py-class docutils literal notranslate"><span class="pre">AwsCredentials</span></code></a> (or an exception) when the operation completes.
+The operation may complete on a different thread.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="awscrt.auth.AwsCredentialsProvider">
+<em class="property">class </em><code class="sig-prename descclassname">awscrt.auth.</code><code class="sig-name descname">AwsCredentialsProvider</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">binding</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.auth.AwsCredentialsProvider" title="Permalink to this definition">¶</a></dt>
+<dd><p>Credentials providers source the AwsCredentials needed to sign an authenticated AWS request.</p>
+<p>Base class: AwsCredentialsProviderBase</p>
+<p>This class provides <cite>new()</cite> functions for several built-in provider types.</p>
+<dl class="py method">
+<dt id="awscrt.auth.AwsCredentialsProvider.new_default_chain">
+<em class="property">classmethod </em><code class="sig-name descname">new_default_chain</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">client_bootstrap</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.auth.AwsCredentialsProvider.new_default_chain" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create the default provider chain used by most AWS SDKs.</p>
+<p>Generally:</p>
+<ol class="arabic simple">
+<li><p>Environment</p></li>
+<li><p>Profile</p></li>
+<li><p>(conditional, off by default) ECS</p></li>
+<li><p>(conditional, on by default) EC2 Instance Metadata</p></li>
+</ol>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><em>AwsCredentialsProvider</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.auth.AwsCredentialsProvider.new_static">
+<em class="property">classmethod </em><code class="sig-name descname">new_static</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">access_key_id</span></em>, <em class="sig-param"><span class="n">secret_access_key</span></em>, <em class="sig-param"><span class="n">session_token</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.auth.AwsCredentialsProvider.new_static" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a simple provider that just returns a fixed set of credentials.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><em>AwsCredentialsProvider</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.auth.AwsCredentialsProvider.get_credentials">
+<code class="sig-name descname">get_credentials</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.auth.AwsCredentialsProvider.get_credentials" title="Permalink to this definition">¶</a></dt>
+<dd><p>Asynchronously fetch AwsCredentials.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><em>concurrent.futures.Future</em> – A Future which will contain
+<a class="reference internal" href="#awscrt.auth.AwsCredentials" title="awscrt.auth.AwsCredentials"><code class="xref py py-class docutils literal notranslate"><span class="pre">AwsCredentials</span></code></a> (or an exception) when the operation completes.
+The operation may complete on a different thread.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="awscrt.auth.AwsSigningAlgorithm">
+<em class="property">class </em><code class="sig-prename descclassname">awscrt.auth.</code><code class="sig-name descname">AwsSigningAlgorithm</code><a class="headerlink" href="#awscrt.auth.AwsSigningAlgorithm" title="Permalink to this definition">¶</a></dt>
+<dd><p>AWS signing algorithm enumeration.</p>
+<dl class="py attribute">
+<dt id="awscrt.auth.AwsSigningAlgorithm.SigV4Header">
+<code class="sig-name descname">SigV4Header</code><em class="property"> = 0</em><a class="headerlink" href="#awscrt.auth.AwsSigningAlgorithm.SigV4Header" title="Permalink to this definition">¶</a></dt>
+<dd><p>Use Signature Version 4 to sign headers.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="awscrt.auth.AwsSigningAlgorithm.SigV4QueryParam">
+<code class="sig-name descname">SigV4QueryParam</code><em class="property"> = 1</em><a class="headerlink" href="#awscrt.auth.AwsSigningAlgorithm.SigV4QueryParam" title="Permalink to this definition">¶</a></dt>
+<dd><p>Use Signature Version 4 to sign query parameters.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="awscrt.auth.AwsBodySigningConfigType">
+<em class="property">class </em><code class="sig-prename descclassname">awscrt.auth.</code><code class="sig-name descname">AwsBodySigningConfigType</code><a class="headerlink" href="#awscrt.auth.AwsBodySigningConfigType" title="Permalink to this definition">¶</a></dt>
+<dd><p>Body signing config enumeration</p>
+<dl class="py attribute">
+<dt id="awscrt.auth.AwsBodySigningConfigType.BodySigningOff">
+<code class="sig-name descname">BodySigningOff</code><em class="property"> = 0</em><a class="headerlink" href="#awscrt.auth.AwsBodySigningConfigType.BodySigningOff" title="Permalink to this definition">¶</a></dt>
+<dd><p>No attempts will be made to sign the payload, and no “x-amz-content-sha256”
+header will be added to the request.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="awscrt.auth.AwsBodySigningConfigType.BodySigningOn">
+<code class="sig-name descname">BodySigningOn</code><em class="property"> = 1</em><a class="headerlink" href="#awscrt.auth.AwsBodySigningConfigType.BodySigningOn" title="Permalink to this definition">¶</a></dt>
+<dd><p>The body will be signed and “x-amz-content-sha256” will contain
+the value of the signature.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="awscrt.auth.AwsBodySigningConfigType.UnsignedPayload">
+<code class="sig-name descname">UnsignedPayload</code><em class="property"> = 2</em><a class="headerlink" href="#awscrt.auth.AwsBodySigningConfigType.UnsignedPayload" title="Permalink to this definition">¶</a></dt>
+<dd><p>The body will not be signed, but “x-amz-content-sha256” will contain
+the value “UNSIGNED-PAYLOAD”. This value is currently only used for Amazon S3.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="awscrt.auth.AwsSigningConfig">
+<em class="property">class </em><code class="sig-prename descclassname">awscrt.auth.</code><code class="sig-name descname">AwsSigningConfig</code><span class="sig-paren">(</span><em class="sig-param">algorithm: AwsSigningAlgorithm, credentials_provider: AwsCredentialsProviderBase, region: str, service: str, date: Optional[datetime.datetime] = None, should_sign_param: Optional[Callable[[str], bool]] = None, use_double_uri_encode: bool = False, should_normalize_uri_path: bool = True, body_signing_type: AwsBodySigningConfigType = &lt;AwsBodySigningConfigType.BodySigningOn: 1&gt;</em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.auth.AwsSigningConfig" title="Permalink to this definition">¶</a></dt>
+<dd><p>Configuration for use in AWS-related signing.</p>
+<p>AwsSigningConfig is immutable.</p>
+<p>It is good practice to use a new config for each signature, or the date might get too old.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>algorithm</strong> (<a class="reference internal" href="#awscrt.auth.AwsSigningAlgorithm" title="awscrt.auth.AwsSigningAlgorithm"><em>AwsSigningAlgorithm</em></a>) – Which signing process to invoke.</p></li>
+<li><p><strong>credentials_provider</strong> (<a class="reference internal" href="#awscrt.auth.AwsCredentialsProviderBase" title="awscrt.auth.AwsCredentialsProviderBase"><em>AwsCredentialsProviderBase</em></a>) – Credentials provider
+to fetch signing credentials with.</p></li>
+<li><p><strong>region</strong> (<em>str</em>) – The region to sign against.</p></li>
+<li><p><strong>service</strong> (<em>str</em>) – Name of service to sign a request for.</p></li>
+<li><p><strong>date</strong> (<em>Optional</em><em>[</em><em>datetime.datetime</em><em>]</em>) – Date and time to use during the
+signing process. If None is provided then
+<cite>datetime.datetime.now(datetime.timezone.utc)</cite> is used.
+Naive dates (lacking timezone info) are assumed to be in local time.</p></li>
+<li><p><strong>should_sign_param</strong> (<em>Optional</em><em>[</em><em>Callable</em><em>[</em><em>[</em><em>str</em><em>]</em><em>, </em><em>bool</em><em>]</em><em>]</em>) – <p>Optional function to control which parameters (header or query) are
+a part of the canonical request.</p>
+<p>Skipping auth-required params will result in an unusable signature.
+Headers injected by the signing process are not skippable.
+This function does not override the internal check function
+(x-amzn-trace-id, user-agent), but rather supplements it.
+In particular, a header will get signed if and only if it returns
+true to both the internal check (skips x-amzn-trace-id, user-agent)
+and this function (if defined).</p>
+</p></li>
+<li><p><strong>use_double_uri_encode</strong> (<em>bool</em>) – Set True to double-encode the resource
+path when constructing the canonical request. By default, all
+services except S3 use double encoding.</p></li>
+<li><p><strong>should_normalize_uri_path</strong> (<em>bool</em>) – Whether the resource paths are
+normalized when building the canonical request.</p></li>
+<li><p><strong>body_signing_type</strong> (<a class="reference internal" href="#awscrt.auth.AwsBodySigningConfigType" title="awscrt.auth.AwsBodySigningConfigType"><em>AwsBodySigningConfigType</em></a>) – Controls how the payload
+will be signed.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt id="awscrt.auth.AwsSigningConfig.replace">
+<code class="sig-name descname">replace</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.auth.AwsSigningConfig.replace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return an AwsSigningConfig with the same attributes, except for those
+attributes given new values by whichever keyword arguments are specified.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.auth.AwsSigningConfig.algorithm">
+<em class="property">property </em><code class="sig-name descname">algorithm</code><a class="headerlink" href="#awscrt.auth.AwsSigningConfig.algorithm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Which signing process to invoke</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#awscrt.auth.AwsSigningAlgorithm" title="awscrt.auth.AwsSigningAlgorithm">AwsSigningAlgorithm</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.auth.AwsSigningConfig.credentials_provider">
+<em class="property">property </em><code class="sig-name descname">credentials_provider</code><a class="headerlink" href="#awscrt.auth.AwsSigningConfig.credentials_provider" title="Permalink to this definition">¶</a></dt>
+<dd><p>Credentials provider to fetch signing credentials with</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#awscrt.auth.AwsCredentialsProviderBase" title="awscrt.auth.AwsCredentialsProviderBase">AwsCredentialsProviderBase</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.auth.AwsSigningConfig.region">
+<em class="property">property </em><code class="sig-name descname">region</code><a class="headerlink" href="#awscrt.auth.AwsSigningConfig.region" title="Permalink to this definition">¶</a></dt>
+<dd><p>The region to sign against</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.auth.AwsSigningConfig.service">
+<em class="property">property </em><code class="sig-name descname">service</code><a class="headerlink" href="#awscrt.auth.AwsSigningConfig.service" title="Permalink to this definition">¶</a></dt>
+<dd><p>Name of service to sign a request for</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.auth.AwsSigningConfig.date">
+<em class="property">property </em><code class="sig-name descname">date</code><a class="headerlink" href="#awscrt.auth.AwsSigningConfig.date" title="Permalink to this definition">¶</a></dt>
+<dd><p>Date and time to use during the signing process.</p>
+<p>If None is provided, then <cite>datetime.datetime.now(datetime.timezone.utc)</cite>
+at time of object construction is used.</p>
+<p>It is good practice to use a new config for each signature, or the date might get too old.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>datetime.datetime</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.auth.AwsSigningConfig.should_sign_param">
+<em class="property">property </em><code class="sig-name descname">should_sign_param</code><a class="headerlink" href="#awscrt.auth.AwsSigningConfig.should_sign_param" title="Permalink to this definition">¶</a></dt>
+<dd><p>Optional function to control which
+parameters (header or query) are a part of the canonical request.</p>
+<p>Skipping auth-required params will result in an unusable signature.
+Headers injected by the signing process are not skippable.
+This function does not override the internal check function
+(x-amzn-trace-id, user-agent), but rather supplements it. In particular,
+a header will get signed if and only if it returns true to both
+the internal check (skips x-amzn-trace-id, user-agent) and this function (if defined).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Optional[Callable[[str], bool]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.auth.AwsSigningConfig.use_double_uri_encode">
+<em class="property">property </em><code class="sig-name descname">use_double_uri_encode</code><a class="headerlink" href="#awscrt.auth.AwsSigningConfig.use_double_uri_encode" title="Permalink to this definition">¶</a></dt>
+<dd><p>Whether to double-encode the resource path when constructing
+the canonical request.</p>
+<p>By default, all services except S3 use double encoding.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.auth.AwsSigningConfig.should_normalize_uri_path">
+<em class="property">property </em><code class="sig-name descname">should_normalize_uri_path</code><a class="headerlink" href="#awscrt.auth.AwsSigningConfig.should_normalize_uri_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Whether the resource paths are normalized when building the
+canonical request.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.auth.AwsSigningConfig.body_signing_type">
+<em class="property">property </em><code class="sig-name descname">body_signing_type</code><a class="headerlink" href="#awscrt.auth.AwsSigningConfig.body_signing_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Controls how the payload will be signed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#awscrt.auth.AwsBodySigningConfigType" title="awscrt.auth.AwsBodySigningConfigType">AwsBodySigningConfigType</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt id="awscrt.auth.aws_sign_request">
+<code class="sig-prename descclassname">awscrt.auth.</code><code class="sig-name descname">aws_sign_request</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">http_request</span></em>, <em class="sig-param"><span class="n">signing_config</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.auth.aws_sign_request" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform AWS HTTP request signing.</p>
+<p>The <a class="reference internal" href="http.html#awscrt.http.HttpRequest" title="awscrt.http.HttpRequest"><code class="xref py py-class docutils literal notranslate"><span class="pre">awscrt.http.HttpRequest</span></code></a> is transformed asynchronously,
+according to the <a class="reference internal" href="#awscrt.auth.AwsSigningConfig" title="awscrt.auth.AwsSigningConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">AwsSigningConfig</span></code></a>.</p>
+<p>When signing:</p>
+<ol class="arabic simple">
+<li><p>It is good practice to use a new config for each signature,
+or the date might get too old.</p></li>
+<li><p>Do not add the following headers to requests before signing, they may be added by the signer:
+x-amz-content-sha256,
+X-Amz-Date,
+Authorization</p></li>
+<li><p>Do not add the following query params to requests before signing, they may be added by the signer:
+X-Amz-Signature,
+X-Amz-Date,
+X-Amz-Credential,
+X-Amz-Algorithm,
+X-Amz-SignedHeaders</p></li>
+</ol>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>http_request</strong> (<a class="reference internal" href="http.html#awscrt.http.HttpRequest" title="awscrt.http.HttpRequest"><em>awscrt.http.HttpRequest</em></a>) – The HTTP request to sign.</p></li>
+<li><p><strong>signing_config</strong> (<a class="reference internal" href="#awscrt.auth.AwsSigningConfig" title="awscrt.auth.AwsSigningConfig"><em>AwsSigningConfig</em></a>) – Configuration for signing.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><em>concurrent.futures.Future</em> – A Future whose result will be the signed
+<a class="reference internal" href="http.html#awscrt.http.HttpRequest" title="awscrt.http.HttpRequest"><code class="xref py py-class docutils literal notranslate"><span class="pre">awscrt.http.HttpRequest</span></code></a>. The future will contain an exception
+if the signing process fails.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="exceptions.html" title="awscrt.exceptions"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="../index.html" title="Welcome to awscrt’s documentation!"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">awscrt  documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Amazon Web Services, Inc.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 3.0.3.
+    </div>
+  </body>
+</html>

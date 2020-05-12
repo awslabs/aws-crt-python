@@ -17,8 +17,6 @@
     <script src="../_static/bizstyle.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="awscrt.mqtt" href="mqtt.html" />
-    <link rel="prev" title="Welcome to awscrt’s documentation!" href="../index.html" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <!--[if lt IE 9]>
     <script src="_static/css3-mediaqueries.js"></script>
@@ -33,23 +31,11 @@
         <li class="right" >
           <a href="../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="right" >
-          <a href="mqtt.html" title="awscrt.mqtt"
-             accesskey="N">next</a> |</li>
-        <li class="right" >
-          <a href="../index.html" title="Welcome to awscrt’s documentation!"
-             accesskey="P">previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="../index.html">awscrt  documentation</a> &#187;</li> 
       </ul>
     </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-  <h4>Previous topic</h4>
-  <p class="topless"><a href="../index.html"
-                        title="previous chapter">Welcome to awscrt’s documentation!</a></p>
-  <h4>Next topic</h4>
-  <p class="topless"><a href="mqtt.html"
-                        title="next chapter">awscrt.mqtt</a></p>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -77,6 +63,9 @@
             
   <div class="section" id="module-awscrt.io">
 <span id="awscrt-io"></span><h1>awscrt.io<a class="headerlink" href="#module-awscrt.io" title="Permalink to this headline">¶</a></h1>
+<p>I/O library for <cite>awscrt</cite>.</p>
+<p>All networking in <cite>awscrt</cite> is asynchronous.
+Long-running event-loop threads are used for concurrency.</p>
 <dl class="py class">
 <dt id="awscrt.io.LogLevel">
 <em class="property">class </em><code class="sig-prename descclassname">awscrt.io.</code><code class="sig-name descname">LogLevel</code><a class="headerlink" href="#awscrt.io.LogLevel" title="Permalink to this definition">¶</a></dt>
@@ -132,13 +121,6 @@
 </ul>
 </dd>
 </dl>
-</dd></dl>
-
-<dl class="py function">
-<dt id="awscrt.io.is_alpn_available">
-<code class="sig-prename descclassname">awscrt.io.</code><code class="sig-name descname">is_alpn_available</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.is_alpn_available" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns True if Application Layer Protocol Negotiation (ALPN)
-is supported on this system.</p>
 </dd></dl>
 
 <dl class="py class">
@@ -640,6 +622,13 @@ Name is also used for x.509 validation.</p>
 
 </dd></dl>
 
+<dl class="py function">
+<dt id="awscrt.io.is_alpn_available">
+<code class="sig-prename descclassname">awscrt.io.</code><code class="sig-name descname">is_alpn_available</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.is_alpn_available" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True if Application Layer Protocol Negotiation (ALPN)
+is supported on this system.</p>
+</dd></dl>
+
 <dl class="py class">
 <dt id="awscrt.io.InputStream">
 <em class="property">class </em><code class="sig-prename descclassname">awscrt.io.</code><code class="sig-name descname">InputStream</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">stream</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.InputStream" title="Permalink to this definition">¶</a></dt>
@@ -688,12 +677,6 @@ If <cite>allow_none</cite> is True, and <cite>stream</cite> is None, then None i
         <li class="right" >
           <a href="../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="right" >
-          <a href="mqtt.html" title="awscrt.mqtt"
-             >next</a> |</li>
-        <li class="right" >
-          <a href="../index.html" title="Welcome to awscrt’s documentation!"
-             >previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="../index.html">awscrt  documentation</a> &#187;</li> 
       </ul>
     </div>

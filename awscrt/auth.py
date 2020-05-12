@@ -1,3 +1,7 @@
+"""
+AWS client-side authentication: standard credentials providers and signing.
+"""
+
 # Copyright 2010-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License").
@@ -47,7 +51,18 @@ except AttributeError:
 class AwsCredentials(NativeResource):
     """
     AwsCredentials are the public/private data needed to sign an authenticated AWS request.
+
     AwsCredentials are immutable.
+
+    Args:
+        access_key_id (str): Access key ID
+        secret_access_key (str): Secret access key
+        session_token (Optional[str]): Session token
+
+    Attributes:
+        access_key_id (str): Access key ID
+        secret_access_key (str): Secret access key
+        session_token (Optional[str]): Session token
     """
     __slots__ = ()
 
@@ -79,6 +94,8 @@ class AwsCredentials(NativeResource):
 class AwsCredentialsProviderBase(NativeResource):
     """
     Base class for providers that source the AwsCredentials needed to sign an authenticated AWS request.
+
+    NOTE: Custom subclasses of AwsCredentialsProviderBase are not yet supported.
     """
     __slots__ = ()
 
@@ -95,8 +112,10 @@ class AwsCredentialsProviderBase(NativeResource):
         """
         Asynchronously fetch AwsCredentials.
 
-        Returns a Future which will contain AwsCredentials (or an exception)
-        when the call completes. The call may complete on a different thread.
+        Returns:
+            concurrent.futures.Future: A Future which will contain
+            :class:`AwsCredentials` (or an exception) when the operation completes.
+            The operation may complete on a different thread.
         """
         raise NotImplementedError()
 
@@ -105,7 +124,9 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
     """
     Credentials providers source the AwsCredentials needed to sign an authenticated AWS request.
 
-    This class provides new() functions for several built-in provider types.
+    Base class: AwsCredentialsProviderBase
+
+    This class provides `new()` functions for several built-in provider types.
     """
     __slots__ = ()
 
@@ -116,10 +137,13 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
 
         Generally:
 
-        (1) Environment
-        (2) Profile
-        (3) (conditional, off by default) ECS
-        (4) (conditional, on by default) EC2 Instance Metadata
+        1.  Environment
+        2.  Profile
+        3.  (conditional, off by default) ECS
+        4.  (conditional, on by default) EC2 Instance Metadata
+
+        Returns:
+            AwsCredentialsProvider:
         """
         assert isinstance(client_bootstrap, ClientBootstrap)
 
@@ -129,7 +153,10 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
     @classmethod
     def new_static(cls, access_key_id, secret_access_key, session_token=None):
         """
-        Create a simple provider that just returns a fixed set of credentials
+        Create a simple provider that just returns a fixed set of credentials.
+
+        Returns:
+            AwsCredentialsProvider:
         """
         assert isinstance_str(access_key_id)
         assert isinstance_str(secret_access_key)
@@ -161,38 +188,81 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
 
 
 class AwsSigningAlgorithm(IntEnum):
-    """
-    Which signing algorithm to use.
+    """AWS signing algorithm enumeration."""
 
-    SigV4Header: Use Signature Version 4 to sign headers.
-    SigV4QueryParam: Use Signature Version 4 to sign query parameters.
-    """
     SigV4Header = 0
+    """Use Signature Version 4 to sign headers."""
+
     SigV4QueryParam = 1
+    """Use Signature Version 4 to sign query parameters."""
 
 
 class AwsBodySigningConfigType(IntEnum):
-    """Body Signing config
+    """Body signing config enumeration"""
 
-    BodySigningOff: No attempts will be made to sign the payload, and no
-    x-amz-content-sha256 header will be added to the request.
-    BodySigningOn: The body will be signed and x-amz-content-sha256 will contain
-    the value of the signature
-    UnsignedPayload: The body will not be signed, but x-amz-content-sha256 will contain
-    the value UNSIGNED-PAYLOAD. This value is currently only used for Amazon S3.
-    """
     BodySigningOff = 0
+    """
+    No attempts will be made to sign the payload, and no "x-amz-content-sha256"
+    header will be added to the request.
+    """
+
     BodySigningOn = 1
+    """
+    The body will be signed and "x-amz-content-sha256" will contain
+    the value of the signature.
+    """
+
     UnsignedPayload = 2
+    """
+    The body will not be signed, but "x-amz-content-sha256" will contain
+    the value "UNSIGNED-PAYLOAD". This value is currently only used for Amazon S3.
+    """
 
 
 class AwsSigningConfig(NativeResource):
     """
     Configuration for use in AWS-related signing.
+
     AwsSigningConfig is immutable.
 
     It is good practice to use a new config for each signature, or the date might get too old.
-    Naive dates (lacking timezone info) are assumed to be in local time.
+
+    Args:
+        algorithm (AwsSigningAlgorithm): Which signing process to invoke.
+
+        credentials_provider (AwsCredentialsProviderBase): Credentials provider
+            to fetch signing credentials with.
+
+        region (str): The region to sign against.
+
+        service (str): Name of service to sign a request for.
+
+        date (Optional[datetime.datetime]): Date and time to use during the
+            signing process. If None is provided then
+            `datetime.datetime.now(datetime.timezone.utc)` is used.
+            Naive dates (lacking timezone info) are assumed to be in local time.
+
+        should_sign_param (Optional[Callable[[str], bool]]):
+            Optional function to control which parameters (header or query) are
+            a part of the canonical request.
+
+            Skipping auth-required params will result in an unusable signature.
+            Headers injected by the signing process are not skippable.
+            This function does not override the internal check function
+            (x-amzn-trace-id, user-agent), but rather supplements it.
+            In particular, a header will get signed if and only if it returns
+            true to both the internal check (skips x-amzn-trace-id, user-agent)
+            and this function (if defined).
+
+        use_double_uri_encode (bool): Set True to double-encode the resource
+            path when constructing the canonical request. By default, all
+            services except S3 use double encoding.
+
+        should_normalize_uri_path (bool): Whether the resource paths are
+            normalized when building the canonical request.
+
+        body_signing_type (AwsBodySigningConfigType): Controls how the payload
+            will be signed.
     """
     __slots__ = ('_priv_should_sign_cb')
 
@@ -266,41 +336,47 @@ class AwsSigningConfig(NativeResource):
 
     @property
     def algorithm(self):
-        """Which AwsSigningAlgorithm to invoke"""
+        """AwsSigningAlgorithm: Which signing process to invoke"""
         return AwsSigningAlgorithm(_awscrt.signing_config_get_algorithm(self._binding))
 
     @property
     def credentials_provider(self):
-        """AwsCredentialsProvider to fetch signing credentials with"""
+        """AwsCredentialsProviderBase: Credentials provider to fetch signing credentials with"""
         return _awscrt.signing_config_get_credentials_provider(self._binding)
 
     @property
     def region(self):
-        """The region to sign against"""
+        """str: The region to sign against"""
         return _awscrt.signing_config_get_region(self._binding)
 
     @property
     def service(self):
-        """Name of service to sign a request for"""
+        """str: Name of service to sign a request for"""
         return _awscrt.signing_config_get_service(self._binding)
 
     @property
     def date(self):
         """
-        datetime.datetime to use during the signing process.
-        If None is provided to constructor then datetime.datetime.now(datetime.timezone.utc) is used.
+        datetime.datetime: Date and time to use during the signing process.
+
+        If None is provided, then `datetime.datetime.now(datetime.timezone.utc)`
+        at time of object construction is used.
+
+        It is good practice to use a new config for each signature, or the date might get too old.
         """
         return _awscrt.signing_config_get_date(self._binding)
 
     @property
     def should_sign_param(self):
         """
-        Optional function to control which parameters (header or query) are a part of the canonical request.
-        Function signature is: (name) -> bool
+        Optional[Callable[[str], bool]]: Optional function to control which
+        parameters (header or query) are a part of the canonical request.
+
         Skipping auth-required params will result in an unusable signature.
         Headers injected by the signing process are not skippable.
-        This function does not override the internal check function (x-amzn-trace-id, user-agent), but rather
-        supplements it.  In particular, a header will get signed if and only if it returns true to both
+        This function does not override the internal check function
+        (x-amzn-trace-id, user-agent), but rather supplements it. In particular,
+        a header will get signed if and only if it returns true to both
         the internal check (skips x-amzn-trace-id, user-agent) and this function (if defined).
         """
         return self._priv_should_sign_cb
@@ -308,53 +384,59 @@ class AwsSigningConfig(NativeResource):
     @property
     def use_double_uri_encode(self):
         """
-        We assume the uri will be encoded once in preparation for transmission.  Certain services
-        do not decode before checking signature, requiring us to actually double-encode the uri in the canonical request
-        in order to pass a signature check.
+        bool: Whether to double-encode the resource path when constructing
+        the canonical request.
+
+        By default, all services except S3 use double encoding.
         """
         return _awscrt.signing_config_get_use_double_uri_encode(self._binding)
 
     @property
     def should_normalize_uri_path(self):
-        """Controls whether or not the uri paths should be normalized when building the canonical request"""
+        """
+        bool: Whether the resource paths are normalized when building the
+        canonical request.
+        """
         return _awscrt.signing_config_get_should_normalize_uri_path(self._binding)
 
     @property
     def body_signing_type(self):
-        """
-        BodySigningOff: No attempts will be made to sign the payload, and no
-        x-amz-content-sha256 header will be added to the request.
-
-        BodySigningOn: The body will be signed and x-amz-content-sha256 will contain
-        the value of the signature
-
-        UnsignedPayload: The body will not be signed, but x-amz-content-sha256 will contain
-        the value UNSIGNED-PAYLOAD. This value is currently only used for Amazon S3.
-        """
+        """AwsBodySigningConfigType: Controls how the payload will be signed."""
         return AwsBodySigningConfigType(_awscrt.signing_config_get_body_signing_type(self._binding))
 
 
 def aws_sign_request(http_request, signing_config):
     """
     Perform AWS HTTP request signing.
-    The HttpRequest is transformed asynchronously, according to the AwsSigningConfig.
-    Returns a Future whose result will be the signed HttpRequest.
+
+    The :class:`awscrt.http.HttpRequest` is transformed asynchronously,
+    according to the :class:`AwsSigningConfig`.
 
     When signing:
 
-      (1) It is good practice to use a new config for each signature, or the date might get too old.
+    1.  It is good practice to use a new config for each signature,
+        or the date might get too old.
 
-      (2) Do not add the following headers to requests before signing, they may be added by the signer:
-         x-amz-content-sha256,
-         X-Amz-Date,
-         Authorization
+    2.  Do not add the following headers to requests before signing, they may be added by the signer:
+        x-amz-content-sha256,
+        X-Amz-Date,
+        Authorization
 
-      (3) Do not add the following query params to requests before signing, they may be added by the signer:
-         X-Amz-Signature,
-         X-Amz-Date,
-         X-Amz-Credential,
-         X-Amz-Algorithm,
-         X-Amz-SignedHeaders
+    3.  Do not add the following query params to requests before signing, they may be added by the signer:
+        X-Amz-Signature,
+        X-Amz-Date,
+        X-Amz-Credential,
+        X-Amz-Algorithm,
+        X-Amz-SignedHeaders
+
+    Args:
+        http_request (awscrt.http.HttpRequest): The HTTP request to sign.
+        signing_config (AwsSigningConfig): Configuration for signing.
+
+    Returns:
+        concurrent.futures.Future: A Future whose result will be the signed
+        :class:`awscrt.http.HttpRequest`. The future will contain an exception
+        if the signing process fails.
     """
 
     assert isinstance(http_request, HttpRequest)
