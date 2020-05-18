@@ -252,7 +252,8 @@ def websockets_with_default_aws_signing(region, credentials_provider, websocket_
         # transform_args need to know when transform is done
         try:
             signing_config = awscrt.auth.AwsSigningConfig(
-                algorithm=awscrt.auth.AwsSigningAlgorithm.SigV4QueryParam,
+                algorithm=awscrt.auth.AwsSigningAlgorithm.SigV4,
+                transform=awscrt.auth.AwsSigningTransform.Header,
                 credentials_provider=credentials_provider,
                 region=region,
                 service='iotdevicegateway',

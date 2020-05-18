@@ -74,6 +74,14 @@ class AwsCredentials(NativeResource):
         super(AwsCredentials, self).__init__()
         self._binding = _awscrt.credentials_new(access_key_id, secret_access_key, session_token)
 
+    @classmethod
+    def _from_binding(cls, binding):
+        """Construct from a pre-existing native object"""
+        credentials = cls.__new__(cls)  # avoid class's default constructor
+        super(cls, credentials).__init__()  # just invoke parent class's __init__()
+        credentials._binding = binding
+        return credentials
+
     @property
     def access_key_id(self):
         return _awscrt.credentials_access_key_id(self._binding)
@@ -168,12 +176,12 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
     def get_credentials(self):
         future = Future()
 
-        def _on_complete(error_code, access_key_id, secret_access_key, session_token):
+        def _on_complete(error_code, binding):
             try:
                 if error_code:
                     future.set_exception(awscrt.exceptions.from_code(error_code))
                 else:
-                    credentials = AwsCredentials(access_key_id, secret_access_key, session_token)
+                    credentials = AwsCredentials._from_binding(binding)
                     future.set_result(credentials)
 
             except Exception as e:
@@ -190,11 +198,18 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
 class AwsSigningAlgorithm(IntEnum):
     """AWS signing algorithm enumeration."""
 
-    SigV4Header = 0
-    """Use Signature Version 4 to sign headers."""
+    SigV4 = 0
+    """Use Signature Version 4"""
 
-    SigV4QueryParam = 1
-    """Use Signature Version 4 to sign query parameters."""
+
+class AwsSigningTransform(IntEnum):
+    """How the signing process transforms the request, enumeration"""
+
+    Header = 0
+    """Signing process transforms the headers."""
+
+    QueryParam = 1
+    """Signing process transforms the query parameters."""
 
 
 class AwsBodySigningConfigType(IntEnum):
@@ -228,7 +243,9 @@ class AwsSigningConfig(NativeResource):
     It is good practice to use a new config for each signature, or the date might get too old.
 
     Args:
-        algorithm (AwsSigningAlgorithm): Which signing process to invoke.
+        algorithm (AwsSigningAlgorithm): Which signing algorithm to use.
+
+        transform (AwsSigningTransform): How signing will transform the request.
 
         credentials_provider (AwsCredentialsProviderBase): Credentials provider
             to fetch signing credentials with.
@@ -266,11 +283,12 @@ class AwsSigningConfig(NativeResource):
     """
     __slots__ = ('_priv_should_sign_cb')
 
-    _attributes = ('algorithm', 'credentials_provider', 'region', 'service', 'date', 'should_sign_param',
+    _attributes = ('algorithm', 'transform', 'credentials_provider', 'region', 'service', 'date', 'should_sign_param',
                    'use_double_uri_encode', 'should_normalize_uri_path', 'body_signing_type')
 
     def __init__(self,
                  algorithm,  # type: AwsSigningAlgorithm
+                 transform,  # type: AwsSigningTransform
                  credentials_provider,  # type: AwsCredentialsProviderBase
                  region,  # type: str
                  service,  # type: str
@@ -283,6 +301,7 @@ class AwsSigningConfig(NativeResource):
         # type: (...) -> None
 
         assert isinstance(algorithm, AwsSigningAlgorithm)
+        assert isinstance(transform, AwsSigningTransform)
         assert isinstance(credentials_provider, AwsCredentialsProviderBase)
         assert isinstance_str(region)
         assert isinstance_str(service)
@@ -316,6 +335,7 @@ class AwsSigningConfig(NativeResource):
 
         self._binding = _awscrt.signing_config_new(
             algorithm,
+            transform,
             credentials_provider,
             region,
             service,
@@ -336,8 +356,13 @@ class AwsSigningConfig(NativeResource):
 
     @property
     def algorithm(self):
-        """AwsSigningAlgorithm: Which signing process to invoke"""
+        """AwsSigningAlgorithm: Which signing algorithm to use"""
         return AwsSigningAlgorithm(_awscrt.signing_config_get_algorithm(self._binding))
+
+    @property
+    def transform(self):
+        """AwsSigningTransform: How signing will transform the request"""
+        return AwsSigningTransform(_awscrt.signing_config_get_transform(self._binding))
 
     @property
     def credentials_provider(self):

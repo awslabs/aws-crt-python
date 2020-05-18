@@ -80,21 +80,18 @@ class TestProvider(NativeResourceTest):
         self.assertTrue(EXAMPLE_SECRET_ACCESS_KEY == credentials.secret_access_key)
         self.assertTrue(EXAMPLE_SESSION_TOKEN == credentials.session_token)
 
-    # TODO: test currently broken because None session_token comes back as empty string do to inconsistent use of
-    # aws_byte_cursor by value/pointer in aws-c-auth APIs.
-    #
-    # def test_static_provider_no_session_token(self):
-    #     provider = AwsCredentialsProvider.new_static(
-    #         self.example_access_key_id,
-    #         self.example_secret_access_key)
+    def test_static_provider_no_session_token(self):
+        provider = awscrt.auth.AwsCredentialsProvider.new_static(
+            EXAMPLE_ACCESS_KEY_ID,
+            EXAMPLE_SECRET_ACCESS_KEY)
 
-    #     future = provider.get_credentials()
-    #     credentials = future.result(TIMEOUT)
+        future = provider.get_credentials()
+        credentials = future.result(TIMEOUT)
 
         # Don't use assertEqual(), which could log actual credentials if test fails.
-    #     self.assertTrue(self.example_access_key_id == credentials.access_key_id)
-    #     self.assertTrue(self.example_secret_access_key == credentials.secret_access_key)
-    #     self.assertTrue(credentials.session_token is None)
+        self.assertTrue(EXAMPLE_ACCESS_KEY_ID == credentials.access_key_id)
+        self.assertTrue(EXAMPLE_SECRET_ACCESS_KEY == credentials.secret_access_key)
+        self.assertTrue(credentials.session_token is None)
 
     def test_default_provider(self):
         # Default credentials provider should pick up environment variables.
@@ -117,7 +114,8 @@ class TestProvider(NativeResourceTest):
 
 class TestSigningConfig(NativeResourceTest):
     def test_create(self):
-        algorithm = awscrt.auth.AwsSigningAlgorithm.SigV4QueryParam
+        algorithm = awscrt.auth.AwsSigningAlgorithm.SigV4
+        transform = awscrt.auth.AwsSigningTransform.QueryParam
         credentials_provider = awscrt.auth.AwsCredentialsProvider.new_static(
             EXAMPLE_ACCESS_KEY_ID, EXAMPLE_SECRET_ACCESS_KEY)
         region = 'us-west-2'
@@ -132,6 +130,7 @@ class TestSigningConfig(NativeResourceTest):
         body_signing_type = awscrt.auth.AwsBodySigningConfigType.BodySigningOff
 
         cfg = awscrt.auth.AwsSigningConfig(algorithm=algorithm,
+                                           transform=transform,
                                            credentials_provider=credentials_provider,
                                            region=region,
                                            service=service,
@@ -156,7 +155,8 @@ class TestSigningConfig(NativeResourceTest):
             EXAMPLE_ACCESS_KEY_ID, EXAMPLE_SECRET_ACCESS_KEY)
 
         # nondefault values, to be sure they're carried over correctly
-        orig_cfg = awscrt.auth.AwsSigningConfig(algorithm=awscrt.auth.AwsSigningAlgorithm.SigV4QueryParam,
+        orig_cfg = awscrt.auth.AwsSigningConfig(algorithm=awscrt.auth.AwsSigningAlgorithm.SigV4,
+                                                transform=awscrt.auth.AwsSigningTransform.QueryParam,
                                                 credentials_provider=credentials_provider,
                                                 region='us-west-1',
                                                 service='aws-suborbital-ion-cannon',
@@ -182,7 +182,7 @@ class TestSigningConfig(NativeResourceTest):
                     self.assertEqual(getattr(orig_cfg, attr), getattr(new_cfg, attr),
                                      "value should match original")
 
-        _replace_attr('algorithm', awscrt.auth.AwsSigningAlgorithm.SigV4Header)
+        _replace_attr('transform', awscrt.auth.AwsSigningTransform.Header)
         _replace_attr('credentials_provider',
                       awscrt.auth.AwsCredentialsProvider.new_static(EXAMPLE_ACCESS_KEY_ID, EXAMPLE_SECRET_ACCESS_KEY))
         _replace_attr('region', 'us-west-2')
@@ -230,7 +230,8 @@ class TestSigner(NativeResourceTest):
             SIGV4TEST_ACCESS_KEY_ID, SIGV4TEST_SECRET_ACCESS_KEY, SIGV4TEST_SESSION_TOKEN)
 
         signing_config = awscrt.auth.AwsSigningConfig(
-            algorithm=awscrt.auth.AwsSigningAlgorithm.SigV4Header,
+            algorithm=awscrt.auth.AwsSigningAlgorithm.SigV4,
+            transform=awscrt.auth.AwsSigningTransform.Header,
             credentials_provider=credentials_provider,
             region=SIGV4TEST_REGION,
             service=SIGV4TEST_SERVICE,
@@ -265,7 +266,8 @@ class TestSigner(NativeResourceTest):
             SIGV4TEST_ACCESS_KEY_ID, SIGV4TEST_SECRET_ACCESS_KEY, SIGV4TEST_SESSION_TOKEN)
 
         signing_config = awscrt.auth.AwsSigningConfig(
-            algorithm=awscrt.auth.AwsSigningAlgorithm.SigV4Header,
+            algorithm=awscrt.auth.AwsSigningAlgorithm.SigV4,
+            transform=awscrt.auth.AwsSigningTransform.Header,
             credentials_provider=credentials_provider,
             region=SIGV4TEST_REGION,
             service=SIGV4TEST_SERVICE,

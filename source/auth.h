@@ -29,6 +29,7 @@ PyObject *aws_py_credentials_provider_new_static(PyObject *self, PyObject *args)
 
 PyObject *aws_py_signing_config_new(PyObject *self, PyObject *args);
 PyObject *aws_py_signing_config_get_algorithm(PyObject *self, PyObject *args);
+PyObject *aws_py_signing_config_get_transform(PyObject *self, PyObject *args);
 PyObject *aws_py_signing_config_get_credentials_provider(PyObject *self, PyObject *args);
 PyObject *aws_py_signing_config_get_region(PyObject *self, PyObject *args);
 PyObject *aws_py_signing_config_get_service(PyObject *self, PyObject *args);

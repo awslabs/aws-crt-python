@@ -557,6 +557,7 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(credentials_provider_new_static, METH_VARARGS),
     AWS_PY_METHOD_DEF(signing_config_new, METH_VARARGS),
     AWS_PY_METHOD_DEF(signing_config_get_algorithm, METH_VARARGS),
+    AWS_PY_METHOD_DEF(signing_config_get_transform, METH_VARARGS),
     AWS_PY_METHOD_DEF(signing_config_get_credentials_provider, METH_VARARGS),
     AWS_PY_METHOD_DEF(signing_config_get_region, METH_VARARGS),
     AWS_PY_METHOD_DEF(signing_config_get_service, METH_VARARGS),

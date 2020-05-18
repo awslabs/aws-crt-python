@@ -79,6 +79,7 @@ PyObject *aws_py_signing_config_new(PyObject *self, PyObject *args) {
     (void)self;
 
     int algorithm;
+    int transform;
     PyObject *py_credentials_provider;
     struct aws_byte_cursor region;
     struct aws_byte_cursor service;
@@ -90,8 +91,9 @@ PyObject *aws_py_signing_config_new(PyObject *self, PyObject *args) {
     int py_body_signing_config;
     if (!PyArg_ParseTuple(
             args,
-            "iOs#s#OdOOOi",
+            "iiOs#s#OdOOOi",
             &algorithm,
+            &transform,
             &py_credentials_provider,
             &region.ptr,
             &region.len,
@@ -124,6 +126,7 @@ PyObject *aws_py_signing_config_new(PyObject *self, PyObject *args) {
     /* set primitive types */
     binding->native.config_type = AWS_SIGNING_CONFIG_AWS;
     binding->native.algorithm = algorithm;
+    binding->native.transform = transform;
     binding->native.use_double_uri_encode = PyObject_IsTrue(py_use_double_uri_encode);
     binding->native.should_normalize_uri_path = PyObject_IsTrue(py_should_normalize_uri_path);
     binding->native.body_signing_type = py_body_signing_config;
@@ -206,6 +209,15 @@ PyObject *aws_py_signing_config_get_algorithm(PyObject *self, PyObject *args) {
     }
 
     return PyLong_FromLong(binding->native.algorithm);
+}
+
+PyObject *aws_py_signing_config_get_transform(PyObject *self, PyObject *args) {
+    struct config_binding *binding = s_common_get(self, args);
+    if (!binding) {
+        return NULL;
+    }
+
+    return PyLong_FromLong(binding->native.transform);
 }
 
 PyObject *aws_py_signing_config_get_credentials_provider(PyObject *self, PyObject *args) {
