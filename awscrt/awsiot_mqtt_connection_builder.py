@@ -253,7 +253,7 @@ def websockets_with_default_aws_signing(region, credentials_provider, websocket_
         try:
             signing_config = awscrt.auth.AwsSigningConfig(
                 algorithm=awscrt.auth.AwsSigningAlgorithm.SigV4,
-                transform=awscrt.auth.AwsSigningTransform.Header,
+                transform=awscrt.auth.AwsSigningTransform.QueryParam,
                 credentials_provider=credentials_provider,
                 region=region,
                 service='iotdevicegateway',
