@@ -10,7 +10,7 @@ phases:
       - cd aws-crt-python
       - export PKG_VERSION=$(git describe --tags | cut -f2 -dv)
       - echo "Updating package version to ${PKG_VERSION}"
-      - sed --in-place -E "s/version='.+'/version='${PKG_VERSION}'/" setup.py
+      - sed --in-place "s/version='.+'/version='${PKG_VERSION}'/" setup.py
   build:
     commands:
       - echo Build started on `date`
@@ -34,4 +34,4 @@ phases:
 
 artifacts:
   files:
-    - 'dist/*' 
+    - 'dist/*'
