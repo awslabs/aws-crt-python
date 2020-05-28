@@ -202,56 +202,88 @@ The operation may complete on a different thread.</p>
 <em class="property">class </em><code class="sig-prename descclassname">awscrt.auth.</code><code class="sig-name descname">AwsSigningAlgorithm</code><a class="headerlink" href="#awscrt.auth.AwsSigningAlgorithm" title="Permalink to this definition">¶</a></dt>
 <dd><p>AWS signing algorithm enumeration.</p>
 <dl class="py attribute">
-<dt id="awscrt.auth.AwsSigningAlgorithm.SigV4Header">
-<code class="sig-name descname">SigV4Header</code><em class="property"> = 0</em><a class="headerlink" href="#awscrt.auth.AwsSigningAlgorithm.SigV4Header" title="Permalink to this definition">¶</a></dt>
-<dd><p>Use Signature Version 4 to sign headers.</p>
-</dd></dl>
-
-<dl class="py attribute">
-<dt id="awscrt.auth.AwsSigningAlgorithm.SigV4QueryParam">
-<code class="sig-name descname">SigV4QueryParam</code><em class="property"> = 1</em><a class="headerlink" href="#awscrt.auth.AwsSigningAlgorithm.SigV4QueryParam" title="Permalink to this definition">¶</a></dt>
-<dd><p>Use Signature Version 4 to sign query parameters.</p>
+<dt id="awscrt.auth.AwsSigningAlgorithm.V4">
+<code class="sig-name descname">V4</code><em class="property"> = 0</em><a class="headerlink" href="#awscrt.auth.AwsSigningAlgorithm.V4" title="Permalink to this definition">¶</a></dt>
+<dd><p>Use Signature Version 4</p>
 </dd></dl>
 
 </dd></dl>
 
 <dl class="py class">
-<dt id="awscrt.auth.AwsBodySigningConfigType">
-<em class="property">class </em><code class="sig-prename descclassname">awscrt.auth.</code><code class="sig-name descname">AwsBodySigningConfigType</code><a class="headerlink" href="#awscrt.auth.AwsBodySigningConfigType" title="Permalink to this definition">¶</a></dt>
-<dd><p>Body signing config enumeration</p>
+<dt id="awscrt.auth.AwsSignatureType">
+<em class="property">class </em><code class="sig-prename descclassname">awscrt.auth.</code><code class="sig-name descname">AwsSignatureType</code><a class="headerlink" href="#awscrt.auth.AwsSignatureType" title="Permalink to this definition">¶</a></dt>
+<dd><p>Which sort of signature should be computed from the signable.</p>
 <dl class="py attribute">
-<dt id="awscrt.auth.AwsBodySigningConfigType.BodySigningOff">
-<code class="sig-name descname">BodySigningOff</code><em class="property"> = 0</em><a class="headerlink" href="#awscrt.auth.AwsBodySigningConfigType.BodySigningOff" title="Permalink to this definition">¶</a></dt>
-<dd><p>No attempts will be made to sign the payload, and no “x-amz-content-sha256”
-header will be added to the request.</p>
+<dt id="awscrt.auth.AwsSignatureType.HTTP_REQUEST_HEADERS">
+<code class="sig-name descname">HTTP_REQUEST_HEADERS</code><em class="property"> = 0</em><a class="headerlink" href="#awscrt.auth.AwsSignatureType.HTTP_REQUEST_HEADERS" title="Permalink to this definition">¶</a></dt>
+<dd><p>A signature for a full HTTP request should be computed,
+with header updates applied to the signing result.</p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt id="awscrt.auth.AwsBodySigningConfigType.BodySigningOn">
-<code class="sig-name descname">BodySigningOn</code><em class="property"> = 1</em><a class="headerlink" href="#awscrt.auth.AwsBodySigningConfigType.BodySigningOn" title="Permalink to this definition">¶</a></dt>
-<dd><p>The body will be signed and “x-amz-content-sha256” will contain
-the value of the signature.</p>
+<dt id="awscrt.auth.AwsSignatureType.HTTP_REQUEST_QUERY_PARAMS">
+<code class="sig-name descname">HTTP_REQUEST_QUERY_PARAMS</code><em class="property"> = 1</em><a class="headerlink" href="#awscrt.auth.AwsSignatureType.HTTP_REQUEST_QUERY_PARAMS" title="Permalink to this definition">¶</a></dt>
+<dd><p>A signature for a full HTTP request should be computed,
+with query param updates applied to the signing result.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="awscrt.auth.AwsSignedBodyValueType">
+<em class="property">class </em><code class="sig-prename descclassname">awscrt.auth.</code><code class="sig-name descname">AwsSignedBodyValueType</code><a class="headerlink" href="#awscrt.auth.AwsSignedBodyValueType" title="Permalink to this definition">¶</a></dt>
+<dd><p>Controls what goes in the canonical request’s body value.</p>
+<dl class="py attribute">
+<dt id="awscrt.auth.AwsSignedBodyValueType.EMPTY">
+<code class="sig-name descname">EMPTY</code><em class="property"> = 0</em><a class="headerlink" href="#awscrt.auth.AwsSignedBodyValueType.EMPTY" title="Permalink to this definition">¶</a></dt>
+<dd><p>Use the SHA-256 of the empty string.</p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt id="awscrt.auth.AwsBodySigningConfigType.UnsignedPayload">
-<code class="sig-name descname">UnsignedPayload</code><em class="property"> = 2</em><a class="headerlink" href="#awscrt.auth.AwsBodySigningConfigType.UnsignedPayload" title="Permalink to this definition">¶</a></dt>
-<dd><p>The body will not be signed, but “x-amz-content-sha256” will contain
-the value “UNSIGNED-PAYLOAD”. This value is currently only used for Amazon S3.</p>
+<dt id="awscrt.auth.AwsSignedBodyValueType.PAYLOAD">
+<code class="sig-name descname">PAYLOAD</code><em class="property"> = 1</em><a class="headerlink" href="#awscrt.auth.AwsSignedBodyValueType.PAYLOAD" title="Permalink to this definition">¶</a></dt>
+<dd><p>Use the SHA-256 of the actual payload.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="awscrt.auth.AwsSignedBodyValueType.UNSIGNED_PAYLOAD">
+<code class="sig-name descname">UNSIGNED_PAYLOAD</code><em class="property"> = 2</em><a class="headerlink" href="#awscrt.auth.AwsSignedBodyValueType.UNSIGNED_PAYLOAD" title="Permalink to this definition">¶</a></dt>
+<dd><p>Use the literal string “UNSIGNED-PAYLOAD”.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="awscrt.auth.AwsSignedBodyHeaderType">
+<em class="property">class </em><code class="sig-prename descclassname">awscrt.auth.</code><code class="sig-name descname">AwsSignedBodyHeaderType</code><a class="headerlink" href="#awscrt.auth.AwsSignedBodyHeaderType" title="Permalink to this definition">¶</a></dt>
+<dd><p>Controls if signing adds a header containing the canonical request’s signed body value.</p>
+<p>See <a class="reference internal" href="#awscrt.auth.AwsSignedBodyValueType" title="awscrt.auth.AwsSignedBodyValueType"><code class="xref py py-class docutils literal notranslate"><span class="pre">AwsSignedBodyValueType</span></code></a>.</p>
+<dl class="py attribute">
+<dt id="awscrt.auth.AwsSignedBodyHeaderType.NONE">
+<code class="sig-name descname">NONE</code><em class="property"> = 0</em><a class="headerlink" href="#awscrt.auth.AwsSignedBodyHeaderType.NONE" title="Permalink to this definition">¶</a></dt>
+<dd><p>Do not add a header.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="awscrt.auth.AwsSignedBodyHeaderType.X_AMZ_CONTENT_SHA_256">
+<code class="sig-name descname">X_AMZ_CONTENT_SHA_256</code><em class="property"> = 1</em><a class="headerlink" href="#awscrt.auth.AwsSignedBodyHeaderType.X_AMZ_CONTENT_SHA_256" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add the “x-amz-content-sha-256” header with the canonical request’s signed body value</p>
 </dd></dl>
 
 </dd></dl>
 
 <dl class="py class">
 <dt id="awscrt.auth.AwsSigningConfig">
-<em class="property">class </em><code class="sig-prename descclassname">awscrt.auth.</code><code class="sig-name descname">AwsSigningConfig</code><span class="sig-paren">(</span><em class="sig-param">algorithm: AwsSigningAlgorithm, credentials_provider: AwsCredentialsProviderBase, region: str, service: str, date: Optional[datetime.datetime] = None, should_sign_param: Optional[Callable[[str], bool]] = None, use_double_uri_encode: bool = False, should_normalize_uri_path: bool = True, body_signing_type: AwsBodySigningConfigType = &lt;AwsBodySigningConfigType.BodySigningOn: 1&gt;</em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.auth.AwsSigningConfig" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">awscrt.auth.</code><code class="sig-name descname">AwsSigningConfig</code><span class="sig-paren">(</span><em class="sig-param">algorithm</em>, <em class="sig-param">signature_type</em>, <em class="sig-param">credentials_provider</em>, <em class="sig-param">region</em>, <em class="sig-param">service</em>, <em class="sig-param">date=None</em>, <em class="sig-param">should_sign_param=None</em>, <em class="sig-param">use_double_uri_encode=False</em>, <em class="sig-param">should_normalize_uri_path=True</em>, <em class="sig-param">signed_body_value_type=&lt;AwsSignedBodyValueType.PAYLOAD: 1&gt;</em>, <em class="sig-param">signed_body_header_type=&lt;AwsSignedBodyHeaderType.NONE: 0&gt;</em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.auth.AwsSigningConfig" title="Permalink to this definition">¶</a></dt>
 <dd><p>Configuration for use in AWS-related signing.</p>
 <p>AwsSigningConfig is immutable.</p>
 <p>It is good practice to use a new config for each signature, or the date might get too old.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>algorithm</strong> (<a class="reference internal" href="#awscrt.auth.AwsSigningAlgorithm" title="awscrt.auth.AwsSigningAlgorithm"><em>AwsSigningAlgorithm</em></a>) – Which signing process to invoke.</p></li>
+<li><p><strong>algorithm</strong> (<a class="reference internal" href="#awscrt.auth.AwsSigningAlgorithm" title="awscrt.auth.AwsSigningAlgorithm"><em>AwsSigningAlgorithm</em></a>) – Which signing algorithm to use.</p></li>
+<li><p><strong>signature_type</strong> (<a class="reference internal" href="#awscrt.auth.AwsSignatureType" title="awscrt.auth.AwsSignatureType"><em>AwsSignatureType</em></a>) – Which sort of signature should be
+computed from the signable.</p></li>
 <li><p><strong>credentials_provider</strong> (<a class="reference internal" href="#awscrt.auth.AwsCredentialsProviderBase" title="awscrt.auth.AwsCredentialsProviderBase"><em>AwsCredentialsProviderBase</em></a>) – Credentials provider
 to fetch signing credentials with.</p></li>
 <li><p><strong>region</strong> (<em>str</em>) – The region to sign against.</p></li>
@@ -275,8 +307,12 @@ path when constructing the canonical request. By default, all
 services except S3 use double encoding.</p></li>
 <li><p><strong>should_normalize_uri_path</strong> (<em>bool</em>) – Whether the resource paths are
 normalized when building the canonical request.</p></li>
-<li><p><strong>body_signing_type</strong> (<a class="reference internal" href="#awscrt.auth.AwsBodySigningConfigType" title="awscrt.auth.AwsBodySigningConfigType"><em>AwsBodySigningConfigType</em></a>) – Controls how the payload
-will be signed.</p></li>
+<li><p><strong>signed_body_value_type</strong> (<a class="reference internal" href="#awscrt.auth.AwsSignedBodyValueType" title="awscrt.auth.AwsSignedBodyValueType"><em>AwsSignedBodyValueType</em></a>) – Controls what goes in
+the canonical request’s body value. Default is to use the SHA-256
+of the actual payload.</p></li>
+<li><p><strong>signed_body_header_type</strong> (<a class="reference internal" href="#awscrt.auth.AwsSignedBodyHeaderType" title="awscrt.auth.AwsSignedBodyHeaderType"><em>AwsSignedBodyHeaderType</em></a>) – Controls if signing
+adds a header containing the canonical request’s signed body value.
+Default is to not add a header.</p></li>
 </ul>
 </dd>
 </dl>
@@ -290,10 +326,21 @@ attributes given new values by whichever keyword arguments are specified.</p>
 <dl class="py method">
 <dt id="awscrt.auth.AwsSigningConfig.algorithm">
 <em class="property">property </em><code class="sig-name descname">algorithm</code><a class="headerlink" href="#awscrt.auth.AwsSigningConfig.algorithm" title="Permalink to this definition">¶</a></dt>
-<dd><p>Which signing process to invoke</p>
+<dd><p>Which signing algorithm to use</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
 <dd class="field-odd"><p><a class="reference internal" href="#awscrt.auth.AwsSigningAlgorithm" title="awscrt.auth.AwsSigningAlgorithm">AwsSigningAlgorithm</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.auth.AwsSigningConfig.signature_type">
+<em class="property">property </em><code class="sig-name descname">signature_type</code><a class="headerlink" href="#awscrt.auth.AwsSigningConfig.signature_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Which sort of signature should be computed from the signable.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#awscrt.auth.AwsSignatureType" title="awscrt.auth.AwsSignatureType">AwsSignatureType</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -389,12 +436,24 @@ canonical request.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="awscrt.auth.AwsSigningConfig.body_signing_type">
-<em class="property">property </em><code class="sig-name descname">body_signing_type</code><a class="headerlink" href="#awscrt.auth.AwsSigningConfig.body_signing_type" title="Permalink to this definition">¶</a></dt>
-<dd><p>Controls how the payload will be signed.</p>
+<dt id="awscrt.auth.AwsSigningConfig.signed_body_value_type">
+<em class="property">property </em><code class="sig-name descname">signed_body_value_type</code><a class="headerlink" href="#awscrt.auth.AwsSigningConfig.signed_body_value_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Controls what goes in the canonical request’s body value.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
-<dd class="field-odd"><p><a class="reference internal" href="#awscrt.auth.AwsBodySigningConfigType" title="awscrt.auth.AwsBodySigningConfigType">AwsBodySigningConfigType</a></p>
+<dd class="field-odd"><p><a class="reference internal" href="#awscrt.auth.AwsSignedBodyValueType" title="awscrt.auth.AwsSignedBodyValueType">AwsSignedBodyValueType</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.auth.AwsSigningConfig.signed_body_header_type">
+<em class="property">property </em><code class="sig-name descname">signed_body_header_type</code><a class="headerlink" href="#awscrt.auth.AwsSigningConfig.signed_body_header_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Controls if signing adds a header containing
+the canonical request’s signed body value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#awscrt.auth.AwsSignedBodyHeaderType" title="awscrt.auth.AwsSignedBodyHeaderType">AwsSignedBodyHeaderType</a></p>
 </dd>
 </dl>
 </dd></dl>

@@ -41,9 +41,16 @@ class NativeResourceTest(unittest.TestCase):
 
         # Print out debugging info on leaking resources
         if NativeResource._living:
+
+            def _printobj(prefix, obj):
+                s = str(obj)
+                if len(s) > 1000:
+                    s = s[:1000] + '...TRUNCATED total-len=' + str(len(s))
+                print(prefix, obj)
+
             print('Leaking NativeResources:')
             for i in NativeResource._living:
-                print('-', i)
+                _printobj('-', i)
 
                 # getrefcount(i) returns 4+ here, but 2 of those are due to debugging.
                 # Don't show:
@@ -72,6 +79,6 @@ class NativeResourceTest(unittest.TestCase):
                     if isinstance(r, types.FrameType):
                         print('  -', inspect.getframeinfo(r))
                     else:
-                        print('  -', r)
+                        _printobj('  -', r)
 
         self.assertEqual(0, len(NativeResource._living))

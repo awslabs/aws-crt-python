@@ -198,40 +198,51 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
 class AwsSigningAlgorithm(IntEnum):
     """AWS signing algorithm enumeration."""
 
-    SigV4 = 0
+    V4 = 0
     """Use Signature Version 4"""
 
 
-class AwsSigningTransform(IntEnum):
-    """How the signing process transforms the request, enumeration"""
+class AwsSignatureType(IntEnum):
+    """Which sort of signature should be computed from the signable."""
 
-    Header = 0
-    """Signing process transforms the headers."""
-
-    QueryParam = 1
-    """Signing process transforms the query parameters."""
-
-
-class AwsBodySigningConfigType(IntEnum):
-    """Body signing config enumeration"""
-
-    BodySigningOff = 0
+    HTTP_REQUEST_HEADERS = 0
     """
-    No attempts will be made to sign the payload, and no "x-amz-content-sha256"
-    header will be added to the request.
+    A signature for a full HTTP request should be computed,
+    with header updates applied to the signing result.
     """
 
-    BodySigningOn = 1
+    HTTP_REQUEST_QUERY_PARAMS = 1
     """
-    The body will be signed and "x-amz-content-sha256" will contain
-    the value of the signature.
+    A signature for a full HTTP request should be computed,
+    with query param updates applied to the signing result.
     """
 
-    UnsignedPayload = 2
+
+class AwsSignedBodyValueType(IntEnum):
+    """Controls what goes in the canonical request's body value."""
+
+    EMPTY = 0
+    """Use the SHA-256 of the empty string."""
+
+    PAYLOAD = 1
+    """Use the SHA-256 of the actual payload."""
+
+    UNSIGNED_PAYLOAD = 2
+    """Use the literal string "UNSIGNED-PAYLOAD"."""
+
+
+class AwsSignedBodyHeaderType(IntEnum):
     """
-    The body will not be signed, but "x-amz-content-sha256" will contain
-    the value "UNSIGNED-PAYLOAD". This value is currently only used for Amazon S3.
+    Controls if signing adds a header containing the canonical request's signed body value.
+
+    See :class:`AwsSignedBodyValueType`.
     """
+
+    NONE = 0
+    """Do not add a header."""
+
+    X_AMZ_CONTENT_SHA_256 = 1
+    """Add the "x-amz-content-sha-256" header with the canonical request's signed body value"""
 
 
 class AwsSigningConfig(NativeResource):
@@ -245,7 +256,8 @@ class AwsSigningConfig(NativeResource):
     Args:
         algorithm (AwsSigningAlgorithm): Which signing algorithm to use.
 
-        transform (AwsSigningTransform): How signing will transform the request.
+        signature_type (AwsSignatureType): Which sort of signature should be
+            computed from the signable.
 
         credentials_provider (AwsCredentialsProviderBase): Credentials provider
             to fetch signing credentials with.
@@ -278,36 +290,53 @@ class AwsSigningConfig(NativeResource):
         should_normalize_uri_path (bool): Whether the resource paths are
             normalized when building the canonical request.
 
-        body_signing_type (AwsBodySigningConfigType): Controls how the payload
-            will be signed.
+        signed_body_value_type (AwsSignedBodyValueType): Controls what goes in
+            the canonical request's body value. Default is to use the SHA-256
+            of the actual payload.
+
+        signed_body_header_type (AwsSignedBodyHeaderType): Controls if signing
+            adds a header containing the canonical request's signed body value.
+            Default is to not add a header.
     """
     __slots__ = ('_priv_should_sign_cb')
 
-    _attributes = ('algorithm', 'transform', 'credentials_provider', 'region', 'service', 'date', 'should_sign_param',
-                   'use_double_uri_encode', 'should_normalize_uri_path', 'body_signing_type')
+    _attributes = (
+        'algorithm',
+        'signature_type',
+        'credentials_provider',
+        'region',
+        'service',
+        'date',
+        'should_sign_param',
+        'use_double_uri_encode',
+        'should_normalize_uri_path',
+        'signed_body_value_type',
+        'signed_body_header_type',
+    )
 
     def __init__(self,
-                 algorithm,  # type: AwsSigningAlgorithm
-                 transform,  # type: AwsSigningTransform
-                 credentials_provider,  # type: AwsCredentialsProviderBase
-                 region,  # type: str
-                 service,  # type: str
-                 date=None,  # type: Optional[datetime.datetime]
-                 should_sign_param=None,  # type: Optional[Callable[[str], bool]]
-                 use_double_uri_encode=False,  # type: bool
-                 should_normalize_uri_path=True,  # type: bool
-                 body_signing_type=AwsBodySigningConfigType.BodySigningOn  # type: AwsBodySigningConfigType
+                 algorithm,
+                 signature_type,
+                 credentials_provider,
+                 region,
+                 service,
+                 date=None,
+                 should_sign_param=None,
+                 use_double_uri_encode=False,
+                 should_normalize_uri_path=True,
+                 signed_body_value_type=AwsSignedBodyValueType.PAYLOAD,
+                 signed_body_header_type=AwsSignedBodyHeaderType.NONE,
                  ):
-        # type: (...) -> None
 
         assert isinstance(algorithm, AwsSigningAlgorithm)
-        assert isinstance(transform, AwsSigningTransform)
+        assert isinstance(signature_type, AwsSignatureType)
         assert isinstance(credentials_provider, AwsCredentialsProviderBase)
         assert isinstance_str(region)
         assert isinstance_str(service)
         assert isinstance(date, datetime.datetime) or date is None
         assert callable(should_sign_param) or should_sign_param is None
-        assert isinstance(body_signing_type, AwsBodySigningConfigType)
+        assert isinstance(signed_body_value_type, AwsSignedBodyValueType)
+        assert isinstance(signed_body_header_type, AwsSignedBodyHeaderType)
 
         super(AwsSigningConfig, self).__init__()
 
@@ -335,7 +364,7 @@ class AwsSigningConfig(NativeResource):
 
         self._binding = _awscrt.signing_config_new(
             algorithm,
-            transform,
+            signature_type,
             credentials_provider,
             region,
             service,
@@ -344,7 +373,8 @@ class AwsSigningConfig(NativeResource):
             should_sign_param_wrapper,
             use_double_uri_encode,
             should_normalize_uri_path,
-            body_signing_type)
+            signed_body_value_type,
+            signed_body_header_type)
 
     def replace(self, **kwargs):
         """
@@ -360,9 +390,9 @@ class AwsSigningConfig(NativeResource):
         return AwsSigningAlgorithm(_awscrt.signing_config_get_algorithm(self._binding))
 
     @property
-    def transform(self):
-        """AwsSigningTransform: How signing will transform the request"""
-        return AwsSigningTransform(_awscrt.signing_config_get_transform(self._binding))
+    def signature_type(self):
+        """AwsSignatureType: Which sort of signature should be computed from the signable."""
+        return AwsSignatureType(_awscrt.signing_config_get_signature_type(self._binding))
 
     @property
     def credentials_provider(self):
@@ -425,9 +455,19 @@ class AwsSigningConfig(NativeResource):
         return _awscrt.signing_config_get_should_normalize_uri_path(self._binding)
 
     @property
-    def body_signing_type(self):
-        """AwsBodySigningConfigType: Controls how the payload will be signed."""
-        return AwsBodySigningConfigType(_awscrt.signing_config_get_body_signing_type(self._binding))
+    def signed_body_value_type(self):
+        """
+        AwsSignedBodyValueType: Controls what goes in the canonical request's body value.
+        """
+        return AwsSignedBodyValueType(_awscrt.signing_config_get_signed_body_value_type(self._binding))
+
+    @property
+    def signed_body_header_type(self):
+        """
+        AwsSignedBodyHeaderType: Controls if signing adds a header containing
+        the canonical request's signed body value.
+        """
+        return AwsSignedBodyHeaderType(_awscrt.signing_config_get_signed_body_header_type(self._binding))
 
 
 def aws_sign_request(http_request, signing_config):

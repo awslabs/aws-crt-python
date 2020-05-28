@@ -19,6 +19,7 @@
 
 #include <aws/auth/signable.h>
 #include <aws/auth/signing.h>
+#include <aws/auth/signing_result.h>
 
 /* Object that stays alive for duration async signing operation */
 struct async_signing_data {

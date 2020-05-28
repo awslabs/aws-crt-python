@@ -79,7 +79,7 @@ PyObject *aws_py_signing_config_new(PyObject *self, PyObject *args) {
     (void)self;
 
     int algorithm;
-    int transform;
+    int signature_type;
     PyObject *py_credentials_provider;
     struct aws_byte_cursor region;
     struct aws_byte_cursor service;
@@ -88,12 +88,13 @@ PyObject *aws_py_signing_config_new(PyObject *self, PyObject *args) {
     PyObject *py_should_sign_param_fn;
     PyObject *py_use_double_uri_encode;
     PyObject *py_should_normalize_uri_path;
-    int py_body_signing_config;
+    int signed_body_value_type;
+    int signed_body_header_type;
     if (!PyArg_ParseTuple(
             args,
-            "iiOs#s#OdOOOi",
+            "iiOs#s#OdOOOii",
             &algorithm,
-            &transform,
+            &signature_type,
             &py_credentials_provider,
             &region.ptr,
             &region.len,
@@ -104,7 +105,8 @@ PyObject *aws_py_signing_config_new(PyObject *self, PyObject *args) {
             &py_should_sign_param_fn,
             &py_use_double_uri_encode,
             &py_should_normalize_uri_path,
-            &py_body_signing_config)) {
+            &signed_body_value_type,
+            &signed_body_header_type)) {
 
         return NULL;
     }
@@ -126,10 +128,11 @@ PyObject *aws_py_signing_config_new(PyObject *self, PyObject *args) {
     /* set primitive types */
     binding->native.config_type = AWS_SIGNING_CONFIG_AWS;
     binding->native.algorithm = algorithm;
-    binding->native.transform = transform;
+    binding->native.signature_type = signature_type;
     binding->native.use_double_uri_encode = PyObject_IsTrue(py_use_double_uri_encode);
     binding->native.should_normalize_uri_path = PyObject_IsTrue(py_should_normalize_uri_path);
-    binding->native.body_signing_type = py_body_signing_config;
+    binding->native.signed_body_value = signed_body_value_type;
+    binding->native.signed_body_header = signed_body_header_type;
 
     /* credentials_provider */
     binding->native.credentials_provider = aws_py_get_credentials_provider(py_credentials_provider);
@@ -211,13 +214,13 @@ PyObject *aws_py_signing_config_get_algorithm(PyObject *self, PyObject *args) {
     return PyLong_FromLong(binding->native.algorithm);
 }
 
-PyObject *aws_py_signing_config_get_transform(PyObject *self, PyObject *args) {
+PyObject *aws_py_signing_config_get_signature_type(PyObject *self, PyObject *args) {
     struct config_binding *binding = s_common_get(self, args);
     if (!binding) {
         return NULL;
     }
 
-    return PyLong_FromLong(binding->native.transform);
+    return PyLong_FromLong(binding->native.signature_type);
 }
 
 PyObject *aws_py_signing_config_get_credentials_provider(PyObject *self, PyObject *args) {
@@ -276,11 +279,20 @@ PyObject *aws_py_signing_config_get_should_normalize_uri_path(PyObject *self, Py
     return PyBool_FromLong(binding->native.should_normalize_uri_path);
 }
 
-PyObject *aws_py_signing_config_get_body_signing_type(PyObject *self, PyObject *args) {
+PyObject *aws_py_signing_config_get_signed_body_value_type(PyObject *self, PyObject *args) {
     struct config_binding *binding = s_common_get(self, args);
     if (!binding) {
         return NULL;
     }
 
-    return PyLong_FromLong(binding->native.body_signing_type);
+    return PyLong_FromLong(binding->native.signed_body_value);
+}
+
+PyObject *aws_py_signing_config_get_signed_body_header_type(PyObject *self, PyObject *args) {
+    struct config_binding *binding = s_common_get(self, args);
+    if (!binding) {
+        return NULL;
+    }
+
+    return PyLong_FromLong(binding->native.signed_body_header);
 }

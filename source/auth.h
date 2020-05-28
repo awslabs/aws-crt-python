@@ -29,14 +29,15 @@ PyObject *aws_py_credentials_provider_new_static(PyObject *self, PyObject *args)
 
 PyObject *aws_py_signing_config_new(PyObject *self, PyObject *args);
 PyObject *aws_py_signing_config_get_algorithm(PyObject *self, PyObject *args);
-PyObject *aws_py_signing_config_get_transform(PyObject *self, PyObject *args);
+PyObject *aws_py_signing_config_get_signature_type(PyObject *self, PyObject *args);
 PyObject *aws_py_signing_config_get_credentials_provider(PyObject *self, PyObject *args);
 PyObject *aws_py_signing_config_get_region(PyObject *self, PyObject *args);
 PyObject *aws_py_signing_config_get_service(PyObject *self, PyObject *args);
 PyObject *aws_py_signing_config_get_date(PyObject *self, PyObject *args);
 PyObject *aws_py_signing_config_get_use_double_uri_encode(PyObject *self, PyObject *args);
 PyObject *aws_py_signing_config_get_should_normalize_uri_path(PyObject *self, PyObject *args);
-PyObject *aws_py_signing_config_get_body_signing_type(PyObject *self, PyObject *args);
+PyObject *aws_py_signing_config_get_signed_body_value_type(PyObject *self, PyObject *args);
+PyObject *aws_py_signing_config_get_signed_body_header_type(PyObject *self, PyObject *args);
 
 PyObject *aws_py_sign_request_aws(PyObject *self, PyObject *args);
 

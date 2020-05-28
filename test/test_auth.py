@@ -114,8 +114,8 @@ class TestProvider(NativeResourceTest):
 
 class TestSigningConfig(NativeResourceTest):
     def test_create(self):
-        algorithm = awscrt.auth.AwsSigningAlgorithm.SigV4
-        transform = awscrt.auth.AwsSigningTransform.QueryParam
+        algorithm = awscrt.auth.AwsSigningAlgorithm.V4
+        signature_type = awscrt.auth.AwsSignatureType.HTTP_REQUEST_QUERY_PARAMS
         credentials_provider = awscrt.auth.AwsCredentialsProvider.new_static(
             EXAMPLE_ACCESS_KEY_ID, EXAMPLE_SECRET_ACCESS_KEY)
         region = 'us-west-2'
@@ -127,10 +127,11 @@ class TestSigningConfig(NativeResourceTest):
 
         use_double_uri_encode = True
         should_normalize_uri_path = False
-        body_signing_type = awscrt.auth.AwsBodySigningConfigType.BodySigningOff
+        signed_body_value_type = awscrt.auth.AwsSignedBodyValueType.EMPTY
+        signed_body_header_type = awscrt.auth.AwsSignedBodyHeaderType.X_AMZ_CONTENT_SHA_256
 
         cfg = awscrt.auth.AwsSigningConfig(algorithm=algorithm,
-                                           transform=transform,
+                                           signature_type=signature_type,
                                            credentials_provider=credentials_provider,
                                            region=region,
                                            service=service,
@@ -138,9 +139,11 @@ class TestSigningConfig(NativeResourceTest):
                                            should_sign_param=should_sign_param,
                                            use_double_uri_encode=use_double_uri_encode,
                                            should_normalize_uri_path=should_normalize_uri_path,
-                                           body_signing_type=body_signing_type)
+                                           signed_body_value_type=signed_body_value_type,
+                                           signed_body_header_type=signed_body_header_type)
 
         self.assertIs(algorithm, cfg.algorithm)  # assert IS enum, not just EQUAL
+        self.assertIs(signature_type, cfg.signature_type)
         self.assertIs(credentials_provider, cfg.credentials_provider)
         self.assertEqual(region, cfg.region)
         self.assertEqual(service, cfg.service)
@@ -148,23 +151,29 @@ class TestSigningConfig(NativeResourceTest):
         self.assertIs(should_sign_param, cfg.should_sign_param)
         self.assertEqual(use_double_uri_encode, cfg.use_double_uri_encode)
         self.assertEqual(should_normalize_uri_path, cfg.should_normalize_uri_path)
-        self.assertIs(body_signing_type, cfg.body_signing_type)
+        self.assertIs(signed_body_value_type, cfg.signed_body_value_type)
+        self.assertIs(signed_body_header_type, cfg.signed_body_header_type)
 
     def test_replace(self):
         credentials_provider = awscrt.auth.AwsCredentialsProvider.new_static(
             EXAMPLE_ACCESS_KEY_ID, EXAMPLE_SECRET_ACCESS_KEY)
 
         # nondefault values, to be sure they're carried over correctly
-        orig_cfg = awscrt.auth.AwsSigningConfig(algorithm=awscrt.auth.AwsSigningAlgorithm.SigV4,
-                                                transform=awscrt.auth.AwsSigningTransform.QueryParam,
-                                                credentials_provider=credentials_provider,
-                                                region='us-west-1',
-                                                service='aws-suborbital-ion-cannon',
-                                                date=datetime.datetime(year=2000, month=1, day=1),
-                                                should_sign_param=lambda x: False,
-                                                use_double_uri_encode=True,
-                                                should_normalize_uri_path=False,
-                                                body_signing_type=awscrt.auth.AwsBodySigningConfigType.BodySigningOff)
+        orig_cfg = awscrt.auth.AwsSigningConfig(
+            algorithm=awscrt.auth.AwsSigningAlgorithm.V4,
+            signature_type=awscrt.auth.AwsSignatureType.HTTP_REQUEST_QUERY_PARAMS,
+            credentials_provider=credentials_provider,
+            region='us-west-1',
+            service='aws-suborbital-ion-cannon',
+            date=datetime.datetime(
+                year=2000,
+                month=1,
+                day=1),
+            should_sign_param=lambda x: False,
+            use_double_uri_encode=True,
+            should_normalize_uri_path=False,
+            signed_body_value_type=awscrt.auth.AwsSignedBodyValueType.EMPTY,
+            signed_body_header_type=awscrt.auth.AwsSignedBodyHeaderType.X_AMZ_CONTENT_SHA_256)
 
         # Call replace on single attribute, then assert that ONLY the one attribute differs
         def _replace_attr(name, value):
@@ -182,7 +191,7 @@ class TestSigningConfig(NativeResourceTest):
                     self.assertEqual(getattr(orig_cfg, attr), getattr(new_cfg, attr),
                                      "value should match original")
 
-        _replace_attr('transform', awscrt.auth.AwsSigningTransform.Header)
+        _replace_attr('signature_type', awscrt.auth.AwsSignatureType.HTTP_REQUEST_HEADERS)
         _replace_attr('credentials_provider',
                       awscrt.auth.AwsCredentialsProvider.new_static(EXAMPLE_ACCESS_KEY_ID, EXAMPLE_SECRET_ACCESS_KEY))
         _replace_attr('region', 'us-west-2')
@@ -191,7 +200,8 @@ class TestSigningConfig(NativeResourceTest):
         _replace_attr('should_sign_param', lambda x: True)
         _replace_attr('use_double_uri_encode', False)
         _replace_attr('should_normalize_uri_path', True)
-        _replace_attr('body_signing_type', awscrt.auth.AwsBodySigningConfigType.BodySigningOn)
+        _replace_attr('signed_body_value_type', awscrt.auth.AwsSignedBodyValueType.PAYLOAD)
+        _replace_attr('signed_body_header_type', awscrt.auth.AwsSignedBodyHeaderType.NONE)
 
         # check that we can replace multiple values at once
         new_cfg = orig_cfg.replace(region='us-west-3', service='aws-slow-blinking')
@@ -230,13 +240,12 @@ class TestSigner(NativeResourceTest):
             SIGV4TEST_ACCESS_KEY_ID, SIGV4TEST_SECRET_ACCESS_KEY, SIGV4TEST_SESSION_TOKEN)
 
         signing_config = awscrt.auth.AwsSigningConfig(
-            algorithm=awscrt.auth.AwsSigningAlgorithm.SigV4,
-            transform=awscrt.auth.AwsSigningTransform.Header,
+            algorithm=awscrt.auth.AwsSigningAlgorithm.V4,
+            signature_type=awscrt.auth.AwsSignatureType.HTTP_REQUEST_HEADERS,
             credentials_provider=credentials_provider,
             region=SIGV4TEST_REGION,
             service=SIGV4TEST_SERVICE,
-            date=SIGV4TEST_DATE,
-            body_signing_type=awscrt.auth.AwsBodySigningConfigType.BodySigningOff)
+            date=SIGV4TEST_DATE)
 
         http_request = awscrt.http.HttpRequest(
             method=SIGV4TEST_METHOD,
@@ -266,13 +275,13 @@ class TestSigner(NativeResourceTest):
             SIGV4TEST_ACCESS_KEY_ID, SIGV4TEST_SECRET_ACCESS_KEY, SIGV4TEST_SESSION_TOKEN)
 
         signing_config = awscrt.auth.AwsSigningConfig(
-            algorithm=awscrt.auth.AwsSigningAlgorithm.SigV4,
-            transform=awscrt.auth.AwsSigningTransform.Header,
+            algorithm=awscrt.auth.AwsSigningAlgorithm.V4,
+            signature_type=awscrt.auth.AwsSignatureType.HTTP_REQUEST_HEADERS,
             credentials_provider=credentials_provider,
             region=SIGV4TEST_REGION,
             service=SIGV4TEST_SERVICE,
             date=SIGV4TEST_DATE,
-            body_signing_type=awscrt.auth.AwsBodySigningConfigType.BodySigningOn)
+            signed_body_header_type=awscrt.auth.AwsSignedBodyHeaderType.X_AMZ_CONTENT_SHA_256)
 
         body_stream = BytesIO(b'hello')
 
