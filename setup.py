@@ -225,7 +225,8 @@ def awscrt_ext():
 
     else:  # unix
         # linker will prefer shared libraries over static if it can find both.
-        # force linker to choose static one by using using "-l:libcrypto.a" syntax instead of just "-lcrypto".
+        # force linker to choose static variant by using using "-l:lib<name>.a" syntax instead of just "-lcrypto".
+        libraries = [':lib{}.a'.format(x.name) for x in libraries]
         libraries += [':libcrypto.a', 'rt']
 
     if distutils.ccompiler.get_default_compiler() != 'msvc':
