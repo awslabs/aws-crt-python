@@ -11,6 +11,7 @@ setup_path = os.path.join(os.path.dirname(__file__), '..', 'setup.py')
 print("Updating setup.py to version {}".format(version))
 with open(setup_path, 'r+') as setup_py:
     contents = setup_py.read()
-    contents = re.sub(r'(\s)version=.+,', r'\1version="{}",'.format(version), contents)
+    contents = re.sub(r'(\s)version="1\.0\.0-dev",', r'\1version="{}",'.format(version), contents)
     setup_py.seek(0, os.SEEK_SET)
     setup_py.write(contents)
+    print(contents)

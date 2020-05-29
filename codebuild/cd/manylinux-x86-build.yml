@@ -8,7 +8,6 @@ phases:
     commands:
       - export CC=gcc
       - cd aws-crt-python
-      - export PKG_VERSION=$(git describe --tags | cut -f2 -dv)
       - /opt/python/cp37-cp37m/bin/python ./continuous-delivery/update-version.py
   build:
     commands:
