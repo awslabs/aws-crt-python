@@ -266,5 +266,5 @@ setuptools.setup(
     test_suite='test',
     tests_require=[
         'boto3'
-    ],
+    ]
 )
