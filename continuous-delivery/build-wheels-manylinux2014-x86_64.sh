@@ -2,6 +2,9 @@
 #before running this, you'll need cmake3 and a compiler. These python versions are just
 #using the default python installers from python.org. Each version needs updated pip, wheel, and setuptools
 set -e
+
+/usr/local/bin/python3.8 ./continuous-delivery/update-version.py
+
 /usr/local/bin/python3.5m setup.py sdist bdist_wheel
 auditwheel repair --plat manylinux2014_x86_64 dist/awscrt-*cp35*.whl
 
