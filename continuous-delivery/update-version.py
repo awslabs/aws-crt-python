@@ -14,4 +14,6 @@ with open(setup_path, 'r+') as setup_py:
     contents = re.sub(r'(\s)version="1\.0\.0-dev",', r'\1version="{}",'.format(version), contents)
     setup_py.seek(0, os.SEEK_SET)
     setup_py.write(contents)
-    print(contents)
+
+    setup = contents[contents.rfind('setuptools.setup'):]
+    print(setup)
