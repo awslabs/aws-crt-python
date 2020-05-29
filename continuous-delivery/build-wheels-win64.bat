@@ -1,4 +1,4 @@
-"C:\Program Files (x86)\Python38\python.exe" .\continuous-delivery\update-version.py || goto error
+"C:\Program Files\Python38\python.exe" continuous-delivery\update-version.py || goto error
 
 "C:\Python27\python.exe" setup.py sdist bdist_wheel || goto error
 "C:\Program Files\Python35\python.exe" setup.py sdist bdist_wheel || goto error
