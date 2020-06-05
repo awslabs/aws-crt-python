@@ -283,9 +283,9 @@ class AwsSigningConfig(NativeResource):
             true to both the internal check (skips x-amzn-trace-id, user-agent)
             and this function (if defined).
 
-        use_double_uri_encode (bool): Set True to double-encode the resource
-            path when constructing the canonical request. By default, all
-            services except S3 use double encoding.
+        use_double_uri_encode (bool): Whether to double-encode the resource path
+            when constructing the canonical request (assuming the path is already
+            encoded). Default is True. All services except S3 use double encoding.
 
         should_normalize_uri_path (bool): Whether the resource paths are
             normalized when building the canonical request.
@@ -322,7 +322,7 @@ class AwsSigningConfig(NativeResource):
                  service,
                  date=None,
                  should_sign_param=None,
-                 use_double_uri_encode=False,
+                 use_double_uri_encode=True,
                  should_normalize_uri_path=True,
                  signed_body_value_type=AwsSignedBodyValueType.PAYLOAD,
                  signed_body_header_type=AwsSignedBodyHeaderType.NONE,
@@ -440,7 +440,7 @@ class AwsSigningConfig(NativeResource):
     def use_double_uri_encode(self):
         """
         bool: Whether to double-encode the resource path when constructing
-        the canonical request.
+        the canonical request (assuming the path is already encoded).
 
         By default, all services except S3 use double encoding.
         """

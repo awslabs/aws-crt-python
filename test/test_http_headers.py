@@ -151,6 +151,10 @@ class TestHttpMessage(NativeResourceTest):
         headers.add('Cookie', 'a=1')
         self.assertEqual([('Cookie', 'a=1')], list(headers))
 
+    def test_utf8(self):
+        request = HttpRequest(path='/ሴ')
+        self.assertEqual('/ሴ', request.path)
+
 
 if __name__ == '__main__':
     unittest.main()

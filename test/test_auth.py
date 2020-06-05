@@ -125,7 +125,7 @@ class TestSigningConfig(NativeResourceTest):
         def should_sign_param(name):
             return not name.tolower().startswith('x-do-not-sign')
 
-        use_double_uri_encode = True
+        use_double_uri_encode = False
         should_normalize_uri_path = False
         signed_body_value_type = awscrt.auth.AwsSignedBodyValueType.EMPTY
         signed_body_header_type = awscrt.auth.AwsSignedBodyHeaderType.X_AMZ_CONTENT_SHA_256
@@ -170,7 +170,7 @@ class TestSigningConfig(NativeResourceTest):
                 month=1,
                 day=1),
             should_sign_param=lambda x: False,
-            use_double_uri_encode=True,
+            use_double_uri_encode=False,
             should_normalize_uri_path=False,
             signed_body_value_type=awscrt.auth.AwsSignedBodyValueType.EMPTY,
             signed_body_header_type=awscrt.auth.AwsSignedBodyHeaderType.X_AMZ_CONTENT_SHA_256)
@@ -198,7 +198,7 @@ class TestSigningConfig(NativeResourceTest):
         _replace_attr('service', 'aws-nothing-but-bees')
         _replace_attr('date', datetime.datetime(year=2001, month=1, day=1))
         _replace_attr('should_sign_param', lambda x: True)
-        _replace_attr('use_double_uri_encode', False)
+        _replace_attr('use_double_uri_encode', True)
         _replace_attr('should_normalize_uri_path', True)
         _replace_attr('signed_body_value_type', awscrt.auth.AwsSignedBodyValueType.PAYLOAD)
         _replace_attr('signed_body_header_type', awscrt.auth.AwsSignedBodyHeaderType.NONE)
@@ -211,31 +211,31 @@ class TestSigningConfig(NativeResourceTest):
         self.assertEqual(orig_cfg.should_sign_param, new_cfg.should_sign_param)
 
 
-# Test values copied from aws-c-auth/tests/aws-sig-v4-test-suite/get-vanilla"
 SIGV4TEST_ACCESS_KEY_ID = 'AKIDEXAMPLE'
 SIGV4TEST_SECRET_ACCESS_KEY = 'wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY'
 SIGV4TEST_SESSION_TOKEN = None
 SIGV4TEST_SERVICE = 'service'
 SIGV4TEST_REGION = 'us-east-1'
-SIGV4TEST_METHOD = 'GET'
-SIGV4TEST_PATH = '/'
 SIGV4TEST_DATE = datetime.datetime(year=2015, month=8, day=30, hour=12, minute=36, second=0, tzinfo=awscrt.auth._utc)
-SIGV4TEST_UNSIGNED_HEADERS = [
-    ('Host', 'example.amazonaws.com'),
-]
-SIGV4TEST_SIGNED_HEADERS = [
-    ('Host',
-     'example.amazonaws.com'),
-    ('X-Amz-Date',
-     '20150830T123600Z'),
-    ('Authorization',
-     'AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/service/aws4_request, SignedHeaders=host;x-amz-date, Signature=5fa00fa31553b73ebf1942676e86291e8372ff2a2260956d9b8aae1d763fbf31')]
 
 
 class TestSigner(NativeResourceTest):
 
     def test_signing_sigv4_headers(self):
+        # Test values copied from aws-c-auth/tests/aws-sig-v4-test-suite/get-vanilla"
+        self._test_signing_sigv4_headers(
+            method='GET',
+            path='/',
+            unsigned_headers=[('Host', 'example.amazonaws.com')],
+            signed_headers=[
+                ('Host',
+                 'example.amazonaws.com'),
+                ('X-Amz-Date',
+                 '20150830T123600Z'),
+                ('Authorization',
+                 'AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/service/aws4_request, SignedHeaders=host;x-amz-date, Signature=5fa00fa31553b73ebf1942676e86291e8372ff2a2260956d9b8aae1d763fbf31')])
 
+    def _test_signing_sigv4_headers(self, method, path, unsigned_headers, signed_headers):
         credentials_provider = awscrt.auth.AwsCredentialsProvider.new_static(
             SIGV4TEST_ACCESS_KEY_ID, SIGV4TEST_SECRET_ACCESS_KEY, SIGV4TEST_SESSION_TOKEN)
 
@@ -248,9 +248,9 @@ class TestSigner(NativeResourceTest):
             date=SIGV4TEST_DATE)
 
         http_request = awscrt.http.HttpRequest(
-            method=SIGV4TEST_METHOD,
-            path=SIGV4TEST_PATH,
-            headers=awscrt.http.HttpHeaders(SIGV4TEST_UNSIGNED_HEADERS))
+            method=method,
+            path=path,
+            headers=awscrt.http.HttpHeaders(unsigned_headers))
 
         signing_future = awscrt.auth.aws_sign_request(http_request, signing_config)
 
@@ -258,19 +258,18 @@ class TestSigner(NativeResourceTest):
 
         self.assertIs(http_request, signing_result)  # should be same object
 
-        self.assertEqual(SIGV4TEST_METHOD, http_request.method)
-        self.assertEqual(SIGV4TEST_PATH, http_request.path)
+        self.assertEqual(method, http_request.method)
+        self.assertEqual(path, http_request.path)
 
         # existing headers should remain
-        for prev_header in SIGV4TEST_UNSIGNED_HEADERS:
+        for prev_header in unsigned_headers:
             self.assertIn(prev_header, http_request.headers)
 
         # signed headers must be present
-        for signed_header in SIGV4TEST_SIGNED_HEADERS:
+        for signed_header in signed_headers:
             self.assertIn(signed_header, http_request.headers)
 
     def test_signing_sigv4_body(self):
-
         credentials_provider = awscrt.auth.AwsCredentialsProvider.new_static(
             SIGV4TEST_ACCESS_KEY_ID, SIGV4TEST_SECRET_ACCESS_KEY, SIGV4TEST_SESSION_TOKEN)
 
@@ -305,3 +304,17 @@ class TestSigner(NativeResourceTest):
 
         # stream should be seeked back to initial position
         self.assertEqual(0, body_stream.tell())
+
+    def test_signing_sigv4_utf8(self):
+        # Test values copied from aws-c-auth/tests/aws-sig-v4-test-suite/get-utf8"
+        self._test_signing_sigv4_headers(
+            method='GET',
+            path=u'/\u1234',  # "/ሴ"
+            unsigned_headers=[('Host', 'example.amazonaws.com')],
+            signed_headers=[
+                ('Host',
+                 'example.amazonaws.com'),
+                ('X-Amz-Date',
+                 '20150830T123600Z'),
+                ('Authorization',
+                 'AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/service/aws4_request, SignedHeaders=host;x-amz-date, Signature=8318018e0b0f223aa2bbf98705b62bb787dc9c0e678f255a891fd03141be5d85')])
