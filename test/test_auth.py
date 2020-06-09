@@ -129,6 +129,7 @@ class TestSigningConfig(NativeResourceTest):
         should_normalize_uri_path = False
         signed_body_value_type = awscrt.auth.AwsSignedBodyValueType.EMPTY
         signed_body_header_type = awscrt.auth.AwsSignedBodyHeaderType.X_AMZ_CONTENT_SHA_256
+        expiration_in_seconds = 123
 
         cfg = awscrt.auth.AwsSigningConfig(algorithm=algorithm,
                                            signature_type=signature_type,
@@ -140,7 +141,8 @@ class TestSigningConfig(NativeResourceTest):
                                            use_double_uri_encode=use_double_uri_encode,
                                            should_normalize_uri_path=should_normalize_uri_path,
                                            signed_body_value_type=signed_body_value_type,
-                                           signed_body_header_type=signed_body_header_type)
+                                           signed_body_header_type=signed_body_header_type,
+                                           expiration_in_seconds=expiration_in_seconds)
 
         self.assertIs(algorithm, cfg.algorithm)  # assert IS enum, not just EQUAL
         self.assertIs(signature_type, cfg.signature_type)
@@ -153,6 +155,7 @@ class TestSigningConfig(NativeResourceTest):
         self.assertEqual(should_normalize_uri_path, cfg.should_normalize_uri_path)
         self.assertIs(signed_body_value_type, cfg.signed_body_value_type)
         self.assertIs(signed_body_header_type, cfg.signed_body_header_type)
+        self.assertEqual(expiration_in_seconds, cfg.expiration_in_seconds)
 
     def test_replace(self):
         credentials_provider = awscrt.auth.AwsCredentialsProvider.new_static(
@@ -173,7 +176,8 @@ class TestSigningConfig(NativeResourceTest):
             use_double_uri_encode=False,
             should_normalize_uri_path=False,
             signed_body_value_type=awscrt.auth.AwsSignedBodyValueType.EMPTY,
-            signed_body_header_type=awscrt.auth.AwsSignedBodyHeaderType.X_AMZ_CONTENT_SHA_256)
+            signed_body_header_type=awscrt.auth.AwsSignedBodyHeaderType.X_AMZ_CONTENT_SHA_256,
+            expiration_in_seconds=123)
 
         # Call replace on single attribute, then assert that ONLY the one attribute differs
         def _replace_attr(name, value):
@@ -202,6 +206,7 @@ class TestSigningConfig(NativeResourceTest):
         _replace_attr('should_normalize_uri_path', True)
         _replace_attr('signed_body_value_type', awscrt.auth.AwsSignedBodyValueType.PAYLOAD)
         _replace_attr('signed_body_header_type', awscrt.auth.AwsSignedBodyHeaderType.NONE)
+        _replace_attr('expiration_in_seconds', 987)
 
         # check that we can replace multiple values at once
         new_cfg = orig_cfg.replace(region='us-west-3', service='aws-slow-blinking')

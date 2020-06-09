@@ -90,9 +90,10 @@ PyObject *aws_py_signing_config_new(PyObject *self, PyObject *args) {
     PyObject *py_should_normalize_uri_path;
     int signed_body_value_type;
     int signed_body_header_type;
+    uint64_t expiration_in_seconds;
     if (!PyArg_ParseTuple(
             args,
-            "iiOs#s#OdOOOii",
+            "iiOs#s#OdOOOiiK",
             &algorithm,
             &signature_type,
             &py_credentials_provider,
@@ -106,7 +107,8 @@ PyObject *aws_py_signing_config_new(PyObject *self, PyObject *args) {
             &py_use_double_uri_encode,
             &py_should_normalize_uri_path,
             &signed_body_value_type,
-            &signed_body_header_type)) {
+            &signed_body_header_type,
+            &expiration_in_seconds)) {
 
         return NULL;
     }
@@ -133,6 +135,7 @@ PyObject *aws_py_signing_config_new(PyObject *self, PyObject *args) {
     binding->native.should_normalize_uri_path = PyObject_IsTrue(py_should_normalize_uri_path);
     binding->native.signed_body_value = signed_body_value_type;
     binding->native.signed_body_header = signed_body_header_type;
+    binding->native.expiration_in_seconds = expiration_in_seconds;
 
     /* credentials_provider */
     binding->native.credentials_provider = aws_py_get_credentials_provider(py_credentials_provider);
@@ -295,4 +298,13 @@ PyObject *aws_py_signing_config_get_signed_body_header_type(PyObject *self, PyOb
     }
 
     return PyLong_FromLong(binding->native.signed_body_header);
+}
+
+PyObject *aws_py_signing_config_get_expiration_in_seconds(PyObject *self, PyObject *args) {
+    struct config_binding *binding = s_common_get(self, args);
+    if (!binding) {
+        return NULL;
+    }
+
+    return PyLong_FromUnsignedLongLong(binding->native.expiration_in_seconds);
 }

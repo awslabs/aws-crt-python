@@ -297,6 +297,11 @@ class AwsSigningConfig(NativeResource):
         signed_body_header_type (AwsSignedBodyHeaderType): Controls if signing
             adds a header containing the canonical request's signed body value.
             Default is to not add a header.
+
+        expiration_in_seconds (int): If set non-zero, and signature_type is
+            HTTP_REQUEST_QUERY_PARAMS, then signing will add "X-Amz-Expires"
+            to the query string, equal to the value specified here.
+            Otherwise, this has no effect.
     """
     __slots__ = ('_priv_should_sign_cb')
 
@@ -312,6 +317,7 @@ class AwsSigningConfig(NativeResource):
         'should_normalize_uri_path',
         'signed_body_value_type',
         'signed_body_header_type',
+        'expiration_in_seconds',
     )
 
     def __init__(self,
@@ -326,6 +332,7 @@ class AwsSigningConfig(NativeResource):
                  should_normalize_uri_path=True,
                  signed_body_value_type=AwsSignedBodyValueType.PAYLOAD,
                  signed_body_header_type=AwsSignedBodyHeaderType.NONE,
+                 expiration_in_seconds=0,
                  ):
 
         assert isinstance(algorithm, AwsSigningAlgorithm)
@@ -337,6 +344,7 @@ class AwsSigningConfig(NativeResource):
         assert callable(should_sign_param) or should_sign_param is None
         assert isinstance(signed_body_value_type, AwsSignedBodyValueType)
         assert isinstance(signed_body_header_type, AwsSignedBodyHeaderType)
+        assert expiration_in_seconds >= 0
 
         super(AwsSigningConfig, self).__init__()
 
@@ -374,7 +382,8 @@ class AwsSigningConfig(NativeResource):
             use_double_uri_encode,
             should_normalize_uri_path,
             signed_body_value_type,
-            signed_body_header_type)
+            signed_body_header_type,
+            expiration_in_seconds)
 
     def replace(self, **kwargs):
         """
@@ -468,6 +477,15 @@ class AwsSigningConfig(NativeResource):
         the canonical request's signed body value.
         """
         return AwsSignedBodyHeaderType(_awscrt.signing_config_get_signed_body_header_type(self._binding))
+
+    @property
+    def expiration_in_seconds(self):
+        """
+        int: If non-zero and signature_type is HTTP_REQUEST_QUERY_PARAMS,
+        then signing will add "X-Amz-Expires" to the query string, equal to the
+        value specified here. Otherwise, this has no effect.
+        """
+        return _awscrt.signing_config_get_expiration_in_seconds(self._binding)
 
 
 def aws_sign_request(http_request, signing_config):
