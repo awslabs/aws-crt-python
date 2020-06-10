@@ -39,6 +39,7 @@ PyObject *aws_py_signing_config_get_should_normalize_uri_path(PyObject *self, Py
 PyObject *aws_py_signing_config_get_signed_body_value_type(PyObject *self, PyObject *args);
 PyObject *aws_py_signing_config_get_signed_body_header_type(PyObject *self, PyObject *args);
 PyObject *aws_py_signing_config_get_expiration_in_seconds(PyObject *self, PyObject *args);
+PyObject *aws_py_signing_config_get_omit_session_token(PyObject *self, PyObject *args);
 
 PyObject *aws_py_sign_request_aws(PyObject *self, PyObject *args);
 

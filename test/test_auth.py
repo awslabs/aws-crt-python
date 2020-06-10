@@ -122,7 +122,7 @@ class TestSigningConfig(NativeResourceTest):
         service = 'aws-suborbital-ion-cannon'
         date = datetime.datetime(year=2000, month=1, day=1)
 
-        def should_sign_param(name):
+        def should_sign_header(name):
             return not name.tolower().startswith('x-do-not-sign')
 
         use_double_uri_encode = False
@@ -130,6 +130,7 @@ class TestSigningConfig(NativeResourceTest):
         signed_body_value_type = awscrt.auth.AwsSignedBodyValueType.EMPTY
         signed_body_header_type = awscrt.auth.AwsSignedBodyHeaderType.X_AMZ_CONTENT_SHA_256
         expiration_in_seconds = 123
+        omit_session_token=True
 
         cfg = awscrt.auth.AwsSigningConfig(algorithm=algorithm,
                                            signature_type=signature_type,
@@ -137,12 +138,13 @@ class TestSigningConfig(NativeResourceTest):
                                            region=region,
                                            service=service,
                                            date=date,
-                                           should_sign_param=should_sign_param,
+                                           should_sign_header=should_sign_header,
                                            use_double_uri_encode=use_double_uri_encode,
                                            should_normalize_uri_path=should_normalize_uri_path,
                                            signed_body_value_type=signed_body_value_type,
                                            signed_body_header_type=signed_body_header_type,
-                                           expiration_in_seconds=expiration_in_seconds)
+                                           expiration_in_seconds=expiration_in_seconds,
+                                           omit_session_token=omit_session_token)
 
         self.assertIs(algorithm, cfg.algorithm)  # assert IS enum, not just EQUAL
         self.assertIs(signature_type, cfg.signature_type)
@@ -150,12 +152,13 @@ class TestSigningConfig(NativeResourceTest):
         self.assertEqual(region, cfg.region)
         self.assertEqual(service, cfg.service)
         self.assertEqual(date, cfg.date)
-        self.assertIs(should_sign_param, cfg.should_sign_param)
+        self.assertIs(should_sign_header, cfg.should_sign_header)
         self.assertEqual(use_double_uri_encode, cfg.use_double_uri_encode)
         self.assertEqual(should_normalize_uri_path, cfg.should_normalize_uri_path)
         self.assertIs(signed_body_value_type, cfg.signed_body_value_type)
         self.assertIs(signed_body_header_type, cfg.signed_body_header_type)
         self.assertEqual(expiration_in_seconds, cfg.expiration_in_seconds)
+        self.assertEqual(omit_session_token, cfg.omit_session_token)
 
     def test_replace(self):
         credentials_provider = awscrt.auth.AwsCredentialsProvider.new_static(
@@ -172,12 +175,13 @@ class TestSigningConfig(NativeResourceTest):
                 year=2000,
                 month=1,
                 day=1),
-            should_sign_param=lambda x: False,
+            should_sign_header=lambda x: False,
             use_double_uri_encode=False,
             should_normalize_uri_path=False,
             signed_body_value_type=awscrt.auth.AwsSignedBodyValueType.EMPTY,
             signed_body_header_type=awscrt.auth.AwsSignedBodyHeaderType.X_AMZ_CONTENT_SHA_256,
-            expiration_in_seconds=123)
+            expiration_in_seconds=123,
+            omit_session_token=True)
 
         # Call replace on single attribute, then assert that ONLY the one attribute differs
         def _replace_attr(name, value):
@@ -201,19 +205,20 @@ class TestSigningConfig(NativeResourceTest):
         _replace_attr('region', 'us-west-2')
         _replace_attr('service', 'aws-nothing-but-bees')
         _replace_attr('date', datetime.datetime(year=2001, month=1, day=1))
-        _replace_attr('should_sign_param', lambda x: True)
+        _replace_attr('should_sign_header', lambda x: True)
         _replace_attr('use_double_uri_encode', True)
         _replace_attr('should_normalize_uri_path', True)
         _replace_attr('signed_body_value_type', awscrt.auth.AwsSignedBodyValueType.PAYLOAD)
         _replace_attr('signed_body_header_type', awscrt.auth.AwsSignedBodyHeaderType.NONE)
         _replace_attr('expiration_in_seconds', 987)
+        _replace_attr('omit_session_token', False)
 
         # check that we can replace multiple values at once
         new_cfg = orig_cfg.replace(region='us-west-3', service='aws-slow-blinking')
         self.assertEqual('us-west-3', new_cfg.region)
         self.assertEqual('aws-slow-blinking', new_cfg.service)
 
-        self.assertEqual(orig_cfg.should_sign_param, new_cfg.should_sign_param)
+        self.assertEqual(orig_cfg.should_sign_header, new_cfg.should_sign_header)
 
 
 SIGV4TEST_ACCESS_KEY_ID = 'AKIDEXAMPLE'

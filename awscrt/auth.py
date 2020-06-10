@@ -271,11 +271,11 @@ class AwsSigningConfig(NativeResource):
             `datetime.datetime.now(datetime.timezone.utc)` is used.
             Naive dates (lacking timezone info) are assumed to be in local time.
 
-        should_sign_param (Optional[Callable[[str], bool]]):
-            Optional function to control which parameters (header or query) are
+        should_sign_header (Optional[Callable[[str], bool]]):
+            Optional function to control which headers are
             a part of the canonical request.
 
-            Skipping auth-required params will result in an unusable signature.
+            Skipping auth-required headers will result in an unusable signature.
             Headers injected by the signing process are not skippable.
             This function does not override the internal check function
             (x-amzn-trace-id, user-agent), but rather supplements it.
@@ -301,6 +301,10 @@ class AwsSigningConfig(NativeResource):
         expiration_in_seconds (Optional[int]): If set, and signature_type is
             HTTP_REQUEST_QUERY_PARAMS, then signing will add "X-Amz-Expires"
             to the query string, equal to the value specified here.
+
+        omit_session_token (bool): If set True, the "X-Amz-Security-Token"
+            query param is omitted from the canonical request. The default
+            False should be used for most services.
     """
     __slots__ = ('_priv_should_sign_cb')
 
@@ -311,12 +315,13 @@ class AwsSigningConfig(NativeResource):
         'region',
         'service',
         'date',
-        'should_sign_param',
+        'should_sign_header',
         'use_double_uri_encode',
         'should_normalize_uri_path',
         'signed_body_value_type',
         'signed_body_header_type',
         'expiration_in_seconds',
+        'omit_session_token',
     )
 
     def __init__(self,
@@ -326,12 +331,13 @@ class AwsSigningConfig(NativeResource):
                  region,
                  service,
                  date=None,
-                 should_sign_param=None,
+                 should_sign_header=None,
                  use_double_uri_encode=True,
                  should_normalize_uri_path=True,
                  signed_body_value_type=AwsSignedBodyValueType.PAYLOAD,
                  signed_body_header_type=AwsSignedBodyHeaderType.NONE,
                  expiration_in_seconds=None,
+                 omit_session_token=False,
                  ):
 
         assert isinstance(algorithm, AwsSigningAlgorithm)
@@ -340,7 +346,7 @@ class AwsSigningConfig(NativeResource):
         assert isinstance_str(region)
         assert isinstance_str(service)
         assert isinstance(date, datetime.datetime) or date is None
-        assert callable(should_sign_param) or should_sign_param is None
+        assert callable(should_sign_header) or should_sign_header is None
         assert isinstance(signed_body_value_type, AwsSignedBodyValueType)
         assert isinstance(signed_body_header_type, AwsSignedBodyHeaderType)
         assert expiration_in_seconds is None or expiration_in_seconds > 0
@@ -361,13 +367,13 @@ class AwsSigningConfig(NativeResource):
                 epoch = datetime.datetime(1970, 1, 1, tzinfo=_utc)
                 timestamp = (date - epoch).total_seconds()
 
-        self._priv_should_sign_cb = should_sign_param
+        self._priv_should_sign_cb = should_sign_header
 
-        if should_sign_param is not None:
-            def should_sign_param_wrapper(name):
-                return should_sign_param(name=name)
+        if should_sign_header is not None:
+            def should_sign_header_wrapper(name):
+                return should_sign_header(name=name)
         else:
-            should_sign_param_wrapper = None
+            should_sign_header_wrapper = None
 
         if expiration_in_seconds is None:
             # C layer uses 0 to indicate None
@@ -381,12 +387,13 @@ class AwsSigningConfig(NativeResource):
             service,
             date,
             timestamp,
-            should_sign_param_wrapper,
+            should_sign_header_wrapper,
             use_double_uri_encode,
             should_normalize_uri_path,
             signed_body_value_type,
             signed_body_header_type,
-            expiration_in_seconds)
+            expiration_in_seconds,
+            omit_session_token)
 
     def replace(self, **kwargs):
         """
@@ -434,7 +441,7 @@ class AwsSigningConfig(NativeResource):
         return _awscrt.signing_config_get_date(self._binding)
 
     @property
-    def should_sign_param(self):
+    def should_sign_header(self):
         """
         Optional[Callable[[str], bool]]: Optional function to control which
         parameters (header or query) are a part of the canonical request.
@@ -491,6 +498,14 @@ class AwsSigningConfig(NativeResource):
         expiration = _awscrt.signing_config_get_expiration_in_seconds(self._binding)
         # C layer uses 0 to indicate None
         return None if expiration == 0 else expiration
+
+    @property
+    def omit_session_token(self):
+        """
+        bool: Whether the "X-Amz-Security-Token" query param is omitted
+        from the canonical request. This should be False for most services.
+        """
+        return _awscrt.signing_config_get_omit_session_token(self._binding)
 
 
 def aws_sign_request(http_request, signing_config):
