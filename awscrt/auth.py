@@ -298,10 +298,9 @@ class AwsSigningConfig(NativeResource):
             adds a header containing the canonical request's signed body value.
             Default is to not add a header.
 
-        expiration_in_seconds (int): If set non-zero, and signature_type is
+        expiration_in_seconds (Optional[int]): If set, and signature_type is
             HTTP_REQUEST_QUERY_PARAMS, then signing will add "X-Amz-Expires"
             to the query string, equal to the value specified here.
-            Otherwise, this has no effect.
     """
     __slots__ = ('_priv_should_sign_cb')
 
@@ -332,7 +331,7 @@ class AwsSigningConfig(NativeResource):
                  should_normalize_uri_path=True,
                  signed_body_value_type=AwsSignedBodyValueType.PAYLOAD,
                  signed_body_header_type=AwsSignedBodyHeaderType.NONE,
-                 expiration_in_seconds=0,
+                 expiration_in_seconds=None,
                  ):
 
         assert isinstance(algorithm, AwsSigningAlgorithm)
@@ -344,7 +343,7 @@ class AwsSigningConfig(NativeResource):
         assert callable(should_sign_param) or should_sign_param is None
         assert isinstance(signed_body_value_type, AwsSignedBodyValueType)
         assert isinstance(signed_body_header_type, AwsSignedBodyHeaderType)
-        assert expiration_in_seconds >= 0
+        assert expiration_in_seconds is None or expiration_in_seconds > 0
 
         super(AwsSigningConfig, self).__init__()
 
@@ -369,6 +368,10 @@ class AwsSigningConfig(NativeResource):
                 return should_sign_param(name=name)
         else:
             should_sign_param_wrapper = None
+
+        if expiration_in_seconds is None:
+            # C layer uses 0 to indicate None
+            expiration_in_seconds = 0
 
         self._binding = _awscrt.signing_config_new(
             algorithm,
@@ -481,11 +484,13 @@ class AwsSigningConfig(NativeResource):
     @property
     def expiration_in_seconds(self):
         """
-        int: If non-zero and signature_type is HTTP_REQUEST_QUERY_PARAMS,
+        Optional[int]: If set, and signature_type is HTTP_REQUEST_QUERY_PARAMS,
         then signing will add "X-Amz-Expires" to the query string, equal to the
-        value specified here. Otherwise, this has no effect.
+        value specified here. Otherwise, this is None has no effect.
         """
-        return _awscrt.signing_config_get_expiration_in_seconds(self._binding)
+        expiration = _awscrt.signing_config_get_expiration_in_seconds(self._binding)
+        # C layer uses 0 to indicate None
+        return None if expiration == 0 else expiration
 
 
 def aws_sign_request(http_request, signing_config):
