@@ -345,7 +345,6 @@ class AwsSigningConfig(NativeResource):
         assert isinstance(credentials_provider, AwsCredentialsProviderBase)
         assert isinstance_str(region)
         assert isinstance_str(service)
-        assert isinstance(date, datetime.datetime) or date is None
         assert callable(should_sign_header) or should_sign_header is None
         assert isinstance(signed_body_value_type, AwsSignedBodyValueType)
         assert isinstance(signed_body_header_type, AwsSignedBodyHeaderType)
