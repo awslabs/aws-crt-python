@@ -303,8 +303,8 @@ class AwsSigningConfig(NativeResource):
             to the query string, equal to the value specified here.
 
         omit_session_token (bool): If set True, the "X-Amz-Security-Token"
-            query param is omitted from the canonical request. The default
-            False should be used for most services.
+            query param is omitted from the canonical request.
+            The default False should be used for most services.
     """
     __slots__ = ('_priv_should_sign_cb')
 
@@ -444,9 +444,9 @@ class AwsSigningConfig(NativeResource):
     def should_sign_header(self):
         """
         Optional[Callable[[str], bool]]: Optional function to control which
-        parameters (header or query) are a part of the canonical request.
+        headers are a part of the canonical request.
 
-        Skipping auth-required params will result in an unusable signature.
+        Skipping auth-required headers will result in an unusable signature.
         Headers injected by the signing process are not skippable.
         This function does not override the internal check function
         (x-amzn-trace-id, user-agent), but rather supplements it. In particular,
