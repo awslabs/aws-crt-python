@@ -130,7 +130,7 @@ class TestSigningConfig(NativeResourceTest):
         signed_body_value_type = awscrt.auth.AwsSignedBodyValueType.EMPTY
         signed_body_header_type = awscrt.auth.AwsSignedBodyHeaderType.X_AMZ_CONTENT_SHA_256
         expiration_in_seconds = 123
-        omit_session_token=True
+        omit_session_token = True
 
         cfg = awscrt.auth.AwsSigningConfig(algorithm=algorithm,
                                            signature_type=signature_type,
