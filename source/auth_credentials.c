@@ -27,7 +27,7 @@ static const char *s_capsule_name_credentials_provider = "aws_credentials_provid
 
 static void s_credentials_capsule_destructor(PyObject *capsule) {
     struct aws_credentials *credentials = PyCapsule_GetPointer(capsule, s_capsule_name_credentials);
-    aws_credentials_destroy(credentials);
+    aws_credentials_release(credentials);
 }
 
 PyObject *aws_py_credentials_new(PyObject *self, PyObject *args) {
@@ -48,15 +48,19 @@ PyObject *aws_py_credentials_new(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    struct aws_credentials *credentials = aws_credentials_new_from_cursors(
-        aws_py_get_allocator(), &access_key_id, &secret_access_key, session_token.ptr ? &session_token : NULL);
+    struct aws_credentials *credentials = aws_credentials_new(
+        aws_py_get_allocator(),
+        access_key_id,
+        secret_access_key,
+        session_token,
+        UINT64_MAX /*expiration_timepoint_seconds*/);
     if (!credentials) {
         return PyErr_AwsLastError();
     }
 
     PyObject *capsule = PyCapsule_New(credentials, s_capsule_name_credentials, s_credentials_capsule_destructor);
     if (!capsule) {
-        aws_credentials_destroy(credentials);
+        aws_credentials_release(credentials);
         return NULL;
     }
 
@@ -84,26 +88,26 @@ static PyObject *s_credentials_get_member_str(PyObject *args, enum credentials_m
         return NULL;
     }
 
-    const struct aws_string *str;
+    struct aws_byte_cursor cursor;
     switch (member) {
         case CREDENTIALS_MEMBER_ACCESS_KEY_ID:
-            str = credentials->access_key_id;
+            cursor = aws_credentials_get_access_key_id(credentials);
             break;
         case CREDENTIALS_MEMBER_SECRET_ACCESS_KEY:
-            str = credentials->secret_access_key;
+            cursor = aws_credentials_get_secret_access_key(credentials);
             break;
         case CREDENTIALS_MEMBER_SESSION_TOKEN:
-            str = credentials->session_token;
+            cursor = aws_credentials_get_session_token(credentials);
             break;
         default:
             AWS_FATAL_ASSERT(0);
     }
 
-    if (!str) {
+    if (member == CREDENTIALS_MEMBER_SESSION_TOKEN && cursor.len == 0) {
         Py_RETURN_NONE;
     }
 
-    return PyString_FromAwsString(str);
+    return PyString_FromAwsByteCursor(&cursor);
 }
 
 PyObject *aws_py_credentials_access_key_id(PyObject *self, PyObject *args) {
@@ -166,51 +170,9 @@ struct aws_credentials_provider *aws_py_get_credentials_provider(PyObject *crede
         credentials_provider_binding);
 }
 
-static int s_aws_string_to_cstr_and_ssize(
-    const struct aws_string *source,
-    const char **out_cstr,
-    Py_ssize_t *out_ssize) {
-
-    *out_cstr = NULL;
-    *out_ssize = 0;
-    if (source) {
-        if (source->len > PY_SSIZE_T_MAX) {
-            return aws_raise_error(AWS_ERROR_OVERFLOW_DETECTED);
-        }
-        *out_cstr = aws_string_c_str(source);
-        *out_ssize = source->len;
-    }
-    return AWS_OP_SUCCESS;
-}
-
 /* Completion callback for get_credentials() */
-static void s_on_get_credentials_complete(struct aws_credentials *credentials, void *user_data) {
+static void s_on_get_credentials_complete(struct aws_credentials *credentials, int error_code, void *user_data) {
     PyObject *on_complete_cb = user_data;
-
-    /* NOTE: This callback doesn't currently supply an error_code, but it should. */
-    int error_code = AWS_ERROR_UNKNOWN;
-
-    const char *access_key_id = NULL;
-    Py_ssize_t access_key_id_len = 0;
-    const char *secret_access_key = NULL;
-    Py_ssize_t secret_access_key_len = 0;
-    const char *session_token = NULL;
-    Py_ssize_t session_token_len = 0;
-
-    if (credentials) {
-        error_code = AWS_ERROR_SUCCESS;
-
-        if (s_aws_string_to_cstr_and_ssize(credentials->access_key_id, &access_key_id, &access_key_id_len)) {
-            error_code = aws_last_error();
-        }
-        if (s_aws_string_to_cstr_and_ssize(
-                credentials->secret_access_key, &secret_access_key, &secret_access_key_len)) {
-            error_code = aws_last_error();
-        }
-        if (s_aws_string_to_cstr_and_ssize(credentials->session_token, &session_token, &session_token_len)) {
-            error_code = aws_last_error();
-        }
-    }
 
     /*************** GIL ACQUIRE ***************/
     PyGILState_STATE state;
@@ -218,16 +180,28 @@ static void s_on_get_credentials_complete(struct aws_credentials *credentials, v
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
-    PyObject *result = PyObject_CallFunction(
-        on_complete_cb,
-        "(is#s#s#)",
-        error_code,
-        access_key_id,
-        access_key_id_len,
-        secret_access_key,
-        secret_access_key_len,
-        session_token,
-        session_token_len);
+    /* Create capsule to reference these aws_credentials */
+    PyObject *capsule = NULL;
+    if (!error_code) {
+        AWS_FATAL_ASSERT(credentials);
+
+        capsule = PyCapsule_New(credentials, s_capsule_name_credentials, s_credentials_capsule_destructor);
+        if (capsule) {
+            aws_credentials_acquire(credentials);
+        } else {
+            /* Unlikely, but if PyCapsule_New() raises exception, we still need to fire completion callback.
+             * So we'll translate python exception to AWS error_code and pass that. */
+            aws_py_raise_error();
+            error_code = aws_last_error();
+        }
+    }
+
+    if (capsule == NULL) {
+        capsule = Py_None;
+        Py_INCREF(capsule);
+    }
+
+    PyObject *result = PyObject_CallFunction(on_complete_cb, "(iO)", error_code, capsule);
     if (result) {
         Py_DECREF(result);
     } else {
@@ -235,6 +209,7 @@ static void s_on_get_credentials_complete(struct aws_credentials *credentials, v
     }
 
     Py_DECREF(on_complete_cb);
+    Py_DECREF(capsule);
 
     PyGILState_Release(state);
     /*************** GIL RELEASE ***************/

@@ -244,20 +244,17 @@ def websockets_with_default_aws_signing(region, credentials_provider, websocket_
     """
     _check_required_kwargs(**kwargs)
 
-    def _should_sign_param(name, **kwargs):
-        blacklist = ['x-amz-date', 'x-amz-security-token']
-        return not (name.lower() in blacklist)
-
     def _sign_websocket_handshake_request(transform_args, **kwargs):
         # transform_args need to know when transform is done
         try:
             signing_config = awscrt.auth.AwsSigningConfig(
-                algorithm=awscrt.auth.AwsSigningAlgorithm.SigV4QueryParam,
+                algorithm=awscrt.auth.AwsSigningAlgorithm.V4,
+                signature_type=awscrt.auth.AwsSignatureType.HTTP_REQUEST_QUERY_PARAMS,
                 credentials_provider=credentials_provider,
                 region=region,
                 service='iotdevicegateway',
-                should_sign_param=_should_sign_param,
-                body_signing_type=awscrt.auth.AwsBodySigningConfigType.BodySigningOff)
+                omit_session_token=True,  # IoT is weird and does not sign X-Amz-Security-Token
+            )
 
             signing_future = awscrt.auth.aws_sign_request(transform_args.http_request, signing_config)
             signing_future.add_done_callback(lambda x: transform_args.set_done(x.exception()))
