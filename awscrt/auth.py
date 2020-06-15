@@ -299,7 +299,7 @@ class AwsSigningConfig(NativeResource):
             Default is to not add a header.
 
         expiration_in_seconds (Optional[int]): If set, and signature_type is
-            HTTP_REQUEST_QUERY_PARAMS, then signing will add "X-Amz-Expires"
+            `HTTP_REQUEST_QUERY_PARAMS`, then signing will add "X-Amz-Expires"
             to the query string, equal to the value specified here.
 
         omit_session_token (bool): If set True, the "X-Amz-Security-Token"
@@ -490,7 +490,7 @@ class AwsSigningConfig(NativeResource):
     @property
     def expiration_in_seconds(self):
         """
-        Optional[int]: If set, and signature_type is HTTP_REQUEST_QUERY_PARAMS,
+        Optional[int]: If set, and signature_type is `HTTP_REQUEST_QUERY_PARAMS`,
         then signing will add "X-Amz-Expires" to the query string, equal to the
         value specified here. Otherwise, this is None has no effect.
         """

@@ -274,7 +274,7 @@ with query param updates applied to the signing result.</p>
 
 <dl class="py class">
 <dt id="awscrt.auth.AwsSigningConfig">
-<em class="property">class </em><code class="sig-prename descclassname">awscrt.auth.</code><code class="sig-name descname">AwsSigningConfig</code><span class="sig-paren">(</span><em class="sig-param">algorithm</em>, <em class="sig-param">signature_type</em>, <em class="sig-param">credentials_provider</em>, <em class="sig-param">region</em>, <em class="sig-param">service</em>, <em class="sig-param">date=None</em>, <em class="sig-param">should_sign_param=None</em>, <em class="sig-param">use_double_uri_encode=False</em>, <em class="sig-param">should_normalize_uri_path=True</em>, <em class="sig-param">signed_body_value_type=&lt;AwsSignedBodyValueType.PAYLOAD: 1&gt;</em>, <em class="sig-param">signed_body_header_type=&lt;AwsSignedBodyHeaderType.NONE: 0&gt;</em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.auth.AwsSigningConfig" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">awscrt.auth.</code><code class="sig-name descname">AwsSigningConfig</code><span class="sig-paren">(</span><em class="sig-param">algorithm</em>, <em class="sig-param">signature_type</em>, <em class="sig-param">credentials_provider</em>, <em class="sig-param">region</em>, <em class="sig-param">service</em>, <em class="sig-param">date=None</em>, <em class="sig-param">should_sign_header=None</em>, <em class="sig-param">use_double_uri_encode=True</em>, <em class="sig-param">should_normalize_uri_path=True</em>, <em class="sig-param">signed_body_value_type=&lt;AwsSignedBodyValueType.PAYLOAD: 1&gt;</em>, <em class="sig-param">signed_body_header_type=&lt;AwsSignedBodyHeaderType.NONE: 0&gt;</em>, <em class="sig-param">expiration_in_seconds=None</em>, <em class="sig-param">omit_session_token=False</em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.auth.AwsSigningConfig" title="Permalink to this definition">¶</a></dt>
 <dd><p>Configuration for use in AWS-related signing.</p>
 <p>AwsSigningConfig is immutable.</p>
 <p>It is good practice to use a new config for each signature, or the date might get too old.</p>
@@ -292,9 +292,9 @@ to fetch signing credentials with.</p></li>
 signing process. If None is provided then
 <cite>datetime.datetime.now(datetime.timezone.utc)</cite> is used.
 Naive dates (lacking timezone info) are assumed to be in local time.</p></li>
-<li><p><strong>should_sign_param</strong> (<em>Optional</em><em>[</em><em>Callable</em><em>[</em><em>[</em><em>str</em><em>]</em><em>, </em><em>bool</em><em>]</em><em>]</em>) – <p>Optional function to control which parameters (header or query) are
+<li><p><strong>should_sign_header</strong> (<em>Optional</em><em>[</em><em>Callable</em><em>[</em><em>[</em><em>str</em><em>]</em><em>, </em><em>bool</em><em>]</em><em>]</em>) – <p>Optional function to control which headers are
 a part of the canonical request.</p>
-<p>Skipping auth-required params will result in an unusable signature.
+<p>Skipping auth-required headers will result in an unusable signature.
 Headers injected by the signing process are not skippable.
 This function does not override the internal check function
 (x-amzn-trace-id, user-agent), but rather supplements it.
@@ -302,9 +302,9 @@ In particular, a header will get signed if and only if it returns
 true to both the internal check (skips x-amzn-trace-id, user-agent)
 and this function (if defined).</p>
 </p></li>
-<li><p><strong>use_double_uri_encode</strong> (<em>bool</em>) – Set True to double-encode the resource
-path when constructing the canonical request. By default, all
-services except S3 use double encoding.</p></li>
+<li><p><strong>use_double_uri_encode</strong> (<em>bool</em>) – Whether to double-encode the resource path
+when constructing the canonical request (assuming the path is already
+encoded). Default is True. All services except S3 use double encoding.</p></li>
 <li><p><strong>should_normalize_uri_path</strong> (<em>bool</em>) – Whether the resource paths are
 normalized when building the canonical request.</p></li>
 <li><p><strong>signed_body_value_type</strong> (<a class="reference internal" href="#awscrt.auth.AwsSignedBodyValueType" title="awscrt.auth.AwsSignedBodyValueType"><em>AwsSignedBodyValueType</em></a>) – Controls what goes in
@@ -313,6 +313,12 @@ of the actual payload.</p></li>
 <li><p><strong>signed_body_header_type</strong> (<a class="reference internal" href="#awscrt.auth.AwsSignedBodyHeaderType" title="awscrt.auth.AwsSignedBodyHeaderType"><em>AwsSignedBodyHeaderType</em></a>) – Controls if signing
 adds a header containing the canonical request’s signed body value.
 Default is to not add a header.</p></li>
+<li><p><strong>expiration_in_seconds</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – If set, and signature_type is
+<cite>HTTP_REQUEST_QUERY_PARAMS</cite>, then signing will add “X-Amz-Expires”
+to the query string, equal to the value specified here.</p></li>
+<li><p><strong>omit_session_token</strong> (<em>bool</em>) – If set True, the “X-Amz-Security-Token”
+query param is omitted from the canonical request.
+The default False should be used for most services.</p></li>
 </ul>
 </dd>
 </dl>
@@ -393,11 +399,11 @@ at time of object construction is used.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="awscrt.auth.AwsSigningConfig.should_sign_param">
-<em class="property">property </em><code class="sig-name descname">should_sign_param</code><a class="headerlink" href="#awscrt.auth.AwsSigningConfig.should_sign_param" title="Permalink to this definition">¶</a></dt>
+<dt id="awscrt.auth.AwsSigningConfig.should_sign_header">
+<em class="property">property </em><code class="sig-name descname">should_sign_header</code><a class="headerlink" href="#awscrt.auth.AwsSigningConfig.should_sign_header" title="Permalink to this definition">¶</a></dt>
 <dd><p>Optional function to control which
-parameters (header or query) are a part of the canonical request.</p>
-<p>Skipping auth-required params will result in an unusable signature.
+headers are a part of the canonical request.</p>
+<p>Skipping auth-required headers will result in an unusable signature.
 Headers injected by the signing process are not skippable.
 This function does not override the internal check function
 (x-amzn-trace-id, user-agent), but rather supplements it. In particular,
@@ -414,7 +420,7 @@ the internal check (skips x-amzn-trace-id, user-agent) and this function (if def
 <dt id="awscrt.auth.AwsSigningConfig.use_double_uri_encode">
 <em class="property">property </em><code class="sig-name descname">use_double_uri_encode</code><a class="headerlink" href="#awscrt.auth.AwsSigningConfig.use_double_uri_encode" title="Permalink to this definition">¶</a></dt>
 <dd><p>Whether to double-encode the resource path when constructing
-the canonical request.</p>
+the canonical request (assuming the path is already encoded).</p>
 <p>By default, all services except S3 use double encoding.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
@@ -454,6 +460,31 @@ the canonical request’s signed body value.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
 <dd class="field-odd"><p><a class="reference internal" href="#awscrt.auth.AwsSignedBodyHeaderType" title="awscrt.auth.AwsSignedBodyHeaderType">AwsSignedBodyHeaderType</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.auth.AwsSigningConfig.expiration_in_seconds">
+<em class="property">property </em><code class="sig-name descname">expiration_in_seconds</code><a class="headerlink" href="#awscrt.auth.AwsSigningConfig.expiration_in_seconds" title="Permalink to this definition">¶</a></dt>
+<dd><p>If set, and signature_type is <cite>HTTP_REQUEST_QUERY_PARAMS</cite>,
+then signing will add “X-Amz-Expires” to the query string, equal to the
+value specified here. Otherwise, this is None has no effect.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Optional[int]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.auth.AwsSigningConfig.omit_session_token">
+<em class="property">property </em><code class="sig-name descname">omit_session_token</code><a class="headerlink" href="#awscrt.auth.AwsSigningConfig.omit_session_token" title="Permalink to this definition">¶</a></dt>
+<dd><p>Whether the “X-Amz-Security-Token” query param is omitted
+from the canonical request. This should be False for most services.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>bool</p>
 </dd>
 </dl>
 </dd></dl>
