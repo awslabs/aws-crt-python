@@ -116,8 +116,8 @@ PyObject *aws_py_http_headers_add_pairs(PyObject *self, PyObject *args) {
             goto done;
         }
 
-        struct aws_byte_cursor name = aws_byte_cursor_from_pystring(PyTuple_GET_ITEM(py_pair, 0));
-        struct aws_byte_cursor value = aws_byte_cursor_from_pystring(PyTuple_GET_ITEM(py_pair, 1));
+        struct aws_byte_cursor name = aws_byte_cursor_from_pyunicode(PyTuple_GET_ITEM(py_pair, 0));
+        struct aws_byte_cursor value = aws_byte_cursor_from_pyunicode(PyTuple_GET_ITEM(py_pair, 1));
         if (!name.ptr || !value.ptr) {
             PyErr_SetString(PyExc_TypeError, type_errmsg);
             goto done;
@@ -162,7 +162,7 @@ PyObject *aws_py_http_headers_get(PyObject *self, PyObject *args) {
         return py_default;
     }
 
-    return PyString_FromAwsByteCursor(&value);
+    return PyUnicode_FromAwsByteCursor(&value);
 }
 
 static PyObject *s_py_tuple_from_header(struct aws_http_header header) {
@@ -170,12 +170,12 @@ static PyObject *s_py_tuple_from_header(struct aws_http_header header) {
     PyObject *py_value = NULL;
     PyObject *py_pair = NULL;
 
-    py_name = PyString_FromAwsByteCursor(&header.name);
+    py_name = PyUnicode_FromAwsByteCursor(&header.name);
     if (!py_name) {
         goto error;
     }
 
-    py_value = PyString_FromAwsByteCursor(&header.value);
+    py_value = PyUnicode_FromAwsByteCursor(&header.value);
     if (!py_value) {
         goto error;
     }

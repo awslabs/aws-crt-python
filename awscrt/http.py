@@ -20,7 +20,7 @@ All network operations in `awscrt.http` are asynchronous.
 from __future__ import absolute_import
 import _awscrt
 from concurrent.futures import Future
-from awscrt import NativeResource, isinstance_str
+from awscrt import NativeResource
 import awscrt.exceptions
 from awscrt.io import ClientBootstrap, EventLoopGroup, DefaultHostResolver, InputStream, TlsConnectionOptions, SocketOptions
 from enum import IntEnum
@@ -40,7 +40,7 @@ class HttpConnectionBase(NativeResource):
     __slots__ = ('_shutdown_future', '_version')
 
     def __init__(self):
-        super(HttpConnectionBase, self).__init__()
+        super().__init__()
 
         self._shutdown_future = Future()
 
@@ -123,7 +123,7 @@ class HttpClientConnection(HttpConnectionBase):
             Otherwise, it will contain an exception.
         """
         assert isinstance(bootstrap, ClientBootstrap) or bootstrap is None
-        assert isinstance_str(host_name)
+        assert isinstance(host_name, str)
         assert isinstance(port, int)
         assert isinstance(tls_connection_options, TlsConnectionOptions) or tls_connection_options is None
         assert isinstance(socket_options, SocketOptions) or socket_options is None
@@ -236,7 +236,7 @@ class HttpStreamBase(NativeResource):
     __slots__ = ('_connection', '_completion_future', '_on_body_cb')
 
     def __init__(self, connection, on_body=None):
-        super(HttpStreamBase, self).__init__()
+        super().__init__()
         self._connection = connection
         self._completion_future = Future()
         self._on_body_cb = on_body
@@ -278,7 +278,7 @@ class HttpClientStream(HttpStreamBase):
         assert callable(on_response) or on_response is None
         assert callable(on_body) or on_body is None
 
-        super(HttpClientStream, self).__init__(connection, on_body)
+        super().__init__(connection, on_body)
 
         self._on_response_cb = on_response
         self._response_status_code = None
@@ -328,7 +328,7 @@ class HttpMessageBase(NativeResource):
     def __init__(self, binding, headers, body_stream=None):
         assert isinstance(headers, HttpHeaders)
 
-        super(HttpMessageBase, self).__init__()
+        super().__init__()
         self._binding = binding
         self._headers = headers
 
@@ -374,7 +374,7 @@ class HttpRequest(HttpMessageBase):
             headers = HttpHeaders()
 
         binding = _awscrt.http_message_new_request(headers)
-        super(HttpRequest, self).__init__(binding, headers, body_stream)
+        super().__init__(binding, headers, body_stream)
         self.method = method
         self.path = path
 
@@ -424,7 +424,7 @@ class HttpHeaders(NativeResource):
     __slots__ = ()
 
     def __init__(self, name_value_pairs=None):
-        super(HttpHeaders, self).__init__()
+        super().__init__()
         self._binding = _awscrt.http_headers_new()
         if name_value_pairs:
             self.add_pairs(name_value_pairs)
@@ -445,8 +445,8 @@ class HttpHeaders(NativeResource):
             name (str): Name.
             value (str): Value.
         """
-        assert isinstance_str(name)
-        assert isinstance_str(value)
+        assert isinstance(name, str)
+        assert isinstance(value, str)
         _awscrt.http_headers_add(self._binding, name, value)
 
     def add_pairs(self, name_value_pairs):
@@ -466,8 +466,8 @@ class HttpHeaders(NativeResource):
             name (str): Name.
             value (str): Value.
         """
-        assert isinstance_str(name)
-        assert isinstance_str(value)
+        assert isinstance(name, str)
+        assert isinstance(value, str)
         _awscrt.http_headers_set(self._binding, name, value)
 
     def get_values(self, name):
@@ -480,7 +480,7 @@ class HttpHeaders(NativeResource):
         Returns:
             Iterator[Tuple[str, str]]:
         """
-        assert isinstance_str(name)
+        assert isinstance(name, str)
         name = name.lower()
         for i in range(_awscrt.http_headers_count(self._binding)):
             name_i, value_i = _awscrt.http_headers_get_index(self._binding, i)
@@ -499,7 +499,7 @@ class HttpHeaders(NativeResource):
         Returns:
             str:
         """
-        assert isinstance_str(name)
+        assert isinstance(name, str)
         return _awscrt.http_headers_get(self._binding, name, default)
 
     def remove(self, name):
@@ -510,7 +510,7 @@ class HttpHeaders(NativeResource):
         Args:
             name (str): Header name.
         """
-        assert isinstance_str(name)
+        assert isinstance(name, str)
         _awscrt.http_headers_remove(self._binding, name)
 
     def remove_value(self, name, value):
@@ -522,8 +522,8 @@ class HttpHeaders(NativeResource):
             name (str): Name.
             value (str): Value.
         """
-        assert isinstance_str(name)
-        assert isinstance_str(value)
+        assert isinstance(name, str)
+        assert isinstance(value, str)
         _awscrt.http_headers_remove_value(self._binding, name, value)
 
     def clear(self):
@@ -552,7 +552,7 @@ class HttpProxyAuthenticationType(IntEnum):
     """Username and password"""
 
 
-class HttpProxyOptions(object):
+class HttpProxyOptions:
     """
     Proxy options for HTTP clients.
 

@@ -16,33 +16,20 @@ import awscrt.exceptions
 from awscrt.http import HttpClientConnection, HttpClientStream, HttpHeaders, HttpProxyOptions, HttpRequest, HttpVersion
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions
 from concurrent.futures import Future
-from io import BytesIO, open  # Python2's built-in open() doesn't return a stream
+from http.server import HTTPServer, SimpleHTTPRequestHandler
+from io import BytesIO
 import os
 import ssl
 from test import NativeResourceTest
 import threading
-try:
-    from urllib.parse import urlparse
-except ImportError:
-    from urlparse import urlparse
 import unittest
-
-# Use a built-in Python HTTP server to test the awscrt's HTTP client
-try:
-    from http.server import HTTPServer, SimpleHTTPRequestHandler
-except ImportError:
-    # Simple HTTP server lives in a different places in Python3 vs Python2:
-    # http.server.HTTPServer               == SocketServer.TCPServer
-    # http.server.SimpleHTTPRequestHandler == SimpleHTTPServer.SimpleHTTPRequestHandler
-    from SimpleHTTPServer import SimpleHTTPRequestHandler
-    import SocketServer
-    HTTPServer = SocketServer.TCPServer
+from urllib.parse import urlparse
 
 PROXY_HOST = os.environ.get('proxyhost')
 PROXY_PORT = int(os.environ.get('proxyport', '0'))
 
 
-class Response(object):
+class Response:
     """Holds contents of incoming response"""
 
     def __init__(self):

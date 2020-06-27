@@ -134,7 +134,7 @@ PyObject *aws_py_http_message_get_request_method(PyObject *self, PyObject *args)
         Py_RETURN_NONE;
     }
 
-    return PyString_FromAwsByteCursor(&method);
+    return PyUnicode_FromAwsByteCursor(&method);
 }
 
 PyObject *aws_py_http_message_set_request_method(PyObject *self, PyObject *args) {
@@ -168,7 +168,7 @@ PyObject *aws_py_http_message_get_request_path(PyObject *self, PyObject *args) {
     if (aws_http_message_get_request_path(binding->native, &path)) {
         Py_RETURN_NONE;
     }
-    return PyString_FromAwsByteCursor(&path);
+    return PyUnicode_FromAwsByteCursor(&path);
 }
 
 PyObject *aws_py_http_message_set_request_path(PyObject *self, PyObject *args) {

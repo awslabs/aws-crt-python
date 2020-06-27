@@ -107,7 +107,7 @@ static PyObject *s_credentials_get_member_str(PyObject *args, enum credentials_m
         Py_RETURN_NONE;
     }
 
-    return PyString_FromAwsByteCursor(&cursor);
+    return PyUnicode_FromAwsByteCursor(&cursor);
 }
 
 PyObject *aws_py_credentials_access_key_id(PyObject *self, PyObject *args) {

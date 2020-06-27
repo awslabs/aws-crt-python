@@ -96,7 +96,7 @@ def check_cmake_installed():
             raise Exception("'cmake' not found. cmake must be installed to build from source.")
 
 
-class AwsLib(object):
+class AwsLib:
     def __init__(self, name, extra_cmake_args=[]):
         self.name = name
         self.extra_cmake_args = extra_cmake_args
@@ -192,7 +192,7 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
         self.library_dirs.append(os.path.join(DEP_INSTALL_PATH, lib_dir))
 
         # continue with normal build_ext.run()
-        setuptools.command.build_ext.build_ext.run(self)  # python2 breaks if we use super().run()
+        super().run()
 
 
 def awscrt_ext():
@@ -252,15 +252,11 @@ setuptools.setup(
     url="https://github.com/awslabs/aws-crt-python",
     packages=['awscrt'],
     classifiers=[
-        "Programming Language :: Python :: 2",
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: OS Independent",
     ],
-    install_requires=[
-        'enum34;python_version<"3.4"',
-        'futures;python_version<"3.2"',
-    ],
+    python_requires='>=3.5',
     ext_modules=[awscrt_ext()],
     cmdclass={'build_ext': awscrt_build_ext},
     test_suite='test',

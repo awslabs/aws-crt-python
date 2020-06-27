@@ -13,7 +13,6 @@
 
 from awscrt.http import HttpHeaders, HttpRequest
 import awscrt.io
-from io import open  # Python2's built-in open() doesn't return a stream
 from test import NativeResourceTest
 import unittest
 
@@ -59,6 +58,20 @@ class TestHttpHeaders(NativeResourceTest):
         h.add('Host', 'example4.org')
         h.set('Host', 'example5.org')
         self.assertEqual(['example5.org'], list(h.get_values('Host')))
+
+    def test_unicode(self):
+        # test adding unicode values in all the different ways
+        h = HttpHeaders([('a', 'ሴ')])
+        self.assertEqual('ሴ', h.get('a'))
+
+        h.set('b', '𦉘')
+        self.assertEqual('𦉘', h.get('b'))
+
+        h.add('c', '👁👄👁')
+        self.assertEqual('👁👄👁', h.get('c'))
+
+        h.add_pairs([('d', 'ⓤţḟ⁻❽')])
+        self.assertEqual('ⓤţḟ⁻❽', h.get('d'))
 
     def test_get_none(self):
         h = HttpHeaders()
@@ -151,7 +164,7 @@ class TestHttpMessage(NativeResourceTest):
         headers.add('Cookie', 'a=1')
         self.assertEqual([('Cookie', 'a=1')], list(headers))
 
-    def test_utf8(self):
+    def test_unicode(self):
         request = HttpRequest(path='/ሴ')
         self.assertEqual('/ሴ', request.path)
 

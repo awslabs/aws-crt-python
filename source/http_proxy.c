@@ -30,7 +30,7 @@ bool aws_py_http_proxy_options_init(struct aws_http_proxy_options *proxy_options
     PyObject *py_password = NULL;
 
     py_host_name = PyObject_GetAttrString(py_proxy_options, "host_name");
-    proxy_options->host = aws_byte_cursor_from_pystring(py_host_name);
+    proxy_options->host = aws_byte_cursor_from_pyunicode(py_host_name);
     if (!proxy_options->host.ptr) {
         PyErr_SetString(PyExc_TypeError, "HttpProxyOptions.host_name is not a valid string");
         goto done;
@@ -58,7 +58,7 @@ bool aws_py_http_proxy_options_init(struct aws_http_proxy_options *proxy_options
 
     py_username = PyObject_GetAttrString(py_proxy_options, "auth_username");
     if (py_username != Py_None) {
-        proxy_options->auth_username = aws_byte_cursor_from_pystring(py_username);
+        proxy_options->auth_username = aws_byte_cursor_from_pyunicode(py_username);
         if (!proxy_options->auth_username.ptr) {
             PyErr_SetString(PyExc_TypeError, "HttpProxyOptions.auth_username is not a valid string");
             goto done;
@@ -67,7 +67,7 @@ bool aws_py_http_proxy_options_init(struct aws_http_proxy_options *proxy_options
 
     py_password = PyObject_GetAttrString(py_proxy_options, "auth_password");
     if (py_password != Py_None) {
-        proxy_options->auth_password = aws_byte_cursor_from_pystring(py_password);
+        proxy_options->auth_password = aws_byte_cursor_from_pyunicode(py_password);
         if (!proxy_options->auth_password.ptr) {
             PyErr_SetString(PyExc_TypeError, "HttpProxyOptions.auth_password is not a valid string");
             goto done;
