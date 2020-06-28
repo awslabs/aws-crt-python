@@ -14,7 +14,6 @@ from awscrt.io import ClientBootstrap
 from concurrent.futures import Future
 import datetime
 from enum import IntEnum
-import time
 
 
 class AwsCredentials(NativeResource):
