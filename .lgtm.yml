@@ -2,3 +2,7 @@ extraction:
   python:
     python_setup:
       version: 3
+  cpp:
+    after_prepare:
+      # not sure why cpp builds are using python 2, but this should stop it
+      - ln -s `which python3` `which python`
