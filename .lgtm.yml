@@ -1,8 +1,5 @@
 extraction:
-  python:
-    python_setup:
-      version: 3
   cpp:
-    after_prepare:
+    index:
       # not sure why cpp builds are using python 2, but this should stop it
-      - alias python=python3
+      build_command: "python3 setup.py build"
