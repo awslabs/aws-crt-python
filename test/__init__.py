@@ -67,7 +67,7 @@ class NativeResourceTest(unittest.TestCase):
                 print('  gc.referrers():', len(referrers))
                 for r in referrers:
                     if isinstance(r, types.FrameType):
-                        print('  -', inspect.getframeinfo(r))
+                        _printobj('  -', inspect.getframeinfo(r))
                     else:
                         _printobj('  -', r)
 

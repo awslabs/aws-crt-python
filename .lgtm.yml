@@ -5,4 +5,4 @@ extraction:
   cpp:
     after_prepare:
       # not sure why cpp builds are using python 2, but this should stop it
-      - ln -s `which python3` `which python`
+      - alias python=python3
