@@ -543,10 +543,11 @@ class Connection(NativeResource):
         future = Future()
         packet_id = 0
 
-        def unsuback(packet_id):
-            future.set_result(dict(
-                packet_id=packet_id
-            ))
+        def unsuback(packet_id, error_code):
+            if error_code != 0:
+                future.set_exception(awscrt.exceptions.from_code(error_code))
+            else:
+                future.set_result(dict(packet_id=packet_id))
 
         try:
             packet_id = _awscrt.mqtt_client_connection_unsubscribe(self._binding, topic, unsuback)
@@ -626,10 +627,11 @@ class Connection(NativeResource):
         future = Future()
         packet_id = 0
 
-        def puback(packet_id):
-            future.set_result(dict(
-                packet_id=packet_id
-            ))
+        def puback(packet_id, error_code):
+            if error_code != 0:
+                future.set_exception(awscrt.exceptions.from_code(error_code))
+            else:
+                future.set_result(dict(packet_id=packet_id))
 
         try:
             packet_id = _awscrt.mqtt_client_connection_publish(self._binding, topic, payload, qos.value, retain, puback)
