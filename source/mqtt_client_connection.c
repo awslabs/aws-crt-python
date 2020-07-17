@@ -692,7 +692,6 @@ static void s_publish_complete(
     int error_code,
     void *userdata) {
     (void)connection;
-    (void)error_code;
 
     struct publish_complete_userdata *metadata = userdata;
     assert(metadata);
@@ -703,7 +702,7 @@ static void s_publish_complete(
     }
 
     if (metadata->callback != Py_None) {
-        PyObject *result = PyObject_CallFunction(metadata->callback, "(H)", packet_id);
+        PyObject *result = PyObject_CallFunction(metadata->callback, "(Hi)", packet_id, error_code);
         if (result) {
             Py_DECREF(result);
         } else {
@@ -956,7 +955,6 @@ static void s_unsuback_callback(
     int error_code,
     void *userdata) {
     (void)connection;
-    (void)error_code;
 
     PyObject *callback = userdata;
 
@@ -965,7 +963,7 @@ static void s_unsuback_callback(
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
-    PyObject *result = PyObject_CallFunction(callback, "(H)", packet_id);
+    PyObject *result = PyObject_CallFunction(callback, "(Hi)", packet_id, error_code);
     if (result) {
         Py_DECREF(result);
     } else {

@@ -553,20 +553,6 @@ PyDoc_STRVAR(s_module_doc, "C extension for binding AWS implementations of MQTT,
  * Module Init
  ******************************************************************************/
 
-static void s_module_free(void *userdata) {
-    (void)userdata;
-    if (s_logger_init) {
-        aws_logger_clean_up(&s_logger);
-    }
-
-    aws_hash_table_clean_up(&s_py_to_aws_error_map);
-    aws_hash_table_clean_up(&s_aws_to_py_error_map);
-
-    aws_mqtt_library_clean_up();
-    aws_auth_library_clean_up();
-    aws_http_library_clean_up();
-}
-
 PyMODINIT_FUNC PyInit__awscrt(void) {
     static struct PyModuleDef s_module_def = {
         PyModuleDef_HEAD_INIT,
@@ -574,10 +560,10 @@ PyMODINIT_FUNC PyInit__awscrt(void) {
         s_module_doc,
         -1, /* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */
         s_module_methods,
-        NULL,          /* slots for multi-phase initialization */
-        NULL,          /* traversal fn to call during GC traversal */
-        NULL,          /* clear fn to call during GC clear */
-        s_module_free, /* fn to call during deallocation of the module object */
+        NULL, /* slots for multi-phase initialization */
+        NULL, /* traversal fn to call during GC traversal */
+        NULL, /* clear fn to call during GC clear */
+        NULL, /* fn to call during deallocation of the module object */
     };
 
     PyObject *m = PyModule_Create(&s_module_def);
