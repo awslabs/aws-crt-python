@@ -1096,12 +1096,8 @@ PyObject *aws_py_mqtt_client_connection_resubscribe_existing_topics(PyObject *se
         /* C will not be invoking the python callback */
         Py_DECREF(suback_callback);
 
-        /* Don't raise a Python exception if error is AWS_ERROR_MQTT_NO_TOPICS_FOR_RESUBSCRIBE.
-         * This is a harmless error, we'll just return None instead of a msg_id */
         int aws_err = aws_last_error();
-        if (aws_err == AWS_ERROR_MQTT_NO_TOPICS_FOR_RESUBSCRIBE) {
-            Py_RETURN_NONE;
-        } else {
+        if (aws_err) {
             PyErr_SetAwsLastError();
             return NULL;
         }
