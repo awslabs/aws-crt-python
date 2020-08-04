@@ -60,6 +60,13 @@ PyObject *PyErr_AwsLastError(void);
  * The Python error indicator MUST be set and the GIL MUST be held when calling this function. */
 int aws_py_raise_error(void);
 
+//! DEBUG
+PyObject *aws_py_trace_system_init(PyObject *self, PyObject *args);
+PyObject *aws_py_trace_system_clean_up(PyObject *self, PyObject *args);
+PyObject *aws_py_trace_event_begin(PyObject *self, PyObject *args);
+PyObject *aws_py_trace_event_end(PyObject *self, PyObject *args);
+//! DEBUG
+
 /**
  * Return built-in Python exception type corresponding to an AWS_ERROR_ code.
  * Ex: AWS_ERROR_OOM -> MemoryError.

@@ -22,6 +22,11 @@
 
 #include <memoryobject.h>
 
+/*
+    DEBUG
+*/
+#include <aws/common/trace_event.h>
+
 static struct aws_logger s_logger;
 static bool s_logger_init = false;
 
@@ -209,7 +214,7 @@ int PyObject_GetAttrAsIntEnum(PyObject *o, const char *class_name, const char *a
         goto done;
     }
 
-    result = PyIntEnum_AsLong(attr);
+    result = (int)PyIntEnum_AsLong(attr);
 done:
     Py_DECREF(attr);
     return result;
@@ -306,6 +311,51 @@ int aws_py_raise_error(void) {
     return aws_raise_error(aws_error_code);
 }
 
+// TODO: add init and clean_up as pyobject functions
+PyObject *aws_py_trace_system_init(PyObject *self, PyObject *args) {
+    (void)self;
+    const char *filename;
+    if (!PyArg_ParseTuple(args, "s", &filename)) {
+        return NULL;
+    }
+    printf("%s\n", filename);
+    if (aws_trace_system_init(aws_default_allocator(), filename) == AWS_OP_ERR) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyObject *aws_py_trace_system_clean_up(PyObject *self, PyObject *args) {
+    (void)self;
+    (void)args;
+    aws_trace_system_clean_up();
+    Py_RETURN_NONE;
+}
+
+/* Add trace events using python */
+PyObject *aws_py_trace_event_begin(PyObject *self, PyObject *args) {
+    (void)self;
+    const char *category;
+    const char *name;
+    if (!PyArg_ParseTuple(args, "ss", &category, &name)) {
+        return NULL;
+    }
+    aws_trace_event(category, name, EVENT_PHASE_BEGIN, 0, NULL, 0, NULL);
+    Py_RETURN_NONE;
+}
+
+/* Add trace events using python */
+PyObject *aws_py_trace_event_end(PyObject *self, PyObject *args) {
+    (void)self;
+    const char *category;
+    const char *name;
+    if (!PyArg_ParseTuple(args, "ss", &category, &name)) {
+        return NULL;
+    }
+    aws_trace_event(category, name, EVENT_PHASE_END, 0, NULL, 0, NULL);
+    Py_RETURN_NONE;
+}
+
 PyObject *aws_py_get_corresponding_builtin_exception(PyObject *self, PyObject *args) {
     (void)self;
     int error_code;
@@ -324,6 +374,7 @@ PyObject *aws_py_get_corresponding_builtin_exception(PyObject *self, PyObject *a
     return py_exception_type;
 }
 
+// TODO: example of how to bind c to python for trace event system
 PyObject *aws_py_get_error_name(PyObject *self, PyObject *args) {
     (void)self;
     int error_code;
@@ -473,6 +524,10 @@ static void s_install_crash_handler(void) {
 
 static PyMethodDef s_module_methods[] = {
     /* Common */
+    AWS_PY_METHOD_DEF(trace_event_begin, METH_VARARGS),
+    AWS_PY_METHOD_DEF(trace_event_end, METH_VARARGS),
+    AWS_PY_METHOD_DEF(trace_system_init, METH_VARARGS),
+    AWS_PY_METHOD_DEF(trace_system_clean_up, METH_VARARGS),
     AWS_PY_METHOD_DEF(get_error_name, METH_VARARGS),
     AWS_PY_METHOD_DEF(get_error_message, METH_VARARGS),
     AWS_PY_METHOD_DEF(get_corresponding_builtin_exception, METH_VARARGS),
@@ -569,8 +624,29 @@ PyDoc_STRVAR(s_module_doc, "C extension for binding AWS implementations of MQTT,
 /*******************************************************************************
  * Module Init
  ******************************************************************************/
+// TODO: ????
+// static void s_trace_system_module_free(void){
+//  aws_trace_system_clean_up();
+//}
 
+static void s_module_free(void) {
+    if (s_logger_init) {
+        aws_logger_clean_up(&s_logger);
+    }
+
+    aws_hash_table_clean_up(&s_py_to_aws_error_map);
+    aws_hash_table_clean_up(&s_aws_to_py_error_map);
+
+    aws_mqtt_library_clean_up();
+    aws_auth_library_clean_up();
+    aws_http_library_clean_up();
+    aws_trace_system_clean_up();
+}
+
+// TODO: init trace here
 static void s_module_init(void) {
+
+    aws_trace_system_init(aws_default_allocator(), "concurrent_crt1.json");
     s_install_crash_handler();
 
     aws_http_library_init(aws_py_get_allocator());
@@ -585,8 +661,13 @@ static void s_module_init(void) {
 }
 
 #if PY_MAJOR_VERSION == 3
+static void s_py3_module_free(void *userdata) {
+    (void)userdata;
+    s_module_free();
+}
 
 PyMODINIT_FUNC PyInit__awscrt(void) {
+
     static struct PyModuleDef s_module_def = {
         PyModuleDef_HEAD_INIT,
         s_module_name,
@@ -596,14 +677,19 @@ PyMODINIT_FUNC PyInit__awscrt(void) {
         NULL, /* slots for multi-phase initialization */
         NULL, /* traversal fn to call during GC traversal */
         NULL, /* clear fn to call during GC clear */
-        NULL, /* fn to call during deallocation of the module object */
+        s_py3_module_free,
+        /* fn to call during deallocation of the module object */ // TODO: clean up trace here
     };
 
     PyObject *m = PyModule_Create(&s_module_def);
     if (!m) {
+        printf("s_module_def error\n");
         return NULL;
     }
-
+    /* Python 2 doesn't let us pass a module-free fn to the module-create fn, so register a global at-exit fn. */
+    if (Py_AtExit(s_module_free) == -1) {
+        AWS_FATAL_ASSERT(0 && "Failed to register atexit function for _awscrt");
+    }
     s_module_init();
     return m;
 }
