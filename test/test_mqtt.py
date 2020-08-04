@@ -143,14 +143,29 @@ class MqttConnectionTest(NativeResourceTest):
         connection.disconnect().result(TIMEOUT)
 
     def test_on_message(self):
-        connection = self._test_connection()
+        config = Config.get()
+        elg = EventLoopGroup()
+        resolver = DefaultHostResolver(elg)
+        bootstrap = ClientBootstrap(elg, resolver)
+
+        tls_opts = TlsContextOptions.create_client_with_mtls(config.cert, config.key)
+        tls = ClientTlsContext(tls_opts)
+
+        client = Client(bootstrap, tls)
+        connection = Connection(
+            client=client,
+            client_id=create_client_id(),
+            host_name=config.endpoint,
+            port=8883)
         received = Future()
 
         def on_message(**kwargs):
             received.set_result(kwargs)
 
+        # on_message for connection has to be set before connect, or possible race will happen
         connection.on_message(on_message)
 
+        connection.connect().result(TIMEOUT)
         # subscribe without callback
         subscribed, packet_id = connection.subscribe(self.TEST_TOPIC, QoS.AT_LEAST_ONCE)
         subscribed.result(TIMEOUT)
