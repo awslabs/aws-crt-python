@@ -640,13 +640,13 @@ static void s_module_free(void) {
     aws_mqtt_library_clean_up();
     aws_auth_library_clean_up();
     aws_http_library_clean_up();
-    aws_trace_system_clean_up();
+    //aws_trace_system_clean_up();
 }
 
 // TODO: init trace here
 static void s_module_init(void) {
 
-    aws_trace_system_init(aws_default_allocator(), "concurrent_crt1.json");
+    //aws_trace_system_init(aws_default_allocator(), "concurrent_crt1.json");
     s_install_crash_handler();
 
     aws_http_library_init(aws_py_get_allocator());

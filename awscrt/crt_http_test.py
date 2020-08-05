@@ -104,10 +104,7 @@ def on_connection(connection_future):
             obj_key = key  + str(obj_number)
             obj_number -= 1
             global credentials_provider
-            cp = credentials_provider
-            future = cp.get_credentials()
-            creds = future.result()
-           
+            cp = credentials_provider           
             global args
             if args.GET:
                 get = True
