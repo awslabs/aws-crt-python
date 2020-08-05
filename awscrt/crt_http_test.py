@@ -147,11 +147,7 @@ def on_connection(connection_future):
         event.set()
         exit(-1)
 
-#args order
-# 0 - program name
-# 1 - num transfers
-# 2 - file size
-# 3 - get / put
+
 def main():
 
     #_awscrt.trace_event_begin("Python-http", "Main()")
