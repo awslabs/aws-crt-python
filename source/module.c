@@ -311,7 +311,6 @@ int aws_py_raise_error(void) {
     return aws_raise_error(aws_error_code);
 }
 
-// TODO: add init and clean_up as pyobject functions
 PyObject *aws_py_trace_system_init(PyObject *self, PyObject *args) {
     (void)self;
     const char *filename;
@@ -374,7 +373,6 @@ PyObject *aws_py_get_corresponding_builtin_exception(PyObject *self, PyObject *a
     return py_exception_type;
 }
 
-// TODO: example of how to bind c to python for trace event system
 PyObject *aws_py_get_error_name(PyObject *self, PyObject *args) {
     (void)self;
     int error_code;
@@ -624,10 +622,7 @@ PyDoc_STRVAR(s_module_doc, "C extension for binding AWS implementations of MQTT,
 /*******************************************************************************
  * Module Init
  ******************************************************************************/
-// TODO: ????
-// static void s_trace_system_module_free(void){
-//  aws_trace_system_clean_up();
-//}
+
 
 static void s_module_free(void) {
     if (s_logger_init) {
@@ -640,13 +635,13 @@ static void s_module_free(void) {
     aws_mqtt_library_clean_up();
     aws_auth_library_clean_up();
     aws_http_library_clean_up();
-    // aws_trace_system_clean_up();
+    aws_trace_system_clean_up();
 }
 
 // TODO: init trace here
 static void s_module_init(void) {
 
-    // aws_trace_system_init(aws_default_allocator(), "concurrent_crt1.json");
+    aws_trace_system_init(aws_default_allocator(), "concurrent_crt2.json");
     s_install_crash_handler();
 
     aws_http_library_init(aws_py_get_allocator());
