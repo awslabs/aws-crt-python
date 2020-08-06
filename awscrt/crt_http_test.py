@@ -150,7 +150,7 @@ def on_connection(connection_future):
 
 def main():
 
-    #_awscrt.trace_event_begin("Python-http", "Main()")
+    _awscrt.trace_event_begin("Python-http", "Main()")
 
     host_name = "crt-canary-bucket-ramosth.s3.us-east-2.amazonaws.com"
     port = 80
@@ -166,7 +166,7 @@ def main():
     end = time.time()
     total = end - start
     print("Time to complete in seconds: ", total)
-    #_awscrt.trace_event_end("Python-http", "Main()")
+    _awscrt.trace_event_end("Python-http", "Main()")
 
 
 if __name__ == "__main__":
