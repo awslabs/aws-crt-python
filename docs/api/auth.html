@@ -282,7 +282,7 @@ normalized when building the canonical request.</p></li>
 canonical request’s body value. Typically, this is the SHA-256
 of the payload, written as lowercase hex. If this has been
 precalculated, it can be set here. Special values used by certain
-services can also be set (see <code class="xref py py-class docutils literal notranslate"><span class="pre">SignedBodyValue</span></code>). If <cite>None</cite>
+services can also be set (see <a class="reference internal" href="#awscrt.auth.AwsSignedBodyValue" title="awscrt.auth.AwsSignedBodyValue"><code class="xref py py-class docutils literal notranslate"><span class="pre">AwsSignedBodyValue</span></code></a>). If <cite>None</cite>
 is passed (the default), the typical value will be calculated from
 the payload during signing.</p></li>
 <li><p><strong>signed_body_header_type</strong> (<a class="reference internal" href="#awscrt.auth.AwsSignedBodyHeaderType" title="awscrt.auth.AwsSignedBodyHeaderType"><em>AwsSignedBodyHeaderType</em></a>) – Controls if signing
@@ -419,9 +419,12 @@ canonical request.</p>
 <dl class="py method">
 <dt id="awscrt.auth.AwsSigningConfig.signed_body_value">
 <em class="property">property </em><code class="sig-name descname">signed_body_value</code><a class="headerlink" href="#awscrt.auth.AwsSigningConfig.signed_body_value" title="Permalink to this definition">¶</a></dt>
-<dd><p>Value to use as the canonical request’s body value.
-If <cite>None</cite> is set (the default), the value will be calculated from
-the payload during signing.</p>
+<dd><p>What to use as the canonical request’s body value.
+If <cite>None</cite> is set (the default), a value will be calculated from
+the payload during signing. Typically, this is the SHA-256 of the
+payload, written as lowercase hex. If this has been precalculated,
+it can be set here. Special values used by certain services can also
+be set (see <a class="reference internal" href="#awscrt.auth.AwsSignedBodyValue" title="awscrt.auth.AwsSignedBodyValue"><code class="xref py py-class docutils literal notranslate"><span class="pre">AwsSignedBodyValue</span></code></a>).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
 <dd class="field-odd"><p>Optional[str]</p>

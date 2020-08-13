@@ -286,7 +286,7 @@ class AwsSigningConfig(NativeResource):
             canonical request's body value. Typically, this is the SHA-256
             of the payload, written as lowercase hex. If this has been
             precalculated, it can be set here. Special values used by certain
-            services can also be set (see :class:`SignedBodyValue`). If `None`
+            services can also be set (see :class:`AwsSignedBodyValue`). If `None`
             is passed (the default), the typical value will be calculated from
             the payload during signing.
 
@@ -471,9 +471,12 @@ class AwsSigningConfig(NativeResource):
     @property
     def signed_body_value(self):
         """
-        Optional[str]: Value to use as the canonical request's body value.
-        If `None` is set (the default), the value will be calculated from
-        the payload during signing.
+        Optional[str]: What to use as the canonical request's body value.
+        If `None` is set (the default), a value will be calculated from
+        the payload during signing. Typically, this is the SHA-256 of the
+        payload, written as lowercase hex. If this has been precalculated,
+        it can be set here. Special values used by certain services can also
+        be set (see :class:`AwsSignedBodyValue`).
         """
         return _awscrt.signing_config_get_signed_body_value(self._binding)
 
