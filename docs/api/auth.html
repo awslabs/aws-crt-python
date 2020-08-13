@@ -5,6 +5,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>awscrt.auth &#8212; awscrt  documentation</title>
     <link rel="stylesheet" href="../_static/bizstyle.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -19,7 +20,7 @@
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="awscrt.exceptions" href="exceptions.html" />
     <link rel="prev" title="Welcome to awscrt’s documentation!" href="../index.html" />
-    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <!--[if lt IE 9]>
     <script src="_static/css3-mediaqueries.js"></script>
     <![endif]-->
@@ -39,36 +40,10 @@
         <li class="right" >
           <a href="../index.html" title="Welcome to awscrt’s documentation!"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../index.html">awscrt  documentation</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="../index.html">awscrt  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">awscrt.auth</a></li> 
       </ul>
-    </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper">
-  <h4>Previous topic</h4>
-  <p class="topless"><a href="../index.html"
-                        title="previous chapter">Welcome to awscrt’s documentation!</a></p>
-  <h4>Next topic</h4>
-  <p class="topless"><a href="exceptions.html"
-                        title="next chapter">awscrt.exceptions</a></p>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="../_sources/api/auth.rst.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
-<div id="searchbox" style="display: none" role="search">
-  <h3 id="searchlabel">Quick search</h3>
-    <div class="searchformwrapper">
-    <form class="search" action="../search.html" method="get">
-      <input type="text" name="q" aria-labelledby="searchlabel" />
-      <input type="submit" value="Go" />
-    </form>
-    </div>
-</div>
-<script>$('#searchbox').show(0);</script>
-        </div>
-      </div>
+    </div>  
 
     <div class="document">
       <div class="documentwrapper">
@@ -199,7 +174,7 @@ The operation may complete on a different thread.</p>
 
 <dl class="py class">
 <dt id="awscrt.auth.AwsSigningAlgorithm">
-<em class="property">class </em><code class="sig-prename descclassname">awscrt.auth.</code><code class="sig-name descname">AwsSigningAlgorithm</code><a class="headerlink" href="#awscrt.auth.AwsSigningAlgorithm" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">awscrt.auth.</code><code class="sig-name descname">AwsSigningAlgorithm</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">value</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.auth.AwsSigningAlgorithm" title="Permalink to this definition">¶</a></dt>
 <dd><p>AWS signing algorithm enumeration.</p>
 <dl class="py attribute">
 <dt id="awscrt.auth.AwsSigningAlgorithm.V4">
@@ -211,7 +186,7 @@ The operation may complete on a different thread.</p>
 
 <dl class="py class">
 <dt id="awscrt.auth.AwsSignatureType">
-<em class="property">class </em><code class="sig-prename descclassname">awscrt.auth.</code><code class="sig-name descname">AwsSignatureType</code><a class="headerlink" href="#awscrt.auth.AwsSignatureType" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">awscrt.auth.</code><code class="sig-name descname">AwsSignatureType</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">value</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.auth.AwsSignatureType" title="Permalink to this definition">¶</a></dt>
 <dd><p>Which sort of signature should be computed from the signable.</p>
 <dl class="py attribute">
 <dt id="awscrt.auth.AwsSignatureType.HTTP_REQUEST_HEADERS">
@@ -230,34 +205,30 @@ with query param updates applied to the signing result.</p>
 </dd></dl>
 
 <dl class="py class">
-<dt id="awscrt.auth.AwsSignedBodyValueType">
-<em class="property">class </em><code class="sig-prename descclassname">awscrt.auth.</code><code class="sig-name descname">AwsSignedBodyValueType</code><a class="headerlink" href="#awscrt.auth.AwsSignedBodyValueType" title="Permalink to this definition">¶</a></dt>
-<dd><p>Controls what goes in the canonical request’s body value.</p>
+<dt id="awscrt.auth.AwsSignedBodyValue">
+<em class="property">class </em><code class="sig-prename descclassname">awscrt.auth.</code><code class="sig-name descname">AwsSignedBodyValue</code><a class="headerlink" href="#awscrt.auth.AwsSignedBodyValue" title="Permalink to this definition">¶</a></dt>
+<dd><p>Values for use with <a class="reference internal" href="#awscrt.auth.AwsSigningConfig.signed_body_value" title="awscrt.auth.AwsSigningConfig.signed_body_value"><code class="xref py py-attr docutils literal notranslate"><span class="pre">AwsSigningConfig.signed_body_value</span></code></a>.</p>
+<p>Some services use special values (e.g. “UNSIGNED-PAYLOAD”) when the body
+is not being signed in the usual way.</p>
 <dl class="py attribute">
-<dt id="awscrt.auth.AwsSignedBodyValueType.EMPTY">
-<code class="sig-name descname">EMPTY</code><em class="property"> = 0</em><a class="headerlink" href="#awscrt.auth.AwsSignedBodyValueType.EMPTY" title="Permalink to this definition">¶</a></dt>
-<dd><p>Use the SHA-256 of the empty string.</p>
+<dt id="awscrt.auth.AwsSignedBodyValue.EMPTY_SHA256">
+<code class="sig-name descname">EMPTY_SHA256</code><em class="property"> = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'</em><a class="headerlink" href="#awscrt.auth.AwsSignedBodyValue.EMPTY_SHA256" title="Permalink to this definition">¶</a></dt>
+<dd><p>The SHA-256 of the empty string.</p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt id="awscrt.auth.AwsSignedBodyValueType.PAYLOAD">
-<code class="sig-name descname">PAYLOAD</code><em class="property"> = 1</em><a class="headerlink" href="#awscrt.auth.AwsSignedBodyValueType.PAYLOAD" title="Permalink to this definition">¶</a></dt>
-<dd><p>Use the SHA-256 of the actual payload.</p>
-</dd></dl>
-
-<dl class="py attribute">
-<dt id="awscrt.auth.AwsSignedBodyValueType.UNSIGNED_PAYLOAD">
-<code class="sig-name descname">UNSIGNED_PAYLOAD</code><em class="property"> = 2</em><a class="headerlink" href="#awscrt.auth.AwsSignedBodyValueType.UNSIGNED_PAYLOAD" title="Permalink to this definition">¶</a></dt>
-<dd><p>Use the literal string “UNSIGNED-PAYLOAD”.</p>
+<dt id="awscrt.auth.AwsSignedBodyValue.UNSIGNED_PAYLOAD">
+<code class="sig-name descname">UNSIGNED_PAYLOAD</code><em class="property"> = 'UNSIGNED-PAYLOAD'</em><a class="headerlink" href="#awscrt.auth.AwsSignedBodyValue.UNSIGNED_PAYLOAD" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unsigned payload option (not accepted by all services)</p>
 </dd></dl>
 
 </dd></dl>
 
 <dl class="py class">
 <dt id="awscrt.auth.AwsSignedBodyHeaderType">
-<em class="property">class </em><code class="sig-prename descclassname">awscrt.auth.</code><code class="sig-name descname">AwsSignedBodyHeaderType</code><a class="headerlink" href="#awscrt.auth.AwsSignedBodyHeaderType" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">awscrt.auth.</code><code class="sig-name descname">AwsSignedBodyHeaderType</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">value</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.auth.AwsSignedBodyHeaderType" title="Permalink to this definition">¶</a></dt>
 <dd><p>Controls if signing adds a header containing the canonical request’s signed body value.</p>
-<p>See <a class="reference internal" href="#awscrt.auth.AwsSignedBodyValueType" title="awscrt.auth.AwsSignedBodyValueType"><code class="xref py py-class docutils literal notranslate"><span class="pre">AwsSignedBodyValueType</span></code></a>.</p>
+<p>See <a class="reference internal" href="#awscrt.auth.AwsSigningConfig.signed_body_value" title="awscrt.auth.AwsSigningConfig.signed_body_value"><code class="xref py py-attr docutils literal notranslate"><span class="pre">AwsSigningConfig.signed_body_value</span></code></a>.</p>
 <dl class="py attribute">
 <dt id="awscrt.auth.AwsSignedBodyHeaderType.NONE">
 <code class="sig-name descname">NONE</code><em class="property"> = 0</em><a class="headerlink" href="#awscrt.auth.AwsSignedBodyHeaderType.NONE" title="Permalink to this definition">¶</a></dt>
@@ -274,7 +245,7 @@ with query param updates applied to the signing result.</p>
 
 <dl class="py class">
 <dt id="awscrt.auth.AwsSigningConfig">
-<em class="property">class </em><code class="sig-prename descclassname">awscrt.auth.</code><code class="sig-name descname">AwsSigningConfig</code><span class="sig-paren">(</span><em class="sig-param">algorithm</em>, <em class="sig-param">signature_type</em>, <em class="sig-param">credentials_provider</em>, <em class="sig-param">region</em>, <em class="sig-param">service</em>, <em class="sig-param">date=None</em>, <em class="sig-param">should_sign_header=None</em>, <em class="sig-param">use_double_uri_encode=True</em>, <em class="sig-param">should_normalize_uri_path=True</em>, <em class="sig-param">signed_body_value_type=&lt;AwsSignedBodyValueType.PAYLOAD: 1&gt;</em>, <em class="sig-param">signed_body_header_type=&lt;AwsSignedBodyHeaderType.NONE: 0&gt;</em>, <em class="sig-param">expiration_in_seconds=None</em>, <em class="sig-param">omit_session_token=False</em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.auth.AwsSigningConfig" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">awscrt.auth.</code><code class="sig-name descname">AwsSigningConfig</code><span class="sig-paren">(</span><em class="sig-param">algorithm</em>, <em class="sig-param">signature_type</em>, <em class="sig-param">credentials_provider</em>, <em class="sig-param">region</em>, <em class="sig-param">service</em>, <em class="sig-param">date=None</em>, <em class="sig-param">should_sign_header=None</em>, <em class="sig-param">use_double_uri_encode=True</em>, <em class="sig-param">should_normalize_uri_path=True</em>, <em class="sig-param">signed_body_value=None</em>, <em class="sig-param">signed_body_header_type=&lt;AwsSignedBodyHeaderType.NONE: 0&gt;</em>, <em class="sig-param">expiration_in_seconds=None</em>, <em class="sig-param">omit_session_token=False</em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.auth.AwsSigningConfig" title="Permalink to this definition">¶</a></dt>
 <dd><p>Configuration for use in AWS-related signing.</p>
 <p>AwsSigningConfig is immutable.</p>
 <p>It is good practice to use a new config for each signature, or the date might get too old.</p>
@@ -307,9 +278,13 @@ when constructing the canonical request (assuming the path is already
 encoded). Default is True. All services except S3 use double encoding.</p></li>
 <li><p><strong>should_normalize_uri_path</strong> (<em>bool</em>) – Whether the resource paths are
 normalized when building the canonical request.</p></li>
-<li><p><strong>signed_body_value_type</strong> (<a class="reference internal" href="#awscrt.auth.AwsSignedBodyValueType" title="awscrt.auth.AwsSignedBodyValueType"><em>AwsSignedBodyValueType</em></a>) – Controls what goes in
-the canonical request’s body value. Default is to use the SHA-256
-of the actual payload.</p></li>
+<li><p><strong>signed_body_value</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – If set, this value is used as the
+canonical request’s body value. Typically, this is the SHA-256
+of the payload, written as lowercase hex. If this has been
+precalculated, it can be set here. Special values used by certain
+services can also be set (see <code class="xref py py-class docutils literal notranslate"><span class="pre">SignedBodyValue</span></code>). If <cite>None</cite>
+is passed (the default), the typical value will be calculated from
+the payload during signing.</p></li>
 <li><p><strong>signed_body_header_type</strong> (<a class="reference internal" href="#awscrt.auth.AwsSignedBodyHeaderType" title="awscrt.auth.AwsSignedBodyHeaderType"><em>AwsSignedBodyHeaderType</em></a>) – Controls if signing
 adds a header containing the canonical request’s signed body value.
 Default is to not add a header.</p></li>
@@ -442,12 +417,14 @@ canonical request.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="awscrt.auth.AwsSigningConfig.signed_body_value_type">
-<em class="property">property </em><code class="sig-name descname">signed_body_value_type</code><a class="headerlink" href="#awscrt.auth.AwsSigningConfig.signed_body_value_type" title="Permalink to this definition">¶</a></dt>
-<dd><p>Controls what goes in the canonical request’s body value.</p>
+<dt id="awscrt.auth.AwsSigningConfig.signed_body_value">
+<em class="property">property </em><code class="sig-name descname">signed_body_value</code><a class="headerlink" href="#awscrt.auth.AwsSigningConfig.signed_body_value" title="Permalink to this definition">¶</a></dt>
+<dd><p>Value to use as the canonical request’s body value.
+If <cite>None</cite> is set (the default), the value will be calculated from
+the payload during signing.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
-<dd class="field-odd"><p><a class="reference internal" href="#awscrt.auth.AwsSignedBodyValueType" title="awscrt.auth.AwsSignedBodyValueType">AwsSignedBodyValueType</a></p>
+<dd class="field-odd"><p>Optional[str]</p>
 </dd>
 </dl>
 </dd></dl>
@@ -530,7 +507,35 @@ if the signing process fails.</p>
 </div>
 
 
+            <div class="clearer"></div>
           </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="../index.html"
+                        title="previous chapter">Welcome to awscrt’s documentation!</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="exceptions.html"
+                        title="next chapter">awscrt.exceptions</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/api/auth.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -550,12 +555,13 @@ if the signing process fails.</p>
         <li class="right" >
           <a href="../index.html" title="Welcome to awscrt’s documentation!"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../index.html">awscrt  documentation</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="../index.html">awscrt  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">awscrt.auth</a></li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2020, Amazon Web Services, Inc.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 3.0.3.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.2.0.
     </div>
   </body>
 </html>

@@ -220,7 +220,7 @@ class AwsSignedBodyValue:
     """The SHA-256 of the empty string."""
 
     UNSIGNED_PAYLOAD = 'UNSIGNED-PAYLOAD'
-    """The literal string "UNSIGNED-PAYLOAD"."""
+    """Unsigned payload option (not accepted by all services)"""
 
 
 class AwsSignedBodyHeaderType(IntEnum):
