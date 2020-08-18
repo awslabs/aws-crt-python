@@ -228,6 +228,7 @@ class AwsSignedBodyValue:
     STREAMING_AWS4_HMAC_SHA256_EVENTS = 'STREAMING-AWS4-HMAC-SHA256-EVENTS'
     """Each event will be signed (not accepted by all services)"""
 
+
 class AwsSignedBodyHeaderType(IntEnum):
     """
     Controls if signing adds a header containing the canonical request's signed body value.
