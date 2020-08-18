@@ -222,6 +222,11 @@ class AwsSignedBodyValue:
     UNSIGNED_PAYLOAD = 'UNSIGNED-PAYLOAD'
     """Unsigned payload option (not accepted by all services)"""
 
+    STREAMING_AWS4_HMAC_SHA256_PAYLOAD = 'STREAMING-AWS4-HMAC-SHA256-PAYLOAD'
+    """Each payload chunk will be signed (not accepted by all services)"""
+
+    STREAMING_AWS4_HMAC_SHA256_EVENTS = 'STREAMING-AWS4-HMAC-SHA256-EVENTS'
+    """Each event will be signed (not accepted by all services)"""
 
 class AwsSignedBodyHeaderType(IntEnum):
     """
