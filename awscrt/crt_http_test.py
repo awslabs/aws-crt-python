@@ -34,13 +34,16 @@ args = parser.parse_args()
 transfers_left = int(args.numTransfers)
 
 
-obj_number = 9223372036854775806
-#credentials    
+#obj_number = 9223372036854775806
+obj_number = int(args.numTransfers)
+#credentials   
+# """" 
+"""
 access_key_id = os.environ.get('AWS_ACCESS_KEY_ID')
 secret_access_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
 session_token = os.environ.get('AWS_SESSION_TOKEN')
 credentials_provider = AwsCredentialsProvider.new_static(access_key_id, secret_access_key, session_token)
-
+"""
 class Response(object):
     """Holds contents of incoming response"""
 
@@ -93,8 +96,9 @@ def on_stream_complete(stream_future):
 def on_connection(connection_future):
     try: 
         connection = connection_future.result()        
-        key = "crt-canary-obj-single-part-"
-        cp = None
+        #key = "crt-canary-obj-single-part-"
+        key = "result"
+        #cp = None
         obj_key = None
         get = False
         put = False
@@ -103,8 +107,8 @@ def on_connection(connection_future):
             global obj_number
             obj_key = key  + str(obj_number)
             obj_number -= 1
-            global credentials_provider
-            cp = credentials_provider           
+            #global credentials_provider
+            #cp = credentials_provider           
             global args
             if args.GET:
                 get = True
@@ -113,6 +117,7 @@ def on_connection(connection_future):
                 
 
         #set up sign config
+        """
         date = datetime.datetime.now(datetime.timezone.utc)
         signing_config = AwsSigningConfig(algorithm=AwsSigningAlgorithm.V4, signature_type=AwsSignatureType.HTTP_REQUEST_HEADERS, credentials_provider=cp, 
         region="us-east-2", service="s3", date=date, should_sign_header=None, use_double_uri_encode=False,
@@ -121,22 +126,24 @@ def on_connection(connection_future):
             signed_body_header_type=awscrt.auth.AwsSignedBodyHeaderType.X_AMZ_CONTENT_SHA_256,
             expiration_in_seconds=120,
             omit_session_token=False)
-    
+        """
 #make request
         headers = HttpHeaders([("content-type", "text/plain"), ("host", connection.host_name)]) 
         request = HttpRequest()
+        print(connection.host_name)
 
         if get:
             request = get_request(obj_key, headers)
         if put:
             request = put_request(obj_key, headers, int(args.file_size))
-
+        """
         signed_request_future = awscrt.auth.aws_sign_request(request, signing_config)
         signed_request_result = signed_request_future.result(10.0)
-
+        """
         response = Response()
         
-        http_client_stream = connection.request(signed_request_result, response.on_response, response.on_body)
+        http_client_stream = connection.request(request, response.on_response, response.on_body)
+            #signed_request_result, response.on_response, response.on_body)
         http_client_stream.activate()
 
 # Process stream results in callback
@@ -152,7 +159,8 @@ def main():
 
     _awscrt.trace_event_begin("Python-http", "Main()")
 
-    host_name = "crt-canary-bucket-ramosth.s3.us-east-2.amazonaws.com"
+    #host_name = "crt-canary-bucket-ramosth.s3.us-east-2.amazonaws.com"
+    host_name = "http://urllib.s3.us-east-2.amazonaws.com"
     port = 80
     start = time.time()
     #start event loop and client bootstrap

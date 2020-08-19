@@ -15,15 +15,16 @@ import asyncio
 #async def parallel_request(obj_key, binary):
  #   r = http.request("PUT", "http://urllib.s3.us-east-2.amazonaws.com/" + obj_key, headers=headers, body=binary)#endpoint + "/results_up.txt")#, auth=auth)
   ## print(r.status)
-
+"""
 def get_response(request):
-    return urllib.request.urlopen(request).read()
+    return urllib3.request.urlopen(request).read()
 
 @asyncio.coroutine
 def read_page(loop, request):
     data = yield from loop.run_in_executor(None, lambda: get_response(request))
-    print()
+    print
 #async def transfer_loop(num)
+"""
 if __name__ == "__main__":
     
     parser = argparse.ArgumentParser()
@@ -47,15 +48,15 @@ if __name__ == "__main__":
     for i in range(num_transfers):
         obj_key = "result" + str(i)
         if args.GET:
-           #r = http.request("PUT", "http://urllib.s3.us-east-2.amazonaws.com/" + obj_key, headers=headers)
-           request = http.request.Request(host_name + obj_key, headers=headers, method="GET")
+           r = http.request("PUT", "http://urllib.s3.us-east-2.amazonaws.com/" + obj_key, headers=headers)
+           #request = http.request.Request(host_name + obj_key, headers=headers, method="GET")
         if args.PUT:
             obj_size = int(args.file_size)
             body_stream = io.BytesIO(b'a' * obj_size)
             binary = body_stream.read()
             print(sys.getsizeof(body_stream))
-            #r = http.request("PUT", "http://urllib.s3.us-east-2.amazonaws.com/" + obj_key, headers=headers, body=binary)#endpoint + "/results_up.txt")#, auth=auth)
-            request = http.request.Request(host_name + obj_key, headers=headers, method="PUT", data=binary)
+            r = http.request("PUT", "http://urllib.s3.us-east-2.amazonaws.com/" + obj_key, headers=headers, body=binary)#endpoint + "/results_up.txt")#, auth=auth)
+            #request = http.request.Request(host_name + obj_key, headers=headers, method="PUT", data=binary)
         print(r.headers)
         print(r.status)
     

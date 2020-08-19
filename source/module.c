@@ -641,7 +641,7 @@ static void s_module_free(void) {
 // TODO: init trace here
 static void s_module_init(void) {
 
-    aws_trace_system_init(aws_default_allocator(), "concurrent_crt2.json");
+    aws_trace_system_init(aws_default_allocator(), "traces/example_put_x.json");
     s_install_crash_handler();
 
     aws_http_library_init(aws_py_get_allocator());
