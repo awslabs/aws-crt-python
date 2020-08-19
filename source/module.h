@@ -61,10 +61,12 @@ PyObject *PyErr_AwsLastError(void);
 int aws_py_raise_error(void);
 
 //! DEBUG
+/*
 PyObject *aws_py_trace_system_init(PyObject *self, PyObject *args);
 PyObject *aws_py_trace_system_clean_up(PyObject *self, PyObject *args);
 PyObject *aws_py_trace_event_begin(PyObject *self, PyObject *args);
 PyObject *aws_py_trace_event_end(PyObject *self, PyObject *args);
+*/
 //! DEBUG
 
 /**

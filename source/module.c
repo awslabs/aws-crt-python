@@ -25,7 +25,7 @@
 /*
     DEBUG
 */
-#include <aws/common/trace_event.h>
+//#include <aws/common/trace_event.h>
 
 static struct aws_logger s_logger;
 static bool s_logger_init = false;
@@ -310,7 +310,7 @@ int aws_py_raise_error(void) {
 
     return aws_raise_error(aws_error_code);
 }
-
+/*
 PyObject *aws_py_trace_system_init(PyObject *self, PyObject *args) {
     (void)self;
     const char *filename;
@@ -331,7 +331,7 @@ PyObject *aws_py_trace_system_clean_up(PyObject *self, PyObject *args) {
     Py_RETURN_NONE;
 }
 
-/* Add trace events using python */
+/* Add trace events using python 
 PyObject *aws_py_trace_event_begin(PyObject *self, PyObject *args) {
     (void)self;
     const char *category;
@@ -343,7 +343,7 @@ PyObject *aws_py_trace_event_begin(PyObject *self, PyObject *args) {
     Py_RETURN_NONE;
 }
 
-/* Add trace events using python */
+/* Add trace events using python 
 PyObject *aws_py_trace_event_end(PyObject *self, PyObject *args) {
     (void)self;
     const char *category;
@@ -354,7 +354,7 @@ PyObject *aws_py_trace_event_end(PyObject *self, PyObject *args) {
     aws_trace_event(category, name, EVENT_PHASE_END, 0, NULL, 0, NULL);
     Py_RETURN_NONE;
 }
-
+*/
 PyObject *aws_py_get_corresponding_builtin_exception(PyObject *self, PyObject *args) {
     (void)self;
     int error_code;
@@ -521,11 +521,12 @@ static void s_install_crash_handler(void) {
     { #NAME, aws_py_##NAME, (FLAGS), NULL }
 
 static PyMethodDef s_module_methods[] = {
-    /* Common */
+    /* Common 
     AWS_PY_METHOD_DEF(trace_event_begin, METH_VARARGS),
     AWS_PY_METHOD_DEF(trace_event_end, METH_VARARGS),
     AWS_PY_METHOD_DEF(trace_system_init, METH_VARARGS),
     AWS_PY_METHOD_DEF(trace_system_clean_up, METH_VARARGS),
+    */
     AWS_PY_METHOD_DEF(get_error_name, METH_VARARGS),
     AWS_PY_METHOD_DEF(get_error_message, METH_VARARGS),
     AWS_PY_METHOD_DEF(get_corresponding_builtin_exception, METH_VARARGS),
@@ -635,13 +636,13 @@ static void s_module_free(void) {
     aws_mqtt_library_clean_up();
     aws_auth_library_clean_up();
     aws_http_library_clean_up();
-    aws_trace_system_clean_up();
+    //aws_trace_system_clean_up();
 }
 
 // TODO: init trace here
 static void s_module_init(void) {
 
-    aws_trace_system_init(aws_default_allocator(), "traces/example_put_x.json");
+  // aws_trace_system_init(aws_default_allocator(), "traces/example_put_x.json");
     s_install_crash_handler();
 
     aws_http_library_init(aws_py_get_allocator());
