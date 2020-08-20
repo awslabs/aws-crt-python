@@ -8,6 +8,7 @@ import datetime
 from io import BytesIO
 import os
 from test import NativeResourceTest, TIMEOUT
+import time
 
 EXAMPLE_ACCESS_KEY_ID = 'example_access_key_id'
 EXAMPLE_SECRET_ACCESS_KEY = 'example_secret_access_key'
@@ -117,7 +118,7 @@ class TestSigningConfig(NativeResourceTest):
 
         use_double_uri_encode = False
         should_normalize_uri_path = False
-        signed_body_value_type = awscrt.auth.AwsSignedBodyValueType.EMPTY
+        signed_body_value = awscrt.auth.AwsSignedBodyValue.EMPTY_SHA256
         signed_body_header_type = awscrt.auth.AwsSignedBodyHeaderType.X_AMZ_CONTENT_SHA_256
         expiration_in_seconds = 123
         omit_session_token = True
@@ -131,7 +132,7 @@ class TestSigningConfig(NativeResourceTest):
                                            should_sign_header=should_sign_header,
                                            use_double_uri_encode=use_double_uri_encode,
                                            should_normalize_uri_path=should_normalize_uri_path,
-                                           signed_body_value_type=signed_body_value_type,
+                                           signed_body_value=signed_body_value,
                                            signed_body_header_type=signed_body_header_type,
                                            expiration_in_seconds=expiration_in_seconds,
                                            omit_session_token=omit_session_token)
@@ -145,7 +146,7 @@ class TestSigningConfig(NativeResourceTest):
         self.assertIs(should_sign_header, cfg.should_sign_header)
         self.assertEqual(use_double_uri_encode, cfg.use_double_uri_encode)
         self.assertEqual(should_normalize_uri_path, cfg.should_normalize_uri_path)
-        self.assertIs(signed_body_value_type, cfg.signed_body_value_type)
+        self.assertEqual(signed_body_value, cfg.signed_body_value)
         self.assertIs(signed_body_header_type, cfg.signed_body_header_type)
         self.assertEqual(expiration_in_seconds, cfg.expiration_in_seconds)
         self.assertEqual(omit_session_token, cfg.omit_session_token)
@@ -168,7 +169,7 @@ class TestSigningConfig(NativeResourceTest):
             should_sign_header=lambda x: False,
             use_double_uri_encode=False,
             should_normalize_uri_path=False,
-            signed_body_value_type=awscrt.auth.AwsSignedBodyValueType.EMPTY,
+            signed_body_value=awscrt.auth.AwsSignedBodyValue.EMPTY_SHA256,
             signed_body_header_type=awscrt.auth.AwsSignedBodyHeaderType.X_AMZ_CONTENT_SHA_256,
             expiration_in_seconds=123,
             omit_session_token=True)
@@ -198,7 +199,7 @@ class TestSigningConfig(NativeResourceTest):
         _replace_attr('should_sign_header', lambda x: True)
         _replace_attr('use_double_uri_encode', True)
         _replace_attr('should_normalize_uri_path', True)
-        _replace_attr('signed_body_value_type', awscrt.auth.AwsSignedBodyValueType.PAYLOAD)
+        _replace_attr('signed_body_value', awscrt.auth.AwsSignedBodyValue.UNSIGNED_PAYLOAD)
         _replace_attr('signed_body_header_type', awscrt.auth.AwsSignedBodyHeaderType.NONE)
         _replace_attr('expiration_in_seconds', 987)
         _replace_attr('omit_session_token', False)
@@ -209,6 +210,27 @@ class TestSigningConfig(NativeResourceTest):
         self.assertEqual('aws-slow-blinking', new_cfg.service)
 
         self.assertEqual(orig_cfg.should_sign_header, new_cfg.should_sign_header)
+
+    def test_special_defaults(self):
+        credentials_provider = awscrt.auth.AwsCredentialsProvider.new_static(
+            EXAMPLE_ACCESS_KEY_ID, EXAMPLE_SECRET_ACCESS_KEY)
+
+        config = awscrt.auth.AwsSigningConfig(
+            algorithm=awscrt.auth.AwsSigningAlgorithm.V4,
+            signature_type=awscrt.auth.AwsSignatureType.HTTP_REQUEST_QUERY_PARAMS,
+            credentials_provider=credentials_provider,
+            region='us-west-1',
+            service='aws-suborbital-ion-cannon')
+
+        # for things in the C layer where zeroed values mean "defaults please",
+        # the python layer chooses to use None.
+        # make sure None is coming back and not zeroes or empty strings.
+        self.assertIsNone(config.signed_body_value)
+        self.assertIsNone(config.expiration_in_seconds)
+
+        # if no date specified, now should be used.
+        # check that config.date has something very close to now.
+        self.assertAlmostEqual(time.time(), config.date.timestamp(), delta=2.0)
 
 
 SIGV4TEST_ACCESS_KEY_ID = 'AKIDEXAMPLE'

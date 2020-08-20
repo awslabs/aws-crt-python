@@ -78,13 +78,13 @@ PyObject *aws_py_signing_config_new(PyObject *self, PyObject *args) {
     PyObject *py_should_sign_header_fn;
     PyObject *py_use_double_uri_encode;
     PyObject *py_should_normalize_uri_path;
-    int signed_body_value_type;
+    struct aws_byte_cursor signed_body_value;
     int signed_body_header_type;
     uint64_t expiration_in_seconds;
     PyObject *py_omit_session_token;
     if (!PyArg_ParseTuple(
             args,
-            "iiOs#s#OdOOOiiKO",
+            "iiOs#s#OdOOOz#iKO",
             &algorithm,
             &signature_type,
             &py_credentials_provider,
@@ -97,7 +97,8 @@ PyObject *aws_py_signing_config_new(PyObject *self, PyObject *args) {
             &py_should_sign_header_fn,
             &py_use_double_uri_encode,
             &py_should_normalize_uri_path,
-            &signed_body_value_type,
+            &signed_body_value.ptr,
+            &signed_body_value.len,
             &signed_body_header_type,
             &expiration_in_seconds,
             &py_omit_session_token)) {
@@ -123,9 +124,11 @@ PyObject *aws_py_signing_config_new(PyObject *self, PyObject *args) {
     binding->native.config_type = AWS_SIGNING_CONFIG_AWS;
     binding->native.algorithm = algorithm;
     binding->native.signature_type = signature_type;
+    binding->native.region = region;
+    binding->native.service = service;
     binding->native.flags.use_double_uri_encode = PyObject_IsTrue(py_use_double_uri_encode);
     binding->native.flags.should_normalize_uri_path = PyObject_IsTrue(py_should_normalize_uri_path);
-    binding->native.signed_body_value = signed_body_value_type;
+    binding->native.signed_body_value = signed_body_value;
     binding->native.signed_body_header = signed_body_header_type;
     binding->native.expiration_in_seconds = expiration_in_seconds;
     binding->native.flags.omit_session_token = PyObject_IsTrue(py_omit_session_token);
@@ -138,25 +141,16 @@ PyObject *aws_py_signing_config_new(PyObject *self, PyObject *args) {
     binding->py_credentials_provider = py_credentials_provider;
     Py_INCREF(binding->py_credentials_provider);
 
-    /* strings: service, region */
-    size_t total_string_len;
-    if (aws_add_size_checked(region.len, service.len, &total_string_len)) {
-        PyErr_SetAwsLastError();
+    /* backup strings */
+    if (aws_byte_buf_init_cache_and_update_cursors(
+            &binding->string_storage,
+            aws_py_get_allocator(),
+            &binding->native.region,
+            &binding->native.service,
+            &binding->native.signed_body_value,
+            NULL)) {
         goto error;
     }
-
-    if (aws_byte_buf_init(&binding->string_storage, aws_py_get_allocator(), total_string_len)) {
-        PyErr_SetAwsLastError();
-        goto error;
-    }
-
-    binding->native.region.ptr = binding->string_storage.buffer + binding->string_storage.len;
-    binding->native.region.len = region.len;
-    aws_byte_buf_write_from_whole_cursor(&binding->string_storage, region);
-
-    binding->native.service.ptr = binding->string_storage.buffer + binding->string_storage.len;
-    binding->native.service.len = service.len;
-    aws_byte_buf_write_from_whole_cursor(&binding->string_storage, service);
 
     /* date: store original datetime python object so user doesn't see different timezones after set/get */
     aws_date_time_init_epoch_secs(&binding->native.date, timestamp);
@@ -275,13 +269,19 @@ PyObject *aws_py_signing_config_get_should_normalize_uri_path(PyObject *self, Py
     return PyBool_FromLong(binding->native.flags.should_normalize_uri_path);
 }
 
-PyObject *aws_py_signing_config_get_signed_body_value_type(PyObject *self, PyObject *args) {
+PyObject *aws_py_signing_config_get_signed_body_value(PyObject *self, PyObject *args) {
     struct config_binding *binding = s_common_get(self, args);
     if (!binding) {
         return NULL;
     }
 
-    return PyLong_FromLong(binding->native.signed_body_value);
+    /* In C layer, 0 length cursor indicates "defaults please".
+     * In Python layer, None indicates "defaults please". */
+    if (binding->native.signed_body_value.len == 0) {
+        Py_RETURN_NONE;
+    }
+
+    return PyString_FromAwsByteCursor(&binding->native.signed_body_value);
 }
 
 PyObject *aws_py_signing_config_get_signed_body_header_type(PyObject *self, PyObject *args) {

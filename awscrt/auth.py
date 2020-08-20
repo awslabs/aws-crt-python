@@ -186,24 +186,32 @@ class AwsSignatureType(IntEnum):
     """
 
 
-class AwsSignedBodyValueType(IntEnum):
-    """Controls what goes in the canonical request's body value."""
+class AwsSignedBodyValue:
+    """
+    Values for use with :attr:`AwsSigningConfig.signed_body_value`.
 
-    EMPTY = 0
-    """Use the SHA-256 of the empty string."""
+    Some services use special values (e.g. "UNSIGNED-PAYLOAD") when the body
+    is not being signed in the usual way.
+    """
 
-    PAYLOAD = 1
-    """Use the SHA-256 of the actual payload."""
+    EMPTY_SHA256 = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+    """The SHA-256 of the empty string."""
 
-    UNSIGNED_PAYLOAD = 2
-    """Use the literal string "UNSIGNED-PAYLOAD"."""
+    UNSIGNED_PAYLOAD = 'UNSIGNED-PAYLOAD'
+    """Unsigned payload option (not accepted by all services)"""
+
+    STREAMING_AWS4_HMAC_SHA256_PAYLOAD = 'STREAMING-AWS4-HMAC-SHA256-PAYLOAD'
+    """Each payload chunk will be signed (not accepted by all services)"""
+
+    STREAMING_AWS4_HMAC_SHA256_EVENTS = 'STREAMING-AWS4-HMAC-SHA256-EVENTS'
+    """Each event will be signed (not accepted by all services)"""
 
 
 class AwsSignedBodyHeaderType(IntEnum):
     """
     Controls if signing adds a header containing the canonical request's signed body value.
 
-    See :class:`AwsSignedBodyValueType`.
+    See :attr:`AwsSigningConfig.signed_body_value`.
     """
 
     NONE = 0
@@ -258,9 +266,13 @@ class AwsSigningConfig(NativeResource):
         should_normalize_uri_path (bool): Whether the resource paths are
             normalized when building the canonical request.
 
-        signed_body_value_type (AwsSignedBodyValueType): Controls what goes in
-            the canonical request's body value. Default is to use the SHA-256
-            of the actual payload.
+        signed_body_value (Optional[str]): If set, this value is used as the
+            canonical request's body value. Typically, this is the SHA-256
+            of the payload, written as lowercase hex. If this has been
+            precalculated, it can be set here. Special values used by certain
+            services can also be set (see :class:`AwsSignedBodyValue`). If `None`
+            is passed (the default), the typical value will be calculated from
+            the payload during signing.
 
         signed_body_header_type (AwsSignedBodyHeaderType): Controls if signing
             adds a header containing the canonical request's signed body value.
@@ -286,7 +298,7 @@ class AwsSigningConfig(NativeResource):
         'should_sign_header',
         'use_double_uri_encode',
         'should_normalize_uri_path',
-        'signed_body_value_type',
+        'signed_body_value',
         'signed_body_header_type',
         'expiration_in_seconds',
         'omit_session_token',
@@ -302,7 +314,7 @@ class AwsSigningConfig(NativeResource):
                  should_sign_header=None,
                  use_double_uri_encode=True,
                  should_normalize_uri_path=True,
-                 signed_body_value_type=AwsSignedBodyValueType.PAYLOAD,
+                 signed_body_value=None,
                  signed_body_header_type=AwsSignedBodyHeaderType.NONE,
                  expiration_in_seconds=None,
                  omit_session_token=False,
@@ -314,7 +326,7 @@ class AwsSigningConfig(NativeResource):
         assert isinstance(region, str)
         assert isinstance(service, str)
         assert callable(should_sign_header) or should_sign_header is None
-        assert isinstance(signed_body_value_type, AwsSignedBodyValueType)
+        assert signed_body_value is None or (isinstance(signed_body_value, str) and len(signed_body_value) > 0)
         assert isinstance(signed_body_header_type, AwsSignedBodyHeaderType)
         assert expiration_in_seconds is None or expiration_in_seconds > 0
 
@@ -348,7 +360,7 @@ class AwsSigningConfig(NativeResource):
             should_sign_header_wrapper,
             use_double_uri_encode,
             should_normalize_uri_path,
-            signed_body_value_type,
+            signed_body_value,
             signed_body_header_type,
             expiration_in_seconds,
             omit_session_token)
@@ -432,11 +444,16 @@ class AwsSigningConfig(NativeResource):
         return _awscrt.signing_config_get_should_normalize_uri_path(self._binding)
 
     @property
-    def signed_body_value_type(self):
+    def signed_body_value(self):
         """
-        AwsSignedBodyValueType: Controls what goes in the canonical request's body value.
+        Optional[str]: What to use as the canonical request's body value.
+        If `None` is set (the default), a value will be calculated from
+        the payload during signing. Typically, this is the SHA-256 of the
+        payload, written as lowercase hex. If this has been precalculated,
+        it can be set here. Special values used by certain services can also
+        be set (see :class:`AwsSignedBodyValue`).
         """
-        return AwsSignedBodyValueType(_awscrt.signing_config_get_signed_body_value_type(self._binding))
+        return _awscrt.signing_config_get_signed_body_value(self._binding)
 
     @property
     def signed_body_header_type(self):

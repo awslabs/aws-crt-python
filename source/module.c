@@ -537,7 +537,7 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(signing_config_get_date, METH_VARARGS),
     AWS_PY_METHOD_DEF(signing_config_get_use_double_uri_encode, METH_VARARGS),
     AWS_PY_METHOD_DEF(signing_config_get_should_normalize_uri_path, METH_VARARGS),
-    AWS_PY_METHOD_DEF(signing_config_get_signed_body_value_type, METH_VARARGS),
+    AWS_PY_METHOD_DEF(signing_config_get_signed_body_value, METH_VARARGS),
     AWS_PY_METHOD_DEF(signing_config_get_signed_body_header_type, METH_VARARGS),
     AWS_PY_METHOD_DEF(signing_config_get_expiration_in_seconds, METH_VARARGS),
     AWS_PY_METHOD_DEF(signing_config_get_omit_session_token, METH_VARARGS),
