@@ -584,6 +584,18 @@ static void s_module_init(void) {
     s_error_map_init();
 }
 
+void s_module_cleanup(void *self) {
+    (void)self;
+
+    aws_common_library_init(aws_py_get_allocator());
+
+    aws_global_thread_shutdown_wait();
+
+    aws_http_library_clean_up();
+    aws_auth_library_clean_up();
+    aws_mqtt_library_clean_up();
+}
+
 #if PY_MAJOR_VERSION == 3
 
 PyMODINIT_FUNC PyInit__awscrt(void) {
@@ -596,7 +608,7 @@ PyMODINIT_FUNC PyInit__awscrt(void) {
         NULL, /* slots for multi-phase initialization */
         NULL, /* traversal fn to call during GC traversal */
         NULL, /* clear fn to call during GC clear */
-        NULL, /* fn to call during deallocation of the module object */
+        s_module_cleanup,
     };
 
     PyObject *m = PyModule_Create(&s_module_def);
