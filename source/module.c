@@ -596,7 +596,7 @@ PyMODINIT_FUNC PyInit__awscrt(void) {
         NULL, /* slots for multi-phase initialization */
         NULL, /* traversal fn to call during GC traversal */
         NULL, /* clear fn to call during GC clear */
-        NULL,
+        NULL, /* fn to call during deallocation of the module object */
     };
 
     PyObject *m = PyModule_Create(&s_module_def);
