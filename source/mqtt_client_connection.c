@@ -55,7 +55,7 @@ struct mqtt_connection_binding {
 };
 
 static void s_mqtt_python_connection_finish_destruction(struct mqtt_connection_binding *py_connection) {
-    aws_mqtt_client_connection_destroy(py_connection->native);
+    aws_mqtt_client_connection_release(py_connection->native);
 
     Py_DECREF(py_connection->self_proxy);
     Py_DECREF(py_connection->client);
@@ -230,7 +230,7 @@ capsule_new_failed:
 proxy_new_failed:
 use_websockets_failed:
 set_interruption_failed:
-    aws_mqtt_client_connection_destroy(py_connection->native);
+    aws_mqtt_client_connection_release(py_connection->native);
 connection_new_failed:
     aws_mem_release(allocator, py_connection);
     return NULL;

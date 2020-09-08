@@ -86,7 +86,7 @@ PyObject *aws_py_is_alpn_available(PyObject *self, PyObject *args) {
  ******************************************************************************/
 
 struct event_loop_group_binding {
-    struct aws_event_loop_group native;
+    struct aws_event_loop_group *native;
 
     /* Dependencies that must outlive this */
     PyObject *shutdown_complete;
@@ -122,7 +122,7 @@ static void s_elg_capsule_destructor(PyObject *elg_capsule) {
 
     /* Must use async cleanup.
      * We could deadlock if we ran the synchronous cleanup from an event-loop thread. */
-    aws_event_loop_group_clean_up_async(&elg_binding->native, s_elg_native_cleanup_complete, elg_binding);
+    aws_event_loop_group_release(elg_binding->native);
 }
 
 PyObject *aws_py_event_loop_group_new(PyObject *self, PyObject *args) {
@@ -141,7 +141,13 @@ PyObject *aws_py_event_loop_group_new(PyObject *self, PyObject *args) {
         return PyErr_AwsLastError();
     }
 
-    if (aws_event_loop_group_default_init(&binding->native, allocator, num_threads)) {
+    struct aws_shutdown_callback_options shutdown_options = {
+        .shutdown_callback_fn = s_elg_native_cleanup_complete,
+        .shutdown_callback_user_data = binding,
+    };
+
+    binding->native = aws_event_loop_group_new_default(allocator, num_threads, &shutdown_options);
+    if (binding->native == NULL) {
         PyErr_SetAwsLastError();
         goto elg_init_failed;
     }
@@ -158,15 +164,14 @@ PyObject *aws_py_event_loop_group_new(PyObject *self, PyObject *args) {
     return capsule;
 
 capsule_new_failed:
-    aws_event_loop_group_clean_up(&binding->native);
+    aws_event_loop_group_release(binding->native);
 elg_init_failed:
     aws_mem_release(allocator, binding);
     return NULL;
 }
 
 struct aws_event_loop_group *aws_py_get_event_loop_group(PyObject *event_loop_group) {
-    AWS_PY_RETURN_NATIVE_REF_FROM_BINDING(
-        event_loop_group, s_capsule_name_elg, "EventLoopGroup", event_loop_group_binding);
+    AWS_PY_RETURN_NATIVE_FROM_BINDING(event_loop_group, s_capsule_name_elg, "EventLoopGroup", event_loop_group_binding);
 }
 
 /*******************************************************************************
@@ -174,7 +179,7 @@ struct aws_event_loop_group *aws_py_get_event_loop_group(PyObject *event_loop_gr
  ******************************************************************************/
 
 struct host_resolver_binding {
-    struct aws_host_resolver native;
+    struct aws_host_resolver *native;
 
     /* Dependencies that must outlive this */
     PyObject *event_loop_group;
@@ -184,7 +189,7 @@ static void s_host_resolver_destructor(PyObject *host_resolver_capsule) {
     struct host_resolver_binding *host_resolver =
         PyCapsule_GetPointer(host_resolver_capsule, s_capsule_name_host_resolver);
     assert(host_resolver);
-    aws_host_resolver_clean_up(&host_resolver->native);
+    aws_host_resolver_release(host_resolver->native);
     Py_DECREF(host_resolver->event_loop_group);
     aws_mem_release(aws_py_get_allocator(), host_resolver);
 }
@@ -218,7 +223,8 @@ PyObject *aws_py_host_resolver_new_default(PyObject *self, PyObject *args) {
 
     /* From hereon, we need to clean up if errors occur */
 
-    if (aws_host_resolver_init_default(&host_resolver->native, allocator, max_hosts, elg)) {
+    host_resolver->native = aws_host_resolver_new_default(allocator, max_hosts, elg, NULL);
+    if (host_resolver->native == NULL) {
         PyErr_SetAwsLastError();
         goto resolver_init_failed;
     }
@@ -235,14 +241,14 @@ PyObject *aws_py_host_resolver_new_default(PyObject *self, PyObject *args) {
     return capsule;
 
 capsule_new_failed:
-    aws_host_resolver_clean_up(&host_resolver->native);
+    aws_host_resolver_release(host_resolver->native);
 resolver_init_failed:
     aws_mem_release(allocator, host_resolver);
     return NULL;
 }
 
 struct aws_host_resolver *aws_py_get_host_resolver(PyObject *host_resolver) {
-    AWS_PY_RETURN_NATIVE_REF_FROM_BINDING(
+    AWS_PY_RETURN_NATIVE_FROM_BINDING(
         host_resolver, s_capsule_name_host_resolver, "HostResolverBase", host_resolver_binding);
 }
 
@@ -375,7 +381,7 @@ static void s_tls_ctx_destructor(PyObject *tls_ctx_capsule) {
     struct aws_tls_ctx *tls_ctx = PyCapsule_GetPointer(tls_ctx_capsule, s_capsule_name_tls_ctx);
     assert(tls_ctx);
 
-    aws_tls_ctx_destroy(tls_ctx);
+    aws_tls_ctx_release(tls_ctx);
 }
 
 PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args) {
@@ -480,6 +486,8 @@ PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args) {
     return capsule;
 
 capsule_new_failure:
+    aws_tls_ctx_release(tls_ctx);
+
 ctx_options_failure:
     aws_tls_ctx_options_clean_up(&ctx_options);
     return NULL;
