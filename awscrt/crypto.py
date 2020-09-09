@@ -4,7 +4,7 @@
 import _awscrt
 
 
-class Hash(object):
+class Hash:
 
     def __init__(self, native_handle):
         """
@@ -33,7 +33,7 @@ class Hash(object):
         return _awscrt.hash_digest(self._hash, truncate_to)
 
 
-class HMAC(object):
+class HMAC:
     def __init__(self, native_handle):
         """
         don't call me, I'm private

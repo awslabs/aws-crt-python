@@ -10,7 +10,7 @@ Long-running event-loop threads are used for concurrency.
 
 from __future__ import absolute_import
 import _awscrt
-from awscrt import NativeResource, isinstance_str
+from awscrt import NativeResource
 from enum import IntEnum
 import io
 import threading
@@ -60,7 +60,7 @@ class EventLoopGroup(NativeResource):
     __slots__ = ('shutdown_event')
 
     def __init__(self, num_threads=0):
-        super(EventLoopGroup, self).__init__()
+        super().__init__()
 
         shutdown_event = threading.Event()
 
@@ -88,7 +88,7 @@ class DefaultHostResolver(HostResolverBase):
     def __init__(self, event_loop_group, max_hosts=16):
         assert isinstance(event_loop_group, EventLoopGroup)
 
-        super(DefaultHostResolver, self).__init__()
+        super().__init__()
         self._binding = _awscrt.host_resolver_new_default(max_hosts, event_loop_group)
 
 
@@ -110,7 +110,7 @@ class ClientBootstrap(NativeResource):
         assert isinstance(event_loop_group, EventLoopGroup)
         assert isinstance(host_resolver, HostResolverBase)
 
-        super(ClientBootstrap, self).__init__()
+        super().__init__()
 
         shutdown_event = threading.Event()
 
@@ -145,7 +145,7 @@ class SocketType(IntEnum):
     `SocketDomain.Local` is not compatible with `DGram` """
 
 
-class SocketOptions(object):
+class SocketOptions:
     """Socket options.
 
     Attributes:
@@ -190,7 +190,7 @@ class TlsVersion(IntEnum):
     DEFAULT = 128  #:
 
 
-class TlsContextOptions(object):
+class TlsContextOptions:
     """Options to create a TLS context.
 
     The static `TlsContextOptions.create_X()` methods provide common TLS configurations.
@@ -234,8 +234,8 @@ class TlsContextOptions(object):
             TlsContextOptions:
         """
 
-        assert isinstance_str(cert_filepath)
-        assert isinstance_str(pk_filepath)
+        assert isinstance(cert_filepath, str)
+        assert isinstance(pk_filepath, str)
 
         cert_buffer = _read_binary_file(cert_filepath)
         key_buffer = _read_binary_file(pk_filepath)
@@ -282,8 +282,8 @@ class TlsContextOptions(object):
             TlsContextOptions:
         """
 
-        assert isinstance_str(pkcs12_filepath)
-        assert isinstance_str(pkcs12_password)
+        assert isinstance(pkcs12_filepath, str)
+        assert isinstance(pkcs12_password, str)
 
         opt = TlsContextOptions()
         opt.pkcs12_filepath = pkcs12_filepath
@@ -307,8 +307,8 @@ class TlsContextOptions(object):
             TlsContextOptions:
         """
 
-        assert isinstance_str(cert_filepath)
-        assert isinstance_str(pk_filepath)
+        assert isinstance(cert_filepath, str)
+        assert isinstance(pk_filepath, str)
 
         cert_buffer = _read_binary_file(cert_filepath)
         key_buffer = _read_binary_file(pk_filepath)
@@ -353,8 +353,8 @@ class TlsContextOptions(object):
             TlsContextOptions:
         """
 
-        assert isinstance_str(pkcs12_filepath)
-        assert isinstance_str(pkcs12_password)
+        assert isinstance(pkcs12_filepath, str)
+        assert isinstance(pkcs12_password, str)
 
         opt = TlsContextOptions()
         opt.pkcs12_filepath = pkcs12_filepath
@@ -373,8 +373,8 @@ class TlsContextOptions(object):
                 of trusted CA certificates.
         """
 
-        assert isinstance_str(ca_dirpath) or ca_dirpath is None
-        assert isinstance_str(ca_filepath) or ca_filepath is None
+        assert isinstance(ca_dirpath, str) or ca_dirpath is None
+        assert isinstance(ca_filepath, str) or ca_filepath is None
 
         if ca_filepath:
             ca_buffer = _read_binary_file(ca_filepath)
@@ -407,7 +407,7 @@ class ClientTlsContext(NativeResource):
     def __init__(self, options):
         assert isinstance(options, TlsContextOptions)
 
-        super(ClientTlsContext, self).__init__()
+        super().__init__()
         self._binding = _awscrt.client_tls_ctx_new(
             options.min_tls_ver.value,
             options.ca_dirpath,
@@ -445,7 +445,7 @@ class TlsConnectionOptions(NativeResource):
     def __init__(self, tls_ctx):
         assert isinstance(tls_ctx, ClientTlsContext)
 
-        super(TlsConnectionOptions, self).__init__()
+        super().__init__()
         self.tls_ctx = tls_ctx
         self._binding = _awscrt.tls_connections_options_new_from_ctx(tls_ctx)
 
@@ -478,7 +478,7 @@ def _alpn_list_to_str(alpn_list):
     None is returned if list is None or empty
     """
     if alpn_list:
-        assert not isinstance_str(alpn_list)
+        assert not isinstance(alpn_list, str)
         return ';'.join(alpn_list)
     return None
 
@@ -502,7 +502,7 @@ class InputStream(NativeResource):
         assert isinstance(stream, io.IOBase)
         assert not isinstance(stream, InputStream)
 
-        super(InputStream, self).__init__()
+        super().__init__()
         self._binding = _awscrt.input_stream_new(stream)
 
     @classmethod

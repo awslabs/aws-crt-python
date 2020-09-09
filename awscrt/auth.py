@@ -7,35 +7,13 @@ AWS client-side authentication: standard credentials providers and signing.
 
 from __future__ import absolute_import
 import _awscrt
-from awscrt import isinstance_str, NativeResource
+from awscrt import NativeResource
 import awscrt.exceptions
 from awscrt.http import HttpRequest
 from awscrt.io import ClientBootstrap
 from concurrent.futures import Future
 import datetime
 from enum import IntEnum
-import time
-
-try:
-    _utc = datetime.timezone.utc
-except AttributeError:
-    # Python 2 lacks the datetime.timestamp() method.
-    # We can do the timestamp math ourselves, but only if datetime.tzinfo is set.
-    # Python 2 also lacks any predefined tzinfo classes (ex: datetime.timezone.utc),
-    # so we must define our own.
-    class _UTC(datetime.tzinfo):
-        ZERO = datetime.timedelta(0)
-
-        def utcoffset(self, dt):
-            return _UTC.ZERO
-
-        def tzname(self, dt):
-            return "UTC"
-
-        def dst(self, dt):
-            return _UTC.ZERO
-
-    _utc = _UTC()
 
 
 class AwsCredentials(NativeResource):
@@ -57,11 +35,11 @@ class AwsCredentials(NativeResource):
     __slots__ = ()
 
     def __init__(self, access_key_id, secret_access_key, session_token=None):
-        assert isinstance_str(access_key_id)
-        assert isinstance_str(secret_access_key)
-        assert isinstance_str(session_token) or session_token is None
+        assert isinstance(access_key_id, str)
+        assert isinstance(secret_access_key, str)
+        assert isinstance(session_token, str) or session_token is None
 
-        super(AwsCredentials, self).__init__()
+        super().__init__()
         self._binding = _awscrt.credentials_new(access_key_id, secret_access_key, session_token)
 
     @classmethod
@@ -98,7 +76,7 @@ class AwsCredentialsProviderBase(NativeResource):
     __slots__ = ()
 
     def __init__(self, binding=None):
-        super(AwsCredentialsProviderBase, self).__init__()
+        super().__init__()
 
         if binding is None:
             # TODO: create binding type that lets native code call into python subclass
@@ -156,9 +134,9 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
         Returns:
             AwsCredentialsProvider:
         """
-        assert isinstance_str(access_key_id)
-        assert isinstance_str(secret_access_key)
-        assert isinstance_str(session_token) or session_token is None
+        assert isinstance(access_key_id, str)
+        assert isinstance(secret_access_key, str)
+        assert isinstance(session_token, str) or session_token is None
 
         binding = _awscrt.credentials_provider_new_static(access_key_id, secret_access_key, session_token)
         return cls(binding)
@@ -345,28 +323,19 @@ class AwsSigningConfig(NativeResource):
         assert isinstance(algorithm, AwsSigningAlgorithm)
         assert isinstance(signature_type, AwsSignatureType)
         assert isinstance(credentials_provider, AwsCredentialsProviderBase)
-        assert isinstance_str(region)
-        assert isinstance_str(service)
+        assert isinstance(region, str)
+        assert isinstance(service, str)
         assert callable(should_sign_header) or should_sign_header is None
         assert signed_body_value is None or (isinstance(signed_body_value, str) and len(signed_body_value) > 0)
         assert isinstance(signed_body_header_type, AwsSignedBodyHeaderType)
         assert expiration_in_seconds is None or expiration_in_seconds > 0
 
-        super(AwsSigningConfig, self).__init__()
+        super().__init__()
 
         if date is None:
-            date = datetime.datetime.now(_utc)
+            date = datetime.datetime.now(datetime.timezone.utc)
 
-        try:
-            timestamp = date.timestamp()
-        except AttributeError:
-            # Python 2 doesn't have datetime.timestamp() function.
-            # If it did we could just call it from binding code instead of calculating it here.
-            if date.tzinfo is None:
-                timestamp = time.mktime(date.timetuple())
-            else:
-                epoch = datetime.datetime(1970, 1, 1, tzinfo=_utc)
-                timestamp = (date - epoch).total_seconds()
+        timestamp = date.timestamp()
 
         self._priv_should_sign_cb = should_sign_header
 

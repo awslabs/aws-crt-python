@@ -96,7 +96,7 @@ class ConnectReturnCode(IntEnum):
     """
 
 
-class Will(object):
+class Will:
     """A Will message is published by the server if a client is lost unexpectedly.
 
     The Will message is stored on the server when a client connects.
@@ -142,7 +142,7 @@ class Client(NativeResource):
         assert isinstance(bootstrap, ClientBootstrap)
         assert tls_ctx is None or isinstance(tls_ctx, ClientTlsContext)
 
-        super(Client, self).__init__()
+        super().__init__()
         self.tls_ctx = tls_ctx
         self._binding = _awscrt.mqtt_client_new(bootstrap, tls_ctx)
 
@@ -275,7 +275,7 @@ class Connection(NativeResource):
         if keep_alive_secs * 1000 <= ping_timeout_ms:
             raise ValueError("'keep_alive_secs' duration must be longer than 'ping_timeout_ms'")
 
-        super(Connection, self).__init__()
+        super().__init__()
 
         # init-only
         self.client = client
@@ -641,7 +641,7 @@ class Connection(NativeResource):
         return future, packet_id
 
 
-class WebsocketHandshakeTransformArgs(object):
+class WebsocketHandshakeTransformArgs:
     """
     Argument to a "websocket_handshake_transform" function.
 

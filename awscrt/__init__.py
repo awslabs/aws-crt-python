@@ -1,7 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 
-from sys import version_info
 from weakref import WeakSet
 
 __all__ = [
@@ -13,7 +12,7 @@ __all__ = [
 ]
 
 
-class NativeResource(object):
+class NativeResource:
     """
     Base for classes that bind to a native type.
     _binding is a python capsule referencing the native object.
@@ -33,12 +32,3 @@ class NativeResource(object):
     def __init__(self):
         if NativeResource._track_lifetime:
             NativeResource._living.add(self)
-
-
-def isinstance_str(x):
-    """
-    Python 2/3 compatible way to check isinstance(x, str).
-    """
-    if version_info[0] == 2:
-        return isinstance(x, basestring)
-    return isinstance(x, str)
