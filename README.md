@@ -1,6 +1,6 @@
 ## AWS CRT Python
 
-Python bindings for the AWS Common Runtime.
+Python 3 bindings for the AWS Common Runtime.
 
 API documentation: https://awslabs.github.io/aws-crt-python/
 
@@ -8,11 +8,14 @@ API documentation: https://awslabs.github.io/aws-crt-python/
 
 This library is licensed under the Apache 2.0 License.
 
+## Minimum Requirements:
+*   Python 3.5+
+
 ## Installation
 
 To install from pip:
 ````bash
-python -m pip install awscrt
+python3 -m pip install awscrt
 ````
 
 To install from Github:
@@ -20,7 +23,7 @@ To install from Github:
 git clone https://github.com/awslabs/aws-crt-python.git
 cd aws-crt-python
 git submodule update --init
-python -m pip install .
+python3 -m pip install .
 ````
 
 To use from your Python application, declare `awscrt` as a dependency in your `setup.py` file.
