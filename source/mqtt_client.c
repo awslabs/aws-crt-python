@@ -9,7 +9,7 @@
 static const char *s_capsule_name_mqtt_client = "aws_mqtt_client";
 
 struct mqtt_client_binding {
-    struct aws_mqtt_client native;
+    struct aws_mqtt_client *native;
 
     /* Dependencies that must outlive this */
     PyObject *bootstrap;
@@ -21,7 +21,7 @@ static void s_mqtt_python_client_destructor(PyObject *client_capsule) {
     struct mqtt_client_binding *client = PyCapsule_GetPointer(client_capsule, s_capsule_name_mqtt_client);
     assert(client);
 
-    aws_mqtt_client_clean_up(&client->native);
+    aws_mqtt_client_release(client->native);
     Py_DECREF(client->bootstrap);
     Py_DECREF(client->tls_ctx);
     aws_mem_release(aws_py_get_allocator(), client);
@@ -50,8 +50,8 @@ PyObject *aws_py_mqtt_client_new(PyObject *self, PyObject *args) {
     }
 
     /* From hereon, we need to clean up if errors occur */
-
-    if (aws_mqtt_client_init(&client->native, allocator, bootstrap)) {
+    client->native = aws_mqtt_client_new(allocator, bootstrap);
+    if (client->native == NULL) {
         PyErr_SetAwsLastError();
         goto client_init_failed;
     }
@@ -70,12 +70,12 @@ PyObject *aws_py_mqtt_client_new(PyObject *self, PyObject *args) {
     return capsule;
 
 capsule_new_failed:
-    aws_mqtt_client_clean_up(&client->native);
+    aws_mqtt_client_release(client->native);
 client_init_failed:
     aws_mem_release(allocator, client);
     return NULL;
 }
 
 struct aws_mqtt_client *aws_py_get_mqtt_client(PyObject *mqtt_client) {
-    AWS_PY_RETURN_NATIVE_REF_FROM_BINDING(mqtt_client, s_capsule_name_mqtt_client, "Client", mqtt_client_binding);
+    AWS_PY_RETURN_NATIVE_FROM_BINDING(mqtt_client, s_capsule_name_mqtt_client, "Client", mqtt_client_binding);
 }

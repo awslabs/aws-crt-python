@@ -229,7 +229,7 @@ PyObject *aws_py_signing_config_get_region(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    return PyString_FromAwsByteCursor(&binding->native.region);
+    return PyUnicode_FromAwsByteCursor(&binding->native.region);
 }
 
 PyObject *aws_py_signing_config_get_service(PyObject *self, PyObject *args) {
@@ -238,7 +238,7 @@ PyObject *aws_py_signing_config_get_service(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    return PyString_FromAwsByteCursor(&binding->native.service);
+    return PyUnicode_FromAwsByteCursor(&binding->native.service);
 }
 
 PyObject *aws_py_signing_config_get_date(PyObject *self, PyObject *args) {
@@ -281,7 +281,7 @@ PyObject *aws_py_signing_config_get_signed_body_value(PyObject *self, PyObject *
         Py_RETURN_NONE;
     }
 
-    return PyString_FromAwsByteCursor(&binding->native.signed_body_value);
+    return PyUnicode_FromAwsByteCursor(&binding->native.signed_body_value);
 }
 
 PyObject *aws_py_signing_config_get_signed_body_header_type(PyObject *self, PyObject *args) {

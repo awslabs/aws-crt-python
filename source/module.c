@@ -70,43 +70,39 @@ PyObject *aws_py_init_logging(PyObject *self, PyObject *args) {
     Py_RETURN_NONE;
 }
 
-#if PY_MAJOR_VERSION == 3
-#    define UNICODE_GET_BYTES_FN PyUnicode_DATA
-#    define UNICODE_GET_BYTE_LEN_FN PyUnicode_GET_LENGTH
-#elif PY_MAJOR_VERSION == 2
-#    define UNICODE_GET_BYTES_FN PyUnicode_AS_DATA
-#    define UNICODE_GET_BYTE_LEN_FN PyUnicode_GET_DATA_SIZE
-#endif /* PY_MAJOR_VERSION */
-
-struct aws_byte_cursor aws_byte_cursor_from_pystring(PyObject *str) {
-    if (PyBytes_CheckExact(str)) {
-        return aws_byte_cursor_from_array(PyBytes_AsString(str), PyBytes_Size(str));
+struct aws_byte_cursor aws_byte_cursor_from_pyunicode(PyObject *str) {
+    Py_ssize_t len;
+    const char *ptr = PyUnicode_AsUTF8AndSize(str, &len);
+    if (ptr) {
+        return aws_byte_cursor_from_array(ptr, (size_t)len);
     }
-    if (PyUnicode_CheckExact(str)) {
-        return aws_byte_cursor_from_array(UNICODE_GET_BYTES_FN(str), UNICODE_GET_BYTE_LEN_FN(str));
-    }
-
     return aws_byte_cursor_from_array(NULL, 0);
 }
 
-PyObject *PyString_FromAwsString(const struct aws_string *aws_str) {
-    return PyString_FromStringAndSize(aws_string_c_str(aws_str), aws_str->len);
+struct aws_byte_cursor aws_byte_cursor_from_pybytes(PyObject *py_bytes) {
+    char *ptr;
+    Py_ssize_t len;
+    if (PyBytes_AsStringAndSize(py_bytes, &ptr, &len) == -1) {
+        return aws_byte_cursor_from_array(NULL, 0);
+    }
+
+    return aws_byte_cursor_from_array(ptr, (size_t)len);
 }
 
-int PyIntEnum_Check(PyObject *int_enum_obj) {
-#if PY_MAJOR_VERSION == 2
-    return PyInt_Check(int_enum_obj);
-#else
-    return PyLong_Check(int_enum_obj);
-#endif
+PyObject *PyUnicode_FromAwsByteCursor(const struct aws_byte_cursor *cursor) {
+    if (cursor->len > PY_SSIZE_T_MAX) {
+        PyErr_SetString(PyExc_OverflowError, "Cursor exceeds PY_SSIZE_T_MAX");
+        return NULL;
+    }
+    return PyUnicode_FromStringAndSize((const char *)cursor->ptr, (Py_ssize_t)cursor->len);
 }
 
-long PyIntEnum_AsLong(PyObject *int_enum_obj) {
-#if PY_MAJOR_VERSION == 2
-    return PyInt_AsLong(int_enum_obj);
-#else
-    return PyLong_AsLong(int_enum_obj);
-#endif
+PyObject *PyUnicode_FromAwsString(const struct aws_string *aws_str) {
+    if (aws_str->len > PY_SSIZE_T_MAX) {
+        PyErr_SetString(PyExc_OverflowError, "String exceeds PY_SSIZE_T_MAX");
+        return NULL;
+    }
+    return PyUnicode_FromStringAndSize(aws_string_c_str(aws_str), aws_str->len);
 }
 
 uint32_t PyObject_GetAttrAsUint32(PyObject *o, const char *class_name, const char *attr_name) {
@@ -204,12 +200,12 @@ int PyObject_GetAttrAsIntEnum(PyObject *o, const char *class_name, const char *a
         return result;
     }
 
-    if (!PyIntEnum_Check(attr)) {
+    if (!PyLong_Check(attr)) {
         PyErr_Format(PyExc_TypeError, "%s.%s is not a valid enum", class_name, attr_name);
         goto done;
     }
 
-    result = PyIntEnum_AsLong(attr);
+    result = PyLong_AsLong(attr);
 done:
     Py_DECREF(attr);
     return result;
@@ -246,11 +242,9 @@ static void s_error_map_init(void) {
         {PyExc_OverflowError, AWS_ERROR_OVERFLOW_DETECTED},
         {PyExc_TypeError, AWS_ERROR_INVALID_ARGUMENT},
         {PyExc_ValueError, AWS_ERROR_INVALID_ARGUMENT},
-#if PY_MAJOR_VERSION == 3
         {PyExc_FileNotFoundError, AWS_ERROR_FILE_INVALID_PATH},
         {PyExc_BlockingIOError, AWS_IO_READ_WOULD_BLOCK},
         {PyExc_BrokenPipeError, AWS_IO_BROKEN_PIPE},
-#endif
     };
 
     if (aws_hash_table_init(
@@ -332,7 +326,7 @@ PyObject *aws_py_get_error_name(PyObject *self, PyObject *args) {
     }
 
     const char *name = aws_error_name(error_code);
-    return PyString_FromString(name);
+    return PyUnicode_FromString(name);
 }
 
 PyObject *aws_py_get_error_message(PyObject *self, PyObject *args) {
@@ -343,7 +337,7 @@ PyObject *aws_py_get_error_message(PyObject *self, PyObject *args) {
     }
 
     const char *name = aws_error_str(error_code);
-    return PyString_FromString(name);
+    return PyUnicode_FromString(name);
 }
 
 PyObject *aws_py_memory_view_from_byte_buffer(struct aws_byte_buf *buf) {
@@ -355,18 +349,7 @@ PyObject *aws_py_memory_view_from_byte_buffer(struct aws_byte_buf *buf) {
 
     Py_ssize_t mem_size = available;
     char *mem_start = (char *)(buf->buffer + buf->len);
-
-#if PY_MAJOR_VERSION == 3
     return PyMemoryView_FromMemory(mem_start, mem_size, PyBUF_WRITE);
-#else
-    Py_buffer py_buf;
-    int read_only = 0;
-    if (PyBuffer_FillInfo(&py_buf, NULL /*obj*/, mem_start, mem_size, read_only, PyBUF_WRITABLE)) {
-        return NULL;
-    }
-
-    return PyMemoryView_FromBuffer(&py_buf);
-#endif /* PY_MAJOR_VERSION */
 }
 
 int aws_py_gilstate_ensure(PyGILState_STATE *out_state) {
@@ -570,22 +553,6 @@ PyDoc_STRVAR(s_module_doc, "C extension for binding AWS implementations of MQTT,
  * Module Init
  ******************************************************************************/
 
-static void s_module_init(void) {
-    s_install_crash_handler();
-
-    aws_http_library_init(aws_py_get_allocator());
-    aws_auth_library_init(aws_py_get_allocator());
-    aws_mqtt_library_init(aws_py_get_allocator());
-
-    if (!PyEval_ThreadsInitialized()) {
-        PyEval_InitThreads();
-    }
-
-    s_error_map_init();
-}
-
-#if PY_MAJOR_VERSION == 3
-
 PyMODINIT_FUNC PyInit__awscrt(void) {
     static struct PyModuleDef s_module_def = {
         PyModuleDef_HEAD_INIT,
@@ -604,20 +571,17 @@ PyMODINIT_FUNC PyInit__awscrt(void) {
         return NULL;
     }
 
-    s_module_init();
-    return m;
-}
+    s_install_crash_handler();
 
-#elif PY_MAJOR_VERSION == 2
+    aws_http_library_init(aws_py_get_allocator());
+    aws_auth_library_init(aws_py_get_allocator());
+    aws_mqtt_library_init(aws_py_get_allocator());
 
-PyMODINIT_FUNC init_awscrt(void) {
-    if (!Py_InitModule3(s_module_name, s_module_methods, s_module_doc)) {
-        AWS_FATAL_ASSERT(0 && "Failed to initialize _awscrt");
+    if (!PyEval_ThreadsInitialized()) {
+        PyEval_InitThreads();
     }
 
-    s_module_init();
-}
+    s_error_map_init();
 
-#else
-#    error Unsupported Python version
-#endif /* PY_MAJOR_VERSION */
+    return m;
+}

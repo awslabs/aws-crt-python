@@ -15,7 +15,7 @@ EXAMPLE_SECRET_ACCESS_KEY = 'example_secret_access_key'
 EXAMPLE_SESSION_TOKEN = 'example_session_token'
 
 
-class ScopedEnvironmentVariable(object):
+class ScopedEnvironmentVariable:
     """
     Set environment variable for lifetime of this object.
     """
@@ -238,7 +238,14 @@ SIGV4TEST_SECRET_ACCESS_KEY = 'wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY'
 SIGV4TEST_SESSION_TOKEN = None
 SIGV4TEST_SERVICE = 'service'
 SIGV4TEST_REGION = 'us-east-1'
-SIGV4TEST_DATE = datetime.datetime(year=2015, month=8, day=30, hour=12, minute=36, second=0, tzinfo=awscrt.auth._utc)
+SIGV4TEST_DATE = datetime.datetime(
+    year=2015,
+    month=8,
+    day=30,
+    hour=12,
+    minute=36,
+    second=0,
+    tzinfo=datetime.timezone.utc)
 
 
 class TestSigner(NativeResourceTest):

@@ -55,7 +55,7 @@ struct mqtt_connection_binding {
 };
 
 static void s_mqtt_python_connection_finish_destruction(struct mqtt_connection_binding *py_connection) {
-    aws_mqtt_client_connection_destroy(py_connection->native);
+    aws_mqtt_client_connection_release(py_connection->native);
 
     Py_DECREF(py_connection->self_proxy);
     Py_DECREF(py_connection->client);
@@ -230,7 +230,7 @@ capsule_new_failed:
 proxy_new_failed:
 use_websockets_failed:
 set_interruption_failed:
-    aws_mqtt_client_connection_destroy(py_connection->native);
+    aws_mqtt_client_connection_release(py_connection->native);
 connection_new_failed:
     aws_mem_release(allocator, py_connection);
     return NULL;
@@ -290,9 +290,9 @@ bool s_set_will(struct aws_mqtt_client_connection *connection, PyObject *will) {
     PyObject *py_payload = NULL;
 
     py_topic = PyObject_GetAttrString(will, "topic");
-    struct aws_byte_cursor topic = aws_byte_cursor_from_pystring(py_topic);
+    struct aws_byte_cursor topic = aws_byte_cursor_from_pyunicode(py_topic);
     if (!topic.ptr) {
-        PyErr_SetString(PyExc_TypeError, "Will.topic is invalid");
+        PyErr_SetString(PyExc_TypeError, "Will.topic must be str type");
         goto done;
     }
 
@@ -302,9 +302,9 @@ bool s_set_will(struct aws_mqtt_client_connection *connection, PyObject *will) {
     }
 
     py_payload = PyObject_GetAttrString(will, "payload");
-    struct aws_byte_cursor payload = aws_byte_cursor_from_pystring(py_payload);
+    struct aws_byte_cursor payload = aws_byte_cursor_from_pybytes(py_payload);
     if (!payload.ptr) {
-        PyErr_SetString(PyExc_TypeError, "Will.payload is invalid");
+        PyErr_SetString(PyExc_TypeError, "Will.payload must be bytes type");
         goto done;
     }
 
@@ -813,7 +813,7 @@ static void s_subscribe_callback(
     PyObject *result = PyObject_CallFunction(
         callback,
         "(NN)",
-        PyString_FromAwsByteCursor(topic),
+        PyUnicode_FromAwsByteCursor(topic),
         PyBytes_FromStringAndSize((const char *)payload->ptr, (Py_ssize_t)payload->len));
 
     if (result) {

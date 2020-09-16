@@ -166,8 +166,7 @@ static int s_on_incoming_body(
         return AWS_OP_ERR; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
-    PyObject *result = PyObject_CallMethod(
-        stream->self_proxy, "_on_body", "(" READABLE_BYTES_FORMAT_STR ")", (const char *)data->ptr, data_len);
+    PyObject *result = PyObject_CallMethod(stream->self_proxy, "_on_body", "(y#)", (const char *)data->ptr, data_len);
     if (!result) {
         aws_result = aws_py_raise_error();
         goto done;
@@ -200,12 +199,7 @@ static void s_on_stream_complete(struct aws_http_stream *native_stream, int erro
     }
 
     /* DECREF python self, we don't need to force it to stay alive any longer. */
-    PyObject *self = PyWeakref_GetObject(stream->self_proxy);
-    Py_DECREF(self);
-    /* Hack note. This use to be a one liner: Py_DECREF(PyWeakref_GetObject(stream->self_proxy));
-     * that would crash on Python 2, saying we were DECREF'ing Py_None.
-     * That should be impossible because we're forcing the python self to stay alive.
-     * I have no idea why splitting it into 2 lines fixes everything, but it does. */
+    Py_DECREF(PyWeakref_GetObject(stream->self_proxy));
 
     PyGILState_Release(state);
     /*************** GIL RELEASE ***************/

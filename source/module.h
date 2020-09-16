@@ -15,23 +15,12 @@
 #include <aws/common/common.h>
 
 struct aws_byte_buf;
+struct aws_byte_cursor;
 struct aws_string;
 
-#if PY_MAJOR_VERSION >= 3
-#    define PyString_FromStringAndSize PyUnicode_FromStringAndSize
-#    define PyString_FromString PyUnicode_FromString
-#    define READABLE_BYTES_FORMAT_STR "y#"
-#else
-#    define READABLE_BYTES_FORMAT_STR "s#"
-#endif /* PY_MAJOR_VERSION */
-
 /* AWS Specific Helpers */
-#define PyBool_FromAwsResult(result) PyBool_FromLong((result) == AWS_OP_SUCCESS)
-#define PyString_FromAwsByteCursor(cursor) PyString_FromStringAndSize((const char *)(cursor)->ptr, (cursor)->len)
-PyObject *PyString_FromAwsString(const struct aws_string *aws_str);
-
-int PyIntEnum_Check(PyObject *int_enum_obj);
-long PyIntEnum_AsLong(PyObject *int_enum_obj);
+PyObject *PyUnicode_FromAwsByteCursor(const struct aws_byte_cursor *cursor);
+PyObject *PyUnicode_FromAwsString(const struct aws_string *aws_str);
 
 /* Return the named attribute, converted to the specified type.
  * If conversion cannot occur a python exception is set (check PyExc_Occurred()) */
@@ -40,9 +29,13 @@ uint16_t PyObject_GetAttrAsUint16(PyObject *o, const char *class_name, const cha
 bool PyObject_GetAttrAsBool(PyObject *o, const char *class_name, const char *attr_name);
 int PyObject_GetAttrAsIntEnum(PyObject *o, const char *class_name, const char *attr_name);
 
-/* Create cursor from PyString, PyBytes, or PyUnicode.
- * If conversion cannot occur, cursor->ptr will be NULL but no python exception is set */
-struct aws_byte_cursor aws_byte_cursor_from_pystring(PyObject *str);
+/* Create cursor from PyUnicode.
+ * If conversion cannot occur, cursor->ptr will be NULL and a python exception is set */
+struct aws_byte_cursor aws_byte_cursor_from_pyunicode(PyObject *str);
+
+/* Create cursor from PyBytes.
+ * If conversion cannot occur, cursor->ptr will be NULL and a python exception is set */
+struct aws_byte_cursor aws_byte_cursor_from_pybytes(PyObject *py_bytes);
 
 /* Set current thread's error indicator based on aws_last_error() */
 void PyErr_SetAwsLastError(void);
