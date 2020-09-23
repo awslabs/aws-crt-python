@@ -110,12 +110,14 @@ class Will:
         qos (QoS): QoS used when publishing the Will message.
         payload (bytes): Content of Will message.
         retain (bool): Whether the Will message is to be retained when it is published.
+            This is not supported by AWS IoT. See https://docs.aws.amazon.com/iot/latest/developerguide/mqtt.html
 
     Attributes:
         topic (str): Topic to publish Will message on.
         qos (QoS): QoS used when publishing the Will message.
         payload (bytes): Content of Will message.
         retain (bool): Whether the Will message is to be retained when it is published.
+            This is not supported by AWS IoT. See https://docs.aws.amazon.com/iot/latest/developerguide/mqtt.html
     """
     __slots__ = ('topic', 'qos', 'payload', 'retain')
 
