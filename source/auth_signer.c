@@ -104,6 +104,7 @@ PyObject *aws_py_sign_request_aws(PyObject *self, PyObject *args) {
 
     async_data->signable = aws_signable_new_http_request(aws_py_get_allocator(), http_request);
     if (!async_data->signable) {
+        PyErr_SetAwsLastError();
         goto error;
     }
 

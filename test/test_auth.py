@@ -347,3 +347,26 @@ class TestSigner(NativeResourceTest):
                  '20150830T123600Z'),
                 ('Authorization',
                  'AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/service/aws4_request, SignedHeaders=host;x-amz-date, Signature=8318018e0b0f223aa2bbf98705b62bb787dc9c0e678f255a891fd03141be5d85')])
+
+    def test_signing_sigv4a_headers(self):
+        credentials_provider = awscrt.auth.AwsCredentialsProvider.new_static(
+            SIGV4TEST_ACCESS_KEY_ID, SIGV4TEST_SECRET_ACCESS_KEY, SIGV4TEST_SESSION_TOKEN)
+
+        signing_config = awscrt.auth.AwsSigningConfig(
+            algorithm=awscrt.auth.AwsSigningAlgorithm.V4_ASYMMETRIC,
+            signature_type=awscrt.auth.AwsSignatureType.HTTP_REQUEST_HEADERS,
+            credentials_provider=credentials_provider,
+            region=SIGV4TEST_REGION,
+            service=SIGV4TEST_SERVICE,
+            date=SIGV4TEST_DATE)
+
+        http_request = awscrt.http.HttpRequest('GET', '/')
+        http_request.headers.add('Host', 'example.amazonaws.com')
+
+        signing_future=awscrt.auth.aws_sign_request(http_request, signing_config)
+        signed_request=signing_future.result(TIMEOUT)
+
+        auth_header_value=signed_request.headers.get('Authorization')
+        self.assertIsNotNone(auth_header_value)
+        self.assertTrue(auth_header_value.startswith(
+            'AWS4-ECDSA-P256-SHA256 Credential=AKIDEXAMPLE/20150830/service/aws4_request, SignedHeaders=host;x-amz-date;x-amz-region-set, Signature='))
