@@ -116,7 +116,7 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
         check_cmake_installed()
 
         prev_cwd = os.getcwd()  # restore cwd at end of function
-        lib_source_dir = os.path.join(PROJECT_DIR, 'aws-common-runtime', aws_lib.name)
+        lib_source_dir = os.path.join(PROJECT_DIR, 'crt', aws_lib.name)
 
         build_type = 'Debug' if self.debug else 'RelWithDebInfo'
 
