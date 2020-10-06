@@ -137,7 +137,7 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
         cmake_args.extend(determine_generator_args())
         cmake_args.extend(determine_cross_compile_args())
         cmake_args.extend([
-            '-DCMAKE_PREFIX_PATH={}'.format(DEP_INSTALL_PATH),
+            '-DCMAKE_PREFIX_PATH="{};{}"'.format(DEP_BUILD_DIR, DEP_INSTALL_PATH),
             '-DCMAKE_INSTALL_PREFIX={}'.format(DEP_INSTALL_PATH),
             '-DBUILD_SHARED_LIBS=OFF',
             '-DCMAKE_BUILD_TYPE={}'.format(build_type),
