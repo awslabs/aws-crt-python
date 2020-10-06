@@ -12,6 +12,9 @@
             }
         }
     },
+    "imports": [
+        "libcrypto"
+    ],
     "hosts": {
         "manylinux": {
             "!build_steps": [
