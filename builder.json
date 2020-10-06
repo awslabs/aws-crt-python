@@ -4,6 +4,11 @@
         "android": {
             "enabled": false,
             "_comment": "disabled until we have a reason to support python on android"
+        },
+        "linux": {
+            "build_env": {
+                "AWS_LC_INSTALL": "{deps_dir}/libcrypto"
+            }
         }
     },
     "imports": [
