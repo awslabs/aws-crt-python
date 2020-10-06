@@ -45,7 +45,7 @@ class ManyLinuxPackage(Builder.Action):
             steps.append(Builder.Script(actions, name=python))
 
         copy_steps = [
-            ['cp', '-r', 'wheelhouse', '../dist']
+            ['cp', '-r', 'wheelhouse', '../dist'],
             ['cp', 'dist/*.tar.gz', '../dist/']
         ]
 
