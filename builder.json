@@ -8,7 +8,7 @@
         "linux": {
             "variables": {
                 "openssl_include": "{deps_dir}/libcrypto/include",
-                "openssl_lib": "{deps_dir}/libcrypto/lib"
+                "openssl_lib": "{deps_dir}/libcrypto"
             }
         }
     },
