@@ -40,8 +40,8 @@ class AWSCrtPython(Builder.Action):
         install_options = []
         if 'linux' == Builder.Host.current_os():
             install_options = [
-                '--install-option=--include-dirs={openssl_include}',
-                '--install-option=--library-dirs={openssl_lib}']
+                '--install-option=--libcrypto_path={openssl_path}',
+            ]
 
         actions = [
             InstallPythonReqs(deps=['boto3'], python=self.custom_python),

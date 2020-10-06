@@ -147,6 +147,9 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
             cmake_args.append('-DCMAKE_INCLUDE_PATH="{}"'.format(';'.join(self.include_dirs)))
         if self.library_dirs:
             cmake_args.append('-DCMAKE_LIBRARY_PATH="{}"'.format(';'.join(self.library_dirs)))
+        if self.libcrypto_path:
+            cmake_args.append('-DLibCrypto_INCLUDE_DIR={}/include'.format(self.libcrypto_path))
+            cmake_args.append('-DLibCrypto_STATIC_LIBRARY={}/lib/libcrypto.a'.format(self.libcrypto_path))
         cmake_args.extend(aws_lib.extra_cmake_args)
         cmake_args.append(lib_source_dir)
 
