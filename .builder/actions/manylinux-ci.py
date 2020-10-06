@@ -5,10 +5,11 @@ import sys
 from aws_crt_python import AWSCrtPython, InstallPythonReqs
 
 pythons = (
+    'cp35-cp35m',
     'cp36-cp36m',
     'cp37-cp37m',
-    'cp38-cp38m',
-    'cp39-cp39m',
+    'cp38-cp38',
+    'cp39-cp39',
 )
 
 
