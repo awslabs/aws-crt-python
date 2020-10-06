@@ -110,6 +110,9 @@ PROJECT_DIR = os.path.dirname(os.path.realpath(__file__))
 DEP_BUILD_DIR = os.path.join(PROJECT_DIR, 'build', 'deps')
 DEP_INSTALL_PATH = os.environ.get('AWS_C_INSTALL', os.path.join(DEP_BUILD_DIR, 'install'))
 
+if sys.platform != 'darwin' and sys.platform != 'win32':
+    AWS_LC_INSTALL = os.environ.get('AWS_LC_INSTALL', os.path.join(DEP_BUILD_DIR, 'libcrypto'))
+
 
 class awscrt_build_ext(setuptools.command.build_ext.build_ext):
     def _build_dependency(self, aws_lib):
@@ -147,9 +150,9 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
             cmake_args.append('-DCMAKE_INCLUDE_PATH="{}"'.format(';'.join(self.include_dirs)))
         if self.library_dirs:
             cmake_args.append('-DCMAKE_LIBRARY_PATH="{}"'.format(';'.join(self.library_dirs)))
-        if self.libcrypto_path:
-            cmake_args.append('-DLibCrypto_INCLUDE_DIR={}/include'.format(self.libcrypto_path))
-            cmake_args.append('-DLibCrypto_STATIC_LIBRARY={}/lib/libcrypto.a'.format(self.libcrypto_path))
+        if sys.platform != 'darwin' and sys.platform != 'win32':
+            cmake_args.append('-DLibCrypto_INCLUDE_DIR={}/include'.format(AWS_LC_INSTALL))
+            cmake_args.append('-DLibCrypto_STATIC_LIBRARY={}/lib/libcrypto.a'.format(AWS_LC_INSTALL))
         cmake_args.extend(aws_lib.extra_cmake_args)
         cmake_args.append(lib_source_dir)
 

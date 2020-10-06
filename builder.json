@@ -4,11 +4,6 @@
         "android": {
             "enabled": false,
             "_comment": "disabled until we have a reason to support python on android"
-        },
-        "linux": {
-            "variables": {
-                "openssl_include": "{deps_dir}/libcrypto"
-            }
         }
     },
     "imports": [
