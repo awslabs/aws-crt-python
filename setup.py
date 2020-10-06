@@ -153,6 +153,7 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
         if sys.platform != 'darwin' and sys.platform != 'win32':
             cmake_args.append('-DLibCrypto_INCLUDE_DIR={}/include'.format(AWS_LC_INSTALL))
             cmake_args.append('-DLibCrypto_STATIC_LIBRARY={}/lib/libcrypto.a'.format(AWS_LC_INSTALL))
+            self.library_dirs.append('{}/lib'.format(AWS_LC_INSTALL))
         cmake_args.extend(aws_lib.extra_cmake_args)
         cmake_args.append(lib_source_dir)
 
