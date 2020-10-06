@@ -142,7 +142,6 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
             '-DBUILD_SHARED_LIBS=OFF',
             '-DCMAKE_BUILD_TYPE={}'.format(build_type),
             '-DBUILD_TESTING=OFF',
-            '-DS2N_NO_PQ_ASM=ON',
         ])
         if self.include_dirs:
             cmake_args.append('-DCMAKE_INCLUDE_PATH={}'.format(';'.join(self.include_dirs)))
@@ -151,6 +150,7 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
         cmake_args.extend(aws_lib.extra_cmake_args)
         cmake_args.append(lib_source_dir)
 
+        print(' '.join(cmake_args))
         subprocess.check_call(cmake_args)
 
         # cmake build/install
@@ -160,6 +160,7 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
             '--config', build_type,
             '--target', 'install',
         ]
+        print(' '.join(build_cmd))
         subprocess.check_call(build_cmd)
 
         os.chdir(prev_cwd)
