@@ -577,9 +577,11 @@ PyMODINIT_FUNC PyInit__awscrt(void) {
     aws_auth_library_init(aws_py_get_allocator());
     aws_mqtt_library_init(aws_py_get_allocator());
 
+#if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 9
     if (!PyEval_ThreadsInitialized()) {
         PyEval_InitThreads();
     }
+#endif
 
     s_error_map_init();
 
