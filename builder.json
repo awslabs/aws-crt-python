@@ -10,7 +10,7 @@
                 "libcrypto"
             ],
             "build_env": {
-                "AWS_LC_INSTALL": "{deps_dir}/libcrypto"
+                "AWS_LIBCRYPTO_INSTALL": "{deps_dir}/libcrypto"
             }
         }
     },
