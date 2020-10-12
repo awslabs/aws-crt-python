@@ -5,6 +5,8 @@ set -e
 
 /usr/local/bin/python3.8 ./continuous-delivery/update-version.py
 
+export AWS_LIBCRYPTO_INSTALL=/opt/openssl
+
 /usr/local/bin/python3.5m setup.py sdist bdist_wheel
 auditwheel repair --plat manylinux2014_x86_64 dist/awscrt-*cp35*.whl
 
@@ -21,4 +23,3 @@ rm dist/*.whl
 cp -r wheelhouse/* dist/
 
 #now you just need to run twine (that's in a different script)
-
