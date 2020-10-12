@@ -20,6 +20,6 @@ auditwheel repair --plat manylinux2014_aarch64 dist/awscrt-*cp37*.whl
 auditwheel repair --plat manylinux2014_aarch64 dist/awscrt-*cp38*.whl
 
 rm dist/*.whl
-cp -r wheelhouse/* dist/
+cp -rv wheelhouse/* dist/
 
 #now you just need to run twine (that's in a different script)
