@@ -12,7 +12,6 @@ from __future__ import absolute_import
 import _awscrt
 from awscrt import NativeResource
 from enum import IntEnum
-import io
 import threading
 
 
