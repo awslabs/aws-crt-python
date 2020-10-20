@@ -627,13 +627,13 @@ struct aws_input_stream_py_impl {
 
     bool is_end_of_stream;
 
-    /* Dependencies that must outlive this */
-    PyObject *io;
+    /* Weak reference proxy to python self. */
+    PyObject *self_proxy;
 };
 
 static void s_aws_input_stream_py_destroy(struct aws_input_stream *stream) {
     struct aws_input_stream_py_impl *impl = stream->impl;
-    Py_DECREF(impl->io);
+    Py_XDECREF(impl->self_proxy);
     aws_mem_release(stream->allocator, stream);
 }
 
@@ -653,7 +653,7 @@ static int s_aws_input_stream_py_seek(
         return AWS_OP_ERR; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
-    method_result = PyObject_CallMethod(impl->io, "seek", "(li)", offset, basis);
+    method_result = PyObject_CallMethod(impl->self_proxy, "_seek", "(li)", offset, basis);
     if (!method_result) {
         aws_result = aws_py_raise_error();
         goto done;
@@ -689,7 +689,7 @@ int s_aws_input_stream_py_read(struct aws_input_stream *stream, struct aws_byte_
         goto done;
     }
 
-    method_result = PyObject_CallMethod(impl->io, "readinto", "(O)", memory_view);
+    method_result = PyObject_CallMethod(impl->self_proxy, "_read_into_memoryview", "(O)", memory_view);
     if (!method_result) {
         aws_result = aws_py_raise_error();
         goto done;
@@ -745,9 +745,9 @@ static struct aws_input_stream_vtable s_aws_input_stream_py_vtable = {
     .destroy = s_aws_input_stream_py_destroy,
 };
 
-static struct aws_input_stream *aws_input_stream_new_from_py(PyObject *io) {
+static struct aws_input_stream *aws_input_stream_new_from_py(PyObject *py_self) {
 
-    if (!io || (io == Py_None)) {
+    if (!py_self || (py_self == Py_None)) {
         aws_raise_error(AWS_ERROR_INVALID_ARGUMENT);
         return NULL;
     }
@@ -761,10 +761,15 @@ static struct aws_input_stream *aws_input_stream_new_from_py(PyObject *io) {
     impl->base.allocator = alloc;
     impl->base.vtable = &s_aws_input_stream_py_vtable;
     impl->base.impl = impl;
-    impl->io = io;
-    Py_INCREF(impl->io);
+    impl->self_proxy = PyWeakref_NewProxy(py_self, NULL);
+    if (!impl->self_proxy) {
+        goto error;
+    }
 
     return &impl->base;
+error:
+    aws_input_stream_destroy(&impl->base);
+    return NULL;
 }
 
 /**
@@ -783,12 +788,12 @@ static void s_input_stream_capsule_destructor(PyObject *py_capsule) {
 PyObject *aws_py_input_stream_new(PyObject *self, PyObject *args) {
     (void)self;
 
-    PyObject *py_io;
-    if (!PyArg_ParseTuple(args, "O", &py_io)) {
+    PyObject *py_self;
+    if (!PyArg_ParseTuple(args, "O", &py_self)) {
         return NULL;
     }
 
-    struct aws_input_stream *stream = aws_input_stream_new_from_py(py_io);
+    struct aws_input_stream *stream = aws_input_stream_new_from_py(py_self);
     if (!stream) {
         return PyErr_AwsLastError();
     }
