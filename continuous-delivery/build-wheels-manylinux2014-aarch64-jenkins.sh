@@ -1,4 +1,5 @@
 #!/bin/bash
+#run build-wheels script in manylinux2014 docker image
 set -ex
 
 DOCKER_IMAGE=123124136734.dkr.ecr.us-east-1.amazonaws.com/aws-crt/manylinux2014-aarch64:latest
