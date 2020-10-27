@@ -83,6 +83,7 @@ lib64/
 parts/
 sdist/
 var/
+wheelhouse/
 wheels/
 *.egg-info/
 .installed.cfg
