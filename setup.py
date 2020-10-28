@@ -7,6 +7,7 @@ import glob
 import os
 import os.path
 import platform
+import re
 import setuptools
 import setuptools.command.build_ext
 import shutil
@@ -88,6 +89,20 @@ def get_cmake_path():
             return cmake_found
 
     raise Exception("CMake must be installed to build from source.")
+
+
+cmake_version = None
+
+
+def get_cmake_version():
+    global cmake_version
+    if cmake_version:
+        return cmake_version
+    cmake = get_cmake_path()
+    stdout = subprocess.check_output([cmake, '--version']).decode('utf-8')
+    # output looks like: "cmake version 3.18.2\n\nCMake suite maintained ..."
+    match = re.search(r'([0-9]+)\.([0-9]+)\.([0-9]+)', stdout)
+    return (int(match.group(1)), int(match.group(2)), int(match.group(3)))
 
 
 def get_libcrypto_static_library(libcrypto_dir):
@@ -203,6 +218,8 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
             '--config', build_type,
             '--target', 'install',
         ]
+        if get_cmake_version() >= (3, 12):
+            build_cmd += ['--parallel']
         print(subprocess.list2cmdline(build_cmd))
         subprocess.check_call(build_cmd)
 
