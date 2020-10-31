@@ -183,4 +183,10 @@ class EventStreamRpcClientConnection(NativeResource):
         return self.shutdown_future
 
     def is_open(self):
+        """
+        Returns:
+            bool: True if this connection is open and usable, False otherwise.
+            Check :attr:`shutdown_future` to know when the connection is completely
+            finished shutting down.
+        """
         return _awscrt.event_stream_connection_is_open(self._binding)
