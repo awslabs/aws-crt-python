@@ -96,8 +96,8 @@ PyObject *aws_py_event_stream_rpc_client_connection_connect(PyObject *self, PyOb
     Py_INCREF(connection->on_setup);
     connection->on_shutdown = on_shutdown_py;
     Py_INCREF(connection->on_shutdown);
-    connection->on_setup = on_setup_py;
-    Py_INCREF(connection->on_setup);
+    connection->on_protocol_message = on_message_py;
+    Py_INCREF(connection->on_protocol_message);
 
     struct aws_event_stream_rpc_client_connection_options conn_options = {
         .host_name = host_name,

@@ -43,15 +43,15 @@ class EventStreamRpcClientConnectionHandler:
         """
         pass
 
-    def on_protocol_message(self, **kwargs) -> None:
-        # TODO define signature
-        pass
-
     def on_connection_shutdown(self, reason: Optional[Exception], **kwargs) -> None:
         """Invoked when the connection finishes shutting down.
 
         Note that this event will not be invoked if the handler is
         garbage-collected before the shutdown process completes"""
+        pass
+
+    def on_protocol_message(self, **kwargs) -> None:
+        # TODO define signature
         pass
 
 
