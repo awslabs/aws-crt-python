@@ -11,7 +11,7 @@ import awscrt.exceptions
 from awscrt.io import ClientBootstrap, SocketOptions, TlsConnectionOptions
 from concurrent.futures import Future
 from functools import partial
-from typing import Callable, Optional
+from typing import Optional
 import weakref
 
 
@@ -77,6 +77,7 @@ class EventStreamRpcClientConnection(NativeResource):
 
     def __init__(self, host_name, port):
         # Do no instantiate directly, use static connect method
+        super().__init__()
         self.host_name: str = host_name
         self.port: int = port
         self.shutdown_future: Future[None] = Future()

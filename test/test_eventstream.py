@@ -8,6 +8,7 @@ from test import NativeResourceTest, TIMEOUT
 
 class SimpleHandler(EventStreamRpcClientConnectionHandler):
     def __init__(self):
+        super().__init__()
         self.is_setup = False
         self.is_shutdown = False
         self.shutdown_reason = None
