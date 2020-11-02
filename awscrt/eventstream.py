@@ -29,12 +29,12 @@ class EventStreamRpcClientConnectionHandler:
     resources finish shutting down.
 
     Attributes:
-        connection: Initially None. Will be set to the actual connection
-            before any events are invoked.
+        connection (Optional[EventStreamRpcClientConnection]): Initially None.
+            Will be set to the actual connection before any events are invoked.
     """
 
     def __init__(self):
-        self.connection: Optional[EventStreamRpcClientConnection] = None
+        self.connection = None
 
     def on_connection_setup(self, **kwargs) -> None:
         """Invoked when connection has been successfully established.
@@ -66,7 +66,7 @@ class EventStreamRpcClientConnection(NativeResource):
 
         port (int): Remote port.
 
-        shutdown_future (concurrent.futures.Future): Completes when this
+        shutdown_future (concurrent.futures.Future[None]): Completes when this
             connection has finished shutting down. Future will contain a
             result of None, or an exception indicating why shutdown occurred.
             Note that the connection may have been garbage-collected before
@@ -78,9 +78,9 @@ class EventStreamRpcClientConnection(NativeResource):
     def __init__(self, host_name, port):
         # Do no instantiate directly, use static connect method
         super().__init__()
-        self.host_name: str = host_name
-        self.port: int = port
-        self.shutdown_future: Future[None] = Future()
+        self.host_name = host_name
+        self.port = port
+        self.shutdown_future = Future()
 
     @classmethod
     def connect(
