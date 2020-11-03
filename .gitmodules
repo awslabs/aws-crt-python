@@ -22,3 +22,6 @@
 [submodule "aws-common-runtime/aws-c-auth"]
 	path = aws-common-runtime/aws-c-auth
 	url = https://github.com/awslabs/aws-c-auth.git
+[submodule "aws-common-runtime/aws-c-s3"]
+	path = aws-common-runtime/aws-c-s3
+	url = https://github.com/awslabs/aws-c-s3.git
