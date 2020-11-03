@@ -1,8 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 
-from __future__ import print_function
-
 import argparse
 from awscrt import io, mqtt
 from awscrt.io import LogLevel
