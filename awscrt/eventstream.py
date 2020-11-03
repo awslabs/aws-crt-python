@@ -11,9 +11,152 @@ from awscrt import NativeResource
 import awscrt.exceptions
 from awscrt.io import ClientBootstrap, SocketOptions, TlsConnectionOptions
 from concurrent.futures import Future
+from enum import Enum
 from functools import partial
 from typing import Optional
+from uuid import UUID
 import weakref
+
+
+_BYTE_MIN = -2**7
+_BYTE_MAX = 2**7 - 1
+_INT16_MIN = -2**15
+_INT16_MAX = 2**15 - 1
+_INT32_MIN = -2**31
+_INT32_MAX = 2**31 - 1
+_INT64_MIN = -2**63
+_INT64_MAX = 2**63 - 1
+
+
+class EventStreamHeaderType(Enum):
+    BOOL_TRUE = 0
+    BOOL_FALSE = 1
+    BYTE = 2
+    INT16 = 3
+    INT32 = 4
+    INT64 = 5
+    BYTE_BUF = 6
+    STRING = 7
+    TIMESTAMP = 8
+    UUID = 9
+
+
+class EventStreamHeader:
+    def __init__(self, name: str, header_type: EventStreamHeaderType, value: Any):
+        # do not call directly, use EventStreamHeader.create_xyz() methods.
+        self._name = name
+        self._type = header_type
+        self._value = value
+
+    @classmethod
+    def create_bool(cls, name: str, value: bool) -> EventStreamHeader:
+        if value:
+            return cls(name, EventStreamHeaderType.BOOL_TRUE, True)
+        else:
+            return cls(name, EventStreamHeaderType.BOOL_FALSE, False)
+
+    @classmethod
+    def create_byte(cls, name: str, value: int) -> EventStreamHeader:
+        value = int(value)
+        if value < _BYTE_MIN or value > _BYTE_MAX:
+            raise ValueError("Value {} cannot fit in signed 8-bit byte".format(value))
+        return cls(name, EventStreamHeaderType.BYTE, value)
+
+    @classmethod
+    def create_int16(cls, name: str, value: int) -> EventStreamHeader:
+        value = int(value)
+        if value < _INT16_MIN or value > _INT16_MAX:
+            raise ValueError("Value {} cannot fit in signed 16-bit int".format(value))
+        return cls(name, EventStreamHeaderType.INT16, value)
+
+    @classmethod
+    def create_int32(cls, name: str, value: int) -> EventStreamHeader:
+        value = int(value)
+        if value < _INT32_MIN or value > _INT32_MAX:
+            raise ValueError("Value {} cannot fit in signed 32-bit int".format(value))
+        return cls(name, EventStreamHeaderType.INT32, value)
+
+    @classmethod
+    def create_int64(cls, name: str, value: int) -> EventStreamHeader:
+        value = int(value)
+        if value < _INT64_MIN or value > _INT64_MAX:
+            raise ValueError("Value {} cannot fit in signed 64-bit int".format(value))
+        return cls(name, EventStreamHeaderType.INT64, value)
+
+    @classmethod
+    def create_byte_buf(cls, name: str, value: bytes) -> EventStreamHeader:
+        value = bytes(value)
+        return cls(name, EventStreamHeaderType.BYTE_BUF, value)
+
+    @classmethod
+    def create_string(cls, name: str, value: str) -> EventStreamHeader:
+        value = str(value)
+        return cls(name, EventStreamHeaderType.STRING, value)
+
+    @classmethod
+    def create_timestemp(cls, name: str, value: int) -> EventStreamHeader:
+        value = int(value)
+        if value < _INT64_MIN or value > _INT64_MAX:
+            raise ValueError("Value {} exceeds timestamp limits".format(value))
+        return cls(name, EventStreamHeaderType.TIMESTAMP, value)
+
+    @classmethod
+    def create_uuid(cls, name: str, value: UUID) -> EventStreamHeader:
+        if not isinstance(value, UUID):
+            raise TypeError("Value must be UUID, not {}".format(type(value)))
+        return cls(name, EventStreamHeaderType.UUID, value)
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def type(self) -> EventStreamHeaderType:
+        return self._type
+
+    @property
+    def value(self) -> Any:
+        return self._value
+
+    def value_as(self, header_type: EventStreamHeaderType) -> Any:
+        if self._type != header_type:
+            raise TypeError("Header type is {}, not {}".format(self._type, header_type))
+        return self._value
+
+    def value_as_bool(self) -> bool:
+        if self._type == EventStreamHeaderType.BOOL_TRUE:
+            return True
+        if self._type == EventStreamHeaderType.BOOL_FALSE:
+            return False
+        raise TypeError(
+            "Header type is {}, not {} or {}".format(
+                self._type,
+                EventStreamHeaderType.BOOL_TRUE,
+                EventStreamHeaderType.BOOL_FALSE))
+
+    def value_as_byte(self) -> int:
+        return self.value_as(EventStreamHeaderType.BYTE)
+
+    def value_as_int16(self) -> int:
+        return self.value_as(EventStreamHeaderType.INT16)
+
+    def value_as_int32(self) -> int:
+        return self.value_as(EventStreamHeaderType.INT32)
+
+    def value_as_int64(self) -> int:
+        return self.value_as(EventStreamHeaderType.INT64)
+
+    def value_as_byte_buf(self) -> bytes:
+        return self.value_as(EventStreamHeaderType.BYTE_BUF)
+
+    def value_as_string(self) -> str:
+        return self.value_as(EventStreamHeaderType.STRING)
+
+    def value_as_timestamp(self) -> int:
+        return self.value_as(EventStreamHeaderType.TIMESTAMP)
+
+    def value_as_uuid(self) -> UUID:
+        return self.value_as(EventStreamHeaderType.UUID)
 
 
 class EventStreamRpcClientConnectionHandler(ABC):
@@ -54,7 +197,7 @@ class EventStreamRpcClientConnectionHandler(ABC):
         pass
 
     @abstractmethod
-    def on_protocol_message(self, **kwargs) -> None:
+    def on_protocol_message(self, headers, payload, message_type, flags, **kwargs) -> None:
         # TODO define signature
         pass
 
