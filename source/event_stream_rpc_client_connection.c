@@ -115,7 +115,7 @@ PyObject *aws_py_event_stream_rpc_client_connection_connect(PyObject *self, PyOb
         goto error;
     }
 
-    Py_RETURN_NONE;
+    return capsule;
 
 error:
     /* capsule's destructor will clean up anything inside of it */
