@@ -233,14 +233,11 @@ static void s_on_protocol_message(
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
-    /* TODO: create Python headers from C headers */
-    PyObject *headers_py = Py_None;
-    Py_INCREF(headers_py);
-
     PyObject *result = PyObject_CallFunction(
         connection->on_protocol_message,
         "(Oy#iI)",
-        headers_py,
+        /* NOTE: if create_python_list() returns NULL, then PyObject_CallFunction() fails too, which is convenient */
+        aws_py_event_stream_headers_create_python_list(message_args->headers, message_args->headers_count),
         message_args->payload->buffer,
         message_args->payload->len,
         message_args->message_type,
@@ -250,9 +247,10 @@ static void s_on_protocol_message(
     } else {
         /* Callback might fail during application shutdown */
         PyErr_WriteUnraisable(PyErr_Occurred());
-    }
 
-    Py_DECREF(headers_py);
+        /* TODO: Should we kill the connection on an unhandled exception?
+         * If so, do we differentiate between internal failure and failure stemming from the user's callback? */
+    }
 
     PyGILState_Release(state);
 }
@@ -289,4 +287,92 @@ PyObject *aws_py_event_stream_rpc_client_connection_is_open(PyObject *self, PyOb
         Py_RETURN_FALSE;
     }
     Py_RETURN_TRUE;
+}
+
+/* Invoked when send_protocol_message() completes */
+static void s_on_protocol_message_flush(int error_code, void *user_data) {
+    PyObject *on_flush_py = user_data;
+
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
+
+    PyObject *result = PyObject_CallFunction(on_flush_py, "(i)", error_code);
+    if (result) {
+        Py_DECREF(result);
+    } else {
+        /* Callback might fail during application shutdown */
+        PyErr_WriteUnraisable(PyErr_Occurred());
+    }
+
+    /* Release reference to completion callback */
+    Py_DECREF(on_flush_py);
+
+    PyGILState_Release(state);
+}
+
+PyObject *aws_py_event_stream_rpc_client_connection_send_protocol_message(PyObject *self, PyObject *args) {
+    (void)self;
+
+    PyObject *capsule_py;
+    PyObject *headers_py;
+    Py_buffer payload_buf; /* Py_buffers must be released after successful PyArg_ParseTuple() calls */
+    int message_type;
+    uint32_t message_flags;
+    PyObject *on_flush_py;
+    if (!PyArg_ParseTuple(
+            args, "OOs*iIO", &capsule_py, &headers_py, &payload_buf, &message_type, &message_flags, &on_flush_py)) {
+        return NULL;
+    }
+
+    /* From hereon, we need to clean up if errors occur */
+
+    bool success = false;
+    struct aws_array_list headers;
+    AWS_ZERO_STRUCT(headers);
+
+    /* Keep completion callback alive until it fires */
+    Py_INCREF(on_flush_py);
+
+    struct connection_binding *connection = PyCapsule_GetPointer(capsule_py, s_capsule_name);
+    if (!connection) {
+        goto done;
+    }
+
+    /* OPTIMIZATION IDEA: Currently, we're deep-copying byte_bufs and strings
+     * into the C headers. We did this because it was simple (and headers
+     * shouldn't be gigantic). Since send_protocol_message() ALSO copies
+     * everything we could, instead, create non-owning C headers here.
+     * It would be more complex because we'd need to track a
+     * list of Py_buffer to release afterwards. */
+    if (!aws_py_event_stream_headers_list_init(&headers, headers_py)) {
+        goto done;
+    }
+
+    struct aws_byte_buf payload = aws_byte_buf_from_array(payload_buf.buf, payload_buf.len);
+    struct aws_event_stream_rpc_message_args msg_args = {
+        .headers = headers.data,
+        .headers_count = aws_array_list_length(&headers),
+        .payload = &payload,
+        .message_type = message_type,
+        .message_flags = message_flags,
+    };
+    if (aws_event_stream_rpc_client_connection_send_protocol_message(
+            connection->native, &msg_args, s_on_protocol_message_flush, on_flush_py)) {
+        goto done;
+    }
+
+done:
+    PyBuffer_Release(&payload_buf);
+    if (aws_array_list_is_valid(&headers)) {
+        aws_event_stream_headers_list_cleanup(&headers);
+    }
+
+    if (success) {
+        Py_RETURN_NONE;
+    }
+
+    Py_DECREF(on_flush_py);
+    return NULL;
 }

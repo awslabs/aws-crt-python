@@ -6,8 +6,28 @@
  */
 #include "module.h"
 
+struct aws_array_list;
+struct aws_event_stream_header_value_pair;
+
 PyObject *aws_py_event_stream_rpc_client_connection_connect(PyObject *self, PyObject *args);
 PyObject *aws_py_event_stream_rpc_client_connection_close(PyObject *self, PyObject *args);
 PyObject *aws_py_event_stream_rpc_client_connection_is_open(PyObject *self, PyObject *args);
+PyObject *aws_py_event_stream_rpc_client_connection_send_protocol_message(PyObject *self, PyObject *args);
+
+/**
+ * Given a python list of EventStreamHeaders, init an aws_array_list of aws_event_stream_header_value_pairs.
+ * All variable-length values are copied (owned) by the new headers.
+ * Returns false and sets python exception if error occurred.
+ */
+bool aws_py_event_stream_headers_list_init(struct aws_array_list *headers, PyObject *headers_py);
+
+/**
+ * Given an array of aws_event_stream_header_value_pair, create a python list containing (name, type, value) tuples.
+ * Returns a new reference if successful.
+ * Returns NULL and sets a python exception if error occurs.
+ */
+PyObject *aws_py_event_stream_headers_create_python_list(
+    struct aws_event_stream_header_value_pair *headers,
+    size_t count);
 
 #endif /* AWS_CRT_PYTHON_EVENT_STREAM_H */

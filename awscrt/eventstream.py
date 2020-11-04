@@ -13,7 +13,7 @@ from awscrt.io import ClientBootstrap, SocketOptions, TlsConnectionOptions
 from concurrent.futures import Future
 from enum import Enum
 from functools import partial
-from typing import Optional
+from typing import ByteString, Optional, Sequence
 from uuid import UUID
 import weakref
 
@@ -84,8 +84,7 @@ class EventStreamHeader:
         return cls(name, EventStreamHeaderType.INT64, value)
 
     @classmethod
-    def create_byte_buf(cls, name: str, value: bytes) -> EventStreamHeader:
-        value = bytes(value)
+    def create_byte_buf(cls, name: str, value: ByteString) -> EventStreamHeader:
         return cls(name, EventStreamHeaderType.BYTE_BUF, value)
 
     @classmethod
@@ -105,6 +104,14 @@ class EventStreamHeader:
         if not isinstance(value, UUID):
             raise TypeError("Value must be UUID, not {}".format(type(value)))
         return cls(name, EventStreamHeaderType.UUID, value)
+
+    @classmethod
+    def _from_binding(cls, args) -> EventStreamHeader:
+        name, header_type, value = args
+        header_type = EventStreamHeaderType(header_type)
+        if header_type == EventStreamHeaderType.UUID:
+            value = UUID(bytes=value)
+        return cls(name, header_type, value)
 
     @property
     def name(self) -> str:
@@ -146,7 +153,7 @@ class EventStreamHeader:
     def value_as_int64(self) -> int:
         return self.value_as(EventStreamHeaderType.INT64)
 
-    def value_as_byte_buf(self) -> bytes:
+    def value_as_byte_buf(self) -> ByteString:
         return self.value_as(EventStreamHeaderType.BYTE_BUF)
 
     def value_as_string(self) -> str:
@@ -157,6 +164,23 @@ class EventStreamHeader:
 
     def value_as_uuid(self) -> UUID:
         return self.value_as(EventStreamHeaderType.UUID)
+
+
+class EventStreamRpcMessageType(Enum):
+    APPLICATION_MESSAGE = 0
+    APPLICATION_ERROR = 1
+    PING = 2
+    PING_RESPONSE = 3
+    CONNECT = 4
+    CONNECT_ACK = 5
+    PROTOCOL_ERROR = 6
+    INTERNAL_ERROR = 7
+
+
+class EventStreamRpcMessageFlag(Flag):
+    NONE = 0
+    CONNECTION_ACCEPTED = 0x1
+    TERMINATE_STREAM = 0x2
 
 
 class EventStreamRpcClientConnectionHandler(ABC):
@@ -197,8 +221,13 @@ class EventStreamRpcClientConnectionHandler(ABC):
         pass
 
     @abstractmethod
-    def on_protocol_message(self, headers, payload, message_type, flags, **kwargs) -> None:
-        # TODO define signature
+    def on_protocol_message(
+            self,
+            headers: Sequence[EventStreamHeader],
+            payload: memoryview,
+            message_type: EventStreamRpcMessageType,
+            flags: EventStreamRpcMessageFlag,
+            **kwargs) -> None:
         pass
 
 
@@ -310,6 +339,10 @@ class EventStreamRpcClientConnection(NativeResource):
     def _on_protocol_message(bound_weak_header, headers, payload, message_type, flags):
         handler = bound_weak_handler()
         if handler:
+            # transform from simple types (ints, tuples, etc) to actual classes
+            headers = [EventStreamHeader._from_binding(i) for i in headers]
+            message_type = EventStreamRpcMessageType(message_type)
+            flags = EventStreamRpcMessageFlag(flags)
             handler.on_protocol_message(
                 headers=headers,
                 payload=payload,
@@ -338,3 +371,24 @@ class EventStreamRpcClientConnection(NativeResource):
             finished shutting down.
         """
         return _awscrt.event_stream_rpc_client_connection_is_open(self._binding)
+
+    def send_protocol_message(
+            self,
+            *,
+            headers: Sequence[EventStreamHeader],
+            payload: ByteString,
+            message_type: EventStreamMessageType,
+            flags: EventStreamRpcMessageFlag = EventStreamRpcMessageFlag.NONE) -> Future[None]:
+
+        future = Future()
+
+        def _on_flush(error_code):
+            if error_code:
+                e = awscrt.exceptions.from_code(error_code)
+                future.set_exception(e)
+            else:
+                future.set_result(None)
+
+        _awscrt.event_stream_send_protocol_message(
+            self._binding, headers, payload, message_type.value, flags.value, _on_flush)
+        return future
