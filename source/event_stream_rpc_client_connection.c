@@ -112,6 +112,7 @@ PyObject *aws_py_event_stream_rpc_client_connection_connect(PyObject *self, PyOb
     };
 
     if (aws_event_stream_rpc_client_connection_connect(alloc, &conn_options)) {
+        PyErr_SetAwsLastError();
         goto error;
     }
 
@@ -233,12 +234,20 @@ static void s_on_protocol_message(
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
+    /* We always want to deliver bytes to python user, even if the length is 0.
+     * But PyObject_CallFunction() with "y#" will convert a NULL ptr to None instead of 0-length bytes.
+     * Therefore, if message_args->payload_buffer is NULL, pass some other valid ptr instead. */
+    const char *payload_ptr = (void *)message_args->payload->buffer;
+    if (payload_ptr == NULL) {
+        payload_ptr = "";
+    }
+
     PyObject *result = PyObject_CallFunction(
         connection->on_protocol_message,
         "(Oy#iI)",
-        /* NOTE: if create_python_list() returns NULL, then PyObject_CallFunction() fails too, which is convenient */
-        aws_py_event_stream_headers_create_python_list(message_args->headers, message_args->headers_count),
-        message_args->payload->buffer,
+        /* NOTE: if headers_create() returns NULL, then PyObject_CallFunction() fails too, which is convenient */
+        aws_py_event_stream_python_headers_create(message_args->headers, message_args->headers_count),
+        payload_ptr,
         message_args->payload->len,
         message_args->message_type,
         message_args->message_flags);
@@ -248,7 +257,7 @@ static void s_on_protocol_message(
         /* Callback might fail during application shutdown */
         PyErr_WriteUnraisable(PyErr_Occurred());
 
-        /* TODO: Should we kill the connection on an unhandled exception?
+        /* TODO: Should we close the connection on an unhandled exception?
          * If so, do we differentiate between internal failure and failure stemming from the user's callback? */
     }
 
@@ -346,7 +355,7 @@ PyObject *aws_py_event_stream_rpc_client_connection_send_protocol_message(PyObje
      * everything we could, instead, create non-owning C headers here.
      * It would be more complex because we'd need to track a
      * list of Py_buffer to release afterwards. */
-    if (!aws_py_event_stream_headers_list_init(&headers, headers_py)) {
+    if (!aws_py_event_stream_native_headers_init(&headers, headers_py)) {
         goto done;
     }
 
@@ -360,8 +369,11 @@ PyObject *aws_py_event_stream_rpc_client_connection_send_protocol_message(PyObje
     };
     if (aws_event_stream_rpc_client_connection_send_protocol_message(
             connection->native, &msg_args, s_on_protocol_message_flush, on_flush_py)) {
+        PyErr_SetAwsLastError();
         goto done;
     }
+
+    success = true;
 
 done:
     PyBuffer_Release(&payload_buf);

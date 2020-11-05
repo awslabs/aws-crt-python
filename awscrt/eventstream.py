@@ -10,10 +10,11 @@ from abc import ABC, abstractmethod
 from awscrt import NativeResource
 import awscrt.exceptions
 from awscrt.io import ClientBootstrap, SocketOptions, TlsConnectionOptions
+from collections.abc import ByteString
 from concurrent.futures import Future
-from enum import Enum
+from enum import IntEnum, IntFlag
 from functools import partial
-from typing import ByteString, Optional, Sequence
+from typing import Any, Optional, Sequence
 from uuid import UUID
 import weakref
 
@@ -28,90 +29,140 @@ _INT64_MIN = -2**63
 _INT64_MAX = 2**63 - 1
 
 
-class EventStreamHeaderType(Enum):
+class EventStreamHeaderType(IntEnum):
+    """Supported types for the value within an EventStreamHeader"""
+
     BOOL_TRUE = 0
+    """Value is True.
+
+    No actual value is transmitted on the wire."""
+
     BOOL_FALSE = 1
+    """Value is False.
+
+    No actual value is transmitted on the wire."""
+
     BYTE = 2
+    """Value is signed 8-bit int."""
+
     INT16 = 3
+    """Value is signed 16-bit int."""
+
     INT32 = 4
+    """Value is signed 32-bit int."""
+
     INT64 = 5
+    """Value is signed 64-bit int."""
+
     BYTE_BUF = 6
+    """Value is raw bytes."""
+
     STRING = 7
+    """Value is a str.
+
+    Transmitted on the wire as utf-8"""
+
     TIMESTAMP = 8
+    """Value is a posix timestamp (seconds since Unix epoch).
+
+    Transmitted on the wire as a 64-bit int"""
+
     UUID = 9
+    """Value is a UUID.
+
+    Transmitted on the wire as 16 bytes"""
+
+    def __format__(self, format_spec):
+        # override so formatted string doesn't simply look like an int
+        return str(self)
 
 
 class EventStreamHeader:
-    def __init__(self, name: str, header_type: EventStreamHeaderType, value: Any):
-        # do not call directly, use EventStreamHeader.create_xyz() methods.
+    """A header in an event-stream message.
+
+    Each header has a name, value, and type.
+    class:`EventStreamHeaderType` enumerates the supported value types.
+    """
+
+    def __init__(self, name: str, value: Any, header_type: EventStreamHeaderType):
+        # do not call directly, use EventStreamHeader.from_xyz() methods.
         self._name = name
-        self._type = header_type
         self._value = value
+        self._type = header_type
 
     @classmethod
-    def create_bool(cls, name: str, value: bool) -> EventStreamHeader:
+    def from_bool(cls, name: str, value: bool) -> 'EventStreamHeader':
         if value:
-            return cls(name, EventStreamHeaderType.BOOL_TRUE, True)
+            return cls(name, True, EventStreamHeaderType.BOOL_TRUE)
         else:
-            return cls(name, EventStreamHeaderType.BOOL_FALSE, False)
+            return cls(name, False, EventStreamHeaderType.BOOL_FALSE)
 
     @classmethod
-    def create_byte(cls, name: str, value: int) -> EventStreamHeader:
+    def from_byte(cls, name: str, value: int) -> 'EventStreamHeader':
         value = int(value)
         if value < _BYTE_MIN or value > _BYTE_MAX:
             raise ValueError("Value {} cannot fit in signed 8-bit byte".format(value))
-        return cls(name, EventStreamHeaderType.BYTE, value)
+        return cls(name, value, EventStreamHeaderType.BYTE)
 
     @classmethod
-    def create_int16(cls, name: str, value: int) -> EventStreamHeader:
+    def from_int16(cls, name: str, value: int) -> 'EventStreamHeader':
         value = int(value)
         if value < _INT16_MIN or value > _INT16_MAX:
             raise ValueError("Value {} cannot fit in signed 16-bit int".format(value))
-        return cls(name, EventStreamHeaderType.INT16, value)
+        return cls(name, value, EventStreamHeaderType.INT16)
 
     @classmethod
-    def create_int32(cls, name: str, value: int) -> EventStreamHeader:
+    def from_int32(cls, name: str, value: int) -> 'EventStreamHeader':
         value = int(value)
         if value < _INT32_MIN or value > _INT32_MAX:
             raise ValueError("Value {} cannot fit in signed 32-bit int".format(value))
-        return cls(name, EventStreamHeaderType.INT32, value)
+        return cls(name, value, EventStreamHeaderType.INT32)
 
     @classmethod
-    def create_int64(cls, name: str, value: int) -> EventStreamHeader:
+    def from_int64(cls, name: str, value: int) -> 'EventStreamHeader':
         value = int(value)
         if value < _INT64_MIN or value > _INT64_MAX:
             raise ValueError("Value {} cannot fit in signed 64-bit int".format(value))
-        return cls(name, EventStreamHeaderType.INT64, value)
+        return cls(name, value, EventStreamHeaderType.INT64)
 
     @classmethod
-    def create_byte_buf(cls, name: str, value: ByteString) -> EventStreamHeader:
-        return cls(name, EventStreamHeaderType.BYTE_BUF, value)
+    def from_byte_buf(cls, name: str, value: ByteString) -> 'EventStreamHeader':
+        return cls(name, value, EventStreamHeaderType.BYTE_BUF)
 
     @classmethod
-    def create_string(cls, name: str, value: str) -> EventStreamHeader:
+    def from_string(cls, name: str, value: str) -> 'EventStreamHeader':
         value = str(value)
-        return cls(name, EventStreamHeaderType.STRING, value)
+        return cls(name, value, EventStreamHeaderType.STRING)
 
     @classmethod
-    def create_timestemp(cls, name: str, value: int) -> EventStreamHeader:
+    def from_timestamp(cls, name: str, value: int) -> 'EventStreamHeader':
         value = int(value)
         if value < _INT64_MIN or value > _INT64_MAX:
             raise ValueError("Value {} exceeds timestamp limits".format(value))
-        return cls(name, EventStreamHeaderType.TIMESTAMP, value)
+        return cls(name, value, EventStreamHeaderType.TIMESTAMP)
 
     @classmethod
-    def create_uuid(cls, name: str, value: UUID) -> EventStreamHeader:
+    def from_uuid(cls, name: str, value: UUID) -> 'EventStreamHeader':
         if not isinstance(value, UUID):
             raise TypeError("Value must be UUID, not {}".format(type(value)))
-        return cls(name, EventStreamHeaderType.UUID, value)
+        return cls(name, value, EventStreamHeaderType.UUID)
 
     @classmethod
-    def _from_binding(cls, args) -> EventStreamHeader:
-        name, header_type, value = args
+    def _from_binding_tuple(cls, binding_tuple):
+        # native code deals with a simplified tuple, rather than full class
+        name, value, header_type = binding_tuple
         header_type = EventStreamHeaderType(header_type)
         if header_type == EventStreamHeaderType.UUID:
             value = UUID(bytes=value)
-        return cls(name, header_type, value)
+        return cls(name, value, header_type)
+
+    def _as_binding_tuple(self):
+        # native code deals with a simplified tuple, rather than full class
+        if self._type == EventStreamHeaderType.UUID:
+            value = self._value.bytes
+        else:
+            value = self._value
+        return (self._name, value, self._type)
 
     @property
     def name(self) -> str:
@@ -125,7 +176,7 @@ class EventStreamHeader:
     def value(self) -> Any:
         return self._value
 
-    def value_as(self, header_type: EventStreamHeaderType) -> Any:
+    def _value_as(self, header_type: EventStreamHeaderType) -> Any:
         if self._type != header_type:
             raise TypeError("Header type is {}, not {}".format(self._type, header_type))
         return self._value
@@ -142,31 +193,44 @@ class EventStreamHeader:
                 EventStreamHeaderType.BOOL_FALSE))
 
     def value_as_byte(self) -> int:
-        return self.value_as(EventStreamHeaderType.BYTE)
+        return self._value_as(EventStreamHeaderType.BYTE)
 
     def value_as_int16(self) -> int:
-        return self.value_as(EventStreamHeaderType.INT16)
+        return self._value_as(EventStreamHeaderType.INT16)
 
     def value_as_int32(self) -> int:
-        return self.value_as(EventStreamHeaderType.INT32)
+        return self._value_as(EventStreamHeaderType.INT32)
 
     def value_as_int64(self) -> int:
-        return self.value_as(EventStreamHeaderType.INT64)
+        return self._value_as(EventStreamHeaderType.INT64)
 
     def value_as_byte_buf(self) -> ByteString:
-        return self.value_as(EventStreamHeaderType.BYTE_BUF)
+        return self._value_as(EventStreamHeaderType.BYTE_BUF)
 
     def value_as_string(self) -> str:
-        return self.value_as(EventStreamHeaderType.STRING)
+        return self._value_as(EventStreamHeaderType.STRING)
 
     def value_as_timestamp(self) -> int:
-        return self.value_as(EventStreamHeaderType.TIMESTAMP)
+        return self._value_as(EventStreamHeaderType.TIMESTAMP)
 
     def value_as_uuid(self) -> UUID:
-        return self.value_as(EventStreamHeaderType.UUID)
+        return self._value_as(EventStreamHeaderType.UUID)
+
+    def __str__(self):
+        return "{}: {} <{}>".format(
+            self._name,
+            repr(self._value),
+            self._type.name)
+
+    def __repr__(self):
+        return "{}({}, {}, {})".format(
+            self.__class__.__name__,
+            repr(self._name),
+            repr(self._value),
+            repr(self._type))
 
 
-class EventStreamRpcMessageType(Enum):
+class EventStreamRpcMessageType(IntEnum):
     APPLICATION_MESSAGE = 0
     APPLICATION_ERROR = 1
     PING = 2
@@ -176,11 +240,19 @@ class EventStreamRpcMessageType(Enum):
     PROTOCOL_ERROR = 6
     INTERNAL_ERROR = 7
 
+    def __format__(self, format_spec):
+        # override so formatted string doesn't simply look like an int
+        return str(self)
 
-class EventStreamRpcMessageFlag(Flag):
+
+class EventStreamRpcMessageFlag(IntFlag):
     NONE = 0
     CONNECTION_ACCEPTED = 0x1
     TERMINATE_STREAM = 0x2
+
+    def __format__(self, format_spec):
+        # override so formatted string doesn't simply look like an int
+        return str(self)
 
 
 class EventStreamRpcClientConnectionHandler(ABC):
@@ -202,7 +274,7 @@ class EventStreamRpcClientConnectionHandler(ABC):
     """
 
     def __init__(self):
-        self.connection = None
+        self.connection = None  # type: Optional[EventStreamRpcClientConnection]
 
     @abstractmethod
     def on_connection_setup(self, **kwargs) -> None:
@@ -224,7 +296,7 @@ class EventStreamRpcClientConnectionHandler(ABC):
     def on_protocol_message(
             self,
             headers: Sequence[EventStreamHeader],
-            payload: memoryview,
+            payload: bytes,
             message_type: EventStreamRpcMessageType,
             flags: EventStreamRpcMessageFlag,
             **kwargs) -> None:
@@ -336,11 +408,11 @@ class EventStreamRpcClientConnection(NativeResource):
                 bound_future.set_result(None)
 
     @staticmethod
-    def _on_protocol_message(bound_weak_header, headers, payload, message_type, flags):
+    def _on_protocol_message(bound_weak_handler, headers, payload, message_type, flags):
         handler = bound_weak_handler()
         if handler:
-            # transform from simple types (ints, tuples, etc) to actual classes
-            headers = [EventStreamHeader._from_binding(i) for i in headers]
+            # transform from simple types to actual classes
+            headers = [EventStreamHeader._from_binding_tuple(i) for i in headers]
             message_type = EventStreamRpcMessageType(message_type)
             flags = EventStreamRpcMessageFlag(flags)
             handler.on_protocol_message(
@@ -375,10 +447,10 @@ class EventStreamRpcClientConnection(NativeResource):
     def send_protocol_message(
             self,
             *,
-            headers: Sequence[EventStreamHeader],
-            payload: ByteString,
-            message_type: EventStreamMessageType,
-            flags: EventStreamRpcMessageFlag = EventStreamRpcMessageFlag.NONE) -> Future[None]:
+            message_type: EventStreamRpcMessageType,
+            headers: Optional[Sequence[EventStreamHeader]] = [],
+            payload: Optional[ByteString] = b'',
+            flags: EventStreamRpcMessageFlag = EventStreamRpcMessageFlag.NONE) -> Future:
 
         future = Future()
 
@@ -389,6 +461,9 @@ class EventStreamRpcClientConnection(NativeResource):
             else:
                 future.set_result(None)
 
-        _awscrt.event_stream_send_protocol_message(
-            self._binding, headers, payload, message_type.value, flags.value, _on_flush)
+        # native code deals with simplified types
+        headers = [i._as_binding_tuple() for i in headers]
+
+        _awscrt.event_stream_rpc_client_connection_send_protocol_message(
+            self._binding, headers, payload, message_type, flags, _on_flush)
         return future

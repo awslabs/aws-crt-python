@@ -19,15 +19,15 @@ PyObject *aws_py_event_stream_rpc_client_connection_send_protocol_message(PyObje
  * All variable-length values are copied (owned) by the new headers.
  * Returns false and sets python exception if error occurred.
  */
-bool aws_py_event_stream_headers_list_init(struct aws_array_list *headers, PyObject *headers_py);
+bool aws_py_event_stream_native_headers_init(struct aws_array_list *native_headers, PyObject *headers_py);
 
 /**
- * Given an array of aws_event_stream_header_value_pair, create a python list containing (name, type, value) tuples.
+ * Given an array of aws_event_stream_header_value_pair, create a python list containing (name, value, type) tuples.
  * Returns a new reference if successful.
  * Returns NULL and sets a python exception if error occurs.
  */
-PyObject *aws_py_event_stream_headers_create_python_list(
-    struct aws_event_stream_header_value_pair *headers,
+PyObject *aws_py_event_stream_python_headers_create(
+    struct aws_event_stream_header_value_pair *native_headers,
     size_t count);
 
 #endif /* AWS_CRT_PYTHON_EVENT_STREAM_H */
