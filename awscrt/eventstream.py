@@ -12,7 +12,7 @@ import awscrt.exceptions
 from awscrt.io import ClientBootstrap, SocketOptions, TlsConnectionOptions
 from collections.abc import ByteString
 from concurrent.futures import Future
-from enum import IntEnum, IntFlag
+from enum import IntEnum
 from functools import partial
 from typing import Any, Optional, Sequence
 from uuid import UUID
@@ -245,7 +245,12 @@ class EventStreamRpcMessageType(IntEnum):
         return str(self)
 
 
-class EventStreamRpcMessageFlag(IntFlag):
+class EventStreamRpcMessageFlag:
+    """Flags for an event-stream RPC messages."""
+    # TODO: when python 3.5 is dropped this class should inherit from IntFlag.
+    # When doing this, be sure to update type-hints and callbacks to pass
+    # EventStreamRpcMessageFlag instead of plain int.
+
     NONE = 0
     CONNECTION_ACCEPTED = 0x1
     TERMINATE_STREAM = 0x2
@@ -298,7 +303,7 @@ class EventStreamRpcClientConnectionHandler(ABC):
             headers: Sequence[EventStreamHeader],
             payload: bytes,
             message_type: EventStreamRpcMessageType,
-            flags: EventStreamRpcMessageFlag,
+            flags: int,
             **kwargs) -> None:
         pass
 
@@ -414,7 +419,6 @@ class EventStreamRpcClientConnection(NativeResource):
             # transform from simple types to actual classes
             headers = [EventStreamHeader._from_binding_tuple(i) for i in headers]
             message_type = EventStreamRpcMessageType(message_type)
-            flags = EventStreamRpcMessageFlag(flags)
             handler.on_protocol_message(
                 headers=headers,
                 payload=payload,
@@ -450,7 +454,7 @@ class EventStreamRpcClientConnection(NativeResource):
             message_type: EventStreamRpcMessageType,
             headers: Optional[Sequence[EventStreamHeader]] = [],
             payload: Optional[ByteString] = b'',
-            flags: EventStreamRpcMessageFlag = EventStreamRpcMessageFlag.NONE) -> Future:
+            flags: int = EventStreamRpcMessageFlag.NONE) -> Future:
 
         future = Future()
 
