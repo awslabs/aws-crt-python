@@ -6,6 +6,7 @@
 
 #include "auth.h"
 #include "crypto.h"
+#include "event_stream.h"
 #include "http.h"
 #include "io.h"
 #include "mqtt_client.h"
@@ -14,6 +15,7 @@
 #include <aws/auth/auth.h>
 #include <aws/common/byte_buf.h>
 #include <aws/common/system_info.h>
+#include <aws/event-stream/event_stream.h>
 #include <aws/http/http.h>
 #include <aws/io/io.h>
 #include <aws/io/logging.h>
@@ -543,6 +545,11 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(signing_config_get_omit_session_token, METH_VARARGS),
     AWS_PY_METHOD_DEF(sign_request_aws, METH_VARARGS),
 
+    /* Event Stream */
+    AWS_PY_METHOD_DEF(event_stream_rpc_client_connection_connect, METH_VARARGS),
+    AWS_PY_METHOD_DEF(event_stream_rpc_client_connection_close, METH_VARARGS),
+    AWS_PY_METHOD_DEF(event_stream_rpc_client_connection_is_open, METH_VARARGS),
+
     {NULL, NULL, 0, NULL},
 };
 
@@ -576,6 +583,7 @@ PyMODINIT_FUNC PyInit__awscrt(void) {
     aws_http_library_init(aws_py_get_allocator());
     aws_auth_library_init(aws_py_get_allocator());
     aws_mqtt_library_init(aws_py_get_allocator());
+    aws_event_stream_library_init(aws_py_get_allocator());
 
 #if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 9
     if (!PyEval_ThreadsInitialized()) {
