@@ -42,39 +42,39 @@ class TestHeaders(NativeResourceTest):
 
     def test_int16(self):
         name = 'sweet16'
-        value = 32_000
+        value = 32000
         h = EventStreamHeader.from_int16(name, value)
         self.assertIs(EventStreamHeaderType.INT16, h.type)
         self.assertEqual(value, h.value_as_int16())
         self.assertEqual(value, h.value)
         self.assertEqual(name, h.name)
 
-        self.assertRaises(ValueError, EventStreamHeader.from_int16, 'too-big', 64_000)
-        self.assertRaises(ValueError, EventStreamHeader.from_int16, 'too-small', -64_000)
+        self.assertRaises(ValueError, EventStreamHeader.from_int16, 'too-big', 64000)
+        self.assertRaises(ValueError, EventStreamHeader.from_int16, 'too-small', -64000)
 
     def test_int32(self):
         name = 'win32'
-        value = 2_000_000_000
+        value = 2000000000
         h = EventStreamHeader.from_int32(name, value)
         self.assertIs(EventStreamHeaderType.INT32, h.type)
         self.assertEqual(value, h.value_as_int32())
         self.assertEqual(value, h.value)
         self.assertEqual(name, h.name)
 
-        self.assertRaises(ValueError, EventStreamHeader.from_int32, 'too-big', 4_000_000_000)
-        self.assertRaises(ValueError, EventStreamHeader.from_int32, 'too-small', -4_000_000_000)
+        self.assertRaises(ValueError, EventStreamHeader.from_int32, 'too-big', 4000000000)
+        self.assertRaises(ValueError, EventStreamHeader.from_int32, 'too-small', -4000000000)
 
     def test_int64(self):
         name = 'N64'
-        value = 9_223_372_036_854_775_807
+        value = 9223372036854775807
         h = EventStreamHeader.from_int64(name, value)
         self.assertIs(EventStreamHeaderType.INT64, h.type)
         self.assertEqual(value, h.value_as_int64())
         self.assertEqual(value, h.value)
         self.assertEqual(name, h.name)
 
-        self.assertRaises(ValueError, EventStreamHeader.from_int32, 'too-big', 18_000_000_000_000_000_000)
-        self.assertRaises(ValueError, EventStreamHeader.from_int32, 'too-small', -18_000_000_000_000_000_000)
+        self.assertRaises(ValueError, EventStreamHeader.from_int32, 'too-big', 18000000000000000000)
+        self.assertRaises(ValueError, EventStreamHeader.from_int32, 'too-small', -18000000000000000000)
 
     def test_byte_buf(self):
         name = 'buffy'
@@ -237,7 +237,7 @@ class TestClient(NativeResourceTest):
         self.assertIsNone(record.failure)
 
     def test_echo(self):
-        # self.skipTest("Skipping until we have permanent echo server")
+        self.skipTest("Skipping until we have permanent echo server")
         elg = EventLoopGroup()
         resolver = DefaultHostResolver(elg)
         bootstrap = ClientBootstrap(elg, resolver)
@@ -263,14 +263,15 @@ class TestClient(NativeResourceTest):
         self.assertIs(EventStreamRpcMessageType.CONNECT_ACK, msg['message_type'])
         self.assertTrue(EventStreamRpcMessageFlag.CONNECTION_ACCEPTED & msg['flags'])
 
-        # send PING msg, server will echo back its headers and payload in the PING_RESPONSE
+        # send PING msg, server will echo back its headers and payload in the PING_RESPONSE.
+        # test every single header type
         echo_headers = [
             EventStreamHeader.from_bool('echo-true', True),
             EventStreamHeader.from_bool('echo-false', False),
             EventStreamHeader.from_byte('echo-byte', 127),
-            EventStreamHeader.from_int16('echo-int16', 32_000),
-            EventStreamHeader.from_int32('echo-int32', 2_000_000_000),
-            EventStreamHeader.from_int64('echo-int64', 999_999_999_999),
+            EventStreamHeader.from_int16('echo-int16', 32000),
+            EventStreamHeader.from_int32('echo-int32', 2000000000),
+            EventStreamHeader.from_int64('echo-int64', 999999999999),
             EventStreamHeader.from_byte_buf('echo-byte-buf', b'\x00\xff\x0f\xf0'),
             EventStreamHeader.from_string('echo-string', 'noodles'),
             EventStreamHeader.from_timestamp('echo-timestamp', time.time()),
@@ -288,7 +289,7 @@ class TestClient(NativeResourceTest):
         msg = handler.record.message_calls.get(timeout=TIMEOUT)
         self.assertIs(EventStreamRpcMessageType.PING_RESPONSE, msg['message_type'])
         for sent_header in echo_headers:
-            recv_header = next(x for x in msg['headers'] if x.name == sent_header.name)
+            recv_header = next(x for x in msg['headers'] if x.name.lower() == sent_header.name.lower())
             self.assertEqual(sent_header.type, recv_header.type)
             self.assertEqual(sent_header.value, recv_header.value)
         self.assertEqual(echo_payload, msg['payload'])
