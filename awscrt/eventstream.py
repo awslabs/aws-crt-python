@@ -231,14 +231,34 @@ class EventStreamHeader:
 
 
 class EventStreamRpcMessageType(IntEnum):
+    """Types of event-stream RPC messages.
+
+    Different message types expect specific headers and flags, consult documentation."""
+    # TODO: flesh out these docs
+
     APPLICATION_MESSAGE = 0
+    """Application message"""
+
     APPLICATION_ERROR = 1
+    """Application error"""
+
     PING = 2
+    """Ping"""
+
     PING_RESPONSE = 3
+    """Ping response"""
+
     CONNECT = 4
+    """Connect"""
+
     CONNECT_ACK = 5
+    """Connect acknowledgement"""
+
     PROTOCOL_ERROR = 6
+    """Protocol error"""
+
     INTERNAL_ERROR = 7
+    """Internal error"""
 
     def __format__(self, format_spec):
         # override so formatted string doesn't simply look like an int
@@ -246,14 +266,27 @@ class EventStreamRpcMessageType(IntEnum):
 
 
 class EventStreamRpcMessageFlag:
-    """Flags for an event-stream RPC messages."""
+    """Flags for event-stream RPC messages.
+
+    Flags may be XORed together.
+    Not all flags can be used with all messages types, consult documentation.
+    """
+    # TODO: flesh out these docs
+
     # TODO: when python 3.5 is dropped this class should inherit from IntFlag.
     # When doing this, be sure to update type-hints and callbacks to pass
     # EventStreamRpcMessageFlag instead of plain int.
 
     NONE = 0
+    """No flags"""
+
     CONNECTION_ACCEPTED = 0x1
+    """Connection accepted
+
+    If this flag is absent from a CONNECT_ACK, the connection has been rejected."""
+
     TERMINATE_STREAM = 0x2
+    """Terminate stream"""
 
     def __format__(self, format_spec):
         # override so formatted string doesn't simply look like an int
@@ -451,10 +484,29 @@ class EventStreamRpcClientConnection(NativeResource):
     def send_protocol_message(
             self,
             *,
-            message_type: EventStreamRpcMessageType,
             headers: Optional[Sequence[EventStreamHeader]] = [],
             payload: Optional[ByteString] = b'',
+            message_type: EventStreamRpcMessageType,
             flags: int = EventStreamRpcMessageFlag.NONE) -> Future:
+        """Send a protocol message.
+
+        Protocol messages use stream 0.
+
+        Keyword Args:
+            headers: Message headers.
+            payload: Binary message payload.
+            message_type: Message type.
+            flags: Message flags. Values from EventStreamRpcMessageFlag may be
+                XORed together. Not all flags can be used with all messages
+                types, consult documentation.
+        Returns:
+            A future which completes with a result of None if the the message
+            successfully written to the wire. This is still no guarantee
+            that the peer received or processed the message.
+            The future will complete with an exception if the connection
+            is closed before the message can be sent.
+
+        """
 
         future = Future()
 
