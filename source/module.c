@@ -549,6 +549,7 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(event_stream_rpc_client_connection_connect, METH_VARARGS),
     AWS_PY_METHOD_DEF(event_stream_rpc_client_connection_close, METH_VARARGS),
     AWS_PY_METHOD_DEF(event_stream_rpc_client_connection_is_open, METH_VARARGS),
+    AWS_PY_METHOD_DEF(event_stream_rpc_client_connection_send_protocol_message, METH_VARARGS),
 
     {NULL, NULL, 0, NULL},
 };
