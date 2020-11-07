@@ -8,6 +8,7 @@ on:
 
 env:
   BUILDER_VERSION: v0.6.19
+  BUILDER_SOURCE: releases
   BUILDER_HOST: https://d19elf31gohf1l.cloudfront.net
   PACKAGE_NAME: aws-crt-python-staging
   LINUX_BASE_IMAGE: ubuntu-16-x64
