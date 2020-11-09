@@ -23,11 +23,11 @@
 	path = crt/aws-c-auth
 	url = https://github.com/awslabs/aws-c-auth.git
 [submodule "aws-common-runtime/aws-c-s3"]
-	path = aws-common-runtime/aws-c-s3
+	path = crt/aws-c-s3
 	url = https://github.com/awslabs/aws-c-s3.git
-[submodule "crt/aws-c-event-stream"]
+[submodule "aws-common-runtime/aws-c-event-stream"]
 	path = crt/aws-c-event-stream
 	url = https://github.com/awslabs/aws-c-event-stream.git
-[submodule "crt/aws-checksums"]
+[submodule "aws-common-runtime/aws-checksums"]
 	path = crt/aws-checksums
 	url = https://github.com/awslabs/aws-checksums.git
