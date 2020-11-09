@@ -1,7 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 
-from __future__ import absolute_import
 import awscrt.exceptions
 from awscrt.http import HttpClientConnection, HttpClientStream, HttpHeaders, HttpProxyOptions, HttpRequest, HttpVersion
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions
@@ -350,8 +349,8 @@ class TestClient(NativeResourceTest):
         stream = connection.request(request, response.on_response, response.on_body)
         stream.activate()
 
-        # wait for stream to complete
-        stream_completion_result = stream.completion_future.result(self.timeout)
+        # wait for stream to complete (use long timeout, it's a big file)
+        stream_completion_result = stream.completion_future.result(60)
 
         # check result
         self.assertEqual(200, response.status_code)

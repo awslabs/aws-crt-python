@@ -8,11 +8,9 @@ Long-running event-loop threads are used for concurrency.
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 
-from __future__ import absolute_import
 import _awscrt
 from awscrt import NativeResource
 from enum import IntEnum
-import io
 import threading
 
 
@@ -490,20 +488,47 @@ def is_alpn_available():
 
 
 class InputStream(NativeResource):
-    """InputStream allows `awscrt` native code to read from Python I/O classes.
+    """InputStream allows `awscrt` native code to read from Python binary I/O classes.
 
     Args:
-        stream (io.IOBase): Python I/O stream to wrap.
+        stream (io.IOBase): Python binary I/O stream to wrap.
     """
-    __slots__ = ()
+    __slots__ = ('_stream')
     # TODO: Implement IOBase interface so Python can read from this class as well.
 
     def __init__(self, stream):
-        assert isinstance(stream, io.IOBase)
+        # duck-type instead of checking inheritance from IOBase.
+        # At the least, stream must have read()
+        if not callable(getattr(stream, 'read', None)):
+            raise TypeError('I/O stream type expected')
         assert not isinstance(stream, InputStream)
 
         super().__init__()
-        self._binding = _awscrt.input_stream_new(stream)
+        self._stream = stream
+        self._binding = _awscrt.input_stream_new(self)
+
+    def _read_into_memoryview(self, m):
+        # Read into memoryview m.
+        # Return number of bytes read, or None if no data available.
+        try:
+            # prefer the most efficient read methods,
+            if hasattr(self._stream, 'readinto1'):
+                return self._stream.readinto1(m)
+            if hasattr(self._stream, 'readinto'):
+                return self._stream.readinto(m)
+
+            if hasattr(self._stream, 'read1'):
+                data = self._stream.read1(len(m))
+            else:
+                data = self._stream.read(len(m))
+            n = len(data)
+            m[:n] = data
+            return n
+        except BlockingIOError:
+            return None
+
+    def _seek(self, offset, whence):
+        return self._stream.seek(offset, whence)
 
     @classmethod
     def wrap(cls, stream, allow_none=False):
@@ -511,7 +536,7 @@ class InputStream(NativeResource):
         Given some stream type, returns an :class:`InputStream`.
 
         Args:
-            stream (Union[io.IOBase, InputStream, None]): I/O stream to wrap.
+            stream (Union[io.IOBase, InputStream, None]): Binary I/O stream to wrap.
             allow_none (bool): Whether to allow `stream` to be None.
                 If False (default), and `stream` is None, an exception is raised.
 
@@ -520,10 +545,8 @@ class InputStream(NativeResource):
             Otherwise, an :class:`InputStream` which wraps the `stream` is returned.
             If `allow_none` is True, and `stream` is None, then None is returned.
         """
-        if isinstance(stream, InputStream):
-            return stream
-        if isinstance(stream, io.IOBase):
-            return cls(stream)
         if stream is None and allow_none:
             return None
-        raise TypeError('I/O stream type expected')
+        if isinstance(stream, InputStream):
+            return stream
+        return cls(stream)

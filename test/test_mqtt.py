@@ -1,7 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 
-from __future__ import absolute_import
 from awscrt import awsiot_mqtt_connection_builder
 from awscrt.auth import AwsCredentialsProvider
 from awscrt.http import HttpProxyOptions

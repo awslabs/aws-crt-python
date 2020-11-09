@@ -12,9 +12,9 @@ phases:
   build:
     commands:
       - echo Build started on `date`
-      - cd aws-crt-python 
+      - cd aws-crt-python
       - CURRENT_TAG_VERSION=$(git describe --tags | cut -f2 -dv)
-      - python3 -m pip install --user awscrt==$CURRENT_TAG_VERSION
+      - python3 -m pip install --no-cache-dir --user awscrt==$CURRENT_TAG_VERSION
       - python3 continuous-delivery/test-pip-install.py
   post_build:
     commands:
