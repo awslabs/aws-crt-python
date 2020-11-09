@@ -158,6 +158,7 @@ AWS_LIBS.append(AwsLib('aws-c-event-stream'))
 AWS_LIBS.append(AwsLib('aws-c-http'))
 AWS_LIBS.append(AwsLib('aws-c-auth'))
 AWS_LIBS.append(AwsLib('aws-c-mqtt'))
+AWS_LIBS.append(AwsLib('aws-c-s3'))
 
 
 PROJECT_DIR = os.path.dirname(os.path.realpath(__file__))
