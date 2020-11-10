@@ -82,6 +82,8 @@ class EventStreamHeader:
 
     Each header has a name, value, and type.
     :class:`EventStreamHeaderType` enumerates the supported value types.
+
+    Create a header with one of the EventStreamHeader.from_X() functions.
     """
 
     def __init__(self, name: str, value: Any, header_type: EventStreamHeaderType):
@@ -92,6 +94,7 @@ class EventStreamHeader:
 
     @classmethod
     def from_bool(cls, name: str, value: bool) -> 'EventStreamHeader':
+        """Create an EventStreamHeader of type BOOL_TRUE or BOOL_FALSE"""
         if value:
             return cls(name, True, EventStreamHeaderType.BOOL_TRUE)
         else:
@@ -99,6 +102,9 @@ class EventStreamHeader:
 
     @classmethod
     def from_byte(cls, name: str, value: int) -> 'EventStreamHeader':
+        """Create an EventStreamHeader of type BYTE
+
+        The value must fit in an 8-bit signed int"""
         value = int(value)
         if value < _BYTE_MIN or value > _BYTE_MAX:
             raise ValueError("Value {} cannot fit in signed 8-bit byte".format(value))
@@ -106,6 +112,9 @@ class EventStreamHeader:
 
     @classmethod
     def from_int16(cls, name: str, value: int) -> 'EventStreamHeader':
+        """Create an EventStreamHeader of type INT16
+
+        The value must fit in an 16-bit signed int"""
         value = int(value)
         if value < _INT16_MIN or value > _INT16_MAX:
             raise ValueError("Value {} cannot fit in signed 16-bit int".format(value))
@@ -113,6 +122,9 @@ class EventStreamHeader:
 
     @classmethod
     def from_int32(cls, name: str, value: int) -> 'EventStreamHeader':
+        """Create an EventStreamHeader of type INT32
+
+        The value must fit in an 32-bit signed int"""
         value = int(value)
         if value < _INT32_MIN or value > _INT32_MAX:
             raise ValueError("Value {} cannot fit in signed 32-bit int".format(value))
@@ -120,6 +132,9 @@ class EventStreamHeader:
 
     @classmethod
     def from_int64(cls, name: str, value: int) -> 'EventStreamHeader':
+        """Create an EventStreamHeader of type INT64
+
+        The value must fit in an 64-bit signed int"""
         value = int(value)
         if value < _INT64_MIN or value > _INT64_MAX:
             raise ValueError("Value {} cannot fit in signed 64-bit int".format(value))
@@ -127,15 +142,23 @@ class EventStreamHeader:
 
     @classmethod
     def from_byte_buf(cls, name: str, value: ByteString) -> 'EventStreamHeader':
+        """Create an EventStreamHeader of type BYTES
+
+        The value must be a bytes-like object"""
         return cls(name, value, EventStreamHeaderType.BYTE_BUF)
 
     @classmethod
     def from_string(cls, name: str, value: str) -> 'EventStreamHeader':
+        """Create an EventStreamHeader of type STRING"""
         value = str(value)
         return cls(name, value, EventStreamHeaderType.STRING)
 
     @classmethod
     def from_timestamp(cls, name: str, value: int) -> 'EventStreamHeader':
+        """Create an EventStreamHeader of type TIMESTAMP
+
+        Value must be a posix timestamp (seconds since Unix epoch)"""
+
         value = int(value)
         if value < _INT64_MIN or value > _INT64_MAX:
             raise ValueError("Value {} exceeds timestamp limits".format(value))
@@ -143,6 +166,10 @@ class EventStreamHeader:
 
     @classmethod
     def from_uuid(cls, name: str, value: UUID) -> 'EventStreamHeader':
+        """Create an EventStreamHeader of type UUID
+
+        The value must be a UUID"""
+
         if not isinstance(value, UUID):
             raise TypeError("Value must be UUID, not {}".format(type(value)))
         return cls(name, value, EventStreamHeaderType.UUID)
@@ -166,14 +193,20 @@ class EventStreamHeader:
 
     @property
     def name(self) -> str:
+        """Header name"""
         return self._name
 
     @property
     def type(self) -> EventStreamHeaderType:
+        """Header type"""
         return self._type
 
     @property
     def value(self) -> Any:
+        """Header value
+
+        The header's type determines the value's type.
+        Use the value_as_X() methods for type-checked queries."""
         return self._value
 
     def _value_as(self, header_type: EventStreamHeaderType) -> Any:
@@ -182,6 +215,9 @@ class EventStreamHeader:
         return self._value
 
     def value_as_bool(self) -> bool:
+        """Return bool value
+
+        Raises an exception if type is not BOOL_TRUE or BOOL_FALSE"""
         if self._type == EventStreamHeaderType.BOOL_TRUE:
             return True
         if self._type == EventStreamHeaderType.BOOL_FALSE:
@@ -193,27 +229,51 @@ class EventStreamHeader:
                 EventStreamHeaderType.BOOL_FALSE))
 
     def value_as_byte(self) -> int:
+        """Return value of 8-bit signed int
+
+        Raises an exception if type is not INT8"""
         return self._value_as(EventStreamHeaderType.BYTE)
 
     def value_as_int16(self) -> int:
+        """Return value of 16-bit signed int
+
+        Raises an exception if type is not INT16"""
         return self._value_as(EventStreamHeaderType.INT16)
 
     def value_as_int32(self) -> int:
+        """Return value of 32-bit signed int
+
+        Raises an exception if type is not INT32"""
         return self._value_as(EventStreamHeaderType.INT32)
 
     def value_as_int64(self) -> int:
+        """Return value of 64-bit signed int
+
+        Raises an exception if type is not INT64"""
         return self._value_as(EventStreamHeaderType.INT64)
 
     def value_as_byte_buf(self) -> ByteString:
+        """Return value of bytes
+
+        Raises an exception if type is not BYTE_BUF"""
         return self._value_as(EventStreamHeaderType.BYTE_BUF)
 
     def value_as_string(self) -> str:
+        """Return value of string
+
+        Raises an exception if type is not STRING"""
         return self._value_as(EventStreamHeaderType.STRING)
 
     def value_as_timestamp(self) -> int:
+        """Return value of timestamp (seconds since Unix epoch)
+
+        Raises an exception if type is not TIMESTAMP"""
         return self._value_as(EventStreamHeaderType.TIMESTAMP)
 
     def value_as_uuid(self) -> UUID:
+        """Return value of UUID
+
+        Raises an exception if type is not UUID"""
         return self._value_as(EventStreamHeaderType.UUID)
 
     def __str__(self):
@@ -233,8 +293,13 @@ class EventStreamHeader:
 class EventStreamRpcMessageType(IntEnum):
     """Types of event-stream RPC messages.
 
+    The APPLICATION_MESSAGE and APPLICATION_ERROR types may only be sent
+    on streams, and will never arrive as a protocol message (stream-id 0).
+
+    For all other message types, they may only be sent as protocol messages
+    (stream-id 0), and will never arrive as a stream message.
+
     Different message types expect specific headers and flags, consult documentation."""
-    # TODO: flesh out these docs
 
     APPLICATION_MESSAGE = 0
     """Application message"""
@@ -252,7 +317,9 @@ class EventStreamRpcMessageType(IntEnum):
     """Connect"""
 
     CONNECT_ACK = 5
-    """Connect acknowledgement"""
+    """Connect acknowledgement
+
+    If the CONNECTION_ACCEPTED flag is not present, the connection has been rejected."""
 
     PROTOCOL_ERROR = 6
     """Protocol error"""
@@ -271,8 +338,6 @@ class EventStreamRpcMessageFlag:
     Flags may be XORed together.
     Not all flags can be used with all message types, consult documentation.
     """
-    # TODO: flesh out these docs
-
     # TODO: when python 3.5 is dropped this class should inherit from IntFlag.
     # When doing this, be sure to update type-hints and callbacks to pass
     # EventStreamRpcMessageFlag instead of plain int.
@@ -286,7 +351,11 @@ class EventStreamRpcMessageFlag:
     If this flag is absent from a CONNECT_ACK, the connection has been rejected."""
 
     TERMINATE_STREAM = 0x2
-    """Terminate stream"""
+    """Terminate stream
+
+    This message may be used with any message type.
+    The sender will close their connection after the message is written to the wire.
+    The receiver will close their connection after delivering the message to the user."""
 
     def __format__(self, format_spec):
         # override so formatted string doesn't simply look like an int
@@ -418,12 +487,27 @@ class EventStreamRpcClientConnection(NativeResource):
         """Asynchronously establish a new EventStreamRpcClientConnection.
 
         Args:
-            TODO (int): fill this out
+            handler: Handler for connection events.
+
+            host_name: Connect to host.
+
+            port: Connect to port.
+
+            bootstrap: Client bootstrap to use when initiating socket connection.
+
+            socket_options: Optional socket options.
+                If None is provided, then default options are used.
+
+            tls_connection_options: Optional TLS
+                connection options. If None is provided, then the connection will
+                be attempted over plain-text.
+
         Returns:
             concurrent.futures.Future: A Future which completes when the connection succeeds or fails.
             If successful, the Future will contain None.
             Otherwise it will contain an exception.
-            If the connection is successful, it is accessible via `handler.connection`.
+            If the connection is successful, it will be made available via
+            the handler's on_connection_setup callback.
         """
 
         if not socket_options:
@@ -536,7 +620,7 @@ class EventStreamRpcClientConnection(NativeResource):
             else:
                 bound_future.set_result(None)
 
-    def close(self):
+    def close(self, reason=None):
         """Close the connection.
 
         Shutdown is asynchronous. This call has no effect if the connection is already
