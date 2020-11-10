@@ -10,7 +10,7 @@ from unittest import skipUnless
 from uuid import UUID, uuid4
 
 # TODO: setup permanent online echo server we can hit from tests
-RUN_LOCALHOST_TESTS = True
+RUN_LOCALHOST_TESTS = False
 
 
 class TestHeaders(NativeResourceTest):
