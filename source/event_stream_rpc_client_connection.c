@@ -12,7 +12,7 @@
 struct connection_binding;
 static void s_capsule_destructor(PyObject *capsule);
 static void s_connection_destroy_if_ready(struct connection_binding *connection);
-static int s_on_connection_setup(
+static void s_on_connection_setup(
     struct aws_event_stream_rpc_client_connection *native,
     int error_code,
     void *user_data);
@@ -139,7 +139,7 @@ error:
     return NULL;
 }
 
-static int s_on_connection_setup(
+static void s_on_connection_setup(
     struct aws_event_stream_rpc_client_connection *native,
     int error_code,
     void *user_data) {
@@ -152,7 +152,7 @@ static int s_on_connection_setup(
 
     PyGILState_STATE state;
     if (aws_py_gilstate_ensure(&state)) {
-        return AWS_OP_ERR; /* Python has shut down. Nothing matters anymore, but don't crash */
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
     PyObject *result = PyObject_CallFunction(connection->on_setup, "(Oi)", connection->capsule_tmp, error_code);
@@ -175,8 +175,6 @@ static int s_on_connection_setup(
     Py_CLEAR(connection->capsule_tmp);
 
     PyGILState_Release(state);
-
-    return AWS_OP_SUCCESS; /* Calling code never actually checks this, so always returning SUCCESS */
 }
 
 static void s_on_connection_shutdown(
@@ -317,10 +315,10 @@ PyObject *aws_py_event_stream_rpc_client_connection_is_open(PyObject *self, PyOb
         return NULL;
     }
 
-    if (aws_event_stream_rpc_client_connection_is_closed(connection->native)) {
-        Py_RETURN_FALSE;
+    if (aws_event_stream_rpc_client_connection_is_open(connection->native)) {
+        Py_RETURN_TRUE;
     }
-    Py_RETURN_TRUE;
+    Py_RETURN_FALSE;
 }
 
 void aws_py_event_stream_rpc_client_on_message_flush(int error_code, void *user_data) {
