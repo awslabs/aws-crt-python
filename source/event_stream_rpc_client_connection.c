@@ -35,6 +35,10 @@ struct connection_binding {
     PyObject *on_setup;
     PyObject *on_shutdown;
     PyObject *on_protocol_message;
+
+    /* keep a reference to our own capsule until we pass it out to python-land
+     * in the on_setup callback, whereupon we clear the reference */
+    PyObject *capsule_tmp;
 };
 
 struct aws_event_stream_rpc_client_connection *aws_py_get_event_stream_rpc_client_connection(PyObject *connection) {
@@ -120,7 +124,14 @@ PyObject *aws_py_event_stream_rpc_client_connection_connect(PyObject *self, PyOb
         goto error;
     }
 
-    return capsule;
+    /* Don't return binding-capsule now. If we did, the thread calling
+     * connect() might not be able to store the returned binding-capsule
+     * before the on_setup() callback fires in another thread.
+     *
+     * To avoid this race, we pass the binding-capsule out to python-land
+     * from the on_setup() callback. */
+    connection->capsule_tmp = capsule;
+    Py_RETURN_NONE;
 
 error:
     /* capsule's destructor will clean up anything inside of it */
@@ -144,17 +155,25 @@ static int s_on_connection_setup(
         return AWS_OP_ERR; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
-    PyObject *result = PyObject_CallFunction(connection->on_setup, "(i)", error_code);
+    PyObject *result = PyObject_CallFunction(connection->on_setup, "(Oi)", connection->capsule_tmp, error_code);
     if (result) {
         Py_DECREF(result);
     } else {
         /* Callback might fail during application shutdown */
         PyErr_WriteUnraisable(PyErr_Occurred());
+
+        /* TODO: close connection if unhandled exception occurs? */
     }
 
     /* on_setup callback has a captured reference to python connection object.
      * Need to clear it so that its refcount can ever reach zero */
     Py_CLEAR(connection->on_setup);
+
+    /* Clear reference to binding-capsule.
+     * It should be stored in the python connection object now.
+     * If it's not stored, then this will cause it to be GC'd, which will close the connection. */
+    Py_CLEAR(connection->capsule_tmp);
+
     PyGILState_Release(state);
 
     return AWS_OP_SUCCESS; /* Calling code never actually checks this, so always returning SUCCESS */

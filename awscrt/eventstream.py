@@ -441,7 +441,7 @@ class EventStreamRpcClientConnection(NativeResource):
         # or references to futures within the connection rather than the connection itself.
         handler_weakref = weakref.ref(handler)
 
-        connection._binding = _awscrt.event_stream_rpc_client_connection_connect(
+        _awscrt.event_stream_rpc_client_connection_connect(
             host_name,
             port,
             bootstrap,
@@ -454,12 +454,13 @@ class EventStreamRpcClientConnection(NativeResource):
         return future
 
     @staticmethod
-    def _on_connection_setup(bound_future, bound_handler, bound_connection, error_code):
+    def _on_connection_setup(bound_future, bound_handler, bound_connection, binding, error_code):
         if error_code:
             connection = None
             error = awscrt.exceptions.from_code(error_code)
         else:
             connection = bound_connection
+            connection._binding = binding
             error = None
 
         try:
