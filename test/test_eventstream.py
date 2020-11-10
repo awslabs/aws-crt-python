@@ -279,7 +279,7 @@ class TestClient(NativeResourceTest):
         # the shutdown_future should complete, but the handler's shutdown
         # callback should not fire in this test because the handler has been deleted.
         del handler
-        del record.setup_call # we were storing another reference to connection here
+        del record.setup_call  # we were storing another reference to connection here
         self.assertIsNone(shutdown_future.exception(TIMEOUT))
         self.assertIsNone(
             record.shutdown_call,

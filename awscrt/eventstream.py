@@ -472,7 +472,6 @@ class EventStreamRpcClientConnection(NativeResource):
             else:
                 bound_future.set_result(None)
 
-
     @staticmethod
     def _on_connection_shutdown(bound_future, bound_weak_handler, error_code):
         reason = awscrt.exceptions.from_code(error_code) if error_code else None
