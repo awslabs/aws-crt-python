@@ -13,6 +13,10 @@ PyObject *aws_py_event_stream_rpc_client_connection_connect(PyObject *self, PyOb
 PyObject *aws_py_event_stream_rpc_client_connection_close(PyObject *self, PyObject *args);
 PyObject *aws_py_event_stream_rpc_client_connection_is_open(PyObject *self, PyObject *args);
 PyObject *aws_py_event_stream_rpc_client_connection_send_protocol_message(PyObject *self, PyObject *args);
+PyObject *aws_py_event_stream_rpc_client_connection_new_stream(PyObject *self, PyObject *args);
+PyObject *aws_py_event_stream_rpc_client_continuation_activate(PyObject *self, PyObject *args);
+PyObject *aws_py_event_stream_rpc_client_continuation_send_message(PyObject *self, PyObject *args);
+PyObject *aws_py_event_stream_rpc_client_continuation_is_closed(PyObject *self, PyObject *args);
 
 /**
  * Given a python list of EventStreamHeaders, init an aws_array_list of aws_event_stream_header_value_pairs.
@@ -29,5 +33,17 @@ bool aws_py_event_stream_native_headers_init(struct aws_array_list *native_heade
 PyObject *aws_py_event_stream_python_headers_create(
     struct aws_event_stream_header_value_pair *native_headers,
     size_t count);
+
+/**
+ * Common callback used by both connection and continuation messages.
+ * user_data should be a python callable that takes an error_code and returns nothing. */
+void aws_py_event_stream_rpc_client_on_message_flush(int error_code, void *user_data);
+
+/* Given a python object, return a pointer to its underlying native type.
+ * If NULL is returned, a python error has been set */
+
+struct aws_event_stream_rpc_client_connection *aws_py_get_event_stream_rpc_client_connection(PyObject *connection);
+struct aws_event_stream_rpc_client_continuation_token *aws_py_get_event_stream_rpc_client_continuation(
+    PyObject *continuation);
 
 #endif /* AWS_CRT_PYTHON_EVENT_STREAM_H */

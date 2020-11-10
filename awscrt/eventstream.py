@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from awscrt import NativeResource
 import awscrt.exceptions
 from awscrt.io import ClientBootstrap, SocketOptions, TlsConnectionOptions
-from collections.abc import ByteString
+from collections.abc import ByteString, Callable
 from concurrent.futures import Future
 from enum import IntEnum
 from functools import partial
@@ -81,7 +81,7 @@ class EventStreamHeader:
     """A header in an event-stream message.
 
     Each header has a name, value, and type.
-    class:`EventStreamHeaderType` enumerates the supported value types.
+    :class:`EventStreamHeaderType` enumerates the supported value types.
     """
 
     def __init__(self, name: str, value: Any, header_type: EventStreamHeaderType):
@@ -269,7 +269,7 @@ class EventStreamRpcMessageFlag:
     """Flags for event-stream RPC messages.
 
     Flags may be XORed together.
-    Not all flags can be used with all messages types, consult documentation.
+    Not all flags can be used with all message types, consult documentation.
     """
     # TODO: flesh out these docs
 
@@ -296,29 +296,41 @@ class EventStreamRpcMessageFlag:
 class EventStreamRpcClientConnectionHandler(ABC):
     """Base class for handling connection events.
 
-    Inherit from this class and override functions to handle connection events.
-    All events for this connection will be invoked on the same thread,
-    and `on_connection_setup()` will always be the first event invoked.
-    The `connection` property will be set before any events are invoked.
-    If the connect attempt is unsuccessful, no events will be invoked.
+    Inherit from this class and override methods to handle connection events.
+    All callbacks for this connection will be invoked on the same thread,
+    and `on_connection_setup()` will always be the first callback invoked.
 
-    Note that the `on_connection_shutdown()` event will not be invoked
-    if the handler is garbage-collected before the connection's internal
-    resources finish shutting down.
-
-    Attributes:
-        connection (Optional[EventStreamRpcClientConnection]): Initially None.
-            Will be set to the actual connection before any events are invoked.
+    Note that if the handler is garbage-collected, its callbacks will
+    not be invoked. To receive all events, maintain a reference to the
+    handler until its connection shuts down (or fails setup).
     """
 
-    def __init__(self):
-        self.connection = None  # type: Optional[EventStreamRpcClientConnection]
-
     @abstractmethod
-    def on_connection_setup(self, **kwargs) -> None:
-        """Invoked when connection has been successfully established.
+    def on_connection_setup(self, connection, error, **kwargs) -> None:
+        """Invoked upon completion of the setup attempt.
 
-        This will always be the first callback invoked on the handler.
+        If setup was successful, the connection is provided to the user.
+        The user must keep a reference to the connection or it will be
+        garbage-collected and closed. A common pattern is to store a
+        reference to the connection in the handler. Example:
+        ```
+            def on_connection_setup(self, connection, error, **kwargs):
+                if error:
+                    ... do error handling ...
+                else:
+                    self.connection = connection
+        ```
+        Setup will always be the first callback invoked on the handler.
+        If setup failed, no further callbacks will be invoked on this handler.
+
+        Args:
+            connection: The connection, if setup was successful,
+                or None if setup failed.
+
+            error: None, if setup was successful, or an Exception
+                if setup failed.
+
+            `**kwargs`: Forward compatibility kwargs.
         """
         pass
 
@@ -326,8 +338,17 @@ class EventStreamRpcClientConnectionHandler(ABC):
     def on_connection_shutdown(self, reason: Optional[Exception], **kwargs) -> None:
         """Invoked when the connection finishes shutting down.
 
+        This event will not be invoked if connection setup failed.
+
         Note that this event will not be invoked if the handler is
-        garbage-collected before the shutdown process completes"""
+        garbage-collected before the shutdown process completes.
+
+        Args:
+            reason: Reason will be None if the user initiated the shutdown,
+                otherwise the reason will be an Exception.
+
+            **kwargs: Forward compatibility kwargs.
+        """
         pass
 
     @abstractmethod
@@ -338,6 +359,22 @@ class EventStreamRpcClientConnectionHandler(ABC):
             message_type: EventStreamRpcMessageType,
             flags: int,
             **kwargs) -> None:
+        """Invoked when a message for the connection (stream-id 0) is received.
+
+        Args:
+            headers: Message headers.
+
+            payload: Binary message payload.
+
+            message_type: Message type.
+
+            flags: Message flags. Values from EventStreamRpcMessageFlag may be
+                XORed together. Not all flags can be used with all message
+                types, consult documentation.
+
+            **kwargs: Forward compatibility kwargs.
+        """
+
         pass
 
 
@@ -364,9 +401,9 @@ class EventStreamRpcClientConnection(NativeResource):
     def __init__(self, host_name, port):
         # Do no instantiate directly, use static connect method
         super().__init__()
-        self.host_name = host_name
-        self.port = port
-        self.shutdown_future = Future()
+        self.host_name = host_name  # type: str
+        self.port = port  # type: int
+        self.shutdown_future = Future()  # type: Future
 
     @classmethod
     def connect(
@@ -418,18 +455,22 @@ class EventStreamRpcClientConnection(NativeResource):
 
     @staticmethod
     def _on_connection_setup(bound_future, bound_handler, bound_connection, error_code):
+        if error_code:
+            connection = None
+            error = awscrt.exceptions.from_code(error_code)
+        else:
+            connection = bound_connection
+            error = None
+
         try:
-            if error_code:
-                e = awscrt.exceptions.from_code(error_code)
-                bound_future.set_exception(e)
+            bound_handler.on_connection_setup(connection=connection, error=error)
+        finally:
+            # user callback had unhandled exception, use finally to ensure future gets set
+            if error:
+                bound_future.set_exception(error)
             else:
-                bound_handler.connection = bound_connection
-                bound_handler.on_connection_setup()
                 bound_future.set_result(None)
-        except Exception as e:
-            # user callback had unhandled exception, set future as failed
-            bound_future.set_exception(e)
-            raise
+
 
     @staticmethod
     def _on_connection_shutdown(bound_future, bound_weak_handler, error_code):
@@ -446,6 +487,16 @@ class EventStreamRpcClientConnection(NativeResource):
                 bound_future.set_result(None)
 
     @staticmethod
+    def _on_continuation_closed(bound_future, bound_weak_handler):
+        try:
+            handler = bound_weak_handler()
+            if handler:
+                handler.on_continuation_closed()
+        finally:
+            # user callback had unhandled exception, use finally to ensure future gets set
+            bound_future.set_result(None)
+
+    @staticmethod
     def _on_protocol_message(bound_weak_handler, headers, payload, message_type, flags):
         handler = bound_weak_handler()
         if handler:
@@ -457,6 +508,33 @@ class EventStreamRpcClientConnection(NativeResource):
                 payload=payload,
                 message_type=message_type,
                 flags=flags)
+
+    @staticmethod
+    def _on_continuation_message(bound_weak_handler, headers, payload, message_type, flags):
+        handler = bound_weak_handler()
+        if handler:
+            # transform from simple types to actual classes
+            headers = [EventStreamHeader._from_binding_tuple(i) for i in headers]
+            message_type = EventStreamRpcMessageType(message_type)
+            handler.on_continuation_message(
+                headers=headers,
+                payload=payload,
+                message_type=message_type,
+                flags=flags)
+
+    @staticmethod
+    def _on_flush(bound_future, bound_callback, error_code):
+        # invoked when a message is flushed (written to wire), or canceled due to connection error.
+        e = awscrt.exceptions.from_code(error_code) if error_code else None
+        try:
+            if bound_callback:
+                bound_callback(error=e)
+        finally:
+            # user callback had unhandled exception, use finally to ensure future gets set
+            if error_code:
+                bound_future.set_exception(e)
+            else:
+                bound_future.set_result(None)
 
     def close(self):
         """Close the connection.
@@ -487,39 +565,286 @@ class EventStreamRpcClientConnection(NativeResource):
             headers: Optional[Sequence[EventStreamHeader]] = [],
             payload: Optional[ByteString] = b'',
             message_type: EventStreamRpcMessageType,
-            flags: int = EventStreamRpcMessageFlag.NONE) -> Future:
+            flags: int = EventStreamRpcMessageFlag.NONE,
+            on_flush: Callable = None) -> Future:
         """Send a protocol message.
 
-        Protocol messages use stream 0.
+        Protocol messages use stream-id 0.
+
+        Use the returned future, or the `on_flush` callback, to be informed
+        when the message is successfully written to the wire, or fails to send.
 
         Keyword Args:
             headers: Message headers.
+
             payload: Binary message payload.
+
             message_type: Message type.
+
             flags: Message flags. Values from EventStreamRpcMessageFlag may be
-                XORed together. Not all flags can be used with all messages
+                XORed together. Not all flags can be used with all message
                 types, consult documentation.
+
+            on_flush: Callback invoked when the message is successfully written
+                to the wire, or fails to send. The function should take the
+                following arguments and return nothing:
+
+                *   `error` (Optional[Exception]): None if the message was
+                    successfully written to the wire, or an Exception
+                    if it failed to send.
+
+                *   `**kwargs` (dict): Forward compatibility kwargs.
+
+                This callback is always invoked on the connection's event-loop
+                thread.
+
         Returns:
-            A future which completes with a result of None if the the message
-            successfully written to the wire. This is still no guarantee
-            that the peer received or processed the message.
-            The future will complete with an exception if the connection
-            is closed before the message can be sent.
-
+            A future which completes with a result of None if the
+            message is successfully written to the wire,
+            or an exception if the message fails to send.
         """
-
         future = Future()
-
-        def _on_flush(error_code):
-            if error_code:
-                e = awscrt.exceptions.from_code(error_code)
-                future.set_exception(e)
-            else:
-                future.set_result(None)
 
         # native code deals with simplified types
         headers = [i._as_binding_tuple() for i in headers]
 
         _awscrt.event_stream_rpc_client_connection_send_protocol_message(
-            self._binding, headers, payload, message_type, flags, _on_flush)
+            self._binding,
+            headers,
+            payload,
+            message_type,
+            flags,
+            partial(self._on_flush, future, on_flush))
         return future
+
+    def new_stream(self, handler: 'EventStreamRpcClientContinuationHandler') -> 'EventStreamClientContinuation':
+        """
+        Create a new stream.
+
+        The stream will send no data until :meth:`EventStreamClientContinuation.activate()`
+        is called. Call activate() when you're ready for callbacks and events to fire.
+
+        Args:
+            handler: Handler to process continuation messages and state changes.
+
+        Returns:
+            The new continuation object.
+        """
+        handler_weakref = weakref.ref(handler)
+        closed_future = Future()
+        binding = _awscrt.event_stream_rpc_client_connection_new_stream(
+            self,
+            partial(self._on_continuation_message, handler_weakref),
+            partial(self._on_continuation_closed, closed_future, handler_weakref))
+        return EventStreamRpcClientContinuation(binding, closed_future, self)
+
+
+class EventStreamRpcClientContinuation(NativeResource):
+    """
+    A continuation of messages on a given stream-id.
+
+    Create with :meth:`EventStreamRpcClientConnection.new_stream()`.
+
+    The stream will send no data until :meth:`EventStreamClientContinuation.activate()`
+    is called. Call activate() when you're ready for callbacks and events to fire.
+
+    Attributes:
+        connection (EventStreamRpcClientConnection): This stream's connection.
+
+        closed_future (Future) : Future which completes with a result of None
+            when the continuation has closed.
+    """
+
+    def __init__(self, binding, closed_future, connection):
+        # Do not instantiate directly, use EventStreamRpcClientConnection.new_stream()
+        super().__init__()
+        self._binding = binding
+        self.connection = connection  # type: EventStreamRpcClientConnection
+        self.closed_future = closed_future  # type: Future
+
+    def activate(
+            self,
+            *,
+            operation: str,
+            headers: Sequence[EventStreamHeader] = [],
+            payload: ByteString = b'',
+            message_type: EventStreamRpcMessageType,
+            flags: int = EventStreamRpcMessageFlag.NONE,
+            on_flush: Callable = None):
+        """
+        Activate the stream by sending its first message.
+
+        Use the returned future, or the `on_flush` callback, to be informed
+        when the message is successfully written to the wire, or fails to send.
+
+        activate() may only be called once, use send_message() to write further
+        messages on this stream-id.
+
+        Keyword Args:
+            operation: Operation name for this stream.
+
+            headers: Message headers.
+
+            payload: Binary message payload.
+
+            message_type: Message type.
+
+            flags: Message flags. Values from EventStreamRpcMessageFlag may be
+                XORed together. Not all flags can be used with all message
+                types, consult documentation.
+
+            on_flush: Callback invoked when the message is successfully written
+                to the wire, or fails to send. The function should take the
+                following arguments and return nothing:
+
+                *   `error` (Optional[Exception]): None if the message was
+                    successfully written to the wire, or an Exception
+                    if it failed to send.
+
+                *   `**kwargs` (dict): Forward compatibility kwargs.
+
+                This callback is always invoked on the connection's event-loop
+                thread.
+
+        Returns:
+            A future which completes with a result of None if the
+            message is successfully written to the wire,
+            or an exception if the message fails to send.
+        """
+
+        flush_future = Future()
+
+        # native code deals with simplified types
+        headers = [i._as_binding_tuple() for i in headers]
+
+        _awscrt.event_stream_rpc_client_continuation_activate(
+            self._binding,
+            operation,
+            headers,
+            payload,
+            message_type,
+            flags,
+            partial(EventStreamRpcClientConnection._on_flush, flush_future, on_flush))
+
+        return flush_future
+
+    def send_message(
+            self,
+            *,
+            headers: Sequence[EventStreamHeader] = [],
+            payload: ByteString = b'',
+            message_type: EventStreamRpcMessageType,
+            flags: int = EventStreamRpcMessageFlag.NONE,
+            on_flush: Callable = None) -> Future:
+        """
+        Send a continuation message.
+
+        Use the returned future, or the `on_flush` callback, to be informed
+        when the message is successfully written to the wire, or fails to send.
+
+        Note that the the first message on a stream-id must be sent with activate(),
+        send_message() is for all messages that follow.
+
+        Keyword Args:
+            operation: Operation name for this stream.
+
+            headers: Message headers.
+
+            payload: Binary message payload.
+
+            message_type: Message type.
+
+            flags: Message flags. Values from EventStreamRpcMessageFlag may be
+                XORed together. Not all flags can be used with all message
+                types, consult documentation.
+
+            on_flush: Callback invoked when the message is successfully written
+                to the wire, or fails to send. The function should take the
+                following arguments and return nothing:
+
+                *   `error` (Optional[Exception]): None if the message was
+                    successfully written to the wire, or an Exception
+                    if it failed to send.
+
+                *   `**kwargs` (dict): Forward compatibility kwargs.
+
+                This callback is always invoked on the connection's event-loop
+                thread.
+
+        Returns:
+            A future which completes with a result of None if the
+            message is successfully written to the wire,
+            or an exception if the message fails to send.
+        """
+        future = Future()
+        # native code deals with simplified types
+        headers = [i._as_binding_tuple() for i in headers]
+
+        _awscrt.event_stream_rpc_client_continuation_send_message(
+            self._binding,
+            headers,
+            payload,
+            message_type,
+            flags,
+            partial(EventStreamRpcClientConnection._on_flush, future, on_flush))
+        return future
+
+    def is_closed(self):
+        return _awscrt.event_stream_rpc_client_continuation_is_closed(self._binding)
+
+
+class EventStreamRpcClientContinuationHandler(ABC):
+    """Base class for handling stream continuation events.
+
+    Inherit from this class and override methods to handle events.
+    All callbacks will be invoked on the same thread (the same thread used by
+    the connection).
+
+    A common pattern is to store the continuation within its handler. Ex:
+    `continuation_handler.continuation = connection.new_stream(continuation_handler)`
+
+    Note that if the handler is garbage-collected, its callbacks will no
+    longer be invoked. Maintain a reference to the handler until the
+    continuation is closed to receive all events.
+    """
+
+    @abstractmethod
+    def on_continuation_message(
+            self,
+            headers: Sequence[EventStreamHeader],
+            payload: bytes,
+            message_type: EventStreamRpcMessageType,
+            flags: int,
+            **kwargs) -> None:
+        """Invoked when a message is received on this continuation.
+
+        Args:
+            headers: Message headers.
+
+            payload: Binary message payload.
+
+            message_type: Message type.
+
+            flags: Message flags. Values from EventStreamRpcMessageFlag may be
+                XORed together. Not all flags can be used with all message
+                types, consult documentation.
+
+            **kwargs: Forward compatibility kwargs.
+        """
+        pass
+
+    @abstractmethod
+    def on_continuation_closed(self, **kwargs) -> None:
+        """Invoked when the continuation is closed.
+
+        Once the continuation is closed, no more messages may be sent or received.
+        The continuation is closed when a message is sent or received with
+        the TERMINATE_STREAM flag, or when the connection shuts down.
+
+        Note that this event will not be invoked if the handler is
+        garbage-collected before the stream completes.
+
+        Args:
+            **kwargs: Forward compatibility kwargs.
+        """
+        pass

@@ -37,6 +37,10 @@ struct connection_binding {
     PyObject *on_protocol_message;
 };
 
+struct aws_event_stream_rpc_client_connection *aws_py_get_event_stream_rpc_client_connection(PyObject *connection) {
+    AWS_PY_RETURN_NATIVE_FROM_BINDING(connection, s_capsule_name, "EventStreamRpcClientConnection", connection_binding);
+}
+
 PyObject *aws_py_event_stream_rpc_client_connection_connect(PyObject *self, PyObject *args) {
     (void)self;
 
@@ -164,7 +168,9 @@ static void s_on_connection_shutdown(
     (void)native;
     struct connection_binding *connection = user_data;
 
+    AWS_FATAL_ASSERT(connection->native && "Illegal for event-stream connection shutdown to fire before setup");
     AWS_FATAL_ASSERT(!connection->shutdown_complete && "illegal for event-stream connection shutdown to fire twice");
+    connection->shutdown_complete = true;
 
     PyGILState_STATE state;
     if (aws_py_gilstate_ensure(&state)) {
@@ -179,7 +185,6 @@ static void s_on_connection_shutdown(
         PyErr_WriteUnraisable(PyErr_Occurred());
     }
 
-    connection->shutdown_complete = true;
     s_connection_destroy_if_ready(connection);
     PyGILState_Release(state);
 }
@@ -191,6 +196,7 @@ static void s_capsule_destructor(PyObject *capsule) {
 }
 
 static void s_connection_destroy_if_ready(struct connection_binding *connection) {
+    /* Cannot */
     bool destroy;
 
     if (connection->native) {
@@ -298,8 +304,7 @@ PyObject *aws_py_event_stream_rpc_client_connection_is_open(PyObject *self, PyOb
     Py_RETURN_TRUE;
 }
 
-/* Invoked when send_protocol_message() completes */
-static void s_on_protocol_message_flush(int error_code, void *user_data) {
+void aws_py_event_stream_rpc_client_on_message_flush(int error_code, void *user_data) {
     PyObject *on_flush_py = user_data;
 
     PyGILState_STATE state;
@@ -368,7 +373,7 @@ PyObject *aws_py_event_stream_rpc_client_connection_send_protocol_message(PyObje
         .message_flags = message_flags,
     };
     if (aws_event_stream_rpc_client_connection_send_protocol_message(
-            connection->native, &msg_args, s_on_protocol_message_flush, on_flush_py)) {
+            connection->native, &msg_args, aws_py_event_stream_rpc_client_on_message_flush, on_flush_py)) {
         PyErr_SetAwsLastError();
         goto done;
     }
