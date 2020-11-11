@@ -10,9 +10,6 @@
 #include <aws/s3/s3_client.h>
 
 PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args);
-
-/* Given a python object, return a pointer to its underlying native type.
- * If NULL is returned, a python error has been set */
-struct aws_mqtt_client *aws_py_get_mqtt_client(PyObject *mqtt_client);
+PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args);
 
 #endif /* AWS_CRT_PYTHON_S3_CLIENT_H */
