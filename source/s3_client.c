@@ -12,13 +12,16 @@ static const char *s_capsule_name_s3_client = "aws_s3_client";
 struct s3_client_binding {
     struct aws_s3_client *native;
 
+    /* Shutdown callback, reference cleared after setting result */
+    PyObject *on_shutdown;
+
     /* Dependencies that must outlive this */
     PyObject *bootstrap;
     PyObject *credential_provider;
     PyObject *tls_ctx;
 };
 
-static void s_s3_python_client_destructor(PyObject *client_capsule) {
+static void s_s3_client_destructor(PyObject *client_capsule) {
 
     struct s3_client_binding *client = PyCapsule_GetPointer(client_capsule, s_capsule_name_s3_client);
     assert(client);
@@ -84,15 +87,24 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
     if (tls_options_py != Py_None) {
         tls_options = aws_py_get_tls_connection_options(tls_options_py);
         if (!tls_options) {
-            goto error;
+            aws_mem_release(aws_py_get_allocator(), s3_clinet);
+            return NULL;
         }
 
         s3_clinet->tls_ctx = PyObject_GetAttrString(tls_options_py, "tls_ctx"); /* Creates new reference */
         if (!s3_clinet->tls_ctx || s3_clinet->tls_ctx == Py_None) {
             PyErr_SetString(PyExc_TypeError, "tls_connection_options.tls_ctx is invalid");
-            goto error;
+            aws_mem_release(aws_py_get_allocator(), s3_clinet);
+            return NULL;
         }
     }
+
+    s3_clinet->on_setup = on_connection_setup_py;
+    Py_INCREF(connection->on_setup);
+    s3_clinet->on_shutdown = on_shutdown_py;
+    Py_INCREF(connection->on_shutdown);
+    s3_clinet->bootstrap = bootstrap_py;
+    Py_INCREF(connection->bootstrap);
 }
 
 PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args);
