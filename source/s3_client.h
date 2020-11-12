@@ -10,6 +10,6 @@
 #include <aws/s3/s3_client.h>
 
 PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args);
-PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args);
+// PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args);
 
 #endif /* AWS_CRT_PYTHON_S3_CLIENT_H */

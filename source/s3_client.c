@@ -12,26 +12,65 @@ static const char *s_capsule_name_s3_client = "aws_s3_client";
 struct s3_client_binding {
     struct aws_s3_client *native;
 
+    bool release_called;
+    bool shutdown_called;
+
     /* Shutdown callback, reference cleared after setting result */
     PyObject *on_shutdown;
-
-    /* Dependencies that must outlive this */
-    PyObject *bootstrap;
-    PyObject *credential_provider;
-    PyObject *tls_ctx;
 };
 
-static void s_s3_client_destructor(PyObject *client_capsule) {
+static void s_s3_client_destroy(struct s3_client_binding *client) {
+    aws_mem_release(aws_py_get_allocator(), client);
+}
 
-    struct s3_client_binding *client = PyCapsule_GetPointer(client_capsule, s_capsule_name_s3_client);
-    assert(client);
+static void s_s3_client_release(struct s3_client_binding *client) {
+    AWS_FATAL_ASSERT(!client->release_called);
+    client->release_called = true;
+
+    bool destroy_after_release = client->shutdown_called;
 
     aws_s3_client_release(client->native);
-    Py_XDECREF(client->bootstrap);
-    Py_XDECREF(client->credential_provider);
-    Py_XDECREF(connection->tls_ctx);
 
-    aws_mem_release(aws_py_get_allocator(), client);
+    if (destroy_after_release) {
+        s_s3_client_destroy(client);
+    }
+}
+
+/* invoked when the python object get cleaned up */
+static void s_s3_client_capsule_destructor(PyObject *capsule) {
+    struct s3_client_binding *client = PyCapsule_GetPointer(capsule, s_capsule_name_s3_client);
+    s_s3_client_release(client);
+}
+
+/* Callback from C land, invoked when the underlying shutdown process finished */
+static void s_s3_client_shutdown(void *user_data) {
+    struct s3_client_binding *client = user_data;
+
+    /* Lock for python */
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
+
+    client->shutdown_called = true;
+
+    bool destroy_after_shutdown = client->release_called;
+
+    /* Invoke on_shutdown, then clear our reference to it */
+    PyObject *result = PyObject_CallFunction(client->on_shutdown, NULL);
+    if (result) {
+        Py_DECREF(result);
+    } else {
+        /* Callback might fail during application shutdown */
+        PyErr_WriteUnraisable(PyErr_Occurred());
+    }
+    Py_CLEAR(client->on_shutdown);
+
+    if (destroy_after_shutdown) {
+        s_s3_client_destroy(client);
+    }
+
+    PyGILState_Release(state);
 }
 
 PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
@@ -87,24 +126,45 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
     if (tls_options_py != Py_None) {
         tls_options = aws_py_get_tls_connection_options(tls_options_py);
         if (!tls_options) {
-            aws_mem_release(aws_py_get_allocator(), s3_clinet);
-            return NULL;
-        }
-
-        s3_clinet->tls_ctx = PyObject_GetAttrString(tls_options_py, "tls_ctx"); /* Creates new reference */
-        if (!s3_clinet->tls_ctx || s3_clinet->tls_ctx == Py_None) {
-            PyErr_SetString(PyExc_TypeError, "tls_connection_options.tls_ctx is invalid");
-            aws_mem_release(aws_py_get_allocator(), s3_clinet);
-            return NULL;
+            goto client_init_failed;
         }
     }
 
-    s3_clinet->on_setup = on_connection_setup_py;
-    Py_INCREF(connection->on_setup);
+    struct aws_s3_client_config s3_config = {
+        .region = aws_byte_cursor_from_array((const uint8_t *)region, region_len),
+        .client_bootstrap = bootstrap,
+        .credentials_provider = credential_provider,
+        .part_size = part_size,
+        .tls_connection_options = tls_options,
+        .connection_timeout_ms = connection_timeout_ms,
+        .throughput_target_gbps = throughput_target_gbps,
+        .throughput_per_vip_gbps = throughput_per_vip_gbps,
+        .num_connections_per_vip = num_connections_per_vip,
+        .shutdown_callback = s_s3_client_shutdown,
+        .shutdown_callback_user_data = s3_clinet,
+    };
+
+    s3_clinet->native = aws_s3_client_new(allocator, &s3_config);
+    if (s3_clinet->native == NULL) {
+        PyErr_SetAwsLastError();
+        goto client_init_failed;
+    }
+
+    PyObject *capsule = PyCapsule_New(s3_clinet, s_capsule_name_s3_client, s_s3_client_capsule_destructor);
+    if (!capsule) {
+        goto capsule_new_failed;
+    }
+
     s3_clinet->on_shutdown = on_shutdown_py;
-    Py_INCREF(connection->on_shutdown);
-    s3_clinet->bootstrap = bootstrap_py;
-    Py_INCREF(connection->bootstrap);
+    Py_INCREF(s3_clinet->on_shutdown);
+
+    return capsule;
+
+capsule_new_failed:
+    aws_s3_client_release(s3_clinet->native);
+client_init_failed:
+    aws_mem_release(allocator, s3_clinet);
+    return NULL;
 }
 
-PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args);
+// PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args);
