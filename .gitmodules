@@ -24,7 +24,7 @@
 	url = https://github.com/awslabs/aws-c-auth.git
 [submodule "aws-common-runtime/aws-c-s3"]
 	path = crt/aws-c-s3
-	url = https://github.com/awslabs/aws-c-s3.git
+	url = git@github.com:awslabs/aws-c-s3.git
 [submodule "aws-common-runtime/aws-c-event-stream"]
 	path = crt/aws-c-event-stream
 	url = https://github.com/awslabs/aws-c-event-stream.git

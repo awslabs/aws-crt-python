@@ -11,6 +11,7 @@ import unittest
 
 class S3ClientTest(NativeResourceTest):
     region = "us-west-2"
+    timeout = 10  # seconds
 
     def _S3ClientNew(self):
 
@@ -23,4 +24,9 @@ class S3ClientTest(NativeResourceTest):
 
     def test_init_defaults(self):
         s3_client = self._S3ClientNew()
-        self.assertIsNotNone(s3_client)
+        # self.assertIsNotNone(s3_client)
+        shutdown_event = s3_client.shutdown_event
+        del s3_client
+        print("what the fuck?")
+        self.assertTrue(shutdown_event.wait(TIMEOUT))
+        print("what?")

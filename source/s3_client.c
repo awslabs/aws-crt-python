@@ -73,6 +73,10 @@ static void s_s3_client_shutdown(void *user_data) {
     PyGILState_Release(state);
 }
 
+struct aws_s3_client *aws_py_get_s3_client(PyObject *client) {
+    AWS_PY_RETURN_NATIVE_FROM_BINDING(client, s_capsule_name_s3_client, "Client", s3_client_binding);
+}
+
 PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
     (void)self;
 
@@ -167,4 +171,18 @@ client_init_failed:
     return NULL;
 }
 
+PyObject *aws_py_s3_client_shutdown(PyObject *self, PyObject *args) {
+    (void)self;
+
+    PyObject *client_py;
+    if (!PyArg_ParseTuple(args, "O", &client_py)) {
+        return NULL;
+    }
+
+    struct aws_s3_client *client = aws_py_get_s3_client(client_py);
+
+    aws_s3_client_release(client);
+
+    Py_RETURN_NONE;
+}
 // PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args);

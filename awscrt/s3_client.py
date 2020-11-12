@@ -10,6 +10,7 @@ from concurrent.futures import Future
 from awscrt import NativeResource
 from awscrt.io import ClientBootstrap, EventLoopGroup, DefaultHostResolver, TlsConnectionOptions
 from awscrt.auth import AwsCredentialsProvider
+import threading
 
 
 class S3Client(NativeResource):
@@ -39,7 +40,7 @@ class S3Client(NativeResource):
         num_connections_per_vip (Optional[int]): The number of connections that each VIP will have.
     """
 
-    __slots__ = ('_shutdown_future')
+    __slots__ = ('shutdown_event')
 
     def __init__(
             self,
@@ -80,10 +81,10 @@ class S3Client(NativeResource):
 
         super().__init__()
 
-        self._shutdown_future = Future()
+        shutdown_event = threading.Event()
 
         def on_shutdown():
-            self._shutdown_future.set_result(None)
+            shutdown_event.set()
 
         self._binding = _awscrt.s3_client_new(
             bootstrap,
@@ -105,3 +106,9 @@ class S3Client(NativeResource):
         Note that the connection may have been garbage-collected before this future completes.
         """
         return self._shutdown_future
+
+    def shutdow(self):
+        """
+        shutdown the client
+        """
+        _awscrt.s3_client_shutdown()
