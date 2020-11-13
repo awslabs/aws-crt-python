@@ -9,13 +9,13 @@ import _awscrt
 from abc import ABC, abstractmethod
 from awscrt import NativeResource
 import awscrt.exceptions
-from awscrt.eventstream import Header, HeaderType
+from awscrt.eventstream import Header
 from awscrt.io import ClientBootstrap, SocketOptions, TlsConnectionOptions
 from collections.abc import ByteString, Callable
 from concurrent.futures import Future
 from enum import IntEnum
 from functools import partial
-from typing import Any, Optional, Sequence
+from typing import Optional, Sequence
 import weakref
 
 __all__ = [
