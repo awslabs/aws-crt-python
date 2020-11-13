@@ -86,6 +86,8 @@ class S3Client(NativeResource):
         def on_shutdown():
             shutdown_event.set()
 
+        self.shutdown_event = shutdown_event
+
         self._binding = _awscrt.s3_client_new(
             bootstrap,
             credential_provider,
