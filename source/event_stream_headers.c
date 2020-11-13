@@ -23,7 +23,7 @@ static bool s_add_native_header(struct aws_array_list *native_headers, PyObject 
 
     const size_t name_len_max = sizeof(((struct aws_event_stream_header_value_pair *)0)->header_name) - 1;
     if (name_len > name_len_max) {
-        PyErr_SetString(PyExc_ValueError, "EventStreamHeader.name exceeds max length");
+        PyErr_SetString(PyExc_ValueError, "Header.name exceeds max length");
         goto done;
     }
 
@@ -106,7 +106,7 @@ static bool s_add_native_header(struct aws_array_list *native_headers, PyObject 
                 goto done;
             }
             if (value_len > UINT16_MAX) {
-                PyErr_SetString(PyExc_ValueError, "EventStreamHeader STRING value exceeds max length");
+                PyErr_SetString(PyExc_ValueError, "Header STRING value exceeds max length");
                 goto done;
             }
             if (aws_event_stream_add_string_header(
@@ -143,7 +143,7 @@ static bool s_add_native_header(struct aws_array_list *native_headers, PyObject 
         } break;
 
         default: {
-            PyErr_SetString(PyExc_ValueError, "EventStreamHeader.type has invalid value");
+            PyErr_SetString(PyExc_ValueError, "Header.type has invalid value");
             goto done;
         } break;
     }
@@ -166,7 +166,7 @@ bool aws_py_event_stream_native_headers_init(struct aws_array_list *native_heade
     bool success = false;
     PyObject *sequence_py = NULL;
 
-    sequence_py = PySequence_Fast(headers_py, "Expected sequence of EventStreamHeaders"); /* New reference */
+    sequence_py = PySequence_Fast(headers_py, "Expected sequence of Headers"); /* New reference */
     if (!sequence_py) {
         goto done;
     }
