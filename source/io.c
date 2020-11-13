@@ -1,16 +1,6 @@
-/*
- * Copyright 2010-2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- *  http://aws.amazon.com/apache2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
+/**
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0.
  */
 #include "io.h"
 
@@ -96,7 +86,7 @@ PyObject *aws_py_is_alpn_available(PyObject *self, PyObject *args) {
  ******************************************************************************/
 
 struct event_loop_group_binding {
-    struct aws_event_loop_group native;
+    struct aws_event_loop_group *native;
 
     /* Dependencies that must outlive this */
     PyObject *shutdown_complete;
@@ -132,7 +122,7 @@ static void s_elg_capsule_destructor(PyObject *elg_capsule) {
 
     /* Must use async cleanup.
      * We could deadlock if we ran the synchronous cleanup from an event-loop thread. */
-    aws_event_loop_group_clean_up_async(&elg_binding->native, s_elg_native_cleanup_complete, elg_binding);
+    aws_event_loop_group_release(elg_binding->native);
 }
 
 PyObject *aws_py_event_loop_group_new(PyObject *self, PyObject *args) {
@@ -151,7 +141,13 @@ PyObject *aws_py_event_loop_group_new(PyObject *self, PyObject *args) {
         return PyErr_AwsLastError();
     }
 
-    if (aws_event_loop_group_default_init(&binding->native, allocator, num_threads)) {
+    struct aws_shutdown_callback_options shutdown_options = {
+        .shutdown_callback_fn = s_elg_native_cleanup_complete,
+        .shutdown_callback_user_data = binding,
+    };
+
+    binding->native = aws_event_loop_group_new_default(allocator, num_threads, &shutdown_options);
+    if (binding->native == NULL) {
         PyErr_SetAwsLastError();
         goto elg_init_failed;
     }
@@ -168,15 +164,14 @@ PyObject *aws_py_event_loop_group_new(PyObject *self, PyObject *args) {
     return capsule;
 
 capsule_new_failed:
-    aws_event_loop_group_clean_up(&binding->native);
+    aws_event_loop_group_release(binding->native);
 elg_init_failed:
     aws_mem_release(allocator, binding);
     return NULL;
 }
 
 struct aws_event_loop_group *aws_py_get_event_loop_group(PyObject *event_loop_group) {
-    AWS_PY_RETURN_NATIVE_REF_FROM_BINDING(
-        event_loop_group, s_capsule_name_elg, "EventLoopGroup", event_loop_group_binding);
+    AWS_PY_RETURN_NATIVE_FROM_BINDING(event_loop_group, s_capsule_name_elg, "EventLoopGroup", event_loop_group_binding);
 }
 
 /*******************************************************************************
@@ -184,7 +179,7 @@ struct aws_event_loop_group *aws_py_get_event_loop_group(PyObject *event_loop_gr
  ******************************************************************************/
 
 struct host_resolver_binding {
-    struct aws_host_resolver native;
+    struct aws_host_resolver *native;
 
     /* Dependencies that must outlive this */
     PyObject *event_loop_group;
@@ -194,7 +189,7 @@ static void s_host_resolver_destructor(PyObject *host_resolver_capsule) {
     struct host_resolver_binding *host_resolver =
         PyCapsule_GetPointer(host_resolver_capsule, s_capsule_name_host_resolver);
     assert(host_resolver);
-    aws_host_resolver_clean_up(&host_resolver->native);
+    aws_host_resolver_release(host_resolver->native);
     Py_DECREF(host_resolver->event_loop_group);
     aws_mem_release(aws_py_get_allocator(), host_resolver);
 }
@@ -228,7 +223,8 @@ PyObject *aws_py_host_resolver_new_default(PyObject *self, PyObject *args) {
 
     /* From hereon, we need to clean up if errors occur */
 
-    if (aws_host_resolver_init_default(&host_resolver->native, allocator, max_hosts, elg)) {
+    host_resolver->native = aws_host_resolver_new_default(allocator, max_hosts, elg, NULL);
+    if (host_resolver->native == NULL) {
         PyErr_SetAwsLastError();
         goto resolver_init_failed;
     }
@@ -245,14 +241,14 @@ PyObject *aws_py_host_resolver_new_default(PyObject *self, PyObject *args) {
     return capsule;
 
 capsule_new_failed:
-    aws_host_resolver_clean_up(&host_resolver->native);
+    aws_host_resolver_release(host_resolver->native);
 resolver_init_failed:
     aws_mem_release(allocator, host_resolver);
     return NULL;
 }
 
 struct aws_host_resolver *aws_py_get_host_resolver(PyObject *host_resolver) {
-    AWS_PY_RETURN_NATIVE_REF_FROM_BINDING(
+    AWS_PY_RETURN_NATIVE_FROM_BINDING(
         host_resolver, s_capsule_name_host_resolver, "HostResolverBase", host_resolver_binding);
 }
 
@@ -385,7 +381,7 @@ static void s_tls_ctx_destructor(PyObject *tls_ctx_capsule) {
     struct aws_tls_ctx *tls_ctx = PyCapsule_GetPointer(tls_ctx_capsule, s_capsule_name_tls_ctx);
     assert(tls_ctx);
 
-    aws_tls_ctx_destroy(tls_ctx);
+    aws_tls_ctx_release(tls_ctx);
 }
 
 PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args) {
@@ -490,6 +486,8 @@ PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args) {
     return capsule;
 
 capsule_new_failure:
+    aws_tls_ctx_release(tls_ctx);
+
 ctx_options_failure:
     aws_tls_ctx_options_clean_up(&ctx_options);
     return NULL;
@@ -629,13 +627,13 @@ struct aws_input_stream_py_impl {
 
     bool is_end_of_stream;
 
-    /* Dependencies that must outlive this */
-    PyObject *io;
+    /* Weak reference proxy to python self. */
+    PyObject *self_proxy;
 };
 
 static void s_aws_input_stream_py_destroy(struct aws_input_stream *stream) {
     struct aws_input_stream_py_impl *impl = stream->impl;
-    Py_DECREF(impl->io);
+    Py_XDECREF(impl->self_proxy);
     aws_mem_release(stream->allocator, stream);
 }
 
@@ -655,7 +653,7 @@ static int s_aws_input_stream_py_seek(
         return AWS_OP_ERR; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
-    method_result = PyObject_CallMethod(impl->io, "seek", "(li)", offset, basis);
+    method_result = PyObject_CallMethod(impl->self_proxy, "_seek", "(li)", offset, basis);
     if (!method_result) {
         aws_result = aws_py_raise_error();
         goto done;
@@ -691,7 +689,7 @@ int s_aws_input_stream_py_read(struct aws_input_stream *stream, struct aws_byte_
         goto done;
     }
 
-    method_result = PyObject_CallMethod(impl->io, "readinto", "(O)", memory_view);
+    method_result = PyObject_CallMethod(impl->self_proxy, "_read_into_memoryview", "(O)", memory_view);
     if (!method_result) {
         aws_result = aws_py_raise_error();
         goto done;
@@ -747,9 +745,9 @@ static struct aws_input_stream_vtable s_aws_input_stream_py_vtable = {
     .destroy = s_aws_input_stream_py_destroy,
 };
 
-static struct aws_input_stream *aws_input_stream_new_from_py(PyObject *io) {
+static struct aws_input_stream *aws_input_stream_new_from_py(PyObject *py_self) {
 
-    if (!io || (io == Py_None)) {
+    if (!py_self || (py_self == Py_None)) {
         aws_raise_error(AWS_ERROR_INVALID_ARGUMENT);
         return NULL;
     }
@@ -763,10 +761,15 @@ static struct aws_input_stream *aws_input_stream_new_from_py(PyObject *io) {
     impl->base.allocator = alloc;
     impl->base.vtable = &s_aws_input_stream_py_vtable;
     impl->base.impl = impl;
-    impl->io = io;
-    Py_INCREF(impl->io);
+    impl->self_proxy = PyWeakref_NewProxy(py_self, NULL);
+    if (!impl->self_proxy) {
+        goto error;
+    }
 
     return &impl->base;
+error:
+    aws_input_stream_destroy(&impl->base);
+    return NULL;
 }
 
 /**
@@ -785,12 +788,12 @@ static void s_input_stream_capsule_destructor(PyObject *py_capsule) {
 PyObject *aws_py_input_stream_new(PyObject *self, PyObject *args) {
     (void)self;
 
-    PyObject *py_io;
-    if (!PyArg_ParseTuple(args, "O", &py_io)) {
+    PyObject *py_self;
+    if (!PyArg_ParseTuple(args, "O", &py_self)) {
         return NULL;
     }
 
-    struct aws_input_stream *stream = aws_input_stream_new_from_py(py_io);
+    struct aws_input_stream *stream = aws_input_stream_new_from_py(py_self);
     if (!stream) {
         return PyErr_AwsLastError();
     }

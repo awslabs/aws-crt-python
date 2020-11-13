@@ -1,19 +1,8 @@
-# Copyright 2010-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License").
-# You may not use this file except in compliance with the License.
-# A copy of the License is located at
-#
-#  http://aws.amazon.com/apache2.0
-#
-# or in the "license" file accompanying this file. This file is distributed
-# on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
-# express or implied. See the License for the specific language governing
-# permissions and limitations under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0.
 
 from awscrt.http import HttpHeaders, HttpRequest
 import awscrt.io
-from io import open  # Python2's built-in open() doesn't return a stream
 from test import NativeResourceTest
 import unittest
 
@@ -59,6 +48,20 @@ class TestHttpHeaders(NativeResourceTest):
         h.add('Host', 'example4.org')
         h.set('Host', 'example5.org')
         self.assertEqual(['example5.org'], list(h.get_values('Host')))
+
+    def test_unicode(self):
+        # test adding unicode values in all the different ways
+        h = HttpHeaders([('a', 'ሴ')])
+        self.assertEqual('ሴ', h.get('a'))
+
+        h.set('b', '𦉘')
+        self.assertEqual('𦉘', h.get('b'))
+
+        h.add('c', '👁👄👁')
+        self.assertEqual('👁👄👁', h.get('c'))
+
+        h.add_pairs([('d', 'ⓤţḟ⁻❽')])
+        self.assertEqual('ⓤţḟ⁻❽', h.get('d'))
 
     def test_get_none(self):
         h = HttpHeaders()
@@ -150,6 +153,10 @@ class TestHttpMessage(NativeResourceTest):
         del request
         headers.add('Cookie', 'a=1')
         self.assertEqual([('Cookie', 'a=1')], list(headers))
+
+    def test_unicode(self):
+        request = HttpRequest(path='/ሴ')
+        self.assertEqual('/ሴ', request.path)
 
 
 if __name__ == '__main__':

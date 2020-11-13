@@ -2,50 +2,17 @@
 AWS client-side authentication: standard credentials providers and signing.
 """
 
-# Copyright 2010-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License").
-# You may not use this file except in compliance with the License.
-# A copy of the License is located at
-#
-#  http://aws.amazon.com/apache2.0
-#
-# or in the "license" file accompanying this file. This file is distributed
-# on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
-# express or implied. See the License for the specific language governing
-# permissions and limitations under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0.
 
-from __future__ import absolute_import
 import _awscrt
-from awscrt import isinstance_str, NativeResource
+from awscrt import NativeResource
 import awscrt.exceptions
 from awscrt.http import HttpRequest
 from awscrt.io import ClientBootstrap
 from concurrent.futures import Future
 import datetime
 from enum import IntEnum
-import time
-
-try:
-    _utc = datetime.timezone.utc
-except AttributeError:
-    # Python 2 lacks the datetime.timestamp() method.
-    # We can do the timestamp math ourselves, but only if datetime.tzinfo is set.
-    # Python 2 also lacks any predefined tzinfo classes (ex: datetime.timezone.utc),
-    # so we must define our own.
-    class _UTC(datetime.tzinfo):
-        ZERO = datetime.timedelta(0)
-
-        def utcoffset(self, dt):
-            return _UTC.ZERO
-
-        def tzname(self, dt):
-            return "UTC"
-
-        def dst(self, dt):
-            return _UTC.ZERO
-
-    _utc = _UTC()
 
 
 class AwsCredentials(NativeResource):
@@ -67,12 +34,20 @@ class AwsCredentials(NativeResource):
     __slots__ = ()
 
     def __init__(self, access_key_id, secret_access_key, session_token=None):
-        assert isinstance_str(access_key_id)
-        assert isinstance_str(secret_access_key)
-        assert isinstance_str(session_token) or session_token is None
+        assert isinstance(access_key_id, str)
+        assert isinstance(secret_access_key, str)
+        assert isinstance(session_token, str) or session_token is None
 
-        super(AwsCredentials, self).__init__()
+        super().__init__()
         self._binding = _awscrt.credentials_new(access_key_id, secret_access_key, session_token)
+
+    @classmethod
+    def _from_binding(cls, binding):
+        """Construct from a pre-existing native object"""
+        credentials = cls.__new__(cls)  # avoid class's default constructor
+        super(cls, credentials).__init__()  # just invoke parent class's __init__()
+        credentials._binding = binding
+        return credentials
 
     @property
     def access_key_id(self):
@@ -100,7 +75,7 @@ class AwsCredentialsProviderBase(NativeResource):
     __slots__ = ()
 
     def __init__(self, binding=None):
-        super(AwsCredentialsProviderBase, self).__init__()
+        super().__init__()
 
         if binding is None:
             # TODO: create binding type that lets native code call into python subclass
@@ -158,9 +133,9 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
         Returns:
             AwsCredentialsProvider:
         """
-        assert isinstance_str(access_key_id)
-        assert isinstance_str(secret_access_key)
-        assert isinstance_str(session_token) or session_token is None
+        assert isinstance(access_key_id, str)
+        assert isinstance(secret_access_key, str)
+        assert isinstance(session_token, str) or session_token is None
 
         binding = _awscrt.credentials_provider_new_static(access_key_id, secret_access_key, session_token)
         return cls(binding)
@@ -168,12 +143,12 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
     def get_credentials(self):
         future = Future()
 
-        def _on_complete(error_code, access_key_id, secret_access_key, session_token):
+        def _on_complete(error_code, binding):
             try:
                 if error_code:
                     future.set_exception(awscrt.exceptions.from_code(error_code))
                 else:
-                    credentials = AwsCredentials(access_key_id, secret_access_key, session_token)
+                    credentials = AwsCredentials._from_binding(binding)
                     future.set_result(credentials)
 
             except Exception as e:
@@ -190,33 +165,59 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
 class AwsSigningAlgorithm(IntEnum):
     """AWS signing algorithm enumeration."""
 
-    SigV4Header = 0
-    """Use Signature Version 4 to sign headers."""
-
-    SigV4QueryParam = 1
-    """Use Signature Version 4 to sign query parameters."""
+    V4 = 0
+    """Use Signature Version 4"""
 
 
-class AwsBodySigningConfigType(IntEnum):
-    """Body signing config enumeration"""
+class AwsSignatureType(IntEnum):
+    """Which sort of signature should be computed from the signable."""
 
-    BodySigningOff = 0
+    HTTP_REQUEST_HEADERS = 0
     """
-    No attempts will be made to sign the payload, and no "x-amz-content-sha256"
-    header will be added to the request.
-    """
-
-    BodySigningOn = 1
-    """
-    The body will be signed and "x-amz-content-sha256" will contain
-    the value of the signature.
+    A signature for a full HTTP request should be computed,
+    with header updates applied to the signing result.
     """
 
-    UnsignedPayload = 2
+    HTTP_REQUEST_QUERY_PARAMS = 1
     """
-    The body will not be signed, but "x-amz-content-sha256" will contain
-    the value "UNSIGNED-PAYLOAD". This value is currently only used for Amazon S3.
+    A signature for a full HTTP request should be computed,
+    with query param updates applied to the signing result.
     """
+
+
+class AwsSignedBodyValue:
+    """
+    Values for use with :attr:`AwsSigningConfig.signed_body_value`.
+
+    Some services use special values (e.g. "UNSIGNED-PAYLOAD") when the body
+    is not being signed in the usual way.
+    """
+
+    EMPTY_SHA256 = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+    """The SHA-256 of the empty string."""
+
+    UNSIGNED_PAYLOAD = 'UNSIGNED-PAYLOAD'
+    """Unsigned payload option (not accepted by all services)"""
+
+    STREAMING_AWS4_HMAC_SHA256_PAYLOAD = 'STREAMING-AWS4-HMAC-SHA256-PAYLOAD'
+    """Each payload chunk will be signed (not accepted by all services)"""
+
+    STREAMING_AWS4_HMAC_SHA256_EVENTS = 'STREAMING-AWS4-HMAC-SHA256-EVENTS'
+    """Each event will be signed (not accepted by all services)"""
+
+
+class AwsSignedBodyHeaderType(IntEnum):
+    """
+    Controls if signing adds a header containing the canonical request's signed body value.
+
+    See :attr:`AwsSigningConfig.signed_body_value`.
+    """
+
+    NONE = 0
+    """Do not add a header."""
+
+    X_AMZ_CONTENT_SHA_256 = 1
+    """Add the "x-amz-content-sha-256" header with the canonical request's signed body value"""
 
 
 class AwsSigningConfig(NativeResource):
@@ -228,7 +229,10 @@ class AwsSigningConfig(NativeResource):
     It is good practice to use a new config for each signature, or the date might get too old.
 
     Args:
-        algorithm (AwsSigningAlgorithm): Which signing process to invoke.
+        algorithm (AwsSigningAlgorithm): Which signing algorithm to use.
+
+        signature_type (AwsSignatureType): Which sort of signature should be
+            computed from the signable.
 
         credentials_provider (AwsCredentialsProviderBase): Credentials provider
             to fetch signing credentials with.
@@ -242,11 +246,11 @@ class AwsSigningConfig(NativeResource):
             `datetime.datetime.now(datetime.timezone.utc)` is used.
             Naive dates (lacking timezone info) are assumed to be in local time.
 
-        should_sign_param (Optional[Callable[[str], bool]]):
-            Optional function to control which parameters (header or query) are
+        should_sign_header (Optional[Callable[[str], bool]]):
+            Optional function to control which headers are
             a part of the canonical request.
 
-            Skipping auth-required params will result in an unusable signature.
+            Skipping auth-required headers will result in an unusable signature.
             Headers injected by the signing process are not skippable.
             This function does not override the internal check function
             (x-amzn-trace-id, user-agent), but rather supplements it.
@@ -254,77 +258,111 @@ class AwsSigningConfig(NativeResource):
             true to both the internal check (skips x-amzn-trace-id, user-agent)
             and this function (if defined).
 
-        use_double_uri_encode (bool): Set True to double-encode the resource
-            path when constructing the canonical request. By default, all
-            services except S3 use double encoding.
+        use_double_uri_encode (bool): Whether to double-encode the resource path
+            when constructing the canonical request (assuming the path is already
+            encoded). Default is True. All services except S3 use double encoding.
 
         should_normalize_uri_path (bool): Whether the resource paths are
             normalized when building the canonical request.
 
-        body_signing_type (AwsBodySigningConfigType): Controls how the payload
-            will be signed.
+        signed_body_value (Optional[str]): If set, this value is used as the
+            canonical request's body value. Typically, this is the SHA-256
+            of the payload, written as lowercase hex. If this has been
+            precalculated, it can be set here. Special values used by certain
+            services can also be set (see :class:`AwsSignedBodyValue`). If `None`
+            is passed (the default), the typical value will be calculated from
+            the payload during signing.
+
+        signed_body_header_type (AwsSignedBodyHeaderType): Controls if signing
+            adds a header containing the canonical request's signed body value.
+            Default is to not add a header.
+
+        expiration_in_seconds (Optional[int]): If set, and signature_type is
+            `HTTP_REQUEST_QUERY_PARAMS`, then signing will add "X-Amz-Expires"
+            to the query string, equal to the value specified here.
+
+        omit_session_token (bool): If set True, the "X-Amz-Security-Token"
+            query param is omitted from the canonical request.
+            The default False should be used for most services.
     """
     __slots__ = ('_priv_should_sign_cb')
 
-    _attributes = ('algorithm', 'credentials_provider', 'region', 'service', 'date', 'should_sign_param',
-                   'use_double_uri_encode', 'should_normalize_uri_path', 'body_signing_type')
+    _attributes = (
+        'algorithm',
+        'signature_type',
+        'credentials_provider',
+        'region',
+        'service',
+        'date',
+        'should_sign_header',
+        'use_double_uri_encode',
+        'should_normalize_uri_path',
+        'signed_body_value',
+        'signed_body_header_type',
+        'expiration_in_seconds',
+        'omit_session_token',
+    )
 
     def __init__(self,
-                 algorithm,  # type: AwsSigningAlgorithm
-                 credentials_provider,  # type: AwsCredentialsProviderBase
-                 region,  # type: str
-                 service,  # type: str
-                 date=None,  # type: Optional[datetime.datetime]
-                 should_sign_param=None,  # type: Optional[Callable[[str], bool]]
-                 use_double_uri_encode=False,  # type: bool
-                 should_normalize_uri_path=True,  # type: bool
-                 body_signing_type=AwsBodySigningConfigType.BodySigningOn  # type: AwsBodySigningConfigType
+                 algorithm,
+                 signature_type,
+                 credentials_provider,
+                 region,
+                 service,
+                 date=None,
+                 should_sign_header=None,
+                 use_double_uri_encode=True,
+                 should_normalize_uri_path=True,
+                 signed_body_value=None,
+                 signed_body_header_type=AwsSignedBodyHeaderType.NONE,
+                 expiration_in_seconds=None,
+                 omit_session_token=False,
                  ):
-        # type: (...) -> None
 
         assert isinstance(algorithm, AwsSigningAlgorithm)
+        assert isinstance(signature_type, AwsSignatureType)
         assert isinstance(credentials_provider, AwsCredentialsProviderBase)
-        assert isinstance_str(region)
-        assert isinstance_str(service)
-        assert isinstance(date, datetime.datetime) or date is None
-        assert callable(should_sign_param) or should_sign_param is None
-        assert isinstance(body_signing_type, AwsBodySigningConfigType)
+        assert isinstance(region, str)
+        assert isinstance(service, str)
+        assert callable(should_sign_header) or should_sign_header is None
+        assert signed_body_value is None or (isinstance(signed_body_value, str) and len(signed_body_value) > 0)
+        assert isinstance(signed_body_header_type, AwsSignedBodyHeaderType)
+        assert expiration_in_seconds is None or expiration_in_seconds > 0
 
-        super(AwsSigningConfig, self).__init__()
+        super().__init__()
 
         if date is None:
-            date = datetime.datetime.now(_utc)
+            date = datetime.datetime.now(datetime.timezone.utc)
 
-        try:
-            timestamp = date.timestamp()
-        except AttributeError:
-            # Python 2 doesn't have datetime.timestamp() function.
-            # If it did we could just call it from binding code instead of calculating it here.
-            if date.tzinfo is None:
-                timestamp = time.mktime(date.timetuple())
-            else:
-                epoch = datetime.datetime(1970, 1, 1, tzinfo=_utc)
-                timestamp = (date - epoch).total_seconds()
+        timestamp = date.timestamp()
 
-        self._priv_should_sign_cb = should_sign_param
+        self._priv_should_sign_cb = should_sign_header
 
-        if should_sign_param is not None:
-            def should_sign_param_wrapper(name):
-                return should_sign_param(name=name)
+        if should_sign_header is not None:
+            def should_sign_header_wrapper(name):
+                return should_sign_header(name=name)
         else:
-            should_sign_param_wrapper = None
+            should_sign_header_wrapper = None
+
+        if expiration_in_seconds is None:
+            # C layer uses 0 to indicate None
+            expiration_in_seconds = 0
 
         self._binding = _awscrt.signing_config_new(
             algorithm,
+            signature_type,
             credentials_provider,
             region,
             service,
             date,
             timestamp,
-            should_sign_param_wrapper,
+            should_sign_header_wrapper,
             use_double_uri_encode,
             should_normalize_uri_path,
-            body_signing_type)
+            signed_body_value,
+            signed_body_header_type,
+            expiration_in_seconds,
+            omit_session_token)
 
     def replace(self, **kwargs):
         """
@@ -336,8 +374,13 @@ class AwsSigningConfig(NativeResource):
 
     @property
     def algorithm(self):
-        """AwsSigningAlgorithm: Which signing process to invoke"""
+        """AwsSigningAlgorithm: Which signing algorithm to use"""
         return AwsSigningAlgorithm(_awscrt.signing_config_get_algorithm(self._binding))
+
+    @property
+    def signature_type(self):
+        """AwsSignatureType: Which sort of signature should be computed from the signable."""
+        return AwsSignatureType(_awscrt.signing_config_get_signature_type(self._binding))
 
     @property
     def credentials_provider(self):
@@ -367,12 +410,12 @@ class AwsSigningConfig(NativeResource):
         return _awscrt.signing_config_get_date(self._binding)
 
     @property
-    def should_sign_param(self):
+    def should_sign_header(self):
         """
         Optional[Callable[[str], bool]]: Optional function to control which
-        parameters (header or query) are a part of the canonical request.
+        headers are a part of the canonical request.
 
-        Skipping auth-required params will result in an unusable signature.
+        Skipping auth-required headers will result in an unusable signature.
         Headers injected by the signing process are not skippable.
         This function does not override the internal check function
         (x-amzn-trace-id, user-agent), but rather supplements it. In particular,
@@ -385,7 +428,7 @@ class AwsSigningConfig(NativeResource):
     def use_double_uri_encode(self):
         """
         bool: Whether to double-encode the resource path when constructing
-        the canonical request.
+        the canonical request (assuming the path is already encoded).
 
         By default, all services except S3 use double encoding.
         """
@@ -400,9 +443,43 @@ class AwsSigningConfig(NativeResource):
         return _awscrt.signing_config_get_should_normalize_uri_path(self._binding)
 
     @property
-    def body_signing_type(self):
-        """AwsBodySigningConfigType: Controls how the payload will be signed."""
-        return AwsBodySigningConfigType(_awscrt.signing_config_get_body_signing_type(self._binding))
+    def signed_body_value(self):
+        """
+        Optional[str]: What to use as the canonical request's body value.
+        If `None` is set (the default), a value will be calculated from
+        the payload during signing. Typically, this is the SHA-256 of the
+        payload, written as lowercase hex. If this has been precalculated,
+        it can be set here. Special values used by certain services can also
+        be set (see :class:`AwsSignedBodyValue`).
+        """
+        return _awscrt.signing_config_get_signed_body_value(self._binding)
+
+    @property
+    def signed_body_header_type(self):
+        """
+        AwsSignedBodyHeaderType: Controls if signing adds a header containing
+        the canonical request's signed body value.
+        """
+        return AwsSignedBodyHeaderType(_awscrt.signing_config_get_signed_body_header_type(self._binding))
+
+    @property
+    def expiration_in_seconds(self):
+        """
+        Optional[int]: If set, and signature_type is `HTTP_REQUEST_QUERY_PARAMS`,
+        then signing will add "X-Amz-Expires" to the query string, equal to the
+        value specified here. Otherwise, this is None has no effect.
+        """
+        expiration = _awscrt.signing_config_get_expiration_in_seconds(self._binding)
+        # C layer uses 0 to indicate None
+        return None if expiration == 0 else expiration
+
+    @property
+    def omit_session_token(self):
+        """
+        bool: Whether the "X-Amz-Security-Token" query param is omitted
+        from the canonical request. This should be False for most services.
+        """
+        return _awscrt.signing_config_get_omit_session_token(self._binding)
 
 
 def aws_sign_request(http_request, signing_config):

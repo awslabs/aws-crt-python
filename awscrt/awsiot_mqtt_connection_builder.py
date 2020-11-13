@@ -80,18 +80,8 @@ Optional Arguments:
     enable_metrics_collection (bool): Whether to send the SDK version number in the CONNECT packet. Default is True.
 """
 
-# Copyright 2010-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License").
-# You may not use this file except in compliance with the License.
-# A copy of the License is located at
-#
-#  http://aws.amazon.com/apache2.0
-#
-# or in the "license" file accompanying this file. This file is distributed
-# on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
-# express or implied. See the License for the specific language governing
-# permissions and limitations under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0.
 
 import awscrt.auth
 import awscrt.io
@@ -244,20 +234,17 @@ def websockets_with_default_aws_signing(region, credentials_provider, websocket_
     """
     _check_required_kwargs(**kwargs)
 
-    def _should_sign_param(name, **kwargs):
-        blacklist = ['x-amz-date', 'x-amz-security-token']
-        return not (name.lower() in blacklist)
-
     def _sign_websocket_handshake_request(transform_args, **kwargs):
         # transform_args need to know when transform is done
         try:
             signing_config = awscrt.auth.AwsSigningConfig(
-                algorithm=awscrt.auth.AwsSigningAlgorithm.SigV4QueryParam,
+                algorithm=awscrt.auth.AwsSigningAlgorithm.V4,
+                signature_type=awscrt.auth.AwsSignatureType.HTTP_REQUEST_QUERY_PARAMS,
                 credentials_provider=credentials_provider,
                 region=region,
                 service='iotdevicegateway',
-                should_sign_param=_should_sign_param,
-                body_signing_type=awscrt.auth.AwsBodySigningConfigType.BodySigningOff)
+                omit_session_token=True,  # IoT is weird and does not sign X-Amz-Security-Token
+            )
 
             signing_future = awscrt.auth.aws_sign_request(transform_args.http_request, signing_config)
             signing_future.add_done_callback(lambda x: transform_args.set_done(x.exception()))

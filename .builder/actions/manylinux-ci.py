@@ -8,8 +8,8 @@ pythons = (
     'cp35-cp35m',
     'cp36-cp36m',
     'cp37-cp37m',
-    'cp27-cp27m',
-    'cp27-cp27mu',
+    'cp38-cp38',
+    'cp39-cp39',
 )
 
 
@@ -45,7 +45,7 @@ class ManyLinuxPackage(Builder.Action):
             steps.append(Builder.Script(actions, name=python))
 
         copy_steps = [
-            ['cp', '-r', 'wheelhouse' '../dist']
+            ['cp', '-r', 'wheelhouse', '../dist'],
             ['cp', 'dist/*.tar.gz', '../dist/']
         ]
 

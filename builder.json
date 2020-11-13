@@ -6,11 +6,15 @@
             "_comment": "disabled until we have a reason to support python on android"
         },
         "linux": {
-            "variables": {
-                "openssl_include": "/opt/openssl/include",
-                "openssl_lib": "/opt/openssl/lib"
+            "imports": [
+                "libcrypto"
+            ],
+            "build_env": {
+                "AWS_LIBCRYPTO_INSTALL": "{deps_dir}/libcrypto"
             }
-        },
+        }
+    },
+    "hosts": {
         "manylinux": {
             "!build_steps": [
                 "manylinux-ci"

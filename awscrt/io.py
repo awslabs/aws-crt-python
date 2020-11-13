@@ -5,24 +5,12 @@ All networking in `awscrt` is asynchronous.
 Long-running event-loop threads are used for concurrency.
 """
 
-# Copyright 2010-2017 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License").
-# You may not use this file except in compliance with the License.
-# A copy of the License is located at
-#
-#  http://aws.amazon.com/apache2.0
-#
-# or in the "license" file accompanying this file. This file is distributed
-# on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
-# express or implied. See the License for the specific language governing
-# permissions and limitations under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0.
 
-from __future__ import absolute_import
 import _awscrt
-from awscrt import NativeResource, isinstance_str
+from awscrt import NativeResource
 from enum import IntEnum
-import io
 import threading
 
 
@@ -70,7 +58,7 @@ class EventLoopGroup(NativeResource):
     __slots__ = ('shutdown_event')
 
     def __init__(self, num_threads=0):
-        super(EventLoopGroup, self).__init__()
+        super().__init__()
 
         shutdown_event = threading.Event()
 
@@ -98,7 +86,7 @@ class DefaultHostResolver(HostResolverBase):
     def __init__(self, event_loop_group, max_hosts=16):
         assert isinstance(event_loop_group, EventLoopGroup)
 
-        super(DefaultHostResolver, self).__init__()
+        super().__init__()
         self._binding = _awscrt.host_resolver_new_default(max_hosts, event_loop_group)
 
 
@@ -120,7 +108,7 @@ class ClientBootstrap(NativeResource):
         assert isinstance(event_loop_group, EventLoopGroup)
         assert isinstance(host_resolver, HostResolverBase)
 
-        super(ClientBootstrap, self).__init__()
+        super().__init__()
 
         shutdown_event = threading.Event()
 
@@ -155,7 +143,7 @@ class SocketType(IntEnum):
     `SocketDomain.Local` is not compatible with `DGram` """
 
 
-class SocketOptions(object):
+class SocketOptions:
     """Socket options.
 
     Attributes:
@@ -200,7 +188,7 @@ class TlsVersion(IntEnum):
     DEFAULT = 128  #:
 
 
-class TlsContextOptions(object):
+class TlsContextOptions:
     """Options to create a TLS context.
 
     The static `TlsContextOptions.create_X()` methods provide common TLS configurations.
@@ -244,8 +232,8 @@ class TlsContextOptions(object):
             TlsContextOptions:
         """
 
-        assert isinstance_str(cert_filepath)
-        assert isinstance_str(pk_filepath)
+        assert isinstance(cert_filepath, str)
+        assert isinstance(pk_filepath, str)
 
         cert_buffer = _read_binary_file(cert_filepath)
         key_buffer = _read_binary_file(pk_filepath)
@@ -292,8 +280,8 @@ class TlsContextOptions(object):
             TlsContextOptions:
         """
 
-        assert isinstance_str(pkcs12_filepath)
-        assert isinstance_str(pkcs12_password)
+        assert isinstance(pkcs12_filepath, str)
+        assert isinstance(pkcs12_password, str)
 
         opt = TlsContextOptions()
         opt.pkcs12_filepath = pkcs12_filepath
@@ -317,8 +305,8 @@ class TlsContextOptions(object):
             TlsContextOptions:
         """
 
-        assert isinstance_str(cert_filepath)
-        assert isinstance_str(pk_filepath)
+        assert isinstance(cert_filepath, str)
+        assert isinstance(pk_filepath, str)
 
         cert_buffer = _read_binary_file(cert_filepath)
         key_buffer = _read_binary_file(pk_filepath)
@@ -363,8 +351,8 @@ class TlsContextOptions(object):
             TlsContextOptions:
         """
 
-        assert isinstance_str(pkcs12_filepath)
-        assert isinstance_str(pkcs12_password)
+        assert isinstance(pkcs12_filepath, str)
+        assert isinstance(pkcs12_password, str)
 
         opt = TlsContextOptions()
         opt.pkcs12_filepath = pkcs12_filepath
@@ -383,8 +371,8 @@ class TlsContextOptions(object):
                 of trusted CA certificates.
         """
 
-        assert isinstance_str(ca_dirpath) or ca_dirpath is None
-        assert isinstance_str(ca_filepath) or ca_filepath is None
+        assert isinstance(ca_dirpath, str) or ca_dirpath is None
+        assert isinstance(ca_filepath, str) or ca_filepath is None
 
         if ca_filepath:
             ca_buffer = _read_binary_file(ca_filepath)
@@ -417,7 +405,7 @@ class ClientTlsContext(NativeResource):
     def __init__(self, options):
         assert isinstance(options, TlsContextOptions)
 
-        super(ClientTlsContext, self).__init__()
+        super().__init__()
         self._binding = _awscrt.client_tls_ctx_new(
             options.min_tls_ver.value,
             options.ca_dirpath,
@@ -455,7 +443,7 @@ class TlsConnectionOptions(NativeResource):
     def __init__(self, tls_ctx):
         assert isinstance(tls_ctx, ClientTlsContext)
 
-        super(TlsConnectionOptions, self).__init__()
+        super().__init__()
         self.tls_ctx = tls_ctx
         self._binding = _awscrt.tls_connections_options_new_from_ctx(tls_ctx)
 
@@ -488,7 +476,7 @@ def _alpn_list_to_str(alpn_list):
     None is returned if list is None or empty
     """
     if alpn_list:
-        assert not isinstance_str(alpn_list)
+        assert not isinstance(alpn_list, str)
         return ';'.join(alpn_list)
     return None
 
@@ -500,20 +488,47 @@ def is_alpn_available():
 
 
 class InputStream(NativeResource):
-    """InputStream allows `awscrt` native code to read from Python I/O classes.
+    """InputStream allows `awscrt` native code to read from Python binary I/O classes.
 
     Args:
-        stream (io.IOBase): Python I/O stream to wrap.
+        stream (io.IOBase): Python binary I/O stream to wrap.
     """
-    __slots__ = ()
+    __slots__ = ('_stream')
     # TODO: Implement IOBase interface so Python can read from this class as well.
 
     def __init__(self, stream):
-        assert isinstance(stream, io.IOBase)
+        # duck-type instead of checking inheritance from IOBase.
+        # At the least, stream must have read()
+        if not callable(getattr(stream, 'read', None)):
+            raise TypeError('I/O stream type expected')
         assert not isinstance(stream, InputStream)
 
-        super(InputStream, self).__init__()
-        self._binding = _awscrt.input_stream_new(stream)
+        super().__init__()
+        self._stream = stream
+        self._binding = _awscrt.input_stream_new(self)
+
+    def _read_into_memoryview(self, m):
+        # Read into memoryview m.
+        # Return number of bytes read, or None if no data available.
+        try:
+            # prefer the most efficient read methods,
+            if hasattr(self._stream, 'readinto1'):
+                return self._stream.readinto1(m)
+            if hasattr(self._stream, 'readinto'):
+                return self._stream.readinto(m)
+
+            if hasattr(self._stream, 'read1'):
+                data = self._stream.read1(len(m))
+            else:
+                data = self._stream.read(len(m))
+            n = len(data)
+            m[:n] = data
+            return n
+        except BlockingIOError:
+            return None
+
+    def _seek(self, offset, whence):
+        return self._stream.seek(offset, whence)
 
     @classmethod
     def wrap(cls, stream, allow_none=False):
@@ -521,7 +536,7 @@ class InputStream(NativeResource):
         Given some stream type, returns an :class:`InputStream`.
 
         Args:
-            stream (Union[io.IOBase, InputStream, None]): I/O stream to wrap.
+            stream (Union[io.IOBase, InputStream, None]): Binary I/O stream to wrap.
             allow_none (bool): Whether to allow `stream` to be None.
                 If False (default), and `stream` is None, an exception is raised.
 
@@ -530,10 +545,8 @@ class InputStream(NativeResource):
             Otherwise, an :class:`InputStream` which wraps the `stream` is returned.
             If `allow_none` is True, and `stream` is None, then None is returned.
         """
-        if isinstance(stream, InputStream):
-            return stream
-        if isinstance(stream, io.IOBase):
-            return cls(stream)
         if stream is None and allow_none:
             return None
-        raise TypeError('I/O stream type expected')
+        if isinstance(stream, InputStream):
+            return stream
+        return cls(stream)

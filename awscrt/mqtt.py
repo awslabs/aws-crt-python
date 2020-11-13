@@ -4,18 +4,8 @@ MQTT
 All network operations in `awscrt.mqtt` are asynchronous.
 """
 
-# Copyright 2010-2017 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License").
-# You may not use this file except in compliance with the License.
-# A copy of the License is located at
-#
-#  http://aws.amazon.com/apache2.0
-#
-# or in the "license" file accompanying this file. This file is distributed
-# on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
-# express or implied. See the License for the specific language governing
-# permissions and limitations under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0.
 
 import _awscrt
 from concurrent.futures import Future
@@ -106,7 +96,7 @@ class ConnectReturnCode(IntEnum):
     """
 
 
-class Will(object):
+class Will:
     """A Will message is published by the server if a client is lost unexpectedly.
 
     The Will message is stored on the server when a client connects.
@@ -152,7 +142,7 @@ class Client(NativeResource):
         assert isinstance(bootstrap, ClientBootstrap)
         assert tls_ctx is None or isinstance(tls_ctx, ClientTlsContext)
 
-        super(Client, self).__init__()
+        super().__init__()
         self.tls_ctx = tls_ctx
         self._binding = _awscrt.mqtt_client_new(bootstrap, tls_ctx)
 
@@ -285,7 +275,7 @@ class Connection(NativeResource):
         if keep_alive_secs * 1000 <= ping_timeout_ms:
             raise ValueError("'keep_alive_secs' duration must be longer than 'ping_timeout_ms'")
 
-        super(Connection, self).__init__()
+        super().__init__()
 
         # init-only
         self.client = client
@@ -553,10 +543,11 @@ class Connection(NativeResource):
         future = Future()
         packet_id = 0
 
-        def unsuback(packet_id):
-            future.set_result(dict(
-                packet_id=packet_id
-            ))
+        def unsuback(packet_id, error_code):
+            if error_code != 0:
+                future.set_exception(awscrt.exceptions.from_code(error_code))
+            else:
+                future.set_result(dict(packet_id=packet_id))
 
         try:
             packet_id = _awscrt.mqtt_client_connection_unsubscribe(self._binding, topic, unsuback)
@@ -636,10 +627,11 @@ class Connection(NativeResource):
         future = Future()
         packet_id = 0
 
-        def puback(packet_id):
-            future.set_result(dict(
-                packet_id=packet_id
-            ))
+        def puback(packet_id, error_code):
+            if error_code != 0:
+                future.set_exception(awscrt.exceptions.from_code(error_code))
+            else:
+                future.set_result(dict(packet_id=packet_id))
 
         try:
             packet_id = _awscrt.mqtt_client_connection_publish(self._binding, topic, payload, qos.value, retain, puback)
@@ -649,7 +641,7 @@ class Connection(NativeResource):
         return future, packet_id
 
 
-class WebsocketHandshakeTransformArgs(object):
+class WebsocketHandshakeTransformArgs:
     """
     Argument to a "websocket_handshake_transform" function.
 

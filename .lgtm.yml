@@ -1,0 +1,5 @@
+extraction:
+  cpp:
+    index:
+      # not sure why cpp builds are using python 2, but this should stop it
+      build_command: "python3 setup.py build"

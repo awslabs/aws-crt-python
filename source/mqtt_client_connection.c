@@ -1,16 +1,6 @@
-/*
- * Copyright 2010-2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- *  http://aws.amazon.com/apache2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
+/**
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0.
  */
 #include "mqtt_client_connection.h"
 
@@ -65,7 +55,7 @@ struct mqtt_connection_binding {
 };
 
 static void s_mqtt_python_connection_finish_destruction(struct mqtt_connection_binding *py_connection) {
-    aws_mqtt_client_connection_destroy(py_connection->native);
+    aws_mqtt_client_connection_release(py_connection->native);
 
     Py_DECREF(py_connection->self_proxy);
     Py_DECREF(py_connection->client);
@@ -240,7 +230,7 @@ capsule_new_failed:
 proxy_new_failed:
 use_websockets_failed:
 set_interruption_failed:
-    aws_mqtt_client_connection_destroy(py_connection->native);
+    aws_mqtt_client_connection_release(py_connection->native);
 connection_new_failed:
     aws_mem_release(allocator, py_connection);
     return NULL;
@@ -300,9 +290,9 @@ bool s_set_will(struct aws_mqtt_client_connection *connection, PyObject *will) {
     PyObject *py_payload = NULL;
 
     py_topic = PyObject_GetAttrString(will, "topic");
-    struct aws_byte_cursor topic = aws_byte_cursor_from_pystring(py_topic);
+    struct aws_byte_cursor topic = aws_byte_cursor_from_pyunicode(py_topic);
     if (!topic.ptr) {
-        PyErr_SetString(PyExc_TypeError, "Will.topic is invalid");
+        PyErr_SetString(PyExc_TypeError, "Will.topic must be str type");
         goto done;
     }
 
@@ -312,9 +302,9 @@ bool s_set_will(struct aws_mqtt_client_connection *connection, PyObject *will) {
     }
 
     py_payload = PyObject_GetAttrString(will, "payload");
-    struct aws_byte_cursor payload = aws_byte_cursor_from_pystring(py_payload);
+    struct aws_byte_cursor payload = aws_byte_cursor_from_pybytes(py_payload);
     if (!payload.ptr) {
-        PyErr_SetString(PyExc_TypeError, "Will.payload is invalid");
+        PyErr_SetString(PyExc_TypeError, "Will.payload must be bytes type");
         goto done;
     }
 
@@ -702,7 +692,6 @@ static void s_publish_complete(
     int error_code,
     void *userdata) {
     (void)connection;
-    (void)error_code;
 
     struct publish_complete_userdata *metadata = userdata;
     assert(metadata);
@@ -713,7 +702,7 @@ static void s_publish_complete(
     }
 
     if (metadata->callback != Py_None) {
-        PyObject *result = PyObject_CallFunction(metadata->callback, "(H)", packet_id);
+        PyObject *result = PyObject_CallFunction(metadata->callback, "(Hi)", packet_id, error_code);
         if (result) {
             Py_DECREF(result);
         } else {
@@ -824,7 +813,7 @@ static void s_subscribe_callback(
     PyObject *result = PyObject_CallFunction(
         callback,
         "(NN)",
-        PyString_FromAwsByteCursor(topic),
+        PyUnicode_FromAwsByteCursor(topic),
         PyBytes_FromStringAndSize((const char *)payload->ptr, (Py_ssize_t)payload->len));
 
     if (result) {
@@ -966,7 +955,6 @@ static void s_unsuback_callback(
     int error_code,
     void *userdata) {
     (void)connection;
-    (void)error_code;
 
     PyObject *callback = userdata;
 
@@ -975,7 +963,7 @@ static void s_unsuback_callback(
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
-    PyObject *result = PyObject_CallFunction(callback, "(H)", packet_id);
+    PyObject *result = PyObject_CallFunction(callback, "(Hi)", packet_id, error_code);
     if (result) {
         Py_DECREF(result);
     } else {
@@ -1108,12 +1096,8 @@ PyObject *aws_py_mqtt_client_connection_resubscribe_existing_topics(PyObject *se
         /* C will not be invoking the python callback */
         Py_DECREF(suback_callback);
 
-        /* Don't raise a Python exception if error is AWS_ERROR_MQTT_NO_TOPICS_FOR_RESUBSCRIBE.
-         * This is a harmless error, we'll just return None instead of a msg_id */
         int aws_err = aws_last_error();
-        if (aws_err == AWS_ERROR_MQTT_NO_TOPICS_FOR_RESUBSCRIBE) {
-            Py_RETURN_NONE;
-        } else {
+        if (aws_err) {
             PyErr_SetAwsLastError();
             return NULL;
         }

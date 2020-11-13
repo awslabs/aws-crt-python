@@ -1,48 +1,24 @@
-# Copyright 2010-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License").
-# You may not use this file except in compliance with the License.
-# A copy of the License is located at
-#
-#  http://aws.amazon.com/apache2.0
-#
-# or in the "license" file accompanying this file. This file is distributed
-# on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
-# express or implied. See the License for the specific language governing
-# permissions and limitations under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0.
 
-from __future__ import absolute_import
 import awscrt.exceptions
 from awscrt.http import HttpClientConnection, HttpClientStream, HttpHeaders, HttpProxyOptions, HttpRequest, HttpVersion
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions
 from concurrent.futures import Future
-from io import BytesIO, open  # Python2's built-in open() doesn't return a stream
+from http.server import HTTPServer, SimpleHTTPRequestHandler
+from io import BytesIO
 import os
 import ssl
 from test import NativeResourceTest
 import threading
-try:
-    from urllib.parse import urlparse
-except ImportError:
-    from urlparse import urlparse
 import unittest
-
-# Use a built-in Python HTTP server to test the awscrt's HTTP client
-try:
-    from http.server import HTTPServer, SimpleHTTPRequestHandler
-except ImportError:
-    # Simple HTTP server lives in a different places in Python3 vs Python2:
-    # http.server.HTTPServer               == SocketServer.TCPServer
-    # http.server.SimpleHTTPRequestHandler == SimpleHTTPServer.SimpleHTTPRequestHandler
-    from SimpleHTTPServer import SimpleHTTPRequestHandler
-    import SocketServer
-    HTTPServer = SocketServer.TCPServer
+from urllib.parse import urlparse
 
 PROXY_HOST = os.environ.get('proxyhost')
 PROXY_PORT = int(os.environ.get('proxyport', '0'))
 
 
-class Response(object):
+class Response:
     """Holds contents of incoming response"""
 
     def __init__(self):
@@ -373,8 +349,8 @@ class TestClient(NativeResourceTest):
         stream = connection.request(request, response.on_response, response.on_body)
         stream.activate()
 
-        # wait for stream to complete
-        stream_completion_result = stream.completion_future.result(self.timeout)
+        # wait for stream to complete (use long timeout, it's a big file)
+        stream_completion_result = stream.completion_future.result(60)
 
         # check result
         self.assertEqual(200, response.status_code)

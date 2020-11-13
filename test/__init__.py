@@ -1,17 +1,6 @@
-# Copyright 2010-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License").
-# You may not use this file except in compliance with the License.
-# A copy of the License is located at
-#
-#  http://aws.amazon.com/apache2.0
-#
-# or in the "license" file accompanying this file. This file is distributed
-# on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
-# express or implied. See the License for the specific language governing
-# permissions and limitations under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0.
 
-from __future__ import print_function
 from awscrt import NativeResource
 import gc
 import inspect
@@ -41,9 +30,16 @@ class NativeResourceTest(unittest.TestCase):
 
         # Print out debugging info on leaking resources
         if NativeResource._living:
+
+            def _printobj(prefix, obj):
+                s = str(obj)
+                if len(s) > 1000:
+                    s = s[:1000] + '...TRUNCATED total-len=' + str(len(s))
+                print(prefix, obj)
+
             print('Leaking NativeResources:')
             for i in NativeResource._living:
-                print('-', i)
+                _printobj('-', i)
 
                 # getrefcount(i) returns 4+ here, but 2 of those are due to debugging.
                 # Don't show:
@@ -70,8 +66,8 @@ class NativeResourceTest(unittest.TestCase):
                 print('  gc.referrers():', len(referrers))
                 for r in referrers:
                     if isinstance(r, types.FrameType):
-                        print('  -', inspect.getframeinfo(r))
+                        _printobj('  -', inspect.getframeinfo(r))
                     else:
-                        print('  -', r)
+                        _printobj('  -', r)
 
         self.assertEqual(0, len(NativeResource._living))
