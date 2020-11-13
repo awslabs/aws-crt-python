@@ -550,7 +550,7 @@ class EventStreamRpcClientConnection(NativeResource):
         try:
             bound_handler.on_connection_setup(connection=connection, error=error)
         finally:
-            # user callback had unhandled exception, use finally to ensure future gets set
+            # ensure future completes, even if user callback had unhandled exception
             if error:
                 bound_future.set_exception(error)
             else:
@@ -564,7 +564,7 @@ class EventStreamRpcClientConnection(NativeResource):
             if handler:
                 handler.on_connection_shutdown(reason=reason)
         finally:
-            # user callback had unhandled exception, use finally to ensure future gets set
+            # ensure future completes, even if user callback had unhandled exception
             if reason:
                 bound_future.set_exception(reason)
             else:
@@ -577,7 +577,7 @@ class EventStreamRpcClientConnection(NativeResource):
             if handler:
                 handler.on_continuation_closed()
         finally:
-            # user callback had unhandled exception, use finally to ensure future gets set
+            # ensure future completes, even if user callback had unhandled exception
             bound_future.set_result(None)
 
     @staticmethod
@@ -614,7 +614,7 @@ class EventStreamRpcClientConnection(NativeResource):
             if bound_callback:
                 bound_callback(error=e)
         finally:
-            # user callback had unhandled exception, use finally to ensure future gets set
+            # ensure future completes, even if user callback had unhandled exception
             if error_code:
                 bound_future.set_exception(e)
             else:
