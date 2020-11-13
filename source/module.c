@@ -555,7 +555,6 @@ static PyMethodDef s_module_methods[] = {
 
     /* S3 */
     AWS_PY_METHOD_DEF(s3_client_new, METH_VARARGS),
-    AWS_PY_METHOD_DEF(s3_client_shutdown, METH_VARARGS),
     // AWS_PY_METHOD_DEF(s3_client_make_meta_request, METH_VARARGS),
 
     {NULL, NULL, 0, NULL},

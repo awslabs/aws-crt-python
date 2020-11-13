@@ -171,18 +171,4 @@ client_init_failed:
     return NULL;
 }
 
-PyObject *aws_py_s3_client_shutdown(PyObject *self, PyObject *args) {
-    (void)self;
-
-    PyObject *client_py;
-    if (!PyArg_ParseTuple(args, "O", &client_py)) {
-        return NULL;
-    }
-
-    struct aws_s3_client *client = aws_py_get_s3_client(client_py);
-
-    aws_s3_client_release(client);
-
-    Py_RETURN_NONE;
-}
 // PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args);

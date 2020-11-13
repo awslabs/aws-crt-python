@@ -40,10 +40,11 @@ class S3Client(NativeResource):
         num_connections_per_vip (Optional[int]): The number of connections that each VIP will have.
     """
 
-    __slots__ = ('shutdown_event')
+    __slots__ = ('shutdown_future')
 
     def __init__(
             self,
+            *,
             bootstrap,
             region,
             credential_provider=None,
@@ -53,7 +54,7 @@ class S3Client(NativeResource):
             throughput_target_gbps=0,
             throughput_per_vip_gbps=0,
             num_connections_per_vip=0):
-        assert isinstance(bootstrap, ClientBootstrap) or bootstrap is None
+        assert isinstance(bootstrap, ClientBootstrap)
         assert isinstance(region, str)
         assert isinstance(credential_provider, AwsCredentialsProvider) or credential_provider is None
         assert isinstance(tls_connection_options, TlsConnectionOptions) or tls_connection_options is None
@@ -71,22 +72,17 @@ class S3Client(NativeResource):
             float) or throughput_per_vip_gbps is None
         assert isinstance(num_connections_per_vip, int) or num_connections_per_vip is None
 
-        if not bootstrap:
-            event_loop_group = EventLoopGroup(1)
-            host_resolver = DefaultHostResolver(event_loop_group)
-            bootstrap = ClientBootstrap(event_loop_group, host_resolver)
-
         if not credential_provider:
             credential_provider = AwsCredentialsProvider.new_default_chain(bootstrap)
 
         super().__init__()
 
-        shutdown_event = threading.Event()
+        shutdown_future = Future()
 
         def on_shutdown():
-            shutdown_event.set()
+            shutdown_future.set_result(None)
 
-        self.shutdown_event = shutdown_event
+        self.shutdown_future = shutdown_future
 
         self._binding = _awscrt.s3_client_new(
             bootstrap,
@@ -99,21 +95,6 @@ class S3Client(NativeResource):
             throughput_target_gbps,
             throughput_per_vip_gbps,
             num_connections_per_vip)
-
-    @property
-    def shutdown_future(self):
-        """
-        concurrent.futures.Future: Completes when this client has finished shutting down.
-        Future will contain nothing.
-        Note that the connection may have been garbage-collected before this future completes.
-        """
-        return self._shutdown_future
-
-    def shutdow(self):
-        """
-        shutdown the client
-        """
-        _awscrt.s3_client_shutdown()
 
     def make_request(self, request, on_body=None, on_headers=None):
         """Create the Request to the the S3 server,
