@@ -1,5 +1,5 @@
 """
-event-stream library for `awscrt`.
+event-stream RPC (remote procedure call) protocol library for `awscrt`.
 """
 
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
@@ -9,289 +9,27 @@ import _awscrt
 from abc import ABC, abstractmethod
 from awscrt import NativeResource
 import awscrt.exceptions
+from awscrt.eventstream import Header, HeaderType
 from awscrt.io import ClientBootstrap, SocketOptions, TlsConnectionOptions
 from collections.abc import ByteString, Callable
 from concurrent.futures import Future
 from enum import IntEnum
 from functools import partial
 from typing import Any, Optional, Sequence
-from uuid import UUID
 import weakref
 
-
-_BYTE_MIN = -2**7
-_BYTE_MAX = 2**7 - 1
-_INT16_MIN = -2**15
-_INT16_MAX = 2**15 - 1
-_INT32_MIN = -2**31
-_INT32_MAX = 2**31 - 1
-_INT64_MIN = -2**63
-_INT64_MAX = 2**63 - 1
-
-
-class EventStreamHeaderType(IntEnum):
-    """Supported types for the value within an EventStreamHeader"""
-
-    BOOL_TRUE = 0
-    """Value is True.
-
-    No actual value is transmitted on the wire."""
-
-    BOOL_FALSE = 1
-    """Value is False.
-
-    No actual value is transmitted on the wire."""
-
-    BYTE = 2
-    """Value is signed 8-bit int."""
-
-    INT16 = 3
-    """Value is signed 16-bit int."""
-
-    INT32 = 4
-    """Value is signed 32-bit int."""
-
-    INT64 = 5
-    """Value is signed 64-bit int."""
-
-    BYTE_BUF = 6
-    """Value is raw bytes."""
-
-    STRING = 7
-    """Value is a str.
-
-    Transmitted on the wire as utf-8"""
-
-    TIMESTAMP = 8
-    """Value is a posix timestamp (seconds since Unix epoch).
-
-    Transmitted on the wire as a 64-bit int"""
-
-    UUID = 9
-    """Value is a UUID.
-
-    Transmitted on the wire as 16 bytes"""
-
-    def __format__(self, format_spec):
-        # override so formatted string doesn't simply look like an int
-        return str(self)
-
-
-class EventStreamHeader:
-    """A header in an event-stream message.
-
-    Each header has a name, value, and type.
-    :class:`EventStreamHeaderType` enumerates the supported value types.
-
-    Create a header with one of the EventStreamHeader.from_X() functions.
-    """
-
-    def __init__(self, name: str, value: Any, header_type: EventStreamHeaderType):
-        # do not call directly, use EventStreamHeader.from_xyz() methods.
-        self._name = name
-        self._value = value
-        self._type = header_type
-
-    @classmethod
-    def from_bool(cls, name: str, value: bool) -> 'EventStreamHeader':
-        """Create an EventStreamHeader of type BOOL_TRUE or BOOL_FALSE"""
-        if value:
-            return cls(name, True, EventStreamHeaderType.BOOL_TRUE)
-        else:
-            return cls(name, False, EventStreamHeaderType.BOOL_FALSE)
-
-    @classmethod
-    def from_byte(cls, name: str, value: int) -> 'EventStreamHeader':
-        """Create an EventStreamHeader of type BYTE
-
-        The value must fit in an 8-bit signed int"""
-        value = int(value)
-        if value < _BYTE_MIN or value > _BYTE_MAX:
-            raise ValueError("Value {} cannot fit in signed 8-bit byte".format(value))
-        return cls(name, value, EventStreamHeaderType.BYTE)
-
-    @classmethod
-    def from_int16(cls, name: str, value: int) -> 'EventStreamHeader':
-        """Create an EventStreamHeader of type INT16
-
-        The value must fit in an 16-bit signed int"""
-        value = int(value)
-        if value < _INT16_MIN or value > _INT16_MAX:
-            raise ValueError("Value {} cannot fit in signed 16-bit int".format(value))
-        return cls(name, value, EventStreamHeaderType.INT16)
-
-    @classmethod
-    def from_int32(cls, name: str, value: int) -> 'EventStreamHeader':
-        """Create an EventStreamHeader of type INT32
-
-        The value must fit in an 32-bit signed int"""
-        value = int(value)
-        if value < _INT32_MIN or value > _INT32_MAX:
-            raise ValueError("Value {} cannot fit in signed 32-bit int".format(value))
-        return cls(name, value, EventStreamHeaderType.INT32)
-
-    @classmethod
-    def from_int64(cls, name: str, value: int) -> 'EventStreamHeader':
-        """Create an EventStreamHeader of type INT64
-
-        The value must fit in an 64-bit signed int"""
-        value = int(value)
-        if value < _INT64_MIN or value > _INT64_MAX:
-            raise ValueError("Value {} cannot fit in signed 64-bit int".format(value))
-        return cls(name, value, EventStreamHeaderType.INT64)
-
-    @classmethod
-    def from_byte_buf(cls, name: str, value: ByteString) -> 'EventStreamHeader':
-        """Create an EventStreamHeader of type BYTES
-
-        The value must be a bytes-like object"""
-        return cls(name, value, EventStreamHeaderType.BYTE_BUF)
-
-    @classmethod
-    def from_string(cls, name: str, value: str) -> 'EventStreamHeader':
-        """Create an EventStreamHeader of type STRING"""
-        value = str(value)
-        return cls(name, value, EventStreamHeaderType.STRING)
-
-    @classmethod
-    def from_timestamp(cls, name: str, value: int) -> 'EventStreamHeader':
-        """Create an EventStreamHeader of type TIMESTAMP
-
-        Value must be a posix timestamp (seconds since Unix epoch)"""
-
-        value = int(value)
-        if value < _INT64_MIN or value > _INT64_MAX:
-            raise ValueError("Value {} exceeds timestamp limits".format(value))
-        return cls(name, value, EventStreamHeaderType.TIMESTAMP)
-
-    @classmethod
-    def from_uuid(cls, name: str, value: UUID) -> 'EventStreamHeader':
-        """Create an EventStreamHeader of type UUID
-
-        The value must be a UUID"""
-
-        if not isinstance(value, UUID):
-            raise TypeError("Value must be UUID, not {}".format(type(value)))
-        return cls(name, value, EventStreamHeaderType.UUID)
-
-    @classmethod
-    def _from_binding_tuple(cls, binding_tuple):
-        # native code deals with a simplified tuple, rather than full class
-        name, value, header_type = binding_tuple
-        header_type = EventStreamHeaderType(header_type)
-        if header_type == EventStreamHeaderType.UUID:
-            value = UUID(bytes=value)
-        return cls(name, value, header_type)
-
-    def _as_binding_tuple(self):
-        # native code deals with a simplified tuple, rather than full class
-        if self._type == EventStreamHeaderType.UUID:
-            value = self._value.bytes
-        else:
-            value = self._value
-        return (self._name, value, self._type)
-
-    @property
-    def name(self) -> str:
-        """Header name"""
-        return self._name
-
-    @property
-    def type(self) -> EventStreamHeaderType:
-        """Header type"""
-        return self._type
-
-    @property
-    def value(self) -> Any:
-        """Header value
-
-        The header's type determines the value's type.
-        Use the value_as_X() methods for type-checked queries."""
-        return self._value
-
-    def _value_as(self, header_type: EventStreamHeaderType) -> Any:
-        if self._type != header_type:
-            raise TypeError("Header type is {}, not {}".format(self._type, header_type))
-        return self._value
-
-    def value_as_bool(self) -> bool:
-        """Return bool value
-
-        Raises an exception if type is not BOOL_TRUE or BOOL_FALSE"""
-        if self._type == EventStreamHeaderType.BOOL_TRUE:
-            return True
-        if self._type == EventStreamHeaderType.BOOL_FALSE:
-            return False
-        raise TypeError(
-            "Header type is {}, not {} or {}".format(
-                self._type,
-                EventStreamHeaderType.BOOL_TRUE,
-                EventStreamHeaderType.BOOL_FALSE))
-
-    def value_as_byte(self) -> int:
-        """Return value of 8-bit signed int
-
-        Raises an exception if type is not INT8"""
-        return self._value_as(EventStreamHeaderType.BYTE)
-
-    def value_as_int16(self) -> int:
-        """Return value of 16-bit signed int
-
-        Raises an exception if type is not INT16"""
-        return self._value_as(EventStreamHeaderType.INT16)
-
-    def value_as_int32(self) -> int:
-        """Return value of 32-bit signed int
-
-        Raises an exception if type is not INT32"""
-        return self._value_as(EventStreamHeaderType.INT32)
-
-    def value_as_int64(self) -> int:
-        """Return value of 64-bit signed int
-
-        Raises an exception if type is not INT64"""
-        return self._value_as(EventStreamHeaderType.INT64)
-
-    def value_as_byte_buf(self) -> ByteString:
-        """Return value of bytes
-
-        Raises an exception if type is not BYTE_BUF"""
-        return self._value_as(EventStreamHeaderType.BYTE_BUF)
-
-    def value_as_string(self) -> str:
-        """Return value of string
-
-        Raises an exception if type is not STRING"""
-        return self._value_as(EventStreamHeaderType.STRING)
-
-    def value_as_timestamp(self) -> int:
-        """Return value of timestamp (seconds since Unix epoch)
-
-        Raises an exception if type is not TIMESTAMP"""
-        return self._value_as(EventStreamHeaderType.TIMESTAMP)
-
-    def value_as_uuid(self) -> UUID:
-        """Return value of UUID
-
-        Raises an exception if type is not UUID"""
-        return self._value_as(EventStreamHeaderType.UUID)
-
-    def __str__(self):
-        return "{}: {} <{}>".format(
-            self._name,
-            repr(self._value),
-            self._type.name)
-
-    def __repr__(self):
-        return "{}({}, {}, {})".format(
-            self.__class__.__name__,
-            repr(self._name),
-            repr(self._value),
-            repr(self._type))
-
-
-class EventStreamRpcMessageType(IntEnum):
-    """Types of event-stream RPC messages.
+__all__ = [
+    'MessageType',
+    'MessageFlag',
+    'ClientConnectionHandler',
+    'ClientConnection',
+    'ClientContinuation',
+    'ClientContinuationHandler',
+]
+
+
+class MessageType(IntEnum):
+    """Types of messages in the event-stream RPC protocol.
 
     The APPLICATION_MESSAGE and APPLICATION_ERROR types may only be sent
     on streams, and will never arrive as a protocol message (stream-id 0).
@@ -332,15 +70,15 @@ class EventStreamRpcMessageType(IntEnum):
         return str(self)
 
 
-class EventStreamRpcMessageFlag:
-    """Flags for event-stream RPC messages.
+class MessageFlag:
+    """Flags for messages in the event-stream RPC protocol.
 
     Flags may be XORed together.
     Not all flags can be used with all message types, consult documentation.
     """
     # TODO: when python 3.5 is dropped this class should inherit from IntFlag.
     # When doing this, be sure to update type-hints and callbacks to pass
-    # EventStreamRpcMessageFlag instead of plain int.
+    # MessageFlag instead of plain int.
 
     NONE = 0
     """No flags"""
@@ -362,7 +100,7 @@ class EventStreamRpcMessageFlag:
         return str(self)
 
 
-class EventStreamRpcClientConnectionHandler(ABC):
+class ClientConnectionHandler(ABC):
     """Base class for handling connection events.
 
     Inherit from this class and override methods to handle connection events.
@@ -423,9 +161,9 @@ class EventStreamRpcClientConnectionHandler(ABC):
     @abstractmethod
     def on_protocol_message(
             self,
-            headers: Sequence[EventStreamHeader],
+            headers: Sequence[Header],
             payload: bytes,
-            message_type: EventStreamRpcMessageType,
+            message_type: MessageType,
             flags: int,
             **kwargs) -> None:
         """Invoked when a message for the connection (stream-id 0) is received.
@@ -437,7 +175,7 @@ class EventStreamRpcClientConnectionHandler(ABC):
 
             message_type: Message type.
 
-            flags: Message flags. Values from EventStreamRpcMessageFlag may be
+            flags: Message flags. Values from MessageFlag may be
                 XORed together. Not all flags can be used with all message
                 types, consult documentation.
 
@@ -447,10 +185,10 @@ class EventStreamRpcClientConnectionHandler(ABC):
         pass
 
 
-class EventStreamRpcClientConnection(NativeResource):
+class ClientConnection(NativeResource):
     """A client connection for the event-stream RPC protocol.
 
-    Use :meth:`EventStreamRpcClientConnection.connect()` to establish a new
+    Use :meth:`ClientConnection.connect()` to establish a new
     connection.
 
     Attributes:
@@ -478,13 +216,13 @@ class EventStreamRpcClientConnection(NativeResource):
     def connect(
             cls,
             *,
-            handler: EventStreamRpcClientConnectionHandler,
+            handler: ClientConnectionHandler,
             host_name: str,
             port: int,
             bootstrap: ClientBootstrap,
             socket_options: Optional[SocketOptions] = None,
             tls_connection_options: Optional[TlsConnectionOptions] = None) -> Future:
-        """Asynchronously establish a new EventStreamRpcClientConnection.
+        """Asynchronously establish a new ClientConnection.
 
         Args:
             handler: Handler for connection events.
@@ -585,8 +323,8 @@ class EventStreamRpcClientConnection(NativeResource):
         handler = bound_weak_handler()
         if handler:
             # transform from simple types to actual classes
-            headers = [EventStreamHeader._from_binding_tuple(i) for i in headers]
-            message_type = EventStreamRpcMessageType(message_type)
+            headers = [Header._from_binding_tuple(i) for i in headers]
+            message_type = MessageType(message_type)
             handler.on_protocol_message(
                 headers=headers,
                 payload=payload,
@@ -598,8 +336,8 @@ class EventStreamRpcClientConnection(NativeResource):
         handler = bound_weak_handler()
         if handler:
             # transform from simple types to actual classes
-            headers = [EventStreamHeader._from_binding_tuple(i) for i in headers]
-            message_type = EventStreamRpcMessageType(message_type)
+            headers = [Header._from_binding_tuple(i) for i in headers]
+            message_type = MessageType(message_type)
             handler.on_continuation_message(
                 headers=headers,
                 payload=payload,
@@ -646,10 +384,10 @@ class EventStreamRpcClientConnection(NativeResource):
     def send_protocol_message(
             self,
             *,
-            headers: Optional[Sequence[EventStreamHeader]] = [],
+            headers: Optional[Sequence[Header]] = [],
             payload: Optional[ByteString] = b'',
-            message_type: EventStreamRpcMessageType,
-            flags: int = EventStreamRpcMessageFlag.NONE,
+            message_type: MessageType,
+            flags: int = MessageFlag.NONE,
             on_flush: Callable = None) -> Future:
         """Send a protocol message.
 
@@ -665,7 +403,7 @@ class EventStreamRpcClientConnection(NativeResource):
 
             message_type: Message type.
 
-            flags: Message flags. Values from EventStreamRpcMessageFlag may be
+            flags: Message flags. Values from MessageFlag may be
                 XORed together. Not all flags can be used with all message
                 types, consult documentation.
 
@@ -701,11 +439,11 @@ class EventStreamRpcClientConnection(NativeResource):
             partial(self._on_flush, future, on_flush))
         return future
 
-    def new_stream(self, handler: 'EventStreamRpcClientContinuationHandler') -> 'EventStreamClientContinuation':
+    def new_stream(self, handler: 'ClientContinuationHandler') -> 'ClientContinuation':
         """
         Create a new stream.
 
-        The stream will send no data until :meth:`EventStreamClientContinuation.activate()`
+        The stream will send no data until :meth:`ClientContinuation.activate()`
         is called. Call activate() when you're ready for callbacks and events to fire.
 
         Args:
@@ -720,40 +458,40 @@ class EventStreamRpcClientConnection(NativeResource):
             self,
             partial(self._on_continuation_message, handler_weakref),
             partial(self._on_continuation_closed, closed_future, handler_weakref))
-        return EventStreamRpcClientContinuation(binding, closed_future, self)
+        return ClientContinuation(binding, closed_future, self)
 
 
-class EventStreamRpcClientContinuation(NativeResource):
+class ClientContinuation(NativeResource):
     """
     A continuation of messages on a given stream-id.
 
-    Create with :meth:`EventStreamRpcClientConnection.new_stream()`.
+    Create with :meth:`ClientConnection.new_stream()`.
 
-    The stream will send no data until :meth:`EventStreamClientContinuation.activate()`
+    The stream will send no data until :meth:`ClientContinuation.activate()`
     is called. Call activate() when you're ready for callbacks and events to fire.
 
     Attributes:
-        connection (EventStreamRpcClientConnection): This stream's connection.
+        connection (ClientConnection): This stream's connection.
 
         closed_future (Future) : Future which completes with a result of None
             when the continuation has closed.
     """
 
     def __init__(self, binding, closed_future, connection):
-        # Do not instantiate directly, use EventStreamRpcClientConnection.new_stream()
+        # Do not instantiate directly, use ClientConnection.new_stream()
         super().__init__()
         self._binding = binding
-        self.connection = connection  # type: EventStreamRpcClientConnection
+        self.connection = connection  # type: ClientConnection
         self.closed_future = closed_future  # type: Future
 
     def activate(
             self,
             *,
             operation: str,
-            headers: Sequence[EventStreamHeader] = [],
+            headers: Sequence[Header] = [],
             payload: ByteString = b'',
-            message_type: EventStreamRpcMessageType,
-            flags: int = EventStreamRpcMessageFlag.NONE,
+            message_type: MessageType,
+            flags: int = MessageFlag.NONE,
             on_flush: Callable = None):
         """
         Activate the stream by sending its first message.
@@ -773,7 +511,7 @@ class EventStreamRpcClientContinuation(NativeResource):
 
             message_type: Message type.
 
-            flags: Message flags. Values from EventStreamRpcMessageFlag may be
+            flags: Message flags. Values from MessageFlag may be
                 XORed together. Not all flags can be used with all message
                 types, consult documentation.
 
@@ -808,17 +546,17 @@ class EventStreamRpcClientContinuation(NativeResource):
             payload,
             message_type,
             flags,
-            partial(EventStreamRpcClientConnection._on_flush, flush_future, on_flush))
+            partial(ClientConnection._on_flush, flush_future, on_flush))
 
         return flush_future
 
     def send_message(
             self,
             *,
-            headers: Sequence[EventStreamHeader] = [],
+            headers: Sequence[Header] = [],
             payload: ByteString = b'',
-            message_type: EventStreamRpcMessageType,
-            flags: int = EventStreamRpcMessageFlag.NONE,
+            message_type: MessageType,
+            flags: int = MessageFlag.NONE,
             on_flush: Callable = None) -> Future:
         """
         Send a continuation message.
@@ -838,7 +576,7 @@ class EventStreamRpcClientContinuation(NativeResource):
 
             message_type: Message type.
 
-            flags: Message flags. Values from EventStreamRpcMessageFlag may be
+            flags: Message flags. Values from MessageFlag may be
                 XORed together. Not all flags can be used with all message
                 types, consult documentation.
 
@@ -870,14 +608,14 @@ class EventStreamRpcClientContinuation(NativeResource):
             payload,
             message_type,
             flags,
-            partial(EventStreamRpcClientConnection._on_flush, future, on_flush))
+            partial(ClientConnection._on_flush, future, on_flush))
         return future
 
     def is_closed(self):
         return _awscrt.event_stream_rpc_client_continuation_is_closed(self._binding)
 
 
-class EventStreamRpcClientContinuationHandler(ABC):
+class ClientContinuationHandler(ABC):
     """Base class for handling stream continuation events.
 
     Inherit from this class and override methods to handle events.
@@ -895,9 +633,9 @@ class EventStreamRpcClientContinuationHandler(ABC):
     @abstractmethod
     def on_continuation_message(
             self,
-            headers: Sequence[EventStreamHeader],
+            headers: Sequence[Header],
             payload: bytes,
-            message_type: EventStreamRpcMessageType,
+            message_type: MessageType,
             flags: int,
             **kwargs) -> None:
         """Invoked when a message is received on this continuation.
@@ -909,7 +647,7 @@ class EventStreamRpcClientContinuationHandler(ABC):
 
             message_type: Message type.
 
-            flags: Message flags. Values from EventStreamRpcMessageFlag may be
+            flags: Message flags. Values from MessageFlag may be
                 XORed together. Not all flags can be used with all message
                 types, consult documentation.
 

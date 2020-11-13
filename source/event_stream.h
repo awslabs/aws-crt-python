@@ -19,7 +19,7 @@ PyObject *aws_py_event_stream_rpc_client_continuation_send_message(PyObject *sel
 PyObject *aws_py_event_stream_rpc_client_continuation_is_closed(PyObject *self, PyObject *args);
 
 /**
- * Given a python list of EventStreamHeaders, init an aws_array_list of aws_event_stream_header_value_pairs.
+ * Given a python list of Headers, init an aws_array_list of aws_event_stream_header_value_pairs.
  * All variable-length values are copied (owned) by the new headers.
  * Returns false and sets python exception if error occurred.
  */

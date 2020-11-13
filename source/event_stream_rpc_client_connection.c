@@ -42,7 +42,7 @@ struct connection_binding {
 };
 
 struct aws_event_stream_rpc_client_connection *aws_py_get_event_stream_rpc_client_connection(PyObject *connection) {
-    AWS_PY_RETURN_NATIVE_FROM_BINDING(connection, s_capsule_name, "EventStreamRpcClientConnection", connection_binding);
+    AWS_PY_RETURN_NATIVE_FROM_BINDING(connection, s_capsule_name, "ClientConnection", connection_binding);
 }
 
 PyObject *aws_py_event_stream_rpc_client_connection_connect(PyObject *self, PyObject *args) {

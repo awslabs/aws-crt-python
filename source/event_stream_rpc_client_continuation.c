@@ -33,8 +33,7 @@ struct continuation_binding {
 
 struct aws_event_stream_rpc_client_continuation_token *aws_py_get_event_stream_rpc_client_continuation(
     PyObject *continuation) {
-    AWS_PY_RETURN_NATIVE_FROM_BINDING(
-        continuation, s_capsule_name, "EventStreamRpcClientContinuation", continuation_binding);
+    AWS_PY_RETURN_NATIVE_FROM_BINDING(continuation, s_capsule_name, "ClientContinuation", continuation_binding);
 }
 
 PyObject *aws_py_event_stream_rpc_client_connection_new_stream(PyObject *self, PyObject *args) {
