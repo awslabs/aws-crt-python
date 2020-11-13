@@ -12,7 +12,7 @@
 struct connection_binding;
 static void s_capsule_destructor(PyObject *capsule);
 static void s_connection_destroy_if_ready(struct connection_binding *connection);
-static int s_on_connection_setup(
+static void s_on_connection_setup(
     struct aws_event_stream_rpc_client_connection *native,
     int error_code,
     void *user_data);
@@ -35,7 +35,15 @@ struct connection_binding {
     PyObject *on_setup;
     PyObject *on_shutdown;
     PyObject *on_protocol_message;
+
+    /* keep a reference to our own capsule until we pass it out to python-land
+     * in the on_setup callback, whereupon we clear the reference */
+    PyObject *capsule_tmp;
 };
+
+struct aws_event_stream_rpc_client_connection *aws_py_get_event_stream_rpc_client_connection(PyObject *connection) {
+    AWS_PY_RETURN_NATIVE_FROM_BINDING(connection, s_capsule_name, "ClientConnection", connection_binding);
+}
 
 PyObject *aws_py_event_stream_rpc_client_connection_connect(PyObject *self, PyObject *args) {
     (void)self;
@@ -116,7 +124,14 @@ PyObject *aws_py_event_stream_rpc_client_connection_connect(PyObject *self, PyOb
         goto error;
     }
 
-    return capsule;
+    /* Don't return binding-capsule now. If we did, the thread calling
+     * connect() might not be able to store the returned binding-capsule
+     * before the on_setup() callback fires in another thread.
+     *
+     * To avoid this race, we pass the binding-capsule out to python-land
+     * from the on_setup() callback. */
+    connection->capsule_tmp = capsule;
+    Py_RETURN_NONE;
 
 error:
     /* capsule's destructor will clean up anything inside of it */
@@ -124,7 +139,7 @@ error:
     return NULL;
 }
 
-static int s_on_connection_setup(
+static void s_on_connection_setup(
     struct aws_event_stream_rpc_client_connection *native,
     int error_code,
     void *user_data) {
@@ -137,23 +152,29 @@ static int s_on_connection_setup(
 
     PyGILState_STATE state;
     if (aws_py_gilstate_ensure(&state)) {
-        return AWS_OP_ERR; /* Python has shut down. Nothing matters anymore, but don't crash */
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
-    PyObject *result = PyObject_CallFunction(connection->on_setup, "(i)", error_code);
+    PyObject *result = PyObject_CallFunction(connection->on_setup, "(Oi)", connection->capsule_tmp, error_code);
     if (result) {
         Py_DECREF(result);
     } else {
         /* Callback might fail during application shutdown */
         PyErr_WriteUnraisable(PyErr_Occurred());
+
+        /* TODO: close connection if unhandled exception occurs? */
     }
 
     /* on_setup callback has a captured reference to python connection object.
      * Need to clear it so that its refcount can ever reach zero */
     Py_CLEAR(connection->on_setup);
-    PyGILState_Release(state);
 
-    return AWS_OP_SUCCESS; /* Calling code never actually checks this, so always returning SUCCESS */
+    /* Clear reference to binding-capsule.
+     * It should be stored in the python connection object now.
+     * If it's not stored, then this will cause it to be GC'd, which will close the connection. */
+    Py_CLEAR(connection->capsule_tmp);
+
+    PyGILState_Release(state);
 }
 
 static void s_on_connection_shutdown(
@@ -164,7 +185,9 @@ static void s_on_connection_shutdown(
     (void)native;
     struct connection_binding *connection = user_data;
 
+    AWS_FATAL_ASSERT(connection->native && "Illegal for event-stream connection shutdown to fire before setup");
     AWS_FATAL_ASSERT(!connection->shutdown_complete && "illegal for event-stream connection shutdown to fire twice");
+    connection->shutdown_complete = true;
 
     PyGILState_STATE state;
     if (aws_py_gilstate_ensure(&state)) {
@@ -179,7 +202,6 @@ static void s_on_connection_shutdown(
         PyErr_WriteUnraisable(PyErr_Occurred());
     }
 
-    connection->shutdown_complete = true;
     s_connection_destroy_if_ready(connection);
     PyGILState_Release(state);
 }
@@ -191,6 +213,7 @@ static void s_capsule_destructor(PyObject *capsule) {
 }
 
 static void s_connection_destroy_if_ready(struct connection_binding *connection) {
+    /* Cannot */
     bool destroy;
 
     if (connection->native) {
@@ -292,14 +315,13 @@ PyObject *aws_py_event_stream_rpc_client_connection_is_open(PyObject *self, PyOb
         return NULL;
     }
 
-    if (aws_event_stream_rpc_client_connection_is_closed(connection->native)) {
-        Py_RETURN_FALSE;
+    if (aws_event_stream_rpc_client_connection_is_open(connection->native)) {
+        Py_RETURN_TRUE;
     }
-    Py_RETURN_TRUE;
+    Py_RETURN_FALSE;
 }
 
-/* Invoked when send_protocol_message() completes */
-static void s_on_protocol_message_flush(int error_code, void *user_data) {
+void aws_py_event_stream_rpc_client_on_message_flush(int error_code, void *user_data) {
     PyObject *on_flush_py = user_data;
 
     PyGILState_STATE state;
@@ -368,7 +390,7 @@ PyObject *aws_py_event_stream_rpc_client_connection_send_protocol_message(PyObje
         .message_flags = message_flags,
     };
     if (aws_event_stream_rpc_client_connection_send_protocol_message(
-            connection->native, &msg_args, s_on_protocol_message_flush, on_flush_py)) {
+            connection->native, &msg_args, aws_py_event_stream_rpc_client_on_message_flush, on_flush_py)) {
         PyErr_SetAwsLastError();
         goto done;
     }
