@@ -114,3 +114,20 @@ class S3Client(NativeResource):
         shutdown the client
         """
         _awscrt.s3_client_shutdown()
+
+    def make_request(self, request, on_body=None, on_headers=None):
+        """Create the Request to the the S3 server,
+        accelerate the put/get request by spliting it into multiple requests under the hood.
+
+        Args:
+            request (HttpRequest): The overall outgoing API request for S3 operation.
+
+            on_body: Optional callback invoked 0+ times as the response body received from S3 server.
+
+            on_headers: Optional callback invoked as the response received, and even the API request
+                has been splited into multiple parts, this callback will only be invoked once as
+                it's just making one API request to S3
+
+        Returns:
+            Future, that resolves once the request has been finished, and throw exception with error occurs.
+        """

@@ -27,6 +27,4 @@ class S3ClientTest(NativeResourceTest):
         # self.assertIsNotNone(s3_client)
         shutdown_event = s3_client.shutdown_event
         del s3_client
-        print("what the fuck?")
         self.assertTrue(shutdown_event.wait(TIMEOUT))
-        print("what?")
