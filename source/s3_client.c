@@ -19,10 +19,6 @@ struct s3_client_binding {
     PyObject *on_shutdown;
 };
 
-static void s_s3_client_destroy(struct s3_client_binding *client) {
-    aws_mem_release(aws_py_get_allocator(), client);
-}
-
 static void s_s3_client_release(struct s3_client_binding *client) {
     AWS_FATAL_ASSERT(!client->release_called);
     client->release_called = true;
@@ -32,11 +28,11 @@ static void s_s3_client_release(struct s3_client_binding *client) {
     aws_s3_client_release(client->native);
 
     if (destroy_after_release) {
-        s_s3_client_destroy(client);
+        aws_mem_release(aws_py_get_allocator(), client);
     }
 }
 
-/* invoked when the python object get cleaned up */
+/* Invoked when the python object get cleaned up */
 static void s_s3_client_capsule_destructor(PyObject *capsule) {
     struct s3_client_binding *client = PyCapsule_GetPointer(capsule, s_capsule_name_s3_client);
     s_s3_client_release(client);
@@ -67,7 +63,7 @@ static void s_s3_client_shutdown(void *user_data) {
     Py_CLEAR(client->on_shutdown);
 
     if (destroy_after_shutdown) {
-        s_s3_client_destroy(client);
+        aws_mem_release(aws_py_get_allocator(), client);
     }
 
     PyGILState_Release(state);
@@ -170,5 +166,3 @@ client_init_failed:
     aws_mem_release(allocator, s3_clinet);
     return NULL;
 }
-
-// PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args);

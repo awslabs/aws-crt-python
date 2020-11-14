@@ -10,7 +10,26 @@ from concurrent.futures import Future
 from awscrt import NativeResource
 from awscrt.io import ClientBootstrap, EventLoopGroup, DefaultHostResolver, TlsConnectionOptions
 from awscrt.auth import AwsCredentialsProvider
-import threading
+from enum import IntEnum
+
+
+class AwsS3RequestType(IntEnum):
+    """The type of the Aws S3 request"""
+
+    DEFAULT = 0
+    """
+    Default type, which is all the rest type of S3 requests besides of GET_OBJECT/PUT_OBJECT
+    """
+
+    GET_OBJECT = 1
+    """
+    Get Object S3 request
+    """
+
+    PUT_OBJECT = 2
+    """
+    Put Object S3 request
+    """
 
 
 class S3Client(NativeResource):
@@ -96,18 +115,34 @@ class S3Client(NativeResource):
             throughput_per_vip_gbps,
             num_connections_per_vip)
 
-    def make_request(self, request, on_body=None, on_headers=None):
+    def make_request(self, *, request, type, on_headers=None, on_body=None):
         """Create the Request to the the S3 server,
         accelerate the put/get request by spliting it into multiple requests under the hood.
 
         Args:
             request (HttpRequest): The overall outgoing API request for S3 operation.
 
-            on_body: Optional callback invoked 0+ times as the response body received from S3 server.
+            type (AwsS3RequestType): The type of S3 request passed in, GET_OBJECT/PUT_OBJECT can be accelerated
 
             on_headers: Optional callback invoked as the response received, and even the API request
-                has been splited into multiple parts, this callback will only be invoked once as
-                it's just making one API request to S3
+                has been splitted into multiple parts, this callback will only be invoked once as
+                it's just making one API request to S3.
+                The function should take the following arguments and return nothing:
+
+                *   `status_code` (int): Response status code.
+
+                *   `headers` (List[Tuple[str, str]]): Response headers as a
+                    list of (name,value) pairs.
+
+                *   `**kwargs` (dict): Forward compatibility kwargs.
+
+            on_body: Optional callback invoked 0+ times as the response body received from S3 server.
+                The function should take the following arguments and return nothing:
+
+                *   `chunk` (buffer): Response body data (not necessarily
+                    a whole "chunk" of chunked encoding).
+
+                *   `**kwargs` (dict): Forward-compatibility kwargs.
 
         Returns:
             Future, that resolves once the request has been finished, and throw exception with error occurs.
