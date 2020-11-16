@@ -55,9 +55,10 @@ class S3RequestTest(NativeResourceTest):
     test_object_path = "/get_object_test_1MB.txt"
     region = "us-west-2"
     bucket_name = "aws-crt-canary-bucket"
+    timeout = 30  # seconds
 
     def _build_endpoint_string(self, region, bucket_name):
-        return bucket_name + ".s3" + region + ".amazonaws.com"
+        return bucket_name + ".s3." + region + ".amazonaws.com"
 
     def _get_object_request(self):
         headers = HttpHeaders([("host", self._build_endpoint_string(self.region, self.bucket_name))])
@@ -65,7 +66,12 @@ class S3RequestTest(NativeResourceTest):
         return request
 
     def test_get_object(self):
-        init_logging(LogLevel.Trace, "stderr")
+        # init_logging(LogLevel.Trace, "log.txt")
         s3_client = S3ClientNew(False, self.region)
         request = self._get_object_request()
-        S3_request = s3_client.make_request(request=request, type=AwsS3RequestType.GET_OBJECT)
+        s3_request = s3_client.make_request(request=request, type=AwsS3RequestType.GET_OBJECT)
+        self.assertIsNone(s3_request.finished_future.result(self.timeout))
+        # del s3_request
+        # self.assertIsNone(s3_request.shutdown_future.result(self.timeout))
+        # del s3_client
+        # self.assertIsNone(s3_client.shutdown_future.result(self.timeout))
