@@ -258,11 +258,11 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     }
 
     meta_request->on_headers = on_headers_py;
-    Py_INCREF(meta_request->on_shutdown);
+    Py_INCREF(meta_request->on_headers);
     meta_request->on_body = on_body_py;
-    Py_INCREF(meta_request->on_shutdown);
+    Py_INCREF(meta_request->on_body);
     meta_request->on_finish = on_finish_py;
-    Py_INCREF(meta_request->on_shutdown);
+    Py_INCREF(meta_request->on_finish);
     meta_request->on_shutdown = on_shutdown_py;
     Py_INCREF(meta_request->on_shutdown);
 

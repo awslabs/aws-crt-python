@@ -4,7 +4,7 @@
 from awscrt.http import HttpHeaders, HttpRequest
 from awscrt.s3_client import S3Client, AwsS3RequestType
 from test import NativeResourceTest, TIMEOUT
-from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions
+from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions, init_logging, LogLevel
 from awscrt.auth import AwsCredentialsProvider
 import io
 import unittest
@@ -65,6 +65,7 @@ class S3RequestTest(NativeResourceTest):
         return request
 
     def test_get_object(self):
+        init_logging(LogLevel.Trace, "stderr")
         s3_client = S3ClientNew(False, self.region)
         request = self._get_object_request()
         S3_request = s3_client.make_request(request=request, type=AwsS3RequestType.GET_OBJECT)
