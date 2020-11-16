@@ -71,7 +71,7 @@ class S3RequestTest(NativeResourceTest):
         self.assertIsNotNone(headers, "headers are none")
 
     def _on_request_body(self, chunk, ** kargs):
-        self.assertIsNotNone(chunk, "the body chunk are none")
+        self.assertIsNotNone(chunk, "the body chunk is none")
 
     def test_get_object(self):
         init_logging(LogLevel.Trace, "log.txt")
@@ -90,5 +90,5 @@ class S3RequestTest(NativeResourceTest):
         del s3_request
         result = (shutdown_future.result(self.timeout))
         print(result)
-        # del s3_client
-        # self.assertIsNone(s3_client.shutdown_future.result(self.timeout))
+        del s3_client
+        self.assertIsNone(s3_client.shutdown_future.result(self.timeout))

@@ -175,7 +175,7 @@ class S3Request(NativeResource):
         self._shutdown_future = Future()
 
         self._binding = _awscrt.s3_client_make_meta_request(
-            client, request, type, self._on_headers, self._on_body, self._on_finish, self._on_shutdown)
+            self, client, request, type, self._on_headers, self._on_body, self._on_finish, self._on_shutdown)
 
     def _on_headers(self, status_code, headers):
         if self._on_headers_cb:

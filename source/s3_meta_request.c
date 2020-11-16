@@ -18,12 +18,11 @@ struct s3_meta_request_binding {
     bool release_called;
     bool shutdown_called;
 
-    /* callback for receiving incoming headers, reference cleared after invoke */
-    PyObject *on_headers;
-    /* callback for incoming body, will be invoked multiple times, reference cleared after request finished */
-    PyObject *on_body;
-    /* Finish callback, indicates the request has done, reference cleared after invoke */
-    PyObject *on_finish;
+    /* Weak reference proxy to python self.
+     * NOTE: The python self is forced to stay alive until on_finish fires.
+     * We do this by INCREFing when the object is created, and DECREFing when on_finish fires. */
+    PyObject *self_proxy;
+
     /* Shutdown callback, all resource cleaned up, reference cleared after invoke */
     PyObject *on_shutdown;
 };
@@ -83,13 +82,13 @@ static void s_s3_request_on_headers(
     }
 
     /* Deliver the built up list of (name,value) tuples */
-    PyObject *result = PyObject_CallFunction(request_binding->on_headers, "(iO)", response_status, header_list);
+    PyObject *result =
+        PyObject_CallMethod(request_binding->self_proxy, "_on_headers", "(iO)", response_status, header_list);
     if (!result) {
         PyErr_WriteUnraisable(PyErr_Occurred());
         goto done;
     }
     Py_DECREF(result);
-    Py_CLEAR(request_binding->on_headers);
 done:
     Py_XDECREF(header_list);
     PyGILState_Release(state);
@@ -113,8 +112,8 @@ static void s_s3_request_on_body(
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
-    PyObject *result =
-        PyObject_CallFunction(request_binding->on_body, "(y#)", (const char *)(body->ptr + range_start), data_len);
+    PyObject *result = PyObject_CallMethod(
+        request_binding->self_proxy, "_on_body", "(y#)", (const char *)(body->ptr + range_start), data_len);
     if (!result) {
         PyErr_WriteUnraisable(PyErr_Occurred());
         goto done;
@@ -141,17 +140,16 @@ static void s_s3_request_on_finish(
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
     /* TODO: expose the error_response_headers/body */
-    PyObject *result = PyObject_CallFunction(request_binding->on_finish, "(i)", meta_request_result->error_code);
+    PyObject *result =
+        PyObject_CallMethod(request_binding->self_proxy, "_on_finish", "(i)", meta_request_result->error_code);
     if (result) {
         Py_DECREF(result);
     } else {
         /* Callback might fail during application shutdown */
         PyErr_WriteUnraisable(PyErr_Occurred());
     }
-    /* clear the body callback as well */
-    Py_CLEAR(request_binding->on_body);
-    Py_CLEAR(request_binding->on_finish);
-
+    /* DECREF python self, we don't need to force it to stay alive any longer. */
+    Py_DECREF(PyWeakref_GetObject(request_binding->self_proxy));
     PyGILState_Release(state);
     /*************** GIL RELEASE ***************/
 }
@@ -159,6 +157,7 @@ static void s_s3_request_on_finish(
 /* Invoked when the python object get cleaned up */
 static void s_s3_meta_request_capsule_destructor(PyObject *capsule) {
     struct s3_meta_request_binding *meta_request = PyCapsule_GetPointer(capsule, s_capsule_name_s3_meta_request);
+    Py_XDECREF(meta_request->self_proxy);
     s_s3_meta_request_release(meta_request);
 }
 
@@ -199,16 +198,18 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
 
     struct aws_allocator *allocator = aws_py_get_allocator();
 
-    PyObject *s3_client_py;
-    PyObject *http_request_py;
+    PyObject *py_s3_request = NULL;
+    PyObject *s3_client_py = NULL;
+    PyObject *http_request_py = NULL;
     int type;
-    PyObject *on_headers_py;
-    PyObject *on_body_py;
-    PyObject *on_finish_py;
-    PyObject *on_shutdown_py;
+    PyObject *on_headers_py = NULL;
+    PyObject *on_body_py = NULL;
+    PyObject *on_finish_py = NULL;
+    PyObject *on_shutdown_py = NULL;
     if (!PyArg_ParseTuple(
             args,
-            "OOiOOOO",
+            "OOOiOOOO",
+            &py_s3_request,
             &s3_client_py,
             &http_request_py,
             &type,
@@ -257,17 +258,19 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
         goto capsule_new_failed;
     }
 
-    meta_request->on_headers = on_headers_py;
-    Py_INCREF(meta_request->on_headers);
-    meta_request->on_body = on_body_py;
-    Py_INCREF(meta_request->on_body);
-    meta_request->on_finish = on_finish_py;
-    Py_INCREF(meta_request->on_finish);
+    meta_request->self_proxy = PyWeakref_NewProxy(py_s3_request, NULL);
+    if (!meta_request->self_proxy) {
+        goto proxy_failed;
+    }
+
+    Py_INCREF(meta_request->self_proxy);
     meta_request->on_shutdown = on_shutdown_py;
     Py_INCREF(meta_request->on_shutdown);
 
     return capsule;
 
+proxy_failed:
+    Py_DECREF(capsule);
 capsule_new_failed:
     aws_s3_meta_request_release(meta_request->native);
 error:
