@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0.
 
 from awscrt.http import HttpHeaders, HttpRequest
-from awscrt.s3_client import S3Client, AwsS3RequestType
+from awscrt.s3_client import S3Client, AwsS3RequestType, S3Request
 from test import NativeResourceTest, TIMEOUT
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions, init_logging, LogLevel
 from awscrt.auth import AwsCredentialsProvider
@@ -55,7 +55,7 @@ class S3RequestTest(NativeResourceTest):
     test_object_path = "/get_object_test_1MB.txt"
     region = "us-west-2"
     bucket_name = "aws-crt-canary-bucket"
-    timeout = 30  # seconds
+    timeout = 10  # seconds
 
     def _build_endpoint_string(self, region, bucket_name):
         return bucket_name + ".s3." + region + ".amazonaws.com"
@@ -77,7 +77,8 @@ class S3RequestTest(NativeResourceTest):
         init_logging(LogLevel.Trace, "log.txt")
         s3_client = S3ClientNew(False, self.region)
         request = self._get_object_request()
-        s3_request = s3_client.make_request(
+        s3_request = S3Request(
+            client=s3_client,
             request=request,
             type=AwsS3RequestType.GET_OBJECT,
             on_headers=self._on_request_headers,
