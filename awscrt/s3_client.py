@@ -8,7 +8,8 @@ S3 client
 import _awscrt
 from concurrent.futures import Future
 from awscrt import NativeResource
-from awscrt.io import ClientBootstrap, EventLoopGroup, DefaultHostResolver, TlsConnectionOptions
+from awscrt.http import HttpRequest
+from awscrt.io import ClientBootstrap, TlsConnectionOptions
 from awscrt.auth import AwsCredentialsProvider
 from enum import IntEnum
 
@@ -117,7 +118,7 @@ class S3Client(NativeResource):
 
     def make_request(self, *, request, type, on_headers=None, on_body=None):
         """Create the Request to the the S3 server,
-        accelerate the put/get request by spliting it into multiple requests under the hood.
+        accelerate the GET_OBJECT/PUT_OBJECT request by spliting it into multiple requests under the hood.
 
         Args:
             request (HttpRequest): The overall outgoing API request for S3 operation.
@@ -145,5 +146,48 @@ class S3Client(NativeResource):
                 *   `**kwargs` (dict): Forward-compatibility kwargs.
 
         Returns:
-            Future, that resolves once the request has been finished, and throw exception with error occurs.
+            S3Request
         """
+        return S3Request(client=self, request=request, type=type, on_headers=on_headers, on_body=on_body)
+
+
+class S3Request(NativeResource):
+    """S3 request
+
+    """
+    __slots__ = ('_on_headers_cb', '_on_body_cb', 'finished_future', 'shutdown_future')
+
+    def __init__(self, *, client, request, type, on_headers=None, on_body=None):
+        assert isinstance(client, S3Client)
+        assert isinstance(request, HttpRequest)
+        assert callable(on_headers) or on_headers is None
+        assert callable(on_body) or on_body is None
+
+        super().__init__()
+
+        # the native s3-request will keep the request alive until the s3-request finishes
+        self._on_headers_cb = on_headers
+        self._on_body_cb = on_body
+
+        self.finished_future = Future()
+        self.shutdown_future = Future()
+
+        self._binding = _awscrt.s3_client_make_meta_request(
+            client, request, type, self._on_headers, self._on_body, self._on_finish, self._on_shutdown)
+
+    def _on_headers(self, status_code, headers):
+        if self._on_headers_cb:
+            self._on_headers_cb(status_code=status_code, headers=headers)
+
+    def _on_body(self, chunk):
+        if self._on_body_cb:
+            self._on_body_cb(chunk=chunk)
+
+    def _on_finish(self, error_code):
+        if error_code:
+            self._completion_future.set_exception(_awscrt.exceptions.from_code(error_code))
+        else:
+            self.finished_future.set_result(None)
+
+    def _on_shutdown(self):
+        self.shutdown_future.set_result(None)
