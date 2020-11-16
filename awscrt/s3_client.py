@@ -155,7 +155,7 @@ class S3Request(NativeResource):
     """S3 request
 
     """
-    __slots__ = ('_on_headers_cb', '_on_body_cb', 'finished_future', 'shutdown_future')
+    __slots__ = ('_on_headers_cb', '_on_body_cb', '_finished_future', 'shutdown_future')
 
     def __init__(self, *, client, request, type, on_headers=None, on_body=None):
         assert isinstance(client, S3Client)
@@ -169,7 +169,7 @@ class S3Request(NativeResource):
         self._on_headers_cb = on_headers
         self._on_body_cb = on_body
 
-        self.finished_future = Future()
+        self._finished_future = Future()
         self.shutdown_future = Future()
 
         self._binding = _awscrt.s3_client_make_meta_request(
@@ -185,9 +185,13 @@ class S3Request(NativeResource):
 
     def _on_finish(self, error_code):
         if error_code:
-            self._completion_future.set_exception(_awscrt.exceptions.from_code(error_code))
+            self._finished_future.set_exception(_awscrt.exceptions.from_code(error_code))
         else:
-            self.finished_future.set_result(None)
+            self._finished_future.set_result("what?")
 
     def _on_shutdown(self):
-        self.shutdown_future.set_result(None)
+        self.shutdown_future.set_result("what?")
+
+    @property
+    def finished_future(self):
+        return self._finished_future
