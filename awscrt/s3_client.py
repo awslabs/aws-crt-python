@@ -155,7 +155,7 @@ class S3Request(NativeResource):
     """S3 request
 
     """
-    __slots__ = ('_on_headers_cb', '_on_body_cb', '_finished_future', '_shutdown_future', "_client")
+    __slots__ = ('_on_headers_cb', '_on_body_cb', '_finished_future', 'shutdown_future')
 
     def __init__(self, *, client, request, type, on_headers=None, on_body=None):
         assert isinstance(client, S3Client)
@@ -168,14 +168,18 @@ class S3Request(NativeResource):
         # the native s3-request will keep the request alive until the s3-request finishes
         self._on_headers_cb = on_headers
         self._on_body_cb = on_body
-        # to keep the client alive until the request shutdown
-        self._client = client
 
         self._finished_future = Future()
-        self._shutdown_future = Future()
+
+        shutdown_future = Future()
+
+        def on_shutdown():
+            shutdown_future.set_result("shutdown")
+
+        self.shutdown_future = shutdown_future
 
         self._binding = _awscrt.s3_client_make_meta_request(
-            self, client, request, type, self._on_headers, self._on_body, self._on_finish, self._on_shutdown)
+            self, client, request, type, self._on_headers, self._on_body, self._on_finish, on_shutdown)
 
     def _on_headers(self, status_code, headers):
         if self._on_headers_cb:
@@ -189,15 +193,8 @@ class S3Request(NativeResource):
         if error_code:
             self._finished_future.set_exception(_awscrt.exceptions.from_code(error_code))
         else:
-            self._finished_future.set_result("what?")
-
-    def _on_shutdown(self):
-        self.shutdown_future.set_result("what?")
+            self._finished_future.set_result("finish")
 
     @property
     def finished_future(self):
         return self._finished_future
-
-    @property
-    def shutdown_future(self):
-        return self._shutdown_future
