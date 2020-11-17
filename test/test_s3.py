@@ -70,7 +70,7 @@ class S3RequestTest(NativeResourceTest):
         self.assertEqual(status_code, 200, "status code is not 200")
         self.assertIsNotNone(headers, "headers are none")
 
-    def _on_request_body(self, chunk, ** kargs):
+    def _on_request_body(self, chunk, **kargs):
         self.assertIsNotNone(chunk, "the body chunk is none")
 
     def test_get_object(self):
