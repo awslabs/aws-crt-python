@@ -10,7 +10,7 @@ import io
 import unittest
 
 
-def S3ClientNew(secure, region):
+def s3_client_new(secure, region):
 
     event_loop_group = EventLoopGroup()
     host_resolver = DefaultHostResolver(event_loop_group)
@@ -36,15 +36,15 @@ class S3ClientTest(NativeResourceTest):
     timeout = 10  # seconds
 
     def test_sanity(self):
-        s3_client = S3ClientNew(False, self.region)
+        s3_client = s3_client_new(False, self.region)
         self.assertIsNotNone(s3_client)
 
     def test_sanity_secure(self):
-        s3_client = S3ClientNew(True, self.region)
+        s3_client = s3_client_new(True, self.region)
         self.assertIsNotNone(s3_client)
 
     def test_wait_shutdown(self):
-        s3_client = S3ClientNew(False, self.region)
+        s3_client = s3_client_new(False, self.region)
         self.assertIsNotNone(s3_client)
         shutdown_future = s3_client.shutdown_future
         del s3_client
@@ -75,10 +75,9 @@ class S3RequestTest(NativeResourceTest):
 
     def test_get_object(self):
         init_logging(LogLevel.Trace, "log.txt")
-        s3_client = S3ClientNew(False, self.region)
+        s3_client = s3_client_new(False, self.region)
         request = self._get_object_request()
-        s3_request = S3Request(
-            client=s3_client,
+        s3_request = s3_client.make_request(
             request=request,
             type=AwsS3RequestType.GET_OBJECT,
             on_headers=self._on_request_headers,
