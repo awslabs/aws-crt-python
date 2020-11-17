@@ -84,10 +84,3 @@ class S3RequestTest(NativeResourceTest):
         finished_future = s3_request.finished_future
         result = (finished_future.result(self.timeout))
         print(result)
-        s3_shutdown_future = s3_request.shutdown_future
-        del s3_request
-        result = (s3_shutdown_future.result(self.timeout))
-        print(result)
-        shutdown_future = s3_client.shutdown_future
-        del s3_client
-        self.assertIsNone(shutdown_future.result(self.timeout))
