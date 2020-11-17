@@ -358,7 +358,7 @@ class ClientConnection(NativeResource):
             else:
                 bound_future.set_result(None)
 
-    def close(self, reason=None):
+    def close(self):
         """Close the connection.
 
         Shutdown is asynchronous. This call has no effect if the connection is already
