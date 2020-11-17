@@ -304,7 +304,8 @@ setuptools.setup(
     author_email="aws-sdk-common-runtime@amazon.com",
     description="A common runtime for AWS Python projects",
     url="https://github.com/awslabs/aws-crt-python",
-    packages=setuptools.find_packages(),
+    # Note: find_packages() without extra args will end up installing test/
+    packages=setuptools.find_packages(include=['awscrt*']),
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: Apache Software License",
