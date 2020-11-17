@@ -100,6 +100,7 @@ class S3Client(NativeResource):
         shutdown_future = Future()
 
         def on_shutdown():
+            print("client shutdown")
             shutdown_future.set_result(None)
 
         self.shutdown_future = shutdown_future
@@ -174,6 +175,7 @@ class S3Request(NativeResource):
         shutdown_future = Future()
 
         def on_shutdown():
+            print("request shutdown")
             shutdown_future.set_result("shutdown")
 
         self.shutdown_future = shutdown_future

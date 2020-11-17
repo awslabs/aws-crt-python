@@ -120,15 +120,10 @@ PyObject *aws_py_credentials_session_token(PyObject *self, PyObject *args) {
  */
 struct credentials_provider_binding {
     struct aws_credentials_provider *native;
-
-    /* Dependencies that must outlive this.
-     * Note that different types of providers have different dependencies */
-    PyObject *bootstrap;
 };
 
 /* Finally clean up binding (after capsule destructor runs and credentials provider shutdown completes) */
 static void s_credentials_provider_binding_clean_up(struct credentials_provider_binding *binding) {
-    Py_XDECREF(binding->bootstrap);
     aws_mem_release(aws_py_get_allocator(), binding);
 }
 
@@ -272,9 +267,6 @@ PyObject *aws_py_credentials_provider_new_chain_default(PyObject *self, PyObject
 
     /* From hereon, we need to clean up if errors occur.
      * Fortunately, the capsule destructor will clean up anything stored inside the binding */
-
-    binding->bootstrap = bootstrap_py;
-    Py_INCREF(binding->bootstrap);
 
     struct aws_credentials_provider_chain_default_options options = {
         .bootstrap = bootstrap,

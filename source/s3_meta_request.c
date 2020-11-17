@@ -133,7 +133,6 @@ static void s_s3_request_on_finish(
     void *user_data) {
     (void)meta_request;
     struct s3_meta_request_binding *request_binding = user_data;
-    printf("request_finished\n");
 
     /*************** GIL ACQUIRE ***************/
     PyGILState_STATE state;
@@ -165,7 +164,6 @@ static void s_s3_meta_request_capsule_destructor(PyObject *capsule) {
 /* Callback from C land, invoked when the underlying shutdown process finished */
 static void s_s3_request_on_shutdown(void *user_data) {
     struct s3_meta_request_binding *request_binding = user_data;
-    printf("request cleaned up\n");
 
     /*************** GIL ACQUIRE ***************/
     PyGILState_STATE state;

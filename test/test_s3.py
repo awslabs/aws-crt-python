@@ -74,7 +74,6 @@ class S3RequestTest(NativeResourceTest):
         self.assertIsNotNone(chunk, "the body chunk is none")
 
     def test_get_object(self):
-        init_logging(LogLevel.Trace, "log.txt")
         s3_client = s3_client_new(False, self.region)
         request = self._get_object_request()
         s3_request = s3_client.make_request(

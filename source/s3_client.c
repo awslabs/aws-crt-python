@@ -34,7 +34,6 @@ static void s_s3_client_release(struct s3_client_binding *client) {
 
 /* Invoked when the python object get cleaned up */
 static void s_s3_client_capsule_destructor(PyObject *capsule) {
-    printf("s3 client python object cleaned up\n");
     struct s3_client_binding *client = PyCapsule_GetPointer(capsule, s_capsule_name_s3_client);
     s_s3_client_release(client);
 }
@@ -42,8 +41,6 @@ static void s_s3_client_capsule_destructor(PyObject *capsule) {
 /* Callback from C land, invoked when the underlying shutdown process finished */
 static void s_s3_client_shutdown(void *user_data) {
     struct s3_client_binding *client = user_data;
-
-    printf("s3 client cleaned up\n");
 
     /* Lock for python */
     PyGILState_STATE state;
