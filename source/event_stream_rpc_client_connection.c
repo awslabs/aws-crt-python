@@ -187,7 +187,6 @@ static void s_on_connection_shutdown(
 
     AWS_FATAL_ASSERT(connection->native && "Illegal for event-stream connection shutdown to fire before setup");
     AWS_FATAL_ASSERT(!connection->shutdown_complete && "illegal for event-stream connection shutdown to fire twice");
-    connection->shutdown_complete = true;
 
     PyGILState_STATE state;
     if (aws_py_gilstate_ensure(&state)) {
@@ -202,6 +201,7 @@ static void s_on_connection_shutdown(
         PyErr_WriteUnraisable(PyErr_Occurred());
     }
 
+    connection->shutdown_complete = true;
     s_connection_destroy_if_ready(connection);
     PyGILState_Release(state);
 }
@@ -257,20 +257,12 @@ static void s_on_protocol_message(
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
-    /* We always want to deliver bytes to python user, even if the length is 0.
-     * But PyObject_CallFunction() with "y#" will convert a NULL ptr to None instead of 0-length bytes.
-     * Therefore, if message_args->payload_buffer is NULL, pass some other valid ptr instead. */
-    const char *payload_ptr = (void *)message_args->payload->buffer;
-    if (payload_ptr == NULL) {
-        payload_ptr = "";
-    }
-
     PyObject *result = PyObject_CallFunction(
         connection->on_protocol_message,
         "(Oy#iI)",
         /* NOTE: if headers_create() returns NULL, then PyObject_CallFunction() fails too, which is convenient */
         aws_py_event_stream_python_headers_create(message_args->headers, message_args->headers_count),
-        payload_ptr,
+        message_args->payload->buffer,
         message_args->payload->len,
         message_args->message_type,
         message_args->message_flags);
