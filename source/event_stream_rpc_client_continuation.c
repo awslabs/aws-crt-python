@@ -162,20 +162,12 @@ static void s_on_continuation_message(
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
-    /* We always want to deliver bytes to python user, even if the length is 0.
-     * But PyObject_CallFunction() with "y#" will convert a NULL ptr to None instead of 0-length bytes.
-     * Therefore, if message_args->payload_buffer is NULL, pass some other valid ptr instead. */
-    const char *payload_ptr = (void *)message_args->payload->buffer;
-    if (payload_ptr == NULL) {
-        payload_ptr = "";
-    }
-
     PyObject *result = PyObject_CallFunction(
         continuation->on_message,
         "(Oy#iI)",
         /* NOTE: if headers_create() returns NULL, then PyObject_CallFunction() fails too, which is convenient */
         aws_py_event_stream_python_headers_create(message_args->headers, message_args->headers_count),
-        payload_ptr,
+        message_args->payload->buffer,
         message_args->payload->len,
         message_args->message_type,
         message_args->message_flags);

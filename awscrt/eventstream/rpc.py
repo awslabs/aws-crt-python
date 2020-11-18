@@ -185,6 +185,35 @@ class ClientConnectionHandler(ABC):
         pass
 
 
+def _msg_args_for_bindings(headers, payload, message_type, flags):
+    """
+    Transform args that a python send-msg function would take,
+    into args that a native send-msg function would take.
+    """
+    # python functions for sending messages
+    if headers is None:
+        headers = []
+    else:
+        headers = [i._as_binding_tuple() for i in headers]
+    if payload is None:
+        payload = b''
+    if flags is None:
+        flags = MessageFlag.NONE
+    return (headers, payload, message_type, flags)
+
+
+def _msg_args_from_bindings(headers, payload, message_type, flags):
+    """
+    Transform msg-received args that came from native,
+    into msg-received args presented to python users.
+    """
+    headers = [Header._from_binding_tuple(i) for i in headers]
+    if payload is None:
+        payload = b''
+    message_type = MessageType(message_type)
+    return (headers, payload, message_type, flags)
+
+
 class ClientConnection(NativeResource):
     """A client connection for the event-stream RPC protocol.
 
@@ -323,8 +352,7 @@ class ClientConnection(NativeResource):
         handler = bound_weak_handler()
         if handler:
             # transform from simple types to actual classes
-            headers = [Header._from_binding_tuple(i) for i in headers]
-            message_type = MessageType(message_type)
+            headers, payload, message_type, flags = _msg_args_from_bindings(headers, payload, message_type, flags)
             handler.on_protocol_message(
                 headers=headers,
                 payload=payload,
@@ -336,8 +364,7 @@ class ClientConnection(NativeResource):
         handler = bound_weak_handler()
         if handler:
             # transform from simple types to actual classes
-            headers = [Header._from_binding_tuple(i) for i in headers]
-            message_type = MessageType(message_type)
+            headers, payload, message_type, flags = _msg_args_from_bindings(headers, payload, message_type, flags)
             handler.on_continuation_message(
                 headers=headers,
                 payload=payload,
@@ -384,10 +411,10 @@ class ClientConnection(NativeResource):
     def send_protocol_message(
             self,
             *,
-            headers: Optional[Sequence[Header]] = [],
-            payload: Optional[ByteString] = b'',
+            headers: Optional[Sequence[Header]] = None,
+            payload: Optional[ByteString] = None,
             message_type: MessageType,
-            flags: int = MessageFlag.NONE,
+            flags: Optional[int] = None,
             on_flush: Callable = None) -> Future:
         """Send a protocol message.
 
@@ -428,7 +455,7 @@ class ClientConnection(NativeResource):
         future = Future()
 
         # native code deals with simplified types
-        headers = [i._as_binding_tuple() for i in headers]
+        headers, payload, message_type, flags = _msg_args_for_bindings(headers, payload, message_type, flags)
 
         _awscrt.event_stream_rpc_client_connection_send_protocol_message(
             self._binding,
@@ -488,10 +515,10 @@ class ClientContinuation(NativeResource):
             self,
             *,
             operation: str,
-            headers: Sequence[Header] = [],
-            payload: ByteString = b'',
+            headers: Sequence[Header] = None,
+            payload: ByteString = None,
             message_type: MessageType,
-            flags: int = MessageFlag.NONE,
+            flags: int = None,
             on_flush: Callable = None):
         """
         Activate the stream by sending its first message.
@@ -537,7 +564,7 @@ class ClientContinuation(NativeResource):
         flush_future = Future()
 
         # native code deals with simplified types
-        headers = [i._as_binding_tuple() for i in headers]
+        headers, payload, message_type, flags = _msg_args_for_bindings(headers, payload, message_type, flags)
 
         _awscrt.event_stream_rpc_client_continuation_activate(
             self._binding,
@@ -553,10 +580,10 @@ class ClientContinuation(NativeResource):
     def send_message(
             self,
             *,
-            headers: Sequence[Header] = [],
-            payload: ByteString = b'',
+            headers: Sequence[Header] = None,
+            payload: ByteString = None,
             message_type: MessageType,
-            flags: int = MessageFlag.NONE,
+            flags: int = None,
             on_flush: Callable = None) -> Future:
         """
         Send a continuation message.
@@ -600,7 +627,7 @@ class ClientContinuation(NativeResource):
         """
         future = Future()
         # native code deals with simplified types
-        headers = [i._as_binding_tuple() for i in headers]
+        headers, payload, message_type, flags = _msg_args_for_bindings(headers, payload, message_type, flags)
 
         _awscrt.event_stream_rpc_client_continuation_send_message(
             self._binding,
