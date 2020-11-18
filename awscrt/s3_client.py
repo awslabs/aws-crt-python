@@ -11,6 +11,7 @@ from awscrt import NativeResource
 from awscrt.http import HttpRequest
 from awscrt.io import ClientBootstrap, TlsConnectionOptions
 from awscrt.auth import AwsCredentialsProvider
+import awscrt.exceptions
 from enum import IntEnum
 
 
@@ -49,7 +50,7 @@ class S3Client(NativeResource):
             connection options. If None is provided, then the connection will
             be attempted over plain-text.
 
-        part_size (Optional[int]): Size of parts the files will be downloaded or uploaded in.
+        part_size (Optional[int]): Size of parts in Byte the files will be downloaded or uploaded in.
 
         connection_timeout_ms (Optional[int]): Timeout value, in milliseconds, used for each connection.
 
@@ -193,7 +194,7 @@ class S3Request(NativeResource):
 
     def _on_finish(self, error_code):
         if error_code:
-            self._finished_future.set_exception(_awscrt.exceptions.from_code(error_code))
+            self._finished_future.set_exception(awscrt.exceptions.from_code(error_code))
         else:
             self._finished_future.set_result("finish")
 

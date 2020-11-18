@@ -104,7 +104,9 @@ static void s_s3_request_on_body(
     (void)meta_request;
     struct s3_meta_request_binding *request_binding = user_data;
 
-    Py_ssize_t data_len = (Py_ssize_t)(range_end - range_start) + 1;
+    // Py_ssize_t data_len = (Py_ssize_t)(range_end - range_start) + 1;
+
+    printf("%llu    %llu    %llu   %zu\n", range_end, range_start, (range_end - range_start) + 1, body->len);
 
     /*************** GIL ACQUIRE ***************/
     PyGILState_STATE state;
@@ -113,7 +115,7 @@ static void s_s3_request_on_body(
     }
 
     PyObject *result = PyObject_CallMethod(
-        request_binding->self_proxy, "_on_body", "(y#)", (const char *)(body->ptr + range_start), data_len);
+        request_binding->self_proxy, "_on_body", "(y#)", (const char *)(body->ptr), (Py_ssize_t)body->len);
     if (!result) {
         PyErr_WriteUnraisable(PyErr_Occurred());
         goto done;

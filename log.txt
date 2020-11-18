@@ -1,0 +1,231 @@
+[INFO] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0b606da0: Initializing edge-triggered kqueue
+[TRACE] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0b606da0: pipe descriptors read 8, write 9.
+[INFO] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0b606da0: starting event-loop thread.
+[INFO] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0d350a50: Initializing edge-triggered kqueue
+[TRACE] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0d350a50: pipe descriptors read 11, write 12.
+[INFO] [2020-11-18T00:00:59Z] [00007000101db000] [event-loop] - id=0x7ffb0b606da0: main loop started
+[INFO] [2020-11-18T00:00:59Z] [00007000101db000] [event-loop] - id=0x7ffb0b606da0: default timeout 100s, and max events to process per tick 100
+[INFO] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0d350a50: starting event-loop thread.
+[TRACE] [2020-11-18T00:00:59Z] [00007000101db000] [event-loop] - id=0x7ffb0b606da0: waiting for a maximum of 100s 0ns
+[INFO] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0d326ba0: Initializing edge-triggered kqueue
+[TRACE] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0d326ba0: pipe descriptors read 14, write 15.
+[INFO] [2020-11-18T00:00:59Z] [000070001025e000] [event-loop] - id=0x7ffb0d350a50: main loop started
+[INFO] [2020-11-18T00:00:59Z] [000070001025e000] [event-loop] - id=0x7ffb0d350a50: default timeout 100s, and max events to process per tick 100
+[INFO] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0d326ba0: starting event-loop thread.
+[TRACE] [2020-11-18T00:00:59Z] [000070001025e000] [event-loop] - id=0x7ffb0d350a50: waiting for a maximum of 100s 0ns
+[INFO] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0d31c810: Initializing edge-triggered kqueue
+[INFO] [2020-11-18T00:00:59Z] [00007000102e1000] [event-loop] - id=0x7ffb0d326ba0: main loop started
+[INFO] [2020-11-18T00:00:59Z] [00007000102e1000] [event-loop] - id=0x7ffb0d326ba0: default timeout 100s, and max events to process per tick 100
+[TRACE] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0d31c810: pipe descriptors read 17, write 18.
+[TRACE] [2020-11-18T00:00:59Z] [00007000102e1000] [event-loop] - id=0x7ffb0d326ba0: waiting for a maximum of 100s 0ns
+[INFO] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0d31c810: starting event-loop thread.
+[INFO] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0d32c820: Initializing edge-triggered kqueue
+[TRACE] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0d32c820: pipe descriptors read 20, write 21.
+[INFO] [2020-11-18T00:00:59Z] [0000700010364000] [event-loop] - id=0x7ffb0d31c810: main loop started
+[INFO] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0d32c820: starting event-loop thread.
+[INFO] [2020-11-18T00:00:59Z] [0000700010364000] [event-loop] - id=0x7ffb0d31c810: default timeout 100s, and max events to process per tick 100
+[TRACE] [2020-11-18T00:00:59Z] [0000700010364000] [event-loop] - id=0x7ffb0d31c810: waiting for a maximum of 100s 0ns
+[INFO] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0b42c2e0: Initializing edge-triggered kqueue
+[INFO] [2020-11-18T00:00:59Z] [00007000103e7000] [event-loop] - id=0x7ffb0d32c820: main loop started
+[INFO] [2020-11-18T00:00:59Z] [00007000103e7000] [event-loop] - id=0x7ffb0d32c820: default timeout 100s, and max events to process per tick 100
+[TRACE] [2020-11-18T00:00:59Z] [00007000103e7000] [event-loop] - id=0x7ffb0d32c820: waiting for a maximum of 100s 0ns
+[TRACE] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0b42c2e0: pipe descriptors read 23, write 24.
+[INFO] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0b42c2e0: starting event-loop thread.
+[INFO] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0b468090: Initializing edge-triggered kqueue
+[INFO] [2020-11-18T00:00:59Z] [000070001046a000] [event-loop] - id=0x7ffb0b42c2e0: main loop started
+[TRACE] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0b468090: pipe descriptors read 26, write 27.
+[INFO] [2020-11-18T00:00:59Z] [000070001046a000] [event-loop] - id=0x7ffb0b42c2e0: default timeout 100s, and max events to process per tick 100
+[TRACE] [2020-11-18T00:00:59Z] [000070001046a000] [event-loop] - id=0x7ffb0b42c2e0: waiting for a maximum of 100s 0ns
+[INFO] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0b468090: starting event-loop thread.
+[INFO] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0b43de50: Initializing edge-triggered kqueue
+[TRACE] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0b43de50: pipe descriptors read 29, write 30.
+[INFO] [2020-11-18T00:00:59Z] [00007000104ed000] [event-loop] - id=0x7ffb0b468090: main loop started
+[INFO] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0b43de50: starting event-loop thread.
+[INFO] [2020-11-18T00:00:59Z] [00007000104ed000] [event-loop] - id=0x7ffb0b468090: default timeout 100s, and max events to process per tick 100
+[TRACE] [2020-11-18T00:00:59Z] [00007000104ed000] [event-loop] - id=0x7ffb0b468090: waiting for a maximum of 100s 0ns
+[INFO] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0b46f850: Initializing edge-triggered kqueue
+[INFO] [2020-11-18T00:00:59Z] [0000700010570000] [event-loop] - id=0x7ffb0b43de50: main loop started
+[INFO] [2020-11-18T00:00:59Z] [0000700010570000] [event-loop] - id=0x7ffb0b43de50: default timeout 100s, and max events to process per tick 100
+[TRACE] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0b46f850: pipe descriptors read 32, write 33.
+[TRACE] [2020-11-18T00:00:59Z] [0000700010570000] [event-loop] - id=0x7ffb0b43de50: waiting for a maximum of 100s 0ns
+[INFO] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0b46f850: starting event-loop thread.
+[INFO] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0b7387d0: Initializing edge-triggered kqueue
+[INFO] [2020-11-18T00:00:59Z] [00007000105f3000] [event-loop] - id=0x7ffb0b46f850: main loop started
+[TRACE] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0b7387d0: pipe descriptors read 35, write 36.
+[INFO] [2020-11-18T00:00:59Z] [00007000105f3000] [event-loop] - id=0x7ffb0b46f850: default timeout 100s, and max events to process per tick 100
+[INFO] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0b7387d0: starting event-loop thread.
+[TRACE] [2020-11-18T00:00:59Z] [00007000105f3000] [event-loop] - id=0x7ffb0b46f850: waiting for a maximum of 100s 0ns
+[INFO] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0b738a90: Initializing edge-triggered kqueue
+[INFO] [2020-11-18T00:00:59Z] [0000700010676000] [event-loop] - id=0x7ffb0b7387d0: main loop started
+[TRACE] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0b738a90: pipe descriptors read 38, write 39.
+[INFO] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0b738a90: starting event-loop thread.
+[INFO] [2020-11-18T00:00:59Z] [0000700010676000] [event-loop] - id=0x7ffb0b7387d0: default timeout 100s, and max events to process per tick 100
+[TRACE] [2020-11-18T00:00:59Z] [0000700010676000] [event-loop] - id=0x7ffb0b7387d0: waiting for a maximum of 100s 0ns
+[INFO] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0b71d030: Initializing edge-triggered kqueue
+[TRACE] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0b71d030: pipe descriptors read 41, write 42.
+[INFO] [2020-11-18T00:00:59Z] [00007000106f9000] [event-loop] - id=0x7ffb0b738a90: main loop started
+[INFO] [2020-11-18T00:00:59Z] [00007000106f9000] [event-loop] - id=0x7ffb0b738a90: default timeout 100s, and max events to process per tick 100
+[INFO] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0b71d030: starting event-loop thread.
+[TRACE] [2020-11-18T00:00:59Z] [00007000106f9000] [event-loop] - id=0x7ffb0b738a90: waiting for a maximum of 100s 0ns
+[INFO] [2020-11-18T00:00:59Z] [000070001077c000] [event-loop] - id=0x7ffb0b71d030: main loop started
+[INFO] [2020-11-18T00:00:59Z] [000070001077c000] [event-loop] - id=0x7ffb0b71d030: default timeout 100s, and max events to process per tick 100
+[TRACE] [2020-11-18T00:00:59Z] [000070001077c000] [event-loop] - id=0x7ffb0b71d030: waiting for a maximum of 100s 0ns
+[INFO] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [dns] - id=0x7ffb0b71cf10: Initializing default host resolver with 16 max host entries.
+[INFO] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [channel-bootstrap] - id=0x7ffb0b739b20: Initializing client bootstrap with event-loop group 0x7ffb0b6514f0
+[DEBUG] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [AuthProfile] - Creating profile collection from file at "/Users/dengket/.aws/config"
+[TRACE] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [AuthProfile] - Parsing aws profile line in profile "<None>", current property: "<None>"
+[TRACE] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [AuthProfile] - Parsing aws profile line in profile "default", current property: "<None>"
+[TRACE] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [AuthProfile] - Parsing aws profile line in profile "default", current property: "region"
+[DEBUG] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [AuthProfile] - Creating profile collection from file at "/Users/dengket/.aws/credentials"
+[TRACE] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [AuthProfile] - Parsing aws profile line in profile "<None>", current property: "<None>"
+[TRACE] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [AuthProfile] - Parsing aws profile line in profile "default", current property: "<None>"
+[TRACE] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [AuthProfile] - Parsing aws profile line in profile "default", current property: "aws_access_key_id"
+[WARN] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [AuthProfile] - property "output" has value "" replaced during merge
+[WARN] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [AuthProfile] - property "region" has value "" replaced during merge
+[WARN] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [AuthProfile] - property "aws_access_key_id" has value "" replaced during merge
+[WARN] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [AuthProfile] - property "aws_secret_access_key" has value "" replaced during merge
+[INFO] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [connection-manager] - id=0x7ffb0b439580: Successfully created
+[INFO] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [exp-backoff-strategy] - id=0x7ffb0b4396e0: Initializing exponential backoff retry strategy with scale factor: 0 jitter mode: 0 and max retries 1
+[INFO] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [S3Client] - id=0x7ffb0b473d30 Initiating making of meta request
+[TRACE] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [dns] - id=0x7ffb0b71cf10 Adding listener 0x7ffb0b62f220 for host name aws-crt-canary-bucket.s3.us-west-2.amazonaws.com
+[DEBUG] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [dns] - id=0x7ffb0b71cf10: Host resolution requested for aws-crt-canary-bucket.s3.us-west-2.amazonaws.com
+[DEBUG] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [dns] - id=0x7ffb0b71cf10: No cached entries found for aws-crt-canary-bucket.s3.us-west-2.amazonaws.com starting new resolver thread.
+[TRACE] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0b606da0: scheduling task 0x7ffb0b473ec8 cross-thread for timestamp 0
+[TRACE] [2020-11-18T00:00:59Z] [00007000107ff000] [dns] - static, resolving aws-crt-canary-bucket.s3.us-west-2.amazonaws.com
+[DEBUG] [2020-11-18T00:00:59Z] [00007000107ff000] [dns] - static: resolving host aws-crt-canary-bucket.s3.us-west-2.amazonaws.com
+[TRACE] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0b606da0: signaling event-loop that cross-thread tasks need to be scheduled.
+[INFO] [2020-11-18T00:00:59Z] [0000000119bd3dc0] [S3Client] - id=0x7ffb0b473d30: Created meta request 0x7ffb0b63d100
+[TRACE] [2020-11-18T00:00:59Z] [00007000101db000] [event-loop] - id=0x7ffb0b606da0: wake up with 1 events to process.
+[TRACE] [2020-11-18T00:00:59Z] [00007000101db000] [event-loop] - id=0x7ffb0b606da0: notified of cross-thread data to process
+[TRACE] [2020-11-18T00:00:59Z] [00007000101db000] [event-loop] - id=0x7ffb0b606da0: processing cross-thread tasks
+[TRACE] [2020-11-18T00:00:59Z] [00007000101db000] [event-loop] - id=0x7ffb0b606da0: task 0x7ffb0b473ec8 pulled to event-loop, scheduling now.
+[DEBUG] [2020-11-18T00:00:59Z] [00007000101db000] [task-scheduler] - id=0x7ffb0b473ec8: Scheduling s3_client_process_work_task task for immediate execution
+[TRACE] [2020-11-18T00:00:59Z] [00007000101db000] [event-loop] - id=0x7ffb0b606da0: running scheduled tasks.
+[DEBUG] [2020-11-18T00:00:59Z] [00007000101db000] [task-scheduler] - id=0x7ffb0b473ec8: Running s3_client_process_work_task task with <Running> status
+[TRACE] [2020-11-18T00:00:59Z] [00007000101db000] [event-loop] - id=0x7ffb0b606da0: no more scheduled tasks using default timeout.
+[TRACE] [2020-11-18T00:00:59Z] [00007000101db000] [event-loop] - id=0x7ffb0b606da0: waiting for a maximum of 100s 0ns
+[DEBUG] [2020-11-18T00:00:59Z] [00007000107ff000] [dns] - static: resolved record: 52.218.201.9
+[DEBUG] [2020-11-18T00:00:59Z] [00007000107ff000] [dns] - static: new address resolved 52.218.201.9 for host aws-crt-canary-bucket.s3.us-west-2.amazonaws.com caching
+[TRACE] [2020-11-18T00:00:59Z] [00007000107ff000] [dns] - static: remaining record count for host 0
+[TRACE] [2020-11-18T00:00:59Z] [00007000107ff000] [dns] - static: remaining record count for host 1
+[TRACE] [2020-11-18T00:00:59Z] [00007000107ff000] [dns] - static: vending address 52.218.201.9 for host aws-crt-canary-bucket.s3.us-west-2.amazonaws.com to caller
+[INFO] [2020-11-18T00:00:59Z] [00007000107ff000] [S3Client] - id=0x7ffb0b473d30 Initiating creation of VIP with address '52.218.201.9'
+[INFO] [2020-11-18T00:00:59Z] [00007000107ff000] [connection-manager] - id=0x7ffb0b474af0: Successfully created
+[TRACE] [2020-11-18T00:00:59Z] [00007000107ff000] [event-loop] - id=0x7ffb0b606da0: scheduling task 0x7ffb0b473ec8 cross-thread for timestamp 0
+[TRACE] [2020-11-18T00:00:59Z] [00007000107ff000] [event-loop] - id=0x7ffb0b606da0: signaling event-loop that cross-thread tasks need to be scheduled.
+[TRACE] [2020-11-18T00:00:59Z] [00007000101db000] [event-loop] - id=0x7ffb0b606da0: wake up with 1 events to process.
+[TRACE] [2020-11-18T00:00:59Z] [00007000101db000] [event-loop] - id=0x7ffb0b606da0: notified of cross-thread data to process
+[TRACE] [2020-11-18T00:00:59Z] [00007000101db000] [event-loop] - id=0x7ffb0b606da0: processing cross-thread tasks
+[TRACE] [2020-11-18T00:00:59Z] [00007000101db000] [event-loop] - id=0x7ffb0b606da0: task 0x7ffb0b473ec8 pulled to event-loop, scheduling now.
+[DEBUG] [2020-11-18T00:00:59Z] [00007000101db000] [task-scheduler] - id=0x7ffb0b473ec8: Scheduling s3_client_process_work_task task for immediate execution
+[TRACE] [2020-11-18T00:00:59Z] [00007000101db000] [event-loop] - id=0x7ffb0b606da0: running scheduled tasks.
+[DEBUG] [2020-11-18T00:00:59Z] [00007000101db000] [task-scheduler] - id=0x7ffb0b473ec8: Running s3_client_process_work_task task with <Running> status
+[INFO] [2020-11-18T00:00:59Z] [00007000101db000] [S3MetaRequest] - id=0x7ffb0b63d100 Meta request finished with error code 29 (Attempt to pop an item from an empty queue.)
+[TRACE] [2020-11-18T00:00:59Z] [00007000101db000] [event-loop] - id=0x7ffb0b606da0: scheduling task 0x7ffb0b473ec8 in-thread for timestamp 0
+[DEBUG] [2020-11-18T00:00:59Z] [00007000101db000] [task-scheduler] - id=0x7ffb0b473ec8: Scheduling s3_client_process_work_task task for immediate execution
+[TRACE] [2020-11-18T00:00:59Z] [00007000101db000] [event-loop] - id=0x7ffb0b606da0: detected more scheduled tasks with the next occurring at 0 using timeout of 0s 0ns.
+[TRACE] [2020-11-18T00:00:59Z] [00007000101db000] [event-loop] - id=0x7ffb0b606da0: waiting for a maximum of 0s 0ns
+[TRACE] [2020-11-18T00:00:59Z] [00007000101db000] [event-loop] - id=0x7ffb0b606da0: wake up with 0 events to process.
+[TRACE] [2020-11-18T00:00:59Z] [00007000101db000] [event-loop] - id=0x7ffb0b606da0: running scheduled tasks.
+[DEBUG] [2020-11-18T00:00:59Z] [00007000101db000] [task-scheduler] - id=0x7ffb0b473ec8: Running s3_client_process_work_task task with <Running> status
+[TRACE] [2020-11-18T00:00:59Z] [00007000101db000] [event-loop] - id=0x7ffb0b606da0: no more scheduled tasks using default timeout.
+[TRACE] [2020-11-18T00:00:59Z] [00007000101db000] [event-loop] - id=0x7ffb0b606da0: waiting for a maximum of 100s 0ns
+[TRACE] [2020-11-18T00:01:00Z] [00007000107ff000] [dns] - static, resolving aws-crt-canary-bucket.s3.us-west-2.amazonaws.com
+[DEBUG] [2020-11-18T00:01:00Z] [00007000107ff000] [dns] - static: resolving host aws-crt-canary-bucket.s3.us-west-2.amazonaws.com
+[DEBUG] [2020-11-18T00:01:00Z] [00007000107ff000] [dns] - static: resolved record: 52.218.201.9
+[TRACE] [2020-11-18T00:01:00Z] [00007000107ff000] [dns] - static: updating expiry for 52.218.201.9 for host aws-crt-canary-bucket.s3.us-west-2.amazonaws.com to 1605657780499792000
+[TRACE] [2020-11-18T00:01:00Z] [00007000107ff000] [dns] - static: remaining record count for host 0
+[TRACE] [2020-11-18T00:01:00Z] [00007000107ff000] [dns] - static: remaining record count for host 1
+[TRACE] [2020-11-18T00:01:01Z] [00007000107ff000] [dns] - static, resolving aws-crt-canary-bucket.s3.us-west-2.amazonaws.com
+[DEBUG] [2020-11-18T00:01:01Z] [00007000107ff000] [dns] - static: resolving host aws-crt-canary-bucket.s3.us-west-2.amazonaws.com
+[DEBUG] [2020-11-18T00:01:01Z] [00007000107ff000] [dns] - static: resolved record: 52.218.201.9
+[TRACE] [2020-11-18T00:01:01Z] [00007000107ff000] [dns] - static: updating expiry for 52.218.201.9 for host aws-crt-canary-bucket.s3.us-west-2.amazonaws.com to 1605657781504877000
+[TRACE] [2020-11-18T00:01:01Z] [00007000107ff000] [dns] - static: remaining record count for host 0
+[TRACE] [2020-11-18T00:01:01Z] [00007000107ff000] [dns] - static: remaining record count for host 1
+[TRACE] [2020-11-18T00:01:02Z] [00007000107ff000] [dns] - static, resolving aws-crt-canary-bucket.s3.us-west-2.amazonaws.com
+[DEBUG] [2020-11-18T00:01:02Z] [00007000107ff000] [dns] - static: resolving host aws-crt-canary-bucket.s3.us-west-2.amazonaws.com
+[DEBUG] [2020-11-18T00:01:02Z] [00007000107ff000] [dns] - static: resolved record: 52.218.201.9
+[TRACE] [2020-11-18T00:01:02Z] [00007000107ff000] [dns] - static: updating expiry for 52.218.201.9 for host aws-crt-canary-bucket.s3.us-west-2.amazonaws.com to 1605657782509276000
+[TRACE] [2020-11-18T00:01:02Z] [00007000107ff000] [dns] - static: remaining record count for host 0
+[TRACE] [2020-11-18T00:01:02Z] [00007000107ff000] [dns] - static: remaining record count for host 1
+[TRACE] [2020-11-18T00:01:03Z] [00007000107ff000] [dns] - static, resolving aws-crt-canary-bucket.s3.us-west-2.amazonaws.com
+[DEBUG] [2020-11-18T00:01:03Z] [00007000107ff000] [dns] - static: resolving host aws-crt-canary-bucket.s3.us-west-2.amazonaws.com
+[DEBUG] [2020-11-18T00:01:03Z] [00007000107ff000] [dns] - static: resolved record: 52.218.201.9
+[TRACE] [2020-11-18T00:01:03Z] [00007000107ff000] [dns] - static: updating expiry for 52.218.201.9 for host aws-crt-canary-bucket.s3.us-west-2.amazonaws.com to 1605657783512656000
+[TRACE] [2020-11-18T00:01:03Z] [00007000107ff000] [dns] - static: remaining record count for host 0
+[TRACE] [2020-11-18T00:01:03Z] [00007000107ff000] [dns] - static: remaining record count for host 1
+[TRACE] [2020-11-18T00:01:04Z] [00007000107ff000] [dns] - static, resolving aws-crt-canary-bucket.s3.us-west-2.amazonaws.com
+[DEBUG] [2020-11-18T00:01:04Z] [00007000107ff000] [dns] - static: resolving host aws-crt-canary-bucket.s3.us-west-2.amazonaws.com
+[DEBUG] [2020-11-18T00:01:04Z] [00007000107ff000] [dns] - static: resolved record: 52.218.201.9
+[TRACE] [2020-11-18T00:01:04Z] [00007000107ff000] [dns] - static: updating expiry for 52.218.201.9 for host aws-crt-canary-bucket.s3.us-west-2.amazonaws.com to 1605657784517729000
+[TRACE] [2020-11-18T00:01:04Z] [00007000107ff000] [dns] - static: remaining record count for host 0
+[TRACE] [2020-11-18T00:01:04Z] [00007000107ff000] [dns] - static: remaining record count for host 1
+[TRACE] [2020-11-18T00:01:05Z] [00007000107ff000] [dns] - static, resolving aws-crt-canary-bucket.s3.us-west-2.amazonaws.com
+[DEBUG] [2020-11-18T00:01:05Z] [00007000107ff000] [dns] - static: resolving host aws-crt-canary-bucket.s3.us-west-2.amazonaws.com
+[DEBUG] [2020-11-18T00:01:05Z] [00007000107ff000] [dns] - static: resolved record: 52.218.201.9
+[TRACE] [2020-11-18T00:01:05Z] [00007000107ff000] [dns] - static: updating expiry for 52.218.201.9 for host aws-crt-canary-bucket.s3.us-west-2.amazonaws.com to 1605657785520850000
+[TRACE] [2020-11-18T00:01:05Z] [00007000107ff000] [dns] - static: remaining record count for host 0
+[TRACE] [2020-11-18T00:01:05Z] [00007000107ff000] [dns] - static: remaining record count for host 1
+[TRACE] [2020-11-18T00:01:06Z] [00007000107ff000] [dns] - static, resolving aws-crt-canary-bucket.s3.us-west-2.amazonaws.com
+[DEBUG] [2020-11-18T00:01:06Z] [00007000107ff000] [dns] - static: resolving host aws-crt-canary-bucket.s3.us-west-2.amazonaws.com
+[DEBUG] [2020-11-18T00:01:06Z] [00007000107ff000] [dns] - static: resolved record: 52.218.201.9
+[TRACE] [2020-11-18T00:01:06Z] [00007000107ff000] [dns] - static: updating expiry for 52.218.201.9 for host aws-crt-canary-bucket.s3.us-west-2.amazonaws.com to 1605657786525240000
+[TRACE] [2020-11-18T00:01:06Z] [00007000107ff000] [dns] - static: remaining record count for host 0
+[TRACE] [2020-11-18T00:01:06Z] [00007000107ff000] [dns] - static: remaining record count for host 1
+[TRACE] [2020-11-18T00:01:07Z] [00007000107ff000] [dns] - static, resolving aws-crt-canary-bucket.s3.us-west-2.amazonaws.com
+[DEBUG] [2020-11-18T00:01:07Z] [00007000107ff000] [dns] - static: resolving host aws-crt-canary-bucket.s3.us-west-2.amazonaws.com
+[DEBUG] [2020-11-18T00:01:07Z] [00007000107ff000] [dns] - static: resolved record: 52.218.201.9
+[TRACE] [2020-11-18T00:01:07Z] [00007000107ff000] [dns] - static: updating expiry for 52.218.201.9 for host aws-crt-canary-bucket.s3.us-west-2.amazonaws.com to 1605657787526801000
+[TRACE] [2020-11-18T00:01:07Z] [00007000107ff000] [dns] - static: remaining record count for host 0
+[TRACE] [2020-11-18T00:01:07Z] [00007000107ff000] [dns] - static: remaining record count for host 1
+[TRACE] [2020-11-18T00:01:08Z] [00007000107ff000] [dns] - static, resolving aws-crt-canary-bucket.s3.us-west-2.amazonaws.com
+[DEBUG] [2020-11-18T00:01:08Z] [00007000107ff000] [dns] - static: resolving host aws-crt-canary-bucket.s3.us-west-2.amazonaws.com
+[DEBUG] [2020-11-18T00:01:08Z] [00007000107ff000] [dns] - static: resolved record: 52.218.201.9
+[TRACE] [2020-11-18T00:01:08Z] [00007000107ff000] [dns] - static: updating expiry for 52.218.201.9 for host aws-crt-canary-bucket.s3.us-west-2.amazonaws.com to 1605657788531674000
+[TRACE] [2020-11-18T00:01:08Z] [00007000107ff000] [dns] - static: remaining record count for host 0
+[TRACE] [2020-11-18T00:01:08Z] [00007000107ff000] [dns] - static: remaining record count for host 1
+[TRACE] [2020-11-18T00:01:09Z] [00007000107ff000] [dns] - static, resolving aws-crt-canary-bucket.s3.us-west-2.amazonaws.com
+[DEBUG] [2020-11-18T00:01:09Z] [00007000107ff000] [dns] - static: resolving host aws-crt-canary-bucket.s3.us-west-2.amazonaws.com
+[DEBUG] [2020-11-18T00:01:09Z] [00007000107ff000] [dns] - static: resolved record: 52.218.201.9
+[TRACE] [2020-11-18T00:01:09Z] [00007000107ff000] [dns] - static: updating expiry for 52.218.201.9 for host aws-crt-canary-bucket.s3.us-west-2.amazonaws.com to 1605657789537165000
+[TRACE] [2020-11-18T00:01:09Z] [00007000107ff000] [dns] - static: remaining record count for host 0
+[TRACE] [2020-11-18T00:01:09Z] [00007000107ff000] [dns] - static: remaining record count for host 1
+[DEBUG] [2020-11-18T00:01:10Z] [0000000119bd3dc0] [channel-bootstrap] - id=0x7ffb0b739b20: releasing bootstrap reference
+[TRACE] [2020-11-18T00:01:10Z] [0000000119bd3dc0] [dns] - id=0x7ffb0b71cf10 Removing listener 0x7ffb0b62f220 for host name aws-crt-canary-bucket.s3.us-west-2.amazonaws.com
+[TRACE] [2020-11-18T00:01:10Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0b606da0: scheduling task 0x7ffb0b473ec8 cross-thread for timestamp 0
+[TRACE] [2020-11-18T00:01:10Z] [0000000119bd3dc0] [event-loop] - id=0x7ffb0b606da0: signaling event-loop that cross-thread tasks need to be scheduled.
+[TRACE] [2020-11-18T00:01:10Z] [00007000101db000] [event-loop] - id=0x7ffb0b606da0: wake up with 1 events to process.
+[TRACE] [2020-11-18T00:01:10Z] [00007000101db000] [event-loop] - id=0x7ffb0b606da0: notified of cross-thread data to process
+[TRACE] [2020-11-18T00:01:10Z] [00007000101db000] [event-loop] - id=0x7ffb0b606da0: processing cross-thread tasks
+[TRACE] [2020-11-18T00:01:10Z] [00007000101db000] [event-loop] - id=0x7ffb0b606da0: task 0x7ffb0b473ec8 pulled to event-loop, scheduling now.
+[DEBUG] [2020-11-18T00:01:10Z] [00007000101db000] [task-scheduler] - id=0x7ffb0b473ec8: Scheduling s3_client_process_work_task task for immediate execution
+[TRACE] [2020-11-18T00:01:10Z] [00007000101db000] [event-loop] - id=0x7ffb0b606da0: running scheduled tasks.
+[DEBUG] [2020-11-18T00:01:10Z] [00007000101db000] [task-scheduler] - id=0x7ffb0b473ec8: Running s3_client_process_work_task task with <Running> status
+[INFO] [2020-11-18T00:01:10Z] [00007000101db000] [connection-manager] - id=0x7ffb0b474af0: release
+[DEBUG] [2020-11-18T00:01:10Z] [00007000101db000] [connection-manager] - id=0x7ffb0b474af0: snapshot not initialized by control flow
+[INFO] [2020-11-18T00:01:10Z] [00007000101db000] [connection-manager] - id=0x7ffb0b474af0: release
+[DEBUG] [2020-11-18T00:01:10Z] [00007000101db000] [connection-manager] - id=0x7ffb0b474af0: snapshot not initialized by control flow
+[INFO] [2020-11-18T00:01:10Z] [00007000101db000] [connection-manager] - id=0x7ffb0b474af0: release
+[DEBUG] [2020-11-18T00:01:10Z] [00007000101db000] [connection-manager] - id=0x7ffb0b474af0: snapshot not initialized by control flow
+[INFO] [2020-11-18T00:01:10Z] [00007000101db000] [connection-manager] - id=0x7ffb0b474af0: release
+[DEBUG] [2020-11-18T00:01:10Z] [00007000101db000] [connection-manager] - id=0x7ffb0b474af0: snapshot not initialized by control flow
+[INFO] [2020-11-18T00:01:10Z] [00007000101db000] [connection-manager] - id=0x7ffb0b474af0: release
+[DEBUG] [2020-11-18T00:01:10Z] [00007000101db000] [connection-manager] - id=0x7ffb0b474af0: snapshot not initialized by control flow
+[INFO] [2020-11-18T00:01:10Z] [00007000101db000] [connection-manager] - id=0x7ffb0b474af0: release
+[DEBUG] [2020-11-18T00:01:10Z] [00007000101db000] [connection-manager] - id=0x7ffb0b474af0: snapshot not initialized by control flow
+[INFO] [2020-11-18T00:01:10Z] [00007000101db000] [connection-manager] - id=0x7ffb0b474af0: release
+[DEBUG] [2020-11-18T00:01:10Z] [00007000101db000] [connection-manager] - id=0x7ffb0b474af0: snapshot not initialized by control flow
+[INFO] [2020-11-18T00:01:10Z] [00007000101db000] [connection-manager] - id=0x7ffb0b474af0: release
+[DEBUG] [2020-11-18T00:01:10Z] [00007000101db000] [connection-manager] - id=0x7ffb0b474af0: snapshot not initialized by control flow
+[INFO] [2020-11-18T00:01:10Z] [00007000101db000] [connection-manager] - id=0x7ffb0b474af0: release
+[DEBUG] [2020-11-18T00:01:10Z] [00007000101db000] [connection-manager] - id=0x7ffb0b474af0: snapshot not initialized by control flow
+[INFO] [2020-11-18T00:01:10Z] [00007000101db000] [connection-manager] - id=0x7ffb0b474af0: release
+[DEBUG] [2020-11-18T00:01:10Z] [00007000101db000] [connection-manager] - id=0x7ffb0b474af0: snapshot not initialized by control flow
+[INFO] [2020-11-18T00:01:10Z] [00007000101db000] [connection-manager] - id=0x7ffb0b474af0: release
+[INFO] [2020-11-18T00:01:10Z] [00007000101db000] [connection-manager] - id=0x7ffb0b474af0: ref count now zero, starting shut down process
+[INFO] [2020-11-18T00:01:10Z] [00007000101db000] [connection-manager] - id=0x7ffb0b474af0: manager release, failing 0 pending acquisitions
+[DEBUG] [2020-11-18T00:01:10Z] [00007000101db000] [connection-manager] - id=0x7ffb0b474af0: snapshot - state=2, idle_connection_count=0, pending_acquire_count=0, pending_connect_count=0, vended_connection_count=0, open_connection_count=0, ref_count=0
+[INFO] [2020-11-18T00:01:10Z] [00007000101db000] [connection-manager] - id=0x7ffb0b474af0: Destroying self
+[DEBUG] [2020-11-18T00:01:10Z] [00007000101db000] [channel-bootstrap] - id=0x7ffb0b739b20: releasing bootstrap reference
+[TRACE] [2020-11-18T00:01:10Z] [00007000101db000] [event-loop] - id=0x7ffb0b606da0: no more scheduled tasks using default timeout.
+[TRACE] [2020-11-18T00:01:10Z] [00007000101db000] [event-loop] - id=0x7ffb0b606da0: waiting for a maximum of 100s 0ns
