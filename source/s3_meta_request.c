@@ -9,6 +9,7 @@
 #include "io.h"
 
 #include <aws/http/request_response.h>
+#include <aws/io/stream.h>
 
 static const char *s_capsule_name_s3_meta_request = "aws_s3_meta_request";
 
@@ -25,7 +26,35 @@ struct s3_meta_request_binding {
 
     /* Shutdown callback, all resource cleaned up, reference cleared after invoke */
     PyObject *on_shutdown;
+
+    // /* for test */
+    // FILE *input_file;
+    // struct aws_byte_buf test_buffer;
+    // struct aws_byte_cursor test_body_cursor;
+    // struct aws_input_stream *input_stream;
 };
+
+// void aws_s3_create_test_buffer(struct aws_allocator *allocator, size_t buffer_size, struct aws_byte_buf *out_buf) {
+//     AWS_PRECONDITION(allocator);
+//     AWS_PRECONDITION(out_buf);
+
+//     struct aws_byte_cursor test_string = AWS_BYTE_CUR_INIT_FROM_STRING_LITERAL("This is an S3 test.");
+
+//     aws_byte_buf_init(out_buf, allocator, buffer_size);
+
+//     for (size_t buffer_pos = 0; buffer_pos < buffer_size; buffer_pos += test_string.len) {
+//         size_t buffer_size_remaining = buffer_size - buffer_pos;
+//         size_t string_copy_size = test_string.len;
+
+//         if (buffer_size_remaining < string_copy_size) {
+//             string_copy_size = buffer_size_remaining;
+//         }
+
+//         struct aws_byte_cursor from_byte_cursor = {.len = string_copy_size, .ptr = test_string.ptr};
+
+//         aws_byte_buf_append(out_buf, &from_byte_cursor);
+//     }
+// }
 
 static void s_s3_meta_request_release(struct s3_meta_request_binding *meta_request) {
     AWS_FATAL_ASSERT(!meta_request->release_called);
@@ -102,11 +131,9 @@ static void s_s3_request_on_body(
     uint64_t range_end,
     void *user_data) {
     (void)meta_request;
+    (void)range_end;
+    (void)range_start;
     struct s3_meta_request_binding *request_binding = user_data;
-
-    // Py_ssize_t data_len = (Py_ssize_t)(range_end - range_start) + 1;
-
-    printf("%llu    %llu    %llu   %zu\n", range_end, range_start, (range_end - range_start) + 1, body->len);
 
     /*************** GIL ACQUIRE ***************/
     PyGILState_STATE state;
@@ -154,6 +181,9 @@ static void s_s3_request_on_finish(
     Py_DECREF(PyWeakref_GetObject(request_binding->self_proxy));
     PyGILState_Release(state);
     /*************** GIL RELEASE ***************/
+    // aws_input_stream_destroy(request_binding->input_stream);
+    // fclose(request_binding->input_file);
+    // aws_byte_buf_clean_up(&request_binding->test_buffer);
 }
 
 /* Invoked when the python object get cleaned up */
@@ -235,9 +265,31 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     if (!meta_request) {
         return PyErr_AwsLastError();
     }
+    // aws_byte_buf_init(&meta_request->test_buffer, allocator, 10 * 1024 * 1024);
+    // struct aws_input_stream *stream = aws_http_message_get_body_stream(http_request);
+    // int64_t len = 0;
+    // stream->vtable->get_length(stream, &len);
+    // struct aws_stream_status status;
+    // printf("buffer length before read   %d\n", (int)meta_request->test_buffer.len);
+    // stream->vtable->read(stream, &meta_request->test_buffer);
+    // stream->vtable->get_status(stream, &status);
+    // printf("%p\n", stream);
+    // printf("stream length from python before read %lld\n", len);
+    // printf("stream status %d   %d\n", (int)status.is_end_of_stream, (int)status.is_valid);
+    // printf("buffer length after read   %d\n", (int)meta_request->test_buffer.len);
+    // stream->vtable->get_length(stream, &len);
+    // printf("stream length after read   %lld\n", len);
 
+    // aws_s3_create_test_buffer(allocator, 10 * 1024 * 1024, &meta_request->test_buffer);
+    // meta_request->input_file = fopen("put_object_test_10MB.txt", "rb");
+
+    // meta_request->test_body_cursor = aws_byte_cursor_from_buf(&meta_request->test_buffer);
+    // meta_request->input_stream = aws_input_stream_new_from_open_file(allocator, meta_request->input_file);
+    // aws_http_message_set_body_stream(http_request, meta_request->input_stream);
+    // len = 0;
+    // meta_request->input_stream->vtable->get_length(meta_request->input_stream, &len);
+    // printf("stream length from C %lld\n", len);
     /* From hereon, we need to clean up if errors occur */
-
     struct aws_s3_meta_request_options s3_meta_request_opt = {
         .type = type,
         .message = http_request,

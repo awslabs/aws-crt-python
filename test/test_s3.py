@@ -73,8 +73,7 @@ class S3RequestTest(NativeResourceTest):
         return request
 
     def _on_request_headers(self, status_code, headers, **kargs):
-
-        self.assertEqual(status_code, 200, "status code is not 200")
+        self.response_status_code = status_code
         self.assertIsNotNone(headers, "headers are none")
         self.response_headers = headers
 
@@ -82,10 +81,17 @@ class S3RequestTest(NativeResourceTest):
         self.assertIsNotNone(chunk, "the body chunk is none")
         self.body_len = self.body_len + len(chunk)
 
-    def _validate_successful_response(self):
-        error = False
-        error |= self.response_status_code != 200
-        return not error
+    def _validate_successful_get_response(self):
+        self.assertEqual(self.response_status_code, 200, "status code is not 200")
+        headers = HttpHeaders(self.response_headers)
+        self.assertIsNone(headers.get("accept-ranges"))
+        self.assertIsNone(headers.get("Content-Range"))
+        body_length = headers.get("Content-Length")
+        self.assertIsNotNone(body_length, "Content-Length is missing from headers")
+        self.assertEqual(
+            int(body_length),
+            self.body_len,
+            "Received body length does not match the Content-Length header")
 
     def _download_file_example(self):
         # num_threads is the Number of event-loops to create. Pass 0 to create one for each processor on the machine.
@@ -122,24 +128,36 @@ class S3RequestTest(NativeResourceTest):
         s3_client = S3Client(
             bootstrap=bootstrap,
             region="us-west-2",
-            credential_provider=credential_provider)
-        data_len = os.stat("put_object_test_10MB.txt").st_size
-        print(data_len)
+            credential_provider=credential_provider,
+            part_size=5 * 1024 * 1024)
         data_stream = open("put_object_test_10MB.txt", 'rb')
+        body_bytes = data_stream.read()
+        data_len = len(body_bytes)
+        data_stream.seek(0)
+        data_stream_replace = io.BytesIO(body_bytes)
+        print(data_len)
         headers = HttpHeaders([("host", self.bucket_name + ".s3." + self.region +
                                 ".amazonaws.com"), ("Content-Type", "text/plain"), ("Content-Length", str(data_len))])
-        request = HttpRequest("PUT", "/put_object_test_10MB.txt", headers, data_stream)
+        request = HttpRequest("PUT", "/put_object_test_10MB.txt", headers, data_stream_replace)
 
         def on_headers(status_code, headers):
+            """
+            check the status and probably print out the headers
+            """
             print(status_code)
             print(headers)
+
         s3_request = s3_client.make_request(
             request=request,
             type=AwsS3RequestType.PUT_OBJECT,
             on_headers=on_headers
         )
         finished_future = s3_request.finished_future
-        result = finished_future.result(self.timeout)
+        try:
+            result = finished_future.result(self.timeout)
+        except Exception as e:
+            print("request finished with failure:", e)
+
         data_stream.close()
 
     def test_get_object(self):
@@ -152,12 +170,10 @@ class S3RequestTest(NativeResourceTest):
             on_body=self._on_request_body)
         finished_future = s3_request.finished_future
         result = (finished_future.result(self.timeout))
-        print(result)
-        print(self.response_headers)
-        print(self.body_len)
+        self._validate_successful_get_response()
 
-    # def test_sample(self):
-    #     self._upload_file_example()
+    def test_sample(self):
+        self._upload_file_example()
 
     # def test_put_object(self):
     #     s3_client = s3_client_new(False, self.region, 16 * 1024)
