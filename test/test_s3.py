@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0.
 
 from awscrt.http import HttpHeaders, HttpRequest
-from awscrt.s3_client import S3Client, AwsS3RequestType, S3Request
+from awscrt.s3 import S3Client, AwsS3RequestType, S3Request
 from test import NativeResourceTest, TIMEOUT
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions, init_logging, LogLevel
 from awscrt.auth import AwsCredentialsProvider
