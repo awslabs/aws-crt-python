@@ -172,8 +172,8 @@ class S3RequestTest(NativeResourceTest):
         result = (finished_future.result(self.timeout))
         self._validate_successful_get_response()
 
-    def test_sample(self):
-        self._upload_file_example()
+    # def test_sample(self):
+    #     self._upload_file_example()
 
     # def test_put_object(self):
     #     s3_client = s3_client_new(False, self.region, 16 * 1024)
