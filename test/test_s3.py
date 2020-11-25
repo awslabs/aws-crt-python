@@ -48,9 +48,10 @@ class S3ClientTest(NativeResourceTest):
     def test_wait_shutdown(self):
         s3_client = s3_client_new(False, self.region)
         self.assertIsNotNone(s3_client)
-        shutdown_future = s3_client.shutdown_future
+
+        shutdown_event = s3_client.shutdown_event
         del s3_client
-        self.assertIsNone(shutdown_future.result(self.timeout))
+        self.assertTrue(shutdown_event.wait(self.timeout))
 
 
 class S3RequestTest(NativeResourceTest):
@@ -173,7 +174,7 @@ class S3RequestTest(NativeResourceTest):
         self._validate_successful_get_response()
         shutdown_event = s3_request.shutdown_event
         del s3_request
-        self.assertTrue(shutdown_event.wait(TIMEOUT))
+        self.assertTrue(shutdown_event.wait(self.timeout))
 
     # def test_sample(self):
     #     self._upload_file_example()
