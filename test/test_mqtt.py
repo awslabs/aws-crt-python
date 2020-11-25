@@ -18,7 +18,7 @@ import time
 import uuid
 import warnings
 
-TIMEOUT = 10.0
+TIMEOUT = 100.0
 PROXY_HOST = os.environ.get('proxyhost')
 PROXY_PORT = int(os.environ.get('proxyport', '0'))
 
