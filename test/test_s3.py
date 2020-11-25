@@ -161,7 +161,6 @@ class S3RequestTest(NativeResourceTest):
         data_stream.close()
 
     def test_get_object(self):
-        init_logging(LogLevel.Trace, 'stderr')
         s3_client = s3_client_new(False, self.region, 16 * 1024)
         request = self._get_object_request()
         s3_request = s3_client.make_request(
@@ -172,6 +171,9 @@ class S3RequestTest(NativeResourceTest):
         finished_future = s3_request.finished_future
         result = (finished_future.result(self.timeout))
         self._validate_successful_get_response()
+        shutdown_event = s3_request.shutdown_event
+        del s3_request
+        self.assertTrue(shutdown_event.wait(TIMEOUT))
 
     # def test_sample(self):
     #     self._upload_file_example()

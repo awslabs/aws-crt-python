@@ -12,6 +12,7 @@ from awscrt.http import HttpRequest
 from awscrt.io import ClientBootstrap, TlsConnectionOptions
 from awscrt.auth import AwsCredentialsProvider
 import awscrt.exceptions
+import threading
 from enum import IntEnum
 
 
@@ -61,7 +62,7 @@ class S3Client(NativeResource):
         num_connections_per_vip (Optional[int]): The number of connections that each VIP will have.
     """
 
-    __slots__ = ('shutdown_future')
+    __slots__ = ('shutdown_event')
 
     def __init__(
             self,
@@ -98,13 +99,13 @@ class S3Client(NativeResource):
 
         super().__init__()
 
-        shutdown_future = Future()
+        shutdown_event = threading.Event()
 
         def on_shutdown():
             print("client shutdown")
-            shutdown_future.set_result(None)
+            shutdown_event.set()
 
-        self.shutdown_future = shutdown_future
+        self.shutdown_event = shutdown_event
 
         self._binding = _awscrt.s3_client_new(
             bootstrap,
@@ -157,7 +158,7 @@ class S3Request(NativeResource):
     """S3 request
 
     """
-    __slots__ = ('_on_headers_cb', '_on_body_cb', '_finished_future', 'shutdown_future')
+    __slots__ = ('_on_headers_cb', '_on_body_cb', '_finished_future', 'shutdown_event')
 
     def __init__(self, *, client, request, type, on_headers=None, on_body=None):
         assert isinstance(client, S3Client)
@@ -173,13 +174,13 @@ class S3Request(NativeResource):
 
         self._finished_future = Future()
 
-        shutdown_future = Future()
+        shutdown_event = threading.Event()
 
         def on_shutdown():
             print("request shutdown")
-            shutdown_future.set_result("shutdown")
+            shutdown_event.set()
 
-        self.shutdown_future = shutdown_future
+        self.shutdown_event = shutdown_event
 
         self._binding = _awscrt.s3_client_make_meta_request(
             self, client, request, type, self._on_headers, self._on_body, self._on_finish, on_shutdown)

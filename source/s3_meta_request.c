@@ -58,6 +58,7 @@ struct s3_meta_request_binding {
 
 static void s_s3_meta_request_release(struct s3_meta_request_binding *meta_request) {
     AWS_FATAL_ASSERT(!meta_request->release_called);
+    printf("s_s3_meta_request_release\n");
     meta_request->release_called = true;
 
     bool destroy_after_release = meta_request->shutdown_called;
@@ -177,9 +178,12 @@ static void s_s3_request_on_finish(
         /* Callback might fail during application shutdown */
         PyErr_WriteUnraisable(PyErr_Occurred());
     }
+    printf("before decref self_proxy\n");
     /* DECREF python self, we don't need to force it to stay alive any longer. */
-    Py_DECREF(PyWeakref_GetObject(request_binding->self_proxy));
+    // Py_DECREF(PyWeakref_GetObject(request_binding->self_proxy));
+    printf("after decref self_proxy\n");
     PyGILState_Release(state);
+    printf("after release state\n");
     /*************** GIL RELEASE ***************/
     // aws_input_stream_destroy(request_binding->input_stream);
     // fclose(request_binding->input_file);
@@ -188,6 +192,7 @@ static void s_s3_request_on_finish(
 
 /* Invoked when the python object get cleaned up */
 static void s_s3_meta_request_capsule_destructor(PyObject *capsule) {
+    printf("s_s3_meta_request_capsule_destructor\n");
     struct s3_meta_request_binding *meta_request = PyCapsule_GetPointer(capsule, s_capsule_name_s3_meta_request);
     Py_XDECREF(meta_request->self_proxy);
     s_s3_meta_request_release(meta_request);
@@ -195,6 +200,7 @@ static void s_s3_meta_request_capsule_destructor(PyObject *capsule) {
 
 /* Callback from C land, invoked when the underlying shutdown process finished */
 static void s_s3_request_on_shutdown(void *user_data) {
+    printf("s_s3_request_on_shutdown\n");
     struct s3_meta_request_binding *request_binding = user_data;
 
     /*************** GIL ACQUIRE ***************/
@@ -317,7 +323,6 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
         goto proxy_failed;
     }
 
-    Py_INCREF(meta_request->self_proxy);
     meta_request->on_shutdown = on_shutdown_py;
     Py_INCREF(meta_request->on_shutdown);
 
