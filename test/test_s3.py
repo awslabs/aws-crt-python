@@ -56,7 +56,7 @@ class S3ClientTest(NativeResourceTest):
 
 class S3RequestTest(NativeResourceTest):
     get_test_object_path = "/get_object_test_1MB.txt"
-    put_test_object_path = "/put_object_test_10MB.txt"
+    put_test_object_path = "/put_object_test_py_10MB.txt"
     region = "us-west-2"
     bucket_name = "aws-crt-canary-bucket"
     timeout = 10  # seconds
@@ -75,13 +75,18 @@ class S3RequestTest(NativeResourceTest):
         return request
 
     def _put_object_request(self):
-        headers = HttpHeaders([("host", self._build_endpoint_string(self.region, self.bucket_name))])
-        request = HttpRequest("PUT", self.put_test_object_path, headers)
+        data_stream = open("put_object_test_10MB.txt", 'rb')
+        body_bytes = data_stream.read()
+        data_len = len(body_bytes)
+        data_stream.seek(0)
+        data_stream_replace = io.BytesIO(body_bytes)
+        headers = HttpHeaders([("host", self._build_endpoint_string(self.region, self.bucket_name)),
+                               ("Content-Type", "text/plain"), ("Content-Length", str(data_len))])
+        request = HttpRequest("PUT", self.put_test_object_path, headers, data_stream_replace)
+        data_stream.close()
         return request
 
     def _on_request_headers(self, status_code, headers, **kargs):
-        print(status_code)
-        print(headers)
         self.response_status_code = status_code
         self.assertIsNotNone(headers, "headers are none")
         self.response_headers = headers
@@ -187,16 +192,17 @@ class S3RequestTest(NativeResourceTest):
     # def test_sample(self):
     #     self._upload_file_example()
 
-    # def test_put_object(self):
-    #     s3_client = s3_client_new(False, self.region, 16 * 1024)
-    #     request = self._put_object_request()
-    #     s3_request = s3_client.make_request(
-    #         request=request,
-    #         type=AwsS3RequestType.GET_OBJECT,
-    #         on_headers=self._on_request_headers,
-    #         on_body=self._on_request_body)
-    #     finished_future = s3_request.finished_future
-    #     result = (finished_future.result(self.timeout))
-    #     print(result)
-    #     print(self.response_headers)
-    #     print(self.body_len)
+    def test_put_object(self):
+        s3_client = s3_client_new(False, self.region)
+        request = self._put_object_request()
+        s3_request = s3_client.make_request(
+            request=request,
+            type=AwsS3RequestType.PUT_OBJECT,
+            on_headers=self._on_request_headers,
+            on_body=self._on_request_body)
+        finished_future = s3_request.finished_future
+        result = (finished_future.result(self.timeout))
+        self._validate_successful_get_response()
+        shutdown_event = s3_request.shutdown_event
+        del s3_request
+        self.assertTrue(shutdown_event.wait(self.timeout))
