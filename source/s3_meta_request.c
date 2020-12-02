@@ -72,7 +72,7 @@ static void s_s3_meta_request_release(struct s3_meta_request_binding *meta_reque
 
 static void s_s3_request_on_headers(
     struct aws_s3_meta_request *meta_request,
-    struct aws_http_headers *headers,
+    const struct aws_http_headers *headers,
     int response_status,
     void *user_data) {
     (void)meta_request;
@@ -129,10 +129,8 @@ static void s_s3_request_on_body(
     struct aws_s3_meta_request *meta_request,
     const struct aws_byte_cursor *body,
     uint64_t range_start,
-    uint64_t range_end,
     void *user_data) {
     (void)meta_request;
-    (void)range_end;
     (void)range_start;
     struct s3_meta_request_binding *request_binding = user_data;
 

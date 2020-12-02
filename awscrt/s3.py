@@ -94,9 +94,6 @@ class S3Client(NativeResource):
             float) or throughput_per_vip_gbps is None
         assert isinstance(num_connections_per_vip, int) or num_connections_per_vip is None
 
-        if not credential_provider:
-            credential_provider = AwsCredentialsProvider.new_default_chain(bootstrap)
-
         super().__init__()
 
         shutdown_event = threading.Event()
@@ -138,7 +135,7 @@ class S3Client(NativeResource):
                 *   `headers` (List[Tuple[str, str]]): Response headers as a
                     list of (name,value) pairs.
 
-                *   `**kwargs` (dict): Forward compatibility kwargs.
+                *   `**kwargs` (dict): Forward-compatibility kwargs.
 
             on_body: Optional callback invoked 0+ times as the response body received from S3 server.
                 The function should take the following arguments and return nothing:

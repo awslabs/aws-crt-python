@@ -111,9 +111,18 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    struct aws_credentials_provider *credential_provider = aws_py_get_credentials_provider(credential_provider_py);
-    if (!credential_provider) {
-        return NULL;
+    struct aws_credentials_provider *credential_provider = NULL;
+    if (credential_provider_py != Py_None) {
+        credential_provider = aws_py_get_credentials_provider(credential_provider_py);
+    }
+
+    struct aws_signing_config_aws signing_config;
+    AWS_ZERO_STRUCT(signing_config);
+
+    struct aws_byte_cursor region_cursor = aws_byte_cursor_from_array((const uint8_t *)region, region_len);
+
+    if (credential_provider) {
+        aws_s3_default_signing_config(&signing_config, region_cursor, credential_provider);
     }
 
     struct s3_client_binding *s3_clinet = aws_mem_calloc(allocator, 1, sizeof(struct s3_client_binding));
@@ -133,7 +142,7 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
     struct aws_s3_client_config s3_config = {
         .region = aws_byte_cursor_from_array((const uint8_t *)region, region_len),
         .client_bootstrap = bootstrap,
-        .credentials_provider = credential_provider,
+        .signing_config = credential_provider ? &signing_config : NULL,
         .part_size = part_size,
         .tls_connection_options = tls_options,
         .connection_timeout_ms = connection_timeout_ms,
