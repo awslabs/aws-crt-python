@@ -59,7 +59,7 @@ class S3RequestTest(NativeResourceTest):
     put_test_object_path = "/put_object_test_py_10MB.txt"
     region = "us-west-2"
     bucket_name = "aws-crt-canary-bucket"
-    timeout = 10  # seconds
+    timeout = 100  # seconds
     num_threads = 0
 
     response_headers = None
