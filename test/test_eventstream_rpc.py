@@ -4,14 +4,18 @@
 from awscrt.eventstream import *
 from awscrt.eventstream.rpc import *
 from awscrt.io import ClientBootstrap, DefaultHostResolver, EventLoopGroup
+import gc
+import os
 from queue import Queue
 from test import NativeResourceTest, TIMEOUT
+from threading import Event
 import time
 from unittest import skipUnless
 from uuid import UUID, uuid4
+import weakref
 
 # TODO: setup permanent online echo server we can hit from tests
-RUN_LOCALHOST_TESTS = False
+RUN_LOCALHOST_TESTS = os.getenv('EVENTSTREAM_ECHO_TEST')
 
 
 class EventRecord:
@@ -55,7 +59,7 @@ class ConnectionHandler(ClientConnectionHandler):
 class ContinuationRecord:
     def __init__(self):
         self.message_calls = Queue()
-        self.close_call = None
+        self.close_call = Event()
         self.failure = None
 
 
@@ -71,15 +75,15 @@ class ContinuationHandler(ClientContinuationHandler):
             message_type,
             flags,
             **kwargs):
-        if self.record.close_call:
+        if self.record.close_call.is_set():
             self.fail_test("messages should not fire after close")
         self.record.message_calls.put(
             {'headers': headers, 'payload': payload, 'message_type': message_type, 'flags': flags})
 
     def on_continuation_closed(self, **kwargs):
-        if self.record.close_call:
+        if self.record.close_call.is_set():
             self.fail_test("shutdown can only fire once")
-        self.record.close_call = {}
+        self.record.close_call.set()
 
 
 class TestClient(NativeResourceTest):
@@ -137,8 +141,7 @@ class TestClient(NativeResourceTest):
 
         self._assertNoFailuresFromCallbacks()
 
-    @skipUnless(RUN_LOCALHOST_TESTS, "Skipping until we have permanent echo server")
-    def test_closes_on_zero_refcount(self):
+    def _connect_and_return_weakref(self):
         elg = EventLoopGroup()
         resolver = DefaultHostResolver(elg)
         bootstrap = ClientBootstrap(elg, resolver)
@@ -152,24 +155,75 @@ class TestClient(NativeResourceTest):
         # connection should succeed
         self.assertIsNone(future.exception(TIMEOUT))
 
-        # grab pointers to stuff that will tell us about how shutdown went,
-        record = handler.record
-        shutdown_future = handler.connection.shutdown_future
+        return weakref.ref(handler.connection)
 
-        # connection should shut itself down when all references are released.
-        # the shutdown_future should complete, but the handler's shutdown
-        # callback should not fire in this test because the handler has been deleted.
-        del handler
-        del record.setup_call  # we were storing another reference to connection here
+    @skipUnless(RUN_LOCALHOST_TESTS, "Skipping until we have permanent echo server")
+    def test_connection_stays_alive_until_close(self):
+        # Currently, eventstream connections do NOT close just because their refcount reaches zero.
+        # We *could* make it work this way, but it would take some combo of:
+        # 1) handler shutdown callbacks aren't guaranteed to fire,
+        #    because handler likely has reference to connection, and we want
+        #    them to get GC'd together.
+        # 2) OR guarantee shutdown callbacks, but explain the subtleties of
+        #    avoiding a strong reference cycle involving the handler.
+        #    This is not a typical thing Python programmers need to think about.
+        # Seems best to keep it simple and just remind the user at every
+        # opportunity that connection must be closed to avoid resource leaks.
+        connection_weakref = self._connect_and_return_weakref()
+
+        # wait a moment to see if connection gets cleaned up
+        time.sleep(1)
+        gc.collect()
+
+        connection = connection_weakref()
+        self.assertIsNotNone(connection, "open connection should not have been GC'd")
+        self.assertTrue(connection.is_open())
+
+        # ok, now shut it down, (and nuke local reference to connection
+        # just to be sure we don't crash if both happen simultaneously)
+        shutdown_future = connection.close()
+        del connection
         self.assertIsNone(shutdown_future.exception(TIMEOUT))
-        self.assertIsNone(
-            record.shutdown_call,
-            "on_connection_shutdown shouldn't fire if handler is garbage collected before connection finishes shutdown")
+
+        # GC should have cleaned it up, now that the connection is closed
+        # and no strong references remain
+        gc.collect()
+        self.assertIsNone(connection_weakref())
+
+        self._assertNoFailuresFromCallbacks()
+
+    @skipUnless(RUN_LOCALHOST_TESTS, "Skipping until we have permanent echo server")
+    def test_stream_cleans_up_if_never_activated(self):
+        # check that there are no resource leaks if a stream/continuation is never activated
+        elg = EventLoopGroup()
+        resolver = DefaultHostResolver(elg)
+        bootstrap = ClientBootstrap(elg, resolver)
+        handler = ConnectionHandler(self._fail_test_from_callback)
+        future = ClientConnection.connect(
+            handler=handler,
+            host_name="127.0.0.1",
+            port=8033,
+            bootstrap=bootstrap)
+
+        # connection should succeed
+        self.assertIsNone(future.exception(TIMEOUT))
+
+        # create stream, but do not activate it
+        stream_handler = ContinuationHandler(self._fail_test_from_callback)
+        continuation = handler.connection.new_stream(stream_handler)
+
+        # close connection
+        handler.connection.close()
+        self.assertIsNone(handler.connection.shutdown_future.exception(TIMEOUT))
+
+        # stream callbacks should not fire because it was never activated
+        self.assertFalse(stream_handler.record.close_call.isSet())
 
         self._assertNoFailuresFromCallbacks()
 
     @skipUnless(RUN_LOCALHOST_TESTS, "Skipping until we have permanent echo server")
     def test_echo(self):
+        # test sending and receiving messages
         elg = EventLoopGroup()
         resolver = DefaultHostResolver(elg)
         bootstrap = ClientBootstrap(elg, resolver)
@@ -231,8 +285,8 @@ class TestClient(NativeResourceTest):
         # use a stream to execute the "EchoMessage" operation,
         # which takes 1 message and responds with 1 message
         stream_handler = ContinuationHandler(self._fail_test_from_callback)
-        stream_handler.continuation = handler.connection.new_stream(stream_handler)
-        msg_future = stream_handler.continuation.activate(
+        continuation = handler.connection.new_stream(stream_handler)
+        msg_future = continuation.activate(
             operation='awstest#EchoMessage',
             headers=[],
             payload=b'{}',
@@ -245,13 +299,13 @@ class TestClient(NativeResourceTest):
         msg = stream_handler.record.message_calls.get(timeout=TIMEOUT)
         self.assertEqual(MessageType.APPLICATION_MESSAGE, msg['message_type'])
         self.assertTrue(MessageFlag.TERMINATE_STREAM & msg['flags'])
-        self.assertIsNone(stream_handler.continuation.closed_future.exception(TIMEOUT))
+        self.assertIsNone(continuation.closed_future.exception(TIMEOUT))
 
         # use a stream to execute the "EchoStreamMessages" operation,
         # which has an empty initial request/response, but then allows further messages
         stream_handler = ContinuationHandler(self._fail_test_from_callback)
-        stream_handler.continuation = handler.connection.new_stream(stream_handler)
-        msg_future = stream_handler.continuation.activate(
+        continuation = handler.connection.new_stream(stream_handler)
+        msg_future = continuation.activate(
             operation='awstest#EchoStreamMessages',
             headers=[],
             payload=b'{}',
@@ -266,7 +320,7 @@ class TestClient(NativeResourceTest):
         self.assertFalse(MessageFlag.TERMINATE_STREAM & msg['flags'])
 
         # send a 2nd message on the stream
-        msg_future = stream_handler.continuation.send_message(
+        msg_future = continuation.send_message(
             headers=[],
             payload=b'{}',
             message_type=MessageType.APPLICATION_MESSAGE,
@@ -282,6 +336,68 @@ class TestClient(NativeResourceTest):
         # close connection
         handler.connection.close()
         self.assertIsNone(handler.connection.shutdown_future.exception(TIMEOUT))
-        self.assertIsNone(stream_handler.continuation.closed_future.exception(TIMEOUT))
+        self.assertIsNone(continuation.closed_future.exception(TIMEOUT))
+
+        self._assertNoFailuresFromCallbacks()
+
+    def _start_request_and_drop_local_references(self, connection):
+        # use a stream to execute the "EchoMessage" operation,
+        # which takes 1 message and responds with 1 message
+        stream_handler = ContinuationHandler(self._fail_test_from_callback)
+        continuation = connection.new_stream(stream_handler)
+        msg_future = continuation.activate(
+            operation='awstest#EchoMessage',
+            headers=[],
+            payload=b'{}',
+            message_type=MessageType.APPLICATION_MESSAGE,
+            flags=MessageFlag.NONE)
+
+        return (continuation.closed_future, stream_handler.record)
+
+    @skipUnless(RUN_LOCALHOST_TESTS, "Skipping until we have permanent echo server")
+    def test_stream_stays_alive_until_close(self):
+        # Test checks that stream stays alive, and all callbacks fire,
+        # even if there are no local references to stream or its handler.
+        elg = EventLoopGroup()
+        resolver = DefaultHostResolver(elg)
+        bootstrap = ClientBootstrap(elg, resolver)
+        handler = ConnectionHandler(self._fail_test_from_callback)
+        connect_future = ClientConnection.connect(
+            handler=handler,
+            host_name="127.0.0.1",
+            port=8033,
+            bootstrap=bootstrap)
+
+        self.assertIsNone(connect_future.exception(TIMEOUT))
+
+        # send CONNECT msg
+        msg_future = handler.connection.send_protocol_message(
+            message_type=MessageType.CONNECT,
+            headers=[Header.from_string(':version', '0.1.0'),
+                     Header.from_string('client-name', 'accepted.testy_mc_testerson')])
+
+        self.assertIsNone(msg_future.exception(TIMEOUT))
+
+        # wait to receive CONNECT_ACK
+        msg = handler.record.message_calls.get(timeout=TIMEOUT)
+        self.assertIs(MessageType.CONNECT_ACK, msg['message_type'])
+        self.assertTrue(MessageFlag.CONNECTION_ACCEPTED & msg['flags'])
+
+        # create new stream and handler, and send request, but don't get back
+        # anything that keeps a reference to these things.
+        # function returns items that should show side-effects of the
+        # request/response continuation to operate to completion.
+        # If this test fails, it's because something got GC'd too early and all
+        # the callbacks couldn't fire
+        stream_closed_future, stream_record = self._start_request_and_drop_local_references(handler.connection)
+
+        # wait to receive response, which should end the stream
+        msg = stream_record.message_calls.get(timeout=TIMEOUT)
+
+        # close connection
+        handler.connection.close()
+        self.assertIsNone(handler.connection.shutdown_future.exception(TIMEOUT))
+        self.assertTrue(stream_record.close_call.wait(timeout=TIMEOUT))
+        self.assertIsNone(stream_closed_future.result(timeout=TIMEOUT))
 
         self._assertNoFailuresFromCallbacks()
