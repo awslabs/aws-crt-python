@@ -8,7 +8,6 @@
 
 struct continuation_binding;
 static void s_continuation_capsule_destructor(PyObject *capsule);
-static void s_continuation_destroy_if_ready(struct continuation_binding *continuation);
 static void s_on_continuation_closed(struct aws_event_stream_rpc_client_continuation_token *native, void *user_data);
 static void s_on_continuation_message(
     struct aws_event_stream_rpc_client_continuation_token *native,
@@ -20,15 +19,11 @@ static const char *s_capsule_name = "aws_event_stream_rpc_client_continuation_to
 struct continuation_binding {
     struct aws_event_stream_rpc_client_continuation_token *native;
 
-    /* Binding cannot be destroyed until:
-     * capsule has been destroyed AND
-     * ((continuation was activated AND closed) OR (never activated at all)) */
-    bool capsule_destroyed;
-    bool has_activated;
-    bool has_closed;
-
-    PyObject *on_message;
-    PyObject *on_closed;
+    /* This reference is solely used for invoking callbacks,
+     * It is not set until activate(), and cleared upon on_continuation_closed().
+     * If it were not cleared, circular references between the python object
+     * and its binding would prevent the GC from ever cleaning things up */
+    PyObject *self_py;
 };
 
 struct aws_event_stream_rpc_client_continuation_token *aws_py_get_event_stream_rpc_client_continuation(
@@ -40,9 +35,7 @@ PyObject *aws_py_event_stream_rpc_client_connection_new_stream(PyObject *self, P
     (void)self;
 
     PyObject *connection_py;
-    PyObject *on_message_py;
-    PyObject *on_closed_py;
-    if (!PyArg_ParseTuple(args, "OOO", &connection_py, &on_message_py, &on_closed_py)) {
+    if (!PyArg_ParseTuple(args, "O", &connection_py)) {
         return NULL;
     }
 
@@ -60,11 +53,6 @@ PyObject *aws_py_event_stream_rpc_client_connection_new_stream(PyObject *self, P
     }
 
     /* From hereon, we need to clean up if errors occur */
-
-    continuation->on_message = on_message_py;
-    Py_INCREF(continuation->on_message);
-    continuation->on_closed = on_closed_py;
-    Py_INCREF(continuation->on_closed);
 
     struct aws_event_stream_rpc_client_stream_continuation_options options = {
         .on_continuation = s_on_continuation_message,
@@ -88,17 +76,12 @@ static void s_on_continuation_closed(struct aws_event_stream_rpc_client_continua
     (void)native;
     struct continuation_binding *continuation = user_data;
 
-    AWS_FATAL_ASSERT(
-        continuation->has_activated && "Illegal for on_continuation_close to fire without having activated");
-    AWS_FATAL_ASSERT(!continuation->has_closed && "Illegal for on_continuation_close to fire twice");
-    continuation->has_closed = true;
-
     PyGILState_STATE state;
     if (aws_py_gilstate_ensure(&state)) {
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
-    PyObject *result = PyObject_CallFunction(continuation->on_closed, "()");
+    PyObject *result = PyObject_CallMethod(continuation->self_py, "_on_continuation_closed", "()");
     if (result) {
         Py_DECREF(result);
     } else {
@@ -106,47 +89,17 @@ static void s_on_continuation_closed(struct aws_event_stream_rpc_client_continua
         PyErr_WriteUnraisable(PyErr_Occurred());
     }
 
-    s_continuation_destroy_if_ready(continuation);
+    /* There will be no further callbacks, clear circular reference
+     * so that python continuation object can ever be GC'd */
+    Py_CLEAR(continuation->self_py);
+
     PyGILState_Release(state);
 }
 
 static void s_continuation_capsule_destructor(PyObject *capsule) {
     struct continuation_binding *continuation = PyCapsule_GetPointer(capsule, s_capsule_name);
-    continuation->capsule_destroyed = true;
-    s_continuation_destroy_if_ready(continuation);
-}
-
-static void s_continuation_destroy_if_ready(struct continuation_binding *continuation) {
-    bool destroy;
-    if (continuation->native) {
-        if (continuation->capsule_destroyed) {
-            if (continuation->has_activated) {
-                if (continuation->has_closed) {
-                    /* python class has been GC'd and continuation is complete */
-                    destroy = true;
-                } else {
-                    /* python class been GC'd but continuation hasn't finished */
-                    destroy = false;
-                }
-            } else {
-                /* capsule has been GC'd and continuation was never activated */
-                destroy = true;
-            }
-        } else {
-            /* capsule still alive */
-            destroy = false;
-        }
-    } else {
-        /* native continuation creation failed */
-        destroy = true;
-    }
-
-    if (destroy) {
-        aws_event_stream_rpc_client_continuation_release(continuation->native);
-        Py_XDECREF(continuation->on_message);
-        Py_XDECREF(continuation->on_closed);
-        aws_mem_release(aws_py_get_allocator(), continuation);
-    }
+    aws_event_stream_rpc_client_continuation_release(continuation->native);
+    aws_mem_release(aws_py_get_allocator(), continuation);
 }
 
 static void s_on_continuation_message(
@@ -162,8 +115,9 @@ static void s_on_continuation_message(
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
-    PyObject *result = PyObject_CallFunction(
-        continuation->on_message,
+    PyObject *result = PyObject_CallMethod(
+        continuation->self_py,
+        "_on_continuation_message",
         "(Oy#iI)",
         /* NOTE: if headers_create() returns NULL, then PyObject_CallFunction() fails too, which is convenient */
         aws_py_event_stream_python_headers_create(message_args->headers, message_args->headers_count),
@@ -188,6 +142,7 @@ PyObject *aws_py_event_stream_rpc_client_continuation_activate(PyObject *self, P
     (void)self;
 
     PyObject *capsule_py;
+    PyObject *self_py;
     const char *operation_name;
     Py_ssize_t operation_name_len;
     PyObject *headers_py;
@@ -197,8 +152,9 @@ PyObject *aws_py_event_stream_rpc_client_continuation_activate(PyObject *self, P
     PyObject *on_flush_py;
     if (!PyArg_ParseTuple(
             args,
-            "Os#Os*iIO",
+            "OOs#Os*iIO",
             &capsule_py,
+            &self_py,
             &operation_name,
             &operation_name_len,
             &headers_py,
@@ -214,16 +170,17 @@ PyObject *aws_py_event_stream_rpc_client_continuation_activate(PyObject *self, P
     bool success = false;
     struct aws_array_list headers;
     AWS_ZERO_STRUCT(headers);
-    bool has_activated_prev_value = false;
+    PyObject *self_py_prev_value = NULL;
     Py_INCREF(on_flush_py); /* Keep completion callback alive until it fires */
+    Py_INCREF(self_py);
 
     struct continuation_binding *continuation = PyCapsule_GetPointer(capsule_py, s_capsule_name);
     if (!continuation) {
         goto done;
     }
 
-    has_activated_prev_value = continuation->has_activated;
-    continuation->has_activated = true;
+    self_py_prev_value = continuation->self_py;
+    continuation->self_py = self_py;
 
     if (!aws_py_event_stream_native_headers_init(&headers, headers_py)) {
         goto done;
@@ -261,8 +218,9 @@ done:
 
     /* failed */
     Py_DECREF(on_flush_py);
+    Py_DECREF(self_py);
     if (continuation) {
-        continuation->has_activated = has_activated_prev_value;
+        continuation->self_py = self_py_prev_value;
     }
     return NULL;
 }

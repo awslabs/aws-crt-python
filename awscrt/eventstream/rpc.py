@@ -16,7 +16,6 @@ from concurrent.futures import Future
 from enum import IntEnum
 from functools import partial
 from typing import Optional, Sequence
-import weakref
 
 __all__ = [
     'MessageType',
@@ -106,10 +105,6 @@ class ClientConnectionHandler(ABC):
     Inherit from this class and override methods to handle connection events.
     All callbacks for this connection will be invoked on the same thread,
     and `on_connection_setup()` will always be the first callback invoked.
-
-    Note that if the handler is garbage-collected, its callbacks will
-    not be invoked. To receive all events, maintain a reference to the
-    handler until its connection shuts down (or fails setup).
     """
 
     @abstractmethod
@@ -117,16 +112,13 @@ class ClientConnectionHandler(ABC):
         """Invoked upon completion of the setup attempt.
 
         If setup was successful, the connection is provided to the user.
-        The user must keep a reference to the connection or it will be
-        garbage-collected and closed. A common pattern is to store a
-        reference to the connection in the handler. Example:
-        ```
-            def on_connection_setup(self, connection, error, **kwargs):
-                if error:
-                    ... do error handling ...
-                else:
-                    self.connection = connection
-        ```
+
+        Note that the network connection stays alive until it is closed,
+        even if no local references to the connection object remain.
+        The user should store a reference to this connection, and call
+        connection.close() when they are done with it to avoid leaking
+        resources.
+
         Setup will always be the first callback invoked on the handler.
         If setup failed, no further callbacks will be invoked on this handler.
 
@@ -146,9 +138,6 @@ class ClientConnectionHandler(ABC):
         """Invoked when the connection finishes shutting down.
 
         This event will not be invoked if connection setup failed.
-
-        Note that this event will not be invoked if the handler is
-        garbage-collected before the shutdown process completes.
 
         Args:
             reason: Reason will be None if the user initiated the shutdown,
@@ -214,11 +203,30 @@ def _from_binding_msg_args(headers, payload, message_type, flags):
     return (headers, payload, message_type, flags)
 
 
+def _on_message_flush(bound_future, bound_callback, error_code):
+    # invoked when a message is flushed (written to wire), or canceled due to connection error.
+    e = awscrt.exceptions.from_code(error_code) if error_code else None
+    try:
+        if bound_callback:
+            bound_callback(error=e)
+    finally:
+        # ensure future completes, even if user callback had unhandled exception
+        if error_code:
+            bound_future.set_exception(e)
+        else:
+            bound_future.set_result(None)
+
+
 class ClientConnection(NativeResource):
     """A client connection for the event-stream RPC protocol.
 
     Use :meth:`ClientConnection.connect()` to establish a new
     connection.
+
+    Note that the network connection stays alive until it is closed,
+    even if no local references to the connection object remain.
+    The user should store a reference to any connections, and call
+    close() when they are done with them to avoid leaking resources.
 
     Attributes:
         host_name (str): Remote host name.
@@ -228,18 +236,20 @@ class ClientConnection(NativeResource):
         shutdown_future (concurrent.futures.Future[None]): Completes when this
             connection has finished shutting down. Future will contain a
             result of None, or an exception indicating why shutdown occurred.
-            Note that the connection may have been garbage-collected before
-            this future completes.
     """
 
-    __slots__ = ['host_name', 'port', 'shutdown_future']
+    __slots__ = ['host_name', 'port', 'shutdown_future', '_connect_future', '_handler']
 
-    def __init__(self, host_name, port):
+    def __init__(self, host_name, port, handler):
         # Do no instantiate directly, use static connect method
         super().__init__()
         self.host_name = host_name  # type: str
         self.port = port  # type: int
         self.shutdown_future = Future()  # type: Future
+        self.shutdown_future.set_running_or_notify_cancel()  # prevent cancel
+        self._connect_future = Future()  # type: Future
+        self._connect_future.set_running_or_notify_cancel()  # prevent cancel
+        self._handler = handler  # type: ClientConnectionHandler
 
     @classmethod
     def connect(
@@ -275,121 +285,76 @@ class ClientConnection(NativeResource):
             Otherwise it will contain an exception.
             If the connection is successful, it will be made available via
             the handler's on_connection_setup callback.
+            Note that this network connection stays alive until it is closed,
+            even if no local references to the connection object remain.
+            The user should store a reference to any connections, and call
+            close() when they are done with them to avoid leaking resources.
         """
 
         if not socket_options:
             socket_options = SocketOptions()
 
-        future = Future()
-
         # Connection is not made available to user until setup callback fires
-        connection = cls(host_name, port)
+        connection = cls(host_name, port, handler)
 
-        # We must be careful to avoid circular references that prevent the connection from getting GC'd.
-        # Only the internal _on_setup callback binds strong references to the connection and handler.
-        # This is ok because it fires exactly once, and references to it are cleared afterwards.
-        # All other callbacks must bind weak references to the handler,
-        # or references to futures within the connection rather than the connection itself.
-        handler_weakref = weakref.ref(handler)
-
+        # connection._binding is set within the following call */
         _awscrt.event_stream_rpc_client_connection_connect(
             host_name,
             port,
             bootstrap,
             socket_options,
             tls_connection_options,
-            partial(cls._on_connection_setup, future, handler, connection),
-            partial(cls._on_connection_shutdown, connection.shutdown_future, handler_weakref),
-            partial(cls._on_protocol_message, handler_weakref))
+            connection)
 
-        return future
+        return connection._connect_future
 
-    @staticmethod
-    def _on_connection_setup(bound_future, bound_handler, bound_connection, binding, error_code):
+    def _on_connection_setup(self, error_code):
         if error_code:
             connection = None
             error = awscrt.exceptions.from_code(error_code)
         else:
-            connection = bound_connection
-            connection._binding = binding
+            connection = self
             error = None
 
         try:
-            bound_handler.on_connection_setup(connection=connection, error=error)
+            self._handler.on_connection_setup(connection=connection, error=error)
         finally:
             # ensure future completes, even if user callback had unhandled exception
             if error:
-                bound_future.set_exception(error)
+                self._connect_future.set_exception(error)
             else:
-                bound_future.set_result(None)
+                self._connect_future.set_result(None)
 
-    @staticmethod
-    def _on_connection_shutdown(bound_future, bound_weak_handler, error_code):
+    def _on_connection_shutdown(self, error_code):
         reason = awscrt.exceptions.from_code(error_code) if error_code else None
         try:
-            handler = bound_weak_handler()
-            if handler:
-                handler.on_connection_shutdown(reason=reason)
+            self._handler.on_connection_shutdown(reason=reason)
         finally:
             # ensure future completes, even if user callback had unhandled exception
             if reason:
-                bound_future.set_exception(reason)
+                self.shutdown_future.set_exception(reason)
             else:
-                bound_future.set_result(None)
+                self.shutdown_future.set_result(None)
 
-    @staticmethod
-    def _on_continuation_closed(bound_future, bound_weak_handler):
-        try:
-            handler = bound_weak_handler()
-            if handler:
-                handler.on_continuation_closed()
-        finally:
-            # ensure future completes, even if user callback had unhandled exception
-            bound_future.set_result(None)
-
-    @staticmethod
-    def _on_protocol_message(bound_weak_handler, headers, payload, message_type, flags):
-        handler = bound_weak_handler()
-        if handler:
-            # transform from simple types to actual classes
-            headers, payload, message_type, flags = _from_binding_msg_args(headers, payload, message_type, flags)
-            handler.on_protocol_message(
-                headers=headers,
-                payload=payload,
-                message_type=message_type,
-                flags=flags)
-
-    @staticmethod
-    def _on_continuation_message(bound_weak_handler, headers, payload, message_type, flags):
-        handler = bound_weak_handler()
-        if handler:
-            # transform from simple types to actual classes
-            headers, payload, message_type, flags = _from_binding_msg_args(headers, payload, message_type, flags)
-            handler.on_continuation_message(
-                headers=headers,
-                payload=payload,
-                message_type=message_type,
-                flags=flags)
-
-    @staticmethod
-    def _on_flush(bound_future, bound_callback, error_code):
-        # invoked when a message is flushed (written to wire), or canceled due to connection error.
-        e = awscrt.exceptions.from_code(error_code) if error_code else None
-        try:
-            if bound_callback:
-                bound_callback(error=e)
-        finally:
-            # ensure future completes, even if user callback had unhandled exception
-            if error_code:
-                bound_future.set_exception(e)
-            else:
-                bound_future.set_result(None)
+    def _on_protocol_message(self, headers, payload, message_type, flags):
+        # transform from simple types to actual classes
+        headers, payload, message_type, flags = _from_binding_msg_args(headers, payload, message_type, flags)
+        self._handler.on_protocol_message(
+            headers=headers,
+            payload=payload,
+            message_type=message_type,
+            flags=flags)
 
     def close(self):
         """Close the connection.
 
-        Shutdown is asynchronous. This call has no effect if the connection is already
-        closing.
+        Shutdown is asynchronous. This call has no effect if the connection is
+        already closed or closing.
+
+        Note that, if the network connection hasn't already ended,
+        close() MUST be called to avoid leaking resources. The network
+        connection will not terminate simply because there are no references
+        to the connection object.
 
         Returns:
             concurrent.futures.Future: This connection's :attr:`shutdown_future`,
@@ -453,6 +418,7 @@ class ClientConnection(NativeResource):
             or an exception if the message fails to send.
         """
         future = Future()
+        future.set_running_or_notify_cancel()  # prevent cancel
 
         # native code deals with simplified types
         headers, payload, message_type, flags = _to_binding_msg_args(headers, payload, message_type, flags)
@@ -463,7 +429,7 @@ class ClientConnection(NativeResource):
             payload,
             message_type,
             flags,
-            partial(self._on_flush, future, on_flush))
+            partial(_on_message_flush, future, on_flush))
         return future
 
     def new_stream(self, handler: 'ClientContinuationHandler') -> 'ClientContinuation':
@@ -479,13 +445,9 @@ class ClientConnection(NativeResource):
         Returns:
             The new continuation object.
         """
-        handler_weakref = weakref.ref(handler)
-        closed_future = Future()
-        binding = _awscrt.event_stream_rpc_client_connection_new_stream(
-            self,
-            partial(self._on_continuation_message, handler_weakref),
-            partial(self._on_continuation_closed, closed_future, handler_weakref))
-        return ClientContinuation(binding, closed_future, self)
+        continuation = ClientContinuation(handler, self)
+        continuation._binding = _awscrt.event_stream_rpc_client_connection_new_stream(self)
+        return continuation
 
 
 class ClientContinuation(NativeResource):
@@ -504,12 +466,13 @@ class ClientContinuation(NativeResource):
             when the continuation has closed.
     """
 
-    def __init__(self, binding, closed_future, connection):
+    def __init__(self, handler, connection):
         # Do not instantiate directly, use ClientConnection.new_stream()
         super().__init__()
-        self._binding = binding
+        self._handler = handler
         self.connection = connection  # type: ClientConnection
-        self.closed_future = closed_future  # type: Future
+        self.closed_future = Future()  # type: Future
+        self.closed_future.set_running_or_notify_cancel()  # prevent cancel
 
     def activate(
             self,
@@ -562,18 +525,23 @@ class ClientContinuation(NativeResource):
         """
 
         flush_future = Future()
+        flush_future.set_running_or_notify_cancel()  # prevent cancel
 
         # native code deals with simplified types
         headers, payload, message_type, flags = _to_binding_msg_args(headers, payload, message_type, flags)
 
         _awscrt.event_stream_rpc_client_continuation_activate(
             self._binding,
+            # don't give binding a reference to self until activate() is called.
+            # this reference is used for invoking callbacks, and its existence
+            # keeps the python object alive until the closed callback fires
+            self,
             operation,
             headers,
             payload,
             message_type,
             flags,
-            partial(ClientConnection._on_flush, flush_future, on_flush))
+            partial(_on_message_flush, flush_future, on_flush))
 
         return flush_future
 
@@ -626,6 +594,7 @@ class ClientContinuation(NativeResource):
             or an exception if the message fails to send.
         """
         future = Future()
+        future.set_running_or_notify_cancel()  # prevent cancel
         # native code deals with simplified types
         headers, payload, message_type, flags = _to_binding_msg_args(headers, payload, message_type, flags)
 
@@ -635,11 +604,27 @@ class ClientContinuation(NativeResource):
             payload,
             message_type,
             flags,
-            partial(ClientConnection._on_flush, future, on_flush))
+            partial(_on_message_flush, future, on_flush))
         return future
 
     def is_closed(self):
         return _awscrt.event_stream_rpc_client_continuation_is_closed(self._binding)
+
+    def _on_continuation_closed(self):
+        try:
+            self._handler.on_continuation_closed()
+        finally:
+            # ensure future completes, even if user callback had unhandled exception
+            self.closed_future.set_result(None)
+
+    def _on_continuation_message(self, headers, payload, message_type, flags):
+        # transform from simple types to actual classes
+        headers, payload, message_type, flags = _from_binding_msg_args(headers, payload, message_type, flags)
+        self._handler.on_continuation_message(
+            headers=headers,
+            payload=payload,
+            message_type=message_type,
+            flags=flags)
 
 
 class ClientContinuationHandler(ABC):
@@ -651,10 +636,6 @@ class ClientContinuationHandler(ABC):
 
     A common pattern is to store the continuation within its handler. Ex:
     `continuation_handler.continuation = connection.new_stream(continuation_handler)`
-
-    Note that if the handler is garbage-collected, its callbacks will no
-    longer be invoked. Maintain a reference to the handler until the
-    continuation is closed to receive all events.
     """
 
     @abstractmethod
@@ -689,9 +670,6 @@ class ClientContinuationHandler(ABC):
         Once the continuation is closed, no more messages may be sent or received.
         The continuation is closed when a message is sent or received with
         the TERMINATE_STREAM flag, or when the connection shuts down.
-
-        Note that this event will not be invoked if the handler is
-        garbage-collected before the stream completes.
 
         Args:
             **kwargs: Forward compatibility kwargs.
