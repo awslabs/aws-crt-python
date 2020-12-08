@@ -150,8 +150,8 @@ AWS_LIBS = []
 if sys.platform != 'darwin' and sys.platform != 'win32':
     AWS_LIBS.append(AwsLib('s2n'))
 AWS_LIBS.append(AwsLib('aws-c-common'))
-AWS_LIBS.append(AwsLib('aws-c-io'))
 AWS_LIBS.append(AwsLib('aws-c-cal'))
+AWS_LIBS.append(AwsLib('aws-c-io'))
 AWS_LIBS.append(AwsLib('aws-checksums'))
 AWS_LIBS.append(AwsLib('aws-c-compression'))
 AWS_LIBS.append(AwsLib('aws-c-event-stream'))
