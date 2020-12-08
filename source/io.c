@@ -223,7 +223,11 @@ PyObject *aws_py_host_resolver_new_default(PyObject *self, PyObject *args) {
 
     /* From hereon, we need to clean up if errors occur */
 
-    host_resolver->native = aws_host_resolver_new_default(allocator, max_hosts, elg, NULL);
+    struct aws_host_resolver_default_options options = {
+        .el_group = elg,
+        .max_entries = max_hosts,
+    };
+    host_resolver->native = aws_host_resolver_new_default(allocator, &options);
     if (host_resolver->native == NULL) {
         PyErr_SetAwsLastError();
         goto resolver_init_failed;
