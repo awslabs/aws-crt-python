@@ -3,8 +3,8 @@ name: CI
 on:
   push:
     branches:
-      - "*"
-      - "!main"
+      - '*'
+      - '!main'
 
 env:
   BUILDER_VERSION: v0.7.0
@@ -28,24 +28,24 @@ jobs:
           - manylinux2014-x64
           - manylinux2014-x86
     steps:
-      # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
-      - name: Build ${{ env.PACKAGE_NAME }}
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u awslabs --password-stdin
-          export DOCKER_IMAGE=docker.pkg.github.com/awslabs/aws-crt-builder/aws-crt-${{ matrix.image }}:${{ env.BUILDER_VERSION }}
-          docker pull $DOCKER_IMAGE
-          docker run --env GITHUB_REF --env AWS_ACCESS_KEY_ID --env AWS_SECRET_ACCESS_KEY --env AWS_DEFAULT_REGION $DOCKER_IMAGE build -p ${{ env.PACKAGE_NAME }}
+        # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
+    - name: Build ${{ env.PACKAGE_NAME }}
+      run: |
+        echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u awslabs --password-stdin
+        export DOCKER_IMAGE=docker.pkg.github.com/awslabs/aws-crt-builder/aws-crt-${{ matrix.image }}:${{ env.BUILDER_VERSION }}
+        docker pull $DOCKER_IMAGE
+        docker run --env GITHUB_REF --env AWS_ACCESS_KEY_ID --env AWS_SECRET_ACCESS_KEY --env AWS_DEFAULT_REGION $DOCKER_IMAGE build -p ${{ env.PACKAGE_NAME }}
 
   al2:
     runs-on: ubuntu-latest
     steps:
-      # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
-      - name: Build ${{ env.PACKAGE_NAME }} + consumers
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u awslabs --password-stdin
-          export DOCKER_IMAGE=docker.pkg.github.com/awslabs/aws-crt-builder/aws-crt-al2-x64:${{ env.BUILDER_VERSION }}
-          docker pull $DOCKER_IMAGE
-          docker run --env GITHUB_REF --env AWS_ACCESS_KEY_ID --env AWS_SECRET_ACCESS_KEY --env AWS_DEFAULT_REGION $DOCKER_IMAGE build -p ${{ env.PACKAGE_NAME }}
+        # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
+    - name: Build ${{ env.PACKAGE_NAME }} + consumers
+      run: |
+        echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u awslabs --password-stdin
+        export DOCKER_IMAGE=docker.pkg.github.com/awslabs/aws-crt-builder/aws-crt-al2-x64:${{ env.BUILDER_VERSION }}
+        docker pull $DOCKER_IMAGE
+        docker run --env GITHUB_REF --env AWS_ACCESS_KEY_ID --env AWS_SECRET_ACCESS_KEY --env AWS_DEFAULT_REGION $DOCKER_IMAGE build -p ${{ env.PACKAGE_NAME }}
 
   clang-compat:
     runs-on: ubuntu-latest
@@ -53,13 +53,13 @@ jobs:
       matrix:
         version: [3, 6, 8, 9]
     steps:
-      # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
-      - name: Build ${{ env.PACKAGE_NAME }}
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u awslabs --password-stdin
-          export DOCKER_IMAGE=docker.pkg.github.com/awslabs/aws-crt-builder/aws-crt-${{ env.LINUX_BASE_IMAGE }}:${{ env.BUILDER_VERSION }}
-          docker pull $DOCKER_IMAGE
-          docker run --env GITHUB_REF --env AWS_ACCESS_KEY_ID --env AWS_SECRET_ACCESS_KEY --env AWS_DEFAULT_REGION $DOCKER_IMAGE build -p ${{ env.PACKAGE_NAME }} --compiler=clang-${{ matrix.version }}
+        # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
+    - name: Build ${{ env.PACKAGE_NAME }}
+      run: |
+        echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u awslabs --password-stdin
+        export DOCKER_IMAGE=docker.pkg.github.com/awslabs/aws-crt-builder/aws-crt-${{ env.LINUX_BASE_IMAGE }}:${{ env.BUILDER_VERSION }}
+        docker pull $DOCKER_IMAGE
+        docker run --env GITHUB_REF --env AWS_ACCESS_KEY_ID --env AWS_SECRET_ACCESS_KEY --env AWS_DEFAULT_REGION $DOCKER_IMAGE build -p ${{ env.PACKAGE_NAME }} --compiler=clang-${{ matrix.version }}
 
   gcc-compat:
     runs-on: ubuntu-latest
@@ -67,21 +67,21 @@ jobs:
       matrix:
         version: [5, 6, 7, 8] # no 4.8 on ubuntu due to the -Wdate-time missing command line options
     steps:
-      # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
-      - name: Build ${{ env.PACKAGE_NAME }}
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u awslabs --password-stdin
-          export DOCKER_IMAGE=docker.pkg.github.com/awslabs/aws-crt-builder/aws-crt-${{ env.LINUX_BASE_IMAGE }}:${{ env.BUILDER_VERSION }}
-          docker pull $DOCKER_IMAGE
-          docker run --env GITHUB_REF --env AWS_ACCESS_KEY_ID --env AWS_SECRET_ACCESS_KEY --env AWS_DEFAULT_REGION $DOCKER_IMAGE build -p ${{ env.PACKAGE_NAME }} --compiler=gcc-${{ matrix.version }}
+        # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
+    - name: Build ${{ env.PACKAGE_NAME }}
+      run: |
+        echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u awslabs --password-stdin
+        export DOCKER_IMAGE=docker.pkg.github.com/awslabs/aws-crt-builder/aws-crt-${{ env.LINUX_BASE_IMAGE }}:${{ env.BUILDER_VERSION }}
+        docker pull $DOCKER_IMAGE
+        docker run --env GITHUB_REF --env AWS_ACCESS_KEY_ID --env AWS_SECRET_ACCESS_KEY --env AWS_DEFAULT_REGION $DOCKER_IMAGE build -p ${{ env.PACKAGE_NAME }} --compiler=gcc-${{ matrix.version }}
 
   windows:
     runs-on: windows-latest
     steps:
-      - name: Build ${{ env.PACKAGE_NAME }} + consumers
-        run: |
-          python -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder.pyz')"
-          python builder.pyz build -p ${{ env.PACKAGE_NAME }}
+    - name: Build ${{ env.PACKAGE_NAME }} + consumers
+      run: |
+        python -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder.pyz')"
+        python builder.pyz build -p ${{ env.PACKAGE_NAME }}
 
   windows-vc14:
     runs-on: windows-latest
@@ -89,22 +89,22 @@ jobs:
       matrix:
         arch: [x86, x64]
     steps:
-      - uses: ilammy/msvc-dev-cmd@v1
-        with:
-          toolset: 14.0
-          arch: ${{ matrix.arch }}
-          uwp: false
-          spectre: true
-      - name: Build ${{ env.PACKAGE_NAME }} + consumers
-        run: |
-          python -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder.pyz')"
-          python builder.pyz build -p ${{ env.PACKAGE_NAME }}
+    - uses: ilammy/msvc-dev-cmd@v1
+      with:
+        toolset: 14.0
+        arch: ${{ matrix.arch }}
+        uwp: false
+        spectre: true
+    - name: Build ${{ env.PACKAGE_NAME }} + consumers
+      run: |
+        python -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder.pyz')"
+        python builder.pyz build -p ${{ env.PACKAGE_NAME }}
 
   osx:
     runs-on: macos-latest
     steps:
-      - name: Build ${{ env.PACKAGE_NAME }} + consumers
-        run: |
-          python3 -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder')"
-          chmod a+x builder
-          ./builder build -p ${{ env.PACKAGE_NAME }}
+    - name: Build ${{ env.PACKAGE_NAME }} + consumers
+      run: |
+        python3 -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder')"
+        chmod a+x builder
+        ./builder build -p ${{ env.PACKAGE_NAME }}
