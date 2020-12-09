@@ -11,6 +11,7 @@
 #include "io.h"
 #include "mqtt_client.h"
 #include "mqtt_client_connection.h"
+#include "s3_client.h"
 
 #include <aws/auth/auth.h>
 #include <aws/common/byte_buf.h>
@@ -21,6 +22,7 @@
 #include <aws/io/logging.h>
 #include <aws/io/tls_channel_handler.h>
 #include <aws/mqtt/mqtt.h>
+#include <aws/s3/s3.h>
 
 #include <memoryobject.h>
 
@@ -555,6 +557,10 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(event_stream_rpc_client_continuation_send_message, METH_VARARGS),
     AWS_PY_METHOD_DEF(event_stream_rpc_client_continuation_is_closed, METH_VARARGS),
 
+    /* S3 */
+    AWS_PY_METHOD_DEF(s3_client_new, METH_VARARGS),
+    AWS_PY_METHOD_DEF(s3_client_make_meta_request, METH_VARARGS),
+
     {NULL, NULL, 0, NULL},
 };
 
@@ -589,6 +595,7 @@ PyMODINIT_FUNC PyInit__awscrt(void) {
     aws_auth_library_init(aws_py_get_allocator());
     aws_mqtt_library_init(aws_py_get_allocator());
     aws_event_stream_library_init(aws_py_get_allocator());
+    aws_s3_library_init(aws_py_get_allocator());
 
 #if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 9
     if (!PyEval_ThreadsInitialized()) {

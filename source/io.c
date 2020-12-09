@@ -736,9 +736,32 @@ int s_aws_input_stream_py_get_status(struct aws_input_stream *stream, struct aws
 }
 
 int s_aws_input_stream_py_get_length(struct aws_input_stream *stream, int64_t *out_length) {
-    (void)stream;
-    (void)out_length;
-    return AWS_ERROR_UNIMPLEMENTED;
+
+    struct aws_input_stream_py_impl *impl = stream->impl;
+
+    int aws_result = AWS_OP_SUCCESS;
+    PyObject *method_result = NULL;
+
+    /*************** GIL ACQUIRE ***************/
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return AWS_OP_ERR; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
+
+    method_result = PyObject_CallMethod(impl->self_proxy, "_get_length", NULL);
+    if (!method_result) {
+        aws_result = aws_py_raise_error();
+        goto done;
+    }
+    int32_t length = PyLong_AsLong(method_result);
+    *out_length = (int64_t)length;
+
+done:
+    Py_XDECREF(method_result);
+    PyGILState_Release(state);
+    /*************** GIL RELEASE ***************/
+
+    return aws_result;
 }
 
 static struct aws_input_stream_vtable s_aws_input_stream_py_vtable = {

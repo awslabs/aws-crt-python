@@ -487,6 +487,40 @@ def is_alpn_available():
     return _awscrt.is_alpn_available()
 
 
+class LazyReadStream(object):
+    def __init__(self, filename, pattern, length=0):
+        self._filename = filename
+        self.length = length
+        self._stream = None
+        self._pattern = pattern
+
+    def _available_stream(self):
+        if self._stream is None:
+            self._stream = open(self._filename, self._pattern)
+
+    def read(self, length):
+        self._available_stream()
+        data = self._stream.read(length)
+        if len(data) is 0:
+            self._stream.close()
+        return data
+
+    def readinto1(self, m):
+        # Read into memoryview m.
+        self._available_stream()
+        len = self._stream.readinto1(m)
+        if len is 0:
+            self._stream.close()
+        return len
+
+    def seek(self, offset, whence):
+        self._available_stream()
+        return self._stream.seek(offset, whence)
+
+    def close(self):
+        pass
+
+
 class InputStream(NativeResource):
     """InputStream allows `awscrt` native code to read from Python binary I/O classes.
 
@@ -529,6 +563,14 @@ class InputStream(NativeResource):
 
     def _seek(self, offset, whence):
         return self._stream.seek(offset, whence)
+
+    def _get_length(self):
+        if hasattr(self._stream, 'length'):
+            return self._stream.length
+        else:
+            body_bytes = self._stream.read()
+            self._stream.seek(0)
+            return len(body_bytes)
 
     @classmethod
     def wrap(cls, stream, allow_none=False):
