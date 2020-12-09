@@ -52,6 +52,7 @@ class S3Client(NativeResource):
             be attempted over plain-text.
 
         part_size (Optional[int]): Size of parts in Byte the files will be downloaded or uploaded in.
+            Note: for PUT_OBJECT request, S3 requires the part size greater than 5MB.
 
         connection_timeout_ms (Optional[int]): Timeout value, in milliseconds, used for each connection.
 
@@ -99,7 +100,6 @@ class S3Client(NativeResource):
         shutdown_event = threading.Event()
 
         def on_shutdown():
-            print("client shutdown")
             shutdown_event.set()
 
         self.shutdown_event = shutdown_event
@@ -116,7 +116,7 @@ class S3Client(NativeResource):
             throughput_per_vip_gbps,
             num_connections_per_vip)
 
-    def make_request(self, *, request, type, on_headers=None, on_body=None):
+    def make_request(self, *, request, type, on_headers=None, on_body=None, on_done=None, **kwargs):
         """Create the Request to the the S3 server,
         accelerate the GET_OBJECT/PUT_OBJECT request by spliting it into multiple requests under the hood.
 
@@ -143,38 +143,57 @@ class S3Client(NativeResource):
                 *   `chunk` (buffer): Response body data (not necessarily
                     a whole "chunk" of chunked encoding).
 
+                *   `offset` (int): The offset of the chunk started in the whole body.
+
+                *   `**kwargs` (dict): Forward-compatibility kwargs.
+
+            on_done: Optional callback invoked when the meta_request has finished the job.
+                The function should take the following arguments and return nothing:
+
+                *   `error_code` (int): The error code from CRT, indicates the job has finished successfully
+                    or failed for specific reason
+
                 *   `**kwargs` (dict): Forward-compatibility kwargs.
 
         Returns:
             S3Request
         """
-        return S3Request(client=self, request=request, type=type, on_headers=on_headers, on_body=on_body)
+        return S3Request(
+            client=self,
+            request=request,
+            type=type,
+            on_headers=on_headers,
+            on_body=on_body,
+            on_done=on_done,
+            **kwargs)
 
 
 class S3Request(NativeResource):
     """S3 request
 
     """
-    __slots__ = ('_on_headers_cb', '_on_body_cb', '_finished_future', 'shutdown_event')
+    __slots__ = ('_on_headers_cb', '_on_body_cb', '_on_done_cb', '_finished_future', '_kwargs', 'shutdown_event')
 
-    def __init__(self, *, client, request, type, on_headers=None, on_body=None):
+    def __init__(self, *, client, request, type, on_headers=None, on_body=None, on_done=None, **kwargs):
         assert isinstance(client, S3Client)
         assert isinstance(request, HttpRequest)
         assert callable(on_headers) or on_headers is None
         assert callable(on_body) or on_body is None
+        assert callable(on_done) or on_done is None
 
         super().__init__()
 
         # the native s3-request will keep the request alive until the s3-request finishes
         self._on_headers_cb = on_headers
         self._on_body_cb = on_body
+        self._on_done_cb = on_done
+        self._kwargs = kwargs
 
         self._finished_future = Future()
 
         shutdown_event = threading.Event()
 
         def on_shutdown():
-            print("request shutdown")
             shutdown_event.set()
 
         self.shutdown_event = shutdown_event
@@ -184,17 +203,19 @@ class S3Request(NativeResource):
 
     def _on_headers(self, status_code, headers):
         if self._on_headers_cb:
-            self._on_headers_cb(status_code=status_code, headers=headers)
+            self._on_headers_cb(status_code=status_code, headers=headers, **self._kwargs)
 
-    def _on_body(self, chunk):
+    def _on_body(self, chunk, offset):
         if self._on_body_cb:
-            self._on_body_cb(chunk=chunk)
+            self._on_body_cb(chunk=chunk, offset=offset, kwargs=self._kwargs)
 
     def _on_finish(self, error_code):
         if error_code:
-            self._finished_future.set_exception(awscrt.exceptions.from_code(error_code))
+            self.finished_future.set_exception(awscrt.exceptions.from_code(error_code))
         else:
-            self._finished_future.set_result("finish")
+            self.finished_future.set_result("finish")
+        if self._on_done_cb:
+            self._on_done_cb(error_code=error_code, kwargs=self._kwargs)
 
     @property
     def finished_future(self):

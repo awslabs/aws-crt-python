@@ -750,7 +750,6 @@ int s_aws_input_stream_py_get_length(struct aws_input_stream *stream, int64_t *o
         goto done;
     }
     int32_t length = PyLong_AsLong(method_result);
-    printf("length from C %d\n", length);
     *out_length = (int64_t)length;
 
 done:
