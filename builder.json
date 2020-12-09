@@ -1,5 +1,5 @@
 {
-    "name": "aws-crt-python-staging",
+    "name": "aws-crt-python",
     "targets": {
         "android": {
             "enabled": false,
