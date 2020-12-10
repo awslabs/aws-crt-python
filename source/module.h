@@ -18,6 +18,15 @@ struct aws_byte_buf;
 struct aws_byte_cursor;
 struct aws_string;
 
+#define AWS_CRT_PYTHON_PACKAGE_ID 10
+
+/* Error codes, unique to aws-crt-python, for passing back to C layers */
+enum aws_crt_python_errors {
+    AWS_ERROR_CRT_CALLBACK_EXCEPTION = AWS_ERROR_ENUM_BEGIN_RANGE(AWS_CRT_PYTHON_PACKAGE_ID),
+
+    AWS_ERROR_CRT_END_RANGE = AWS_ERROR_ENUM_END_RANGE(AWS_CRT_PYTHON_PACKAGE_ID)
+};
+
 /* AWS Specific Helpers */
 PyObject *PyUnicode_FromAwsByteCursor(const struct aws_byte_cursor *cursor);
 PyObject *PyUnicode_FromAwsString(const struct aws_string *aws_str);
