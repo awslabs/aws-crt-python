@@ -18,6 +18,7 @@ static const char *s_capsule_name = "aws_event_stream_rpc_client_continuation_to
 
 struct continuation_binding {
     struct aws_event_stream_rpc_client_continuation_token *native;
+    struct aws_event_stream_rpc_client_connection *native_connection;
 
     /* This reference is solely used for invoking callbacks,
      * It is not set until activate(), and cleared upon on_continuation_closed().
@@ -47,6 +48,8 @@ PyObject *aws_py_event_stream_rpc_client_connection_new_stream(PyObject *self, P
 
     struct continuation_binding *continuation =
         aws_mem_calloc(aws_py_get_allocator(), 1, sizeof(struct continuation_binding));
+    continuation->native_connection = native_connection;
+
     PyObject *capsule = PyCapsule_New(continuation, s_capsule_name, s_continuation_capsule_destructor);
     if (!capsule) {
         return NULL;
@@ -86,7 +89,7 @@ static void s_on_continuation_closed(struct aws_event_stream_rpc_client_continua
         Py_DECREF(result);
     } else {
         /* Callback might fail during application shutdown */
-        PyErr_WriteUnraisable(PyErr_Occurred());
+        PyErr_WriteUnraisable(continuation->self_py);
     }
 
     /* There will be no further callbacks, clear circular reference
@@ -129,10 +132,7 @@ static void s_on_continuation_message(
         Py_DECREF(result);
     } else {
         /* Callback might fail during application shutdown */
-        PyErr_WriteUnraisable(PyErr_Occurred());
-
-        /* TODO: Should we close the stream on an unhandled exception?
-         * If so, do we differentiate between internal failure and failure stemming from the user's callback? */
+        PyErr_WriteUnraisable(continuation->self_py);
     }
 
     PyGILState_Release(state);
