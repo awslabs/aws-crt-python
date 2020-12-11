@@ -73,27 +73,17 @@ class S3Client(NativeResource):
             credential_provider=None,
             tls_connection_options=None,
             part_size=0,
-            connection_timeout_ms=0,
-            throughput_target_gbps=0,
-            throughput_per_vip_gbps=0,
-            num_connections_per_vip=0):
+            throughput_target_gbps=0,):
         assert isinstance(bootstrap, ClientBootstrap)
         assert isinstance(region, str)
         assert isinstance(credential_provider, AwsCredentialsProvider) or credential_provider is None
         assert isinstance(tls_connection_options, TlsConnectionOptions) or tls_connection_options is None
         assert isinstance(part_size, int) or part_size is None
-        assert isinstance(connection_timeout_ms, int) or connection_timeout_ms is None
         assert isinstance(
             throughput_target_gbps,
             int) or isinstance(
             throughput_target_gbps,
             float) or throughput_target_gbps is None
-        assert isinstance(
-            throughput_per_vip_gbps,
-            int) or isinstance(
-            throughput_per_vip_gbps,
-            float) or throughput_per_vip_gbps is None
-        assert isinstance(num_connections_per_vip, int) or num_connections_per_vip is None
 
         super().__init__()
 
@@ -111,10 +101,7 @@ class S3Client(NativeResource):
             on_shutdown,
             region,
             part_size,
-            connection_timeout_ms,
-            throughput_target_gbps,
-            throughput_per_vip_gbps,
-            num_connections_per_vip)
+            throughput_target_gbps)
 
     def make_request(self, *, request, type, on_headers=None, on_body=None, on_done=None, **kwargs):
         """Create the Request to the the S3 server,

@@ -85,13 +85,10 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
     const char *region;
     Py_ssize_t region_len;
     uint64_t part_size;
-    uint32_t connection_timeout_ms;
     double throughput_target_gbps;
-    double throughput_per_vip_gbps;
-    uint32_t num_connections_per_vip;
     if (!PyArg_ParseTuple(
             args,
-            "OOOOs#KIddI",
+            "OOOOs#Kd",
             &bootstrap_py,
             &credential_provider_py,
             &tls_options_py,
@@ -99,10 +96,7 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
             &region,
             &region_len,
             &part_size,
-            &connection_timeout_ms,
-            &throughput_target_gbps,
-            &throughput_per_vip_gbps,
-            &num_connections_per_vip)) {
+            &throughput_target_gbps)) {
         return NULL;
     }
 
@@ -122,7 +116,7 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
     struct aws_byte_cursor region_cursor = aws_byte_cursor_from_array((const uint8_t *)region, region_len);
 
     if (credential_provider) {
-        aws_s3_default_signing_config(&signing_config, region_cursor, credential_provider);
+        aws_s3_init_default_signing_config(&signing_config, region_cursor, credential_provider);
     }
 
     struct s3_client_binding *s3_clinet = aws_mem_calloc(allocator, 1, sizeof(struct s3_client_binding));
@@ -145,10 +139,7 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
         .signing_config = credential_provider ? &signing_config : NULL,
         .part_size = part_size,
         .tls_connection_options = tls_options,
-        .connection_timeout_ms = connection_timeout_ms,
         .throughput_target_gbps = throughput_target_gbps,
-        .throughput_per_vip_gbps = throughput_per_vip_gbps,
-        .num_connections_per_vip = num_connections_per_vip,
         .shutdown_callback = s_s3_client_shutdown,
         .shutdown_callback_user_data = s3_clinet,
     };
