@@ -73,7 +73,7 @@ class S3Client(NativeResource):
             credential_provider=None,
             tls_connection_options=None,
             part_size=0,
-            throughput_target_gbps=0,):
+            throughput_target_gbps=0):
         assert isinstance(bootstrap, ClientBootstrap)
         assert isinstance(region, str)
         assert isinstance(credential_provider, AwsCredentialsProvider) or credential_provider is None
