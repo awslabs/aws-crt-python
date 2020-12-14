@@ -108,9 +108,9 @@ class TestProvider(NativeResourceTest):
                    "aws_access_key_id=default_access_key_id\n" +
                    "aws_secret_access_key=default_secret_access_key\n\n" +
 
-                   "[%s]\n" % profile_name +
-                   "aws_access_key_id=%s\n" % EXAMPLE_ACCESS_KEY_ID +
-                   "aws_secret_access_key=%s" % EXAMPLE_SECRET_ACCESS_KEY
+                   "[" + profile_name + "]\n" +
+                   "aws_access_key_id=example_access_key_id\n" +
+                   "aws_secret_access_key=example_secret_access_key"
                    )
         file.close()
 
