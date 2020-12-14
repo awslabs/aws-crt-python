@@ -3,7 +3,7 @@
 
 from awscrt.eventstream import *
 from awscrt.eventstream.rpc import *
-from awscrt.io import ClientBootstrap, DefaultHostResolver, EventLoopGroup
+from awscrt.io import (ClientBootstrap, DefaultHostResolver, EventLoopGroup, init_logging, LogLevel)
 import gc
 import os
 from queue import Queue
@@ -17,26 +17,31 @@ import weakref
 # TODO: setup permanent online echo server we can hit from tests
 RUN_LOCALHOST_TESTS = os.getenv('EVENTSTREAM_ECHO_TEST')
 
+#init_logging(LogLevel.Trace, 'stderr')
 
-class EventRecord:
+
+class ConnectionRecord:
     def __init__(self):
         self.setup_call = None
         self.shutdown_call = None
         self.message_calls = Queue()
-        self.failure = None
 
 
 class ConnectionHandler(ClientConnectionHandler):
     def __init__(self, fail_test_fn):
-        self.record = EventRecord()
+        self.record = ConnectionRecord()
         self.fail_test = fail_test_fn
         self.connection = None
+        # whether to purposefully raise an exception in a callback
+        self.raise_during_setup = False
 
     def on_connection_setup(self, connection, error, **kwargs):
         if self.record.setup_call is not None:
             self.fail_test("setup can only fire once")
         self.record.setup_call = {'connection': connection, 'error': error}
         self.connection = connection
+        if self.raise_during_setup:
+            raise RuntimeError("Purposefully raising error in callback")
 
     def on_connection_shutdown(self, reason, **kwargs):
         if self.record.setup_call is None:
@@ -60,7 +65,6 @@ class ContinuationRecord:
     def __init__(self):
         self.message_calls = Queue()
         self.close_call = Event()
-        self.failure = None
 
 
 class ContinuationHandler(ClientContinuationHandler):
@@ -86,6 +90,7 @@ class ContinuationHandler(ClientContinuationHandler):
         self.record.close_call.set()
 
 
+@skipUnless(RUN_LOCALHOST_TESTS, "Skipping until we have permanent echo server")
 class TestClient(NativeResourceTest):
 
     def _fail_test_from_callback(self, msg):
@@ -114,7 +119,6 @@ class TestClient(NativeResourceTest):
         self.assertIsNone(handler.record.shutdown_call)
         self._assertNoFailuresFromCallbacks()
 
-    @skipUnless(RUN_LOCALHOST_TESTS, "Skipping until we have permanent echo server")
     def test_connect_success(self):
         elg = EventLoopGroup()
         resolver = DefaultHostResolver(elg)
@@ -157,7 +161,6 @@ class TestClient(NativeResourceTest):
 
         return weakref.ref(handler.connection)
 
-    @skipUnless(RUN_LOCALHOST_TESTS, "Skipping until we have permanent echo server")
     def test_connection_stays_alive_until_close(self):
         # Currently, eventstream connections do NOT close just because their refcount reaches zero.
         # We *could* make it work this way, but it would take some combo of:
@@ -192,38 +195,31 @@ class TestClient(NativeResourceTest):
 
         self._assertNoFailuresFromCallbacks()
 
-    @skipUnless(RUN_LOCALHOST_TESTS, "Skipping until we have permanent echo server")
-    def test_stream_cleans_up_if_never_activated(self):
-        # check that there are no resource leaks if a stream/continuation is never activated
+    def test_setup_callback_exception_closes_connection(self):
         elg = EventLoopGroup()
         resolver = DefaultHostResolver(elg)
         bootstrap = ClientBootstrap(elg, resolver)
         handler = ConnectionHandler(self._fail_test_from_callback)
-        future = ClientConnection.connect(
+
+        # tell handler to explode during setup callback
+        handler.raise_during_setup = True
+        connect_future = ClientConnection.connect(
             handler=handler,
             host_name="127.0.0.1",
             port=8033,
             bootstrap=bootstrap)
 
-        # connection should succeed
-        self.assertIsNone(future.exception(TIMEOUT))
+        # the connect future does actually succeed, since the user's setup
+        # callback got a chance to run.
+        connect_future.exception(TIMEOUT)
 
-        # create stream, but do not activate it
-        stream_handler = ContinuationHandler(self._fail_test_from_callback)
-        continuation = handler.connection.new_stream(stream_handler)
+        # but the unhandled exception should cause the connection to die
+        shutdown_reason = handler.connection.shutdown_future.exception(TIMEOUT)
+        self.assertTrue("CALLBACK_EXCEPTION" in shutdown_reason.name)
+        self.assertTrue("CALLBACK_EXCEPTION" in handler.record.shutdown_call['reason'].name)
 
-        # close connection
-        handler.connection.close()
-        self.assertIsNone(handler.connection.shutdown_future.exception(TIMEOUT))
-
-        # stream callbacks should not fire because it was never activated
-        self.assertFalse(stream_handler.record.close_call.isSet())
-
-        self._assertNoFailuresFromCallbacks()
-
-    @skipUnless(RUN_LOCALHOST_TESTS, "Skipping until we have permanent echo server")
-    def test_echo(self):
-        # test sending and receiving messages
+    def _connect_fully(self):
+        # connect, send CONNECT message, receive CONNECT_ACK
         elg = EventLoopGroup()
         resolver = DefaultHostResolver(elg)
         bootstrap = ClientBootstrap(elg, resolver)
@@ -248,6 +244,29 @@ class TestClient(NativeResourceTest):
         msg = handler.record.message_calls.get(timeout=TIMEOUT)
         self.assertIs(MessageType.CONNECT_ACK, msg['message_type'])
         self.assertTrue(MessageFlag.CONNECTION_ACCEPTED & msg['flags'])
+
+        return handler
+
+    def test_stream_cleans_up_if_never_activated(self):
+        # check that there are no resource leaks if a stream/continuation is never activated
+        handler = self._connect_fully()
+
+        # create stream, but do not activate it
+        stream_handler = ContinuationHandler(self._fail_test_from_callback)
+        continuation = handler.connection.new_stream(stream_handler)
+
+        # close connection
+        handler.connection.close()
+        self.assertIsNone(handler.connection.shutdown_future.exception(TIMEOUT))
+
+        # stream callbacks should not fire because it was never activated
+        self.assertFalse(stream_handler.record.close_call.isSet())
+
+        self._assertNoFailuresFromCallbacks()
+
+    def test_stream_message_echo(self):
+        # test sending and receiving messages
+        handler = self._connect_fully()
 
         # send PING msg, server will echo back its headers and payload in the PING_RESPONSE.
         # test every single header type
@@ -286,14 +305,21 @@ class TestClient(NativeResourceTest):
         # which takes 1 message and responds with 1 message
         stream_handler = ContinuationHandler(self._fail_test_from_callback)
         continuation = handler.connection.new_stream(stream_handler)
+        msg_flushed = Event()
+
+        def on_msg_flush(error, **kwargs):
+            msg_flushed.set()
+
         msg_future = continuation.activate(
             operation='awstest#EchoMessage',
             headers=[],
             payload=b'{}',
             message_type=MessageType.APPLICATION_MESSAGE,
-            flags=MessageFlag.NONE)
+            flags=MessageFlag.NONE,
+            on_flush=on_msg_flush)
 
         self.assertIsNone(msg_future.exception(TIMEOUT))
+        msg_flushed.wait(TIMEOUT)
 
         # wait to receive response, which should end the stream
         msg = stream_handler.record.message_calls.get(timeout=TIMEOUT)
@@ -354,34 +380,10 @@ class TestClient(NativeResourceTest):
 
         return (continuation.closed_future, stream_handler.record)
 
-    @skipUnless(RUN_LOCALHOST_TESTS, "Skipping until we have permanent echo server")
     def test_stream_stays_alive_until_close(self):
         # Test checks that stream stays alive, and all callbacks fire,
         # even if there are no local references to stream or its handler.
-        elg = EventLoopGroup()
-        resolver = DefaultHostResolver(elg)
-        bootstrap = ClientBootstrap(elg, resolver)
-        handler = ConnectionHandler(self._fail_test_from_callback)
-        connect_future = ClientConnection.connect(
-            handler=handler,
-            host_name="127.0.0.1",
-            port=8033,
-            bootstrap=bootstrap)
-
-        self.assertIsNone(connect_future.exception(TIMEOUT))
-
-        # send CONNECT msg
-        msg_future = handler.connection.send_protocol_message(
-            message_type=MessageType.CONNECT,
-            headers=[Header.from_string(':version', '0.1.0'),
-                     Header.from_string('client-name', 'accepted.testy_mc_testerson')])
-
-        self.assertIsNone(msg_future.exception(TIMEOUT))
-
-        # wait to receive CONNECT_ACK
-        msg = handler.record.message_calls.get(timeout=TIMEOUT)
-        self.assertIs(MessageType.CONNECT_ACK, msg['message_type'])
-        self.assertTrue(MessageFlag.CONNECTION_ACCEPTED & msg['flags'])
+        handler = self._connect_fully()
 
         # create new stream and handler, and send request, but don't get back
         # anything that keeps a reference to these things.
@@ -401,3 +403,42 @@ class TestClient(NativeResourceTest):
         self.assertIsNone(stream_closed_future.result(timeout=TIMEOUT))
 
         self._assertNoFailuresFromCallbacks()
+
+    def test_on_closed_deadlock_regression(self):
+        # ensure that during the on_closed() callback of the first stream,
+        # we can activate a second stream without deadlocking
+        handler = self._connect_fully()
+
+        # create 2 streams but don't activate yet
+        first_stream_handler = DeadlockStreamHandler(handler.connection)
+        first_stream = handler.connection.new_stream(first_stream_handler)
+
+        second_stream_handler = ContinuationHandler(self._fail_test_from_callback)
+        second_stream = handler.connection.new_stream(second_stream_handler)
+
+        # activate first stream with message that closes the stream
+        # from the on_closed() callback it will activate the second stream
+        first_stream_handler.second_stream = second_stream
+        first_stream.activate(operation="first",
+                              message_type=MessageType.APPLICATION_MESSAGE)
+
+        first_stream_handler.activated_second_stream.wait(TIMEOUT)
+
+        handler.connection.close().result()
+
+
+class DeadlockStreamHandler(ClientContinuationHandler):
+    def __init__(self, connection):
+        super().__init__()
+        self.connection = connection
+        self.activated_second_stream = Event()
+
+    def on_continuation_message(self, headers, payload, message_type, flags, **kwargs) -> None:
+        pass
+
+    def on_continuation_closed(self, **kwargs) -> None:
+        print("ACTIVATING")
+        self.second_stream.activate(operation="next",
+                                    message_type=MessageType.APPLICATION_MESSAGE)
+        print("EVENTING")
+        self.activated_second_stream.set()
