@@ -16,6 +16,7 @@ PyObject *aws_py_credentials_session_token(PyObject *self, PyObject *args);
 PyObject *aws_py_credentials_provider_get_credentials(PyObject *self, PyObject *args);
 PyObject *aws_py_credentials_provider_new_chain_default(PyObject *self, PyObject *args);
 PyObject *aws_py_credentials_provider_new_static(PyObject *self, PyObject *args);
+PyObject *aws_py_credentials_provider_new_profile(PyObject *self, PyObject *args);
 
 PyObject *aws_py_signing_config_new(PyObject *self, PyObject *args);
 PyObject *aws_py_signing_config_get_algorithm(PyObject *self, PyObject *args);

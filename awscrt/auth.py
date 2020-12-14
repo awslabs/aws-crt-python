@@ -140,6 +140,28 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
         binding = _awscrt.credentials_provider_new_static(access_key_id, secret_access_key, session_token)
         return cls(binding)
 
+    @classmethod
+    def new_profile(
+            cls,
+            client_bootstrap,
+            profile_name='default',
+            config_file_name='~/.aws/config',
+            credentials_file_name='~/.aws/credentials'):
+        """
+        Create a provider only search for profile.
+
+        Returns:
+            AwsCredentialsProvider:
+        """
+        assert isinstance(client_bootstrap, ClientBootstrap)
+        assert isinstance(profile_name, str)
+        assert isinstance(config_file_name, str)
+        assert isinstance(credentials_file_name, str)
+
+        binding = _awscrt.credentials_provider_new_profile(
+            client_bootstrap, profile_name, config_file_name, credentials_file_name)
+        return cls(binding)
+
     def get_credentials(self):
         future = Future()
 

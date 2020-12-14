@@ -120,15 +120,10 @@ PyObject *aws_py_credentials_session_token(PyObject *self, PyObject *args) {
  */
 struct credentials_provider_binding {
     struct aws_credentials_provider *native;
-
-    /* Dependencies that must outlive this.
-     * Note that different types of providers have different dependencies */
-    PyObject *bootstrap;
 };
 
 /* Finally clean up binding (after capsule destructor runs and credentials provider shutdown completes) */
 static void s_credentials_provider_binding_clean_up(struct credentials_provider_binding *binding) {
-    Py_XDECREF(binding->bootstrap);
     aws_mem_release(aws_py_get_allocator(), binding);
 }
 
@@ -273,9 +268,6 @@ PyObject *aws_py_credentials_provider_new_chain_default(PyObject *self, PyObject
     /* From hereon, we need to clean up if errors occur.
      * Fortunately, the capsule destructor will clean up anything stored inside the binding */
 
-    binding->bootstrap = bootstrap_py;
-    Py_INCREF(binding->bootstrap);
-
     struct aws_credentials_provider_chain_default_options options = {
         .bootstrap = bootstrap,
         .shutdown_options = {s_credentials_provider_shutdown_complete, binding},
@@ -330,6 +322,62 @@ PyObject *aws_py_credentials_provider_new_static(PyObject *self, PyObject *args)
     };
 
     binding->native = aws_credentials_provider_new_static(allocator, &options);
+    if (!binding->native) {
+        PyErr_SetAwsLastError();
+        goto error;
+    }
+
+    return capsule;
+error:
+    Py_DECREF(capsule);
+    return NULL;
+}
+
+PyObject *aws_py_credentials_provider_new_profile(PyObject *self, PyObject *args) {
+    (void)self;
+    struct aws_allocator *allocator = aws_py_get_allocator();
+
+    PyObject *bootstrap_py;
+    struct aws_byte_cursor profile_name;
+    struct aws_byte_cursor config_file_name;
+    struct aws_byte_cursor credentials_file_name;
+
+    if (!PyArg_ParseTuple(
+            args,
+            "Os#s#s#",
+            &bootstrap_py,
+            &profile_name.ptr,
+            &profile_name.len,
+            &config_file_name.ptr,
+            &config_file_name.len,
+            &credentials_file_name.ptr,
+            &credentials_file_name.len)) {
+        return NULL;
+    }
+
+    struct aws_client_bootstrap *bootstrap = aws_py_get_client_bootstrap(bootstrap_py);
+    if (!bootstrap) {
+        return NULL;
+    }
+
+    struct credentials_provider_binding *binding;
+    PyObject *capsule = s_new_credentials_provider_binding_and_capsule(&binding);
+    if (!capsule) {
+        return NULL;
+    }
+
+    /* From hereon, we need to clean up if errors occur.
+     * Fortunately, the capsule destructor will clean up anything stored inside the binding */
+
+    struct aws_credentials_provider_profile_options options = {
+        .bootstrap = bootstrap,
+        .profile_name_override = profile_name,
+        .config_file_name_override = config_file_name,
+        .credentials_file_name_override = credentials_file_name,
+        .shutdown_options = {s_credentials_provider_shutdown_complete, binding},
+    };
+
+    binding->native = aws_credentials_provider_new_profile(allocator, &options);
     if (!binding->native) {
         PyErr_SetAwsLastError();
         goto error;
