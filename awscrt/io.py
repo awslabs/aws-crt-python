@@ -564,14 +564,6 @@ class InputStream(NativeResource):
     def _seek(self, offset, whence):
         return self._stream.seek(offset, whence)
 
-    def _get_length(self):
-        if hasattr(self._stream, 'length'):
-            return self._stream.length
-        else:
-            body_bytes = self._stream.read()
-            self._stream.seek(0)
-            return len(body_bytes)
-
     @classmethod
     def wrap(cls, stream, allow_none=False):
         """
