@@ -52,15 +52,10 @@ class S3Client(NativeResource):
             be attempted over plain-text.
 
         part_size (Optional[int]): Size of parts in Byte the files will be downloaded or uploaded in.
-            Note: for PUT_OBJECT request, S3 requires the part size greater than 5MB.
-
-        connection_timeout_ms (Optional[int]): Timeout value, in milliseconds, used for each connection.
+            Note: for PUT_OBJECT request, S3 requires the part size greater than 5MB. (5*1024*1024 by default)
 
         throughput_target_gbps (Optional[float]): Throughput target in Gbps that we are trying to reach.
-
-        throughput_per_vip_gbps (Optional[float]): Amount of throughput in Gbps to designate to each VIP.
-
-        num_connections_per_vip (Optional[int]): The number of connections that each VIP will have.
+            (5 Gbps by default)
     """
 
     __slots__ = ('shutdown_event')

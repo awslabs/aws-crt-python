@@ -65,10 +65,8 @@ class Statistics(object):
 
     def record_read(self, size):
         self._bytes_read += size
-        do_print = False
         if self.sec_first_byte == 0:
             self.sec_first_byte = time.time() - self.star_time
-            do_print = True
         time_now = time.time()
         if time_now - self.last_sample_time > 1:
             bytes_this_second = (self._bytes_read - self._bytes_sampled) / (time_now - self.last_sample_time)

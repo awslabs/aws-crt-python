@@ -3,7 +3,7 @@
 
 from awscrt.http import HttpHeaders, HttpRequest
 from awscrt.s3 import S3Client, AwsS3RequestType
-from test import NativeResourceTest, TIMEOUT
+from test import NativeResourceTest
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions
 from awscrt.auth import AwsCredentialsProvider
 import unittest
