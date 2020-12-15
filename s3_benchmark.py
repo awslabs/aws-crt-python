@@ -14,7 +14,6 @@ class CrtLazyReadStream(object):
         self.length = length
         self._stream = None
         self._pattern = pattern
-        # self._subscriber_manager = subscriber_manager
         self._statistic = statistics
 
     def _available_stream(self):
@@ -96,6 +95,7 @@ bunch_size = 1
 writing_disk = True
 request_type = "download"
 
+# Initialization
 event_loop_group = EventLoopGroup()
 host_resolver = DefaultHostResolver(event_loop_group)
 bootstrap = ClientBootstrap(event_loop_group, host_resolver)
@@ -143,8 +143,6 @@ completed = repeat_times * bunch_size
 for i in range(0, repeat_times):
     futures = []
     s3_requests = []
-    key = "/0_10GB_" + str(i) + suffix
-    request = HttpRequest("GET", key, headers)
     for j in range(0, bunch_size):
         if request_type == "download":
             s3_requests.append(s3_client.make_request(
@@ -159,7 +157,7 @@ for i in range(0, repeat_times):
     for j in futures:
         try:
             j.result(100000)
-        except BaseException:
+        except Exception as e:
             completed = completed - 1
 
 end_time = time.time()
