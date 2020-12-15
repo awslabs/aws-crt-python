@@ -144,19 +144,22 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
     def new_profile(
             cls,
             client_bootstrap,
-            profile_name='default',
-            config_file_name='~/.aws/config',
-            credentials_file_name='~/.aws/credentials'):
+            profile_name=None,
+            config_file_name=None,
+            credentials_file_name=None):
         """
-        Create a provider only search for profile.
+        Creates a provider that sources credentials from key-value profiles
+        loaded from the aws credentials file ("~/.aws/credentials" by default)
+        and the aws config file ("~/.aws/config" by default)
+        and corresponding the profile ("default" by default)
 
         Returns:
             AwsCredentialsProvider:
         """
         assert isinstance(client_bootstrap, ClientBootstrap)
-        assert isinstance(profile_name, str)
-        assert isinstance(config_file_name, str)
-        assert isinstance(credentials_file_name, str)
+        assert isinstance(profile_name, str) or profile_name is None
+        assert isinstance(config_file_name, str) or config_file_name is None
+        assert isinstance(credentials_file_name, str) or credentials_file_name is None
 
         binding = _awscrt.credentials_provider_new_profile(
             client_bootstrap, profile_name, config_file_name, credentials_file_name)

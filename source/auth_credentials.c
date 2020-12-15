@@ -344,7 +344,7 @@ PyObject *aws_py_credentials_provider_new_profile(PyObject *self, PyObject *args
 
     if (!PyArg_ParseTuple(
             args,
-            "Os#s#s#",
+            "Oz#z#z#",
             &bootstrap_py,
             &profile_name.ptr,
             &profile_name.len,
