@@ -139,15 +139,16 @@ static void s_on_connection_setup(
     if (result) {
         Py_DECREF(result);
     } else {
-        /* Callback might fail during application shutdown */
-        PyErr_WriteUnraisable(PyErr_Occurred());
-
         /* Close connection if unhandled exception occurs.
-         * There's no guarantee user was able to store a reference,
-         * so there's no guarantee they'll ever be able to close it. */
-        aws_event_stream_rpc_client_connection_close(
-            connection->native,
-            AWS_ERROR_UNKNOWN /* TODO: need better error like AWS_ERROR_CRT_PYTHON_UNHANDLED_EXCEPTION */);
+         * Note that callback might fail during application shutdown */
+        AWS_LOGF_ERROR(
+            AWS_LS_EVENT_STREAM_RPC_CLIENT,
+            "id=%p: Exception in on_connection_setup() callback, closing connection.",
+            (void *)connection->native);
+
+        PyErr_WriteUnraisable(connection->self_py);
+
+        aws_event_stream_rpc_client_connection_close(connection->native, AWS_ERROR_CRT_CALLBACK_EXCEPTION);
     }
 
     if (!native) {
@@ -177,7 +178,7 @@ static void s_on_connection_shutdown(
         Py_DECREF(result);
     } else {
         /* Callback might fail during application shutdown */
-        PyErr_WriteUnraisable(PyErr_Occurred());
+        PyErr_WriteUnraisable(connection->self_py);
     }
 
     /* There will be no further callbacks, clear circular reference
@@ -220,10 +221,7 @@ static void s_on_protocol_message(
         Py_DECREF(result);
     } else {
         /* Callback might fail during application shutdown */
-        PyErr_WriteUnraisable(PyErr_Occurred());
-
-        /* TODO: Should we close the connection on an unhandled exception?
-         * If so, do we differentiate between internal failure and failure stemming from the user's callback? */
+        PyErr_WriteUnraisable(connection->self_py);
     }
 
     PyGILState_Release(state);
@@ -276,7 +274,7 @@ void aws_py_event_stream_rpc_client_on_message_flush(int error_code, void *user_
         Py_DECREF(result);
     } else {
         /* Callback might fail during application shutdown */
-        PyErr_WriteUnraisable(PyErr_Occurred());
+        PyErr_WriteUnraisable(on_flush_py);
     }
 
     /* Release reference to completion callback */

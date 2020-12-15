@@ -101,6 +101,44 @@ class TestProvider(NativeResourceTest):
             self.assertTrue(EXAMPLE_SECRET_ACCESS_KEY == credentials.secret_access_key)
             self.assertTrue(credentials.session_token is None)
 
+    def _prepare_profile_file(self, profile_name, credential_file_name):
+        # prepare a credential profile file for the credential provider
+        file = open(credential_file_name, "w")
+        file.write("[default]\n" +
+                   "aws_access_key_id=default_access_key_id\n" +
+                   "aws_secret_access_key=default_secret_access_key\n\n" +
+
+                   "[%s]\n" % profile_name +
+                   "aws_access_key_id=%s\n" % EXAMPLE_ACCESS_KEY_ID +
+                   "aws_secret_access_key=%s" % EXAMPLE_SECRET_ACCESS_KEY
+                   )
+        file.close()
+
+    def _cleanup_profile_file(self, credential_file_name):
+        os.remove(credential_file_name)
+
+    def test_profile_provider(self):
+        # Profile provider should pick up the profile file to provide the credentials.
+        profile_name = "crt_user"
+        credential_file_name = "credential_" + str(int(os.times()[-1] * 100))
+        self._prepare_profile_file(profile_name, credential_file_name)
+
+        event_loop_group = awscrt.io.EventLoopGroup()
+        host_resolver = awscrt.io.DefaultHostResolver(event_loop_group)
+        bootstrap = awscrt.io.ClientBootstrap(event_loop_group, host_resolver)
+        provider = awscrt.auth.AwsCredentialsProvider.new_profile(
+            bootstrap, profile_name=profile_name, credentials_file_name=credential_file_name)
+
+        future = provider.get_credentials()
+        credentials = future.result(TIMEOUT)
+
+        # Don't use assertEqual(), which could log actual credentials if test fails.
+        self.assertTrue(EXAMPLE_ACCESS_KEY_ID == credentials.access_key_id)
+        self.assertTrue(EXAMPLE_SECRET_ACCESS_KEY == credentials.secret_access_key)
+        self.assertTrue(credentials.session_token is None)
+
+        self._cleanup_profile_file(credential_file_name)
+
 
 class TestSigningConfig(NativeResourceTest):
     def test_create(self):

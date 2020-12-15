@@ -226,6 +226,22 @@ PyObject *PyErr_AwsLastError(void) {
     return PyErr_Format(PyExc_RuntimeError, "%d (%s): %s", err, name, msg);
 }
 
+#define AWS_DEFINE_ERROR_INFO_CRT(CODE, STR)                                                                           \
+    [(CODE)-AWS_ERROR_ENUM_BEGIN_RANGE(AWS_CRT_PYTHON_PACKAGE_ID)] = AWS_DEFINE_ERROR_INFO(CODE, STR, "aws-crt-python")
+
+/* clang-format off */
+static struct aws_error_info s_errors[] = {
+    AWS_DEFINE_ERROR_INFO_CRT(
+        AWS_ERROR_CRT_CALLBACK_EXCEPTION,
+        "Callback raised an exception."),
+};
+/* clang-format on */
+
+static struct aws_error_info_list s_error_list = {
+    .error_list = s_errors,
+    .count = AWS_ARRAY_SIZE(s_errors),
+};
+
 /* Mappings between Python built-in exception types and AWS_ERROR_ codes
  * Stored in hashtables as `PyObject*` of Python exception type, and `int` of AWS_ERROR_ enum (cast to void*) */
 static struct aws_hash_table s_py_to_aws_error_map;
@@ -532,6 +548,7 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(credentials_provider_get_credentials, METH_VARARGS),
     AWS_PY_METHOD_DEF(credentials_provider_new_chain_default, METH_VARARGS),
     AWS_PY_METHOD_DEF(credentials_provider_new_static, METH_VARARGS),
+    AWS_PY_METHOD_DEF(credentials_provider_new_profile, METH_VARARGS),
     AWS_PY_METHOD_DEF(signing_config_new, METH_VARARGS),
     AWS_PY_METHOD_DEF(signing_config_get_algorithm, METH_VARARGS),
     AWS_PY_METHOD_DEF(signing_config_get_signature_type, METH_VARARGS),
@@ -603,6 +620,7 @@ PyMODINIT_FUNC PyInit__awscrt(void) {
     }
 #endif
 
+    aws_register_error_info(&s_error_list);
     s_error_map_init();
 
     return m;
