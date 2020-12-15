@@ -149,8 +149,10 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
             credentials_file_name=None):
         """
         Creates a provider that sources credentials from key-value profiles
-        loaded from the aws credentials file ("~/.aws/credentials" by default)
-        and the aws config file ("~/.aws/config" by default)
+        loaded from the aws credentials file (if not set, will read from env_variable
+            AWS_SHARED_CREDENTIALS_FILE first, and set to ~/.aws/credentials if env_variable not set too)
+        and the aws config file (if not set, will read from env_variable
+            AWS_CONFIG_FILE first, and set to ~/.aws/config if env_variable not set too)
         and corresponding the profile ("default" by default)
 
         Returns:
