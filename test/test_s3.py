@@ -2,11 +2,10 @@
 # SPDX-License-Identifier: Apache-2.0.
 
 from awscrt.http import HttpHeaders, HttpRequest
-from awscrt.s3 import S3Client, AwsS3RequestType, S3Request
+from awscrt.s3 import S3Client, AwsS3RequestType
 from test import NativeResourceTest, TIMEOUT
-from awscrt.io import LazyReadStream, ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions, init_logging, LogLevel
+from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions
 from awscrt.auth import AwsCredentialsProvider
-import io
 import unittest
 import os
 
@@ -57,7 +56,6 @@ class S3ClientTest(NativeResourceTest):
 class S3RequestTest(NativeResourceTest):
     get_test_object_path = "/get_object_test_10MB.txt"
     put_test_object_path = "/put_object_test_py_10MB.txt"
-    put_test_small_object_path = "/0.txt"
     region = "us-west-2"
     bucket_name = "aws-crt-canary-bucket"
     timeout = 100  # seconds
@@ -65,7 +63,9 @@ class S3RequestTest(NativeResourceTest):
 
     response_headers = None
     response_status_code = None
-    body_len = 0
+    received_body_len = 0
+
+    put_body_stream = None
 
     def _build_endpoint_string(self, region, bucket_name):
         return bucket_name + ".s3." + region + ".amazonaws.com"
@@ -75,39 +75,27 @@ class S3RequestTest(NativeResourceTest):
         request = HttpRequest("GET", self.get_test_object_path, headers)
         return request
 
-    def _put_object_request(self):
-        data_len = 10485760
-        body_stream = LazyReadStream("put_object_test_10MB.txt", "r+b", data_len)
-        headers = HttpHeaders([("host", self._build_endpoint_string(self.region, self.bucket_name)),
-                               ("Content-Type", "text/plain"), ("Content-Length", str(data_len))])
-        request = HttpRequest("PUT", self.put_test_object_path, headers, body_stream)
-        return request
-
-    def _put_small_object_request(self):
-        file_stats = os.stat("get_object_test_1MB.txt")
+    def _put_object_request(self, file_name):
+        self.put_body_stream = open(file_name, "r+b")
+        file_stats = os.stat(file_name)
         data_len = file_stats.st_size
-        body_stream = LazyReadStream("get_object_test_1MB.txt", "r+b", data_len)
         headers = HttpHeaders([("host", self._build_endpoint_string(self.region, self.bucket_name)),
                                ("Content-Type", "text/plain"), ("Content-Length", str(data_len))])
-        request = HttpRequest("PUT", self.put_test_small_object_path, headers, body_stream)
+        request = HttpRequest("PUT", self.put_test_object_path, headers, self.put_body_stream)
         return request
 
     def _on_request_headers(self, status_code, headers, **kargs):
-        print(status_code)
-        print(headers)
         self.response_status_code = status_code
         self.assertIsNotNone(headers, "headers are none")
         self.response_headers = headers
 
     def _on_request_body(self, chunk, offset, **kargs):
-        print(offset)
         self.assertIsNotNone(chunk, "the body chunk is none")
-        self.body_len = self.body_len + len(chunk)
+        self.received_body_len = self.received_body_len + len(chunk)
 
     def _validate_successful_get_response(self, put_object):
         self.assertEqual(self.response_status_code, 200, "status code is not 200")
         headers = HttpHeaders(self.response_headers)
-        # self.assertIsNone(headers.get("accept-ranges"))
         self.assertIsNone(headers.get("Content-Range"))
         body_length = headers.get("Content-Length")
         if not put_object:
@@ -115,75 +103,8 @@ class S3RequestTest(NativeResourceTest):
         if body_length:
             self.assertEqual(
                 int(body_length),
-                self.body_len,
+                self.received_body_len,
                 "Received body length does not match the Content-Length header")
-
-    def _download_file_example(self):
-        # num_threads is the Number of event-loops to create. Pass 0 to create one for each processor on the machine.
-        event_loop_group = EventLoopGroup(self.num_threads)
-        host_resolver = DefaultHostResolver(event_loop_group)
-        bootstrap = ClientBootstrap(event_loop_group, host_resolver)
-        credential_provider = AwsCredentialsProvider.new_default_chain(bootstrap)
-        s3_client = S3Client(
-            bootstrap=bootstrap,
-            region="us-west-2",
-            credential_provider=credential_provider)
-        headers = HttpHeaders([("host", self.bucket_name + ".s3." + self.region + ".amazonaws.com")])
-        request = HttpRequest("GET", "/get_object_test_1MB.txt", headers)
-        file = open("get_object_test_1MB.txt", "wb")
-
-        def on_body(chunk):
-            file.write(chunk)
-
-        s3_request = s3_client.make_request(
-            request=request,
-            type=AwsS3RequestType.GET_OBJECT,
-            on_body=on_body)
-        finished_future = s3_request.finished_future
-        result = finished_future.result(self.timeout)
-        file.close()
-
-    def _upload_file_example(self):
-        # num_threads is the Number of event-loops to create. Pass 0 to create one for each processor on the machine.
-        init_logging(LogLevel.Trace, "log.txt")
-        event_loop_group = EventLoopGroup(self.num_threads)
-        host_resolver = DefaultHostResolver(event_loop_group)
-        bootstrap = ClientBootstrap(event_loop_group, host_resolver)
-        credential_provider = AwsCredentialsProvider.new_default_chain(bootstrap)
-        s3_client = S3Client(
-            bootstrap=bootstrap,
-            region="us-west-2",
-            credential_provider=credential_provider,
-            part_size=5 * 1024 * 1024)
-        data_stream = open("put_object_test_10MB.txt", 'rb')
-        body_bytes = data_stream.read()
-        data_len = len(body_bytes)
-        data_stream.seek(0)
-        data_stream_replace = io.BytesIO(body_bytes)
-        print(data_len)
-        headers = HttpHeaders([("host", self.bucket_name + ".s3." + self.region +
-                                ".amazonaws.com"), ("Content-Type", "text/plain"), ("Content-Length", str(data_len))])
-        request = HttpRequest("PUT", "/put_object_test_py_10MB.txt", headers, data_stream_replace)
-
-        def on_headers(status_code, headers):
-            """
-            check the status and probably print out the headers
-            """
-            print(status_code)
-            print(headers)
-
-        s3_request = s3_client.make_request(
-            request=request,
-            type=AwsS3RequestType.PUT_OBJECT,
-            on_headers=on_headers
-        )
-        finished_future = s3_request.finished_future
-        try:
-            result = finished_future.result(self.timeout)
-        except Exception as e:
-            print("request finished with failure:", e)
-
-        data_stream.close()
 
     def _test_s3_put_get_object(self, request, type):
         s3_client = s3_client_new(False, self.region, 5 * 1024 * 1024)
@@ -193,26 +114,21 @@ class S3RequestTest(NativeResourceTest):
             on_headers=self._on_request_headers,
             on_body=self._on_request_body)
         finished_future = s3_request.finished_future
-        result = (finished_future.result(self.timeout))
+        finished_future.result(self.timeout)
         self._validate_successful_get_response(type is AwsS3RequestType.PUT_OBJECT)
         shutdown_event = s3_request.shutdown_event
         del s3_request
         self.assertTrue(shutdown_event.wait(self.timeout))
 
     def test_get_object(self):
-        init_logging(LogLevel.Error, "unittestlog.txt")
         request = self._get_object_request()
         self._test_s3_put_get_object(request, AwsS3RequestType.GET_OBJECT)
 
-    # def test_sample(self):
-    #     self._upload_file_example()
-
     def test_put_object(self):
-        # init_logging(LogLevel.Trace, "unittest_log.txt")
-        request = self._put_object_request()
+        request = self._put_object_request("test/resources/s3_put_object.txt")
         self._test_s3_put_get_object(request, AwsS3RequestType.PUT_OBJECT)
+        self.put_body_stream.close()
 
-    def test_put_small_object(self):
-        # init_logging(LogLevel.Trace, "unittest_log.txt")
-        request = self._put_small_object_request()
-        self._test_s3_put_get_object(request, AwsS3RequestType.PUT_OBJECT)
+
+if __name__ == '__main__':
+    unittest.main()
