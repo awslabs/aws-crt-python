@@ -387,7 +387,7 @@ void *aws_py_get_binding(PyObject *obj, const char *capsule_name, const char *cl
     PyObject *py_binding = PyObject_GetAttrString(obj, "_binding"); /* new reference */
     if (!py_binding) {
         return PyErr_Format(
-            PyExc_AttributeError,
+            PyExc_TypeError,
             "Expected valid '%s', received '%s' (no '_binding' attribute)",
             class_name,
             Py_TYPE(obj)->tp_name);

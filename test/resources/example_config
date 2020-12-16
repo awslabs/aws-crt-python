@@ -1,0 +1,2 @@
+[profile test_process_provider]
+credential_process=echo "{\"Version\": 1, \"AccessKeyId\": \"process_access_key_id\", \"SecretAccessKey\": \"process_secret_access_key\"}"
