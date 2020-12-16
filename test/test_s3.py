@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0.
 
 from awscrt.http import HttpHeaders, HttpRequest
-from awscrt.s3 import S3Client, AwsS3RequestType
+from awscrt.s3 import S3Client, S3RequestType
 from test import NativeResourceTest
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions
 from awscrt.auth import AwsCredentialsProvider
@@ -115,18 +115,18 @@ class S3RequestTest(NativeResourceTest):
             on_body=self._on_request_body)
         finished_future = s3_request.finished_future
         finished_future.result(self.timeout)
-        self._validate_successful_get_response(type is AwsS3RequestType.PUT_OBJECT)
+        self._validate_successful_get_response(type is S3RequestType.PUT_OBJECT)
         shutdown_event = s3_request.shutdown_event
         del s3_request
         self.assertTrue(shutdown_event.wait(self.timeout))
 
     def test_get_object(self):
         request = self._get_object_request()
-        self._test_s3_put_get_object(request, AwsS3RequestType.GET_OBJECT)
+        self._test_s3_put_get_object(request, S3RequestType.GET_OBJECT)
 
     def test_put_object(self):
         request = self._put_object_request("test/resources/s3_put_object.txt")
-        self._test_s3_put_get_object(request, AwsS3RequestType.PUT_OBJECT)
+        self._test_s3_put_get_object(request, S3RequestType.PUT_OBJECT)
         self.put_body_stream.close()
 
 

@@ -19,26 +19,31 @@ struct s3_meta_request_binding {
     bool release_called;
     bool shutdown_called;
 
-    /* Weak reference proxy to python self.
-     * NOTE: The python self is forced to stay alive until on_finish fires.
-     * We do this by INCREFing when the object is created, and DECREFing when on_finish fires. */
-    PyObject *self_proxy;
+    /* Reference proxy to python self */
+    PyObject *self_py;
 
     /* Shutdown callback, all resource cleaned up, reference cleared after invoke */
     PyObject *on_shutdown;
 };
 
+static void s_destroy_if_ready(struct s3_meta_request_binding *meta_request) {
+    if (meta_request->native && (!meta_request->shutdown_called || !meta_request->release_called)) {
+        /* native meta_request successfully created, but not ready to clean up yet */
+        return;
+    }
+    /* in case native never existed and shutdown never happened */
+    Py_XDECREF(meta_request->on_shutdown);
+    aws_mem_release(aws_py_get_allocator(), meta_request);
+}
+
 static void s_s3_meta_request_release(struct s3_meta_request_binding *meta_request) {
     AWS_FATAL_ASSERT(!meta_request->release_called);
-    meta_request->release_called = true;
-
-    bool destroy_after_release = meta_request->shutdown_called;
 
     aws_s3_meta_request_release(meta_request->native);
 
-    if (destroy_after_release) {
-        aws_mem_release(aws_py_get_allocator(), meta_request);
-    }
+    meta_request->release_called = true;
+
+    s_destroy_if_ready(meta_request);
 }
 
 static void s_s3_request_on_headers(
@@ -60,7 +65,7 @@ static void s_s3_request_on_headers(
      * extracting values from buffer of [name,value,name,value,...] null-terminated strings */
     PyObject *header_list = PyList_New(num_headers);
     if (!header_list) {
-        PyErr_WriteUnraisable(PyErr_Occurred());
+        PyErr_WriteUnraisable(request_binding->self_py);
         goto done;
     }
 
@@ -76,7 +81,7 @@ static void s_s3_request_on_headers(
         size_t value_len = header.value.len;
         PyObject *tuple = Py_BuildValue("(s#s#)", name_str, name_len, value_str, value_len);
         if (!tuple) {
-            PyErr_WriteUnraisable(PyErr_Occurred());
+            PyErr_WriteUnraisable(request_binding->self_py);
             goto done;
         }
         PyList_SET_ITEM(header_list, i, tuple); /* steals reference to tuple */
@@ -84,9 +89,9 @@ static void s_s3_request_on_headers(
 
     /* Deliver the built up list of (name,value) tuples */
     PyObject *result =
-        PyObject_CallMethod(request_binding->self_proxy, "_on_headers", "(iO)", response_status, header_list);
+        PyObject_CallMethod(request_binding->self_py, "_on_headers", "(iO)", response_status, header_list);
     if (!result) {
-        PyErr_WriteUnraisable(PyErr_Occurred());
+        PyErr_WriteUnraisable(request_binding->self_py);
         goto done;
     }
     Py_DECREF(result);
@@ -111,14 +116,9 @@ static void s_s3_request_on_body(
     }
 
     PyObject *result = PyObject_CallMethod(
-        request_binding->self_proxy,
-        "_on_body",
-        "(y#K)",
-        (const char *)(body->ptr),
-        (Py_ssize_t)body->len,
-        range_start);
+        request_binding->self_py, "_on_body", "(y#K)", (const char *)(body->ptr), (Py_ssize_t)body->len, range_start);
     if (!result) {
-        PyErr_WriteUnraisable(PyErr_Occurred());
+        PyErr_WriteUnraisable(request_binding->self_py);
         goto done;
     }
     Py_DECREF(result);
@@ -144,13 +144,14 @@ static void s_s3_request_on_finish(
     }
     /* TODO: expose the error_response_headers/body */
     PyObject *result =
-        PyObject_CallMethod(request_binding->self_proxy, "_on_finish", "(i)", meta_request_result->error_code);
+        PyObject_CallMethod(request_binding->self_py, "_on_finish", "(i)", meta_request_result->error_code);
     if (result) {
         Py_DECREF(result);
     } else {
         /* Callback might fail during application shutdown */
-        PyErr_WriteUnraisable(PyErr_Occurred());
+        PyErr_WriteUnraisable(request_binding->self_py);
     }
+    Py_CLEAR(request_binding->self_py);
     PyGILState_Release(state);
     /*************** GIL RELEASE ***************/
 }
@@ -158,7 +159,7 @@ static void s_s3_request_on_finish(
 /* Invoked when the python object get cleaned up */
 static void s_s3_meta_request_capsule_destructor(PyObject *capsule) {
     struct s3_meta_request_binding *meta_request = PyCapsule_GetPointer(capsule, s_capsule_name_s3_meta_request);
-    Py_XDECREF(meta_request->self_proxy);
+    Py_XDECREF(meta_request->self_py);
     s_s3_meta_request_release(meta_request);
 }
 
@@ -203,17 +204,23 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     PyObject *s3_client_py = NULL;
     PyObject *http_request_py = NULL;
     int type;
+    PyObject *credential_provider_py;
+    const char *region;
+    Py_ssize_t region_len;
     PyObject *on_headers_py = NULL;
     PyObject *on_body_py = NULL;
     PyObject *on_finish_py = NULL;
     PyObject *on_shutdown_py = NULL;
     if (!PyArg_ParseTuple(
             args,
-            "OOOiOOOO",
+            "OOOiOs#OOOO",
             &py_s3_request,
             &s3_client_py,
             &http_request_py,
             &type,
+            &credential_provider_py,
+            &region,
+            &region_len,
             &on_headers_py,
             &on_body_py,
             &on_finish_py,
@@ -230,14 +237,45 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
         return NULL;
     }
 
+    struct aws_credentials_provider *credential_provider = NULL;
+    if (credential_provider_py != Py_None) {
+        credential_provider = aws_py_get_credentials_provider(credential_provider_py);
+        if (!credential_provider) {
+            return NULL;
+        }
+    }
+
+    struct aws_signing_config_aws signing_config;
+    AWS_ZERO_STRUCT(signing_config);
+    if (credential_provider) {
+        struct aws_byte_cursor region_cursor = aws_byte_cursor_from_array((const uint8_t *)region, region_len);
+        aws_s3_init_default_signing_config(&signing_config, region_cursor, credential_provider);
+    }
+
     struct s3_meta_request_binding *meta_request = aws_mem_calloc(allocator, 1, sizeof(struct s3_meta_request_binding));
     if (!meta_request) {
         return PyErr_AwsLastError();
     }
+
     /* From hereon, we need to clean up if errors occur */
+
+    PyObject *capsule =
+        PyCapsule_New(meta_request, s_capsule_name_s3_meta_request, s_s3_meta_request_capsule_destructor);
+    if (!capsule) {
+        aws_mem_release(allocator, meta_request);
+        return NULL;
+    }
+
+    meta_request->on_shutdown = on_shutdown_py;
+    Py_INCREF(meta_request->on_shutdown);
+
+    meta_request->self_py = py_s3_request;
+    Py_INCREF(meta_request->self_py);
+
     struct aws_s3_meta_request_options s3_meta_request_opt = {
         .type = type,
         .message = http_request,
+        .signing_config = credential_provider ? &signing_config : NULL,
         .headers_callback = s_s3_request_on_headers,
         .body_callback = s_s3_request_on_body,
         .finish_callback = s_s3_request_on_finish,
@@ -251,27 +289,9 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
         goto error;
     }
 
-    PyObject *capsule =
-        PyCapsule_New(meta_request, s_capsule_name_s3_meta_request, s_s3_meta_request_capsule_destructor);
-    if (!capsule) {
-        goto capsule_new_failed;
-    }
-
-    meta_request->self_proxy = PyWeakref_NewProxy(py_s3_request, NULL);
-    if (!meta_request->self_proxy) {
-        goto proxy_failed;
-    }
-
-    meta_request->on_shutdown = on_shutdown_py;
-    Py_INCREF(meta_request->on_shutdown);
-
     return capsule;
 
-proxy_failed:
-    Py_DECREF(capsule);
-capsule_new_failed:
-    aws_s3_meta_request_release(meta_request->native);
 error:
-    aws_mem_release(allocator, meta_request);
+    Py_DECREF(capsule);
     return NULL;
 }

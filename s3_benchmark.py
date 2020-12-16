@@ -1,4 +1,4 @@
-from awscrt.s3 import S3Client, AwsS3RequestType
+from awscrt.s3 import S3Client, S3RequestType
 from awscrt.io import ClientBootstrap, DefaultHostResolver, EventLoopGroup
 from awscrt.auth import AwsCredentialsProvider
 from awscrt.http import HttpHeaders, HttpRequest
@@ -147,12 +147,12 @@ for i in range(0, repeat_times):
         if request_type == "download":
             s3_requests.append(s3_client.make_request(
                 request=request,
-                type=AwsS3RequestType.GET_OBJECT,
+                type=S3RequestType.GET_OBJECT,
                 on_body=on_body))
         else:
             s3_requests.append(s3_client.make_request(
                 request=upload_request,
-                type=AwsS3RequestType.PUT_OBJECT))
+                type=S3RequestType.PUT_OBJECT))
         futures.append(s3_requests[j].finished_future)
     for j in futures:
         try:

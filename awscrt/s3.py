@@ -16,7 +16,7 @@ import threading
 from enum import IntEnum
 
 
-class AwsS3RequestType(IntEnum):
+class S3RequestType(IntEnum):
     """The type of the Aws S3 request"""
 
     DEFAULT = 0
@@ -45,7 +45,7 @@ class S3Client(NativeResource):
 
         credential_provider (Optional[AwsCredentialsProvider]): Credentials providers source the
             AwsCredentials needed to sign an authenticated AWS request.
-            If None is provided, then the default chain credential provider will be used
+            If None is provided, the request will not be signed.
 
         tls_connection_options (Optional[TlsConnectionOptions]): Optional TLS
             connection options. If None is provided, then the connection will
@@ -58,7 +58,7 @@ class S3Client(NativeResource):
             (5 Gbps by default)
     """
 
-    __slots__ = ('shutdown_event')
+    __slots__ = ('shutdown_event', '_region')
 
     def __init__(
             self,
@@ -86,7 +86,7 @@ class S3Client(NativeResource):
 
         def on_shutdown():
             shutdown_event.set()
-
+        self._region = region
         self.shutdown_event = shutdown_event
 
         self._binding = _awscrt.s3_client_new(
@@ -98,17 +98,29 @@ class S3Client(NativeResource):
             part_size,
             throughput_target_gbps)
 
-    def make_request(self, *, request, type, on_headers=None, on_body=None, on_done=None, **kwargs):
+    def make_request(
+            self,
+            *,
+            request,
+            type,
+            credential_provider=None,
+            on_headers=None,
+            on_body=None,
+            on_done=None):
         """Create the Request to the the S3 server,
         accelerate the GET_OBJECT/PUT_OBJECT request by spliting it into multiple requests under the hood.
 
         Args:
             request (HttpRequest): The overall outgoing API request for S3 operation.
 
-            type (AwsS3RequestType): The type of S3 request passed in, GET_OBJECT/PUT_OBJECT can be accelerated
+            type (S3RequestType): The type of S3 request passed in, GET_OBJECT/PUT_OBJECT can be accelerated
+
+            credential_provider (Optional[AwsCredentialsProvider]): Credentials providers source the
+                AwsCredentials needed to sign an authenticated AWS request, for this request only.
+                If None is provided, the credential provider in the client will be used.
 
             on_headers: Optional callback invoked as the response received, and even the API request
-                has been splitted into multiple parts, this callback will only be invoked once as
+                has been split into multiple parts, this callback will only be invoked once as
                 it's just making one API request to S3.
                 The function should take the following arguments and return nothing:
 
@@ -132,8 +144,9 @@ class S3Client(NativeResource):
             on_done: Optional callback invoked when the meta_request has finished the job.
                 The function should take the following arguments and return nothing:
 
-                *   `error_code` (int): The error code from CRT, indicates the job has finished successfully
-                    or failed for specific reason
+                *   `error` (Optional[Exception]): None if the request was
+                    successfully sent and valid response received, or an Exception
+                    if it failed.
 
                 *   `**kwargs` (dict): Forward-compatibility kwargs.
 
@@ -144,19 +157,47 @@ class S3Client(NativeResource):
             client=self,
             request=request,
             type=type,
+            credential_provider=credential_provider,
             on_headers=on_headers,
             on_body=on_body,
             on_done=on_done,
-            **kwargs)
+            region=self._region)
 
 
 class S3Request(NativeResource):
     """S3 request
+    Create a new S3Request with :meth:`S3Client.make_request()`
 
+    Attributes:
+        finished_future (concurrent.futures.Future): Future that will
+            resolve when the s3 request has finished successfully.
+            If the error happens, the Future will contain an exception
+            indicating why it failed.
+
+        shutdown_event (threading.Event): Signals when underlying threads and
+            structures have all finished shutting down. Shutdown begins when the
+            S3Request object is destroyed.
     """
-    __slots__ = ('_on_headers_cb', '_on_body_cb', '_on_done_cb', '_finished_future', '_kwargs', 'shutdown_event')
+    __slots__ = (
+        '_on_headers_cb',
+        '_on_body_cb',
+        '_on_done_cb',
+        '_finished_future',
+        '_kwargs',
+        '_http_request',
+        'shutdown_event')
 
-    def __init__(self, *, client, request, type, on_headers=None, on_body=None, on_done=None, **kwargs):
+    def __init__(
+            self,
+            *,
+            client,
+            request,
+            type,
+            credential_provider=None,
+            on_headers=None,
+            on_body=None,
+            on_done=None,
+            region=None):
         assert isinstance(client, S3Client)
         assert isinstance(request, HttpRequest)
         assert callable(on_headers) or on_headers is None
@@ -165,11 +206,13 @@ class S3Request(NativeResource):
 
         super().__init__()
 
-        # the native s3-request will keep the request alive until the s3-request finishes
+        # the native s3 request will keep the native http request alive until the s3
+        # request finishes, but to keep the io stream alive, still keep the reference
+        # to HttpRequest here
+        self._http_request = request
         self._on_headers_cb = on_headers
         self._on_body_cb = on_body
         self._on_done_cb = on_done
-        self._kwargs = kwargs
 
         self._finished_future = Future()
 
@@ -181,23 +224,36 @@ class S3Request(NativeResource):
         self.shutdown_event = shutdown_event
 
         self._binding = _awscrt.s3_client_make_meta_request(
-            self, client, request, type, self._on_headers, self._on_body, self._on_finish, on_shutdown)
+            self,
+            client,
+            request,
+            type,
+            credential_provider,
+            region,
+            self._on_headers,
+            self._on_body,
+            self._on_finish,
+            on_shutdown)
 
     def _on_headers(self, status_code, headers):
         if self._on_headers_cb:
-            self._on_headers_cb(status_code=status_code, headers=headers, **self._kwargs)
+            self._on_headers_cb(status_code=status_code, headers=headers)
 
     def _on_body(self, chunk, offset):
         if self._on_body_cb:
-            self._on_body_cb(chunk=chunk, offset=offset, kwargs=self._kwargs)
+            self._on_body_cb(chunk=chunk, offset=offset)
 
     def _on_finish(self, error_code):
+        error = None
+        # the http request can be released now
+        self._http_request = None
         if error_code:
-            self.finished_future.set_exception(awscrt.exceptions.from_code(error_code))
+            error = awscrt.exceptions.from_code(error_code)
+            self.finished_future.set_exception(error)
         else:
-            self.finished_future.set_result("finish")
+            self.finished_future.set_result(None)
         if self._on_done_cb:
-            self._on_done_cb(error_code=error_code, kwargs=self._kwargs)
+            self._on_done_cb(error=error)
 
     @property
     def finished_future(self):
