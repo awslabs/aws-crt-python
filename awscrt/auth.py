@@ -167,6 +167,65 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
             client_bootstrap, profile_name, config_file_name, credentials_file_name)
         return cls(binding)
 
+    @classmethod
+    def new_process(cls, profile_to_use=None):
+        """
+        Configuration options for the process credentials provider
+
+        The process credentials provider sources credentials from running a command or process.
+        The command to run is sourced from a profile in the AWS config file, using the standard
+        profile selection rules. The profile key the command is read from is "credential_process."
+        E.g.:
+         [default]
+         credential_process=/opt/amazon/bin/my-credential-fetcher --argsA=abc
+        On successfully running the command, the output should be a json data with the following
+        format:
+        {
+           "Version": 1,
+           "AccessKeyId": "accesskey",
+           "SecretAccessKey": "secretAccessKey"
+           "SessionToken": "....",
+           "Expiration": "2019-05-29T00:21:43Z"
+        }
+        Version here identifies the command output format version.
+        This provider is not part of the default provider chain.
+
+        Param:
+            profile_to_use: the path to the profile. If not provided, we will try environment variable: AWS_PROFILE.
+
+        Returns:
+            AwsCredentialsProvider:
+        """
+
+        binding = _awscrt.credentials_provider_new_process(profile_to_use)
+        return cls(binding)
+
+    @classmethod
+    def new_environment(cls):
+        """
+        Configuration options for a provider that returns credentials based on environment variable values
+
+        Returns:
+            AwsCredentialsProvider:
+        """
+
+        binding = _awscrt.credentials_provider_new_environment()
+        return cls(binding)
+
+    @classmethod
+    def new_chain(cls, providers=[]):
+        """
+        Configuration options for a provider that queries, in order, a list of providers.
+        This provider uses the first set of credentials successfully queried.
+        Providers are queried one at a time; a provider is not queried until the preceding provider has failed to source credentials.
+
+        Returns:
+            AwsCredentialsProvider:
+        """
+
+        binding = _awscrt.credentials_provider_new_chain(providers)
+        return cls(binding)
+
     def get_credentials(self):
         future = Future()
 

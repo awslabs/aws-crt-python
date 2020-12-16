@@ -388,3 +388,99 @@ error:
     Py_DECREF(capsule);
     return NULL;
 }
+
+PyObject *aws_py_credentials_provider_new_process(PyObject *self, PyObject *args) {
+    (void)self;
+    struct aws_allocator *allocator = aws_py_get_allocator();
+
+    struct aws_byte_cursor profile_to_use;
+
+    if (!PyArg_ParseTuple(args, "z#", &profile_to_use.ptr, &profile_to_use.len)) {
+        return NULL;
+    }
+
+    struct credentials_provider_binding *binding;
+    PyObject *capsule = s_new_credentials_provider_binding_and_capsule(&binding);
+    if (!capsule) {
+        return NULL;
+    }
+
+    /* From hereon, we need to clean up if errors occur.
+     * Fortunately, the capsule destructor will clean up anything stored inside the binding */
+
+    struct aws_credentials_provider_process_options options = {
+        .profile_to_use = profile_to_use,
+        .shutdown_options = {s_credentials_provider_shutdown_complete, binding},
+    };
+
+    binding->native = aws_py_credentials_provider_new_process(allocator, &options);
+    if (!binding->native) {
+        PyErr_SetAwsLastError();
+        goto error;
+    }
+
+    return capsule;
+error:
+    Py_DECREF(capsule);
+    return NULL;
+}
+
+PyObject *aws_py_credentials_provider_new_environment(PyObject *self, PyObject *args) {
+    (void)self;
+    struct aws_allocator *allocator = aws_py_get_allocator();
+
+    struct credentials_provider_binding *binding;
+    PyObject *capsule = s_new_credentials_provider_binding_and_capsule(&binding);
+    if (!capsule) {
+        return NULL;
+    }
+
+    /* From hereon, we need to clean up if errors occur.
+     * Fortunately, the capsule destructor will clean up anything stored inside the binding */
+
+    struct aws_credentials_provider_environment_options options = {
+        .shutdown_options = {s_credentials_provider_shutdown_complete, binding},
+    };
+
+    binding->native = aws_py_credentials_provider_new_environment(allocator, &options);
+    if (!binding->native) {
+        PyErr_SetAwsLastError();
+        goto error;
+    }
+
+    return capsule;
+error:
+    Py_DECREF(capsule);
+    return NULL;
+}
+
+PyObject *aws_py_credentials_provider_new_chain(PyObject *self, PyObject *args) {
+    (void)self;
+    struct aws_allocator *allocator = aws_py_get_allocator();
+
+    struct credentials_provider_binding *binding;
+    PyObject *capsule = s_new_credentials_provider_binding_and_capsule(&binding);
+    if (!capsule) {
+        return NULL;
+    }
+
+    // TODO: parse the list passed in
+
+    /* From hereon, we need to clean up if errors occur.
+     * Fortunately, the capsule destructor will clean up anything stored inside the binding */
+
+    struct aws_credentials_provider_chain_options options = {
+        .shutdown_options = {s_credentials_provider_shutdown_complete, binding},
+    };
+
+    binding->native = aws_py_credentials_provider_new_chain(allocator, &options);
+    if (!binding->native) {
+        PyErr_SetAwsLastError();
+        goto error;
+    }
+
+    return capsule;
+error:
+    Py_DECREF(capsule);
+    return NULL;
+}
