@@ -157,7 +157,11 @@ class TestProvider(NativeResourceTest):
 
     def test_process_provider(self):
         with ScopedEnvironmentVariable("AWS_CONFIG_FILE", "test/resources/example_config"):
-            provider = awscrt.auth.AwsCredentialsProvider.new_process('test_process_provider')
+            if sys.platform == 'win32':
+                profile = 'test_process_provider_win'
+            else:
+                profile = 'test_process_provider'
+            provider = awscrt.auth.AwsCredentialsProvider.new_process(profile)
             credentials = provider.get_credentials().result(TIMEOUT)
 
             # Don't use assertEqual(), which could log actual credentials if test fails.
