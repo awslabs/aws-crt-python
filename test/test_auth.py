@@ -6,6 +6,7 @@ import awscrt.io
 import datetime
 from io import BytesIO
 import os
+import sys
 from test import NativeResourceTest, TIMEOUT
 import time
 
