@@ -389,7 +389,7 @@ void *aws_py_get_binding(PyObject *obj, const char *capsule_name, const char *cl
     PyObject *py_binding = PyObject_GetAttrString(obj, "_binding"); /* new reference */
     if (!py_binding) {
         return PyErr_Format(
-            PyExc_AttributeError,
+            PyExc_TypeError,
             "Expected valid '%s', received '%s' (no '_binding' attribute)",
             class_name,
             Py_TYPE(obj)->tp_name);
@@ -549,6 +549,9 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(credentials_provider_new_chain_default, METH_VARARGS),
     AWS_PY_METHOD_DEF(credentials_provider_new_static, METH_VARARGS),
     AWS_PY_METHOD_DEF(credentials_provider_new_profile, METH_VARARGS),
+    AWS_PY_METHOD_DEF(credentials_provider_new_process, METH_VARARGS),
+    AWS_PY_METHOD_DEF(credentials_provider_new_environment, METH_VARARGS),
+    AWS_PY_METHOD_DEF(credentials_provider_new_chain, METH_VARARGS),
     AWS_PY_METHOD_DEF(signing_config_new, METH_VARARGS),
     AWS_PY_METHOD_DEF(signing_config_get_algorithm, METH_VARARGS),
     AWS_PY_METHOD_DEF(signing_config_get_signature_type, METH_VARARGS),
