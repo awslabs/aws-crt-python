@@ -117,6 +117,9 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
         3.  (conditional, off by default) ECS
         4.  (conditional, on by default) EC2 Instance Metadata
 
+        Args:
+            client_bootstrap (ClientBootstrap): Client bootstrap to use when initiating socket connection.
+
         Returns:
             AwsCredentialsProvider:
         """
@@ -130,6 +133,11 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
         """
         Create a simple provider that just returns a fixed set of credentials.
 
+        Args:
+            access_key_id (str): Access key ID
+            secret_access_key (str): Secret access key
+            session_token (Optional[str]): Optional session token
+
         Returns:
             AwsCredentialsProvider:
         """
@@ -138,6 +146,113 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
         assert isinstance(session_token, str) or session_token is None
 
         binding = _awscrt.credentials_provider_new_static(access_key_id, secret_access_key, session_token)
+        return cls(binding)
+
+    @classmethod
+    def new_profile(
+            cls,
+            client_bootstrap,
+            profile_name=None,
+            config_filepath=None,
+            credentials_filepath=None):
+        """
+        Creates a provider that sources credentials from key-value profiles
+        loaded from the aws credentials file.
+
+        Args:
+            client_bootstrap: Client bootstrap to use when initiating socket connection.
+
+            profile_name (Optional[str]): Name of profile to use.
+                If not set, uses value from AWS_PROFILE environment variable.
+                If that is not set, uses value of "default"
+
+            config_filepath (Optional[str]): Path to profile config file.
+                If not set, uses value from AWS_CONFIG_FILE environment variable.
+                If that is not set, uses value of "~/.aws/config"
+
+            credentials_filepath (Optional[str]): Path to profile credentials file.
+                If not set, uses value from AWS_SHARED_CREDENTIALS_FILE environment variable.
+                If that is not set, uses value of "~/.aws/credentials"
+
+        Returns:
+            AwsCredentialsProvider:
+        """
+        assert isinstance(client_bootstrap, ClientBootstrap)
+        assert isinstance(profile_name, str) or profile_name is None
+        assert isinstance(config_filepath, str) or config_filepath is None
+        assert isinstance(credentials_filepath, str) or credentials_filepath is None
+
+        binding = _awscrt.credentials_provider_new_profile(
+            client_bootstrap, profile_name, config_filepath, credentials_filepath)
+        return cls(binding)
+
+    @classmethod
+    def new_process(cls, profile_to_use=None):
+        """
+        Creates a provider that sources credentials from running an external command or process.
+
+        The command to run is sourced from a profile in the AWS config file, using the standard
+        profile selection rules. The profile key the command is read from is "credential_process."
+        E.g.:
+         [default]
+         credential_process=/opt/amazon/bin/my-credential-fetcher --argsA=abc
+        On successfully running the command, the output should be a json data with the following
+        format:
+        {
+           "Version": 1,
+           "AccessKeyId": "accesskey",
+           "SecretAccessKey": "secretAccessKey"
+           "SessionToken": "....",
+           "Expiration": "2019-05-29T00:21:43Z"
+        }
+        Version here identifies the command output format version.
+        This provider is not part of the default provider chain.
+
+        Args:
+            profile_to_use (Optional[str]): Name of profile in which to look for credential_process.
+                If not set, uses value from AWS_PROFILE environment variable.
+                If that is not set, uses value of "default"
+
+        Returns:
+            AwsCredentialsProvider:
+        """
+
+        binding = _awscrt.credentials_provider_new_process(profile_to_use)
+        return cls(binding)
+
+    @classmethod
+    def new_environment(cls):
+        """
+        Creates a provider that returns credentials sourced from environment variables.
+
+        * AWS_ACCESS_KEY_ID
+        * AWS_SECRET_ACCESS_KEY
+        * AWS_SESSION_TOKEN
+
+        Returns:
+            AwsCredentialsProvider:
+        """
+
+        binding = _awscrt.credentials_provider_new_environment()
+        return cls(binding)
+
+    @classmethod
+    def new_chain(cls, providers):
+        """
+        Creates a provider that sources credentials from an ordered sequence of providers.
+
+        This provider uses the first set of credentials successfully queried.
+        Providers are queried one at a time; a provider is not queried until the
+        preceding provider has failed to source credentials.
+
+        Args:
+            providers (List[AwsCredentialsProvider]): List of credentials providers.
+
+        Returns:
+            AwsCredentialsProvider:
+        """
+
+        binding = _awscrt.credentials_provider_new_chain(providers)
         return cls(binding)
 
     def get_credentials(self):
