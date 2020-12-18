@@ -3,7 +3,7 @@ from awscrt.io import ClientBootstrap, DefaultHostResolver, EventLoopGroup
 from awscrt.auth import AwsCredentialsProvider
 from awscrt.http import HttpHeaders, HttpRequest
 import time
-import os
+# import os
 import sys
 import threading
 
