@@ -172,7 +172,7 @@ class TestProvider(NativeResourceTest):
 
     def test_py_provider(self):
         credential = FakePyProvider()
-        provider = awscrt.auth.AwsCredentialsProvider.new_py_provider(credential)
+        provider = awscrt.auth.AwsCredentialsProvider.new_python(credential)
         credentials = provider.get_credentials().result(TIMEOUT)
 
         # Don't use assertEqual(), which could log actual credentials if test fails.
