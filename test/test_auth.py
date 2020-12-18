@@ -178,15 +178,14 @@ class TestProvider(NativeResourceTest):
         # Don't use assertEqual(), which could log actual credentials if test fails.
         self.assertTrue('accesskey' == credentials.access_key_id)
         self.assertTrue('secretAccessKey' == credentials.secret_access_key)
-        # self.assertTrue(credentials.session_token is None)
+        self.assertTrue('sessionToken' == credentials.session_token)
 
 
 class FakePyProvider():
     def get_credential(self):
         return {"AccessKeyId": "accesskey",
                 "SecretAccessKey": "secretAccessKey",
-                "SessionToken": "....",
-                "Expiration": 1247169778}
+                "SessionToken": "sessionToken"}
 
 
 class TestSigningConfig(NativeResourceTest):
