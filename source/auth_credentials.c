@@ -562,7 +562,7 @@ static int s_credentials_provider_py_provider_get_credentials(
 
     PyGILState_STATE state;
     if (aws_py_gilstate_ensure(&state)) {
-        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+        return AWS_OP_ERR; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
     // TODO: ERROR handling, do not crash baby.
