@@ -560,6 +560,11 @@ static int s_credentials_provider_py_provider_get_credentials(
     int error_code = AWS_ERROR_SUCCESS;
     struct credentials_provider_binding *binding = provider->impl;
 
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
+
     // TODO: ERROR handling, do not crash baby.
     PyObject *dict = PyObject_CallMethod(binding->py_provider, "get_credential", "()");
 
@@ -572,6 +577,7 @@ static int s_credentials_provider_py_provider_get_credentials(
     struct aws_string *secret_access_key = aws_string_new_from_c_str(allocator, PyUnicode_AsUTF8(py_secret_key));
     struct aws_string *session_token = aws_string_new_from_c_str(allocator, PyUnicode_AsUTF8(py_token));
     uint64_t expiration = PyLong_AsUnsignedLongLong(py_expiration);
+    PyGILState_Release(state);
     if (access_key_id != NULL && secret_access_key != NULL) {
         credentials =
             aws_credentials_new_from_string(allocator, access_key_id, secret_access_key, session_token, expiration);
