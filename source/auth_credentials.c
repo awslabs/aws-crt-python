@@ -573,9 +573,14 @@ static int s_credentials_provider_py_provider_get_credentials(
     PyObject *py_token = PyDict_GetItemString(dict, "SessionToken");
     PyObject *py_expiration = PyDict_GetItemString(dict, "Expiration");
 
-    struct aws_string *access_key_id = aws_string_new_from_c_str(allocator, PyUnicode_AsUTF8(py_key));
-    struct aws_string *secret_access_key = aws_string_new_from_c_str(allocator, PyUnicode_AsUTF8(py_secret_key));
-    struct aws_string *session_token = aws_string_new_from_c_str(allocator, PyUnicode_AsUTF8(py_token));
+    struct aws_byte_cursor cursor = aws_byte_cursor_from_pyunicode(py_key);
+    struct aws_string *access_key_id = aws_string_new_from_cursor(allocator, &cursor);
+    cursor = aws_byte_cursor_from_pyunicode(py_token);
+    struct aws_string *session_token = aws_string_new_from_cursor(allocator, &cursor);
+    cursor = aws_byte_cursor_from_pyunicode(py_secret_key);
+    struct aws_string *secret_access_key = aws_string_new_from_cursor(allocator, &cursor);
+
+    /* if not set, the expiration will be -1, which is UINT64_MAX */
     uint64_t expiration = PyLong_AsUnsignedLongLong(py_expiration);
     PyGILState_Release(state);
     if (access_key_id != NULL && secret_access_key != NULL) {
