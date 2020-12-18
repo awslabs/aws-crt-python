@@ -20,7 +20,7 @@ PyObject *aws_py_credentials_provider_new_profile(PyObject *self, PyObject *args
 PyObject *aws_py_credentials_provider_new_process(PyObject *self, PyObject *args);
 PyObject *aws_py_credentials_provider_new_environment(PyObject *self, PyObject *args);
 PyObject *aws_py_credentials_provider_new_chain(PyObject *self, PyObject *args);
-PyObject *aws_py_credentials_provider_new_py_provider(PyObject *self, PyObject *args);
+PyObject *aws_py_credentials_provider_new_python(PyObject *self, PyObject *args);
 
 PyObject *aws_py_signing_config_new(PyObject *self, PyObject *args);
 PyObject *aws_py_signing_config_get_algorithm(PyObject *self, PyObject *args);

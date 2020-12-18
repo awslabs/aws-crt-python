@@ -597,9 +597,12 @@ static int s_credentials_provider_py_provider_get_credentials(
             aws_credentials_new_from_string(allocator, access_key_id, secret_access_key, session_token, expiration);
         if (credentials == NULL) {
             error_code = aws_last_error();
+            if (!error_code) {
+                error_code = AWS_AUTH_CREDENTIALS_PROVIDER_INVALID_DELEGATE;
+            }
         }
     } else {
-        error_code = AWS_AUTH_CREDENTIALS_PROVIDER_INVALID_REVERT;
+        error_code = AWS_AUTH_CREDENTIALS_PROVIDER_INVALID_DELEGATE;
     }
 
     callback(credentials, error_code, user_data);
@@ -625,7 +628,7 @@ static struct aws_credentials_provider_vtable s_aws_credentials_provider_py_prov
     .destroy = s_credentials_provider_py_provider_destroy,
 };
 
-PyObject *aws_py_credentials_provider_new_py_provider(PyObject *self, PyObject *args) {
+PyObject *aws_py_credentials_provider_new_python(PyObject *self, PyObject *args) {
     (void)self;
     (void)args;
     struct aws_allocator *allocator = aws_py_get_allocator();
@@ -648,7 +651,7 @@ PyObject *aws_py_credentials_provider_new_py_provider(PyObject *self, PyObject *
     /* From hereon, we need to clean up if errors occur.
      * Fortunately, the capsule destructor will clean up anything stored inside the binding */
 
-    struct aws_credentials_provider_revert_options options = {
+    struct aws_credentials_provider_delegate_options options = {
         .provider_vtable = &s_aws_credentials_provider_py_provider_vtable,
         .impl = binding,
         .shutdown_options =
@@ -658,7 +661,7 @@ PyObject *aws_py_credentials_provider_new_py_provider(PyObject *self, PyObject *
             },
     };
 
-    binding->native = aws_credentials_provider_new_revert(allocator, &options);
+    binding->native = aws_credentials_provider_new_delegate(allocator, &options);
     if (!binding->native) {
         PyErr_SetAwsLastError();
         goto error;
