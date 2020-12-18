@@ -170,6 +170,24 @@ class TestProvider(NativeResourceTest):
             self.assertTrue('process_secret_access_key' == credentials.secret_access_key)
             self.assertTrue(credentials.session_token is None)
 
+    def test_py_provider(self):
+        credential = FakePyProvider()
+        provider = awscrt.auth.AwsCredentialsProvider.new_py_provider(credential)
+        credentials = provider.get_credentials().result(TIMEOUT)
+
+        # Don't use assertEqual(), which could log actual credentials if test fails.
+        self.assertTrue('accesskey' == credentials.access_key_id)
+        self.assertTrue('secretAccessKey' == credentials.secret_access_key)
+        # self.assertTrue(credentials.session_token is None)
+
+
+class FakePyProvider():
+    def get_credential(self):
+        return {"AccessKeyId": "accesskey",
+                "SecretAccessKey": "secretAccessKey",
+                "SessionToken": "....",
+                "Expiration": 1247169778}
+
 
 class TestSigningConfig(NativeResourceTest):
     def test_create(self):

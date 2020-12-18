@@ -255,6 +255,31 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
         binding = _awscrt.credentials_provider_new_chain(providers)
         return cls(binding)
 
+    @classmethod
+    def new_py_provider(cls, py_provider):
+        """
+        Creates a provider that sources credentials from a python class.
+
+        The python provider needs to have a method :get_credential(), which returns
+        the credential as a dictionary like:
+        {
+            "Version": 1,
+            "AccessKeyId": "accesskey",
+            "SecretAccessKey": "secretAccessKey",
+            "SessionToken": "....",
+            "Expiration": 1247169778
+        }
+
+        Args:
+            providers (List[AwsCredentialsProvider]): List of credentials providers.
+
+        Returns:
+            AwsCredentialsProvider:
+        """
+
+        binding = _awscrt.credentials_provider_new_py_provider(py_provider)
+        return cls(binding)
+
     def get_credentials(self):
         future = Future()
 
