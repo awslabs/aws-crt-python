@@ -68,9 +68,8 @@ class S3Client(NativeResource):
             AwsCredentials needed to sign an authenticated AWS request.
             If None is provided, the request will not be signed.
 
-        tls_connection_options (Optional[TlsConnectionOptions]): Optional TLS
-            connection options. If None is provided, then the connection will
-            be attempted over plain-text.
+        tls_connection_options (Optional[TlsConnectionOptions]): Optional TLS Options to be used
+            for each connection, if tls_mode is ENABLED
 
         part_size (Optional[int]): Size of parts in Byte the files will be downloaded or uploaded in.
             Note: for PUT_OBJECT request, S3 requires the part size greater than 5MB. (5*1024*1024 by default)
