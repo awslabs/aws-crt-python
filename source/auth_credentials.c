@@ -556,6 +556,9 @@ static int s_credentials_provider_py_provider_get_credentials(
     void *user_data) {
     struct aws_allocator *allocator = provider->allocator;
 
+    struct aws_string *access_key_id = NULL;
+    struct aws_string *secret_access_key = NULL;
+    struct aws_string *session_token = NULL;
     struct aws_credentials *credentials = NULL;
     int error_code = AWS_ERROR_SUCCESS;
     struct credentials_provider_binding *binding = provider->impl;
@@ -565,7 +568,6 @@ static int s_credentials_provider_py_provider_get_credentials(
         return AWS_OP_ERR; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
-    // TODO: ERROR handling, do not crash baby.
     PyObject *dict = PyObject_CallMethod(binding->py_provider, "get_credential", "()");
 
     PyObject *py_key = PyDict_GetItemString(dict, "AccessKeyId");
@@ -573,16 +575,21 @@ static int s_credentials_provider_py_provider_get_credentials(
     PyObject *py_token = PyDict_GetItemString(dict, "SessionToken");
     PyObject *py_expiration = PyDict_GetItemString(dict, "Expiration");
 
-    struct aws_byte_cursor cursor = aws_byte_cursor_from_pyunicode(py_key);
-    struct aws_string *access_key_id = aws_string_new_from_cursor(allocator, &cursor);
-    cursor = aws_byte_cursor_from_pyunicode(py_token);
-    struct aws_string *session_token = aws_string_new_from_cursor(allocator, &cursor);
-    cursor = aws_byte_cursor_from_pyunicode(py_secret_key);
-    struct aws_string *secret_access_key = aws_string_new_from_cursor(allocator, &cursor);
-
+    struct aws_byte_cursor cursor;
+    if (py_key) {
+        cursor = aws_byte_cursor_from_pyunicode(py_key);
+        access_key_id = aws_string_new_from_cursor(allocator, &cursor);
+    }
+    if (py_secret_key) {
+        cursor = aws_byte_cursor_from_pyunicode(py_secret_key);
+        secret_access_key = aws_string_new_from_cursor(allocator, &cursor);
+    }
+    if (py_token) {
+        cursor = aws_byte_cursor_from_pyunicode(py_token);
+        session_token = aws_string_new_from_cursor(allocator, &cursor);
+    }
     /* if not set, the expiration will be -1, which is UINT64_MAX */
     uint64_t expiration = PyLong_AsUnsignedLongLong(py_expiration);
-    PyGILState_Release(state);
     if (access_key_id != NULL && secret_access_key != NULL) {
         credentials =
             aws_credentials_new_from_string(allocator, access_key_id, secret_access_key, session_token, expiration);
@@ -590,11 +597,11 @@ static int s_credentials_provider_py_provider_get_credentials(
             error_code = aws_last_error();
         }
     } else {
-        // TODO: ERROR CODE
-        error_code = AWS_AUTH_CREDENTIALS_PROVIDER_INVALID_ENVIRONMENT;
+        error_code = AWS_AUTH_CREDENTIALS_PROVIDER_INVALID_REVERT;
     }
 
     callback(credentials, error_code, user_data);
+    PyGILState_Release(state);
 
     aws_credentials_release(credentials);
     aws_string_destroy(session_token);
@@ -640,7 +647,7 @@ PyObject *aws_py_credentials_provider_new_py_provider(PyObject *self, PyObject *
     /* From hereon, we need to clean up if errors occur.
      * Fortunately, the capsule destructor will clean up anything stored inside the binding */
 
-    struct aws_credentials_provider_vtable_options options = {
+    struct aws_credentials_provider_revert_options options = {
         .provider_vtable = &s_aws_credentials_provider_py_provider_vtable,
         .impl = binding,
         .shutdown_options =
@@ -650,7 +657,7 @@ PyObject *aws_py_credentials_provider_new_py_provider(PyObject *self, PyObject *
             },
     };
 
-    binding->native = aws_credentials_provider_new_vtable(allocator, &options);
+    binding->native = aws_credentials_provider_new_revert(allocator, &options);
     if (!binding->native) {
         PyErr_SetAwsLastError();
         goto error;

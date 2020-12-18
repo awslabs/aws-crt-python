@@ -261,9 +261,8 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
         Creates a provider that sources credentials from a python class.
 
         The python provider needs to have a method :get_credential(), which returns
-        the credential as a dictionary like:
+        the credential as a dictionary like (Expiration and SessionToken are optional):
         {
-            "Version": 1,
             "AccessKeyId": "accesskey",
             "SecretAccessKey": "secretAccessKey",
             "SessionToken": "....",
