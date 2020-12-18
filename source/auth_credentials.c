@@ -218,7 +218,6 @@ PyObject *aws_py_credentials_provider_get_credentials(PyObject *self, PyObject *
     }
 
     AWS_FATAL_ASSERT(on_complete_cb != Py_None);
-    printf("before get credentials\n");
 
     Py_INCREF(on_complete_cb);
     if (aws_credentials_provider_get_credentials(provider->native, s_on_get_credentials_complete, on_complete_cb)) {
