@@ -589,6 +589,7 @@ static int s_credentials_provider_py_provider_get_credentials(
     }
     /* if not set, the expiration will be -1, which is UINT64_MAX */
     uint64_t expiration = PyLong_AsUnsignedLongLong(py_expiration);
+    PyGILState_Release(state);
     if (access_key_id != NULL && secret_access_key != NULL) {
         credentials =
             aws_credentials_new_from_string(allocator, access_key_id, secret_access_key, session_token, expiration);
@@ -600,7 +601,6 @@ static int s_credentials_provider_py_provider_get_credentials(
     }
 
     callback(credentials, error_code, user_data);
-    PyGILState_Release(state);
 
     aws_credentials_release(credentials);
     aws_string_destroy(session_token);
