@@ -35,6 +35,20 @@ class S3RequestType(IntEnum):
     """
 
 
+class S3RequestTlsMode(IntEnum):
+    """Tls mode for S3 request"""
+
+    AWS_MR_TLS_ENABLED = 0
+    """
+    Enable tls for S3 request.
+    """
+
+    AWS_MR_TLS_DISABLED = 1
+    """
+    Disable tls for S3 request.
+    """
+
+
 class S3Client(NativeResource):
     """S3 client
 
@@ -42,6 +56,13 @@ class S3Client(NativeResource):
         bootstrap (ClientBootstrap): Client bootstrap to use when initiating socket connection.
 
         region (str): Region that the S3 bucket lives in.
+
+        tls_mode (Optional, S3RequestTlsMode):  How tls should be used while performing the request
+            If this is ENABLED:
+                If tls_connection_options is not-null, then those tls options will be used
+                If tls_connection_options is NULL, then default tls options will be used
+            If this is DISABLED:
+                No tls options will be used, regardless of tls_connection_options value.
 
         credential_provider (Optional[AwsCredentialsProvider]): Credentials providers source the
             AwsCredentials needed to sign an authenticated AWS request.
@@ -65,6 +86,7 @@ class S3Client(NativeResource):
             *,
             bootstrap,
             region,
+            tls_mode=0,
             credential_provider=None,
             tls_connection_options=None,
             part_size=0,
@@ -95,6 +117,7 @@ class S3Client(NativeResource):
             tls_connection_options,
             on_shutdown,
             region,
+            tls_mode,
             part_size,
             throughput_target_gbps)
 

@@ -83,15 +83,17 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
     Py_ssize_t region_len;
     uint64_t part_size = 0;
     double throughput_target_gbps = 0;
+    int tls_mode;
     if (!PyArg_ParseTuple(
             args,
-            "OOOOs#|Kd",
+            "OOOOs#iKd",
             &bootstrap_py,
             &credential_provider_py,
             &tls_options_py,
             &on_shutdown_py,
             &region,
             &region_len,
+            &tls_mode,
             &part_size,
             &throughput_target_gbps)) {
         return NULL;
@@ -146,6 +148,7 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
     struct aws_s3_client_config s3_config = {
         .region = aws_byte_cursor_from_array((const uint8_t *)region, region_len),
         .client_bootstrap = bootstrap,
+        .tls_mode = tls_mode,
         .signing_config = credential_provider ? &signing_config : NULL,
         .part_size = part_size,
         .tls_connection_options = tls_options,
