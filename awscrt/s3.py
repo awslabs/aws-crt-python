@@ -126,6 +126,7 @@ class S3Client(NativeResource):
             request,
             type,
             credential_provider=None,
+            file=None,
             on_headers=None,
             on_body=None,
             on_done=None):
@@ -140,6 +141,12 @@ class S3Client(NativeResource):
             credential_provider (Optional[AwsCredentialsProvider]): Credentials providers source the
                 AwsCredentials needed to sign an authenticated AWS request, for this request only.
                 If None is provided, the credential provider in the client will be used.
+
+            file (Optional[io.FileIO]): Optional file object from Python, you can either pass the file object
+                here or handle the file stream from the on_body callback. If file is set here, the C part will
+                handle writing/reading into the disk. If set, for GET_OBJECT request, the on_body callback will
+                not have valid chunk passed in. The performance can be improved with the file set, but the memory
+                usage will be higher.
 
             on_headers: Optional callback invoked as the response received, and even the API request
                 has been split into multiple parts, this callback will only be invoked once as
@@ -180,6 +187,7 @@ class S3Client(NativeResource):
             request=request,
             type=type,
             credential_provider=credential_provider,
+            file=file,
             on_headers=on_headers,
             on_body=on_body,
             on_done=on_done,
@@ -216,12 +224,14 @@ class S3Request(NativeResource):
             request,
             type,
             credential_provider=None,
+            file=None,
             on_headers=None,
             on_body=None,
             on_done=None,
             region=None):
         assert isinstance(client, S3Client)
         assert isinstance(request, HttpRequest)
+        # assert isinstance(file, FileIO) or file is None
         assert callable(on_headers) or on_headers is None
         assert callable(on_body) or on_body is None
         assert callable(on_done) or on_done is None
@@ -251,6 +261,7 @@ class S3Request(NativeResource):
             request,
             type,
             credential_provider,
+            file,
             region,
             self._on_headers,
             self._on_body,
@@ -261,9 +272,9 @@ class S3Request(NativeResource):
         if self._on_headers_cb:
             self._on_headers_cb(status_code=status_code, headers=headers)
 
-    def _on_body(self, chunk, offset):
+    def _on_body(self, chunk, offset, size=None):
         if self._on_body_cb:
-            self._on_body_cb(chunk=chunk, offset=offset)
+            self._on_body_cb(chunk=chunk, offset=offset, size=size)
 
     def _on_finish(self, error_code):
         error = None

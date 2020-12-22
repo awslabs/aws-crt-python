@@ -22,6 +22,11 @@ struct s3_meta_request_binding {
     /* Reference proxy to python self */
     PyObject *self_py;
 
+    /**
+     * io.FileObj that handles file operation from C land to reduce the cost
+     * passing chunks from C into python
+     **/
+    PyObject *file_py;
     /* Shutdown callback, all resource cleaned up, reference cleared after invoke */
     PyObject *on_shutdown;
 };
@@ -114,9 +119,27 @@ static void s_s3_request_on_body(
     if (aws_py_gilstate_ensure(&state)) {
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
-
-    PyObject *result = PyObject_CallMethod(
-        request_binding->self_py, "_on_body", "(y#K)", (const char *)(body->ptr), (Py_ssize_t)body->len, range_start);
+    PyObject *result = NULL;
+    if (request_binding->file_py) {
+        if (body->len) {
+            PyObject *byte_object = PyBytes_FromStringAndSize((char *)(body->ptr), (Py_ssize_t)body->len);
+            if (PyFile_WriteObject(byte_object, request_binding->file_py, 0)) {
+                /* TODO: raise error */
+                goto done;
+            }
+            Py_DECREF(byte_object);
+        }
+        result = PyObject_CallMethod(
+            request_binding->self_py, "_on_body", "(y#KK)", NULL, (Py_ssize_t)0, range_start, (uint64_t)body->len);
+    } else {
+        result = PyObject_CallMethod(
+            request_binding->self_py,
+            "_on_body",
+            "(y#K)",
+            (const char *)(body->ptr),
+            (Py_ssize_t)body->len,
+            range_start);
+    }
     if (!result) {
         PyErr_WriteUnraisable(request_binding->self_py);
         goto done;
@@ -160,6 +183,7 @@ static void s_s3_request_on_finish(
 static void s_s3_meta_request_capsule_destructor(PyObject *capsule) {
     struct s3_meta_request_binding *meta_request = PyCapsule_GetPointer(capsule, s_capsule_name_s3_meta_request);
     Py_XDECREF(meta_request->self_py);
+    Py_XDECREF(meta_request->file_py);
     s_s3_meta_request_release(meta_request);
 }
 
@@ -204,7 +228,8 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     PyObject *s3_client_py = NULL;
     PyObject *http_request_py = NULL;
     int type;
-    PyObject *credential_provider_py;
+    PyObject *credential_provider_py = NULL;
+    PyObject *file_py = NULL;
     const char *region;
     Py_ssize_t region_len;
     PyObject *on_headers_py = NULL;
@@ -213,12 +238,13 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     PyObject *on_shutdown_py = NULL;
     if (!PyArg_ParseTuple(
             args,
-            "OOOiOs#OOOO",
+            "OOOiOOs#OOOO",
             &py_s3_request,
             &s3_client_py,
             &http_request_py,
             &type,
             &credential_provider_py,
+            &file_py,
             &region,
             &region_len,
             &on_headers_py,
@@ -271,6 +297,11 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
 
     meta_request->self_py = py_s3_request;
     Py_INCREF(meta_request->self_py);
+
+    if (file_py != Py_None) {
+        meta_request->file_py = file_py;
+        Py_INCREF(meta_request->file_py);
+    }
 
     struct aws_s3_meta_request_options s3_meta_request_opt = {
         .type = type,
