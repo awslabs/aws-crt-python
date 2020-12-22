@@ -14,6 +14,7 @@ from awscrt.auth import AwsCredentialsProvider
 import awscrt.exceptions
 import threading
 from enum import IntEnum
+import os
 
 
 class S3RequestType(IntEnum):
@@ -142,11 +143,8 @@ class S3Client(NativeResource):
                 AwsCredentials needed to sign an authenticated AWS request, for this request only.
                 If None is provided, the credential provider in the client will be used.
 
-            file (Optional[io.FileIO]): Optional file object from Python, you can either pass the file object
-                here or handle the file stream from the on_body callback. If file is set here, the C part will
-                handle writing/reading into the disk. If set, for GET_OBJECT request, the on_body callback will
-                not have valid chunk passed in. The performance can be improved with the file set, but the memory
-                usage will be higher.
+            file (Optional[path]): Optional file path. If set, the C part will handle writing/reading from a file.
+                The performance can be improved with it, but the memory usage will be higher
 
             on_headers: Optional callback invoked as the response received, and even the API request
                 has been split into multiple parts, this callback will only be invoked once as
@@ -231,7 +229,8 @@ class S3Request(NativeResource):
             region=None):
         assert isinstance(client, S3Client)
         assert isinstance(request, HttpRequest)
-        # assert isinstance(file, FileIO) or file is None
+        assert os.path.isfile(file) or file is None
+        # assert file is path or file is None
         assert callable(on_headers) or on_headers is None
         assert callable(on_body) or on_body is None
         assert callable(on_done) or on_done is None
