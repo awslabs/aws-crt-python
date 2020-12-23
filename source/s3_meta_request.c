@@ -227,7 +227,7 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     PyObject *on_shutdown_py = NULL;
     if (!PyArg_ParseTuple(
             args,
-            "OOOiOs#s#OOOO",
+            "OOOiOz#s#OOOO",
             &py_s3_request,
             &s3_client_py,
             &http_request_py,
