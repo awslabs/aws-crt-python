@@ -169,7 +169,9 @@ static void s_s3_request_on_finish(
 static void s_s3_meta_request_capsule_destructor(PyObject *capsule) {
     struct s3_meta_request_binding *meta_request = PyCapsule_GetPointer(capsule, s_capsule_name_s3_meta_request);
     Py_XDECREF(meta_request->self_py);
-    fclose(meta_request->file);
+    if (meta_request->file) {
+        fclose(meta_request->file);
+    }
     s_s3_meta_request_release(meta_request);
 }
 
