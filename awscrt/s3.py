@@ -14,7 +14,6 @@ from awscrt.auth import AwsCredentialsProvider
 import awscrt.exceptions
 import threading
 from enum import IntEnum
-import os
 
 
 class S3RequestType(IntEnum):
