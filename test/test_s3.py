@@ -134,22 +134,41 @@ class S3RequestTest(NativeResourceTest):
 
     def test_get_object_file_object(self):
         request = self._get_object_request()
+        type = S3RequestType.GET_OBJECT
         s3_client = s3_client_new(False, self.region, 5 * 1024 * 1024)
         with NamedTemporaryFile("w") as file:
-            print(file.name)
             s3_request = s3_client.make_request(
                 request=request,
                 file=file.name,
-                type=S3RequestType.GET_OBJECT,
+                type=type,
                 on_headers=self._on_request_headers,
                 on_body=self._on_request_body_file_object)
             finished_future = s3_request.finished_future
             finished_future.result(self.timeout)
-            # self._validate_successful_get_response(type is S3RequestType.PUT_OBJECT)
+            self._validate_successful_get_response(type is S3RequestType.PUT_OBJECT)
             shutdown_event = s3_request.shutdown_event
             del s3_request
             self.assertTrue(shutdown_event.wait(self.timeout))
             # TODO verify the written file
+
+    def test_put_object_file_object(self):
+        request = self._put_object_request("test/resources/s3_put_object.txt")
+        type = S3RequestType.PUT_OBJECT
+        # close the stream, to test if the C FILE pointer as the input stream working well.
+        self.put_body_stream.close()
+        s3_client = s3_client_new(False, self.region, 5 * 1024 * 1024)
+        s3_request = s3_client.make_request(
+            request=request,
+            file="test/resources/s3_put_object.txt",
+            type=type,
+            on_headers=self._on_request_headers,
+            on_body=self._on_request_body_file_object)
+        finished_future = s3_request.finished_future
+        finished_future.result(self.timeout)
+        self._validate_successful_get_response(type is S3RequestType.PUT_OBJECT)
+        shutdown_event = s3_request.shutdown_event
+        del s3_request
+        self.assertTrue(shutdown_event.wait(self.timeout))
 
 
 if __name__ == '__main__':

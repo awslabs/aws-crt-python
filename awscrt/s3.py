@@ -229,8 +229,6 @@ class S3Request(NativeResource):
             region=None):
         assert isinstance(client, S3Client)
         assert isinstance(request, HttpRequest)
-        assert file is None or os.path.isfile(file)
-        # assert file is path or file is None
         assert callable(on_headers) or on_headers is None
         assert callable(on_body) or on_body is None
         assert callable(on_done) or on_done is None

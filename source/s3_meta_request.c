@@ -27,6 +27,11 @@ struct s3_meta_request_binding {
      * passing chunks from C into python
      **/
     FILE *file;
+    /**
+     * input stream for using FILE pointer as the input body of a put request, keep it alive until the meta request
+     * finishes.
+     */
+    struct aws_input_stream *input_body;
     /* Shutdown callback, all resource cleaned up, reference cleared after invoke */
     PyObject *on_shutdown;
 };
@@ -115,7 +120,6 @@ static void s_s3_request_on_body(
     struct s3_meta_request_binding *request_binding = user_data;
     if (request_binding->file) {
         fwrite((void *)body->ptr, body->len, 1, request_binding->file);
-        return;
     }
 
     /*************** GIL ACQUIRE ***************/
@@ -123,9 +127,20 @@ static void s_s3_request_on_body(
     if (aws_py_gilstate_ensure(&state)) {
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
-    PyObject *result = PyObject_CallMethod(
-        request_binding->self_py, "_on_body", "(y#K)", (const char *)(body->ptr), (Py_ssize_t)body->len, range_start);
+    PyObject *result;
+    if (request_binding->file) {
+        result = PyObject_CallMethod(
+            request_binding->self_py, "_on_body", "(y#KK)", NULL, (Py_ssize_t)0, range_start, body->len);
 
+    } else {
+        result = PyObject_CallMethod(
+            request_binding->self_py,
+            "_on_body",
+            "(y#K)",
+            (const char *)(body->ptr),
+            (Py_ssize_t)body->len,
+            range_start);
+    }
     if (!result) {
         PyErr_WriteUnraisable(request_binding->self_py);
         goto done;
@@ -145,6 +160,9 @@ static void s_s3_request_on_finish(
     void *user_data) {
     (void)meta_request;
     struct s3_meta_request_binding *request_binding = user_data;
+    if (request_binding->input_body) {
+        aws_input_stream_destroy(request_binding->input_body);
+    }
 
     /*************** GIL ACQUIRE ***************/
     PyGILState_STATE state;
@@ -273,8 +291,6 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
         return PyErr_AwsLastError();
     }
 
-    // struct aws_byte_cursor file_path_cursor = aws_byte_cursor_from_array((const uint8_t *)file_path, file_path_len);
-
     /* From hereon, we need to clean up if errors occur */
 
     PyObject *capsule =
@@ -292,9 +308,15 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
 
     if (file_path) {
         meta_request->file = fopen(file_path, type == AWS_S3_META_REQUEST_TYPE_GET_OBJECT ? "wb+" : "rb+");
-    }
-    if (type == AWS_S3_META_REQUEST_TYPE_PUT_OBJECT) {
-        /* TODO: set the body of the request to the file handler */
+        if (type == AWS_S3_META_REQUEST_TYPE_PUT_OBJECT) {
+            meta_request->input_body = aws_input_stream_new_from_open_file(allocator, meta_request->file);
+            if (!meta_request->input_body) {
+                PyErr_SetAwsLastError();
+                goto error;
+            }
+            /* rewrite the input stream of the original request */
+            aws_http_message_set_body_stream(http_request, meta_request->input_body);
+        }
     }
 
     struct aws_s3_meta_request_options s3_meta_request_opt = {
