@@ -120,6 +120,7 @@ static void s_s3_request_on_body(
     struct s3_meta_request_binding *request_binding = user_data;
     if (request_binding->file) {
         fwrite((void *)body->ptr, body->len, 1, request_binding->file);
+        return;
     }
 
     /*************** GIL ACQUIRE ***************/
@@ -127,20 +128,9 @@ static void s_s3_request_on_body(
     if (aws_py_gilstate_ensure(&state)) {
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
-    PyObject *result;
-    if (request_binding->file) {
-        result = PyObject_CallMethod(
-            request_binding->self_py, "_on_body", "(y#KK)", NULL, (Py_ssize_t)0, range_start, body->len);
+    PyObject *result = PyObject_CallMethod(
+        request_binding->self_py, "_on_body", "(y#K)", (const char *)(body->ptr), (Py_ssize_t)body->len, range_start);
 
-    } else {
-        result = PyObject_CallMethod(
-            request_binding->self_py,
-            "_on_body",
-            "(y#K)",
-            (const char *)(body->ptr),
-            (Py_ssize_t)body->len,
-            range_start);
-    }
     if (!result) {
         PyErr_WriteUnraisable(request_binding->self_py);
         goto done;

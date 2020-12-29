@@ -87,7 +87,6 @@ class S3RequestTest(NativeResourceTest):
 
     def _on_request_headers(self, status_code, headers, **kargs):
         self.response_status_code = status_code
-        self.assertIsNotNone(headers, "headers are none")
         self.response_headers = headers
 
     def _on_request_body(self, chunk, offset, **kargs):
@@ -145,7 +144,7 @@ class S3RequestTest(NativeResourceTest):
                 on_body=self._on_request_body_file_object)
             finished_future = s3_request.finished_future
             finished_future.result(self.timeout)
-            self._validate_successful_get_response(type is S3RequestType.PUT_OBJECT)
+            self.assertEqual(self.response_status_code, 200, "status code is not 200")
             shutdown_event = s3_request.shutdown_event
             del s3_request
             self.assertTrue(shutdown_event.wait(self.timeout))
