@@ -172,7 +172,7 @@ static void s_s3_request_on_finish(
         result = PyObject_CallMethod(
             request_binding->self_py,
             "_on_finish",
-            "(iO#K)",
+            "(iOy#)",
             meta_request_result->error_code,
             header_list,
             (const char *)(error_body->buffer),
