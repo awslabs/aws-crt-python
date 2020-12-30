@@ -56,6 +56,31 @@ static void s_s3_meta_request_release(struct s3_meta_request_binding *meta_reque
     s_destroy_if_ready(meta_request);
 }
 
+static int s_get_py_headers(const struct aws_http_headers *headers, PyObject *header_py) {
+    /* Not take the reference of header_py, caller is the one holding the reference. */
+    size_t num_headers = aws_http_headers_count(headers);
+
+    for (size_t i = 0; i < num_headers; i++) {
+        struct aws_http_header header;
+        AWS_ZERO_STRUCT(header);
+        if (aws_http_headers_get_index(headers, i, &header)) {
+            goto error;
+        }
+        const char *name_str = (const char *)header.name.ptr;
+        size_t name_len = header.name.len;
+        const char *value_str = (const char *)header.value.ptr;
+        size_t value_len = header.value.len;
+        PyObject *tuple = Py_BuildValue("(s#s#)", name_str, name_len, value_str, value_len);
+        if (!tuple) {
+            goto error;
+        }
+        PyList_SET_ITEM(header_py, i, tuple); /* steals reference to tuple */
+    }
+    return AWS_OP_SUCCESS;
+error:
+    return AWS_OP_ERR;
+}
+
 static void s_s3_request_on_headers(
     struct aws_s3_meta_request *meta_request,
     const struct aws_http_headers *headers,
@@ -78,23 +103,9 @@ static void s_s3_request_on_headers(
         PyErr_WriteUnraisable(request_binding->self_py);
         goto done;
     }
-
-    for (size_t i = 0; i < num_headers; i++) {
-        struct aws_http_header header;
-        AWS_ZERO_STRUCT(header);
-        if (aws_http_headers_get_index(headers, i, &header)) {
-            goto done;
-        }
-        const char *name_str = (const char *)header.name.ptr;
-        size_t name_len = header.name.len;
-        const char *value_str = (const char *)header.value.ptr;
-        size_t value_len = header.value.len;
-        PyObject *tuple = Py_BuildValue("(s#s#)", name_str, name_len, value_str, value_len);
-        if (!tuple) {
-            PyErr_WriteUnraisable(request_binding->self_py);
-            goto done;
-        }
-        PyList_SET_ITEM(header_list, i, tuple); /* steals reference to tuple */
+    if (s_get_py_headers(headers, header_list)) {
+        PyErr_WriteUnraisable(request_binding->self_py);
+        goto done;
     }
 
     /* Deliver the built up list of (name,value) tuples */
@@ -159,15 +170,42 @@ static void s_s3_request_on_finish(
     if (aws_py_gilstate_ensure(&state)) {
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
-    /* TODO: expose the error_response_headers/body */
-    PyObject *result =
-        PyObject_CallMethod(request_binding->self_py, "_on_finish", "(i)", meta_request_result->error_code);
+    PyObject *result;
+    PyObject *header_list = Py_None;
+    if (meta_request_result->error_code) {
+        /* Get the header and body of the error */
+        header_list = PyList_New(aws_http_headers_count(meta_request_result->error_response_headers));
+        if (!header_list) {
+            PyErr_WriteUnraisable(request_binding->self_py);
+            Py_XDECREF(header_list);
+            goto done;
+        }
+        if (s_get_py_headers(meta_request_result->error_response_headers, header_list)) {
+            PyErr_WriteUnraisable(request_binding->self_py);
+            Py_XDECREF(header_list);
+            goto done;
+        }
+        struct aws_byte_buf *error_body = meta_request_result->error_response_body;
+        result = PyObject_CallMethod(
+            request_binding->self_py,
+            "_on_finish",
+            "(iOy#)",
+            meta_request_result->error_code,
+            header_list,
+            (const char *)(error_body->buffer),
+            (Py_ssize_t)error_body->len);
+        Py_XDECREF(header_list);
+    } else {
+        result = PyObject_CallMethod(
+            request_binding->self_py, "_on_finish", "(iOy#)", meta_request_result->error_code, header_list, NULL, 0);
+    }
     if (result) {
         Py_DECREF(result);
     } else {
         /* Callback might fail during application shutdown */
         PyErr_WriteUnraisable(request_binding->self_py);
     }
+done:
     Py_CLEAR(request_binding->self_py);
     PyGILState_Release(state);
     /*************** GIL RELEASE ***************/
