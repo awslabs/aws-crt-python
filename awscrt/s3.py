@@ -265,7 +265,7 @@ class S3Request(NativeResource):
         if self._on_body_cb:
             self._on_body_cb(chunk=chunk, offset=offset)
 
-    def _on_finish(self, error_code):
+    def _on_finish(self, error_code, error_headers, error_body):
         error = None
         # the http request can be released now
         self._http_request = None
@@ -275,7 +275,7 @@ class S3Request(NativeResource):
         else:
             self.finished_future.set_result(None)
         if self._on_done_cb:
-            self._on_done_cb(error=error)
+            self._on_done_cb(error=error, error_headers=error_headers, error_body=error_body)
 
     @property
     def finished_future(self):
