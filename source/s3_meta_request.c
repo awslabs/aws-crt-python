@@ -215,6 +215,105 @@ static void s_s3_request_on_shutdown(void *user_data) {
     /*************** GIL RELEASE ***************/
 }
 
+/* TODO: probably should put the input stream to somewhere else, but to keep it simple and timely manner. */
+/*
+ * file-based python input stream for reporting the progress
+ */
+struct aws_input_py_stream_file_impl {
+    FILE *file;
+    bool close_on_clean_up;
+    struct s3_meta_request_binding *binding;
+};
+
+static int s_aws_input_stream_file_read(struct aws_input_stream *stream, struct aws_byte_buf *dest) {
+    struct aws_input_py_stream_file_impl *impl = stream->impl;
+
+    size_t max_read = dest->capacity - dest->len;
+    size_t actually_read = fread(dest->buffer + dest->len, 1, max_read, impl->file);
+    if (actually_read == 0) {
+        if (ferror(impl->file)) {
+            return aws_raise_error(AWS_IO_STREAM_READ_FAILED);
+        }
+    }
+
+    dest->len += actually_read;
+
+    return AWS_OP_SUCCESS;
+}
+static int s_aws_input_stream_file_seek(
+    struct aws_input_stream *stream,
+    aws_off_t offset,
+    enum aws_stream_seek_basis basis) {
+    struct aws_input_py_stream_file_impl *impl = stream->impl;
+
+    int whence = (basis == AWS_SSB_BEGIN) ? SEEK_SET : SEEK_END;
+    if (aws_fseek(impl->file, offset, whence)) {
+        return AWS_OP_ERR;
+    }
+
+    return AWS_OP_SUCCESS;
+}
+
+static int s_aws_input_stream_file_get_status(struct aws_input_stream *stream, struct aws_stream_status *status) {
+    struct aws_input_py_stream_file_impl *impl = stream->impl;
+
+    status->is_end_of_stream = feof(impl->file) != 0;
+    status->is_valid = ferror(impl->file) == 0;
+
+    return AWS_OP_SUCCESS;
+}
+
+static int s_aws_input_stream_file_get_length(struct aws_input_stream *stream, int64_t *length) {
+    struct aws_input_py_stream_file_impl *impl = stream->impl;
+
+    return aws_file_get_length(impl->file, length);
+}
+
+static void s_aws_input_stream_file_destroy(struct aws_input_stream *stream) {
+    struct aws_input_py_stream_file_impl *impl = stream->impl;
+
+    if (impl->close_on_clean_up && impl->file) {
+        fclose(impl->file);
+    }
+
+    aws_mem_release(stream->allocator, stream);
+}
+
+static struct aws_input_stream_vtable s_aws_input_stream_file_vtable = {
+    .seek = s_aws_input_stream_file_seek,
+    .read = s_aws_input_stream_file_read,
+    .get_status = s_aws_input_stream_file_get_status,
+    .get_length = s_aws_input_stream_file_get_length,
+    .destroy = s_aws_input_stream_file_destroy};
+
+static struct aws_input_stream *s_input_stream_new_from_open_file(struct aws_allocator *allocator, FILE *file) {
+    struct aws_input_stream *input_stream = NULL;
+    struct aws_input_py_stream_file_impl *impl = NULL;
+
+    aws_mem_acquire_many(
+        allocator,
+        2,
+        &input_stream,
+        sizeof(struct aws_input_stream),
+        &impl,
+        sizeof(struct aws_input_py_stream_file_impl));
+
+    if (!input_stream) {
+        return NULL;
+    }
+    AWS_ZERO_STRUCT(*input_stream);
+    AWS_ZERO_STRUCT(*impl);
+
+    input_stream->allocator = allocator;
+    input_stream->vtable = &s_aws_input_stream_file_vtable;
+    input_stream->impl = impl;
+
+    impl->file = file;
+    impl->close_on_clean_up = false;
+
+    return input_stream;
+}
+
 PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     (void)self;
 
@@ -299,7 +398,8 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     if (file_path) {
         meta_request->file = fopen(file_path, type == AWS_S3_META_REQUEST_TYPE_GET_OBJECT ? "wb+" : "rb+");
         if (type == AWS_S3_META_REQUEST_TYPE_PUT_OBJECT) {
-            meta_request->input_body = aws_input_stream_new_from_open_file(allocator, meta_request->file);
+            meta_request->input_body = s_input_stream_new_from_open_file(allocator, meta_request->file);
+            meta_request->input_body->vtable->read;
             if (!meta_request->input_body) {
                 PyErr_SetAwsLastError();
                 goto error;
