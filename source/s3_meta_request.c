@@ -9,6 +9,7 @@
 #include "io.h"
 
 #include <aws/http/request_response.h>
+#include <aws/io/file_utils.h>
 #include <aws/io/stream.h>
 
 static const char *s_capsule_name_s3_meta_request = "aws_s3_meta_request";
@@ -129,15 +130,15 @@ static void s_s3_request_on_body(
     void *user_data) {
     (void)meta_request;
     struct s3_meta_request_binding *request_binding = user_data;
-    if (request_binding->file) {
-        fwrite((void *)body->ptr, body->len, 1, request_binding->file);
-        return;
-    }
 
     /*************** GIL ACQUIRE ***************/
     PyGILState_STATE state;
     if (aws_py_gilstate_ensure(&state)) {
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
+    if (request_binding->file) {
+        fwrite((void *)body->ptr, body->len, 1, request_binding->file);
+        goto done;
     }
     PyObject *result = PyObject_CallMethod(
         request_binding->self_py, "_on_body", "(y#K)", (const char *)(body->ptr), (Py_ssize_t)body->len, range_start);
@@ -149,6 +150,12 @@ static void s_s3_request_on_body(
     Py_DECREF(result);
 
 done:
+    result = PyObject_CallMethod(request_binding->self_py, "_on_progress", "(K)", body->len);
+    if (!result) {
+        PyErr_WriteUnraisable(request_binding->self_py);
+    } else {
+        Py_DECREF(result);
+    }
     PyGILState_Release(state);
     /*************** GIL RELEASE ***************/
 }
@@ -275,7 +282,20 @@ static int s_aws_input_stream_file_read(struct aws_input_stream *stream, struct 
     }
 
     dest->len += actually_read;
-
+    /*************** GIL ACQUIRE ***************/
+    struct s3_meta_request_binding *request_binding = impl->binding;
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return AWS_OP_SUCCESS; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
+    PyObject *result = PyObject_CallMethod(request_binding->self_py, "_on_progress", "(K)", 123456);
+    if (!result) {
+        PyErr_WriteUnraisable(request_binding->self_py);
+    } else {
+        Py_DECREF(result);
+    }
+    PyGILState_Release(state);
+    /*************** GIL RELEASE ***************/
     return AWS_OP_SUCCESS;
 }
 static int s_aws_input_stream_file_seek(
@@ -324,7 +344,10 @@ static struct aws_input_stream_vtable s_aws_input_stream_file_vtable = {
     .get_length = s_aws_input_stream_file_get_length,
     .destroy = s_aws_input_stream_file_destroy};
 
-static struct aws_input_stream *s_input_stream_new_from_open_file(struct aws_allocator *allocator, FILE *file) {
+static struct aws_input_stream *s_input_stream_new_from_open_file(
+    struct aws_allocator *allocator,
+    FILE *file,
+    struct s3_meta_request_binding *request_binding) {
     struct aws_input_stream *input_stream = NULL;
     struct aws_input_py_stream_file_impl *impl = NULL;
 
@@ -348,6 +371,7 @@ static struct aws_input_stream *s_input_stream_new_from_open_file(struct aws_all
 
     impl->file = file;
     impl->close_on_clean_up = false;
+    impl->binding = request_binding;
 
     return input_stream;
 }
@@ -366,13 +390,10 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     Py_ssize_t file_path_len;
     const char *region;
     Py_ssize_t region_len;
-    PyObject *on_headers_py = NULL;
-    PyObject *on_body_py = NULL;
-    PyObject *on_finish_py = NULL;
     PyObject *on_shutdown_py = NULL;
     if (!PyArg_ParseTuple(
             args,
-            "OOOiOz#s#OOOO",
+            "OOOiOz#s#O",
             &py_s3_request,
             &s3_client_py,
             &http_request_py,
@@ -382,9 +403,6 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
             &file_path_len,
             &region,
             &region_len,
-            &on_headers_py,
-            &on_body_py,
-            &on_finish_py,
             &on_shutdown_py)) {
         return NULL;
     }
@@ -436,8 +454,7 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     if (file_path) {
         meta_request->file = fopen(file_path, type == AWS_S3_META_REQUEST_TYPE_GET_OBJECT ? "wb+" : "rb+");
         if (type == AWS_S3_META_REQUEST_TYPE_PUT_OBJECT) {
-            meta_request->input_body = s_input_stream_new_from_open_file(allocator, meta_request->file);
-            meta_request->input_body->vtable->read;
+            meta_request->input_body = s_input_stream_new_from_open_file(allocator, meta_request->file, meta_request);
             if (!meta_request->input_body) {
                 PyErr_SetAwsLastError();
                 goto error;

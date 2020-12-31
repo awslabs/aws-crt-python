@@ -129,7 +129,8 @@ class S3Client(NativeResource):
             file=None,
             on_headers=None,
             on_body=None,
-            on_done=None):
+            on_done=None,
+            on_progress=None):
         """Create the Request to the the S3 server,
         accelerate the GET_OBJECT/PUT_OBJECT request by spliting it into multiple requests under the hood.
 
@@ -176,6 +177,13 @@ class S3Client(NativeResource):
 
                 *   `**kwargs` (dict): Forward-compatibility kwargs.
 
+            on_progress: Optional callback invoked when part of the transfer is done to report the progress.
+                The function should take the following arguments and return nothing:
+
+                *   `progress` (int): The data in bytes that just get transferred
+
+                *   `**kwargs` (dict): Forward-compatibility kwargs.
+
         Returns:
             S3Request
         """
@@ -188,6 +196,7 @@ class S3Client(NativeResource):
             on_headers=on_headers,
             on_body=on_body,
             on_done=on_done,
+            on_progress=on_progress,
             region=self._region)
 
 
@@ -209,6 +218,7 @@ class S3Request(NativeResource):
         '_on_headers_cb',
         '_on_body_cb',
         '_on_done_cb',
+        '_on_progress_cb',
         '_finished_future',
         '_kwargs',
         '_http_request',
@@ -225,6 +235,7 @@ class S3Request(NativeResource):
             on_headers=None,
             on_body=None,
             on_done=None,
+            on_progress=None,
             region=None):
         assert isinstance(client, S3Client)
         assert isinstance(request, HttpRequest)
@@ -241,6 +252,7 @@ class S3Request(NativeResource):
         self._on_headers_cb = on_headers
         self._on_body_cb = on_body
         self._on_done_cb = on_done
+        self._on_progress_cb = on_progress
 
         self._finished_future = Future()
 
@@ -259,9 +271,6 @@ class S3Request(NativeResource):
             credential_provider,
             file,
             region,
-            self._on_headers,
-            self._on_body,
-            self._on_finish,
             on_shutdown)
 
     def _on_headers(self, status_code, headers):
@@ -283,6 +292,11 @@ class S3Request(NativeResource):
             self.finished_future.set_result(None)
         if self._on_done_cb:
             self._on_done_cb(error=error, error_headers=error_headers, error_body=error_body)
+
+    def _on_progress(self, progress):
+        print(progress)
+        if self._on_progress_cb:
+            self._on_progress_cb(progress)
 
     @property
     def finished_future(self):
