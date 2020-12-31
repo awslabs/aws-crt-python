@@ -294,7 +294,6 @@ class S3Request(NativeResource):
             self._on_done_cb(error=error, error_headers=error_headers, error_body=error_body)
 
     def _on_progress(self, progress):
-        print(progress)
         if self._on_progress_cb:
             self._on_progress_cb(progress)
 
