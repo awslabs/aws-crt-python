@@ -6,7 +6,6 @@ import time
 # import os
 import sys
 import threading
-import csv
 
 GBPS = 1000 * 1000 * 1000
 
@@ -65,7 +64,6 @@ class Statistics(object):
         self.sec_first_byte = 0
         self.star_time = time.time()
         self.last_sample_time = time.time()
-        self.all_data = []
 
     def record_read(self, size):
         with self._lock:
@@ -77,7 +75,6 @@ class Statistics(object):
                 bytes_this_second = (self._bytes_read - self._bytes_sampled) / (time_now - self.last_sample_time)
                 self._bytes_sampled = self._bytes_read
                 self._bytes_avg = (self._bytes_avg + bytes_this_second) * 0.5
-                self.all_data.append((bytes_this_second * 8) / GBPS)
                 if self._bytes_peak < bytes_this_second:
                     self._bytes_peak = bytes_this_second
                 self.last_sample_time = time_now
@@ -96,8 +93,8 @@ object_name = "/0_10GB.txt"
 file_name = "." + object_name
 object_real_name = "/0_10GB"
 suffix = ".txt"
-repeat_times = 160
-bunch_size = 1
+repeat_times = 1
+bunch_size = 160
 
 writing_disk = True
 request_type = "download"
@@ -128,10 +125,7 @@ request = HttpRequest("GET", object_name, headers)
 
 
 def on_body(offset, chunk, **kwargs):
-
-    # pass
-    # print(kwargs)
-    t_statistic.record_read(kwargs['size'])
+    t_statistic.record_read(len(chunk))
     # if writing_disk:
     #     if not os.path.exists(file_name):
     #         open(file_name, 'a').close()
@@ -154,46 +148,32 @@ def on_done(**kwargs):
 def print_statistic(statistic):
     print("Gbps peak:", statistic.bytes_peak())
     print("Gbps avg:", statistic.bytes_avg())
-    sys.stdout.flush()
 
 
 # init_logging(LogLevel.Trace, "trace_log.txt")
 start_time = time.time()
 completed = repeat_times * bunch_size
 
-
 for i in range(0, repeat_times):
-    print(i)
-    # futures = []
-    # s3_requests = []
-    file = "/dev/null"
+    futures = []
+    s3_requests = []
     for j in range(0, bunch_size):
 
-        s3_request = (s3_client.make_request(
+        s3_requests.append(s3_client.make_request(
             request=request,
             type=S3RequestType.GET_OBJECT,
-            file=file,
             on_body=on_body,
             on_done=on_done))
 
+        futures.append(s3_requests[j].finished_future)
+    for j in futures:
         try:
-            s3_request.finished_future.result(10000)
+            j.result(100000)
         except Exception as e:
             completed = completed - 1
 
-    # file.close()
-    # print_statistic(t_statistic)
-
 end_time = time.time()
 print_statistic(t_statistic)
-
-# with open('result.csv', 'w') as csvfile:
-#     spamwriter = csv.writer(csvfile,
-#                             quotechar='|', quoting=csv.QUOTE_MINIMAL)
-#     spamwriter.writerow(t_statistic.all_data)
-
-
 print("total time:", end_time - start_time)
 print("completed/all:", completed, repeat_times * bunch_size)
 print("latency:", t_statistic.sec_first_byte)
-# file.close()
