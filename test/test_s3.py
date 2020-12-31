@@ -65,6 +65,8 @@ class S3RequestTest(NativeResourceTest):
     response_headers = None
     response_status_code = None
     received_body_len = 0
+    transferred_len = 0
+    data_len = 0
 
     put_body_stream = None
 
@@ -79,9 +81,9 @@ class S3RequestTest(NativeResourceTest):
     def _put_object_request(self, file_name):
         self.put_body_stream = open(file_name, "r+b")
         file_stats = os.stat(file_name)
-        data_len = file_stats.st_size
+        self.data_len = file_stats.st_size
         headers = HttpHeaders([("host", self._build_endpoint_string(self.region, self.bucket_name)),
-                               ("Content-Type", "text/plain"), ("Content-Length", str(data_len))])
+                               ("Content-Type", "text/plain"), ("Content-Length", str(self.data_len))])
         request = HttpRequest("PUT", self.put_test_object_path, headers, self.put_body_stream)
         return request
 
@@ -91,6 +93,9 @@ class S3RequestTest(NativeResourceTest):
 
     def _on_request_body(self, chunk, offset, **kargs):
         self.received_body_len = self.received_body_len + len(chunk)
+
+    def _on_progress(self, progress):
+        self.transferred_len += progress
 
     def _validate_successful_get_response(self, put_object):
         self.assertEqual(self.response_status_code, 200, "status code is not 200")
@@ -141,9 +146,17 @@ class S3RequestTest(NativeResourceTest):
                 file=file.name,
                 type=type,
                 on_headers=self._on_request_headers,
-                on_body=self._on_request_body_file_object)
+                on_body=self._on_request_body_file_object,
+                on_progress=self._on_progress)
             finished_future = s3_request.finished_future
             finished_future.result(self.timeout)
+
+            # Result check
+            self.data_len = int(HttpHeaders(self.response_headers).get("Content-Length"))
+            self.assertEqual(
+                self.data_len,
+                self.transferred_len,
+                "the transferred length reported does not match the content-length header")
             self.assertEqual(self.response_status_code, 200, "status code is not 200")
             shutdown_event = s3_request.shutdown_event
             del s3_request
@@ -161,9 +174,16 @@ class S3RequestTest(NativeResourceTest):
             file="test/resources/s3_put_object.txt",
             type=type,
             on_headers=self._on_request_headers,
-            on_body=self._on_request_body_file_object)
+            on_body=self._on_request_body_file_object,
+            on_progress=self._on_progress)
         finished_future = s3_request.finished_future
         finished_future.result(self.timeout)
+
+        # check result
+        self.assertEqual(
+            self.data_len,
+            self.transferred_len,
+            "the transferred length reported does not match body we sent")
         self._validate_successful_get_response(type is S3RequestType.PUT_OBJECT)
         shutdown_event = s3_request.shutdown_event
         del s3_request
