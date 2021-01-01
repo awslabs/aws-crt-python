@@ -151,7 +151,7 @@ static void s_s3_request_on_body(
     Py_DECREF(result);
 
 done:
-    result = PyObject_CallMethod(request_binding->self_py, "_on_progress", "(K)", body->len);
+    result = PyObject_CallMethod(request_binding->self_py, "_on_progress", "(k)", (uint64_t)body->len);
     if (!result) {
         PyErr_WriteUnraisable(request_binding->self_py);
     } else {
@@ -289,7 +289,7 @@ static int s_aws_input_stream_file_read(struct aws_input_stream *stream, struct 
     if (aws_py_gilstate_ensure(&state)) {
         return AWS_OP_SUCCESS; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
-    PyObject *result = PyObject_CallMethod(request_binding->self_py, "_on_progress", "(K)", dest->len);
+    PyObject *result = PyObject_CallMethod(request_binding->self_py, "_on_progress", "(k)", (uint64_t)dest->len);
     if (!result) {
         PyErr_WriteUnraisable(request_binding->self_py);
     } else {
