@@ -137,6 +137,7 @@ static void s_s3_request_on_body(
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
     if (request_binding->file) {
+        /* The callback will be invoked with the right order, so we don't need to seek first. */
         fwrite((void *)body->ptr, body->len, 1, request_binding->file);
         goto done;
     }
