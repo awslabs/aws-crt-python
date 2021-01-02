@@ -377,6 +377,11 @@ static struct aws_input_stream *s_input_stream_new_from_open_file(
     return input_stream;
 }
 
+struct aws_s3_meta_request *aws_py_get_s3_meta_request(PyObject *meta_request) {
+    AWS_PY_RETURN_NATIVE_FROM_BINDING(
+        meta_request, s_capsule_name_s3_meta_request, "S3Request", s3_meta_request_binding);
+}
+
 PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     (void)self;
 
@@ -487,4 +492,23 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
 error:
     Py_DECREF(capsule);
     return NULL;
+}
+
+PyObject *aws_py_s3_meta_request_cancel(PyObject *self, PyObject *args) {
+    (void)self;
+
+    PyObject *py_meta_request = NULL;
+    if (!PyArg_ParseTuple(args, "O", &py_meta_request)) {
+        return NULL;
+    }
+
+    struct aws_s3_meta_request *meta_request = NULL;
+    meta_request = aws_py_get_s3_meta_request(py_meta_request);
+    if (!meta_request) {
+        return NULL;
+    }
+
+    aws_s3_meta_request_cancel(meta_request);
+
+    Py_RETURN_NONE;
 }

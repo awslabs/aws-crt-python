@@ -300,3 +300,6 @@ class S3Request(NativeResource):
     @property
     def finished_future(self):
         return self._finished_future
+
+    def cancel(self):
+        return(_awscrt.aws_py_s3_meta_request_cancel(self))
