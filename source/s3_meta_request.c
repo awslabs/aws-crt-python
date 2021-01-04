@@ -180,8 +180,10 @@ static void s_s3_request_on_finish(
     }
     PyObject *result;
     PyObject *header_list = Py_None;
-    if (meta_request_result->error_code) {
-        /* Get the header and body of the error */
+    struct aws_byte_buf error_body;
+    AWS_ZERO_STRUCT(error_body);
+    /* Get the header and body of the error */
+    if (meta_request_result->error_response_headers) {
         header_list = PyList_New(aws_http_headers_count(meta_request_result->error_response_headers));
         if (!header_list) {
             PyErr_WriteUnraisable(request_binding->self_py);
@@ -193,19 +195,20 @@ static void s_s3_request_on_finish(
             Py_XDECREF(header_list);
             goto done;
         }
-        struct aws_byte_buf *error_body = meta_request_result->error_response_body;
-        result = PyObject_CallMethod(
-            request_binding->self_py,
-            "_on_finish",
-            "(iOy#)",
-            meta_request_result->error_code,
-            header_list,
-            (const char *)(error_body->buffer),
-            (Py_ssize_t)error_body->len);
+    }
+    if (meta_request_result->error_response_body) {
+        error_body = *(meta_request_result->error_response_body);
+    }
+    result = PyObject_CallMethod(
+        request_binding->self_py,
+        "_on_finish",
+        "(iOy#)",
+        meta_request_result->error_code,
+        header_list,
+        (const char *)(error_body.buffer),
+        (Py_ssize_t)error_body.len);
+    if (header_list != Py_None) {
         Py_XDECREF(header_list);
-    } else {
-        result = PyObject_CallMethod(
-            request_binding->self_py, "_on_finish", "(iOy#)", meta_request_result->error_code, header_list, NULL, 0);
     }
     if (result) {
         Py_DECREF(result);
