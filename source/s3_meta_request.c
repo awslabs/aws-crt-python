@@ -8,6 +8,7 @@
 #include "http.h"
 #include "io.h"
 
+#include <aws/common/clock.h>
 #include <aws/http/request_response.h>
 #include <aws/io/file_utils.h>
 #include <aws/io/stream.h>
@@ -35,6 +36,11 @@ struct s3_meta_request_binding {
     struct aws_input_stream *input_body;
     /* Shutdown callback, all resource cleaned up, reference cleared after invoke */
     PyObject *on_shutdown;
+
+    /* Batch up the transferred size in one sec. */
+    uint64_t size_transferred;
+    /* The time stamp when the progress reported */
+    uint64_t last_sampled_time;
 };
 
 static void s_destroy_if_ready(struct s3_meta_request_binding *meta_request) {
@@ -123,6 +129,26 @@ done:
     /*************** GIL RELEASE ***************/
 }
 
+static int s_record_progress(struct s3_meta_request_binding *request_binding, uint64_t length, bool *report_progress) {
+    if (aws_add_u64_checked(request_binding->size_transferred, length, &request_binding->size_transferred)) {
+        /* Wow */
+        return AWS_OP_ERR;
+    }
+    uint64_t now;
+    if (aws_high_res_clock_get_ticks(&now)) {
+        return AWS_OP_ERR;
+    }
+    uint64_t nano_sec = 0;
+    if (aws_sub_u64_checked(now, request_binding->last_sampled_time, &nano_sec)) {
+        return AWS_OP_ERR;
+    }
+    *report_progress = ((double)nano_sec / (1000 * 1000 * 1000) >= 1);
+    if (*report_progress) {
+        request_binding->last_sampled_time = now;
+    }
+    return AWS_OP_SUCCESS;
+}
+
 static void s_s3_request_on_body(
     struct aws_s3_meta_request *meta_request,
     const struct aws_byte_cursor *body,
@@ -131,15 +157,25 @@ static void s_s3_request_on_body(
     (void)meta_request;
     struct s3_meta_request_binding *request_binding = user_data;
 
-    /*************** GIL ACQUIRE ***************/
-    PyGILState_STATE state;
-    if (aws_py_gilstate_ensure(&state)) {
-        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    bool report_progress;
+    if (s_record_progress(request_binding, (uint64_t)body->len, &report_progress)) {
+        return;
     }
+    PyGILState_STATE state;
     if (request_binding->file) {
         /* The callback will be invoked with the right order, so we don't need to seek first. */
         fwrite((void *)body->ptr, body->len, 1, request_binding->file);
-        goto done;
+        if (report_progress) {
+            if (aws_py_gilstate_ensure(&state)) {
+                return; /* Python has shut down. Nothing matters anymore, but don't crash */
+            }
+            goto progress_report;
+        }
+        return;
+    }
+    /*************** GIL ACQUIRE ***************/
+    if (aws_py_gilstate_ensure(&state)) {
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
     PyObject *result = PyObject_CallMethod(
         request_binding->self_py, "_on_body", "(y#K)", (const char *)(body->ptr), (Py_ssize_t)body->len, range_start);
@@ -150,19 +186,29 @@ static void s_s3_request_on_body(
     }
     Py_DECREF(result);
 
+    if (report_progress) {
+        goto progress_report;
+    }
 done:
-    result = PyObject_CallMethod(request_binding->self_py, "_on_progress", "(k)", (uint64_t)body->len);
+    /*************** GIL RELEASE ***************/
+    PyGILState_Release(state);
+    return;
+
+progress_report:
+    /* Hold the GIL before enterring here */
+    result = PyObject_CallMethod(request_binding->self_py, "_on_progress", "(k)", request_binding->size_transferred);
     if (!result) {
         PyErr_WriteUnraisable(request_binding->self_py);
     } else {
         Py_DECREF(result);
     }
+    request_binding->size_transferred = 0;
     PyGILState_Release(state);
-    /*************** GIL RELEASE ***************/
+    return;
 }
 
-/* If the request has not finished, it will keep the request alive, until the finish callback invoked. So, we don't need
- * to clean anything from this call */
+/* If the request has not finished, it will keep the request alive, until the finish callback invoked. So, we don't
+ * need to clean anything from this call */
 static void s_s3_request_on_finish(
     struct aws_s3_meta_request *meta_request,
     const struct aws_s3_meta_request_result *meta_request_result,
@@ -179,6 +225,17 @@ static void s_s3_request_on_finish(
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
     PyObject *result;
+    if (request_binding->size_transferred) {
+        /* report the remaining progress */
+        result =
+            PyObject_CallMethod(request_binding->self_py, "_on_progress", "(k)", request_binding->size_transferred);
+        if (!result) {
+            PyErr_WriteUnraisable(request_binding->self_py);
+        } else {
+            Py_DECREF(result);
+        }
+        request_binding->size_transferred = 0;
+    }
     PyObject *header_list = Py_None;
     struct aws_byte_buf error_body;
     AWS_ZERO_STRUCT(error_body);
@@ -284,22 +341,31 @@ static int s_aws_input_stream_file_read(struct aws_input_stream *stream, struct 
             return aws_raise_error(AWS_IO_STREAM_READ_FAILED);
         }
     }
-
     dest->len += actually_read;
-    /*************** GIL ACQUIRE ***************/
+
+    bool report_progress;
     struct s3_meta_request_binding *request_binding = impl->binding;
-    PyGILState_STATE state;
-    if (aws_py_gilstate_ensure(&state)) {
-        return AWS_OP_SUCCESS; /* Python has shut down. Nothing matters anymore, but don't crash */
+    if (s_record_progress(request_binding, (uint64_t)actually_read, &report_progress)) {
+        return AWS_OP_ERR;
     }
-    PyObject *result = PyObject_CallMethod(request_binding->self_py, "_on_progress", "(k)", (uint64_t)dest->len);
-    if (!result) {
-        PyErr_WriteUnraisable(request_binding->self_py);
-    } else {
-        Py_DECREF(result);
+
+    if (report_progress) {
+        /*************** GIL ACQUIRE ***************/
+        PyGILState_STATE state;
+        if (aws_py_gilstate_ensure(&state)) {
+            return AWS_OP_SUCCESS; /* Python has shut down. Nothing matters anymore, but don't crash */
+        }
+        PyObject *result =
+            PyObject_CallMethod(request_binding->self_py, "_on_progress", "(k)", request_binding->size_transferred);
+        if (!result) {
+            PyErr_WriteUnraisable(request_binding->self_py);
+        } else {
+            Py_DECREF(result);
+        }
+        request_binding->size_transferred = 0;
+        PyGILState_Release(state);
+        /*************** GIL RELEASE ***************/
     }
-    PyGILState_Release(state);
-    /*************** GIL RELEASE ***************/
     return AWS_OP_SUCCESS;
 }
 static int s_aws_input_stream_file_seek(
@@ -479,6 +545,9 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
         .user_data = meta_request,
     };
 
+    if (aws_high_res_clock_get_ticks(&meta_request->last_sampled_time)) {
+        goto error;
+    }
     meta_request->native = aws_s3_client_make_meta_request(s3_client, &s3_meta_request_opt);
     if (meta_request->native == NULL) {
         PyErr_SetAwsLastError();
