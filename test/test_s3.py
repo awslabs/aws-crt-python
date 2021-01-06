@@ -4,7 +4,7 @@
 from awscrt.http import HttpHeaders, HttpRequest
 from awscrt.s3 import S3Client, S3RequestType
 from test import NativeResourceTest
-from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions
+from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions, init_logging, LogLevel
 from awscrt.auth import AwsCredentialsProvider
 import unittest
 import os
@@ -67,6 +67,7 @@ class S3RequestTest(NativeResourceTest):
     received_body_len = 0
     transferred_len = 0
     data_len = 0
+    progress_invoked = 0
 
     put_body_stream = None
 
@@ -159,40 +160,6 @@ class S3RequestTest(NativeResourceTest):
             self.assertTrue(shutdown_event.wait(self.timeout))
             # TODO verify the written file
 
-    def _on_progress_cancel_after_first_chunk(self, progress):
-        self.transferred_len += progress
-        self.s3_request.cancel()
-
-    def test_multipart_get_object_cancel(self):
-        # a 5 GB file
-        request = self._get_object_request("/crt-canary-obj-single-part-9223372036854775807")
-        type = S3RequestType.GET_OBJECT
-        s3_client = s3_client_new(False, self.region, 5 * 1024 * 1024)
-        with NamedTemporaryFile("w") as file:
-            self.s3_request = s3_client.make_request(
-                request=request,
-                file=file.name,
-                type=type,
-                on_headers=self._on_request_headers,
-                on_progress=self._on_progress_cancel_after_first_chunk)
-            finished_future = self.s3_request.finished_future
-            try:
-                finished_future.result(10)
-            except Exception:
-                pass
-
-            # Result check
-            self.data_len = int(HttpHeaders(self.response_headers).get("Content-Length"))
-            self.assertLess(
-                self.transferred_len,
-                self.data_len,
-                "the transferred length reported does not match the content-length header")
-            self.assertEqual(self.response_status_code, 200, "status code is not 200")
-            shutdown_event = self.s3_request.shutdown_event
-            del self.s3_request
-            self.assertTrue(shutdown_event.wait(self.timeout))
-            # TODO verify the written file
-
     def test_put_object_file_object(self):
         request = self._put_object_request("test/resources/s3_put_object.txt")
         type = S3RequestType.PUT_OBJECT
@@ -217,6 +184,49 @@ class S3RequestTest(NativeResourceTest):
         shutdown_event = s3_request.shutdown_event
         del s3_request
         self.assertTrue(shutdown_event.wait(self.timeout))
+
+    def _on_progress_cancel_after_first_chunk(self, progress):
+        print(progress)
+        self.transferred_len += progress
+        self.progress_invoked += 1
+        self.s3_request.cancel()
+
+    def test_multipart_get_object_cancel(self):
+        # a 5 GB file
+        request = self._get_object_request("/crt-canary-obj-single-part-9223372036854775807")
+        type = S3RequestType.GET_OBJECT
+        s3_client = s3_client_new(False, self.region, 5 * 1024 * 1024)
+        with NamedTemporaryFile("w") as file:
+            self.s3_request = s3_client.make_request(
+                request=request,
+                file=file.name,
+                type=type,
+                on_headers=self._on_request_headers,
+                on_progress=self._on_progress_cancel_after_first_chunk)
+            finished_future = self.s3_request.finished_future
+            try:
+                finished_future.result(self.timeout)
+            except Exception as e:
+                self.assertEqual(e.name, "AWS_ERROR_S3_CANCELED_SUCCESS")
+
+            # Result check
+            self.data_len = int(HttpHeaders(self.response_headers).get("Content-Length"))
+            self.assertLess(
+                self.transferred_len,
+                self.data_len,
+                "the cancel failed to block all the following body")
+
+            # The on finish callback may invoke the progress
+            self.assertLessEqual(self.progress_invoked, 2)
+            shutdown_event = self.s3_request.shutdown_event
+            del self.s3_request
+            self.assertTrue(shutdown_event.wait(self.timeout))
+            # TODO verify the written file
+
+    # def test_multipart_put_object_cancel(self):
+    #     request = self._put_object_request("test/resources/s3_put_object.txt")
+    #     self._test_s3_put_get_object(request, S3RequestType.PUT_OBJECT)
+    #     self.put_body_stream.close()
 
 
 if __name__ == '__main__':

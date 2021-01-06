@@ -93,14 +93,9 @@ static void s_s3_request_on_headers(
     const struct aws_http_headers *headers,
     int response_status,
     void *user_data) {
+    printf("s_s3_request_on_headers\n");
     (void)meta_request;
     struct s3_meta_request_binding *request_binding = user_data;
-
-    /*************** GIL ACQUIRE ***************/
-    PyGILState_STATE state;
-    if (aws_py_gilstate_ensure(&state)) {
-        return; /* Python has shut down. Nothing matters anymore, but don't crash */
-    }
 
     size_t num_headers = aws_http_headers_count(headers);
     /* Build up a list of (name,value) tuples,
@@ -115,17 +110,23 @@ static void s_s3_request_on_headers(
         goto done;
     }
 
+    /*************** GIL ACQUIRE ***************/
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
     /* Deliver the built up list of (name,value) tuples */
     PyObject *result =
         PyObject_CallMethod(request_binding->self_py, "_on_headers", "(iO)", response_status, header_list);
     if (!result) {
         PyErr_WriteUnraisable(request_binding->self_py);
-        goto done;
+        goto release_lock;
     }
     Py_DECREF(result);
+release_lock:
+    PyGILState_Release(state);
 done:
     Py_XDECREF(header_list);
-    PyGILState_Release(state);
     /*************** GIL RELEASE ***************/
 }
 
@@ -154,6 +155,7 @@ static void s_s3_request_on_body(
     const struct aws_byte_cursor *body,
     uint64_t range_start,
     void *user_data) {
+    printf("s_s3_request_on_body\n");
     (void)meta_request;
     struct s3_meta_request_binding *request_binding = user_data;
 
@@ -213,6 +215,7 @@ static void s_s3_request_on_finish(
     struct aws_s3_meta_request *meta_request,
     const struct aws_s3_meta_request_result *meta_request_result,
     void *user_data) {
+    printf("s_s3_request_on_finish\n");
     (void)meta_request;
     struct s3_meta_request_binding *request_binding = user_data;
     if (request_binding->input_body) {
@@ -281,6 +284,7 @@ done:
 
 /* Invoked when the python object get cleaned up */
 static void s_s3_meta_request_capsule_destructor(PyObject *capsule) {
+    printf("s_s3_meta_request_capsule_destructor\n");
     struct s3_meta_request_binding *meta_request = PyCapsule_GetPointer(capsule, s_capsule_name_s3_meta_request);
     Py_XDECREF(meta_request->self_py);
     if (meta_request->file) {
@@ -291,6 +295,7 @@ static void s_s3_meta_request_capsule_destructor(PyObject *capsule) {
 
 /* Callback from C land, invoked when the underlying shutdown process finished */
 static void s_s3_request_on_shutdown(void *user_data) {
+    printf("s_s3_request_on_shutdown\n");
     struct s3_meta_request_binding *request_binding = user_data;
 
     /*************** GIL ACQUIRE ***************/
