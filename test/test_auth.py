@@ -170,9 +170,11 @@ class TestProvider(NativeResourceTest):
             self.assertTrue('process_secret_access_key' == credentials.secret_access_key)
             self.assertTrue(credentials.session_token is None)
 
-    def test_py_provider(self):
-        credential = FakePyProvider()
-        provider = awscrt.auth.AwsCredentialsProvider.new_python(credential)
+    def test_delegate_provider(self):
+        def delegate_get_credentials():
+            return awscrt.auth.AwsCredentials("accesskey", "secretAccessKey", "sessionToken")
+
+        provider = awscrt.auth.AwsCredentialsProvider.new_delegate(delegate_get_credentials)
         credentials = provider.get_credentials().result(TIMEOUT)
 
         # Don't use assertEqual(), which could log actual credentials if test fails.
@@ -180,13 +182,27 @@ class TestProvider(NativeResourceTest):
         self.assertTrue('secretAccessKey' == credentials.secret_access_key)
         self.assertTrue('sessionToken' == credentials.session_token)
 
+    def test_delegate_provider_exception(self):
+        # delegate that raises exception should result in exception
+        def delegate_get_credentials():
+            raise Exception("purposefully thrown exception")
 
-class FakePyProvider():
-    def get_credential(self):
-        return {"AccessKeyId": "accesskey",
-                "SecretAccessKey": "secretAccessKey",
-                "SessionToken": "sessionToken"}
+        provider = awscrt.auth.AwsCredentialsProvider.new_delegate(delegate_get_credentials)
 
+        with self.assertRaises(Exception):
+            credentials_future = provider.get_credentials()
+            credentials = credentials_future.result(TIMEOUT)
+
+    def test_delegate_provider_exception_from_bad_return_type(self):
+        # delegate that returns wrong type should result in exception
+        def delegate_get_credentials():
+            return "purposefully return wrong type"
+
+        provider = awscrt.auth.AwsCredentialsProvider.new_delegate(delegate_get_credentials)
+
+        with self.assertRaises(Exception):
+            credentials_future = provider.get_credentials()
+            credentials = credentials_future.result(TIMEOUT)
 
 class TestSigningConfig(NativeResourceTest):
     def test_create(self):
