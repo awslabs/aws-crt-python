@@ -242,7 +242,8 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
     @classmethod
     def new_delegate(cls, get_credentials):
         """
-        Creates a provider that sources credentials from a custom callback.
+        Creates a provider that sources credentials from a custom
+        synchronous callback.
 
         Args:
             get_credentials: Callable which takes no arguments and returns
@@ -251,6 +252,7 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
         Returns:
             AwsCredentialsProvider:
         """
+        # TODO: support async delegates
 
         assert callable(get_credentials)
 
