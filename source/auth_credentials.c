@@ -26,24 +26,22 @@ PyObject *aws_py_credentials_new(PyObject *self, PyObject *args) {
     struct aws_byte_cursor access_key_id;
     struct aws_byte_cursor secret_access_key;
     struct aws_byte_cursor session_token; /* session_token is optional */
+    uint64_t expiration_timestamp_sec;
     if (!PyArg_ParseTuple(
             args,
-            "s#s#z#",
+            "s#s#z#K",
             &access_key_id.ptr,
             &access_key_id.len,
             &secret_access_key.ptr,
             &secret_access_key.len,
             &session_token.ptr,
-            &session_token.len)) {
+            &session_token.len,
+            &expiration_timestamp_sec)) {
         return NULL;
     }
 
     struct aws_credentials *credentials = aws_credentials_new(
-        aws_py_get_allocator(),
-        access_key_id,
-        secret_access_key,
-        session_token,
-        UINT64_MAX /*expiration_timepoint_seconds*/);
+        aws_py_get_allocator(), access_key_id, secret_access_key, session_token, expiration_timestamp_sec);
     if (!credentials) {
         return PyErr_AwsLastError();
     }
@@ -113,6 +111,23 @@ PyObject *aws_py_credentials_secret_access_key(PyObject *self, PyObject *args) {
 PyObject *aws_py_credentials_session_token(PyObject *self, PyObject *args) {
     (void)self;
     return s_credentials_get_member_str(args, CREDENTIALS_MEMBER_SESSION_TOKEN);
+}
+
+PyObject *aws_py_credentials_expiration_timestamp_seconds(PyObject *self, PyObject *args) {
+    (void)self;
+
+    PyObject *capsule;
+    if (!PyArg_ParseTuple(args, "O", &capsule)) {
+        return NULL;
+    }
+
+    const struct aws_credentials *credentials = PyCapsule_GetPointer(capsule, s_capsule_name_credentials);
+    if (!credentials) {
+        return NULL;
+    }
+
+    uint64_t timestamp = aws_credentials_get_expiration_timepoint_seconds(credentials);
+    return PyLong_FromUnsignedLongLong(timestamp);
 }
 
 /**

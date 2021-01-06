@@ -24,22 +24,47 @@ class AwsCredentials(NativeResource):
     Args:
         access_key_id (str): Access key ID
         secret_access_key (str): Secret access key
-        session_token (Optional[str]): Session token
+        session_token (Optional[str]): Optional security token associated with
+            the credentials.
+        expiration (Optional[datetime.datetime]): Optional expiration datetime,
+            that the credentials will no longer be valid past.
+            Converted to UTC timezone and rounded down to nearest second.
+            If not set, then credentials do not expire.
 
     Attributes:
         access_key_id (str): Access key ID
         secret_access_key (str): Secret access key
-        session_token (Optional[str]): Session token
+        session_token (Optional[str]): Security token associated with
+            the credentials. None if not set.
+        expiration (Optional[datetime.datetime]): Expiration datetime,
+            that the credentials will no longer be valid past.
+            None if credentials do not expire.
+            Timezone is always UTC.
     """
     __slots__ = ()
 
-    def __init__(self, access_key_id, secret_access_key, session_token=None):
+    # C layer uses UINT64_MAX as timestamp for non-expiring credentials
+    _NONEXPIRING_TIMESTAMP = 0xFFFFFFFFFFFFFFFF
+
+    def __init__(self, access_key_id, secret_access_key, session_token=None, expiration=None):
         assert isinstance(access_key_id, str)
         assert isinstance(secret_access_key, str)
         assert isinstance(session_token, str) or session_token is None
 
+        # C layer uses large int as timestamp for non-expiring credentials
+        if expiration is None:
+            expiration_timestamp = self._NONEXPIRING_TIMESTAMP
+        else:
+            expiration_timestamp = int(expiration.timestamp())
+            if expiration_timestamp < 0 or expiration_timestamp >= self._NONEXPIRING_TIMESTAMP:
+                raise OverflowError("expiration datetime out of range")
+
         super().__init__()
-        self._binding = _awscrt.credentials_new(access_key_id, secret_access_key, session_token)
+        self._binding = _awscrt.credentials_new(
+            access_key_id,
+            secret_access_key,
+            session_token,
+            expiration_timestamp)
 
     @classmethod
     def _from_binding(cls, binding):
@@ -60,6 +85,15 @@ class AwsCredentials(NativeResource):
     @property
     def session_token(self):
         return _awscrt.credentials_session_token(self._binding)
+
+    @property
+    def expiration(self):
+        timestamp = _awscrt.credentials_expiration_timestamp_seconds(self._binding)
+        # C layer uses large int as timestamp for non-expiring credentials
+        if timestamp == self._NONEXPIRING_TIMESTAMP:
+            return None
+        else:
+            return datetime.datetime.fromtimestamp(timestamp, tz=datetime.timezone.utc)
 
     def __deepcopy__(self, memo):
         # AwsCredentials is immutable, so just return self.
