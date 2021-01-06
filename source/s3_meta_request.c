@@ -93,9 +93,14 @@ static void s_s3_request_on_headers(
     const struct aws_http_headers *headers,
     int response_status,
     void *user_data) {
-    printf("s_s3_request_on_headers\n");
     (void)meta_request;
     struct s3_meta_request_binding *request_binding = user_data;
+
+    /*************** GIL ACQUIRE ***************/
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
 
     size_t num_headers = aws_http_headers_count(headers);
     /* Build up a list of (name,value) tuples,
@@ -110,26 +115,19 @@ static void s_s3_request_on_headers(
         goto done;
     }
 
-    /*************** GIL ACQUIRE ***************/
-    PyGILState_STATE state;
-    if (aws_py_gilstate_ensure(&state)) {
-        return; /* Python has shut down. Nothing matters anymore, but don't crash */
-    }
     /* Deliver the built up list of (name,value) tuples */
     PyObject *result =
         PyObject_CallMethod(request_binding->self_py, "_on_headers", "(iO)", response_status, header_list);
     if (!result) {
         PyErr_WriteUnraisable(request_binding->self_py);
-        goto release_lock;
+        goto done;
     }
     Py_DECREF(result);
-release_lock:
-    PyGILState_Release(state);
 done:
     Py_XDECREF(header_list);
+    PyGILState_Release(state);
     /*************** GIL RELEASE ***************/
 }
-
 static int s_record_progress(struct s3_meta_request_binding *request_binding, uint64_t length, bool *report_progress) {
     if (aws_add_u64_checked(request_binding->size_transferred, length, &request_binding->size_transferred)) {
         /* Wow */
