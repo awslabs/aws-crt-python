@@ -153,7 +153,6 @@ static void s_s3_request_on_body(
     const struct aws_byte_cursor *body,
     uint64_t range_start,
     void *user_data) {
-    printf("s_s3_request_on_body\n");
     (void)meta_request;
     struct s3_meta_request_binding *request_binding = user_data;
 
@@ -213,7 +212,6 @@ static void s_s3_request_on_finish(
     struct aws_s3_meta_request *meta_request,
     const struct aws_s3_meta_request_result *meta_request_result,
     void *user_data) {
-    printf("s_s3_request_on_finish\n");
     (void)meta_request;
     struct s3_meta_request_binding *request_binding = user_data;
     if (request_binding->input_body) {
@@ -282,7 +280,6 @@ done:
 
 /* Invoked when the python object get cleaned up */
 static void s_s3_meta_request_capsule_destructor(PyObject *capsule) {
-    printf("s_s3_meta_request_capsule_destructor\n");
     struct s3_meta_request_binding *meta_request = PyCapsule_GetPointer(capsule, s_capsule_name_s3_meta_request);
     Py_XDECREF(meta_request->self_py);
     if (meta_request->file) {
@@ -293,7 +290,6 @@ static void s_s3_meta_request_capsule_destructor(PyObject *capsule) {
 
 /* Callback from C land, invoked when the underlying shutdown process finished */
 static void s_s3_request_on_shutdown(void *user_data) {
-    printf("s_s3_request_on_shutdown\n");
     struct s3_meta_request_binding *request_binding = user_data;
 
     /*************** GIL ACQUIRE ***************/
