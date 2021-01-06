@@ -53,16 +53,6 @@ static void s_destroy_if_ready(struct s3_meta_request_binding *meta_request) {
     aws_mem_release(aws_py_get_allocator(), meta_request);
 }
 
-static void s_s3_meta_request_release(struct s3_meta_request_binding *meta_request) {
-    AWS_FATAL_ASSERT(!meta_request->release_called);
-
-    aws_s3_meta_request_release(meta_request->native);
-
-    meta_request->release_called = true;
-
-    s_destroy_if_ready(meta_request);
-}
-
 static int s_get_py_headers(const struct aws_http_headers *headers, PyObject *header_py) {
     /* Not take the reference of header_py, caller is the one holding the reference. */
     size_t num_headers = aws_http_headers_count(headers);
@@ -282,11 +272,17 @@ done:
 /* Invoked when the python object get cleaned up */
 static void s_s3_meta_request_capsule_destructor(PyObject *capsule) {
     struct s3_meta_request_binding *meta_request = PyCapsule_GetPointer(capsule, s_capsule_name_s3_meta_request);
+    AWS_FATAL_ASSERT(!meta_request->release_called);
     Py_XDECREF(meta_request->self_py);
     if (meta_request->file) {
         fclose(meta_request->file);
     }
-    s_s3_meta_request_release(meta_request);
+
+    aws_s3_meta_request_release(meta_request->native);
+
+    meta_request->release_called = true;
+
+    s_destroy_if_ready(meta_request);
 }
 
 /* Callback from C land, invoked when the underlying shutdown process finished */
