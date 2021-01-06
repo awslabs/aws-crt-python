@@ -73,9 +73,9 @@ class S3RequestTest(NativeResourceTest):
     def _build_endpoint_string(self, region, bucket_name):
         return bucket_name + ".s3." + region + ".amazonaws.com"
 
-    def _get_object_request(self):
+    def _get_object_request(self, object_path):
         headers = HttpHeaders([("host", self._build_endpoint_string(self.region, self.bucket_name))])
-        request = HttpRequest("GET", self.get_test_object_path, headers)
+        request = HttpRequest("GET", object_path, headers)
         return request
 
     def _put_object_request(self, file_name):
@@ -125,7 +125,7 @@ class S3RequestTest(NativeResourceTest):
         self.assertTrue(shutdown_event.wait(self.timeout))
 
     def test_get_object(self):
-        request = self._get_object_request()
+        request = self._get_object_request(self.get_test_object_path)
         self._test_s3_put_get_object(request, S3RequestType.GET_OBJECT)
 
     def test_put_object(self):
@@ -133,11 +133,8 @@ class S3RequestTest(NativeResourceTest):
         self._test_s3_put_get_object(request, S3RequestType.PUT_OBJECT)
         self.put_body_stream.close()
 
-    def _on_request_body_file_object(self, chunk, offset, **kargs):
-        self.received_body_len = self.received_body_len + kargs['size']
-
     def test_get_object_file_object(self):
-        request = self._get_object_request()
+        request = self._get_object_request(self.get_test_object_path)
         type = S3RequestType.GET_OBJECT
         s3_client = s3_client_new(False, self.region, 5 * 1024 * 1024)
         with NamedTemporaryFile("w") as file:
@@ -146,7 +143,6 @@ class S3RequestTest(NativeResourceTest):
                 file=file.name,
                 type=type,
                 on_headers=self._on_request_headers,
-                on_body=self._on_request_body_file_object,
                 on_progress=self._on_progress)
             finished_future = s3_request.finished_future
             finished_future.result(self.timeout)
@@ -163,6 +159,40 @@ class S3RequestTest(NativeResourceTest):
             self.assertTrue(shutdown_event.wait(self.timeout))
             # TODO verify the written file
 
+    def _on_progress_cancel_after_first_chunk(self, progress):
+        self.transferred_len += progress
+        self.s3_request.cancel()
+
+    def test_multipart_get_object_cancel(self):
+        # a 5 GB file
+        request = self._get_object_request("/crt-canary-obj-single-part-9223372036854775807")
+        type = S3RequestType.GET_OBJECT
+        s3_client = s3_client_new(False, self.region, 5 * 1024 * 1024)
+        with NamedTemporaryFile("w") as file:
+            self.s3_request = s3_client.make_request(
+                request=request,
+                file=file.name,
+                type=type,
+                on_headers=self._on_request_headers,
+                on_progress=self._on_progress_cancel_after_first_chunk)
+            finished_future = self.s3_request.finished_future
+            try:
+                finished_future.result(10)
+            except Exception:
+                pass
+
+            # Result check
+            self.data_len = int(HttpHeaders(self.response_headers).get("Content-Length"))
+            self.assertLess(
+                self.transferred_len,
+                self.data_len,
+                "the transferred length reported does not match the content-length header")
+            self.assertEqual(self.response_status_code, 200, "status code is not 200")
+            shutdown_event = self.s3_request.shutdown_event
+            del self.s3_request
+            self.assertTrue(shutdown_event.wait(self.timeout))
+            # TODO verify the written file
+
     def test_put_object_file_object(self):
         request = self._put_object_request("test/resources/s3_put_object.txt")
         type = S3RequestType.PUT_OBJECT
@@ -174,7 +204,6 @@ class S3RequestTest(NativeResourceTest):
             file="test/resources/s3_put_object.txt",
             type=type,
             on_headers=self._on_request_headers,
-            on_body=self._on_request_body_file_object,
             on_progress=self._on_progress)
         finished_future = s3_request.finished_future
         finished_future.result(self.timeout)
