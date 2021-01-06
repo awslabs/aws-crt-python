@@ -13,6 +13,7 @@ import time
 EXAMPLE_ACCESS_KEY_ID = 'example_access_key_id'
 EXAMPLE_SECRET_ACCESS_KEY = 'example_secret_access_key'
 EXAMPLE_SESSION_TOKEN = 'example_session_token'
+EXAMPLE_SESSION_EXPIRATION = datetime.datetime.fromtimestamp(1609911816, tz=datetime.timezone.utc)
 
 
 class ScopedEnvironmentVariable:
@@ -40,12 +41,14 @@ class TestCredentials(NativeResourceTest):
         credentials = awscrt.auth.AwsCredentials(
             EXAMPLE_ACCESS_KEY_ID,
             EXAMPLE_SECRET_ACCESS_KEY,
-            EXAMPLE_SESSION_TOKEN)
+            EXAMPLE_SESSION_TOKEN,
+            EXAMPLE_SESSION_EXPIRATION)
 
         # Don't use assertEqual(), which could log actual credentials if test fails.
         self.assertTrue(EXAMPLE_ACCESS_KEY_ID == credentials.access_key_id)
         self.assertTrue(EXAMPLE_SECRET_ACCESS_KEY == credentials.secret_access_key)
         self.assertTrue(EXAMPLE_SESSION_TOKEN == credentials.session_token)
+        self.assertTrue(EXAMPLE_SESSION_EXPIRATION == credentials.expiration)
 
     def test_create_no_session_token(self):
         credentials = awscrt.auth.AwsCredentials(EXAMPLE_ACCESS_KEY_ID, EXAMPLE_SECRET_ACCESS_KEY)
@@ -54,6 +57,14 @@ class TestCredentials(NativeResourceTest):
         self.assertTrue(EXAMPLE_ACCESS_KEY_ID == credentials.access_key_id)
         self.assertTrue(EXAMPLE_SECRET_ACCESS_KEY == credentials.secret_access_key)
         self.assertTrue(credentials.session_token is None)
+
+    def test_create_no_expiration(self):
+        credentials = awscrt.auth.AwsCredentials(EXAMPLE_ACCESS_KEY_ID, EXAMPLE_SECRET_ACCESS_KEY)
+
+        # Don't use assertEqual(), which could log actual credentials if test fails.
+        self.assertTrue(EXAMPLE_ACCESS_KEY_ID == credentials.access_key_id)
+        self.assertTrue(EXAMPLE_SECRET_ACCESS_KEY == credentials.secret_access_key)
+        self.assertTrue(credentials.expiration is None)
 
 
 class TestProvider(NativeResourceTest):
