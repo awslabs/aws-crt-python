@@ -76,6 +76,7 @@ class AwsCredentialsProviderBase(NativeResource):
     # AwsCredentialsProvider.new_delegate() instead.
     pass
 
+
 class AwsCredentialsProvider(AwsCredentialsProviderBase):
     """
     Credentials providers source the AwsCredentials needed to sign an authenticated AWS request.

@@ -204,6 +204,7 @@ class TestProvider(NativeResourceTest):
             credentials_future = provider.get_credentials()
             credentials = credentials_future.result(TIMEOUT)
 
+
 class TestSigningConfig(NativeResourceTest):
     def test_create(self):
         algorithm = awscrt.auth.AwsSigningAlgorithm.V4
