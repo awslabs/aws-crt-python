@@ -228,14 +228,36 @@ class S3RequestTest(NativeResourceTest):
                 self.data_len,
                 "the cancel failed to block all the following body")
 
-            # The on finish callback may invoke the progress
+            # The on_finish callback may invoke the progress
             self.assertLessEqual(self.progress_invoked, 2)
             shutdown_event = self.s3_request.shutdown_event
             del self.s3_request
             self.assertTrue(shutdown_event.wait(self.timeout))
-            # TODO verify the written file
 
-    def test_multipart_put_object_cancel(self):
+    def test_get_object_quick_cancel(self):
+        # a 5 GB file
+        request = self._get_object_request("/crt-canary-obj-single-part-9223372036854775807")
+        s3_client = s3_client_new(False, self.region, 5 * 1024 * 1024)
+        with NamedTemporaryFile("w") as file:
+            s3_request = s3_client.make_request(
+                request=request,
+                file=file.name,
+                type=S3RequestType.GET_OBJECT,
+                on_headers=self._on_request_headers,
+                on_progress=self._on_progress)
+            s3_request.cancel()
+            finished_future = s3_request.finished_future
+            try:
+                finished_future.result(self.timeout)
+            except Exception as e:
+                self.assertEqual(e.name, "AWS_ERROR_S3_CANCELED_SUCCESS")
+
+            # The on_finish callback may invoke the progress
+            shutdown_event = s3_request.shutdown_event
+            del s3_request
+            self.assertTrue(shutdown_event.wait(self.timeout))
+
+    def _put_object_cancel_helper(self, cancel_after_read):
         read_futrue = Future()
         put_body_stream = FakeReadStream(read_futrue)
         data_len = 10 * 1024 * 1024 * 1024  # some fake length
@@ -248,7 +270,9 @@ class S3RequestTest(NativeResourceTest):
             type=S3RequestType.PUT_OBJECT,
             on_headers=self._on_request_headers)
 
-        read_futrue.result(self.timeout)
+        if cancel_after_read:
+            read_futrue.result(self.timeout)
+
         s3_request.cancel()
         finished_future = s3_request.finished_future
         try:
@@ -260,7 +284,15 @@ class S3RequestTest(NativeResourceTest):
         del s3_request
         self.assertTrue(shutdown_event.wait(self.timeout))
 
-        # If CLI installed, run list_parts to ensure the cancel succeed.
+        # TODO If CLI installed, run the following command to ensure the cancel succeed.
+        # aws s3api list-multipart-uploads --bucket aws-crt-canary-bucket --prefix 'cancelled_request'
+        # Nothing should printout
+
+    def test_multipart_put_object_cancel(self):
+        return self._put_object_cancel_helper(True)
+
+    def test_put_object_quick_cancel(self):
+        return self._put_object_cancel_helper(False)
 
 
 if __name__ == '__main__':
