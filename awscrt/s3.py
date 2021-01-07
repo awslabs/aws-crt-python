@@ -126,7 +126,8 @@ class S3Client(NativeResource):
             request,
             type,
             credential_provider=None,
-            file=None,
+            recv_filepath=None,
+            send_filepath=None,
             on_headers=None,
             on_body=None,
             on_done=None,
@@ -143,8 +144,11 @@ class S3Client(NativeResource):
                 AwsCredentials needed to sign an authenticated AWS request, for this request only.
                 If None is provided, the credential provider in the client will be used.
 
-            file (Optional[path]): Optional file path. If set, the C part will handle writing/reading from a file.
-                The performance can be improved with it, but the memory usage will be higher
+            recv_filepath (Optional[str]): Optional file path. If set, the C part will handle writing from a file.
+                The performance can be improved. on_body callback will not be invoked once recv_filepath is set.
+
+            send_filepath (Optional[str]): Optional file path. If set, the C part will handle reading from a file.
+                The performance can be improved.
 
             on_headers: Optional callback invoked as the response received, and even the API request
                 has been split into multiple parts, this callback will only be invoked once as
@@ -159,6 +163,7 @@ class S3Client(NativeResource):
                 *   `**kwargs` (dict): Forward-compatibility kwargs.
 
             on_body: Optional callback invoked 0+ times as the response body received from S3 server.
+                Once the filepath is set, this callback will never get invoked.
                 The function should take the following arguments and return nothing:
 
                 *   `chunk` (buffer): Response body data (not necessarily
@@ -192,7 +197,8 @@ class S3Client(NativeResource):
             request=request,
             type=type,
             credential_provider=credential_provider,
-            file=file,
+            recv_filepath=recv_filepath,
+            send_filepath=send_filepath,
             on_headers=on_headers,
             on_body=on_body,
             on_done=on_done,
@@ -231,7 +237,8 @@ class S3Request(NativeResource):
             request,
             type,
             credential_provider=None,
-            file=None,
+            recv_filepath=None,
+            send_filepath=None,
             on_headers=None,
             on_body=None,
             on_done=None,
@@ -269,7 +276,8 @@ class S3Request(NativeResource):
             request,
             type,
             credential_provider,
-            file,
+            recv_filepath,
+            send_filepath,
             region,
             on_shutdown)
 
@@ -277,9 +285,9 @@ class S3Request(NativeResource):
         if self._on_headers_cb:
             self._on_headers_cb(status_code=status_code, headers=headers)
 
-    def _on_body(self, chunk, offset, size=None):
+    def _on_body(self, chunk, offset):
         if self._on_body_cb:
-            self._on_body_cb(chunk=chunk, offset=offset, size=size)
+            self._on_body_cb(chunk=chunk, offset=offset)
 
     def _on_finish(self, error_code, error_headers, error_body):
         error = None

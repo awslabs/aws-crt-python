@@ -143,7 +143,7 @@ class S3RequestTest(NativeResourceTest):
         with NamedTemporaryFile("w") as file:
             s3_request = s3_client.make_request(
                 request=request,
-                file=file.name,
+                recv_filepath=file.name,
                 type=type,
                 on_headers=self._on_request_headers,
                 on_body=self._on_request_body_file_object,
@@ -171,7 +171,7 @@ class S3RequestTest(NativeResourceTest):
         s3_client = s3_client_new(False, self.region, 5 * 1024 * 1024)
         s3_request = s3_client.make_request(
             request=request,
-            file="test/resources/s3_put_object.txt",
+            send_filepath="test/resources/s3_put_object.txt",
             type=type,
             on_headers=self._on_request_headers,
             on_body=self._on_request_body_file_object,
