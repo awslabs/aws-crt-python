@@ -101,43 +101,28 @@ class AwsCredentials(NativeResource):
 
 
 class AwsCredentialsProviderBase(NativeResource):
-    """
-    Base class for providers that source the AwsCredentials needed to sign an authenticated AWS request.
-
-    NOTE: Custom subclasses of AwsCredentialsProviderBase are not yet supported.
-    """
-    __slots__ = ()
-
-    def __init__(self, binding=None):
-        super().__init__()
-
-        if binding is None:
-            # TODO: create binding type that lets native code call into python subclass
-            raise NotImplementedError("Custom subclasses of AwsCredentialsProviderBase are not yet supported")
-
-        self._binding = binding
-
-    def get_credentials(self):
-        """
-        Asynchronously fetch AwsCredentials.
-
-        Returns:
-            concurrent.futures.Future: A Future which will contain
-            :class:`AwsCredentials` (or an exception) when the operation completes.
-            The operation may complete on a different thread.
-        """
-        raise NotImplementedError()
+    # Pointless base class, kept for backwards compatibility.
+    # AwsCredentialsProvider is (and always will be) the only subclass.
+    #
+    # Originally created with the thought that, when we supported
+    # custom python providers, they would inherit from this class.
+    # We ended up supporting custom python providers via
+    # AwsCredentialsProvider.new_delegate() instead.
+    pass
 
 
 class AwsCredentialsProvider(AwsCredentialsProviderBase):
     """
     Credentials providers source the AwsCredentials needed to sign an authenticated AWS request.
 
-    Base class: AwsCredentialsProviderBase
-
     This class provides `new()` functions for several built-in provider types.
+    To define a custom provider, use the `new_delegate()` function.
     """
     __slots__ = ()
+
+    def __init__(self, binding):
+        super().__init__()
+        self._binding = binding
 
     @classmethod
     def new_default_chain(cls, client_bootstrap):
@@ -289,7 +274,35 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
         binding = _awscrt.credentials_provider_new_chain(providers)
         return cls(binding)
 
+    @classmethod
+    def new_delegate(cls, get_credentials):
+        """
+        Creates a provider that sources credentials from a custom
+        synchronous callback.
+
+        Args:
+            get_credentials: Callable which takes no arguments and returns
+                :class:`AwsCredentials`.
+
+        Returns:
+            AwsCredentialsProvider:
+        """
+        # TODO: support async delegates
+
+        assert callable(get_credentials)
+
+        binding = _awscrt.credentials_provider_new_delegate(get_credentials)
+        return cls(binding)
+
     def get_credentials(self):
+        """
+        Asynchronously fetch AwsCredentials.
+
+        Returns:
+            concurrent.futures.Future: A Future which will contain
+            :class:`AwsCredentials` (or an exception) when the operation completes.
+            The operation may complete on a different thread.
+        """
         future = Future()
 
         def _on_complete(error_code, binding):
@@ -306,7 +319,7 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
         try:
             _awscrt.credentials_provider_get_credentials(self._binding, _on_complete)
         except Exception as e:
-            future.set_result(e)
+            future.set_exception(e)
 
         return future
 
@@ -383,7 +396,7 @@ class AwsSigningConfig(NativeResource):
         signature_type (AwsSignatureType): Which sort of signature should be
             computed from the signable.
 
-        credentials_provider (AwsCredentialsProviderBase): Credentials provider
+        credentials_provider (AwsCredentialsProvider): Credentials provider
             to fetch signing credentials with.
 
         region (str): The region to sign against.
@@ -470,7 +483,7 @@ class AwsSigningConfig(NativeResource):
 
         assert isinstance(algorithm, AwsSigningAlgorithm)
         assert isinstance(signature_type, AwsSignatureType)
-        assert isinstance(credentials_provider, AwsCredentialsProviderBase)
+        assert isinstance(credentials_provider, AwsCredentialsProvider)
         assert isinstance(region, str)
         assert isinstance(service, str)
         assert callable(should_sign_header) or should_sign_header is None
@@ -533,7 +546,7 @@ class AwsSigningConfig(NativeResource):
 
     @property
     def credentials_provider(self):
-        """AwsCredentialsProviderBase: Credentials provider to fetch signing credentials with"""
+        """AwsCredentialsProvider: Credentials provider to fetch signing credentials with"""
         return _awscrt.signing_config_get_credentials_provider(self._binding)
 
     @property

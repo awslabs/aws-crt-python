@@ -135,10 +135,16 @@ PyObject *aws_py_credentials_expiration_timestamp_seconds(PyObject *self, PyObje
  */
 struct credentials_provider_binding {
     struct aws_credentials_provider *native;
+
+    /* Python get_credentials() callable.
+     * Only used by "delegate" provider type */
+    PyObject *py_delegate;
 };
 
 /* Finally clean up binding (after capsule destructor runs and credentials provider shutdown completes) */
 static void s_credentials_provider_binding_clean_up(struct credentials_provider_binding *binding) {
+    Py_XDECREF(binding->py_delegate);
+
     aws_mem_release(aws_py_get_allocator(), binding);
 }
 
@@ -166,7 +172,7 @@ struct aws_credentials_provider *aws_py_get_credentials_provider(PyObject *crede
     AWS_PY_RETURN_NATIVE_FROM_BINDING(
         credentials_provider,
         s_capsule_name_credentials_provider,
-        "AwsCredentialsProviderBase",
+        "AwsCredentialsProvider",
         credentials_provider_binding);
 }
 
@@ -557,5 +563,105 @@ done:
     }
 
     Py_XDECREF(capsule);
+    return NULL;
+}
+
+static int s_credentials_provider_delegate_get_credentials(
+    void *delegate_user_data,
+    aws_on_get_credentials_callback_fn callback,
+    void *callback_user_data) {
+
+    struct credentials_provider_binding *binding = delegate_user_data;
+
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        /* Python has shut down. Nothing matters anymore, but don't crash */
+        return aws_raise_error(AWS_ERROR_INVALID_STATE);
+    }
+
+    struct aws_credentials *native_credentials = NULL;
+
+    PyObject *py_result = PyObject_CallFunction(binding->py_delegate, "()");
+    if (!py_result) {
+        AWS_LOGF_ERROR(
+            AWS_LS_AUTH_CREDENTIALS_PROVIDER,
+            "(id=%p) Exception in get_credentials() delegate callback",
+            (void *)binding->native);
+
+        PyErr_WriteUnraisable(binding->py_delegate);
+        goto done;
+    }
+
+    /* Expect py_result to be AwsCredentials (which wraps native aws_credentials). */
+    native_credentials = aws_py_get_credentials(py_result);
+    if (!native_credentials) {
+        AWS_LOGF_ERROR(
+            AWS_LS_AUTH_CREDENTIALS_PROVIDER,
+            "(id=%p) get_credentials() delegate callback failed to return AwsCredentials",
+            (void *)binding->native);
+
+        PyErr_WriteUnraisable(binding->py_delegate);
+        goto done;
+    }
+
+    /* Keep native aws_credentials alive until we pass them to callback. */
+    aws_credentials_acquire(native_credentials);
+
+done:
+    /* Decref the python AwsCredentials (or whatever else was returned) before releasing the GIL */
+    Py_XDECREF(py_result);
+
+    PyGILState_Release(state);
+
+    if (!native_credentials) {
+        return aws_raise_error(AWS_ERROR_CRT_CALLBACK_EXCEPTION);
+    }
+
+    callback(native_credentials, AWS_ERROR_SUCCESS, callback_user_data);
+    aws_credentials_release(native_credentials);
+    return AWS_OP_SUCCESS;
+}
+
+PyObject *aws_py_credentials_provider_new_delegate(PyObject *self, PyObject *args) {
+    (void)self;
+    struct aws_allocator *allocator = aws_py_get_allocator();
+
+    PyObject *py_delegate;
+
+    if (!PyArg_ParseTuple(args, "O", &py_delegate)) {
+        return NULL;
+    }
+
+    struct credentials_provider_binding *binding;
+    PyObject *capsule = s_new_credentials_provider_binding_and_capsule(&binding);
+    if (!capsule) {
+        return NULL;
+    }
+
+    binding->py_delegate = py_delegate;
+    Py_INCREF(py_delegate);
+
+    /* From hereon, we need to clean up if errors occur.
+     * Fortunately, the capsule destructor will clean up anything stored inside the binding */
+
+    struct aws_credentials_provider_delegate_options options = {
+        .get_credentials = s_credentials_provider_delegate_get_credentials,
+        .delegate_user_data = binding,
+        .shutdown_options =
+            {
+                .shutdown_callback = s_credentials_provider_shutdown_complete,
+                .shutdown_user_data = binding,
+            },
+    };
+
+    binding->native = aws_credentials_provider_new_delegate(allocator, &options);
+    if (!binding->native) {
+        PyErr_SetAwsLastError();
+        goto error;
+    }
+
+    return capsule;
+error:
+    Py_DECREF(capsule);
     return NULL;
 }
