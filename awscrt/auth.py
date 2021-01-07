@@ -24,22 +24,47 @@ class AwsCredentials(NativeResource):
     Args:
         access_key_id (str): Access key ID
         secret_access_key (str): Secret access key
-        session_token (Optional[str]): Session token
+        session_token (Optional[str]): Optional security token associated with
+            the credentials.
+        expiration (Optional[datetime.datetime]): Optional expiration datetime,
+            that the credentials will no longer be valid past.
+            Converted to UTC timezone and rounded down to nearest second.
+            If not set, then credentials do not expire.
 
     Attributes:
         access_key_id (str): Access key ID
         secret_access_key (str): Secret access key
-        session_token (Optional[str]): Session token
+        session_token (Optional[str]): Security token associated with
+            the credentials. None if not set.
+        expiration (Optional[datetime.datetime]): Expiration datetime,
+            that the credentials will no longer be valid past.
+            None if credentials do not expire.
+            Timezone is always UTC.
     """
     __slots__ = ()
 
-    def __init__(self, access_key_id, secret_access_key, session_token=None):
+    # C layer uses UINT64_MAX as timestamp for non-expiring credentials
+    _NONEXPIRING_TIMESTAMP = 0xFFFFFFFFFFFFFFFF
+
+    def __init__(self, access_key_id, secret_access_key, session_token=None, expiration=None):
         assert isinstance(access_key_id, str)
         assert isinstance(secret_access_key, str)
         assert isinstance(session_token, str) or session_token is None
 
+        # C layer uses large int as timestamp for non-expiring credentials
+        if expiration is None:
+            expiration_timestamp = self._NONEXPIRING_TIMESTAMP
+        else:
+            expiration_timestamp = int(expiration.timestamp())
+            if expiration_timestamp < 0 or expiration_timestamp >= self._NONEXPIRING_TIMESTAMP:
+                raise OverflowError("expiration datetime out of range")
+
         super().__init__()
-        self._binding = _awscrt.credentials_new(access_key_id, secret_access_key, session_token)
+        self._binding = _awscrt.credentials_new(
+            access_key_id,
+            secret_access_key,
+            session_token,
+            expiration_timestamp)
 
     @classmethod
     def _from_binding(cls, binding):
@@ -61,49 +86,43 @@ class AwsCredentials(NativeResource):
     def session_token(self):
         return _awscrt.credentials_session_token(self._binding)
 
+    @property
+    def expiration(self):
+        timestamp = _awscrt.credentials_expiration_timestamp_seconds(self._binding)
+        # C layer uses large int as timestamp for non-expiring credentials
+        if timestamp == self._NONEXPIRING_TIMESTAMP:
+            return None
+        else:
+            return datetime.datetime.fromtimestamp(timestamp, tz=datetime.timezone.utc)
+
     def __deepcopy__(self, memo):
         # AwsCredentials is immutable, so just return self.
         return self
 
 
 class AwsCredentialsProviderBase(NativeResource):
-    """
-    Base class for providers that source the AwsCredentials needed to sign an authenticated AWS request.
-
-    NOTE: Custom subclasses of AwsCredentialsProviderBase are not yet supported.
-    """
-    __slots__ = ()
-
-    def __init__(self, binding=None):
-        super().__init__()
-
-        if binding is None:
-            # TODO: create binding type that lets native code call into python subclass
-            raise NotImplementedError("Custom subclasses of AwsCredentialsProviderBase are not yet supported")
-
-        self._binding = binding
-
-    def get_credentials(self):
-        """
-        Asynchronously fetch AwsCredentials.
-
-        Returns:
-            concurrent.futures.Future: A Future which will contain
-            :class:`AwsCredentials` (or an exception) when the operation completes.
-            The operation may complete on a different thread.
-        """
-        raise NotImplementedError()
+    # Pointless base class, kept for backwards compatibility.
+    # AwsCredentialsProvider is (and always will be) the only subclass.
+    #
+    # Originally created with the thought that, when we supported
+    # custom python providers, they would inherit from this class.
+    # We ended up supporting custom python providers via
+    # AwsCredentialsProvider.new_delegate() instead.
+    pass
 
 
 class AwsCredentialsProvider(AwsCredentialsProviderBase):
     """
     Credentials providers source the AwsCredentials needed to sign an authenticated AWS request.
 
-    Base class: AwsCredentialsProviderBase
-
     This class provides `new()` functions for several built-in provider types.
+    To define a custom provider, use the `new_delegate()` function.
     """
     __slots__ = ()
+
+    def __init__(self, binding):
+        super().__init__()
+        self._binding = binding
 
     @classmethod
     def new_default_chain(cls, client_bootstrap):
@@ -256,32 +275,34 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
         return cls(binding)
 
     @classmethod
-    def new_python(cls, py_provider):
+    def new_delegate(cls, get_credentials):
         """
-        Creates a provider that sources credentials from a python class.
-
-        The python provider needs to have a method :get_credential(), which returns
-        the credential as a dictionary like (Expiration and SessionToken are optional):
-        {
-            "AccessKeyId": "accesskey",
-            "SecretAccessKey": "secretAccessKey",
-            "SessionToken": "....",
-            "Expiration": 1247169778 // timepoint, in seconds since epoch
-        }
+        Creates a provider that sources credentials from a custom
+        synchronous callback.
 
         Args:
-            provider: python Object.
+            get_credentials: Callable which takes no arguments and returns
+                :class:`AwsCredentials`.
 
         Returns:
             AwsCredentialsProvider:
         """
+        # TODO: support async delegates
 
-        assert hasattr(py_provider, 'get_credential')
-        assert callable(py_provider.get_credential)
-        binding = _awscrt.credentials_provider_new_python(py_provider)
+        assert callable(get_credentials)
+
+        binding = _awscrt.credentials_provider_new_delegate(get_credentials)
         return cls(binding)
 
     def get_credentials(self):
+        """
+        Asynchronously fetch AwsCredentials.
+
+        Returns:
+            concurrent.futures.Future: A Future which will contain
+            :class:`AwsCredentials` (or an exception) when the operation completes.
+            The operation may complete on a different thread.
+        """
         future = Future()
 
         def _on_complete(error_code, binding):
@@ -298,7 +319,7 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
         try:
             _awscrt.credentials_provider_get_credentials(self._binding, _on_complete)
         except Exception as e:
-            future.set_result(e)
+            future.set_exception(e)
 
         return future
 
@@ -375,7 +396,7 @@ class AwsSigningConfig(NativeResource):
         signature_type (AwsSignatureType): Which sort of signature should be
             computed from the signable.
 
-        credentials_provider (AwsCredentialsProviderBase): Credentials provider
+        credentials_provider (AwsCredentialsProvider): Credentials provider
             to fetch signing credentials with.
 
         region (str): The region to sign against.
@@ -462,7 +483,7 @@ class AwsSigningConfig(NativeResource):
 
         assert isinstance(algorithm, AwsSigningAlgorithm)
         assert isinstance(signature_type, AwsSignatureType)
-        assert isinstance(credentials_provider, AwsCredentialsProviderBase)
+        assert isinstance(credentials_provider, AwsCredentialsProvider)
         assert isinstance(region, str)
         assert isinstance(service, str)
         assert callable(should_sign_header) or should_sign_header is None
@@ -525,7 +546,7 @@ class AwsSigningConfig(NativeResource):
 
     @property
     def credentials_provider(self):
-        """AwsCredentialsProviderBase: Credentials provider to fetch signing credentials with"""
+        """AwsCredentialsProvider: Credentials provider to fetch signing credentials with"""
         return _awscrt.signing_config_get_credentials_provider(self._binding)
 
     @property
