@@ -13,6 +13,7 @@ import time
 EXAMPLE_ACCESS_KEY_ID = 'example_access_key_id'
 EXAMPLE_SECRET_ACCESS_KEY = 'example_secret_access_key'
 EXAMPLE_SESSION_TOKEN = 'example_session_token'
+EXAMPLE_SESSION_EXPIRATION = datetime.datetime.fromtimestamp(1609911816, tz=datetime.timezone.utc)
 
 
 class ScopedEnvironmentVariable:
@@ -40,12 +41,14 @@ class TestCredentials(NativeResourceTest):
         credentials = awscrt.auth.AwsCredentials(
             EXAMPLE_ACCESS_KEY_ID,
             EXAMPLE_SECRET_ACCESS_KEY,
-            EXAMPLE_SESSION_TOKEN)
+            EXAMPLE_SESSION_TOKEN,
+            EXAMPLE_SESSION_EXPIRATION)
 
         # Don't use assertEqual(), which could log actual credentials if test fails.
         self.assertTrue(EXAMPLE_ACCESS_KEY_ID == credentials.access_key_id)
         self.assertTrue(EXAMPLE_SECRET_ACCESS_KEY == credentials.secret_access_key)
         self.assertTrue(EXAMPLE_SESSION_TOKEN == credentials.session_token)
+        self.assertTrue(EXAMPLE_SESSION_EXPIRATION == credentials.expiration)
 
     def test_create_no_session_token(self):
         credentials = awscrt.auth.AwsCredentials(EXAMPLE_ACCESS_KEY_ID, EXAMPLE_SECRET_ACCESS_KEY)
@@ -54,6 +57,14 @@ class TestCredentials(NativeResourceTest):
         self.assertTrue(EXAMPLE_ACCESS_KEY_ID == credentials.access_key_id)
         self.assertTrue(EXAMPLE_SECRET_ACCESS_KEY == credentials.secret_access_key)
         self.assertTrue(credentials.session_token is None)
+
+    def test_create_no_expiration(self):
+        credentials = awscrt.auth.AwsCredentials(EXAMPLE_ACCESS_KEY_ID, EXAMPLE_SECRET_ACCESS_KEY)
+
+        # Don't use assertEqual(), which could log actual credentials if test fails.
+        self.assertTrue(EXAMPLE_ACCESS_KEY_ID == credentials.access_key_id)
+        self.assertTrue(EXAMPLE_SECRET_ACCESS_KEY == credentials.secret_access_key)
+        self.assertTrue(credentials.expiration is None)
 
 
 class TestProvider(NativeResourceTest):
@@ -170,9 +181,11 @@ class TestProvider(NativeResourceTest):
             self.assertTrue('process_secret_access_key' == credentials.secret_access_key)
             self.assertTrue(credentials.session_token is None)
 
-    def test_py_provider(self):
-        credential = FakePyProvider()
-        provider = awscrt.auth.AwsCredentialsProvider.new_python(credential)
+    def test_delegate_provider(self):
+        def delegate_get_credentials():
+            return awscrt.auth.AwsCredentials("accesskey", "secretAccessKey", "sessionToken")
+
+        provider = awscrt.auth.AwsCredentialsProvider.new_delegate(delegate_get_credentials)
         credentials = provider.get_credentials().result(TIMEOUT)
 
         # Don't use assertEqual(), which could log actual credentials if test fails.
@@ -180,12 +193,27 @@ class TestProvider(NativeResourceTest):
         self.assertTrue('secretAccessKey' == credentials.secret_access_key)
         self.assertTrue('sessionToken' == credentials.session_token)
 
+    def test_delegate_provider_exception(self):
+        # delegate that raises exception should result in exception
+        def delegate_get_credentials():
+            raise Exception("purposefully thrown exception")
 
-class FakePyProvider():
-    def get_credential(self):
-        return {"AccessKeyId": "accesskey",
-                "SecretAccessKey": "secretAccessKey",
-                "SessionToken": "sessionToken"}
+        provider = awscrt.auth.AwsCredentialsProvider.new_delegate(delegate_get_credentials)
+
+        with self.assertRaises(Exception):
+            credentials_future = provider.get_credentials()
+            credentials = credentials_future.result(TIMEOUT)
+
+    def test_delegate_provider_exception_from_bad_return_type(self):
+        # delegate that returns wrong type should result in exception
+        def delegate_get_credentials():
+            return "purposefully return wrong type"
+
+        provider = awscrt.auth.AwsCredentialsProvider.new_delegate(delegate_get_credentials)
+
+        with self.assertRaises(Exception):
+            credentials_future = provider.get_credentials()
+            credentials = credentials_future.result(TIMEOUT)
 
 
 class TestSigningConfig(NativeResourceTest):

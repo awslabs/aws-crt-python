@@ -26,24 +26,22 @@ PyObject *aws_py_credentials_new(PyObject *self, PyObject *args) {
     struct aws_byte_cursor access_key_id;
     struct aws_byte_cursor secret_access_key;
     struct aws_byte_cursor session_token; /* session_token is optional */
+    uint64_t expiration_timestamp_sec;
     if (!PyArg_ParseTuple(
             args,
-            "s#s#z#",
+            "s#s#z#K",
             &access_key_id.ptr,
             &access_key_id.len,
             &secret_access_key.ptr,
             &secret_access_key.len,
             &session_token.ptr,
-            &session_token.len)) {
+            &session_token.len,
+            &expiration_timestamp_sec)) {
         return NULL;
     }
 
     struct aws_credentials *credentials = aws_credentials_new(
-        aws_py_get_allocator(),
-        access_key_id,
-        secret_access_key,
-        session_token,
-        UINT64_MAX /*expiration_timepoint_seconds*/);
+        aws_py_get_allocator(), access_key_id, secret_access_key, session_token, expiration_timestamp_sec);
     if (!credentials) {
         return PyErr_AwsLastError();
     }
@@ -115,19 +113,38 @@ PyObject *aws_py_credentials_session_token(PyObject *self, PyObject *args) {
     return s_credentials_get_member_str(args, CREDENTIALS_MEMBER_SESSION_TOKEN);
 }
 
+PyObject *aws_py_credentials_expiration_timestamp_seconds(PyObject *self, PyObject *args) {
+    (void)self;
+
+    PyObject *capsule;
+    if (!PyArg_ParseTuple(args, "O", &capsule)) {
+        return NULL;
+    }
+
+    const struct aws_credentials *credentials = PyCapsule_GetPointer(capsule, s_capsule_name_credentials);
+    if (!credentials) {
+        return NULL;
+    }
+
+    uint64_t timestamp = aws_credentials_get_expiration_timepoint_seconds(credentials);
+    return PyLong_FromUnsignedLongLong(timestamp);
+}
+
 /**
  * Binds a Python CredentialsProvider to a native aws_credentials_provider.
  */
 struct credentials_provider_binding {
     struct aws_credentials_provider *native;
-    PyObject *py_provider;
+
+    /* Python get_credentials() callable.
+     * Only used by "delegate" provider type */
+    PyObject *py_delegate;
 };
 
 /* Finally clean up binding (after capsule destructor runs and credentials provider shutdown completes) */
 static void s_credentials_provider_binding_clean_up(struct credentials_provider_binding *binding) {
-    if (binding->py_provider) {
-        Py_XDECREF(binding->py_provider);
-    }
+    Py_XDECREF(binding->py_delegate);
+
     aws_mem_release(aws_py_get_allocator(), binding);
 }
 
@@ -155,7 +172,7 @@ struct aws_credentials_provider *aws_py_get_credentials_provider(PyObject *crede
     AWS_PY_RETURN_NATIVE_FROM_BINDING(
         credentials_provider,
         s_capsule_name_credentials_provider,
-        "AwsCredentialsProviderBase",
+        "AwsCredentialsProvider",
         credentials_provider_binding);
 }
 
@@ -549,93 +566,69 @@ done:
     return NULL;
 }
 
-static int s_credentials_provider_py_provider_get_credentials(
-    struct aws_credentials_provider *provider,
+static int s_credentials_provider_delegate_get_credentials(
+    void *delegate_user_data,
     aws_on_get_credentials_callback_fn callback,
-    void *user_data) {
-    struct aws_allocator *allocator = provider->allocator;
+    void *callback_user_data) {
 
-    struct aws_string *access_key_id = NULL;
-    struct aws_string *secret_access_key = NULL;
-    struct aws_string *session_token = NULL;
-    struct aws_credentials *credentials = NULL;
-    int error_code = AWS_ERROR_SUCCESS;
-    struct credentials_provider_binding *binding = provider->impl;
+    struct credentials_provider_binding *binding = delegate_user_data;
 
     PyGILState_STATE state;
     if (aws_py_gilstate_ensure(&state)) {
-        return AWS_OP_ERR; /* Python has shut down. Nothing matters anymore, but don't crash */
+        /* Python has shut down. Nothing matters anymore, but don't crash */
+        return aws_raise_error(AWS_ERROR_INVALID_STATE);
     }
 
-    PyObject *dict = PyObject_CallMethod(binding->py_provider, "get_credential", "()");
+    struct aws_credentials *native_credentials = NULL;
 
-    PyObject *py_key = PyDict_GetItemString(dict, "AccessKeyId");
-    PyObject *py_secret_key = PyDict_GetItemString(dict, "SecretAccessKey");
-    PyObject *py_token = PyDict_GetItemString(dict, "SessionToken");
-    PyObject *py_expiration = PyDict_GetItemString(dict, "Expiration");
+    PyObject *py_result = PyObject_CallFunction(binding->py_delegate, "()");
+    if (!py_result) {
+        AWS_LOGF_ERROR(
+            AWS_LS_AUTH_CREDENTIALS_PROVIDER,
+            "(id=%p) Exception in get_credentials() delegate callback",
+            (void *)binding->native);
 
-    struct aws_byte_cursor cursor;
-    if (py_key) {
-        cursor = aws_byte_cursor_from_pyunicode(py_key);
-        access_key_id = aws_string_new_from_cursor(allocator, &cursor);
+        PyErr_WriteUnraisable(binding->py_delegate);
+        goto done;
     }
-    if (py_secret_key) {
-        cursor = aws_byte_cursor_from_pyunicode(py_secret_key);
-        secret_access_key = aws_string_new_from_cursor(allocator, &cursor);
+
+    /* Expect py_result to be AwsCredentials (which wraps native aws_credentials). */
+    native_credentials = aws_py_get_credentials(py_result);
+    if (!native_credentials) {
+        AWS_LOGF_ERROR(
+            AWS_LS_AUTH_CREDENTIALS_PROVIDER,
+            "(id=%p) get_credentials() delegate callback failed to return AwsCredentials",
+            (void *)binding->native);
+
+        PyErr_WriteUnraisable(binding->py_delegate);
+        goto done;
     }
-    if (py_token) {
-        cursor = aws_byte_cursor_from_pyunicode(py_token);
-        session_token = aws_string_new_from_cursor(allocator, &cursor);
-    }
-    uint64_t expiration = UINT64_MAX;
-    if (py_expiration) {
-        expiration = PyLong_AsUnsignedLongLong(py_expiration);
-    }
+
+    /* Keep native aws_credentials alive until we pass them to callback. */
+    aws_credentials_acquire(native_credentials);
+
+done:
+    /* Decref the python AwsCredentials (or whatever else was returned) before releasing the GIL */
+    Py_XDECREF(py_result);
+
     PyGILState_Release(state);
-    if (access_key_id != NULL && secret_access_key != NULL) {
-        credentials =
-            aws_credentials_new_from_string(allocator, access_key_id, secret_access_key, session_token, expiration);
-        if (credentials == NULL) {
-            error_code = aws_last_error();
-            if (!error_code) {
-                error_code = AWS_AUTH_CREDENTIALS_PROVIDER_INVALID_DELEGATE;
-            }
-        }
-    } else {
-        error_code = AWS_AUTH_CREDENTIALS_PROVIDER_INVALID_DELEGATE;
+
+    if (!native_credentials) {
+        return aws_raise_error(AWS_ERROR_CRT_CALLBACK_EXCEPTION);
     }
 
-    callback(credentials, error_code, user_data);
-
-    aws_credentials_release(credentials);
-    aws_string_destroy(session_token);
-    aws_string_destroy(secret_access_key);
-    aws_string_destroy(access_key_id);
-
+    callback(native_credentials, AWS_ERROR_SUCCESS, callback_user_data);
+    aws_credentials_release(native_credentials);
     return AWS_OP_SUCCESS;
 }
 
-static void s_credentials_provider_py_provider_destroy(struct aws_credentials_provider *provider) {
-    if (provider && provider->shutdown_options.shutdown_callback) {
-        provider->shutdown_options.shutdown_callback(provider->shutdown_options.shutdown_user_data);
-    }
-
-    aws_mem_release(provider->allocator, provider);
-}
-
-static struct aws_credentials_provider_vtable s_aws_credentials_provider_py_provider_vtable = {
-    .get_credentials = s_credentials_provider_py_provider_get_credentials,
-    .destroy = s_credentials_provider_py_provider_destroy,
-};
-
-PyObject *aws_py_credentials_provider_new_python(PyObject *self, PyObject *args) {
+PyObject *aws_py_credentials_provider_new_delegate(PyObject *self, PyObject *args) {
     (void)self;
-    (void)args;
     struct aws_allocator *allocator = aws_py_get_allocator();
 
-    PyObject *py_provider;
+    PyObject *py_delegate;
 
-    if (!PyArg_ParseTuple(args, "O", &py_provider)) {
+    if (!PyArg_ParseTuple(args, "O", &py_delegate)) {
         return NULL;
     }
 
@@ -645,15 +638,15 @@ PyObject *aws_py_credentials_provider_new_python(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    binding->py_provider = py_provider;
-    Py_INCREF(py_provider);
+    binding->py_delegate = py_delegate;
+    Py_INCREF(py_delegate);
 
     /* From hereon, we need to clean up if errors occur.
      * Fortunately, the capsule destructor will clean up anything stored inside the binding */
 
     struct aws_credentials_provider_delegate_options options = {
-        .provider_vtable = &s_aws_credentials_provider_py_provider_vtable,
-        .impl = binding,
+        .get_credentials = s_credentials_provider_delegate_get_credentials,
+        .delegate_user_data = binding,
         .shutdown_options =
             {
                 .shutdown_callback = s_credentials_provider_shutdown_complete,
