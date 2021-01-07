@@ -383,7 +383,7 @@ int aws_py_gilstate_ensure(PyGILState_STATE *out_state) {
 
 void *aws_py_get_binding(PyObject *obj, const char *capsule_name, const char *class_name) {
     if (!obj || obj == Py_None) {
-        return PyErr_Format(PyExc_TypeError, "Excepted '%s', received 'NoneType'", class_name);
+        return PyErr_Format(PyExc_TypeError, "Expected '%s', received 'NoneType'", class_name);
     }
 
     PyObject *py_binding = PyObject_GetAttrString(obj, "_binding"); /* new reference */
@@ -545,6 +545,7 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(credentials_access_key_id, METH_VARARGS),
     AWS_PY_METHOD_DEF(credentials_secret_access_key, METH_VARARGS),
     AWS_PY_METHOD_DEF(credentials_session_token, METH_VARARGS),
+    AWS_PY_METHOD_DEF(credentials_expiration_timestamp_seconds, METH_VARARGS),
     AWS_PY_METHOD_DEF(credentials_provider_get_credentials, METH_VARARGS),
     AWS_PY_METHOD_DEF(credentials_provider_new_chain_default, METH_VARARGS),
     AWS_PY_METHOD_DEF(credentials_provider_new_static, METH_VARARGS),
@@ -552,7 +553,7 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(credentials_provider_new_process, METH_VARARGS),
     AWS_PY_METHOD_DEF(credentials_provider_new_environment, METH_VARARGS),
     AWS_PY_METHOD_DEF(credentials_provider_new_chain, METH_VARARGS),
-    AWS_PY_METHOD_DEF(credentials_provider_new_python, METH_VARARGS),
+    AWS_PY_METHOD_DEF(credentials_provider_new_delegate, METH_VARARGS),
     AWS_PY_METHOD_DEF(signing_config_new, METH_VARARGS),
     AWS_PY_METHOD_DEF(signing_config_get_algorithm, METH_VARARGS),
     AWS_PY_METHOD_DEF(signing_config_get_signature_type, METH_VARARGS),

@@ -226,7 +226,7 @@ def websockets_with_default_aws_signing(region, credentials_provider, websocket_
     Arguments:
         region (str): AWS region to use when signing.
 
-        credentials_provider (awscrt.auth.AwsCredentialsProviderBase): Source of AWS credentials to use when signing.
+        credentials_provider (awscrt.auth.AwsCredentialsProvider): Source of AWS credentials to use when signing.
 
         websocket_proxy_options (awscrt.http.HttpProxyOptions): If specified, a proxy is used when connecting.
 
