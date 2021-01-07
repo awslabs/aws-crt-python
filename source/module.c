@@ -5,6 +5,7 @@
 #include "module.h"
 
 #include "auth.h"
+#include "common.h"
 #include "crypto.h"
 #include "event_stream.h"
 #include "http.h"
@@ -477,6 +478,8 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(get_error_name, METH_VARARGS),
     AWS_PY_METHOD_DEF(get_error_message, METH_VARARGS),
     AWS_PY_METHOD_DEF(get_corresponding_builtin_exception, METH_VARARGS),
+    AWS_PY_METHOD_DEF(get_cpu_group_count, METH_VARARGS),
+    AWS_PY_METHOD_DEF(get_cpu_count_for_group, METH_VARARGS),
 
     /* IO */
     AWS_PY_METHOD_DEF(is_alpn_available, METH_NOARGS),

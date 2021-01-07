@@ -46,8 +46,13 @@ class EventLoopGroup(NativeResource):
     need to do async work will ask the EventLoopGroup for an event-loop to use.
 
     Args:
-        num_threads (int): Number of event-loops to create.
-            Pass 0 to create one for each processor on the machine.
+        num_threads (Optional[int]): Maximum number of event-loops to create.
+            If unspecified, one is created for each processor on the machine.
+
+        cpu_group (Optional[int]): Optional processor group to which all
+            threads will be pinned. Useful for systems with non-uniform
+            memory access (NUMA) nodes. If specified, the number of threads
+            will be capped at the number of processors in the group.
 
     Attributes:
         shutdown_event (threading.Event): Signals when EventLoopGroup's threads
@@ -57,8 +62,18 @@ class EventLoopGroup(NativeResource):
 
     __slots__ = ('shutdown_event')
 
-    def __init__(self, num_threads=0):
+    def __init__(self, num_threads=None, cpu_group=None):
         super().__init__()
+
+        if num_threads is None:
+            # C uses 0 to indicate defaults
+            num_threads = 0
+
+        if cpu_group is None:
+            is_pinned = False
+            cpu_group = 0
+        else:
+            is_pinned = True
 
         shutdown_event = threading.Event()
 
@@ -66,7 +81,7 @@ class EventLoopGroup(NativeResource):
             shutdown_event.set()
 
         self.shutdown_event = shutdown_event
-        self._binding = _awscrt.event_loop_group_new(num_threads, on_shutdown)
+        self._binding = _awscrt.event_loop_group_new(num_threads, is_pinned, cpu_group, on_shutdown)
 
 
 class HostResolverBase(NativeResource):
