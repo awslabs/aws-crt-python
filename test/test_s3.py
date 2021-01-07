@@ -43,7 +43,7 @@ class FakeReadStream(object):
     def read(self, length):
         fake_string = "x" * length
         fake_data = bytes(fake_string, 'utf-8')
-        self._future.set_result(None)
+        self._future.set_result("result")
         return fake_data
 
 
