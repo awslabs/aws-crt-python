@@ -480,7 +480,6 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(get_corresponding_builtin_exception, METH_VARARGS),
     AWS_PY_METHOD_DEF(get_cpu_group_count, METH_VARARGS),
     AWS_PY_METHOD_DEF(get_cpu_count_for_group, METH_VARARGS),
-    AWS_PY_METHOD_DEF(get_cpu_ids_for_group, METH_VARARGS),
 
     /* IO */
     AWS_PY_METHOD_DEF(is_alpn_available, METH_NOARGS),

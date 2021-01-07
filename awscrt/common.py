@@ -19,10 +19,3 @@ def get_cpu_count_for_group(group_idx: int) -> int:
     Returns number of processors in a given group.
     """
     return _awscrt.get_cpu_count_for_group(group_idx)
-
-
-def get_cpu_ids_for_group(group_idx: int) -> List[int]:
-    """
-    Returns list of processor IDs for a given group.
-    """
-    return _awscrt.get_cpu_ids_for_group(group_idx)
