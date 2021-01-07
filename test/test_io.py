@@ -14,6 +14,9 @@ class EventLoopGroupTest(NativeResourceTest):
     def test_1_thread(self):
         event_loop_group = EventLoopGroup(1)
 
+    def test_cpu_group(self):
+        event_loop_group = EventLoopGroup(cpu_group=0)
+
     def test_shutdown_complete(self):
         event_loop_group = EventLoopGroup()
         shutdown_event = event_loop_group.shutdown_event

@@ -131,8 +131,10 @@ PyObject *aws_py_event_loop_group_new(PyObject *self, PyObject *args) {
     struct aws_allocator *allocator = aws_py_get_allocator();
 
     uint16_t num_threads;
+    int is_pinned;
+    uint16_t cpu_group;
     PyObject *shutdown_complete_py;
-    if (!PyArg_ParseTuple(args, "HO", &num_threads, &shutdown_complete_py)) {
+    if (!PyArg_ParseTuple(args, "HpHO", &num_threads, &is_pinned, &cpu_group, &shutdown_complete_py)) {
         return NULL;
     }
 
@@ -146,7 +148,12 @@ PyObject *aws_py_event_loop_group_new(PyObject *self, PyObject *args) {
         .shutdown_callback_user_data = binding,
     };
 
-    binding->native = aws_event_loop_group_new_default(allocator, num_threads, &shutdown_options);
+    if (is_pinned) {
+        binding->native =
+            aws_event_loop_group_new_default_pinned_to_cpu_group(allocator, num_threads, cpu_group, &shutdown_options);
+    } else {
+        binding->native = aws_event_loop_group_new_default(allocator, num_threads, &shutdown_options);
+    }
     if (binding->native == NULL) {
         PyErr_SetAwsLastError();
         goto elg_init_failed;
