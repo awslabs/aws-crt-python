@@ -257,10 +257,6 @@ class S3Request(NativeResource):
 
         super().__init__()
 
-        # the native s3 request will keep the native http request alive until the s3
-        # request finishes, but to keep the io stream alive, still keep the reference
-        # to HttpRequest here
-        self._http_request = request
         self._on_headers_cb = on_headers
         self._on_body_cb = on_body
         self._on_done_cb = on_done
@@ -296,8 +292,6 @@ class S3Request(NativeResource):
 
     def _on_finish(self, error_code, error_headers, error_body):
         error = None
-        # the http request can be released now
-        self._http_request = None
         if error_code:
             error = awscrt.exceptions.from_code(error_code)
             self.finished_future.set_exception(error)
