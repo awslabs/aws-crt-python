@@ -48,6 +48,11 @@ struct s3_meta_request_binding {
     uint64_t last_sampled_time;
 };
 
+struct aws_s3_meta_request *aws_py_get_s3_meta_request(PyObject *meta_request) {
+    AWS_PY_RETURN_NATIVE_FROM_BINDING(
+        meta_request, s_capsule_name_s3_meta_request, "S3Request", s3_meta_request_binding);
+}
+
 static void s_destroy_if_ready(struct s3_meta_request_binding *meta_request) {
     if (meta_request->native && (!meta_request->shutdown_called || !meta_request->release_called)) {
         /* native meta_request successfully created, but not ready to clean up yet */
