@@ -88,8 +88,8 @@ class S3Client(NativeResource):
             tls_mode=0,
             credential_provider=None,
             tls_connection_options=None,
-            part_size=0,
-            throughput_target_gbps=0):
+            part_size=None,
+            throughput_target_gbps=None):
         assert isinstance(bootstrap, ClientBootstrap)
         assert isinstance(region, str)
         assert isinstance(credential_provider, AwsCredentialsProvider) or credential_provider is None
@@ -109,6 +109,11 @@ class S3Client(NativeResource):
             shutdown_event.set()
         self._region = region
         self.shutdown_event = shutdown_event
+
+        if part_size is None:
+            part_size = 0
+        if throughput_target_gbps is None:
+            throughput_target_gbps = 0
 
         self._binding = _awscrt.s3_client_new(
             bootstrap,

@@ -33,8 +33,10 @@ def s3_client_new(secure, region, part_size=0):
 
 
 class S3ClientTest(NativeResourceTest):
-    region = "us-west-2"
-    timeout = 10  # seconds
+
+    def setUp(self):
+        self.region = "us-west-2"
+        self.timeout = 10  # seconds
 
     def test_sanity(self):
         s3_client = s3_client_new(False, self.region)
@@ -54,18 +56,19 @@ class S3ClientTest(NativeResourceTest):
 
 
 class S3RequestTest(NativeResourceTest):
-    get_test_object_path = "/get_object_test_10MB.txt"
-    put_test_object_path = "/put_object_test_py_10MB.txt"
-    region = "us-west-2"
-    bucket_name = "aws-crt-canary-bucket"
-    timeout = 100  # seconds
-    num_threads = 0
+    def setUp(self):
+        self.get_test_object_path = "/get_object_test_10MB.txt"
+        self.put_test_object_path = "/put_object_test_py_10MB.txt"
+        self.region = "us-west-2"
+        self.bucket_name = "aws-crt-canary-bucket"
+        self.timeout = 100  # seconds
+        self.num_threads = 0
 
-    response_headers = None
-    response_status_code = None
-    received_body_len = 0
+        self.response_headers = None
+        self.response_status_code = None
+        self.received_body_len = 0
 
-    put_body_stream = None
+        self.put_body_stream = None
 
     def _build_endpoint_string(self, region, bucket_name):
         return bucket_name + ".s3." + region + ".amazonaws.com"
