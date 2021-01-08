@@ -153,11 +153,12 @@ class S3RequestTest(NativeResourceTest):
         request = self._get_object_request(self.get_test_object_path)
         request_type = S3RequestType.GET_OBJECT
         s3_client = s3_client_new(False, self.region, 5 * 1024 * 1024)
-        with NamedTemporaryFile("w") as file:
+        with NamedTemporaryFile(mode="w", delete=False) as file:
+            file.close()
             s3_request = s3_client.make_request(
                 request=request,
-                file=file.name,
                 type=request_type,
+                recv_filepath=file.name,
                 on_headers=self._on_request_headers,
                 on_progress=self._on_progress)
             finished_future = s3_request.finished_future
@@ -165,6 +166,12 @@ class S3RequestTest(NativeResourceTest):
 
             # Result check
             self.data_len = int(HttpHeaders(self.response_headers).get("Content-Length"))
+            file_stats = os.stat(file.name)
+            file_len = file_stats.st_size
+            self.assertEqual(
+                file_len,
+                self.transferred_len,
+                "the length of written file does not match the transferred length reported")
             self.assertEqual(
                 self.data_len,
                 self.transferred_len,
@@ -173,7 +180,8 @@ class S3RequestTest(NativeResourceTest):
             shutdown_event = s3_request.shutdown_event
             del s3_request
             self.assertTrue(shutdown_event.wait(self.timeout))
-            # TODO verify the written file
+            # TODO verify the content of written file
+            os.remove(file.name)
 
     def test_put_object_file_object(self):
         request = self._put_object_request("test/resources/s3_put_object.txt")
@@ -183,8 +191,8 @@ class S3RequestTest(NativeResourceTest):
         s3_client = s3_client_new(False, self.region, 5 * 1024 * 1024)
         s3_request = s3_client.make_request(
             request=request,
-            file="test/resources/s3_put_object.txt",
             type=request_type,
+            send_filepath="test/resources/s3_put_object.txt",
             on_headers=self._on_request_headers,
             on_progress=self._on_progress)
         finished_future = s3_request.finished_future
