@@ -154,6 +154,12 @@ class S3RequestTest(NativeResourceTest):
 
             # Result check
             self.data_len = int(HttpHeaders(self.response_headers).get("Content-Length"))
+            file_stats = os.stat(file.name)
+            file_len = file_stats.st_size
+            self.assertEqual(
+                file_len,
+                self.transferred_len,
+                "the length of written file does not match the transferred length reported")
             self.assertEqual(
                 self.data_len,
                 self.transferred_len,
@@ -162,7 +168,7 @@ class S3RequestTest(NativeResourceTest):
             shutdown_event = s3_request.shutdown_event
             del s3_request
             self.assertTrue(shutdown_event.wait(self.timeout))
-            # TODO verify the written file
+            # TODO verify the content of written file
             os.remove(file.name)
 
     def test_put_object_file_object(self):
