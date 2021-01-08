@@ -24,13 +24,14 @@ struct s3_meta_request_binding {
 
     /* Reference proxy to python self */
     PyObject *self_py;
+    /* Reference to python http message to keep it alive */
+    PyObject *http_message_py;
 
     /**
-     * FILE pointer. If set, it handles file operation from C land to reduce the cost
+     * file path if set, it handles file operation from C land to reduce the cost
      * passing chunks from C into python. One for recv/writing, the other for send/reading
      **/
     FILE *recv_file;
-    FILE *send_file;
     /**
      * input stream for using FILE pointer as the input body of a put request, keep it alive until the meta request
      * finishes.
@@ -38,6 +39,8 @@ struct s3_meta_request_binding {
     struct aws_input_stream *input_body;
     /* Shutdown callback, all resource cleaned up, reference cleared after invoke */
     PyObject *on_shutdown;
+
+    struct aws_http_message *copied_message;
 
     /* Batch up the transferred size in one sec. */
     uint64_t size_transferred;
@@ -49,6 +52,14 @@ static void s_destroy_if_ready(struct s3_meta_request_binding *meta_request) {
     if (meta_request->native && (!meta_request->shutdown_called || !meta_request->release_called)) {
         /* native meta_request successfully created, but not ready to clean up yet */
         return;
+    }
+
+    if (meta_request->input_body) {
+        aws_input_stream_destroy(meta_request->input_body);
+    }
+
+    if (meta_request->copied_message) {
+        aws_http_message_release(meta_request->copied_message);
     }
     /* in case native never existed and shutdown never happened */
     Py_XDECREF(meta_request->on_shutdown);
@@ -189,7 +200,7 @@ static void s_s3_request_on_body(
     if (report_progress) {
         /* Hold the GIL before enterring here */
         result =
-            PyObject_CallMethod(request_binding->self_py, "_on_progress", "(k)", request_binding->size_transferred);
+            PyObject_CallMethod(request_binding->self_py, "_on_progress", "(K)", request_binding->size_transferred);
         if (!result) {
             PyErr_WriteUnraisable(request_binding->self_py);
         } else {
@@ -210,9 +221,6 @@ static void s_s3_request_on_finish(
     void *user_data) {
     (void)meta_request;
     struct s3_meta_request_binding *request_binding = user_data;
-    if (request_binding->input_body) {
-        aws_input_stream_destroy(request_binding->input_body);
-    }
 
     /*************** GIL ACQUIRE ***************/
     PyGILState_STATE state;
@@ -226,7 +234,7 @@ static void s_s3_request_on_finish(
     if (request_binding->size_transferred) {
         /* report the remaining progress */
         result =
-            PyObject_CallMethod(request_binding->self_py, "_on_progress", "(k)", request_binding->size_transferred);
+            PyObject_CallMethod(request_binding->self_py, "_on_progress", "(K)", request_binding->size_transferred);
         if (!result) {
             PyErr_WriteUnraisable(request_binding->self_py);
         } else {
@@ -269,6 +277,7 @@ static void s_s3_request_on_finish(
 done:
     Py_XDECREF(header_list);
     Py_CLEAR(request_binding->self_py);
+    Py_CLEAR(request_binding->http_message_py);
     PyGILState_Release(state);
     /*************** GIL RELEASE ***************/
 }
@@ -278,11 +287,10 @@ static void s_s3_meta_request_capsule_destructor(PyObject *capsule) {
     struct s3_meta_request_binding *meta_request = PyCapsule_GetPointer(capsule, s_capsule_name_s3_meta_request);
     AWS_FATAL_ASSERT(!meta_request->release_called);
     Py_XDECREF(meta_request->self_py);
+    Py_XDECREF(meta_request->http_message_py);
+
     if (meta_request->recv_file) {
         fclose(meta_request->recv_file);
-    }
-    if (meta_request->send_file) {
-        fclose(meta_request->send_file);
     }
 
     aws_s3_meta_request_release(meta_request->native);
@@ -324,7 +332,6 @@ static void s_s3_request_on_shutdown(void *user_data) {
     /*************** GIL RELEASE ***************/
 }
 
-/* TODO: probably should put the input stream to somewhere else, but to keep it simple and timely manner. */
 /*
  * file-based python input stream for reporting the progress
  */
@@ -359,9 +366,9 @@ static int s_aws_input_stream_file_read(struct aws_input_stream *stream, struct 
             return AWS_OP_SUCCESS; /* Python has shut down. Nothing matters anymore, but don't crash */
         }
         PyObject *result =
-            PyObject_CallMethod(request_binding->self_py, "_on_progress", "(k)", request_binding->size_transferred);
+            PyObject_CallMethod(request_binding->self_py, "_on_progress", "(K)", request_binding->size_transferred);
         if (!result) {
-            PyErr_WriteUnraisable(request_binding->self_py);
+            return aws_py_raise_error();
         } else {
             Py_DECREF(result);
         }
@@ -440,6 +447,58 @@ static struct aws_input_stream *s_input_stream_new_from_file(
     return input_stream;
 }
 
+/* Copy an existing HTTP message without body. */
+struct aws_http_message *s_copy_http_message(struct aws_allocator *allocator, struct aws_http_message *base_message) {
+    AWS_PRECONDITION(allocator);
+    AWS_PRECONDITION(base_message);
+
+    struct aws_http_message *message = aws_http_message_new_request(allocator);
+
+    if (message == NULL) {
+        return NULL;
+    }
+
+    struct aws_byte_cursor request_method;
+    if (aws_http_message_get_request_method(base_message, &request_method)) {
+        goto error_clean_up;
+    }
+
+    if (aws_http_message_set_request_method(message, request_method)) {
+        goto error_clean_up;
+    }
+
+    struct aws_byte_cursor request_path;
+    if (aws_http_message_get_request_path(base_message, &request_path)) {
+        goto error_clean_up;
+    }
+
+    if (aws_http_message_set_request_path(message, request_path)) {
+        goto error_clean_up;
+    }
+
+    size_t num_headers = aws_http_message_get_header_count(base_message);
+    for (size_t header_index = 0; header_index < num_headers; ++header_index) {
+        struct aws_http_header header;
+        if (aws_http_message_get_header(base_message, &header, header_index)) {
+            goto error_clean_up;
+        }
+        if (aws_http_message_add_header(message, header)) {
+            goto error_clean_up;
+        }
+    }
+
+    return message;
+
+error_clean_up:
+
+    if (message != NULL) {
+        aws_http_message_release(message);
+        message = NULL;
+    }
+
+    return NULL;
+}
+
 PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     (void)self;
 
@@ -451,24 +510,20 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     int type;
     PyObject *credential_provider_py = NULL;
     const char *recv_filepath;
-    Py_ssize_t recv_filepath_len;
     const char *send_filepath;
-    Py_ssize_t send_filepath_len;
     const char *region;
     Py_ssize_t region_len;
     PyObject *on_shutdown_py = NULL;
     if (!PyArg_ParseTuple(
             args,
-            "OOOiOz#z#s#O",
+            "OOOiOzzs#O",
             &py_s3_request,
             &s3_client_py,
             &http_request_py,
             &type,
             &credential_provider_py,
             &recv_filepath,
-            &recv_filepath_len,
             &send_filepath,
-            &send_filepath_len,
             &region,
             &region_len,
             &on_shutdown_py)) {
@@ -519,25 +574,36 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     meta_request->self_py = py_s3_request;
     Py_INCREF(meta_request->self_py);
 
+    meta_request->http_message_py = http_request_py;
+    Py_INCREF(meta_request->http_message_py);
+
     if (recv_filepath) {
         meta_request->recv_file = fopen(recv_filepath, "wb+");
+        if (!meta_request->recv_file) {
+            aws_translate_and_raise_io_error(errno);
+            PyErr_SetAwsLastError();
+            goto error;
+        }
     }
     if (send_filepath) {
-        meta_request->send_file = fopen(send_filepath, "rb+");
         if (type == AWS_S3_META_REQUEST_TYPE_PUT_OBJECT) {
+            /* Copy the http request from python object and replace the old pointer with new pointer */
+            meta_request->copied_message = s_copy_http_message(allocator, http_request);
             meta_request->input_body = s_input_stream_new_from_file(allocator, send_filepath, meta_request);
             if (!meta_request->input_body) {
                 PyErr_SetAwsLastError();
                 goto error;
             }
             /* rewrite the input stream of the original request */
-            aws_http_message_set_body_stream(http_request, meta_request->input_body);
+            aws_http_message_set_body_stream(meta_request->copied_message, meta_request->input_body);
+            /* We are using the new message now, don't need to keep the python object alive */
+            Py_CLEAR(meta_request->http_message_py);
         }
     }
 
     struct aws_s3_meta_request_options s3_meta_request_opt = {
         .type = type,
-        .message = http_request,
+        .message = meta_request->copied_message ? meta_request->copied_message : http_request,
         .signing_config = credential_provider ? &signing_config : NULL,
         .headers_callback = s_s3_request_on_headers,
         .body_callback = s_s3_request_on_body,

@@ -137,6 +137,7 @@ class S3Client(NativeResource):
 
         Args:
             request (HttpRequest): The overall outgoing API request for S3 operation.
+                If the request body is a file, set send_filepath for better performance.
 
             type (S3RequestType): The type of S3 request passed in, GET_OBJECT/PUT_OBJECT can be accelerated
 
@@ -144,11 +145,15 @@ class S3Client(NativeResource):
                 AwsCredentials needed to sign an authenticated AWS request, for this request only.
                 If None is provided, the credential provider in the client will be used.
 
-            recv_filepath (Optional[str]): Optional file path. If set, the C part will handle writing from a file.
-                The performance can be improved. on_body callback will not be invoked once recv_filepath is set.
+             recv_filepath (Optional[str]): Optional file path. If set, the
+                response body is written directly to a file and the
+                on_body callback is not invoked. This should give better
+                performance than writing to file from the on_body callback.
 
-            send_filepath (Optional[str]): Optional file path. If set, the C part will handle reading from a file.
-                The performance can be improved.
+            send_filepath (Optional[str]): Optional file path. If set, the
+                request body is read directly from a file and the
+                request's body_stream is ignored. This should give better
+                performance than reading a file from a stream.
 
             on_headers: Optional callback invoked as the response received, and even the API request
                 has been split into multiple parts, this callback will only be invoked once as
@@ -163,7 +168,7 @@ class S3Client(NativeResource):
                 *   `**kwargs` (dict): Forward-compatibility kwargs.
 
             on_body: Optional callback invoked 0+ times as the response body received from S3 server.
-                Once the filepath is set, this callback will never get invoked.
+                If simply writing to a file, use recv_filepath instead of on_body for better performance.
                 The function should take the following arguments and return nothing:
 
                 *   `chunk` (buffer): Response body data (not necessarily
