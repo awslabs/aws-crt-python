@@ -140,7 +140,8 @@ class S3RequestTest(NativeResourceTest):
         request = self._get_object_request()
         type = S3RequestType.GET_OBJECT
         s3_client = s3_client_new(False, self.region, 5 * 1024 * 1024)
-        with NamedTemporaryFile("w") as file:
+        with NamedTemporaryFile(mode="w", delete=False) as file:
+            file.close()
             s3_request = s3_client.make_request(
                 request=request,
                 recv_filepath=file.name,
@@ -162,6 +163,7 @@ class S3RequestTest(NativeResourceTest):
             del s3_request
             self.assertTrue(shutdown_event.wait(self.timeout))
             # TODO verify the written file
+            os.remove(file.name)
 
     def test_put_object_file_object(self):
         request = self._put_object_request("test/resources/s3_put_object.txt")
