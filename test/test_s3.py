@@ -217,10 +217,11 @@ class S3RequestTest(NativeResourceTest):
         # a 5 GB file
         request = self._get_object_request("/crt-canary-obj-single-part-9223372036854775807")
         s3_client = s3_client_new(False, self.region, 5 * 1024 * 1024)
-        with NamedTemporaryFile("w") as file:
+        with NamedTemporaryFile(mode="w", delete=False) as file:
+            file.close()
             self.s3_request = s3_client.make_request(
                 request=request,
-                file=file.name,
+                recv_filepath=file.name,
                 type=S3RequestType.GET_OBJECT,
                 on_headers=self._on_request_headers,
                 on_progress=self._on_progress_cancel_after_first_chunk)
@@ -242,15 +243,17 @@ class S3RequestTest(NativeResourceTest):
             shutdown_event = self.s3_request.shutdown_event
             del self.s3_request
             self.assertTrue(shutdown_event.wait(self.timeout))
+            os.remove(file.name)
 
     def test_get_object_quick_cancel(self):
         # a 5 GB file
         request = self._get_object_request("/crt-canary-obj-single-part-9223372036854775807")
         s3_client = s3_client_new(False, self.region, 5 * 1024 * 1024)
-        with NamedTemporaryFile("w") as file:
+        with NamedTemporaryFile(mode="w", delete=False) as file:
+            file.close()
             s3_request = s3_client.make_request(
                 request=request,
-                file=file.name,
+                recv_filepath=file.name,
                 type=S3RequestType.GET_OBJECT,
                 on_headers=self._on_request_headers,
                 on_progress=self._on_progress)
@@ -265,6 +268,7 @@ class S3RequestTest(NativeResourceTest):
             shutdown_event = s3_request.shutdown_event
             del s3_request
             self.assertTrue(shutdown_event.wait(self.timeout))
+            os.remove(file.name)
 
     def _put_object_cancel_helper(self, cancel_after_read):
         read_futrue = Future()
