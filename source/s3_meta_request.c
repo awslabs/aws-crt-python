@@ -26,6 +26,8 @@ struct s3_meta_request_binding {
     PyObject *self_py;
     /* Reference to python http message to keep it alive */
     PyObject *http_message_py;
+    /* Reference to python object that reference to other related python object to keep it alive */
+    PyObject *py_core;
 
     /**
      * file path if set, it handles file operation from C land to reduce the cost
@@ -68,6 +70,7 @@ static void s_destroy_if_ready(struct s3_meta_request_binding *meta_request) {
     }
     /* in case native never existed and shutdown never happened */
     Py_XDECREF(meta_request->on_shutdown);
+    Py_XDECREF(meta_request->py_core);
     aws_mem_release(aws_py_get_allocator(), meta_request);
 }
 
@@ -136,6 +139,7 @@ done:
     PyGILState_Release(state);
     /*************** GIL RELEASE ***************/
 }
+
 static int s_record_progress(struct s3_meta_request_binding *request_binding, uint64_t length, bool *report_progress) {
     if (aws_add_u64_checked(request_binding->size_transferred, length, &request_binding->size_transferred)) {
         /* Wow */
@@ -327,6 +331,7 @@ static void s_s3_request_on_shutdown(void *user_data) {
         PyErr_WriteUnraisable(PyErr_Occurred());
     }
     Py_CLEAR(request_binding->on_shutdown);
+    Py_CLEAR(request_binding->py_core);
 
     if (destroy_after_shutdown) {
         aws_mem_release(aws_py_get_allocator(), request_binding);
@@ -518,9 +523,10 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     const char *region;
     Py_ssize_t region_len;
     PyObject *on_shutdown_py = NULL;
+    PyObject *py_core = NULL;
     if (!PyArg_ParseTuple(
             args,
-            "OOOiOzzs#O",
+            "OOOiOzzs#OO",
             &py_s3_request,
             &s3_client_py,
             &http_request_py,
@@ -530,7 +536,8 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
             &send_filepath,
             &region,
             &region_len,
-            &on_shutdown_py)) {
+            &on_shutdown_py,
+            &py_core)) {
         return NULL;
     }
     struct aws_s3_client *s3_client = aws_py_get_s3_client(s3_client_py);
@@ -580,6 +587,9 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
 
     meta_request->http_message_py = http_request_py;
     Py_INCREF(meta_request->http_message_py);
+
+    meta_request->py_core = py_core;
+    Py_INCREF(meta_request->py_core);
 
     if (recv_filepath) {
         meta_request->recv_file = fopen(recv_filepath, "wb+");

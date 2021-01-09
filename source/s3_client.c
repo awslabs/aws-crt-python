@@ -17,6 +17,8 @@ struct s3_client_binding {
 
     /* Shutdown callback, reference cleared after invoking callback */
     PyObject *on_shutdown;
+    /* Reference to python object that reference to other related python object to keep it alive */
+    PyObject *py_core;
 };
 
 static void s_destroy_if_ready(struct s3_client_binding *client) {
@@ -26,6 +28,7 @@ static void s_destroy_if_ready(struct s3_client_binding *client) {
     }
     /* in case native never existed and shutdown never happened */
     Py_XDECREF(client->on_shutdown);
+    Py_XDECREF(client->py_core);
     aws_mem_release(aws_py_get_allocator(), client);
 }
 
@@ -59,6 +62,7 @@ static void s_s3_client_shutdown(void *user_data) {
         PyErr_WriteUnraisable(PyErr_Occurred());
     }
     Py_CLEAR(client->on_shutdown);
+    Py_CLEAR(client->py_core);
 
     client->shutdown_called = true;
 
@@ -75,10 +79,11 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
 
     struct aws_allocator *allocator = aws_py_get_allocator();
 
-    PyObject *bootstrap_py;
-    PyObject *credential_provider_py;
-    PyObject *tls_options_py;
-    PyObject *on_shutdown_py;
+    PyObject *bootstrap_py = NULL;
+    PyObject *credential_provider_py = NULL;
+    PyObject *tls_options_py = NULL;
+    PyObject *on_shutdown_py = NULL;
+    PyObject *py_core = NULL;
     const char *region;
     Py_ssize_t region_len;
     uint64_t part_size = 0;
@@ -86,7 +91,7 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
     int tls_mode;
     if (!PyArg_ParseTuple(
             args,
-            "OOOOs#iKd",
+            "OOOOs#iKdO",
             &bootstrap_py,
             &credential_provider_py,
             &tls_options_py,
@@ -95,7 +100,8 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
             &region_len,
             &tls_mode,
             &part_size,
-            &throughput_target_gbps)) {
+            &throughput_target_gbps,
+            &py_core)) {
         return NULL;
     }
 
@@ -144,6 +150,9 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
 
     s3_client->on_shutdown = on_shutdown_py;
     Py_INCREF(s3_client->on_shutdown);
+
+    s3_client->py_core = py_core;
+    Py_INCREF(s3_client->py_core);
 
     struct aws_s3_client_config s3_config = {
         .region = aws_byte_cursor_from_array((const uint8_t *)region, region_len),
