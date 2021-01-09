@@ -316,18 +316,7 @@ class S3Request(NativeResource):
         _awscrt.s3_meta_request_cancel(self)
 
 
-class _S3RequestCore(NativeResource):
-    '''
-    Private class to keep all the related Python object alive unitl C land clean up for S3Request
-    '''
-
-    def __init__(self, client, request, credential_provider=None):
-        self._client = client
-        self._request = request
-        self._credential_provider = credential_provider
-
-
-class _S3ClientCore(NativeResource):
+class _S3ClientCore:
     '''
     Private class to keep all the related Python object alive unitl C land clean up for S3Client
     '''
@@ -338,3 +327,14 @@ class _S3ClientCore(NativeResource):
         self._bootstrap = bootstrap
         self._credential_provider = credential_provider
         self._tls_connection_options = tls_connection_options
+
+
+class _S3RequestCore:
+    '''
+    Private class to keep all the related Python object alive unitl C land clean up for S3Request
+    '''
+
+    def __init__(self, client, request, credential_provider=None):
+        self._client = client
+        self._request = request
+        self._credential_provider = credential_provider
