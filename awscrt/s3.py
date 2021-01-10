@@ -272,7 +272,7 @@ class S3Request(NativeResource):
 
         self.shutdown_event = shutdown_event
 
-        s3_request_soul = _S3RequestCore(client, request, credential_provider)
+        s3_request_core = _S3RequestCore(client, request, credential_provider)
 
         self._binding = _awscrt.s3_client_make_meta_request(
             self,
@@ -284,7 +284,7 @@ class S3Request(NativeResource):
             send_filepath,
             region,
             on_shutdown,
-            s3_request_soul)
+            s3_request_core)
 
     def _on_headers(self, status_code, headers):
         if self._on_headers_cb:
@@ -318,7 +318,7 @@ class S3Request(NativeResource):
 
 class _S3ClientCore:
     '''
-    Private class to keep all the related Python object alive unitl C land clean up for S3Client
+    Private class to keep all the related Python object alive until C land clean up for S3Client
     '''
 
     def __init__(self, bootstrap,
@@ -331,7 +331,7 @@ class _S3ClientCore:
 
 class _S3RequestCore:
     '''
-    Private class to keep all the related Python object alive unitl C land clean up for S3Request
+    Private class to keep all the related Python object alive until C land clean up for S3Request
     '''
 
     def __init__(self, client, request, credential_provider=None):
