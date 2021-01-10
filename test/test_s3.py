@@ -89,11 +89,9 @@ class S3RequestTest(NativeResourceTest):
 
     def _on_request_headers(self, status_code, headers, **kargs):
         self.response_status_code = status_code
-        self.assertIsNotNone(headers, "headers are none")
         self.response_headers = headers
 
     def _on_request_body(self, chunk, offset, **kargs):
-        self.assertIsNotNone(chunk, "the body chunk is none")
         self.received_body_len = self.received_body_len + len(chunk)
 
     def _validate_successful_get_response(self, put_object):
