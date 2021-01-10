@@ -298,6 +298,10 @@ class S3Request(NativeResource):
         error = None
         if error_code:
             error = awscrt.exceptions.from_code(error_code)
+            if error_body:
+                # TODO The error body is XML, will need to parse it to something prettier.
+                extra_message = ". Body from error request is: " + str(error_body)
+                error.message = error.message + extra_message
             self.finished_future.set_exception(error)
         else:
             self.finished_future.set_result(None)
