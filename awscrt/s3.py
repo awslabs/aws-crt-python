@@ -109,7 +109,7 @@ class S3Client(NativeResource):
             shutdown_event.set()
         self._region = region
         self.shutdown_event = shutdown_event
-
+        s3_client_core = _S3ClientCore(bootstrap, credential_provider, tls_connection_options)
         self._binding = _awscrt.s3_client_new(
             bootstrap,
             credential_provider,
@@ -118,7 +118,8 @@ class S3Client(NativeResource):
             region,
             tls_mode,
             part_size,
-            throughput_target_gbps)
+            throughput_target_gbps,
+            s3_client_core)
 
     def make_request(
             self,
@@ -271,6 +272,8 @@ class S3Request(NativeResource):
 
         self.shutdown_event = shutdown_event
 
+        s3_request_core = _S3RequestCore(client, request, credential_provider)
+
         self._binding = _awscrt.s3_client_make_meta_request(
             self,
             client,
@@ -280,7 +283,8 @@ class S3Request(NativeResource):
             recv_filepath,
             send_filepath,
             region,
-            on_shutdown)
+            on_shutdown,
+            s3_request_core)
 
     def _on_headers(self, status_code, headers):
         if self._on_headers_cb:
@@ -294,6 +298,10 @@ class S3Request(NativeResource):
         error = None
         if error_code:
             error = awscrt.exceptions.from_code(error_code)
+            if error_body:
+                # TODO The error body is XML, will need to parse it to something prettier.
+                extra_message = ". Body from error request is: " + str(error_body)
+                error.message = error.message + extra_message
             self.finished_future.set_exception(error)
         else:
             self.finished_future.set_result(None)
@@ -307,3 +315,30 @@ class S3Request(NativeResource):
     @property
     def finished_future(self):
         return self._finished_future
+
+    def cancel(self):
+        _awscrt.s3_meta_request_cancel(self)
+
+
+class _S3ClientCore:
+    '''
+    Private class to keep all the related Python object alive until C land clean up for S3Client
+    '''
+
+    def __init__(self, bootstrap,
+                 credential_provider=None,
+                 tls_connection_options=None):
+        self._bootstrap = bootstrap
+        self._credential_provider = credential_provider
+        self._tls_connection_options = tls_connection_options
+
+
+class _S3RequestCore:
+    '''
+    Private class to keep all the related Python object alive until C land clean up for S3Request
+    '''
+
+    def __init__(self, client, request, credential_provider=None):
+        self._client = client
+        self._request = request
+        self._credential_provider = credential_provider

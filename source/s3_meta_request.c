@@ -26,6 +26,8 @@ struct s3_meta_request_binding {
     PyObject *self_py;
     /* Reference to python http message to keep it alive */
     PyObject *http_message_py;
+    /* Reference to python object that reference to other related python object to keep it alive */
+    PyObject *py_core;
 
     /**
      * file path if set, it handles file operation from C land to reduce the cost
@@ -48,6 +50,11 @@ struct s3_meta_request_binding {
     uint64_t last_sampled_time;
 };
 
+struct aws_s3_meta_request *aws_py_get_s3_meta_request(PyObject *meta_request) {
+    AWS_PY_RETURN_NATIVE_FROM_BINDING(
+        meta_request, s_capsule_name_s3_meta_request, "S3Request", s3_meta_request_binding);
+}
+
 static void s_destroy_if_ready(struct s3_meta_request_binding *meta_request) {
     if (meta_request->native && (!meta_request->shutdown_called || !meta_request->release_called)) {
         /* native meta_request successfully created, but not ready to clean up yet */
@@ -63,6 +70,7 @@ static void s_destroy_if_ready(struct s3_meta_request_binding *meta_request) {
     }
     /* in case native never existed and shutdown never happened */
     Py_XDECREF(meta_request->on_shutdown);
+    Py_XDECREF(meta_request->py_core);
     aws_mem_release(aws_py_get_allocator(), meta_request);
 }
 
@@ -91,7 +99,7 @@ error:
     return AWS_OP_ERR;
 }
 
-static void s_s3_request_on_headers(
+static int s_s3_request_on_headers(
     struct aws_s3_meta_request *meta_request,
     const struct aws_http_headers *headers,
     int response_status,
@@ -100,9 +108,10 @@ static void s_s3_request_on_headers(
     struct s3_meta_request_binding *request_binding = user_data;
 
     /*************** GIL ACQUIRE ***************/
+    bool error = true;
     PyGILState_STATE state;
     if (aws_py_gilstate_ensure(&state)) {
-        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+        return AWS_OP_ERR; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
     size_t num_headers = aws_http_headers_count(headers);
@@ -126,9 +135,15 @@ static void s_s3_request_on_headers(
         goto done;
     }
     Py_DECREF(result);
+    error = false;
 done:
     Py_XDECREF(header_list);
     PyGILState_Release(state);
+    if (error) {
+        return aws_raise_error(AWS_ERROR_CRT_CALLBACK_EXCEPTION);
+    } else {
+        return AWS_OP_SUCCESS;
+    }
     /*************** GIL RELEASE ***************/
 }
 
@@ -153,7 +168,7 @@ static int s_record_progress(struct s3_meta_request_binding *request_binding, ui
     return AWS_OP_SUCCESS;
 }
 
-static void s_s3_request_on_body(
+static int s_s3_request_on_body(
     struct aws_s3_meta_request *meta_request,
     const struct aws_byte_cursor *body,
     uint64_t range_start,
@@ -163,24 +178,23 @@ static void s_s3_request_on_body(
 
     bool report_progress;
     if (s_record_progress(request_binding, (uint64_t)body->len, &report_progress)) {
-        return;
+        return AWS_OP_ERR;
     }
     if (request_binding->recv_file) {
         /* The callback will be invoked with the right order, so we don't need to seek first. */
-        if (fwrite((void *)body->ptr, body->len, 1, request_binding->recv_file) < body->len) {
-            /* fwrite failed */
-            /* TODO: return the error code back to native client. */
-            /* return aws_translate_and_raise_io_error(errno); */
+        if (fwrite((void *)body->ptr, body->len, 1, request_binding->recv_file) < 1) {
+            return aws_translate_and_raise_io_error(errno);
         }
         if (!report_progress) {
-            return;
+            return AWS_OP_SUCCESS;
         }
     }
+    bool error = true;
     /*************** GIL ACQUIRE ***************/
     PyGILState_STATE state;
     PyObject *result = NULL;
     if (aws_py_gilstate_ensure(&state)) {
-        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+        return AWS_OP_ERR; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
     if (!request_binding->recv_file) {
         result = PyObject_CallMethod(
@@ -208,9 +222,14 @@ static void s_s3_request_on_body(
         }
         request_binding->size_transferred = 0;
     }
+    error = false;
 done:
     PyGILState_Release(state);
-    return;
+    if (error) {
+        return aws_raise_error(AWS_ERROR_CRT_CALLBACK_EXCEPTION);
+    } else {
+        return AWS_OP_SUCCESS;
+    }
 }
 
 /* If the request has not finished, it will keep the request alive, until the finish callback invoked. So, we don't
@@ -323,6 +342,7 @@ static void s_s3_request_on_shutdown(void *user_data) {
         PyErr_WriteUnraisable(PyErr_Occurred());
     }
     Py_CLEAR(request_binding->on_shutdown);
+    Py_CLEAR(request_binding->py_core);
 
     if (destroy_after_shutdown) {
         aws_mem_release(aws_py_get_allocator(), request_binding);
@@ -514,9 +534,10 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     const char *region;
     Py_ssize_t region_len;
     PyObject *on_shutdown_py = NULL;
+    PyObject *py_core = NULL;
     if (!PyArg_ParseTuple(
             args,
-            "OOOiOzzs#O",
+            "OOOiOzzs#OO",
             &py_s3_request,
             &s3_client_py,
             &http_request_py,
@@ -526,7 +547,8 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
             &send_filepath,
             &region,
             &region_len,
-            &on_shutdown_py)) {
+            &on_shutdown_py,
+            &py_core)) {
         return NULL;
     }
     struct aws_s3_client *s3_client = aws_py_get_s3_client(s3_client_py);
@@ -577,6 +599,9 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     meta_request->http_message_py = http_request_py;
     Py_INCREF(meta_request->http_message_py);
 
+    meta_request->py_core = py_core;
+    Py_INCREF(meta_request->py_core);
+
     if (recv_filepath) {
         meta_request->recv_file = fopen(recv_filepath, "wb+");
         if (!meta_request->recv_file) {
@@ -626,4 +651,23 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
 error:
     Py_DECREF(capsule);
     return NULL;
+}
+
+PyObject *aws_py_s3_meta_request_cancel(PyObject *self, PyObject *args) {
+    (void)self;
+
+    PyObject *py_meta_request = NULL;
+    if (!PyArg_ParseTuple(args, "O", &py_meta_request)) {
+        return NULL;
+    }
+
+    struct aws_s3_meta_request *meta_request = NULL;
+    meta_request = aws_py_get_s3_meta_request(py_meta_request);
+    if (!meta_request) {
+        return NULL;
+    }
+
+    aws_s3_meta_request_cancel(meta_request);
+
+    Py_RETURN_NONE;
 }
