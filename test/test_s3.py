@@ -264,7 +264,6 @@ class S3RequestTest(NativeResourceTest):
             except Exception as e:
                 self.assertEqual(e.name, "AWS_ERROR_S3_CANCELED_SUCCESS")
 
-            # The on_finish callback may invoke the progress
             shutdown_event = s3_request.shutdown_event
             del s3_request
             self.assertTrue(shutdown_event.wait(self.timeout))

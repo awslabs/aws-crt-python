@@ -99,7 +99,7 @@ error:
     return AWS_OP_ERR;
 }
 
-static void s_s3_request_on_headers(
+static int s_s3_request_on_headers(
     struct aws_s3_meta_request *meta_request,
     const struct aws_http_headers *headers,
     int response_status,
@@ -108,9 +108,10 @@ static void s_s3_request_on_headers(
     struct s3_meta_request_binding *request_binding = user_data;
 
     /*************** GIL ACQUIRE ***************/
+    bool error = true;
     PyGILState_STATE state;
     if (aws_py_gilstate_ensure(&state)) {
-        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+        return AWS_OP_ERR; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
     size_t num_headers = aws_http_headers_count(headers);
@@ -134,9 +135,15 @@ static void s_s3_request_on_headers(
         goto done;
     }
     Py_DECREF(result);
+    error = false;
 done:
     Py_XDECREF(header_list);
     PyGILState_Release(state);
+    if (error) {
+        return aws_raise_error(AWS_ERROR_CRT_CALLBACK_EXCEPTION);
+    } else {
+        return AWS_OP_SUCCESS;
+    }
     /*************** GIL RELEASE ***************/
 }
 
@@ -161,7 +168,7 @@ static int s_record_progress(struct s3_meta_request_binding *request_binding, ui
     return AWS_OP_SUCCESS;
 }
 
-static void s_s3_request_on_body(
+static int s_s3_request_on_body(
     struct aws_s3_meta_request *meta_request,
     const struct aws_byte_cursor *body,
     uint64_t range_start,
@@ -171,24 +178,23 @@ static void s_s3_request_on_body(
 
     bool report_progress;
     if (s_record_progress(request_binding, (uint64_t)body->len, &report_progress)) {
-        return;
+        return AWS_OP_ERR;
     }
     if (request_binding->recv_file) {
         /* The callback will be invoked with the right order, so we don't need to seek first. */
         if (fwrite((void *)body->ptr, body->len, 1, request_binding->recv_file) < body->len) {
-            /* fwrite failed */
-            /* TODO: return the error code back to native client. */
-            /* return aws_translate_and_raise_io_error(errno); */
+            return aws_translate_and_raise_io_error(errno);
         }
         if (!report_progress) {
-            return;
+            return AWS_OP_SUCCESS;
         }
     }
+    bool error = true;
     /*************** GIL ACQUIRE ***************/
     PyGILState_STATE state;
     PyObject *result = NULL;
     if (aws_py_gilstate_ensure(&state)) {
-        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+        return AWS_OP_ERR; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
     if (!request_binding->recv_file) {
         result = PyObject_CallMethod(
@@ -216,9 +222,14 @@ static void s_s3_request_on_body(
         }
         request_binding->size_transferred = 0;
     }
+    error = false;
 done:
     PyGILState_Release(state);
-    return;
+    if (error) {
+        return aws_raise_error(AWS_ERROR_CRT_CALLBACK_EXCEPTION);
+    } else {
+        return AWS_OP_SUCCESS;
+    }
 }
 
 /* If the request has not finished, it will keep the request alive, until the finish callback invoked. So, we don't
