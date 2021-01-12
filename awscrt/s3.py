@@ -109,6 +109,7 @@ class S3Client(NativeResource):
             shutdown_event.set()
         self._region = region
         self.shutdown_event = shutdown_event
+        s3_client_core = _S3ClientCore(bootstrap, credential_provider, tls_connection_options)
 
         if part_size is None:
             part_size = 0
@@ -123,7 +124,8 @@ class S3Client(NativeResource):
             region,
             tls_mode,
             part_size,
-            throughput_target_gbps)
+            throughput_target_gbps,
+            s3_client_core)
 
     def make_request(
             self,
@@ -131,20 +133,34 @@ class S3Client(NativeResource):
             request,
             type,
             credential_provider=None,
+            recv_filepath=None,
+            send_filepath=None,
             on_headers=None,
             on_body=None,
-            on_done=None):
+            on_done=None,
+            on_progress=None):
         """Create the Request to the the S3 server,
         accelerate the GET_OBJECT/PUT_OBJECT request by spliting it into multiple requests under the hood.
 
         Args:
             request (HttpRequest): The overall outgoing API request for S3 operation.
+                If the request body is a file, set send_filepath for better performance.
 
             type (S3RequestType): The type of S3 request passed in, GET_OBJECT/PUT_OBJECT can be accelerated
 
             credential_provider (Optional[AwsCredentialsProvider]): Credentials providers source the
                 AwsCredentials needed to sign an authenticated AWS request, for this request only.
                 If None is provided, the credential provider in the client will be used.
+
+             recv_filepath (Optional[str]): Optional file path. If set, the
+                response body is written directly to a file and the
+                on_body callback is not invoked. This should give better
+                performance than writing to file from the on_body callback.
+
+            send_filepath (Optional[str]): Optional file path. If set, the
+                request body is read directly from a file and the
+                request's body_stream is ignored. This should give better
+                performance than reading a file from a stream.
 
             on_headers: Optional callback invoked as the response received, and even the API request
                 has been split into multiple parts, this callback will only be invoked once as
@@ -159,6 +175,7 @@ class S3Client(NativeResource):
                 *   `**kwargs` (dict): Forward-compatibility kwargs.
 
             on_body: Optional callback invoked 0+ times as the response body received from S3 server.
+                If simply writing to a file, use recv_filepath instead of on_body for better performance.
                 The function should take the following arguments and return nothing:
 
                 *   `chunk` (buffer): Response body data (not necessarily
@@ -177,6 +194,13 @@ class S3Client(NativeResource):
 
                 *   `**kwargs` (dict): Forward-compatibility kwargs.
 
+            on_progress: Optional callback invoked when part of the transfer is done to report the progress.
+                The function should take the following arguments and return nothing:
+
+                *   `progress` (int): The data in bytes that just get transferred
+
+                *   `**kwargs` (dict): Forward-compatibility kwargs.
+
         Returns:
             S3Request
         """
@@ -185,9 +209,12 @@ class S3Client(NativeResource):
             request=request,
             type=type,
             credential_provider=credential_provider,
+            recv_filepath=recv_filepath,
+            send_filepath=send_filepath,
             on_headers=on_headers,
             on_body=on_body,
             on_done=on_done,
+            on_progress=on_progress,
             region=self._region)
 
 
@@ -209,6 +236,7 @@ class S3Request(NativeResource):
         '_on_headers_cb',
         '_on_body_cb',
         '_on_done_cb',
+        '_on_progress_cb',
         '_finished_future',
         '_kwargs',
         '_http_request',
@@ -221,9 +249,12 @@ class S3Request(NativeResource):
             request,
             type,
             credential_provider=None,
+            recv_filepath=None,
+            send_filepath=None,
             on_headers=None,
             on_body=None,
             on_done=None,
+            on_progress=None,
             region=None):
         assert isinstance(client, S3Client)
         assert isinstance(request, HttpRequest)
@@ -233,13 +264,10 @@ class S3Request(NativeResource):
 
         super().__init__()
 
-        # the native s3 request will keep the native http request alive until the s3
-        # request finishes, but to keep the io stream alive, still keep the reference
-        # to HttpRequest here
-        self._http_request = request
         self._on_headers_cb = on_headers
         self._on_body_cb = on_body
         self._on_done_cb = on_done
+        self._on_progress_cb = on_progress
 
         self._finished_future = Future()
 
@@ -250,17 +278,19 @@ class S3Request(NativeResource):
 
         self.shutdown_event = shutdown_event
 
+        s3_request_core = _S3RequestCore(client, request, credential_provider)
+
         self._binding = _awscrt.s3_client_make_meta_request(
             self,
             client,
             request,
             type,
             credential_provider,
+            recv_filepath,
+            send_filepath,
             region,
-            self._on_headers,
-            self._on_body,
-            self._on_finish,
-            on_shutdown)
+            on_shutdown,
+            s3_request_core)
 
     def _on_headers(self, status_code, headers):
         if self._on_headers_cb:
@@ -272,16 +302,49 @@ class S3Request(NativeResource):
 
     def _on_finish(self, error_code, error_headers, error_body):
         error = None
-        # the http request can be released now
-        self._http_request = None
         if error_code:
             error = awscrt.exceptions.from_code(error_code)
+            if error_body:
+                # TODO The error body is XML, will need to parse it to something prettier.
+                extra_message = ". Body from error request is: " + str(error_body)
+                error.message = error.message + extra_message
             self.finished_future.set_exception(error)
         else:
             self.finished_future.set_result(None)
         if self._on_done_cb:
             self._on_done_cb(error=error, error_headers=error_headers, error_body=error_body)
 
+    def _on_progress(self, progress):
+        if self._on_progress_cb:
+            self._on_progress_cb(progress)
+
     @property
     def finished_future(self):
         return self._finished_future
+
+    def cancel(self):
+        _awscrt.s3_meta_request_cancel(self)
+
+
+class _S3ClientCore:
+    '''
+    Private class to keep all the related Python object alive until C land clean up for S3Client
+    '''
+
+    def __init__(self, bootstrap,
+                 credential_provider=None,
+                 tls_connection_options=None):
+        self._bootstrap = bootstrap
+        self._credential_provider = credential_provider
+        self._tls_connection_options = tls_connection_options
+
+
+class _S3RequestCore:
+    '''
+    Private class to keep all the related Python object alive until C land clean up for S3Request
+    '''
+
+    def __init__(self, client, request, credential_provider=None):
+        self._client = client
+        self._request = request
+        self._credential_provider = credential_provider
