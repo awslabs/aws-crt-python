@@ -182,7 +182,7 @@ static int s_s3_request_on_body(
     }
     if (request_binding->recv_file) {
         /* The callback will be invoked with the right order, so we don't need to seek first. */
-        if (fwrite((void *)body->ptr, body->len, 1, request_binding->recv_file) < body->len) {
+        if (fwrite((void *)body->ptr, body->len, 1, request_binding->recv_file) < 1) {
             return aws_translate_and_raise_io_error(errno);
         }
         if (!report_progress) {
