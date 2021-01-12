@@ -229,7 +229,7 @@ class S3RequestTest(NativeResourceTest):
             try:
                 finished_future.result(self.timeout)
             except Exception as e:
-                self.assertEqual(e.name, "AWS_ERROR_S3_CANCELED_SUCCESS")
+                self.assertEqual(e.name, "AWS_ERROR_S3_CANCELED")
 
             # Result check
             self.data_len = int(HttpHeaders(self.response_headers).get("Content-Length"))
@@ -262,7 +262,7 @@ class S3RequestTest(NativeResourceTest):
             try:
                 finished_future.result(self.timeout)
             except Exception as e:
-                self.assertEqual(e.name, "AWS_ERROR_S3_CANCELED_SUCCESS")
+                self.assertEqual(e.name, "AWS_ERROR_S3_CANCELED")
 
             shutdown_event = s3_request.shutdown_event
             del s3_request
@@ -290,7 +290,7 @@ class S3RequestTest(NativeResourceTest):
         try:
             finished_future.result(self.timeout)
         except Exception as e:
-            self.assertEqual(e.name, "AWS_ERROR_S3_CANCELED_SUCCESS")
+            self.assertEqual(e.name, "AWS_ERROR_S3_CANCELED")
 
         shutdown_event = s3_request.shutdown_event
         del s3_request
