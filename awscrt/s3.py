@@ -21,7 +21,7 @@ class S3RequestType(IntEnum):
 
     DEFAULT = 0
     """
-    Default type, which is all the rest type of S3 requests besides of GET_OBJECT/PUT_OBJECT
+    Default type, for all S3 request types other than GET_OBJECT/PUT_OBJECT.
     """
 
     GET_OBJECT = 1
@@ -36,42 +36,42 @@ class S3RequestType(IntEnum):
 
 
 class S3RequestTlsMode(IntEnum):
-    """Tls mode for S3 request"""
+    """TLS mode for S3 request"""
 
-    AWS_MR_TLS_ENABLED = 0
+    ENABLED = 0
     """
-    Enable tls for S3 request.
+    Enable TLS for S3 request.
     """
 
-    AWS_MR_TLS_DISABLED = 1
+    DISABLED = 1
     """
-    Disable tls for S3 request.
+    Disable TLS for S3 request.
     """
 
 
 class S3Client(NativeResource):
     """S3 client
 
-    Args:
+    Keyword Args:
         bootstrap (ClientBootstrap): Client bootstrap to use when initiating socket connection.
 
         region (str): Region that the S3 bucket lives in.
 
-        tls_mode (Optional, S3RequestTlsMode):  How tls should be used while performing the request
+        tls_mode (Optional[S3RequestTlsMode]):  How TLS should be used while performing the request
             If this is ENABLED:
-                If tls_connection_options is not-null, then those tls options will be used
-                If tls_connection_options is NULL, then default tls options will be used
+                If tls_connection_options is set, then those TLS options will be used
+                If tls_connection_options is unset, then default TLS options will be used
             If this is DISABLED:
-                No tls options will be used, regardless of tls_connection_options value.
+                No TLS options will be used, regardless of tls_connection_options value.
 
         credential_provider (Optional[AwsCredentialsProvider]): Credentials providers source the
             AwsCredentials needed to sign an authenticated AWS request.
             If None is provided, the request will not be signed.
 
         tls_connection_options (Optional[TlsConnectionOptions]): Optional TLS Options to be used
-            for each connection, if tls_mode is ENABLED
+            for each connection, unless tls_mode is DISABLED
 
-        part_size (Optional[int]): Size of parts in Byte the files will be downloaded or uploaded in.
+        part_size (Optional[int]): Size, in bytes, of parts that files will be downloaded or uploaded in.
             Note: for PUT_OBJECT request, S3 requires the part size greater than 5MB. (5*1024*1024 by default)
 
         throughput_target_gbps (Optional[float]): Throughput target in Gbps that we are trying to reach.
@@ -85,7 +85,7 @@ class S3Client(NativeResource):
             *,
             bootstrap,
             region,
-            tls_mode=0,
+            tls_mode=None,
             credential_provider=None,
             tls_connection_options=None,
             part_size=None,
@@ -111,6 +111,9 @@ class S3Client(NativeResource):
         self.shutdown_event = shutdown_event
         s3_client_core = _S3ClientCore(bootstrap, credential_provider, tls_connection_options)
 
+        # C layer uses 0 to indicate defaults
+        if tls_mode is None:
+            tls_mode = 0
         if part_size is None:
             part_size = 0
         if throughput_target_gbps is None:
@@ -140,7 +143,7 @@ class S3Client(NativeResource):
             on_done=None,
             on_progress=None):
         """Create the Request to the the S3 server,
-        accelerate the GET_OBJECT/PUT_OBJECT request by spliting it into multiple requests under the hood.
+        GET_OBJECT/PUT_OBJECT requests are split it into multi-part requests under the hood for acceleration.
 
         Args:
             request (HttpRequest): The overall outgoing API request for S3 operation.
@@ -185,7 +188,7 @@ class S3Client(NativeResource):
 
                 *   `**kwargs` (dict): Forward-compatibility kwargs.
 
-            on_done: Optional callback invoked when the meta_request has finished the job.
+            on_done: Optional callback invoked when the request has finished the job.
                 The function should take the following arguments and return nothing:
 
                 *   `error` (Optional[Exception]): None if the request was

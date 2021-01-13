@@ -12,7 +12,7 @@
 #include "io.h"
 #include "mqtt_client.h"
 #include "mqtt_client_connection.h"
-#include "s3_client.h"
+#include "s3.h"
 
 #include <aws/auth/auth.h>
 #include <aws/common/byte_buf.h>
