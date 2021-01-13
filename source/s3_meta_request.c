@@ -55,13 +55,11 @@ static void s_destroy(struct s3_meta_request_binding *meta_request) {
     if (meta_request->copied_message) {
         aws_http_message_release(meta_request->copied_message);
     }
-    /* in case native never existed and shutdown never happened */
-    Py_CLEAR(meta_request->py_core);
+    Py_XDECREF(meta_request->py_core);
     aws_mem_release(aws_py_get_allocator(), meta_request);
 }
 
 static PyObject *s_get_py_headers(const struct aws_http_headers *headers) {
-    /* Not take the reference of header_py, caller is the one holding the reference. */
     size_t num_headers = aws_http_headers_count(headers);
     PyObject *header_list = PyList_New(num_headers);
     if (!header_list) {
@@ -70,9 +68,7 @@ static PyObject *s_get_py_headers(const struct aws_http_headers *headers) {
     for (size_t i = 0; i < num_headers; i++) {
         struct aws_http_header header;
         AWS_ZERO_STRUCT(header);
-        if (aws_http_headers_get_index(headers, i, &header)) {
-            goto error;
-        }
+        aws_http_headers_get_index(headers, i, &header);
         const char *name_str = (const char *)header.name.ptr;
         size_t name_len = header.name.len;
         const char *value_str = (const char *)header.value.ptr;
@@ -288,7 +284,8 @@ static void s_s3_meta_request_capsule_destructor(PyObject *capsule) {
     if (meta_request->native) {
         aws_s3_meta_request_release(meta_request->native);
     } else {
-        /* release may cleaned up the binding already */
+        /* we hit this branch if things failed part way through setting up the binding,
+         * before the native aws_s3_meta_request could be created. */
         s_destroy(meta_request);
     }
 }
@@ -345,7 +342,7 @@ static int s_aws_input_stream_file_read(struct aws_input_stream *stream, struct 
         /*************** GIL ACQUIRE ***************/
         PyGILState_STATE state;
         if (aws_py_gilstate_ensure(&state)) {
-            return AWS_OP_SUCCESS; /* Python has shut down. Nothing matters anymore, but don't crash */
+            return AWS_OP_ERR; /* Python has shut down. Nothing matters anymore, but don't crash */
         }
         PyObject *result =
             PyObject_CallMethod(request_binding->py_core, "_on_progress", "(K)", request_binding->size_transferred);
@@ -354,10 +351,10 @@ static int s_aws_input_stream_file_read(struct aws_input_stream *stream, struct 
         }
         request_binding->size_transferred = 0;
         PyGILState_Release(state);
+        /*************** GIL RELEASE ***************/
         if (!result) {
             return aws_py_raise_error();
         }
-        /*************** GIL RELEASE ***************/
     }
     return AWS_OP_SUCCESS;
 }

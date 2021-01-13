@@ -20,7 +20,6 @@ struct s3_client_binding {
 };
 
 static void s_destroy(struct s3_client_binding *client) {
-    /* in case native never existed and shutdown never happened */
     Py_XDECREF(client->on_shutdown);
     Py_XDECREF(client->py_core);
     aws_mem_release(aws_py_get_allocator(), client);
@@ -33,6 +32,8 @@ static void s_s3_client_capsule_destructor(PyObject *capsule) {
     if (client->native) {
         aws_s3_client_release(client->native);
     } else {
+        /* we hit this branch if things failed part way through setting up the binding,
+         * before the native aws_s3_meta_request could be created. */
         s_destroy(client);
     }
 }
@@ -55,8 +56,6 @@ static void s_s3_client_shutdown(void *user_data) {
         /* Callback might fail during application shutdown */
         PyErr_WriteUnraisable(PyErr_Occurred());
     }
-    Py_CLEAR(client->on_shutdown);
-    Py_CLEAR(client->py_core);
 
     s_destroy(client);
 
