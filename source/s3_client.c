@@ -13,7 +13,6 @@ static const char *s_capsule_name_s3_client = "aws_s3_client";
 struct s3_client_binding {
     struct aws_s3_client *native;
 
-    bool release_called;
     bool shutdown_called;
 
     /* Shutdown callback, reference cleared after invoking callback */
@@ -23,7 +22,7 @@ struct s3_client_binding {
 };
 
 static void s_destroy_if_ready(struct s3_client_binding *client) {
-    if (client->native && (!client->shutdown_called || !client->release_called)) {
+    if (client->native && !client->shutdown_called) {
         /* native client successfully created, but not ready to clean up yet */
         return;
     }
@@ -36,10 +35,8 @@ static void s_destroy_if_ready(struct s3_client_binding *client) {
 /* Invoked when the python object get cleaned up */
 static void s_s3_client_capsule_destructor(PyObject *capsule) {
     struct s3_client_binding *client = PyCapsule_GetPointer(capsule, s_capsule_name_s3_client);
-    AWS_FATAL_ASSERT(!client->release_called);
 
     aws_s3_client_release(client->native);
-    client->release_called = true;
 
     s_destroy_if_ready(client);
 }
@@ -66,9 +63,9 @@ static void s_s3_client_shutdown(void *user_data) {
     Py_CLEAR(client->py_core);
 
     client->shutdown_called = true;
+    s_destroy_if_ready(client);
 
     PyGILState_Release(state);
-    s_destroy_if_ready(client);
 }
 
 struct aws_s3_client *aws_py_get_s3_client(PyObject *client) {
