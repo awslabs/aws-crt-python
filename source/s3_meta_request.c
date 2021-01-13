@@ -48,7 +48,7 @@ struct aws_s3_meta_request *aws_py_get_s3_meta_request(PyObject *meta_request) {
         meta_request, s_capsule_name_s3_meta_request, "S3Request", s3_meta_request_binding);
 }
 
-static void s_destroy(struct s3_meta_request_binding *meta_request) {
+static void s_destroy_if_ready(struct s3_meta_request_binding *meta_request) {
     if (meta_request->native && !meta_request->shutdown_called) {
         /* native meta_request successfully created, but not ready to clean up yet */
         return;
@@ -223,8 +223,6 @@ done:
     }
 }
 
-/* If the request has not finished, it will keep the request alive, until the finish callback invoked. So, we don't
- * need to clean anything from this call */
 static void s_s3_request_on_finish(
     struct aws_s3_meta_request *meta_request,
     const struct aws_s3_meta_request_result *meta_request_result,
@@ -295,6 +293,7 @@ static void s_s3_meta_request_capsule_destructor(PyObject *capsule) {
     }
 
     aws_s3_meta_request_release(meta_request->native);
+    s_destroy_if_ready(meta_request);
 }
 
 /* Callback from C land, invoked when the underlying shutdown process finished */
@@ -315,7 +314,7 @@ static void s_s3_request_on_shutdown(void *user_data) {
         PyErr_WriteUnraisable(request_binding->py_core);
     }
 
-    s_destroy(request_binding);
+    s_destroy_if_ready(request_binding);
     PyGILState_Release(state);
     /*************** GIL RELEASE ***************/
 }
@@ -355,13 +354,14 @@ static int s_aws_input_stream_file_read(struct aws_input_stream *stream, struct 
         }
         PyObject *result =
             PyObject_CallMethod(request_binding->py_core, "_on_progress", "(K)", request_binding->size_transferred);
-        if (!result) {
-            return aws_py_raise_error();
-        } else {
+        if (result) {
             Py_DECREF(result);
         }
         request_binding->size_transferred = 0;
         PyGILState_Release(state);
+        if (!result) {
+            return aws_py_raise_error();
+        }
         /*************** GIL RELEASE ***************/
     }
     return AWS_OP_SUCCESS;

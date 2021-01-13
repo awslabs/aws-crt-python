@@ -192,6 +192,14 @@ class S3Client(NativeResource):
                     successfully sent and valid response received, or an Exception
                     if it failed.
 
+                *   `error_headers` (Optional[List[Tuple[str, str]]]): If request
+                    failed because server side sent an unsuccessful response, the headers
+                    of the response is provided here. Else None will be returned.
+
+                *   `error_body` (Optional[Bytes]): If request failed because server
+                    side sent an unsuccessful response, the body of the response is
+                    provided here. Else None will be returned.
+
                 *   `**kwargs` (dict): Forward-compatibility kwargs.
 
             on_progress: Optional callback invoked when part of the transfer is done to report the progress.
