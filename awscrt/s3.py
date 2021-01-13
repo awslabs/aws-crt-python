@@ -270,14 +270,18 @@ class S3Request(NativeResource):
 
         self._finished_future = Future()
 
-        shutdown_event = threading.Event()
+        self.shutdown_event = threading.Event()
 
-        def on_shutdown():
-            shutdown_event.set()
-
-        self.shutdown_event = shutdown_event
-
-        s3_request_core = _S3RequestCore(client, request, credential_provider)
+        s3_request_core = _S3RequestCore(
+            client,
+            request,
+            self._finished_future,
+            self.shutdown_event,
+            credential_provider,
+            on_headers,
+            on_body,
+            on_done,
+            on_progress)
 
         self._binding = _awscrt.s3_client_make_meta_request(
             self,
@@ -288,34 +292,7 @@ class S3Request(NativeResource):
             recv_filepath,
             send_filepath,
             region,
-            on_shutdown,
             s3_request_core)
-
-    def _on_headers(self, status_code, headers):
-        if self._on_headers_cb:
-            self._on_headers_cb(status_code=status_code, headers=headers)
-
-    def _on_body(self, chunk, offset):
-        if self._on_body_cb:
-            self._on_body_cb(chunk=chunk, offset=offset)
-
-    def _on_finish(self, error_code, error_headers, error_body):
-        error = None
-        if error_code:
-            error = awscrt.exceptions.from_code(error_code)
-            if error_body:
-                # TODO The error body is XML, will need to parse it to something prettier.
-                extra_message = ". Body from error request is: " + str(error_body)
-                error.message = error.message + extra_message
-            self.finished_future.set_exception(error)
-        else:
-            self.finished_future.set_result(None)
-        if self._on_done_cb:
-            self._on_done_cb(error=error, error_headers=error_headers, error_body=error_body)
-
-    def _on_progress(self, progress):
-        if self._on_progress_cb:
-            self._on_progress_cb(progress)
 
     @property
     def finished_future(self):
@@ -343,7 +320,55 @@ class _S3RequestCore:
     Private class to keep all the related Python object alive until C land clean up for S3Request
     '''
 
-    def __init__(self, client, request, credential_provider=None):
+    def __init__(
+            self,
+            client,
+            request,
+            finish_future,
+            shutdown_event,
+            credential_provider=None,
+            on_headers=None,
+            on_body=None,
+            on_done=None,
+            on_progress=None):
+
         self._client = client
         self._request = request
         self._credential_provider = credential_provider
+
+        self._on_headers_cb = on_headers
+        self._on_body_cb = on_body
+        self._on_done_cb = on_done
+        self._on_progress_cb = on_progress
+
+        self._finished_future = finish_future
+        self._shutdown_event = shutdown_event
+
+    def _on_shutdown(self):
+        self._shutdown_event.set()
+
+    def _on_headers(self, status_code, headers):
+        if self._on_headers_cb:
+            self._on_headers_cb(status_code=status_code, headers=headers)
+
+    def _on_body(self, chunk, offset):
+        if self._on_body_cb:
+            self._on_body_cb(chunk=chunk, offset=offset)
+
+    def _on_finish(self, error_code, error_headers, error_body):
+        error = None
+        if error_code:
+            error = awscrt.exceptions.from_code(error_code)
+            if error_body:
+                # TODO The error body is XML, will need to parse it to something prettier.
+                extra_message = ". Body from error request is: " + str(error_body)
+                error.message = error.message + extra_message
+            self._finished_future.set_exception(error)
+        else:
+            self._finished_future.set_result(None)
+        if self._on_done_cb:
+            self._on_done_cb(error=error, error_headers=error_headers, error_body=error_body)
+
+    def _on_progress(self, progress):
+        if self._on_progress_cb:
+            self._on_progress_cb(progress)

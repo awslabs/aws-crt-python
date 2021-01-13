@@ -21,8 +21,6 @@ struct s3_meta_request_binding {
 
     bool shutdown_called;
 
-    /* Reference proxy to python self */
-    PyObject *self_py;
     /* Reference to python object that reference to other related python object to keep it alive */
     PyObject *py_core;
 
@@ -36,8 +34,6 @@ struct s3_meta_request_binding {
      * finishes.
      */
     struct aws_input_stream *input_body;
-    /* Shutdown callback, all resource cleaned up, reference cleared after invoke */
-    PyObject *on_shutdown;
 
     struct aws_http_message *copied_message;
 
@@ -52,7 +48,7 @@ struct aws_s3_meta_request *aws_py_get_s3_meta_request(PyObject *meta_request) {
         meta_request, s_capsule_name_s3_meta_request, "S3Request", s3_meta_request_binding);
 }
 
-static void s_destroy_if_ready(struct s3_meta_request_binding *meta_request) {
+static void s_destroy(struct s3_meta_request_binding *meta_request) {
     if (meta_request->native && !meta_request->shutdown_called) {
         /* native meta_request successfully created, but not ready to clean up yet */
         return;
@@ -66,8 +62,7 @@ static void s_destroy_if_ready(struct s3_meta_request_binding *meta_request) {
         aws_http_message_release(meta_request->copied_message);
     }
     /* in case native never existed and shutdown never happened */
-    Py_XDECREF(meta_request->on_shutdown);
-    Py_XDECREF(meta_request->py_core);
+    Py_CLEAR(meta_request->py_core);
     aws_mem_release(aws_py_get_allocator(), meta_request);
 }
 
@@ -118,15 +113,15 @@ static int s_s3_request_on_headers(
     /* Build up a list of (name,value) tuples */
     PyObject *header_list = s_get_py_headers(headers);
     if (!header_list) {
-        PyErr_WriteUnraisable(request_binding->self_py);
+        PyErr_WriteUnraisable(request_binding->py_core);
         goto done;
     }
 
     /* Deliver the built up list of (name,value) tuples */
     PyObject *result =
-        PyObject_CallMethod(request_binding->self_py, "_on_headers", "(iO)", response_status, header_list);
+        PyObject_CallMethod(request_binding->py_core, "_on_headers", "(iO)", response_status, header_list);
     if (!result) {
-        PyErr_WriteUnraisable(request_binding->self_py);
+        PyErr_WriteUnraisable(request_binding->py_core);
         goto done;
     }
     Py_DECREF(result);
@@ -193,7 +188,7 @@ static int s_s3_request_on_body(
     }
     if (!request_binding->recv_file) {
         result = PyObject_CallMethod(
-            request_binding->self_py,
+            request_binding->py_core,
             "_on_body",
             "(y#K)",
             (const char *)(body->ptr),
@@ -201,7 +196,7 @@ static int s_s3_request_on_body(
             range_start);
 
         if (!result) {
-            PyErr_WriteUnraisable(request_binding->self_py);
+            PyErr_WriteUnraisable(request_binding->py_core);
             goto done;
         }
         Py_DECREF(result);
@@ -209,9 +204,9 @@ static int s_s3_request_on_body(
     if (report_progress) {
         /* Hold the GIL before enterring here */
         result =
-            PyObject_CallMethod(request_binding->self_py, "_on_progress", "(K)", request_binding->size_transferred);
+            PyObject_CallMethod(request_binding->py_core, "_on_progress", "(K)", request_binding->size_transferred);
         if (!result) {
-            PyErr_WriteUnraisable(request_binding->self_py);
+            PyErr_WriteUnraisable(request_binding->py_core);
         } else {
             Py_DECREF(result);
         }
@@ -249,9 +244,9 @@ static void s_s3_request_on_finish(
     if (request_binding->size_transferred) {
         /* report the remaining progress */
         result =
-            PyObject_CallMethod(request_binding->self_py, "_on_progress", "(K)", request_binding->size_transferred);
+            PyObject_CallMethod(request_binding->py_core, "_on_progress", "(K)", request_binding->size_transferred);
         if (!result) {
-            PyErr_WriteUnraisable(request_binding->self_py);
+            PyErr_WriteUnraisable(request_binding->py_core);
         } else {
             Py_DECREF(result);
         }
@@ -263,7 +258,7 @@ static void s_s3_request_on_finish(
     if (meta_request_result->error_response_headers) {
         header_list = s_get_py_headers(meta_request_result->error_response_headers);
         if (!header_list) {
-            PyErr_WriteUnraisable(request_binding->self_py);
+            PyErr_WriteUnraisable(request_binding->py_core);
             goto done;
         }
     }
@@ -271,7 +266,7 @@ static void s_s3_request_on_finish(
         error_body = *(meta_request_result->error_response_body);
     }
     result = PyObject_CallMethod(
-        request_binding->self_py,
+        request_binding->py_core,
         "_on_finish",
         "(iOy#)",
         meta_request_result->error_code,
@@ -283,11 +278,10 @@ static void s_s3_request_on_finish(
         Py_DECREF(result);
     } else {
         /* Callback might fail during application shutdown */
-        PyErr_WriteUnraisable(request_binding->self_py);
+        PyErr_WriteUnraisable(request_binding->py_core);
     }
 done:
     Py_XDECREF(header_list);
-    Py_CLEAR(request_binding->self_py);
     PyGILState_Release(state);
     /*************** GIL RELEASE ***************/
 }
@@ -295,15 +289,12 @@ done:
 /* Invoked when the python object get cleaned up */
 static void s_s3_meta_request_capsule_destructor(PyObject *capsule) {
     struct s3_meta_request_binding *meta_request = PyCapsule_GetPointer(capsule, s_capsule_name_s3_meta_request);
-    Py_XDECREF(meta_request->self_py);
 
     if (meta_request->recv_file) {
         fclose(meta_request->recv_file);
     }
 
     aws_s3_meta_request_release(meta_request->native);
-
-    s_destroy_if_ready(meta_request);
 }
 
 /* Callback from C land, invoked when the underlying shutdown process finished */
@@ -318,16 +309,13 @@ static void s_s3_request_on_shutdown(void *user_data) {
 
     request_binding->shutdown_called = true;
 
-    /* Invoke on_shutdown, then clear our reference to it */
-    PyObject *result = PyObject_CallFunction(request_binding->on_shutdown, NULL);
-    if (result) {
-        Py_DECREF(result);
-    } else {
-        /* Callback might fail during application shutdown */
-        PyErr_WriteUnraisable(PyErr_Occurred());
+    /* Deliver the built up list of (name,value) tuples */
+    PyObject *result = PyObject_CallMethod(request_binding->py_core, "_on_shutdown", NULL);
+    if (!result) {
+        PyErr_WriteUnraisable(request_binding->py_core);
     }
 
-    s_destroy_if_ready(request_binding);
+    s_destroy(request_binding);
     PyGILState_Release(state);
     /*************** GIL RELEASE ***************/
 }
@@ -366,7 +354,7 @@ static int s_aws_input_stream_file_read(struct aws_input_stream *stream, struct 
             return AWS_OP_SUCCESS; /* Python has shut down. Nothing matters anymore, but don't crash */
         }
         PyObject *result =
-            PyObject_CallMethod(request_binding->self_py, "_on_progress", "(K)", request_binding->size_transferred);
+            PyObject_CallMethod(request_binding->py_core, "_on_progress", "(K)", request_binding->size_transferred);
         if (!result) {
             return aws_py_raise_error();
         } else {
@@ -513,11 +501,10 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     const char *send_filepath;
     const char *region;
     Py_ssize_t region_len;
-    PyObject *on_shutdown_py = NULL;
     PyObject *py_core = NULL;
     if (!PyArg_ParseTuple(
             args,
-            "OOOiOzzs#OO",
+            "OOOiOzzs#O",
             &py_s3_request,
             &s3_client_py,
             &http_request_py,
@@ -527,7 +514,6 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
             &send_filepath,
             &region,
             &region_len,
-            &on_shutdown_py,
             &py_core)) {
         return NULL;
     }
@@ -569,12 +555,6 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
         aws_mem_release(allocator, meta_request);
         return NULL;
     }
-
-    meta_request->on_shutdown = on_shutdown_py;
-    Py_INCREF(meta_request->on_shutdown);
-
-    meta_request->self_py = py_s3_request;
-    Py_INCREF(meta_request->self_py);
 
     meta_request->py_core = py_core;
     Py_INCREF(meta_request->py_core);
