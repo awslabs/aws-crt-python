@@ -19,8 +19,6 @@ static const char *s_capsule_name_s3_meta_request = "aws_s3_meta_request";
 struct s3_meta_request_binding {
     struct aws_s3_meta_request *native;
 
-    bool shutdown_called;
-
     /* Reference to python object that reference to other related python object to keep it alive */
     PyObject *py_core;
 
@@ -48,12 +46,7 @@ struct aws_s3_meta_request *aws_py_get_s3_meta_request(PyObject *meta_request) {
         meta_request, s_capsule_name_s3_meta_request, "S3Request", s3_meta_request_binding);
 }
 
-static void s_destroy_if_ready(struct s3_meta_request_binding *meta_request) {
-    if (meta_request->native && !meta_request->shutdown_called) {
-        /* native meta_request successfully created, but not ready to clean up yet */
-        return;
-    }
-
+static void s_destroy(struct s3_meta_request_binding *meta_request) {
     if (meta_request->input_body) {
         aws_input_stream_destroy(meta_request->input_body);
     }
@@ -291,9 +284,12 @@ static void s_s3_meta_request_capsule_destructor(PyObject *capsule) {
     if (meta_request->recv_file) {
         fclose(meta_request->recv_file);
     }
-
-    aws_s3_meta_request_release(meta_request->native);
-    s_destroy_if_ready(meta_request);
+    if (meta_request->native) {
+        aws_s3_meta_request_release(meta_request->native);
+    } else {
+        /* release may cleaned up the binding already */
+        s_destroy(meta_request);
+    }
 }
 
 /* Callback from C land, invoked when the underlying shutdown process finished */
@@ -306,15 +302,13 @@ static void s_s3_request_on_shutdown(void *user_data) {
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
-    request_binding->shutdown_called = true;
-
     /* Deliver the built up list of (name,value) tuples */
     PyObject *result = PyObject_CallMethod(request_binding->py_core, "_on_shutdown", NULL);
     if (!result) {
         PyErr_WriteUnraisable(request_binding->py_core);
     }
 
-    s_destroy_if_ready(request_binding);
+    s_destroy(request_binding);
     PyGILState_Release(state);
     /*************** GIL RELEASE ***************/
 }
