@@ -19,13 +19,10 @@ static const char *s_capsule_name_s3_meta_request = "aws_s3_meta_request";
 struct s3_meta_request_binding {
     struct aws_s3_meta_request *native;
 
-    bool release_called;
     bool shutdown_called;
 
     /* Reference proxy to python self */
     PyObject *self_py;
-    /* Reference to python http message to keep it alive */
-    PyObject *http_message_py;
     /* Reference to python object that reference to other related python object to keep it alive */
     PyObject *py_core;
 
@@ -56,7 +53,7 @@ struct aws_s3_meta_request *aws_py_get_s3_meta_request(PyObject *meta_request) {
 }
 
 static void s_destroy_if_ready(struct s3_meta_request_binding *meta_request) {
-    if (meta_request->native && (!meta_request->shutdown_called || !meta_request->release_called)) {
+    if (meta_request->native && !meta_request->shutdown_called) {
         /* native meta_request successfully created, but not ready to clean up yet */
         return;
     }
@@ -74,10 +71,13 @@ static void s_destroy_if_ready(struct s3_meta_request_binding *meta_request) {
     aws_mem_release(aws_py_get_allocator(), meta_request);
 }
 
-static int s_get_py_headers(const struct aws_http_headers *headers, PyObject *header_py) {
+static PyObject *s_get_py_headers(const struct aws_http_headers *headers) {
     /* Not take the reference of header_py, caller is the one holding the reference. */
     size_t num_headers = aws_http_headers_count(headers);
-
+    PyObject *header_list = PyList_New(num_headers);
+    if (!header_list) {
+        return NULL;
+    }
     for (size_t i = 0; i < num_headers; i++) {
         struct aws_http_header header;
         AWS_ZERO_STRUCT(header);
@@ -94,9 +94,10 @@ static int s_get_py_headers(const struct aws_http_headers *headers, PyObject *he
         }
         PyList_SET_ITEM(header_py, i, tuple); /* steals reference to tuple */
     }
-    return AWS_OP_SUCCESS;
+    return header_list;
 error:
-    return AWS_OP_ERR;
+    Py_XDECREF(header_list);
+    return NULL;
 }
 
 static int s_s3_request_on_headers(
@@ -115,14 +116,9 @@ static int s_s3_request_on_headers(
     }
 
     size_t num_headers = aws_http_headers_count(headers);
-    /* Build up a list of (name,value) tuples,
-     * extracting values from buffer of [name,value,name,value,...] null-terminated strings */
-    PyObject *header_list = PyList_New(num_headers);
+    /* Build up a list of (name,value) tuples */
+    PyObject *header_list = s_get_py_headers(headers);
     if (!header_list) {
-        PyErr_WriteUnraisable(request_binding->self_py);
-        goto done;
-    }
-    if (s_get_py_headers(headers, header_list)) {
         PyErr_WriteUnraisable(request_binding->self_py);
         goto done;
     }
@@ -139,12 +135,12 @@ static int s_s3_request_on_headers(
 done:
     Py_XDECREF(header_list);
     PyGILState_Release(state);
+    /*************** GIL RELEASE ***************/
     if (error) {
         return aws_raise_error(AWS_ERROR_CRT_CALLBACK_EXCEPTION);
     } else {
         return AWS_OP_SUCCESS;
     }
-    /*************** GIL RELEASE ***************/
 }
 
 static int s_record_progress(struct s3_meta_request_binding *request_binding, uint64_t length, bool *report_progress) {
@@ -225,6 +221,7 @@ static int s_s3_request_on_body(
     error = false;
 done:
     PyGILState_Release(state);
+    /*************** GIL RELEASE ***************/
     if (error) {
         return aws_raise_error(AWS_ERROR_CRT_CALLBACK_EXCEPTION);
     } else {
@@ -265,12 +262,8 @@ static void s_s3_request_on_finish(
     AWS_ZERO_STRUCT(error_body);
     /* Get the header and body of the error */
     if (meta_request_result->error_response_headers) {
-        header_list = PyList_New(aws_http_headers_count(meta_request_result->error_response_headers));
+        header_list = s_get_py_headers(meta_request_result->error_response_headers);
         if (!header_list) {
-            PyErr_WriteUnraisable(request_binding->self_py);
-            goto done;
-        }
-        if (s_get_py_headers(meta_request_result->error_response_headers, header_list)) {
             PyErr_WriteUnraisable(request_binding->self_py);
             goto done;
         }
@@ -296,7 +289,6 @@ static void s_s3_request_on_finish(
 done:
     Py_XDECREF(header_list);
     Py_CLEAR(request_binding->self_py);
-    Py_CLEAR(request_binding->http_message_py);
     PyGILState_Release(state);
     /*************** GIL RELEASE ***************/
 }
@@ -304,17 +296,13 @@ done:
 /* Invoked when the python object get cleaned up */
 static void s_s3_meta_request_capsule_destructor(PyObject *capsule) {
     struct s3_meta_request_binding *meta_request = PyCapsule_GetPointer(capsule, s_capsule_name_s3_meta_request);
-    AWS_FATAL_ASSERT(!meta_request->release_called);
     Py_XDECREF(meta_request->self_py);
-    Py_XDECREF(meta_request->http_message_py);
 
     if (meta_request->recv_file) {
         fclose(meta_request->recv_file);
     }
 
     aws_s3_meta_request_release(meta_request->native);
-
-    meta_request->release_called = true;
 
     s_destroy_if_ready(meta_request);
 }
@@ -341,13 +329,8 @@ static void s_s3_request_on_shutdown(void *user_data) {
         /* Callback might fail during application shutdown */
         PyErr_WriteUnraisable(PyErr_Occurred());
     }
-    Py_CLEAR(request_binding->on_shutdown);
-    Py_CLEAR(request_binding->py_core);
 
-    if (destroy_after_shutdown) {
-        aws_mem_release(aws_py_get_allocator(), request_binding);
-    }
-
+    s_destroy_if_ready(request_binding);
     PyGILState_Release(state);
     /*************** GIL RELEASE ***************/
 }
@@ -596,9 +579,6 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     meta_request->self_py = py_s3_request;
     Py_INCREF(meta_request->self_py);
 
-    meta_request->http_message_py = http_request_py;
-    Py_INCREF(meta_request->http_message_py);
-
     meta_request->py_core = py_core;
     Py_INCREF(meta_request->py_core);
 
@@ -621,8 +601,6 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
             }
             /* rewrite the input stream of the original request */
             aws_http_message_set_body_stream(meta_request->copied_message, meta_request->input_body);
-            /* We are using the new message now, don't need to keep the python object alive */
-            Py_CLEAR(meta_request->http_message_py);
         }
     }
 

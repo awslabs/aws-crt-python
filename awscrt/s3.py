@@ -17,7 +17,7 @@ from enum import IntEnum
 
 
 class S3RequestType(IntEnum):
-    """The type of the Aws S3 request"""
+    """The type of the AWS S3 request"""
 
     DEFAULT = 0
     """
@@ -238,7 +238,6 @@ class S3Request(NativeResource):
         '_on_done_cb',
         '_on_progress_cb',
         '_finished_future',
-        '_kwargs',
         '_http_request',
         'shutdown_event')
 
