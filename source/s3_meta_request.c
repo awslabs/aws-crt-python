@@ -92,7 +92,7 @@ static PyObject *s_get_py_headers(const struct aws_http_headers *headers) {
         if (!tuple) {
             goto error;
         }
-        PyList_SET_ITEM(header_py, i, tuple); /* steals reference to tuple */
+        PyList_SET_ITEM(header_list, i, tuple); /* steals reference to tuple */
     }
     return header_list;
 error:
@@ -115,7 +115,6 @@ static int s_s3_request_on_headers(
         return AWS_OP_ERR; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
-    size_t num_headers = aws_http_headers_count(headers);
     /* Build up a list of (name,value) tuples */
     PyObject *header_list = s_get_py_headers(headers);
     if (!header_list) {
@@ -318,8 +317,6 @@ static void s_s3_request_on_shutdown(void *user_data) {
     }
 
     request_binding->shutdown_called = true;
-
-    bool destroy_after_shutdown = request_binding->release_called;
 
     /* Invoke on_shutdown, then clear our reference to it */
     PyObject *result = PyObject_CallFunction(request_binding->on_shutdown, NULL);
