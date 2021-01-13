@@ -2,10 +2,11 @@
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  * SPDX-License-Identifier: Apache-2.0.
  */
-#include "s3_client.h"
+#include "s3.h"
 
 #include "auth.h"
 #include "io.h"
+#include <aws/s3/s3_client.h>
 
 static const char *s_capsule_name_s3_client = "aws_s3_client";
 
