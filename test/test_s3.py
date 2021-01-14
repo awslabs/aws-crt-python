@@ -131,6 +131,7 @@ class S3RequestTest(NativeResourceTest):
 
     def _test_s3_put_get_object(self, request, request_type):
         s3_client = s3_client_new(False, self.region, 5 * 1024 * 1024)
+        init_logging(LogLevel.Debug, "stderr")
         s3_request = s3_client.make_request(
             request=request,
             type=request_type,
@@ -308,6 +309,49 @@ class S3RequestTest(NativeResourceTest):
 
     def test_put_object_quick_cancel(self):
         return self._put_object_cancel_helper(False)
+
+    def test_multipart_upload_with_invalid_request(self):
+        request = self._put_object_request("test/resources/s3_put_object.txt")
+        request.headers.set("Content-MD5", "something")
+        self._test_s3_put_get_object(request, S3RequestType.PUT_OBJECT)
+        self.put_body_stream.close()
+
+    def test_multipart_upload_with_invalid_region(self):
+        request = self._put_object_request("test/resources/s3_put_object.txt")
+        self.region = "something"
+        self._test_s3_put_get_object(request, S3RequestType.PUT_OBJECT)
+        self.put_body_stream.close()
+
+    def test_multipart_download_with_invalid_region(self):
+        request = self._get_object_request(self.get_test_object_path)
+        self.region = "us-west-1"
+        self._test_s3_put_get_object(request, S3RequestType.GET_OBJECT)
+
+    def test_multipart_upload_with_invalid_file_path(self):
+        request = self._put_object_request("test/resources/s3_put_object.txt")
+        request_type = S3RequestType.PUT_OBJECT
+        # close the stream, to test if the C FILE pointer as the input stream working well.
+        self.put_body_stream.close()
+        s3_client = s3_client_new(False, self.region, 10 * 1024 * 1024)
+        s3_request = s3_client.make_request(
+            request=request,
+            type=request_type,
+            send_filepath="test/resources/",  # invalid path
+            on_headers=self._on_request_headers,
+            on_progress=self._on_progress)
+        finished_future = s3_request.finished_future
+        # Finish future should result in error. Failed read from input stream
+        finished_future.result(self.timeout)
+
+        # check result
+        self.assertEqual(
+            self.data_len,
+            self.transferred_len,
+            "the transferred length reported does not match body we sent")
+        self._validate_successful_get_response(request_type is S3RequestType.PUT_OBJECT)
+        shutdown_event = s3_request.shutdown_event
+        del s3_request
+        self.assertTrue(shutdown_event.wait(self.timeout))
 
 
 if __name__ == '__main__':
