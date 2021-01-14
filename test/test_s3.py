@@ -129,7 +129,7 @@ class S3RequestTest(NativeResourceTest):
                 self.received_body_len,
                 "Received body length does not match the Content-Length header")
 
-    def _test_s3_put_get_object(self, request, request_type):
+    def _test_s3_put_get_object(self, request, request_type, exception_name=None):
         s3_client = s3_client_new(False, self.region, 5 * 1024 * 1024)
         init_logging(LogLevel.Debug, "stderr")
         s3_request = s3_client.make_request(
@@ -138,8 +138,12 @@ class S3RequestTest(NativeResourceTest):
             on_headers=self._on_request_headers,
             on_body=self._on_request_body)
         finished_future = s3_request.finished_future
-        finished_future.result(self.timeout)
-        self._validate_successful_get_response(request_type is S3RequestType.PUT_OBJECT)
+        try:
+            finished_future.result(self.timeout)
+        except Exception as e:
+            self.assertEqual(e.name, exception_name)
+        else:
+            self._validate_successful_get_response(request_type is S3RequestType.PUT_OBJECT)
         shutdown_event = s3_request.shutdown_event
         del s3_request
         self.assertTrue(shutdown_event.wait(self.timeout))
@@ -313,13 +317,13 @@ class S3RequestTest(NativeResourceTest):
     def test_multipart_upload_with_invalid_request(self):
         request = self._put_object_request("test/resources/s3_put_object.txt")
         request.headers.set("Content-MD5", "something")
-        self._test_s3_put_get_object(request, S3RequestType.PUT_OBJECT)
+        self._test_s3_put_get_object(request, S3RequestType.PUT_OBJECT, "AWS_ERROR_S3_INVALID_RESPONSE_STATUS")
         self.put_body_stream.close()
 
-    def test_multipart_upload_with_invalid_region(self):
+    def test_multipart_upload_with_bad_region(self):
         request = self._put_object_request("test/resources/s3_put_object.txt")
         self.region = "something"
-        self._test_s3_put_get_object(request, S3RequestType.PUT_OBJECT)
+        self._test_s3_put_get_object(request, S3RequestType.PUT_OBJECT, "AWS_ERROR_S3_INVALID_RESPONSE_STATUS")
         self.put_body_stream.close()
 
     def test_multipart_download_with_invalid_region(self):
