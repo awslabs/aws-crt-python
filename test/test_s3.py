@@ -3,7 +3,6 @@
 
 import unittest
 import os
-import threading
 from tempfile import NamedTemporaryFile
 from test import NativeResourceTest
 from concurrent.futures import Future
@@ -70,16 +69,6 @@ class S3ClientTest(NativeResourceTest):
         shutdown_event = s3_client.shutdown_event
         del s3_client
         self.assertTrue(shutdown_event.wait(self.timeout))
-
-
-class CancelThread(threading.Thread):
-    def __init__(self, s3_request):
-        threading.Thread.__init__(self)
-        self._s3_request = s3_request
-
-    def run(self):
-        self._s3_request.cancel()
-        self._s3_request = None
 
 
 class S3RequestTest(NativeResourceTest):
@@ -298,14 +287,13 @@ class S3RequestTest(NativeResourceTest):
 
         if cancel_after_read:
             read_futrue.result(self.timeout)
-        cancel_thread = CancelThread(s3_request)
-        cancel_thread.start()
+
+        s3_request.cancel()
         finished_future = s3_request.finished_future
         try:
             finished_future.result(self.timeout)
         except Exception as e:
             self.assertEqual(e.name, "AWS_ERROR_S3_CANCELED")
-        cancel_thread.join()
         shutdown_event = s3_request.shutdown_event
         del s3_request
         self.assertTrue(shutdown_event.wait(self.timeout))
