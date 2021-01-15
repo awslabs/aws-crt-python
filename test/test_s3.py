@@ -79,6 +79,7 @@ class CancelThread(threading.Thread):
 
     def run(self):
         self._s3_request.cancel()
+        self._s3_request = None
 
 
 class S3RequestTest(NativeResourceTest):
