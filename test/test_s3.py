@@ -39,13 +39,27 @@ def s3_client_new(secure, region, part_size=0):
 class FakeReadStream(object):
     def __init__(self, read_future):
         self._future = read_future
-        pass
 
     def read(self, length):
         fake_string = "x" * length
         fake_data = bytes(fake_string, 'utf-8')
         if not self._future.done():
             self._future.set_result(None)
+        return fake_data
+
+
+class BadReadStream(object):
+    def __init__(self):
+        pass
+
+    def readinto1(self, m):
+        raise IOError
+
+    def read(self, length):
+        # Create a data with less bytes
+        fake_string = "x" * length / 2
+        fake_data = bytes(fake_string, 'utf-8')
+        raise IOError
         return fake_data
 
 
@@ -312,8 +326,7 @@ class S3RequestTest(NativeResourceTest):
         cancel_thread.join()
         shutdown_event = s3_request.shutdown_event
         del s3_request
-        # TODO The meta request doesn't clean up correctly
-        shutdown_event.wait(1)
+        self.assertTrue(shutdown_event.wait(self.timeout))
 
         # TODO If CLI installed, run the following command to ensure the cancel succeed.
         # aws s3api list-multipart-uploads --bucket aws-crt-canary-bucket --prefix 'cancelled_request'
@@ -331,33 +344,24 @@ class S3RequestTest(NativeResourceTest):
         self._test_s3_put_get_object(request, S3RequestType.PUT_OBJECT, "AWS_ERROR_S3_INVALID_RESPONSE_STATUS")
         self.put_body_stream.close()
 
-    def test_multipart_upload_with_invalid_file_path(self):
-        # TODO instead of open an invalid file path, we should use the input stream to report an error
-        request = self._put_object_request("test/resources/s3_put_object.txt")
-        request_type = S3RequestType.PUT_OBJECT
-        # close the stream, to test if the C FILE pointer as the input stream working well.
-        self.put_body_stream.close()
-        s3_client = s3_client_new(False, self.region, 10 * 1024 * 1024)
+    def test_multipart_upload_with_invalid_input_stream(self):
+        put_body_stream = BadReadStream()
+        data_len = 10 * 1024 * 1024 * 1024  # some fake length
+        headers = HttpHeaders([("host", self._build_endpoint_string(self.region, self.bucket_name)),
+                               ("Content-Type", "text/plain"), ("Content-Length", str(data_len))])
+        http_request = HttpRequest("PUT", "/cancelled_request", headers, put_body_stream)
+        s3_client = s3_client_new(False, self.region, 5 * 1024 * 1024)
         s3_request = s3_client.make_request(
-            request=request,
-            type=request_type,
-            send_filepath="test/resources",  # invalid path
-            on_headers=self._on_request_headers,
-            on_progress=self._on_progress)
+            request=http_request,
+            type=S3RequestType.PUT_OBJECT,
+            on_headers=self._on_request_headers)
+
         finished_future = s3_request.finished_future
-        # Finish future should result in error. Failed read from input stream
         try:
             finished_future.result(self.timeout)
         except Exception as e:
-            print(e)
-            # should fail with invalid path
-            self.assertIsNotNone(e)
-
-        # check result
-        self.assertEqual(
-            0,
-            self.transferred_len,
-            "the transferred length should be zero")
+            # The python raised error will result in AWS_ERROR_UNKNOWN
+            self.assertEqual(e.name, "AWS_ERROR_UNKNOWN")
         shutdown_event = s3_request.shutdown_event
         del s3_request
         self.assertTrue(shutdown_event.wait(self.timeout))
