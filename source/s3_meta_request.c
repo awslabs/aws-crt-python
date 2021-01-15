@@ -276,6 +276,7 @@ done:
 
 /* Invoked when the python object get cleaned up */
 static void s_s3_meta_request_capsule_destructor(PyObject *capsule) {
+    printf("s_s3_meta_request_capsule_destructor\n");
     struct s3_meta_request_binding *meta_request = PyCapsule_GetPointer(capsule, s_capsule_name_s3_meta_request);
 
     if (meta_request->recv_file) {
@@ -324,6 +325,7 @@ static int s_aws_input_stream_file_read(struct aws_input_stream *stream, struct 
     size_t pre_len = dest->len;
 
     if (aws_input_stream_read(impl->actual_stream, dest)) {
+        printf("errored!\n");
         return AWS_OP_ERR;
     }
 
@@ -418,6 +420,7 @@ static struct aws_input_stream *s_input_stream_new_from_file(
     input_stream->impl = impl;
 
     impl->actual_stream = aws_input_stream_new_from_file(allocator, file_name);
+    printf("%p\n", impl->actual_stream);
     if (!impl->actual_stream) {
         aws_mem_release(allocator, input_stream);
         return NULL;
@@ -613,8 +616,9 @@ PyObject *aws_py_s3_meta_request_cancel(PyObject *self, PyObject *args) {
     if (!meta_request) {
         return NULL;
     }
-
+    printf("before cancel\n");
     aws_s3_meta_request_cancel(meta_request);
+    printf("after cancel\n");
 
     Py_RETURN_NONE;
 }
