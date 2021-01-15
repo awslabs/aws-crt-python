@@ -332,6 +332,7 @@ class S3RequestTest(NativeResourceTest):
         self.put_body_stream.close()
 
     def test_multipart_upload_with_invalid_file_path(self):
+        # TODO instead of open an invalid file path, we should use the input stream to report an error
         request = self._put_object_request("test/resources/s3_put_object.txt")
         request_type = S3RequestType.PUT_OBJECT
         # close the stream, to test if the C FILE pointer as the input stream working well.
