@@ -299,7 +299,10 @@ class S3RequestTest(NativeResourceTest):
         except Exception as e:
             self.assertEqual(e.name, "AWS_ERROR_S3_CANCELED")
 
+        shutdown_event = s3_request.shutdown_event
+        del s3_request
         # TODO The meta request doesn't clean up correctly
+        shutdown_event.wait(1)
 
         # TODO If CLI installed, run the following command to ensure the cancel succeed.
         # aws s3api list-multipart-uploads --bucket aws-crt-canary-bucket --prefix 'cancelled_request'
