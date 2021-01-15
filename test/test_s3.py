@@ -72,7 +72,7 @@ class S3ClientTest(NativeResourceTest):
         self.assertTrue(shutdown_event.wait(self.timeout))
 
 
-class myThread (threading.Thread):
+class CancelThread(threading.Thread):
     def __init__(self, s3_request):
         threading.Thread.__init__(self)
         self._s3_request = s3_request
@@ -298,17 +298,17 @@ class S3RequestTest(NativeResourceTest):
 
         if cancel_after_read:
             read_futrue.result(self.timeout)
-        thread1 = myThread(s3_request)
-        thread1.start()
+        cancel_thread = CancelThread(s3_request)
+        cancel_thread.start()
         finished_future = s3_request.finished_future
         try:
             finished_future.result(self.timeout)
         except Exception as e:
             self.assertEqual(e.name, "AWS_ERROR_S3_CANCELED")
-        thread1.join()
+        cancel_thread.join()
         shutdown_event = s3_request.shutdown_event
         del s3_request
-        shutdown_event.wait(self.timeout)
+        self.assertTrue(shutdown_event.wait(self.timeout))
 
         # TODO If CLI installed, run the following command to ensure the cancel succeed.
         # aws s3api list-multipart-uploads --bucket aws-crt-canary-bucket --prefix 'cancelled_request'
