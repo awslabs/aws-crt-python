@@ -239,13 +239,7 @@ class S3Request(NativeResource):
             If the error happens, the Future will contain an exception
             indicating why it failed.
     """
-    __slots__ = (
-        '_on_headers_cb',
-        '_on_body_cb',
-        '_on_done_cb',
-        '_on_progress_cb',
-        '_finished_future',
-        '_http_request')
+    __slots__ = ('_finished_future')
 
     def __init__(
             self,
@@ -268,11 +262,6 @@ class S3Request(NativeResource):
         assert callable(on_done) or on_done is None
 
         super().__init__()
-
-        self._on_headers_cb = on_headers
-        self._on_body_cb = on_body
-        self._on_done_cb = on_done
-        self._on_progress_cb = on_progress
 
         self._finished_future = Future()
 
