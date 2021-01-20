@@ -238,8 +238,12 @@ class S3Request(NativeResource):
             resolve when the s3 request has finished successfully.
             If the error happens, the Future will contain an exception
             indicating why it failed.
+
+        shutdown_event (threading.Event): Signals when underlying threads and
+            structures have all finished shutting down. Shutdown begins when the
+            S3Request object is destroyed.
     """
-    __slots__ = ('_finished_future')
+    __slots__ = ('_finished_future', 'shutdown_event')
 
     def __init__(
             self,
@@ -264,10 +268,12 @@ class S3Request(NativeResource):
         super().__init__()
 
         self._finished_future = Future()
+        self.shutdown_event = threading.Event()
 
         s3_request_core = _S3RequestCore(
             request,
             self._finished_future,
+            self.shutdown_event,
             credential_provider,
             on_headers,
             on_body,
@@ -315,6 +321,7 @@ class _S3RequestCore:
             self,
             request,
             finish_future,
+            shutdown_event,
             credential_provider=None,
             on_headers=None,
             on_body=None,
@@ -330,6 +337,7 @@ class _S3RequestCore:
         self._on_progress_cb = on_progress
 
         self._finished_future = finish_future
+        self._shutdown_event = shutdown_event
 
     def _on_headers(self, status_code, headers):
         if self._on_headers_cb:

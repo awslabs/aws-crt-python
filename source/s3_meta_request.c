@@ -23,12 +23,6 @@ struct s3_meta_request_binding {
     /* Reference to python object that reference to other related python object to keep it alive */
     PyObject *py_core;
 
-    /* If error headers included from finish call, store the python copy of the headers */
-    PyObject *error_headers;
-    /* If error body included from finish result, deep copy of the response body */
-    struct aws_byte_buf error_response_body;
-    int error_code;
-
     /**
      * file path if set, it handles file operation from C land to reduce the cost
      * passing chunks from C into python. One for recv/writing, the other for send/reading
@@ -46,9 +40,6 @@ struct s3_meta_request_binding {
     uint64_t size_transferred;
     /* The time stamp when the progress reported */
     uint64_t last_sampled_time;
-
-    bool shutdown_called;
-    bool destructor_called;
 };
 
 struct aws_s3_meta_request *aws_py_get_s3_meta_request(PyObject *meta_request) {
@@ -65,8 +56,6 @@ static void s_destroy(struct s3_meta_request_binding *meta_request) {
         aws_http_message_release(meta_request->copied_message);
     }
     Py_XDECREF(meta_request->py_core);
-    Py_XDECREF(meta_request->error_headers);
-    aws_byte_buf_clean_up(&meta_request->error_response_body);
     aws_mem_release(aws_py_get_allocator(), meta_request);
 }
 
@@ -231,58 +220,19 @@ static void s_s3_request_on_finish(
     (void)meta_request;
     struct s3_meta_request_binding *request_binding = user_data;
 
-    if (request_binding->recv_file) {
-        fclose(request_binding->recv_file);
-        request_binding->recv_file = NULL;
+    if (meta_request->recv_file) {
+        fclose(meta_request->recv_file);
+        meta_request->recv_file = NULL;
     }
     /*************** GIL ACQUIRE ***************/
     PyGILState_STATE state;
     if (aws_py_gilstate_ensure(&state)) {
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
-    struct aws_allocator *allocator = aws_py_get_allocator();
-    if (meta_request_result->error_response_body) {
-        aws_byte_buf_init_copy(
-            &request_binding->error_response_body, allocator, meta_request_result->error_response_body);
-    }
+
     PyObject *header_list = NULL;
-    if (meta_request_result->error_response_headers) {
-        header_list = s_get_py_headers(meta_request_result->error_response_headers);
-        if (!header_list) {
-            PyErr_WriteUnraisable(request_binding->py_core);
-            goto done;
-        }
-    }
-    request_binding->error_code = meta_request_result->error_code;
-    request_binding->error_headers = header_list;
-done:
-    PyGILState_Release(state);
-    /*************** GIL RELEASE ***************/
-    aws_s3_meta_request_release(request_binding->native);
-}
-
-/* Invoked when the python object get cleaned up */
-static void s_s3_meta_request_capsule_destructor(PyObject *capsule) {
-    struct s3_meta_request_binding *meta_request = PyCapsule_GetPointer(capsule, s_capsule_name_s3_meta_request);
-
-    if (meta_request->recv_file) {
-        fclose(meta_request->recv_file);
-        meta_request->recv_file = NULL;
-    }
-    meta_request->destructor_called = true;
-    if (!meta_request->native) {
-        /* we hit this branch if things failed part way through setting up the binding,
-         * before the native aws_s3_meta_request could be created. */
-        s_destroy(meta_request);
-    } else {
-        if (meta_request->shutdown_called) {
-            s_destroy(meta_request);
-        }
-    }
-}
-
-static void s_invoke_finish_callbacks(struct s3_meta_request_binding *request_binding) {
     PyObject *result = NULL;
+
     if (request_binding->size_transferred) {
         /* report the remaining progress */
         result =
@@ -294,21 +244,54 @@ static void s_invoke_finish_callbacks(struct s3_meta_request_binding *request_bi
         }
         request_binding->size_transferred = 0;
     }
-    PyObject *header_list = request_binding->error_headers;
+    struct aws_byte_buf error_body;
+    AWS_ZERO_STRUCT(error_body);
+    /* Get the header and body of the error */
+    if (meta_request_result->error_response_headers) {
+        header_list = s_get_py_headers(meta_request_result->error_response_headers);
+        if (!header_list) {
+            PyErr_WriteUnraisable(request_binding->py_core);
+            goto done;
+        }
+    }
+    if (meta_request_result->error_response_body) {
+        error_body = *(meta_request_result->error_response_body);
+    }
     result = PyObject_CallMethod(
         request_binding->py_core,
         "_on_finish",
         "(iOy#)",
-        request_binding->error_code,
+        meta_request_result->error_code,
         header_list ? header_list : Py_None,
-        (const char *)(request_binding->error_response_body.buffer),
-        (Py_ssize_t)request_binding->error_response_body.len);
+        (const char *)(error_body.buffer),
+        (Py_ssize_t)error_body.len);
 
     if (result) {
         Py_DECREF(result);
     } else {
         /* Callback might fail during application shutdown */
         PyErr_WriteUnraisable(request_binding->py_core);
+    }
+done:
+    Py_XDECREF(header_list);
+    PyGILState_Release(state);
+    /*************** GIL RELEASE ***************/
+}
+
+/* Invoked when the python object get cleaned up */
+static void s_s3_meta_request_capsule_destructor(PyObject *capsule) {
+    struct s3_meta_request_binding *meta_request = PyCapsule_GetPointer(capsule, s_capsule_name_s3_meta_request);
+
+    if (meta_request->recv_file) {
+        fclose(meta_request->recv_file);
+        meta_request->recv_file = NULL;
+    }
+    if (meta_request->native) {
+        aws_s3_meta_request_release(meta_request->native);
+    } else {
+        /* we hit this branch if things failed part way through setting up the binding,
+         * before the native aws_s3_meta_request could be created. */
+        s_destroy(meta_request);
     }
 }
 
@@ -321,12 +304,14 @@ static void s_s3_request_on_shutdown(void *user_data) {
     if (aws_py_gilstate_ensure(&state)) {
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
-    s_invoke_finish_callbacks(request_binding);
-    Py_CLEAR(request_binding->py_core);
-    request_binding->shutdown_called = true;
-    if (request_binding->destructor_called) {
-        s_destroy(request_binding);
+
+    /* Deliver the built up list of (name,value) tuples */
+    PyObject *result = PyObject_CallMethod(request_binding->py_core, "_on_shutdown", NULL);
+    if (!result) {
+        PyErr_WriteUnraisable(request_binding->py_core);
     }
+
+    s_destroy(request_binding);
     PyGILState_Release(state);
     /*************** GIL RELEASE ***************/
 }
@@ -633,6 +618,7 @@ PyObject *aws_py_s3_meta_request_cancel(PyObject *self, PyObject *args) {
     if (!meta_request) {
         return NULL;
     }
+
     aws_s3_meta_request_cancel(meta_request);
 
     Py_RETURN_NONE;
