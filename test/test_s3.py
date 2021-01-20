@@ -7,6 +7,10 @@ from tempfile import NamedTemporaryFile
 from test import NativeResourceTest
 from concurrent.futures import Future
 
+import weakref
+import gc
+import sys
+
 from awscrt.http import HttpHeaders, HttpRequest
 from awscrt.s3 import S3Client, S3RequestType
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions
@@ -143,10 +147,6 @@ class S3RequestTest(NativeResourceTest):
         else:
             self._validate_successful_get_response(request_type is S3RequestType.PUT_OBJECT)
 
-        client_shutdown_event = s3_client.shutdown_event
-        del s3_client
-        self.assertTrue(client_shutdown_event.wait(self.timeout))
-
     def test_get_object(self):
         request = self._get_object_request(self.get_test_object_path)
         self._test_s3_put_get_object(request, S3RequestType.GET_OBJECT)
@@ -241,11 +241,6 @@ class S3RequestTest(NativeResourceTest):
 
             # The on_finish callback may invoke the progress
             self.assertLessEqual(self.progress_invoked, 2)
-            client_shutdown_event = s3_client.shutdown_event
-            del s3_client
-            del request
-            del self.s3_request
-            self.assertTrue(client_shutdown_event.wait(self.timeout))
             os.remove(file.name)
 
     def test_get_object_quick_cancel(self):
@@ -266,11 +261,6 @@ class S3RequestTest(NativeResourceTest):
                 finished_future.result(self.timeout)
             except Exception as e:
                 self.assertEqual(e.name, "AWS_ERROR_S3_CANCELED")
-            del s3_request
-            del request
-            client_shutdown_event = s3_client.shutdown_event
-            del s3_client
-            self.assertTrue(client_shutdown_event.wait(self.timeout))
             os.remove(file.name)
 
     def _put_object_cancel_helper(self, cancel_after_read):
@@ -295,9 +285,6 @@ class S3RequestTest(NativeResourceTest):
         except Exception as e:
             self.assertEqual(e.name, "AWS_ERROR_S3_CANCELED")
 
-        client_shutdown_event = s3_client.shutdown_event
-        del s3_client
-        self.assertTrue(client_shutdown_event.wait(self.timeout))
         # TODO If CLI installed, run the following command to ensure the cancel succeed.
         # aws s3api list-multipart-uploads --bucket aws-crt-canary-bucket --prefix 'cancelled_request'
         # Nothing should printout
