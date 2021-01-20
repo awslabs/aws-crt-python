@@ -244,6 +244,8 @@ class S3RequestTest(NativeResourceTest):
             self.assertLessEqual(self.progress_invoked, 2)
             client_shutdown_event = s3_client.shutdown_event
             del s3_client
+            del request
+            del self.s3_request
             self.assertTrue(client_shutdown_event.wait(self.timeout))
             os.remove(file.name)
 
@@ -266,6 +268,7 @@ class S3RequestTest(NativeResourceTest):
             except Exception as e:
                 self.assertEqual(e.name, "AWS_ERROR_S3_CANCELED")
             del s3_request
+            del request
             client_shutdown_event = s3_client.shutdown_event
             del s3_client
             self.assertTrue(client_shutdown_event.wait(self.timeout))

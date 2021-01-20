@@ -322,8 +322,8 @@ static void s_s3_request_on_shutdown(void *user_data) {
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
     s_invoke_finish_callbacks(request_binding);
-    request_binding->shutdown_called = true;
     Py_CLEAR(request_binding->py_core);
+    request_binding->shutdown_called = true;
     if (request_binding->destructor_called) {
         s_destroy(request_binding);
     }
