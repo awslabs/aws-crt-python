@@ -46,6 +46,9 @@ struct s3_meta_request_binding {
     uint64_t size_transferred;
     /* The time stamp when the progress reported */
     uint64_t last_sampled_time;
+
+    bool shutdown_called;
+    bool destructor_called;
 };
 
 struct aws_s3_meta_request *aws_py_get_s3_meta_request(PyObject *meta_request) {
@@ -266,11 +269,15 @@ static void s_s3_meta_request_capsule_destructor(PyObject *capsule) {
         fclose(meta_request->recv_file);
         meta_request->recv_file = NULL;
     }
-
+    meta_request->destructor_called = true;
     if (!meta_request->native) {
         /* we hit this branch if things failed part way through setting up the binding,
          * before the native aws_s3_meta_request could be created. */
         s_destroy(meta_request);
+    } else {
+        if (meta_request->shutdown_called) {
+            s_destroy(meta_request);
+        }
     }
 }
 
@@ -315,8 +322,10 @@ static void s_s3_request_on_shutdown(void *user_data) {
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
     s_invoke_finish_callbacks(request_binding);
-
-    s_destroy(request_binding);
+    request_binding->shutdown_called = true;
+    if (request_binding->destructor_called) {
+        s_destroy(request_binding);
+    }
     PyGILState_Release(state);
     /*************** GIL RELEASE ***************/
 }
