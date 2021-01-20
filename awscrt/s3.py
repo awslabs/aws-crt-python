@@ -277,7 +277,6 @@ class S3Request(NativeResource):
         self._finished_future = Future()
 
         s3_request_core = _S3RequestCore(
-            client,
             request,
             self._finished_future,
             credential_provider,
@@ -325,7 +324,6 @@ class _S3RequestCore:
 
     def __init__(
             self,
-            client,
             request,
             finish_future,
             credential_provider=None,
@@ -334,7 +332,6 @@ class _S3RequestCore:
             on_done=None,
             on_progress=None):
 
-        self._client = client
         self._request = request
         self._credential_provider = credential_provider
 
