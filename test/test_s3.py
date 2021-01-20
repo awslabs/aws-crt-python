@@ -71,16 +71,6 @@ class S3ClientTest(NativeResourceTest):
         self.assertTrue(shutdown_event.wait(self.timeout))
 
 
-class CancelThread(threading.Thread):
-    def __init__(self, s3_request):
-        threading.Thread.__init__(self)
-        self._s3_request = s3_request
-
-    def run(self):
-        self._s3_request.cancel()
-        self._s3_request = None
-
-
 class S3RequestTest(NativeResourceTest):
     def setUp(self):
         self.get_test_object_path = "/get_object_test_10MB.txt"
@@ -219,9 +209,6 @@ class S3RequestTest(NativeResourceTest):
             self.transferred_len,
             "the transferred length reported does not match body we sent")
         self._validate_successful_get_response(request_type is S3RequestType.PUT_OBJECT)
-        shutdown_event = s3_request.shutdown_event
-        del s3_request
-        self.assertTrue(shutdown_event.wait(self.timeout))
 
     def _on_progress_cancel_after_first_chunk(self, progress):
         self.transferred_len += progress
@@ -276,9 +263,6 @@ class S3RequestTest(NativeResourceTest):
             except Exception as e:
                 self.assertEqual(e.name, "AWS_ERROR_S3_CANCELED")
 
-            shutdown_event = s3_request.shutdown_event
-            del s3_request
-            self.assertTrue(shutdown_event.wait(self.timeout))
             os.remove(file.name)
 
     def _put_object_cancel_helper(self, cancel_after_read):
@@ -296,14 +280,12 @@ class S3RequestTest(NativeResourceTest):
 
         if cancel_after_read:
             read_futrue.result(self.timeout)
-        cancel_thread = CancelThread(s3_request)
-        cancel_thread.start()
+        s3_request.cancel()
         finished_future = s3_request.finished_future
         try:
             finished_future.result(self.timeout)
         except Exception as e:
             self.assertEqual(e.name, "AWS_ERROR_S3_CANCELED")
-        cancel_thread.join()
 
         # TODO If CLI installed, run the following command to ensure the cancel succeed.
         # aws s3api list-multipart-uploads --bucket aws-crt-canary-bucket --prefix 'cancelled_request'
@@ -320,27 +302,6 @@ class S3RequestTest(NativeResourceTest):
         request.headers.set("Content-MD5", "something")
         self._test_s3_put_get_object(request, S3RequestType.PUT_OBJECT, "AWS_ERROR_S3_INVALID_RESPONSE_STATUS")
         self.put_body_stream.close()
-
-    # def test_multipart_upload_with_invalid_input_stream(self):
-    #     put_body_stream = open("test/resources/s3_put_object.txt", "r+b")
-    #     data_len = 10 * 1024 * 1024 * 1024  # some fake length
-    #     headers = HttpHeaders([("host", self._build_endpoint_string(self.region, self.bucket_name)),
-    #                            ("Content-Type", "text/plain"), ("Content-Length", str(data_len))])
-    #     http_request = HttpRequest("PUT", "/cancelled_request", headers, put_body_stream)
-    #     s3_client = s3_client_new(False, self.region, 5 * 1024 * 1024)
-    #     put_body_stream.close()
-    #     s3_request = s3_client.make_request(
-    #         request=http_request,
-    #         type=S3RequestType.PUT_OBJECT,
-    #         on_headers=self._on_request_headers)
-
-    #     finished_future = s3_request.finished_future
-    #     try:
-    #         finished_future.result(self.timeout)
-    #     except Exception as e:
-    #         print(e)
-    #         # The python raised error will result in AWS_ERROR_UNKNOWN
-    #         # self.assertEqual(e.name, "AWS_ERROR_UNKNOWN")
 
 
 if __name__ == '__main__':
