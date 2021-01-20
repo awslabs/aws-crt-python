@@ -367,6 +367,7 @@ class _S3RequestCore:
         if self._on_done_cb:
             self._on_done_cb(error=error, error_headers=error_headers, error_body=error_body)
         self._client = None
+        self._request = None
 
     def _on_progress(self, progress):
         if self._on_progress_cb:
