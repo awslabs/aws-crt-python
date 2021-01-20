@@ -712,7 +712,6 @@ int s_aws_input_stream_py_read(struct aws_input_stream *stream, struct aws_byte_
     if (method_result != Py_None) {
         bytes_read = PyLong_AsSsize_t(method_result);
         if (bytes_read == -1 && PyErr_Occurred()) {
-            printf("something is wrong\n");
             aws_result = aws_py_raise_error();
             goto done;
         }

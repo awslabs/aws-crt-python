@@ -3,7 +3,6 @@
 
 import unittest
 import os
-import threading
 from tempfile import NamedTemporaryFile
 from test import NativeResourceTest
 from concurrent.futures import Future
