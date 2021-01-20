@@ -242,6 +242,9 @@ class S3RequestTest(NativeResourceTest):
 
             # The on_finish callback may invoke the progress
             self.assertLessEqual(self.progress_invoked, 2)
+            client_shutdown_event = s3_client.shutdown_event
+            del s3_client
+            self.assertTrue(client_shutdown_event.wait(self.timeout))
             os.remove(file.name)
 
     def test_get_object_quick_cancel(self):
@@ -290,6 +293,9 @@ class S3RequestTest(NativeResourceTest):
         except Exception as e:
             self.assertEqual(e.name, "AWS_ERROR_S3_CANCELED")
 
+        client_shutdown_event = s3_client.shutdown_event
+        del s3_client
+        self.assertTrue(client_shutdown_event.wait(self.timeout))
         # TODO If CLI installed, run the following command to ensure the cancel succeed.
         # aws s3api list-multipart-uploads --bucket aws-crt-canary-bucket --prefix 'cancelled_request'
         # Nothing should printout
