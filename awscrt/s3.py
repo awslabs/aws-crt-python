@@ -359,7 +359,7 @@ class _S3RequestCore:
         self._owner._binding = None  # force S3Request's C parts to be cleaned up
         self._owner = None  # allow S3Request to be cleaned up
 
-    def _shutdown(self):
+    def _on_shutdown(self):
         error = None
         if self._done_error_code:
             error = awscrt.exceptions.from_code(self._done_error_code)
