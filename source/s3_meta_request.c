@@ -220,9 +220,9 @@ static void s_s3_request_on_finish(
     (void)meta_request;
     struct s3_meta_request_binding *request_binding = user_data;
 
-    if (meta_request->recv_file) {
-        fclose(meta_request->recv_file);
-        meta_request->recv_file = NULL;
+    if (request_binding->recv_file) {
+        fclose(request_binding->recv_file);
+        request_binding->recv_file = NULL;
     }
     /*************** GIL ACQUIRE ***************/
     PyGILState_STATE state;

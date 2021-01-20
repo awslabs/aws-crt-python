@@ -271,6 +271,7 @@ class S3Request(NativeResource):
         self.shutdown_event = threading.Event()
 
         s3_request_core = _S3RequestCore(
+            self,
             request,
             self._finished_future,
             self.shutdown_event,
@@ -319,6 +320,7 @@ class _S3RequestCore:
 
     def __init__(
             self,
+            owner,
             request,
             finish_future,
             shutdown_event,
@@ -328,6 +330,7 @@ class _S3RequestCore:
             on_done=None,
             on_progress=None):
 
+        self._owner = owner
         self._request = request
         self._credential_provider = credential_provider
 
@@ -348,18 +351,28 @@ class _S3RequestCore:
             self._on_body_cb(chunk=chunk, offset=offset)
 
     def _on_finish(self, error_code, error_headers, error_body):
+        # temporary hack: delay on_done callback until shutdown
+        self._done_error_code = error_code
+        self._done_error_headers = error_headers
+        self._done_error_body = error_body
+
+        self._owner._binding = None  # force S3Request's C parts to be cleaned up
+        self._owner = None  # allow S3Request to be cleaned up
+
+    def _shutdown(self):
         error = None
-        if error_code:
-            error = awscrt.exceptions.from_code(error_code)
-            if error_body:
+        if self._done_error_code:
+            error = awscrt.exceptions.from_code(self._done_error_code)
+            if self._done_error_body:
                 # TODO The error body is XML, will need to parse it to something prettier.
-                extra_message = ". Body from error request is: " + str(error_body)
+                extra_message = ". Body from error request is: " + str(self._done_error_body)
                 error.message = error.message + extra_message
             self._finished_future.set_exception(error)
         else:
             self._finished_future.set_result(None)
         if self._on_done_cb:
-            self._on_done_cb(error=error, error_headers=error_headers, error_body=error_body)
+            self._on_done_cb(error=error, error_headers=self._done_error_headers, error_body=self._done_error_body)
+        self._shutdown_event.set()
 
     def _on_progress(self, progress):
         if self._on_progress_cb:
