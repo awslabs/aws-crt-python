@@ -448,6 +448,14 @@ class Connection(NativeResource):
 
                 *   `payload` (bytes): Payload of message.
 
+                *   `dup` (bool): DUP flag. If True, this might be re-delivery
+                    of an earlier attempt to send the message.
+
+                *   `qos` (:class:`QoS`): Quality of Service used to deliver the message.
+
+                *   `retain` (bool): Retain flag. If True, the message was sent
+                    as a result of a new subscription being made by the client.
+
                 *   `**kwargs` (dict): Forward-compatibility kwargs.
 
         Returns:
@@ -473,8 +481,14 @@ class Connection(NativeResource):
         packet_id = 0
 
         if callback:
-            def callback_wrapper(topic, payload):
-                callback(topic=topic, payload=payload)
+            def callback_wrapper(topic, payload, dup, qos, retain):
+                try:
+                    callback(topic=topic, payload=payload, dup=dup, qos=QoS(qos), retain=retain)
+                except TypeError:
+                    # This callback used to have fewer args.
+                    # Try again, passing only those those args, to cover case where
+                    # user function failed to take forward-compatibility **kwargs.
+                    callback(topic=topic, payload=payload)
         else:
             callback_wrapper = None
 
@@ -512,13 +526,27 @@ class Connection(NativeResource):
 
             *   `payload` (bytes): Payload of message.
 
+            *   `dup` (bool): DUP flag. If True, this might be re-delivery
+                of an earlier attempt to send the message.
+
+            *   `qos` (:class:`QoS`): Quality of Service used to deliver the message.
+
+            *   `retain` (bool): Retain flag. If True, the message was sent
+                as a result of a new subscription being made by the client.
+
             *   `**kwargs` (dict): Forward-compatibility kwargs.
         """
         assert callable(callback) or callback is None
 
         if callback:
-            def callback_wrapper(topic, payload):
-                callback(topic=topic, payload=payload)
+            def callback_wrapper(topic, payload, dup, qos, retain):
+                try:
+                    callback(topic=topic, payload=payload, dup=dup, qos=QoS(qos), retain=retain)
+                except TypeError:
+                    # This callback used to have fewer args.
+                    # Try again, passing only those those args, to cover case where
+                    # user function failed to take forward-compatibility **kwargs.
+                    callback(topic=topic, payload=payload)
         else:
             callback_wrapper = None
 
