@@ -96,13 +96,15 @@ class S3RequestTest(NativeResourceTest):
         request = HttpRequest("GET", object_path, headers)
         return request
 
-    def _put_object_request(self, file_name):
+    def _put_object_request(self, file_name, path=None):
         self.put_body_stream = open(file_name, "r+b")
         file_stats = os.stat(file_name)
         self.data_len = file_stats.st_size
         headers = HttpHeaders([("host", self._build_endpoint_string(self.region, self.bucket_name)),
                                ("Content-Type", "text/plain"), ("Content-Length", str(self.data_len))])
-        request = HttpRequest("PUT", self.put_test_object_path, headers, self.put_body_stream)
+        if path is None:
+            path = self.put_test_object_path
+        request = HttpRequest("PUT", path, headers, self.put_body_stream)
         return request
 
     def _on_request_headers(self, status_code, headers, **kargs):
@@ -155,6 +157,30 @@ class S3RequestTest(NativeResourceTest):
         request = self._put_object_request("test/resources/s3_put_object.txt")
         self._test_s3_put_get_object(request, S3RequestType.PUT_OBJECT)
         self.put_body_stream.close()
+
+    def test_put_object_multiple_times(self):
+        s3_client = s3_client_new(False, self.region, 5 * 1024 * 1024)
+        finished_futures = []
+        for i in range(2):
+            path = "/put_object_test_py_10MB_{}.txt".format(str(i))
+            request = self._put_object_request("test/resources/s3_put_object.txt", path)
+            s3_request = s3_client.make_request(
+                request=request,
+                type=S3RequestType.PUT_OBJECT,
+                on_headers=self._on_request_headers,
+                on_body=self._on_request_body)
+            finished_futures.append(s3_request.finished_future)
+
+        try:
+            for future in finished_futures:
+                future.result(self.timeout)
+        except Exception as e:
+            # failed
+            self.assertTrue(False)
+
+        client_shutdown_event = s3_client.shutdown_event
+        del s3_client
+        self.assertTrue(client_shutdown_event.wait(self.timeout))
 
     def test_get_object_file_object(self):
         request = self._get_object_request(self.get_test_object_path)
