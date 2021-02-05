@@ -145,9 +145,9 @@ class S3RequestTest(NativeResourceTest):
         else:
             self._validate_successful_get_response(request_type is S3RequestType.PUT_OBJECT)
 
-        client_shutdown_event = s3_client.shutdown_event
-        del s3_client
-        self.assertTrue(client_shutdown_event.wait(self.timeout))
+        shutdown_event = s3_request.shutdown_event
+        s3_request = None
+        self.assertTrue(shutdown_event.wait(self.timeout))
 
     def test_get_object(self):
         request = self._get_object_request(self.get_test_object_path)
