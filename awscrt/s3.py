@@ -348,7 +348,6 @@ class _S3RequestCore:
             self._on_body_cb(chunk=chunk, offset=offset)
 
     def _on_shutdown(self):
-        print("shutdown")
         self._shutdown_event.set()
 
     def _on_finish(self, error_code, error_headers, error_body):
