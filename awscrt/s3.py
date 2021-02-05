@@ -348,6 +348,7 @@ class _S3RequestCore:
             self._on_body_cb(chunk=chunk, offset=offset)
 
     def _on_shutdown(self):
+        print("shutdown")
         self._shutdown_event.set()
 
     def _on_finish(self, error_code, error_headers, error_body):
@@ -363,6 +364,7 @@ class _S3RequestCore:
             self._finished_future.set_result(None)
         if self._on_done_cb:
             self._on_done_cb(error=error, error_headers=error_headers, error_body=error_body)
+        self._request = None
 
     def _on_progress(self, progress):
         if self._on_progress_cb:
