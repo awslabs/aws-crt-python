@@ -240,7 +240,6 @@ class S3RequestTest(NativeResourceTest):
         self.transferred_len += progress
         self.progress_invoked += 1
         self.s3_request.cancel()
-        self.s3_request = None
 
     def test_multipart_get_object_cancel(self):
         # a 5 GB file
@@ -269,9 +268,9 @@ class S3RequestTest(NativeResourceTest):
 
             # The on_finish callback may invoke the progress
             self.assertLessEqual(self.progress_invoked, 2)
-            client_shutdown_event = s3_client.shutdown_event
-            del s3_client
-            self.assertTrue(client_shutdown_event.wait(self.timeout))
+            shutdown_event = self.s3_request.shutdown_event
+            self.s3_request = None
+            self.assertTrue(shutdown_event.wait(self.timeout))
             os.remove(file.name)
 
     def test_get_object_quick_cancel(self):
