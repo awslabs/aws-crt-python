@@ -271,7 +271,7 @@ class S3Request(NativeResource):
         self.shutdown_event = threading.Event()
 
         s3_request_core = _S3RequestCore(
-            self,
+            request,
             self._finished_future,
             self.shutdown_event,
             credential_provider,
