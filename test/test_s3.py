@@ -161,16 +161,16 @@ class S3RequestTest(NativeResourceTest):
     def test_put_object_multiple_times(self):
         s3_client = s3_client_new(False, self.region, 5 * 1024 * 1024)
         finished_futures = []
-        for i in range(2):
+        for i in range(3):
             path = "/put_object_test_py_10MB_{}.txt".format(str(i))
             request = self._put_object_request("test/resources/s3_put_object.txt", path)
             s3_request = s3_client.make_request(
                 request=request,
                 type=S3RequestType.PUT_OBJECT,
+                send_filepath="test/resources/s3_put_object.txt",
                 on_headers=self._on_request_headers,
                 on_body=self._on_request_body)
             finished_futures.append(s3_request.finished_future)
-
         try:
             for future in finished_futures:
                 future.result(self.timeout)
@@ -181,6 +181,7 @@ class S3RequestTest(NativeResourceTest):
         client_shutdown_event = s3_client.shutdown_event
         del s3_client
         self.assertTrue(client_shutdown_event.wait(self.timeout))
+        self.put_body_stream.close()
 
     def test_get_object_file_object(self):
         request = self._get_object_request(self.get_test_object_path)
