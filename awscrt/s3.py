@@ -243,14 +243,7 @@ class S3Request(NativeResource):
             structures have all finished shutting down. Shutdown begins when the
             S3Request object is destroyed.
     """
-    __slots__ = (
-        '_on_headers_cb',
-        '_on_body_cb',
-        '_on_done_cb',
-        '_on_progress_cb',
-        '_finished_future',
-        '_http_request',
-        'shutdown_event')
+    __slots__ = ('_finished_future', 'shutdown_event')
 
     def __init__(
             self,
@@ -274,17 +267,10 @@ class S3Request(NativeResource):
 
         super().__init__()
 
-        self._on_headers_cb = on_headers
-        self._on_body_cb = on_body
-        self._on_done_cb = on_done
-        self._on_progress_cb = on_progress
-
         self._finished_future = Future()
-
         self.shutdown_event = threading.Event()
 
         s3_request_core = _S3RequestCore(
-            client,
             request,
             self._finished_future,
             self.shutdown_event,
@@ -333,7 +319,6 @@ class _S3RequestCore:
 
     def __init__(
             self,
-            client,
             request,
             finish_future,
             shutdown_event,
@@ -343,7 +328,6 @@ class _S3RequestCore:
             on_done=None,
             on_progress=None):
 
-        self._client = client
         self._request = request
         self._credential_provider = credential_provider
 
@@ -355,9 +339,6 @@ class _S3RequestCore:
         self._finished_future = finish_future
         self._shutdown_event = shutdown_event
 
-    def _on_shutdown(self):
-        self._shutdown_event.set()
-
     def _on_headers(self, status_code, headers):
         if self._on_headers_cb:
             self._on_headers_cb(status_code=status_code, headers=headers)
@@ -365,6 +346,9 @@ class _S3RequestCore:
     def _on_body(self, chunk, offset):
         if self._on_body_cb:
             self._on_body_cb(chunk=chunk, offset=offset)
+
+    def _on_shutdown(self):
+        self._shutdown_event.set()
 
     def _on_finish(self, error_code, error_headers, error_body):
         error = None

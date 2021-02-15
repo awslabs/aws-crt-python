@@ -9,7 +9,7 @@ from concurrent.futures import Future
 
 from awscrt.http import HttpHeaders, HttpRequest
 from awscrt.s3 import S3Client, S3RequestType
-from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions, init_logging, LogLevel
+from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions
 from awscrt.auth import AwsCredentialsProvider
 
 
@@ -38,7 +38,6 @@ def s3_client_new(secure, region, part_size=0):
 class FakeReadStream(object):
     def __init__(self, read_future):
         self._future = read_future
-        pass
 
     def read(self, length):
         fake_string = "x" * length
@@ -97,13 +96,15 @@ class S3RequestTest(NativeResourceTest):
         request = HttpRequest("GET", object_path, headers)
         return request
 
-    def _put_object_request(self, file_name):
+    def _put_object_request(self, file_name, path=None):
         self.put_body_stream = open(file_name, "r+b")
         file_stats = os.stat(file_name)
         self.data_len = file_stats.st_size
         headers = HttpHeaders([("host", self._build_endpoint_string(self.region, self.bucket_name)),
                                ("Content-Type", "text/plain"), ("Content-Length", str(self.data_len))])
-        request = HttpRequest("PUT", self.put_test_object_path, headers, self.put_body_stream)
+        if path is None:
+            path = self.put_test_object_path
+        request = HttpRequest("PUT", path, headers, self.put_body_stream)
         return request
 
     def _on_request_headers(self, status_code, headers, **kargs):
@@ -129,7 +130,7 @@ class S3RequestTest(NativeResourceTest):
                 self.received_body_len,
                 "Received body length does not match the Content-Length header")
 
-    def _test_s3_put_get_object(self, request, request_type):
+    def _test_s3_put_get_object(self, request, request_type, exception_name=None):
         s3_client = s3_client_new(False, self.region, 5 * 1024 * 1024)
         s3_request = s3_client.make_request(
             request=request,
@@ -137,10 +138,15 @@ class S3RequestTest(NativeResourceTest):
             on_headers=self._on_request_headers,
             on_body=self._on_request_body)
         finished_future = s3_request.finished_future
-        finished_future.result(self.timeout)
-        self._validate_successful_get_response(request_type is S3RequestType.PUT_OBJECT)
+        try:
+            finished_future.result(self.timeout)
+        except Exception as e:
+            self.assertEqual(e.name, exception_name)
+        else:
+            self._validate_successful_get_response(request_type is S3RequestType.PUT_OBJECT)
+
         shutdown_event = s3_request.shutdown_event
-        del s3_request
+        s3_request = None
         self.assertTrue(shutdown_event.wait(self.timeout))
 
     def test_get_object(self):
@@ -150,6 +156,31 @@ class S3RequestTest(NativeResourceTest):
     def test_put_object(self):
         request = self._put_object_request("test/resources/s3_put_object.txt")
         self._test_s3_put_get_object(request, S3RequestType.PUT_OBJECT)
+        self.put_body_stream.close()
+
+    def test_put_object_multiple_times(self):
+        s3_client = s3_client_new(False, self.region, 5 * 1024 * 1024)
+        finished_futures = []
+        for i in range(3):
+            path = "/put_object_test_py_10MB_{}.txt".format(str(i))
+            request = self._put_object_request("test/resources/s3_put_object.txt", path)
+            s3_request = s3_client.make_request(
+                request=request,
+                type=S3RequestType.PUT_OBJECT,
+                send_filepath="test/resources/s3_put_object.txt",
+                on_headers=self._on_request_headers,
+                on_body=self._on_request_body)
+            finished_futures.append(s3_request.finished_future)
+        try:
+            for future in finished_futures:
+                future.result(self.timeout)
+        except Exception as e:
+            # failed
+            self.assertTrue(False)
+
+        client_shutdown_event = s3_client.shutdown_event
+        del s3_client
+        self.assertTrue(client_shutdown_event.wait(self.timeout))
         self.put_body_stream.close()
 
     def test_get_object_file_object(self):
@@ -180,9 +211,6 @@ class S3RequestTest(NativeResourceTest):
                 self.transferred_len,
                 "the transferred length reported does not match the content-length header")
             self.assertEqual(self.response_status_code, 200, "status code is not 200")
-            shutdown_event = s3_request.shutdown_event
-            del s3_request
-            self.assertTrue(shutdown_event.wait(self.timeout))
             # TODO verify the content of written file
             os.remove(file.name)
 
@@ -207,9 +235,6 @@ class S3RequestTest(NativeResourceTest):
             self.transferred_len,
             "the transferred length reported does not match body we sent")
         self._validate_successful_get_response(request_type is S3RequestType.PUT_OBJECT)
-        shutdown_event = s3_request.shutdown_event
-        del s3_request
-        self.assertTrue(shutdown_event.wait(self.timeout))
 
     def _on_progress_cancel_after_first_chunk(self, progress):
         self.transferred_len += progress
@@ -244,7 +269,7 @@ class S3RequestTest(NativeResourceTest):
             # The on_finish callback may invoke the progress
             self.assertLessEqual(self.progress_invoked, 2)
             shutdown_event = self.s3_request.shutdown_event
-            del self.s3_request
+            self.s3_request = None
             self.assertTrue(shutdown_event.wait(self.timeout))
             os.remove(file.name)
 
@@ -266,9 +291,8 @@ class S3RequestTest(NativeResourceTest):
                 finished_future.result(self.timeout)
             except Exception as e:
                 self.assertEqual(e.name, "AWS_ERROR_S3_CANCELED")
-
             shutdown_event = s3_request.shutdown_event
-            del s3_request
+            s3_request = None
             self.assertTrue(shutdown_event.wait(self.timeout))
             os.remove(file.name)
 
@@ -287,17 +311,16 @@ class S3RequestTest(NativeResourceTest):
 
         if cancel_after_read:
             read_futrue.result(self.timeout)
-
         s3_request.cancel()
         finished_future = s3_request.finished_future
         try:
             finished_future.result(self.timeout)
         except Exception as e:
             self.assertEqual(e.name, "AWS_ERROR_S3_CANCELED")
-        shutdown_event = s3_request.shutdown_event
-        del s3_request
-        self.assertTrue(shutdown_event.wait(self.timeout))
 
+        shutdown_event = s3_request.shutdown_event
+        s3_request = None
+        self.assertTrue(shutdown_event.wait(self.timeout))
         # TODO If CLI installed, run the following command to ensure the cancel succeed.
         # aws s3api list-multipart-uploads --bucket aws-crt-canary-bucket --prefix 'cancelled_request'
         # Nothing should printout
@@ -307,6 +330,12 @@ class S3RequestTest(NativeResourceTest):
 
     def test_put_object_quick_cancel(self):
         return self._put_object_cancel_helper(False)
+
+    def test_multipart_upload_with_invalid_request(self):
+        request = self._put_object_request("test/resources/s3_put_object.txt")
+        request.headers.set("Content-MD5", "something")
+        self._test_s3_put_get_object(request, S3RequestType.PUT_OBJECT, "AWS_ERROR_S3_INVALID_RESPONSE_STATUS")
+        self.put_body_stream.close()
 
 
 if __name__ == '__main__':
