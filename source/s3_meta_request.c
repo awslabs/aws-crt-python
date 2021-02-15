@@ -220,6 +220,10 @@ static void s_s3_request_on_finish(
     (void)meta_request;
     struct s3_meta_request_binding *request_binding = user_data;
 
+    if (request_binding->recv_file) {
+        fclose(request_binding->recv_file);
+        request_binding->recv_file = NULL;
+    }
     /*************** GIL ACQUIRE ***************/
     PyGILState_STATE state;
     if (aws_py_gilstate_ensure(&state)) {
@@ -280,6 +284,7 @@ static void s_s3_meta_request_capsule_destructor(PyObject *capsule) {
 
     if (meta_request->recv_file) {
         fclose(meta_request->recv_file);
+        meta_request->recv_file = NULL;
     }
     if (meta_request->native) {
         aws_s3_meta_request_release(meta_request->native);
