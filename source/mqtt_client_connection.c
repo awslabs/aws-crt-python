@@ -796,6 +796,9 @@ static void s_subscribe_callback(
     struct aws_mqtt_client_connection *connection,
     const struct aws_byte_cursor *topic,
     const struct aws_byte_cursor *payload,
+    bool dup,
+    enum aws_mqtt_qos qos,
+    bool retain,
     void *user_data) {
 
     (void)connection;
@@ -812,9 +815,14 @@ static void s_subscribe_callback(
 
     PyObject *result = PyObject_CallFunction(
         callback,
-        "(NN)",
-        PyUnicode_FromAwsByteCursor(topic),
-        PyBytes_FromStringAndSize((const char *)payload->ptr, (Py_ssize_t)payload->len));
+        "(s#y#OiO)",
+        topic->ptr,
+        topic->len,
+        payload->ptr,
+        payload->len,
+        dup ? Py_True : Py_False,
+        qos,
+        retain ? Py_True : Py_False);
 
     if (result) {
         Py_DECREF(result);
@@ -927,20 +935,21 @@ PyObject *aws_py_mqtt_client_connection_on_message(PyObject *self, PyObject *arg
         return NULL;
     }
 
-    Py_CLEAR(py_connection->on_any_publish);
-
     if (callback == Py_None) {
-        aws_mqtt_client_connection_set_on_any_publish_handler(py_connection->native, NULL, NULL);
-        Py_RETURN_NONE;
+        if (aws_mqtt_client_connection_set_on_any_publish_handler(py_connection->native, NULL, NULL)) {
+            return PyErr_AwsLastError();
+        }
+    } else {
+        if (aws_mqtt_client_connection_set_on_any_publish_handler(
+                py_connection->native, s_subscribe_callback, callback)) {
+            return PyErr_AwsLastError();
+        }
     }
 
-    if (aws_mqtt_client_connection_set_on_any_publish_handler(py_connection->native, s_subscribe_callback, callback)) {
-        Py_DECREF(callback);
-        return PyErr_AwsLastError();
-    }
+    Py_XDECREF(py_connection->on_any_publish);
 
-    Py_INCREF(callback);
     py_connection->on_any_publish = callback;
+    Py_INCREF(callback);
 
     Py_RETURN_NONE;
 }
