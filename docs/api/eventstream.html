@@ -1,0 +1,339 @@
+
+
+<!doctype html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>awscrt.eventstream &#8212; awscrt  documentation</title>
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/bizstyle.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/bizstyle.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="awscrt.eventstream.rpc" href="eventstream.rpc.html" />
+    <link rel="prev" title="awscrt.exceptions" href="exceptions.html" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <!--[if lt IE 9]>
+    <script src="_static/css3-mediaqueries.js"></script>
+    <![endif]-->
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="eventstream.rpc.html" title="awscrt.eventstream.rpc"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="exceptions.html" title="awscrt.exceptions"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">awscrt  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">awscrt.eventstream</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-awscrt.eventstream">
+<span id="awscrt-eventstream"></span><h1>awscrt.eventstream<a class="headerlink" href="#module-awscrt.eventstream" title="Permalink to this headline">¶</a></h1>
+<p>event-stream library for <cite>awscrt</cite>.</p>
+<dl class="py class">
+<dt id="awscrt.eventstream.HeaderType">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">awscrt.eventstream.</span></code><code class="sig-name descname"><span class="pre">HeaderType</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.eventstream.HeaderType" title="Permalink to this definition">¶</a></dt>
+<dd><p>Supported types for the value within a Header</p>
+<dl class="py attribute">
+<dt id="awscrt.eventstream.HeaderType.BOOL_TRUE">
+<code class="sig-name descname"><span class="pre">BOOL_TRUE</span></code><em class="property"> <span class="pre">=</span> <span class="pre">0</span></em><a class="headerlink" href="#awscrt.eventstream.HeaderType.BOOL_TRUE" title="Permalink to this definition">¶</a></dt>
+<dd><p>Value is True.</p>
+<p>No actual value is transmitted on the wire.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="awscrt.eventstream.HeaderType.BOOL_FALSE">
+<code class="sig-name descname"><span class="pre">BOOL_FALSE</span></code><em class="property"> <span class="pre">=</span> <span class="pre">1</span></em><a class="headerlink" href="#awscrt.eventstream.HeaderType.BOOL_FALSE" title="Permalink to this definition">¶</a></dt>
+<dd><p>Value is False.</p>
+<p>No actual value is transmitted on the wire.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="awscrt.eventstream.HeaderType.BYTE">
+<code class="sig-name descname"><span class="pre">BYTE</span></code><em class="property"> <span class="pre">=</span> <span class="pre">2</span></em><a class="headerlink" href="#awscrt.eventstream.HeaderType.BYTE" title="Permalink to this definition">¶</a></dt>
+<dd><p>Value is signed 8-bit int.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="awscrt.eventstream.HeaderType.INT16">
+<code class="sig-name descname"><span class="pre">INT16</span></code><em class="property"> <span class="pre">=</span> <span class="pre">3</span></em><a class="headerlink" href="#awscrt.eventstream.HeaderType.INT16" title="Permalink to this definition">¶</a></dt>
+<dd><p>Value is signed 16-bit int.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="awscrt.eventstream.HeaderType.INT32">
+<code class="sig-name descname"><span class="pre">INT32</span></code><em class="property"> <span class="pre">=</span> <span class="pre">4</span></em><a class="headerlink" href="#awscrt.eventstream.HeaderType.INT32" title="Permalink to this definition">¶</a></dt>
+<dd><p>Value is signed 32-bit int.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="awscrt.eventstream.HeaderType.INT64">
+<code class="sig-name descname"><span class="pre">INT64</span></code><em class="property"> <span class="pre">=</span> <span class="pre">5</span></em><a class="headerlink" href="#awscrt.eventstream.HeaderType.INT64" title="Permalink to this definition">¶</a></dt>
+<dd><p>Value is signed 64-bit int.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="awscrt.eventstream.HeaderType.BYTE_BUF">
+<code class="sig-name descname"><span class="pre">BYTE_BUF</span></code><em class="property"> <span class="pre">=</span> <span class="pre">6</span></em><a class="headerlink" href="#awscrt.eventstream.HeaderType.BYTE_BUF" title="Permalink to this definition">¶</a></dt>
+<dd><p>Value is raw bytes.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="awscrt.eventstream.HeaderType.STRING">
+<code class="sig-name descname"><span class="pre">STRING</span></code><em class="property"> <span class="pre">=</span> <span class="pre">7</span></em><a class="headerlink" href="#awscrt.eventstream.HeaderType.STRING" title="Permalink to this definition">¶</a></dt>
+<dd><p>Value is a str.</p>
+<p>Transmitted on the wire as utf-8</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="awscrt.eventstream.HeaderType.TIMESTAMP">
+<code class="sig-name descname"><span class="pre">TIMESTAMP</span></code><em class="property"> <span class="pre">=</span> <span class="pre">8</span></em><a class="headerlink" href="#awscrt.eventstream.HeaderType.TIMESTAMP" title="Permalink to this definition">¶</a></dt>
+<dd><p>Value is a posix timestamp (seconds since Unix epoch).</p>
+<p>Transmitted on the wire as a 64-bit int</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="awscrt.eventstream.HeaderType.UUID">
+<code class="sig-name descname"><span class="pre">UUID</span></code><em class="property"> <span class="pre">=</span> <span class="pre">9</span></em><a class="headerlink" href="#awscrt.eventstream.HeaderType.UUID" title="Permalink to this definition">¶</a></dt>
+<dd><p>Value is a UUID.</p>
+<p>Transmitted on the wire as 16 bytes</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="awscrt.eventstream.Header">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">awscrt.eventstream.</span></code><code class="sig-name descname"><span class="pre">Header</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">header_type</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#awscrt.eventstream.HeaderType" title="awscrt.eventstream.HeaderType"><span class="pre">awscrt.eventstream.HeaderType</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.eventstream.Header" title="Permalink to this definition">¶</a></dt>
+<dd><p>A header in an event-stream message.</p>
+<p>Each header has a name, value, and type.
+<a class="reference internal" href="#awscrt.eventstream.HeaderType" title="awscrt.eventstream.HeaderType"><code class="xref py py-class docutils literal notranslate"><span class="pre">HeaderType</span></code></a> enumerates the supported value types.</p>
+<p>Create a header with one of the Header.from_X() functions.</p>
+<dl class="py method">
+<dt id="awscrt.eventstream.Header.from_bool">
+<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">from_bool</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#awscrt.eventstream.Header" title="awscrt.eventstream.Header"><span class="pre">awscrt.eventstream.Header</span></a><a class="headerlink" href="#awscrt.eventstream.Header.from_bool" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a Header of type <a class="reference internal" href="#awscrt.eventstream.HeaderType.BOOL_TRUE" title="awscrt.eventstream.HeaderType.BOOL_TRUE"><code class="xref py py-attr docutils literal notranslate"><span class="pre">BOOL_TRUE</span></code></a> or <a class="reference internal" href="#awscrt.eventstream.HeaderType.BOOL_FALSE" title="awscrt.eventstream.HeaderType.BOOL_FALSE"><code class="xref py py-attr docutils literal notranslate"><span class="pre">BOOL_FALSE</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.eventstream.Header.from_byte">
+<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">from_byte</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#awscrt.eventstream.Header" title="awscrt.eventstream.Header"><span class="pre">awscrt.eventstream.Header</span></a><a class="headerlink" href="#awscrt.eventstream.Header.from_byte" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a Header of type <a class="reference internal" href="#awscrt.eventstream.HeaderType.BYTE" title="awscrt.eventstream.HeaderType.BYTE"><code class="xref py py-attr docutils literal notranslate"><span class="pre">BYTE</span></code></a></p>
+<p>The value must fit in an 8-bit signed int</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.eventstream.Header.from_int16">
+<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">from_int16</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#awscrt.eventstream.Header" title="awscrt.eventstream.Header"><span class="pre">awscrt.eventstream.Header</span></a><a class="headerlink" href="#awscrt.eventstream.Header.from_int16" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a Header of type <a class="reference internal" href="#awscrt.eventstream.HeaderType.INT16" title="awscrt.eventstream.HeaderType.INT16"><code class="xref py py-attr docutils literal notranslate"><span class="pre">INT16</span></code></a></p>
+<p>The value must fit in an 16-bit signed int</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.eventstream.Header.from_int32">
+<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">from_int32</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#awscrt.eventstream.Header" title="awscrt.eventstream.Header"><span class="pre">awscrt.eventstream.Header</span></a><a class="headerlink" href="#awscrt.eventstream.Header.from_int32" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a Header of type <a class="reference internal" href="#awscrt.eventstream.HeaderType.INT32" title="awscrt.eventstream.HeaderType.INT32"><code class="xref py py-attr docutils literal notranslate"><span class="pre">INT32</span></code></a></p>
+<p>The value must fit in an 32-bit signed int</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.eventstream.Header.from_int64">
+<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">from_int64</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#awscrt.eventstream.Header" title="awscrt.eventstream.Header"><span class="pre">awscrt.eventstream.Header</span></a><a class="headerlink" href="#awscrt.eventstream.Header.from_int64" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a Header of type <a class="reference internal" href="#awscrt.eventstream.HeaderType.INT64" title="awscrt.eventstream.HeaderType.INT64"><code class="xref py py-attr docutils literal notranslate"><span class="pre">INT64</span></code></a></p>
+<p>The value must fit in an 64-bit signed int</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.eventstream.Header.from_byte_buf">
+<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">from_byte_buf</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">collections.abc.ByteString</span></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#awscrt.eventstream.Header" title="awscrt.eventstream.Header"><span class="pre">awscrt.eventstream.Header</span></a><a class="headerlink" href="#awscrt.eventstream.Header.from_byte_buf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a Header of type <a class="reference internal" href="#awscrt.eventstream.HeaderType.BYTE_BUF" title="awscrt.eventstream.HeaderType.BYTE_BUF"><code class="xref py py-attr docutils literal notranslate"><span class="pre">BYTE_BUF</span></code></a></p>
+<p>The value must be a bytes-like object</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.eventstream.Header.from_string">
+<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">from_string</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#awscrt.eventstream.Header" title="awscrt.eventstream.Header"><span class="pre">awscrt.eventstream.Header</span></a><a class="headerlink" href="#awscrt.eventstream.Header.from_string" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a Header of type <a class="reference internal" href="#awscrt.eventstream.HeaderType.STRING" title="awscrt.eventstream.HeaderType.STRING"><code class="xref py py-attr docutils literal notranslate"><span class="pre">STRING</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.eventstream.Header.from_timestamp">
+<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">from_timestamp</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#awscrt.eventstream.Header" title="awscrt.eventstream.Header"><span class="pre">awscrt.eventstream.Header</span></a><a class="headerlink" href="#awscrt.eventstream.Header.from_timestamp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a Header of type <a class="reference internal" href="#awscrt.eventstream.HeaderType.TIMESTAMP" title="awscrt.eventstream.HeaderType.TIMESTAMP"><code class="xref py py-attr docutils literal notranslate"><span class="pre">TIMESTAMP</span></code></a></p>
+<p>Value must be a posix timestamp (seconds since Unix epoch)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.eventstream.Header.from_uuid">
+<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">from_uuid</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">uuid.UUID</span></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#awscrt.eventstream.Header" title="awscrt.eventstream.Header"><span class="pre">awscrt.eventstream.Header</span></a><a class="headerlink" href="#awscrt.eventstream.Header.from_uuid" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a Header of type <a class="reference internal" href="#awscrt.eventstream.HeaderType.UUID" title="awscrt.eventstream.HeaderType.UUID"><code class="xref py py-attr docutils literal notranslate"><span class="pre">UUID</span></code></a></p>
+<p>The value must be a UUID</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.eventstream.Header.name">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">name</span></code><a class="headerlink" href="#awscrt.eventstream.Header.name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Header name</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.eventstream.Header.type">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">type</span></code><a class="headerlink" href="#awscrt.eventstream.Header.type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Header type</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.eventstream.Header.value">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">value</span></code><a class="headerlink" href="#awscrt.eventstream.Header.value" title="Permalink to this definition">¶</a></dt>
+<dd><p>Header value</p>
+<p>The header’s type determines the value’s type.
+Use the value_as_X() methods for type-checked queries.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.eventstream.Header.value_as_bool">
+<code class="sig-name descname"><span class="pre">value_as_bool</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">bool</span><a class="headerlink" href="#awscrt.eventstream.Header.value_as_bool" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return bool value</p>
+<p>Raises an exception if type is not <a class="reference internal" href="#awscrt.eventstream.HeaderType.BOOL_TRUE" title="awscrt.eventstream.HeaderType.BOOL_TRUE"><code class="xref py py-attr docutils literal notranslate"><span class="pre">BOOL_TRUE</span></code></a> or <a class="reference internal" href="#awscrt.eventstream.HeaderType.BOOL_FALSE" title="awscrt.eventstream.HeaderType.BOOL_FALSE"><code class="xref py py-attr docutils literal notranslate"><span class="pre">BOOL_FALSE</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.eventstream.Header.value_as_byte">
+<code class="sig-name descname"><span class="pre">value_as_byte</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">int</span><a class="headerlink" href="#awscrt.eventstream.Header.value_as_byte" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return value of 8-bit signed int</p>
+<p>Raises an exception if type is not <a class="reference internal" href="#awscrt.eventstream.HeaderType.BYTE" title="awscrt.eventstream.HeaderType.BYTE"><code class="xref py py-attr docutils literal notranslate"><span class="pre">BYTE</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.eventstream.Header.value_as_int16">
+<code class="sig-name descname"><span class="pre">value_as_int16</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">int</span><a class="headerlink" href="#awscrt.eventstream.Header.value_as_int16" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return value of 16-bit signed int</p>
+<p>Raises an exception if type is not <a class="reference internal" href="#awscrt.eventstream.HeaderType.INT16" title="awscrt.eventstream.HeaderType.INT16"><code class="xref py py-attr docutils literal notranslate"><span class="pre">INT16</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.eventstream.Header.value_as_int32">
+<code class="sig-name descname"><span class="pre">value_as_int32</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">int</span><a class="headerlink" href="#awscrt.eventstream.Header.value_as_int32" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return value of 32-bit signed int</p>
+<p>Raises an exception if type is not <a class="reference internal" href="#awscrt.eventstream.HeaderType.INT32" title="awscrt.eventstream.HeaderType.INT32"><code class="xref py py-attr docutils literal notranslate"><span class="pre">INT32</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.eventstream.Header.value_as_int64">
+<code class="sig-name descname"><span class="pre">value_as_int64</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">int</span><a class="headerlink" href="#awscrt.eventstream.Header.value_as_int64" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return value of 64-bit signed int</p>
+<p>Raises an exception if type is not <a class="reference internal" href="#awscrt.eventstream.HeaderType.INT64" title="awscrt.eventstream.HeaderType.INT64"><code class="xref py py-attr docutils literal notranslate"><span class="pre">INT64</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.eventstream.Header.value_as_byte_buf">
+<code class="sig-name descname"><span class="pre">value_as_byte_buf</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">collections.abc.ByteString</span><a class="headerlink" href="#awscrt.eventstream.Header.value_as_byte_buf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return value of bytes</p>
+<p>Raises an exception if type is not <a class="reference internal" href="#awscrt.eventstream.HeaderType.BYTE_BUF" title="awscrt.eventstream.HeaderType.BYTE_BUF"><code class="xref py py-attr docutils literal notranslate"><span class="pre">BYTE_BUF</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.eventstream.Header.value_as_string">
+<code class="sig-name descname"><span class="pre">value_as_string</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">str</span><a class="headerlink" href="#awscrt.eventstream.Header.value_as_string" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return value of string</p>
+<p>Raises an exception if type is not <a class="reference internal" href="#awscrt.eventstream.HeaderType.STRING" title="awscrt.eventstream.HeaderType.STRING"><code class="xref py py-attr docutils literal notranslate"><span class="pre">STRING</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.eventstream.Header.value_as_timestamp">
+<code class="sig-name descname"><span class="pre">value_as_timestamp</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">int</span><a class="headerlink" href="#awscrt.eventstream.Header.value_as_timestamp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return value of timestamp (seconds since Unix epoch)</p>
+<p>Raises an exception if type is not <a class="reference internal" href="#awscrt.eventstream.HeaderType.TIMESTAMP" title="awscrt.eventstream.HeaderType.TIMESTAMP"><code class="xref py py-attr docutils literal notranslate"><span class="pre">TIMESTAMP</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="awscrt.eventstream.Header.value_as_uuid">
+<code class="sig-name descname"><span class="pre">value_as_uuid</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">uuid.UUID</span><a class="headerlink" href="#awscrt.eventstream.Header.value_as_uuid" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return value of UUID</p>
+<p>Raises an exception if type is not <a class="reference internal" href="#awscrt.eventstream.HeaderType.UUID" title="awscrt.eventstream.HeaderType.UUID"><code class="xref py py-attr docutils literal notranslate"><span class="pre">UUID</span></code></a></p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="exceptions.html"
+                        title="previous chapter">awscrt.exceptions</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="eventstream.rpc.html"
+                        title="next chapter">awscrt.eventstream.rpc</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/api/eventstream.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="eventstream.rpc.html" title="awscrt.eventstream.rpc"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="exceptions.html" title="awscrt.exceptions"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">awscrt  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">awscrt.eventstream</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Amazon Web Services, Inc.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.5.1.
+    </div>
+  </body>
+</html>

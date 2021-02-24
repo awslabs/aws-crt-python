@@ -5,20 +5,21 @@
 <html>
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>awscrt.mqtt &#8212; awscrt  documentation</title>
-    <link rel="stylesheet" href="../_static/bizstyle.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/bizstyle.css" type="text/css" />
     
     <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
     <script src="../_static/jquery.js"></script>
     <script src="../_static/underscore.js"></script>
     <script src="../_static/doctools.js"></script>
-    <script src="../_static/language_data.js"></script>
     <script src="../_static/bizstyle.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="awscrt.s3" href="s3.html" />
     <link rel="prev" title="awscrt.io" href="io.html" />
-    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <!--[if lt IE 9]>
     <script src="_static/css3-mediaqueries.js"></script>
     <![endif]-->
@@ -33,35 +34,15 @@
           <a href="../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
+          <a href="s3.html" title="awscrt.s3"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
           <a href="io.html" title="awscrt.io"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../index.html">awscrt  documentation</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="../index.html">awscrt  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">awscrt.mqtt</a></li> 
       </ul>
-    </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper">
-  <h4>Previous topic</h4>
-  <p class="topless"><a href="io.html"
-                        title="previous chapter">awscrt.io</a></p>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="../_sources/api/mqtt.rst.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
-<div id="searchbox" style="display: none" role="search">
-  <h3 id="searchlabel">Quick search</h3>
-    <div class="searchformwrapper">
-    <form class="search" action="../search.html" method="get">
-      <input type="text" name="q" aria-labelledby="searchlabel" />
-      <input type="submit" value="Go" />
-    </form>
-    </div>
-</div>
-<script>$('#searchbox').show(0);</script>
-        </div>
-      </div>
+    </div>  
 
     <div class="document">
       <div class="documentwrapper">
@@ -74,12 +55,12 @@
 <p>All network operations in <cite>awscrt.mqtt</cite> are asynchronous.</p>
 <dl class="py class">
 <dt id="awscrt.mqtt.QoS">
-<em class="property">class </em><code class="sig-prename descclassname">awscrt.mqtt.</code><code class="sig-name descname">QoS</code><a class="headerlink" href="#awscrt.mqtt.QoS" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">awscrt.mqtt.</span></code><code class="sig-name descname"><span class="pre">QoS</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.mqtt.QoS" title="Permalink to this definition">¶</a></dt>
 <dd><p>Quality of Service enumeration</p>
 <p>[MQTT-4.3]</p>
 <dl class="py attribute">
 <dt id="awscrt.mqtt.QoS.AT_MOST_ONCE">
-<code class="sig-name descname">AT_MOST_ONCE</code><em class="property"> = 0</em><a class="headerlink" href="#awscrt.mqtt.QoS.AT_MOST_ONCE" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">AT_MOST_ONCE</span></code><em class="property"> <span class="pre">=</span> <span class="pre">0</span></em><a class="headerlink" href="#awscrt.mqtt.QoS.AT_MOST_ONCE" title="Permalink to this definition">¶</a></dt>
 <dd><p>QoS 0 - At most once delivery</p>
 <p>The message is delivered according to the capabilities of the underlying network.
 No response is sent by the receiver and no retry is performed by the sender.
@@ -88,14 +69,14 @@ The message arrives at the receiver either once or not at all.</p>
 
 <dl class="py attribute">
 <dt id="awscrt.mqtt.QoS.AT_LEAST_ONCE">
-<code class="sig-name descname">AT_LEAST_ONCE</code><em class="property"> = 1</em><a class="headerlink" href="#awscrt.mqtt.QoS.AT_LEAST_ONCE" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">AT_LEAST_ONCE</span></code><em class="property"> <span class="pre">=</span> <span class="pre">1</span></em><a class="headerlink" href="#awscrt.mqtt.QoS.AT_LEAST_ONCE" title="Permalink to this definition">¶</a></dt>
 <dd><p>QoS 1 - At least once delivery</p>
 <p>This quality of service ensures that the message arrives at the receiver at least once.</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt id="awscrt.mqtt.QoS.EXACTLY_ONCE">
-<code class="sig-name descname">EXACTLY_ONCE</code><em class="property"> = 2</em><a class="headerlink" href="#awscrt.mqtt.QoS.EXACTLY_ONCE" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">EXACTLY_ONCE</span></code><em class="property"> <span class="pre">=</span> <span class="pre">2</span></em><a class="headerlink" href="#awscrt.mqtt.QoS.EXACTLY_ONCE" title="Permalink to this definition">¶</a></dt>
 <dd><p>QoS 2 - Exactly once delivery</p>
 <p>This is the highest quality of service, for use when neither loss nor
 duplication of messages are acceptable. There is an increased overhead
@@ -108,46 +89,46 @@ does not support QoS 2 at time of writing (May 2020).</p>
 
 <dl class="py class">
 <dt id="awscrt.mqtt.ConnectReturnCode">
-<em class="property">class </em><code class="sig-prename descclassname">awscrt.mqtt.</code><code class="sig-name descname">ConnectReturnCode</code><a class="headerlink" href="#awscrt.mqtt.ConnectReturnCode" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">awscrt.mqtt.</span></code><code class="sig-name descname"><span class="pre">ConnectReturnCode</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.mqtt.ConnectReturnCode" title="Permalink to this definition">¶</a></dt>
 <dd><p>Connect return code enumeration.</p>
 <p>[MQTT-3.2.2.3]</p>
 <dl class="py attribute">
 <dt id="awscrt.mqtt.ConnectReturnCode.ACCEPTED">
-<code class="sig-name descname">ACCEPTED</code><em class="property"> = 0</em><a class="headerlink" href="#awscrt.mqtt.ConnectReturnCode.ACCEPTED" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">ACCEPTED</span></code><em class="property"> <span class="pre">=</span> <span class="pre">0</span></em><a class="headerlink" href="#awscrt.mqtt.ConnectReturnCode.ACCEPTED" title="Permalink to this definition">¶</a></dt>
 <dd><p>Connection Accepted.</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt id="awscrt.mqtt.ConnectReturnCode.UNACCEPTABLE_PROTOCOL_VERSION">
-<code class="sig-name descname">UNACCEPTABLE_PROTOCOL_VERSION</code><em class="property"> = 1</em><a class="headerlink" href="#awscrt.mqtt.ConnectReturnCode.UNACCEPTABLE_PROTOCOL_VERSION" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">UNACCEPTABLE_PROTOCOL_VERSION</span></code><em class="property"> <span class="pre">=</span> <span class="pre">1</span></em><a class="headerlink" href="#awscrt.mqtt.ConnectReturnCode.UNACCEPTABLE_PROTOCOL_VERSION" title="Permalink to this definition">¶</a></dt>
 <dd><p>Connection Refused, unacceptable protocol version.</p>
 <p>The Server does not support the level of the MQTT protocol requested by the Client.</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt id="awscrt.mqtt.ConnectReturnCode.IDENTIFIER_REJECTED">
-<code class="sig-name descname">IDENTIFIER_REJECTED</code><em class="property"> = 2</em><a class="headerlink" href="#awscrt.mqtt.ConnectReturnCode.IDENTIFIER_REJECTED" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">IDENTIFIER_REJECTED</span></code><em class="property"> <span class="pre">=</span> <span class="pre">2</span></em><a class="headerlink" href="#awscrt.mqtt.ConnectReturnCode.IDENTIFIER_REJECTED" title="Permalink to this definition">¶</a></dt>
 <dd><p>Connection Refused, identifier rejected.</p>
 <p>The Client identifier is correct UTF-8 but not allowed by the Server.</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt id="awscrt.mqtt.ConnectReturnCode.SERVER_UNAVAILABLE">
-<code class="sig-name descname">SERVER_UNAVAILABLE</code><em class="property"> = 3</em><a class="headerlink" href="#awscrt.mqtt.ConnectReturnCode.SERVER_UNAVAILABLE" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">SERVER_UNAVAILABLE</span></code><em class="property"> <span class="pre">=</span> <span class="pre">3</span></em><a class="headerlink" href="#awscrt.mqtt.ConnectReturnCode.SERVER_UNAVAILABLE" title="Permalink to this definition">¶</a></dt>
 <dd><p>Connection Refused, Server unavailable.</p>
 <p>The Network Connection has been made but the MQTT service is unavailable.</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt id="awscrt.mqtt.ConnectReturnCode.BAD_USERNAME_OR_PASSWORD">
-<code class="sig-name descname">BAD_USERNAME_OR_PASSWORD</code><em class="property"> = 4</em><a class="headerlink" href="#awscrt.mqtt.ConnectReturnCode.BAD_USERNAME_OR_PASSWORD" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">BAD_USERNAME_OR_PASSWORD</span></code><em class="property"> <span class="pre">=</span> <span class="pre">4</span></em><a class="headerlink" href="#awscrt.mqtt.ConnectReturnCode.BAD_USERNAME_OR_PASSWORD" title="Permalink to this definition">¶</a></dt>
 <dd><p>Connection Refused, bad user name or password.</p>
 <p>The data in the user name or password is malformed.</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt id="awscrt.mqtt.ConnectReturnCode.NOT_AUTHORIZED">
-<code class="sig-name descname">NOT_AUTHORIZED</code><em class="property"> = 5</em><a class="headerlink" href="#awscrt.mqtt.ConnectReturnCode.NOT_AUTHORIZED" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">NOT_AUTHORIZED</span></code><em class="property"> <span class="pre">=</span> <span class="pre">5</span></em><a class="headerlink" href="#awscrt.mqtt.ConnectReturnCode.NOT_AUTHORIZED" title="Permalink to this definition">¶</a></dt>
 <dd><p>Connection Refused, not authorized.</p>
 <p>The Client is not authorized to connect.</p>
 </dd></dl>
@@ -156,7 +137,7 @@ does not support QoS 2 at time of writing (May 2020).</p>
 
 <dl class="py class">
 <dt id="awscrt.mqtt.Will">
-<em class="property">class </em><code class="sig-prename descclassname">awscrt.mqtt.</code><code class="sig-name descname">Will</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">topic</span></em>, <em class="sig-param"><span class="n">qos</span></em>, <em class="sig-param"><span class="n">payload</span></em>, <em class="sig-param"><span class="n">retain</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.mqtt.Will" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">awscrt.mqtt.</span></code><code class="sig-name descname"><span class="pre">Will</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qos</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">payload</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">retain</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.mqtt.Will" title="Permalink to this definition">¶</a></dt>
 <dd><p>A Will message is published by the server if a client is lost unexpectedly.</p>
 <p>The Will message is stored on the server when a client connects.
 It is published if the client connection is lost without the server
@@ -174,7 +155,7 @@ receiving a DISCONNECT packet.</p>
 </dl>
 <dl class="py attribute">
 <dt id="awscrt.mqtt.Will.topic">
-<code class="sig-name descname">topic</code><a class="headerlink" href="#awscrt.mqtt.Will.topic" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">topic</span></code><a class="headerlink" href="#awscrt.mqtt.Will.topic" title="Permalink to this definition">¶</a></dt>
 <dd><p>Topic to publish Will message on.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
@@ -185,7 +166,7 @@ receiving a DISCONNECT packet.</p>
 
 <dl class="py attribute">
 <dt id="awscrt.mqtt.Will.qos">
-<code class="sig-name descname">qos</code><a class="headerlink" href="#awscrt.mqtt.Will.qos" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">qos</span></code><a class="headerlink" href="#awscrt.mqtt.Will.qos" title="Permalink to this definition">¶</a></dt>
 <dd><p>QoS used when publishing the Will message.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
@@ -196,7 +177,7 @@ receiving a DISCONNECT packet.</p>
 
 <dl class="py attribute">
 <dt id="awscrt.mqtt.Will.payload">
-<code class="sig-name descname">payload</code><a class="headerlink" href="#awscrt.mqtt.Will.payload" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">payload</span></code><a class="headerlink" href="#awscrt.mqtt.Will.payload" title="Permalink to this definition">¶</a></dt>
 <dd><p>Content of Will message.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
@@ -207,7 +188,7 @@ receiving a DISCONNECT packet.</p>
 
 <dl class="py attribute">
 <dt id="awscrt.mqtt.Will.retain">
-<code class="sig-name descname">retain</code><a class="headerlink" href="#awscrt.mqtt.Will.retain" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">retain</span></code><a class="headerlink" href="#awscrt.mqtt.Will.retain" title="Permalink to this definition">¶</a></dt>
 <dd><p>Whether the Will message is to be retained when it is published.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
@@ -220,7 +201,7 @@ receiving a DISCONNECT packet.</p>
 
 <dl class="py class">
 <dt id="awscrt.mqtt.Client">
-<em class="property">class </em><code class="sig-prename descclassname">awscrt.mqtt.</code><code class="sig-name descname">Client</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">bootstrap</span></em>, <em class="sig-param"><span class="n">tls_ctx</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.mqtt.Client" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">awscrt.mqtt.</span></code><code class="sig-name descname"><span class="pre">Client</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bootstrap</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tls_ctx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.mqtt.Client" title="Permalink to this definition">¶</a></dt>
 <dd><p>MQTT client.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -235,7 +216,7 @@ If None is provided, then an unencrypted connection is used.</p></li>
 
 <dl class="py class">
 <dt id="awscrt.mqtt.Connection">
-<em class="property">class </em><code class="sig-prename descclassname">awscrt.mqtt.</code><code class="sig-name descname">Connection</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">client</span></em>, <em class="sig-param"><span class="n">host_name</span></em>, <em class="sig-param"><span class="n">port</span></em>, <em class="sig-param"><span class="n">client_id</span></em>, <em class="sig-param"><span class="n">clean_session</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">on_connection_interrupted</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">on_connection_resumed</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">reconnect_min_timeout_secs</span><span class="o">=</span><span class="default_value">5</span></em>, <em class="sig-param"><span class="n">reconnect_max_timeout_secs</span><span class="o">=</span><span class="default_value">60</span></em>, <em class="sig-param"><span class="n">keep_alive_secs</span><span class="o">=</span><span class="default_value">1200</span></em>, <em class="sig-param"><span class="n">ping_timeout_ms</span><span class="o">=</span><span class="default_value">3000</span></em>, <em class="sig-param"><span class="n">will</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">username</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">password</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">socket_options</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">use_websockets</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">websocket_proxy_options</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">websocket_handshake_transform</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.mqtt.Connection" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">awscrt.mqtt.</span></code><code class="sig-name descname"><span class="pre">Connection</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">client</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">host_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">port</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">client_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clean_session</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_connection_interrupted</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_connection_resumed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reconnect_min_timeout_secs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reconnect_max_timeout_secs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">60</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keep_alive_secs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ping_timeout_ms</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">will</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">username</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">password</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">socket_options</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_websockets</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">websocket_proxy_options</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">websocket_handshake_transform</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.mqtt.Connection" title="Permalink to this definition">¶</a></dt>
 <dd><p>MQTT client connection.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -256,15 +237,18 @@ and sends mesages (with QoS1 or higher) that were published while the client was
 <li><p><strong>on_connection_interrupted</strong> – <p>Optional callback invoked whenever the MQTT connection is lost.
 The MQTT client will automatically attempt to reconnect.
 The function should take the following arguments return nothing:</p>
-<ul>
+<blockquote>
+<div><ul>
 <li><p><cite>connection</cite> (<a class="reference internal" href="#awscrt.mqtt.Connection" title="awscrt.mqtt.Connection"><code class="xref py py-class docutils literal notranslate"><span class="pre">Connection</span></code></a>): This MQTT Connection.</p></li>
 <li><p><cite>error</cite> (<a class="reference internal" href="exceptions.html#awscrt.exceptions.AwsCrtError" title="awscrt.exceptions.AwsCrtError"><code class="xref py py-class docutils literal notranslate"><span class="pre">awscrt.exceptions.AwsCrtError</span></code></a>): Exception which caused connection loss.</p></li>
 <li><p><cite>**kwargs</cite> (dict): Forward-compatibility kwargs.</p></li>
 </ul>
+</div></blockquote>
 </p></li>
 <li><p><strong>on_connection_resumed</strong> – <p>Optional callback invoked whenever the MQTT connection
 is automatically resumed. Function should take the following arguments and return nothing:</p>
-<ul>
+<blockquote>
+<div><ul>
 <li><p><cite>connection</cite> (<a class="reference internal" href="#awscrt.mqtt.Connection" title="awscrt.mqtt.Connection"><code class="xref py py-class docutils literal notranslate"><span class="pre">Connection</span></code></a>): This MQTT Connection</p></li>
 <li><p><cite>return_code</cite> (<a class="reference internal" href="#awscrt.mqtt.ConnectReturnCode" title="awscrt.mqtt.ConnectReturnCode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ConnectReturnCode</span></code></a>): Connect return
 code received from the server.</p></li>
@@ -273,6 +257,7 @@ Note that the server has forgotten all previous subscriptions if this is False.
 Subscriptions can be re-established via resubscribe_existing_topics().</p></li>
 <li><p><cite>**kwargs</cite> (dict): Forward-compatibility kwargs.</p></li>
 </ul>
+</div></blockquote>
 </p></li>
 <li><p><strong>reconnect_min_timeout_secs</strong> (<em>int</em>) – Minimum time to wait between reconnect attempts.
 Must be &lt;= <cite>reconnect_max_timeout_secs</cite>.
@@ -286,10 +271,7 @@ The server will assume the connection is lost if no PING is received after 1.5X 
 This duration must be longer than ping_timeout_ms.</p></li>
 <li><p><strong>ping_timeout_ms</strong> (<em>int</em>) – Milliseconds to wait for ping response before client assumes
 the connection is invalid and attempts to reconnect.
-This duration must be shorter than keep_alive_secs.
-Alternatively, TCP keep-alive via <code class="xref py py-attr docutils literal notranslate"><span class="pre">SocketOptions.keep_alive</span></code>
-may accomplish this in a more efficient (low-power) scenario,
-but keep-alive options may not work the same way on every platform and OS version.</p></li>
+This duration must be shorter than <cite>keep_alive_secs</cite>.</p></li>
 <li><p><strong>will</strong> (<a class="reference internal" href="#awscrt.mqtt.Will" title="awscrt.mqtt.Will"><em>Will</em></a>) – Will to send with CONNECT packet. The will is
 published by the server when its connection to the client is unexpectedly lost.</p></li>
 <li><p><strong>username</strong> (<em>str</em>) – Username to connect with.</p></li>
@@ -302,19 +284,21 @@ If provided, function is called each time a websocket connection is attempted.
 The function may modify the HTTP request before it is sent to the server.
 See <a class="reference internal" href="#awscrt.mqtt.WebsocketHandshakeTransformArgs" title="awscrt.mqtt.WebsocketHandshakeTransformArgs"><code class="xref py py-class docutils literal notranslate"><span class="pre">WebsocketHandshakeTransformArgs</span></code></a> for more info.
 Function should take the following arguments and return nothing:</p>
-<ul>
+<blockquote>
+<div><ul>
 <li><p><cite>transform_args</cite> (<a class="reference internal" href="#awscrt.mqtt.WebsocketHandshakeTransformArgs" title="awscrt.mqtt.WebsocketHandshakeTransformArgs"><code class="xref py py-class docutils literal notranslate"><span class="pre">WebsocketHandshakeTransformArgs</span></code></a>):
 Contains HTTP request to be transformed. Function must call
 <cite>transform_args.done()</cite> when complete.</p></li>
 <li><p><cite>**kwargs</cite> (dict): Forward-compatibility kwargs.</p></li>
 </ul>
+</div></blockquote>
 </p></li>
 </ul>
 </dd>
 </dl>
 <dl class="py method">
 <dt id="awscrt.mqtt.Connection.connect">
-<code class="sig-name descname">connect</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.mqtt.Connection.connect" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">connect</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.mqtt.Connection.connect" title="Permalink to this definition">¶</a></dt>
 <dd><p>Open the actual connection to the server (async).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
@@ -331,7 +315,7 @@ If connection succeeds, Future will contain a dict with the following members:</
 
 <dl class="py method">
 <dt id="awscrt.mqtt.Connection.disconnect">
-<code class="sig-name descname">disconnect</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.mqtt.Connection.disconnect" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">disconnect</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.mqtt.Connection.disconnect" title="Permalink to this definition">¶</a></dt>
 <dd><p>Close the connection (async).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
@@ -343,7 +327,7 @@ The future will contain an empty dict.</p>
 
 <dl class="py method">
 <dt id="awscrt.mqtt.Connection.subscribe">
-<code class="sig-name descname">subscribe</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">topic</span></em>, <em class="sig-param"><span class="n">qos</span></em>, <em class="sig-param"><span class="n">callback</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.mqtt.Connection.subscribe" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">subscribe</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qos</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">callback</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.mqtt.Connection.subscribe" title="Permalink to this definition">¶</a></dt>
 <dd><p>Subscribe to a topic filter (async).</p>
 <p>The client sends a SUBSCRIBE packet and the server responds with a SUBACK.</p>
 <p>subscribe() may be called while the device is offline, though the async
@@ -359,11 +343,18 @@ the SUBACK is received.</p>
 The server may grant a lower QoS in the SUBACK (see returned Future)</p></li>
 <li><p><strong>callback</strong> – <p>Optional callback invoked when message received.
 Function should take the following arguments and return nothing:</p>
-<ul>
+<blockquote>
+<div><ul>
 <li><p><cite>topic</cite> (str): Topic receiving message.</p></li>
 <li><p><cite>payload</cite> (bytes): Payload of message.</p></li>
+<li><p><cite>dup</cite> (bool): DUP flag. If True, this might be re-delivery
+of an earlier attempt to send the message.</p></li>
+<li><p><cite>qos</cite> (<a class="reference internal" href="#awscrt.mqtt.QoS" title="awscrt.mqtt.QoS"><code class="xref py py-class docutils literal notranslate"><span class="pre">QoS</span></code></a>): Quality of Service used to deliver the message.</p></li>
+<li><p><cite>retain</cite> (bool): Retain flag. If True, the message was sent
+as a result of a new subscription being made by the client.</p></li>
 <li><p><cite>**kwargs</cite> (dict): Forward-compatibility kwargs.</p></li>
 </ul>
+</div></blockquote>
 </p></li>
 </ul>
 </dd>
@@ -372,12 +363,14 @@ Function should take the following arguments and return nothing:</p>
 the ID of the SUBSCRIBE packet. The Future completes when a
 SUBACK is received from the server. If successful, the Future will
 contain a dict with the following members:</p>
-<ul class="simple">
+<blockquote>
+<div><ul class="simple">
 <li><p>[‘packet_id’] (int): ID of the SUBSCRIBE packet being acknowledged.</p></li>
 <li><p>[‘topic’] (str): Topic filter of the SUBSCRIBE packet being acknowledged.</p></li>
 <li><p>[‘qos’] (<a class="reference internal" href="#awscrt.mqtt.QoS" title="awscrt.mqtt.QoS"><code class="xref py py-class docutils literal notranslate"><span class="pre">QoS</span></code></a>): Maximum QoS that was granted by the server.
 This may be lower than the requested QoS.</p></li>
 </ul>
+</div></blockquote>
 <p>If unsuccessful, the Future contains an exception. The exception
 will be a <a class="reference internal" href="#awscrt.mqtt.SubscribeError" title="awscrt.mqtt.SubscribeError"><code class="xref py py-class docutils literal notranslate"><span class="pre">SubscribeError</span></code></a> if a SUBACK was received
 in which the server rejected the subscription. Other exception
@@ -389,22 +382,29 @@ types indicate other errors with the operation.</p>
 
 <dl class="py method">
 <dt id="awscrt.mqtt.Connection.on_message">
-<code class="sig-name descname">on_message</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">callback</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.mqtt.Connection.on_message" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">on_message</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">callback</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.mqtt.Connection.on_message" title="Permalink to this definition">¶</a></dt>
 <dd><p>Set callback to be invoked when ANY message is received.</p>
-<dl class="simple">
+<dl>
 <dt>callback: Callback to invoke when message received, or None to disable.</dt><dd><p>Function should take the following arguments and return nothing:</p>
-<ul class="simple">
+<blockquote>
+<div><ul class="simple">
 <li><p><cite>topic</cite> (str): Topic receiving message.</p></li>
 <li><p><cite>payload</cite> (bytes): Payload of message.</p></li>
+<li><p><cite>dup</cite> (bool): DUP flag. If True, this might be re-delivery
+of an earlier attempt to send the message.</p></li>
+<li><p><cite>qos</cite> (<a class="reference internal" href="#awscrt.mqtt.QoS" title="awscrt.mqtt.QoS"><code class="xref py py-class docutils literal notranslate"><span class="pre">QoS</span></code></a>): Quality of Service used to deliver the message.</p></li>
+<li><p><cite>retain</cite> (bool): Retain flag. If True, the message was sent
+as a result of a new subscription being made by the client.</p></li>
 <li><p><cite>**kwargs</cite> (dict): Forward-compatibility kwargs.</p></li>
 </ul>
+</div></blockquote>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py method">
 <dt id="awscrt.mqtt.Connection.unsubscribe">
-<code class="sig-name descname">unsubscribe</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">topic</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.mqtt.Connection.unsubscribe" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">unsubscribe</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.mqtt.Connection.unsubscribe" title="Permalink to this definition">¶</a></dt>
 <dd><p>Unsubscribe from a topic filter (async).</p>
 <p>The client sends an UNSUBSCRIBE packet, and the server responds with an UNSUBACK.</p>
 <dl class="field-list simple">
@@ -426,7 +426,7 @@ will contain a dict with the following members:</p>
 
 <dl class="py method">
 <dt id="awscrt.mqtt.Connection.resubscribe_existing_topics">
-<code class="sig-name descname">resubscribe_existing_topics</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.mqtt.Connection.resubscribe_existing_topics" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">resubscribe_existing_topics</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.mqtt.Connection.resubscribe_existing_topics" title="Permalink to this definition">¶</a></dt>
 <dd><p>Subscribe again to all current topics.</p>
 <p>This is to help when resuming a connection with a clean session.</p>
 <dl class="field-list simple">
@@ -449,7 +449,7 @@ to resubscribe to, then the list will be empty.</p></li>
 
 <dl class="py method">
 <dt id="awscrt.mqtt.Connection.publish">
-<code class="sig-name descname">publish</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">topic</span></em>, <em class="sig-param"><span class="n">payload</span></em>, <em class="sig-param"><span class="n">qos</span></em>, <em class="sig-param"><span class="n">retain</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.mqtt.Connection.publish" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">publish</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">payload</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qos</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">retain</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.mqtt.Connection.publish" title="Permalink to this definition">¶</a></dt>
 <dd><p>Publish message (async).</p>
 <p>If the device is offline, the PUBLISH packet will be sent once the connection resumes.</p>
 <dl class="field-list simple">
@@ -484,7 +484,7 @@ the ID of the PUBLISH packet. The QoS determines when the Future completes:</p>
 
 <dl class="py class">
 <dt id="awscrt.mqtt.WebsocketHandshakeTransformArgs">
-<em class="property">class </em><code class="sig-prename descclassname">awscrt.mqtt.</code><code class="sig-name descname">WebsocketHandshakeTransformArgs</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">mqtt_connection</span></em>, <em class="sig-param"><span class="n">http_request</span></em>, <em class="sig-param"><span class="n">done_future</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.mqtt.WebsocketHandshakeTransformArgs" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">awscrt.mqtt.</span></code><code class="sig-name descname"><span class="pre">WebsocketHandshakeTransformArgs</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mqtt_connection</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">http_request</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">done_future</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.mqtt.WebsocketHandshakeTransformArgs" title="Permalink to this definition">¶</a></dt>
 <dd><p>Argument to a “websocket_handshake_transform” function.</p>
 <p>A websocket_handshake_transform function has signature:
 <code class="docutils literal notranslate"><span class="pre">fn(transform_args:</span> <span class="pre">WebsocketHandshakeTransformArgs,</span> <span class="pre">**kwargs)</span> <span class="pre">-&gt;</span> <span class="pre">None</span></code></p>
@@ -512,7 +512,7 @@ or an exception will be set.</p></li>
 </dl>
 <dl class="py attribute">
 <dt id="awscrt.mqtt.WebsocketHandshakeTransformArgs.mqtt_connection">
-<code class="sig-name descname">mqtt_connection</code><a class="headerlink" href="#awscrt.mqtt.WebsocketHandshakeTransformArgs.mqtt_connection" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">mqtt_connection</span></code><a class="headerlink" href="#awscrt.mqtt.WebsocketHandshakeTransformArgs.mqtt_connection" title="Permalink to this definition">¶</a></dt>
 <dd><p>Connection this handshake is for.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
@@ -523,7 +523,7 @@ or an exception will be set.</p></li>
 
 <dl class="py attribute">
 <dt id="awscrt.mqtt.WebsocketHandshakeTransformArgs.http_request">
-<code class="sig-name descname">http_request</code><a class="headerlink" href="#awscrt.mqtt.WebsocketHandshakeTransformArgs.http_request" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">http_request</span></code><a class="headerlink" href="#awscrt.mqtt.WebsocketHandshakeTransformArgs.http_request" title="Permalink to this definition">¶</a></dt>
 <dd><p>HTTP request for this handshake.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
@@ -534,7 +534,7 @@ or an exception will be set.</p></li>
 
 <dl class="py method">
 <dt id="awscrt.mqtt.WebsocketHandshakeTransformArgs.set_done">
-<code class="sig-name descname">set_done</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">exception</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.mqtt.WebsocketHandshakeTransformArgs.set_done" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">set_done</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">exception</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.mqtt.WebsocketHandshakeTransformArgs.set_done" title="Permalink to this definition">¶</a></dt>
 <dd><p>Mark the transformation complete.
 If exception is passed in, the handshake is canceled.</p>
 </dd></dl>
@@ -543,14 +543,42 @@ If exception is passed in, the handshake is canceled.</p>
 
 <dl class="py exception">
 <dt id="awscrt.mqtt.SubscribeError">
-<em class="property">exception </em><code class="sig-prename descclassname">awscrt.mqtt.</code><code class="sig-name descname">SubscribeError</code><a class="headerlink" href="#awscrt.mqtt.SubscribeError" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">exception</span> </em><code class="sig-prename descclassname"><span class="pre">awscrt.mqtt.</span></code><code class="sig-name descname"><span class="pre">SubscribeError</span></code><a class="headerlink" href="#awscrt.mqtt.SubscribeError" title="Permalink to this definition">¶</a></dt>
 <dd><p>Subscription rejected by server.</p>
 </dd></dl>
 
 </div>
 
 
+            <div class="clearer"></div>
           </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="io.html"
+                        title="previous chapter">awscrt.io</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="s3.html"
+                        title="next chapter">awscrt.s3</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/api/mqtt.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -565,14 +593,18 @@ If exception is passed in, the handshake is canceled.</p>
           <a href="../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
+          <a href="s3.html" title="awscrt.s3"
+             >next</a> |</li>
+        <li class="right" >
           <a href="io.html" title="awscrt.io"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../index.html">awscrt  documentation</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="../index.html">awscrt  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">awscrt.mqtt</a></li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2020, Amazon Web Services, Inc.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 3.0.3.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.5.1.
     </div>
   </body>
 </html>

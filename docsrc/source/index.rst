@@ -12,10 +12,16 @@ API Reference
    :maxdepth: 2
 
    api/auth
+   api/common
    api/exceptions
+   api/eventstream
+   api/eventstream.rpc
    api/http
    api/io
    api/mqtt
+   api/s3
+
+   api/mqtt_connection_builder
 
 Indices and tables
 ==================
