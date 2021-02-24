@@ -75,7 +75,7 @@ Optional Keyword Arguments:
         Otherwise, default port is 8883.
 
     **tcp_connect_timeout_ms** (`int`): Milliseconds to wait for TCP connect response. Default is 5000ms (5 seconds).
-	
+
     **ca_filepath** (`str`): Override default trust store with CA certificates from this PEM formatted file.
 
     **ca_dirpath** (`str`): Override default trust store with CA certificates loaded from this directory (Unix only).
@@ -226,7 +226,11 @@ def mtls_from_bytes(cert_bytes, pri_key_bytes, **kwargs) -> awscrt.mqtt.Connecti
     return _builder(tls_ctx_options, **kwargs)
 
 
-def websockets_with_default_aws_signing(region, credentials_provider, websocket_proxy_options=None, **kwargs) -> awscrt.mqtt.Connection:
+def websockets_with_default_aws_signing(
+        region,
+        credentials_provider,
+        websocket_proxy_options=None,
+        **kwargs) -> awscrt.mqtt.Connection:
     """
     This builder creates an :class:`awscrt.mqtt.Connection`, configured for an MQTT connection over websockets to AWS IoT.
     The websocket handshake is signed using credentials from the credentials_provider.
@@ -263,7 +267,10 @@ def websockets_with_default_aws_signing(region, credentials_provider, websocket_
     return websockets_with_custom_handshake(_sign_websocket_handshake_request, websocket_proxy_options, **kwargs)
 
 
-def websockets_with_custom_handshake(websocket_handshake_transform, websocket_proxy_options=None, **kwargs) -> awscrt.mqtt.Connection:
+def websockets_with_custom_handshake(
+        websocket_handshake_transform,
+        websocket_proxy_options=None,
+        **kwargs) -> awscrt.mqtt.Connection:
     """
     This builder creates an :class:`awscrt.mqtt.Connection`, configured for an MQTT connection over websockets,
     with a custom function to transform the websocket handshake request before it is sent to the server.
