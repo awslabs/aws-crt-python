@@ -57,11 +57,11 @@ Optional Keyword Arguments:
     **keep_alive_secs** (`int`): The keep alive value, in seconds, to send in CONNECT packet.
         A PING will automatically be sent at this interval.
         The server will assume the connection is lost if no PING is received after 1.5X this value.
-        This duration must be longer than ping_timeout_ms.
+        Default is 1200sec (20 minutes). This duration must be longer than ping_timeout_ms.
 
     **ping_timeout_ms** (`int`): Milliseconds to wait for ping response before client assumes
         the connection is invalid and attempts to reconnect.
-        This duration must be shorter than `keep_alive_secs`.
+        Default is 3000ms (3 seconds). This duration must be shorter than `keep_alive_secs`.
 
     **will** (:class:`awscrt.mqtt.Will`): Will to send with CONNECT packet. The will is
         published by the server when its connection to the client is unexpectedly lost.
@@ -74,6 +74,8 @@ Optional Keyword Arguments:
         Default port is 443 if system supports ALPN or websockets are being used.
         Otherwise, default port is 8883.
 
+    **tcp_connect_timeout_ms** (`int`): Milliseconds to wait for TCP connect response. Default is 5000ms (5 seconds).
+	
     **ca_filepath** (`str`): Override default trust store with CA certificates from this PEM formatted file.
 
     **ca_dirpath** (`str`): Override default trust store with CA certificates loaded from this directory (Unix only).
