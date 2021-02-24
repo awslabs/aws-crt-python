@@ -115,8 +115,8 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
     """
     Credentials providers source the AwsCredentials needed to sign an authenticated AWS request.
 
-    This class provides `new()` functions for several built-in provider types.
-    To define a custom provider, use the `new_delegate()` function.
+    This class provides `new_X()` functions for several built-in provider types.
+    To define a custom provider, use the :meth:`new_delegate()` function.
     """
     __slots__ = ()
 
@@ -179,7 +179,7 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
         loaded from the aws credentials file.
 
         Args:
-            client_bootstrap: Client bootstrap to use when initiating socket connection.
+            client_bootstrap (ClientBootstrap): Client bootstrap to use when initiating socket connection.
 
             profile_name (Optional[str]): Name of profile to use.
                 If not set, uses value from AWS_PROFILE environment variable.
@@ -212,18 +212,22 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
 
         The command to run is sourced from a profile in the AWS config file, using the standard
         profile selection rules. The profile key the command is read from is "credential_process."
-        E.g.:
-         [default]
-         credential_process=/opt/amazon/bin/my-credential-fetcher --argsA=abc
+        Example::
+
+            [default]
+            credential_process=/opt/amazon/bin/my-credential-fetcher --argsA=abc
+
         On successfully running the command, the output should be a json data with the following
-        format:
-        {
-           "Version": 1,
-           "AccessKeyId": "accesskey",
-           "SecretAccessKey": "secretAccessKey"
-           "SessionToken": "....",
-           "Expiration": "2019-05-29T00:21:43Z"
-        }
+        format::
+
+            {
+                "Version": 1,
+                "AccessKeyId": "accesskey",
+                "SecretAccessKey": "secretAccessKey"
+                "SessionToken": "....",
+                "Expiration": "2019-05-29T00:21:43Z"
+            }
+
         Version here identifies the command output format version.
         This provider is not part of the default provider chain.
 
@@ -440,7 +444,7 @@ class AwsSigningConfig(NativeResource):
             Default is to not add a header.
 
         expiration_in_seconds (Optional[int]): If set, and signature_type is
-            `HTTP_REQUEST_QUERY_PARAMS`, then signing will add "X-Amz-Expires"
+            :attr:`AwsSignatureType.HTTP_REQUEST_QUERY_PARAMS`, then signing will add "X-Amz-Expires"
             to the query string, equal to the value specified here.
 
         omit_session_token (bool): If set True, the "X-Amz-Security-Token"
@@ -627,7 +631,7 @@ class AwsSigningConfig(NativeResource):
     @property
     def expiration_in_seconds(self):
         """
-        Optional[int]: If set, and signature_type is `HTTP_REQUEST_QUERY_PARAMS`,
+        Optional[int]: If set, and signature_type is :attr:`AwsSignatureType.HTTP_REQUEST_QUERY_PARAMS`,
         then signing will add "X-Amz-Expires" to the query string, equal to the
         value specified here. Otherwise, this is None has no effect.
         """

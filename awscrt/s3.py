@@ -21,7 +21,8 @@ class S3RequestType(IntEnum):
 
     DEFAULT = 0
     """
-    Default type, for all S3 request types other than GET_OBJECT/PUT_OBJECT.
+    Default type, for all S3 request types other than
+    :attr:`~S3RequestType.GET_OBJECT`/:attr:`~S3RequestType.PUT_OBJECT`.
     """
 
     GET_OBJECT = 1
@@ -58,21 +59,24 @@ class S3Client(NativeResource):
         region (str): Region that the S3 bucket lives in.
 
         tls_mode (Optional[S3RequestTlsMode]):  How TLS should be used while performing the request
-            If this is ENABLED:
-                If tls_connection_options is set, then those TLS options will be used
-                If tls_connection_options is unset, then default TLS options will be used
-            If this is DISABLED:
-                No TLS options will be used, regardless of tls_connection_options value.
+
+            If this is :attr:`S3RequestTlsMode.ENABLED`:
+                If `tls_connection_options` is set, then those TLS options will be used
+                If `tls_connection_options` is unset, then default TLS options will be used
+
+            If this is :attr:`S3RequestTlsMode.DISABLED`:
+                No TLS options will be used, regardless of `tls_connection_options` value.
 
         credential_provider (Optional[AwsCredentialsProvider]): Credentials providers source the
-            AwsCredentials needed to sign an authenticated AWS request.
+            :class:`~awscrt.auth.AwsCredentials` needed to sign an authenticated AWS request.
             If None is provided, the request will not be signed.
 
         tls_connection_options (Optional[TlsConnectionOptions]): Optional TLS Options to be used
-            for each connection, unless tls_mode is DISABLED
+            for each connection, unless `tls_mode` is :attr:`S3RequestTlsMode.DISABLED`
 
         part_size (Optional[int]): Size, in bytes, of parts that files will be downloaded or uploaded in.
-            Note: for PUT_OBJECT request, S3 requires the part size greater than 5MB. (5*1024*1024 by default)
+            Note: for :attr:`S3RequestType.PUT_OBJECT` request, S3 requires the part size greater than 5MB.
+            (5*1024*1024 by default)
 
         throughput_target_gbps (Optional[float]): Throughput target in Gbps that we are trying to reach.
             (5 Gbps by default)
@@ -143,26 +147,28 @@ class S3Client(NativeResource):
             on_done=None,
             on_progress=None):
         """Create the Request to the the S3 server,
-        GET_OBJECT/PUT_OBJECT requests are split it into multi-part requests under the hood for acceleration.
+        :attr:`~S3RequestType.GET_OBJECT`/:attr:`~S3RequestType.PUT_OBJECT` requests are split it into multi-part
+        requests under the hood for acceleration.
 
-        Args:
+        Keyword Args:
             request (HttpRequest): The overall outgoing API request for S3 operation.
                 If the request body is a file, set send_filepath for better performance.
 
-            type (S3RequestType): The type of S3 request passed in, GET_OBJECT/PUT_OBJECT can be accelerated
+            type (S3RequestType): The type of S3 request passed in,
+                :attr:`~S3RequestType.GET_OBJECT`/:attr:`~S3RequestType.PUT_OBJECT` can be accelerated
 
             credential_provider (Optional[AwsCredentialsProvider]): Credentials providers source the
-                AwsCredentials needed to sign an authenticated AWS request, for this request only.
+                :class:`~awscrt.auth.AwsCredentials` needed to sign an authenticated AWS request, for this request only.
                 If None is provided, the credential provider in the client will be used.
 
-             recv_filepath (Optional[str]): Optional file path. If set, the
+            recv_filepath (Optional[str]): Optional file path. If set, the
                 response body is written directly to a file and the
-                on_body callback is not invoked. This should give better
-                performance than writing to file from the on_body callback.
+                `on_body` callback is not invoked. This should give better
+                performance than writing to file from the `on_body` callback.
 
             send_filepath (Optional[str]): Optional file path. If set, the
                 request body is read directly from a file and the
-                request's body_stream is ignored. This should give better
+                request's `body_stream` is ignored. This should give better
                 performance than reading a file from a stream.
 
             on_headers: Optional callback invoked as the response received, and even the API request
@@ -170,47 +176,47 @@ class S3Client(NativeResource):
                 it's just making one API request to S3.
                 The function should take the following arguments and return nothing:
 
-                *   `status_code` (int): Response status code.
+                    *   `status_code` (int): Response status code.
 
-                *   `headers` (List[Tuple[str, str]]): Response headers as a
-                    list of (name,value) pairs.
+                    *   `headers` (List[Tuple[str, str]]): Response headers as a
+                        list of (name,value) pairs.
 
-                *   `**kwargs` (dict): Forward-compatibility kwargs.
+                    *   `**kwargs` (dict): Forward-compatibility kwargs.
 
             on_body: Optional callback invoked 0+ times as the response body received from S3 server.
-                If simply writing to a file, use recv_filepath instead of on_body for better performance.
+                If simply writing to a file, use `recv_filepath` instead of `on_body` for better performance.
                 The function should take the following arguments and return nothing:
 
-                *   `chunk` (buffer): Response body data (not necessarily
-                    a whole "chunk" of chunked encoding).
+                    *   `chunk` (buffer): Response body data (not necessarily
+                        a whole "chunk" of chunked encoding).
 
-                *   `offset` (int): The offset of the chunk started in the whole body.
+                    *   `offset` (int): The offset of the chunk started in the whole body.
 
-                *   `**kwargs` (dict): Forward-compatibility kwargs.
+                    *   `**kwargs` (dict): Forward-compatibility kwargs.
 
             on_done: Optional callback invoked when the request has finished the job.
                 The function should take the following arguments and return nothing:
 
-                *   `error` (Optional[Exception]): None if the request was
-                    successfully sent and valid response received, or an Exception
-                    if it failed.
+                    *   `error` (Optional[Exception]): None if the request was
+                        successfully sent and valid response received, or an Exception
+                        if it failed.
 
-                *   `error_headers` (Optional[List[Tuple[str, str]]]): If request
-                    failed because server side sent an unsuccessful response, the headers
-                    of the response is provided here. Else None will be returned.
+                    *   `error_headers` (Optional[List[Tuple[str, str]]]): If request
+                        failed because server side sent an unsuccessful response, the headers
+                        of the response is provided here. Else None will be returned.
 
-                *   `error_body` (Optional[Bytes]): If request failed because server
-                    side sent an unsuccessful response, the body of the response is
-                    provided here. Else None will be returned.
+                    *   `error_body` (Optional[Bytes]): If request failed because server
+                        side sent an unsuccessful response, the body of the response is
+                        provided here. Else None will be returned.
 
-                *   `**kwargs` (dict): Forward-compatibility kwargs.
+                    *   `**kwargs` (dict): Forward-compatibility kwargs.
 
             on_progress: Optional callback invoked when part of the transfer is done to report the progress.
                 The function should take the following arguments and return nothing:
 
-                *   `progress` (int): The data in bytes that just get transferred
+                    *   `progress` (int): Number of bytes of data that just get transferred
 
-                *   `**kwargs` (dict): Forward-compatibility kwargs.
+                    *   `**kwargs` (dict): Forward-compatibility kwargs.
 
         Returns:
             S3Request

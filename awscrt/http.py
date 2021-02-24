@@ -187,15 +187,15 @@ class HttpClientConnection(HttpConnectionBase):
             on_response: Optional callback invoked once main response headers are received.
                 The function should take the following arguments and return nothing:
 
-                *   `http_stream` (:class:`HttpClientStream`): HTTP stream carrying
-                    out this request/response exchange.
+                    *   `http_stream` (:class:`HttpClientStream`): HTTP stream carrying
+                        out this request/response exchange.
 
-                *   `status_code` (int): Response status code.
+                    *   `status_code` (int): Response status code.
 
-                *   `headers` (List[Tuple[str, str]]): Response headers as a
-                    list of (name,value) pairs.
+                    *   `headers` (List[Tuple[str, str]]): Response headers as a
+                        list of (name,value) pairs.
 
-                *   `**kwargs` (dict): Forward compatibility kwargs.
+                    *   `**kwargs` (dict): Forward compatibility kwargs.
 
                 An exception raise by this function will cause the HTTP stream to end in error.
                 This callback is always invoked on the connection's event-loop thread.
@@ -203,13 +203,13 @@ class HttpClientConnection(HttpConnectionBase):
             on_body: Optional callback invoked 0+ times as response body data is received.
                 The function should take the following arguments and return nothing:
 
-                *   `http_stream` (:class:`HttpClientStream`): HTTP stream carrying
-                    out this request/response exchange.
+                    *   `http_stream` (:class:`HttpClientStream`): HTTP stream carrying
+                        out this request/response exchange.
 
-                *   `chunk` (buffer): Response body data (not necessarily
-                    a whole "chunk" of chunked encoding).
+                    *   `chunk` (buffer): Response body data (not necessarily
+                        a whole "chunk" of chunked encoding).
 
-                *   `**kwargs` (dict): Forward-compatibility kwargs.
+                    *   `**kwargs` (dict): Forward-compatibility kwargs.
 
                 An exception raise by this function will cause the HTTP stream to end in error.
                 This callback is always invoked on the connection's event-loop thread.
