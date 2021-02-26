@@ -98,7 +98,8 @@ class TestProvider(NativeResourceTest):
     def test_default_provider(self):
         # Default credentials provider should pick up environment variables.
         with ScopedEnvironmentVariable('AWS_ACCESS_KEY_ID', EXAMPLE_ACCESS_KEY_ID), \
-                ScopedEnvironmentVariable('AWS_SECRET_ACCESS_KEY', EXAMPLE_SECRET_ACCESS_KEY):
+                ScopedEnvironmentVariable('AWS_SECRET_ACCESS_KEY', EXAMPLE_SECRET_ACCESS_KEY), \
+                ScopedEnvironmentVariable('AWS_SESSION_TOKEN', EXAMPLE_SESSION_TOKEN):
 
             event_loop_group = awscrt.io.EventLoopGroup()
             host_resolver = awscrt.io.DefaultHostResolver(event_loop_group)
@@ -111,7 +112,7 @@ class TestProvider(NativeResourceTest):
             # Don't use assertEqual(), which could log actual credentials if test fails.
             self.assertTrue(EXAMPLE_ACCESS_KEY_ID == credentials.access_key_id)
             self.assertTrue(EXAMPLE_SECRET_ACCESS_KEY == credentials.secret_access_key)
-            self.assertTrue(credentials.session_token is None)
+            self.assertTrue(EXAMPLE_SESSION_TOKEN == credentials.session_token)
 
     def test_profile_provider(self):
         # Profile provider should pick up the profile file to provide the credentials.
