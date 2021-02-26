@@ -30,7 +30,7 @@ __all__ = [
 class MessageType(IntEnum):
     """Types of messages in the event-stream RPC protocol.
 
-    The APPLICATION_MESSAGE and APPLICATION_ERROR types may only be sent
+    The :attr:`~MessageType.APPLICATION_MESSAGE` and :attr:`~MessageType.APPLICATION_ERROR` types may only be sent
     on streams, and will never arrive as a protocol message (stream-id 0).
 
     For all other message types, they may only be sent as protocol messages
@@ -56,7 +56,7 @@ class MessageType(IntEnum):
     CONNECT_ACK = 5
     """Connect acknowledgement
 
-    If the CONNECTION_ACCEPTED flag is not present, the connection has been rejected."""
+    If the :attr:`MessageFlag.CONNECTION_ACCEPTED` flag is not present, the connection has been rejected."""
 
     PROTOCOL_ERROR = 6
     """Protocol error"""
@@ -85,7 +85,7 @@ class MessageFlag:
     CONNECTION_ACCEPTED = 0x1
     """Connection accepted
 
-    If this flag is absent from a CONNECT_ACK, the connection has been rejected."""
+    If this flag is absent from a :attr:`MessageType.CONNECT_ACK`, the connection has been rejected."""
 
     TERMINATE_STREAM = 0x2
     """Terminate stream
@@ -104,7 +104,7 @@ class ClientConnectionHandler(ABC):
 
     Inherit from this class and override methods to handle connection events.
     All callbacks for this connection will be invoked on the same thread,
-    and `on_connection_setup()` will always be the first callback invoked.
+    and :meth:`on_connection_setup()` will always be the first callback invoked.
     """
 
     @abstractmethod
@@ -116,7 +116,7 @@ class ClientConnectionHandler(ABC):
         Note that the network connection stays alive until it is closed,
         even if no local references to the connection object remain.
         The user should store a reference to this connection, and call
-        connection.close() when they are done with it to avoid leaking
+        `connection.close()` when they are done with it to avoid leaking
         resources.
 
         Setup will always be the first callback invoked on the handler.
@@ -164,7 +164,7 @@ class ClientConnectionHandler(ABC):
 
             message_type: Message type.
 
-            flags: Message flags. Values from MessageFlag may be
+            flags: Message flags. Values from :class:`MessageFlag` may be
                 XORed together. Not all flags can be used with all message
                 types, consult documentation.
 
@@ -226,7 +226,7 @@ class ClientConnection(NativeResource):
     Note that the network connection stays alive until it is closed,
     even if no local references to the connection object remain.
     The user should store a reference to any connections, and call
-    close() when they are done with them to avoid leaking resources.
+    :meth:`close()` when they are done with them to avoid leaking resources.
 
     Attributes:
         host_name (str): Remote host name.
@@ -288,7 +288,7 @@ class ClientConnection(NativeResource):
             Note that this network connection stays alive until it is closed,
             even if no local references to the connection object remain.
             The user should store a reference to any connections, and call
-            close() when they are done with them to avoid leaking resources.
+            :meth:`close()` when they are done with them to avoid leaking resources.
         """
 
         if not socket_options:
@@ -352,7 +352,7 @@ class ClientConnection(NativeResource):
         already closed or closing.
 
         Note that, if the network connection hasn't already ended,
-        close() MUST be called to avoid leaking resources. The network
+        `close()` MUST be called to avoid leaking resources. The network
         connection will not terminate simply because there are no references
         to the connection object.
 
@@ -395,7 +395,7 @@ class ClientConnection(NativeResource):
 
             message_type: Message type.
 
-            flags: Message flags. Values from MessageFlag may be
+            flags: Message flags. Values from :class:`MessageFlag` may be
                 XORed together. Not all flags can be used with all message
                 types, consult documentation.
 
@@ -403,11 +403,11 @@ class ClientConnection(NativeResource):
                 to the wire, or fails to send. The function should take the
                 following arguments and return nothing:
 
-                *   `error` (Optional[Exception]): None if the message was
-                    successfully written to the wire, or an Exception
-                    if it failed to send.
+                    *   `error` (Optional[Exception]): None if the message was
+                        successfully written to the wire, or an Exception
+                        if it failed to send.
 
-                *   `**kwargs` (dict): Forward compatibility kwargs.
+                    *   `**kwargs` (dict): Forward compatibility kwargs.
 
                 This callback is always invoked on the connection's event-loop
                 thread.
@@ -501,7 +501,7 @@ class ClientContinuation(NativeResource):
 
             message_type: Message type.
 
-            flags: Message flags. Values from MessageFlag may be
+            flags: Message flags. Values from :class:`MessageFlag` may be
                 XORed together. Not all flags can be used with all message
                 types, consult documentation.
 
@@ -509,11 +509,11 @@ class ClientContinuation(NativeResource):
                 to the wire, or fails to send. The function should take the
                 following arguments and return nothing:
 
-                *   `error` (Optional[Exception]): None if the message was
-                    successfully written to the wire, or an Exception
-                    if it failed to send.
+                    *   `error` (Optional[Exception]): None if the message was
+                        successfully written to the wire, or an Exception
+                        if it failed to send.
 
-                *   `**kwargs` (dict): Forward compatibility kwargs.
+                    *   `**kwargs` (dict): Forward compatibility kwargs.
 
                 This callback is always invoked on the connection's event-loop
                 thread.
@@ -571,7 +571,7 @@ class ClientContinuation(NativeResource):
 
             message_type: Message type.
 
-            flags: Message flags. Values from MessageFlag may be
+            flags: Message flags. Values from :class:`MessageFlag` may be
                 XORed together. Not all flags can be used with all message
                 types, consult documentation.
 
@@ -579,11 +579,11 @@ class ClientContinuation(NativeResource):
                 to the wire, or fails to send. The function should take the
                 following arguments and return nothing:
 
-                *   `error` (Optional[Exception]): None if the message was
-                    successfully written to the wire, or an Exception
-                    if it failed to send.
+                    *   `error` (Optional[Exception]): None if the message was
+                        successfully written to the wire, or an Exception
+                        if it failed to send.
 
-                *   `**kwargs` (dict): Forward compatibility kwargs.
+                    *   `**kwargs` (dict): Forward compatibility kwargs.
 
                 This callback is always invoked on the connection's event-loop
                 thread.
@@ -634,8 +634,10 @@ class ClientContinuationHandler(ABC):
     All callbacks will be invoked on the same thread (the same thread used by
     the connection).
 
-    A common pattern is to store the continuation within its handler. Ex:
-    `continuation_handler.continuation = connection.new_stream(continuation_handler)`
+    A common pattern is to store the continuation within its handler.
+    Example::
+
+        continuation_handler.continuation = connection.new_stream(continuation_handler)
     """
 
     @abstractmethod
@@ -655,7 +657,7 @@ class ClientContinuationHandler(ABC):
 
             message_type: Message type.
 
-            flags: Message flags. Values from MessageFlag may be
+            flags: Message flags. Values from :class:`MessageFlag` may be
                 XORed together. Not all flags can be used with all message
                 types, consult documentation.
 

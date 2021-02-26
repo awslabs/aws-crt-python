@@ -88,7 +88,7 @@ class Header:
 
     @classmethod
     def from_bool(cls, name: str, value: bool) -> 'Header':
-        """Create a Header of type BOOL_TRUE or BOOL_FALSE"""
+        """Create a Header of type :attr:`~HeaderType.BOOL_TRUE` or :attr:`~HeaderType.BOOL_FALSE`"""
         if value:
             return cls(name, True, HeaderType.BOOL_TRUE)
         else:
@@ -96,7 +96,7 @@ class Header:
 
     @classmethod
     def from_byte(cls, name: str, value: int) -> 'Header':
-        """Create a Header of type BYTE
+        """Create a Header of type :attr:`~HeaderType.BYTE`
 
         The value must fit in an 8-bit signed int"""
         value = int(value)
@@ -106,7 +106,7 @@ class Header:
 
     @classmethod
     def from_int16(cls, name: str, value: int) -> 'Header':
-        """Create a Header of type INT16
+        """Create a Header of type :attr:`~HeaderType.INT16`
 
         The value must fit in an 16-bit signed int"""
         value = int(value)
@@ -116,7 +116,7 @@ class Header:
 
     @classmethod
     def from_int32(cls, name: str, value: int) -> 'Header':
-        """Create a Header of type INT32
+        """Create a Header of type :attr:`~HeaderType.INT32`
 
         The value must fit in an 32-bit signed int"""
         value = int(value)
@@ -126,7 +126,7 @@ class Header:
 
     @classmethod
     def from_int64(cls, name: str, value: int) -> 'Header':
-        """Create a Header of type INT64
+        """Create a Header of type :attr:`~HeaderType.INT64`
 
         The value must fit in an 64-bit signed int"""
         value = int(value)
@@ -136,20 +136,20 @@ class Header:
 
     @classmethod
     def from_byte_buf(cls, name: str, value: ByteString) -> 'Header':
-        """Create a Header of type BYTES
+        """Create a Header of type :attr:`~HeaderType.BYTE_BUF`
 
         The value must be a bytes-like object"""
         return cls(name, value, HeaderType.BYTE_BUF)
 
     @classmethod
     def from_string(cls, name: str, value: str) -> 'Header':
-        """Create a Header of type STRING"""
+        """Create a Header of type :attr:`~HeaderType.STRING`"""
         value = str(value)
         return cls(name, value, HeaderType.STRING)
 
     @classmethod
     def from_timestamp(cls, name: str, value: int) -> 'Header':
-        """Create a Header of type TIMESTAMP
+        """Create a Header of type :attr:`~HeaderType.TIMESTAMP`
 
         Value must be a posix timestamp (seconds since Unix epoch)"""
 
@@ -160,7 +160,7 @@ class Header:
 
     @classmethod
     def from_uuid(cls, name: str, value: UUID) -> 'Header':
-        """Create a Header of type UUID
+        """Create a Header of type :attr:`~HeaderType.UUID`
 
         The value must be a UUID"""
 
@@ -211,7 +211,7 @@ class Header:
     def value_as_bool(self) -> bool:
         """Return bool value
 
-        Raises an exception if type is not BOOL_TRUE or BOOL_FALSE"""
+        Raises an exception if type is not :attr:`~HeaderType.BOOL_TRUE` or :attr:`~HeaderType.BOOL_FALSE`"""
         if self._type == HeaderType.BOOL_TRUE:
             return True
         if self._type == HeaderType.BOOL_FALSE:
@@ -225,49 +225,49 @@ class Header:
     def value_as_byte(self) -> int:
         """Return value of 8-bit signed int
 
-        Raises an exception if type is not INT8"""
+        Raises an exception if type is not :attr:`~HeaderType.BYTE`"""
         return self._value_as(HeaderType.BYTE)
 
     def value_as_int16(self) -> int:
         """Return value of 16-bit signed int
 
-        Raises an exception if type is not INT16"""
+        Raises an exception if type is not :attr:`~HeaderType.INT16`"""
         return self._value_as(HeaderType.INT16)
 
     def value_as_int32(self) -> int:
         """Return value of 32-bit signed int
 
-        Raises an exception if type is not INT32"""
+        Raises an exception if type is not :attr:`~HeaderType.INT32`"""
         return self._value_as(HeaderType.INT32)
 
     def value_as_int64(self) -> int:
         """Return value of 64-bit signed int
 
-        Raises an exception if type is not INT64"""
+        Raises an exception if type is not :attr:`~HeaderType.INT64`"""
         return self._value_as(HeaderType.INT64)
 
     def value_as_byte_buf(self) -> ByteString:
         """Return value of bytes
 
-        Raises an exception if type is not BYTE_BUF"""
+        Raises an exception if type is not :attr:`~HeaderType.BYTE_BUF`"""
         return self._value_as(HeaderType.BYTE_BUF)
 
     def value_as_string(self) -> str:
         """Return value of string
 
-        Raises an exception if type is not STRING"""
+        Raises an exception if type is not :attr:`~HeaderType.STRING`"""
         return self._value_as(HeaderType.STRING)
 
     def value_as_timestamp(self) -> int:
         """Return value of timestamp (seconds since Unix epoch)
 
-        Raises an exception if type is not TIMESTAMP"""
+        Raises an exception if type is not :attr:`~HeaderType.TIMESTAMP`"""
         return self._value_as(HeaderType.TIMESTAMP)
 
     def value_as_uuid(self) -> UUID:
         """Return value of UUID
 
-        Raises an exception if type is not UUID"""
+        Raises an exception if type is not :attr:`~HeaderType.UUID`"""
         return self._value_as(HeaderType.UUID)
 
     def __str__(self):
