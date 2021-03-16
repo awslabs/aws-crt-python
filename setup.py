@@ -121,17 +121,17 @@ def get_libcrypto_static_library(libcrypto_dir):
 
 
 class AwsLib:
-    def __init__(self, name, extra_cmake_args=[], link=True):
+    def __init__(self, name, extra_cmake_args=[], libname=None):
         self.name = name
         self.extra_cmake_args = extra_cmake_args
-        self.link = link
+        self.libname = libname if libname else name
 
 
 # The extension depends on these libs.
 # They're built along with the extension, in the order listed.
 AWS_LIBS = []
 if sys.platform != 'darwin' and sys.platform != 'win32':
-    AWS_LIBS.append(AwsLib('aws-lc', ['BUILD_LIBSSL=OFF'], False))
+    AWS_LIBS.append(AwsLib('aws-lc', ['BUILD_LIBSSL=OFF'], 'crypto'))
     AWS_LIBS.append(AwsLib('s2n'))
 AWS_LIBS.append(AwsLib('aws-c-common'))
 AWS_LIBS.append(AwsLib('aws-c-cal'))
@@ -231,7 +231,7 @@ def awscrt_ext():
     extra_link_args = os.environ.get('LDFLAGS', '').split()
     extra_objects = []
 
-    libraries = [x.name for x in AWS_LIBS if x.link]
+    libraries = [x.libname for x in AWS_LIBS]
 
     # libraries must be passed to the linker with upstream dependencies listed last.
     libraries.reverse()
@@ -250,14 +250,14 @@ def awscrt_ext():
         # HACK: Don't understand why, but if AWS_LIBS are linked normally on macos, we get this error:
         # ImportError: dlopen(_awscrt.cpython-37m-darwin.so, 2): Symbol not found: _aws_byte_cursor_eq_ignore_case
         # Workaround is to pass them as 'extra_objects' instead of 'libraries'.
-        extra_objects = [os.path.join(DEP_INSTALL_PATH, 'lib', 'lib{}.a'.format(x.name)) for x in AWS_LIBS]
+        extra_objects = [os.path.join(DEP_INSTALL_PATH, 'lib', 'lib{}.a'.format(x)) for x in libraries]
         libraries = []
 
     else:  # unix
         # linker will prefer shared libraries over static if it can find both.
-        # force linker to choose static variant by using using "-l:lib<name>.a" syntax instead of just "-lcrypto".
+        # force linker to choose static variant by using using "-l:libcrypto.a" syntax instead of just "-lcrypto".
         libraries = [':lib{}.a'.format(x) for x in libraries]
-        libraries += [':libcrypto.a', 'rt']
+        libraries += ['rt']
 
     if distutils.ccompiler.get_default_compiler() != 'msvc':
         extra_compile_args += ['-Wextra', '-Werror', '-Wno-strict-aliasing', '-std=gnu99']
