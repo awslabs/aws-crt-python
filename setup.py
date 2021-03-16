@@ -121,16 +121,17 @@ def get_libcrypto_static_library(libcrypto_dir):
 
 
 class AwsLib:
-    def __init__(self, name, extra_cmake_args=[]):
+    def __init__(self, name, extra_cmake_args=[], link=True):
         self.name = name
         self.extra_cmake_args = extra_cmake_args
+        self.link = link
 
 
 # The extension depends on these libs.
 # They're built along with the extension, in the order listed.
 AWS_LIBS = []
 if sys.platform != 'darwin' and sys.platform != 'win32':
-    AWS_LIBS.append(AwsLib('aws-lc'))
+    AWS_LIBS.append(AwsLib('aws-lc', ['BUILD_LIBSSL=OFF'], False))
     AWS_LIBS.append(AwsLib('s2n'))
 AWS_LIBS.append(AwsLib('aws-c-common'))
 AWS_LIBS.append(AwsLib('aws-c-cal'))
@@ -183,10 +184,6 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
             '-DCMAKE_POSITION_INDEPENDENT_CODE=ON'
         ])
 
-        # if self.include_dirs:
-        #     cmake_args.append('-DCMAKE_INCLUDE_PATH="{}"'.format(';'.join(self.include_dirs)))
-        # if self.library_dirs:
-        #     cmake_args.append('-DCMAKE_LIBRARY_PATH="{}"'.format(';'.join(self.library_dirs)))
         cmake_args.extend(aws_lib.extra_cmake_args)
         cmake_args.append(lib_source_dir)
 
@@ -234,7 +231,7 @@ def awscrt_ext():
     extra_link_args = os.environ.get('LDFLAGS', '').split()
     extra_objects = []
 
-    libraries = [x.name for x in AWS_LIBS if x.name != 'aws-lc']
+    libraries = [x.name for x in AWS_LIBS if x.link]
 
     # libraries must be passed to the linker with upstream dependencies listed last.
     libraries.reverse()
