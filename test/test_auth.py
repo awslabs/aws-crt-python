@@ -1,18 +1,19 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 
-from __future__ import absolute_import
 import awscrt.auth
 import awscrt.io
 import datetime
 from io import BytesIO
 import os
+import sys
 from test import NativeResourceTest, TIMEOUT
 import time
 
 EXAMPLE_ACCESS_KEY_ID = 'example_access_key_id'
 EXAMPLE_SECRET_ACCESS_KEY = 'example_secret_access_key'
 EXAMPLE_SESSION_TOKEN = 'example_session_token'
+EXAMPLE_SESSION_EXPIRATION = datetime.datetime.fromtimestamp(1609911816, tz=datetime.timezone.utc)
 
 
 class ScopedEnvironmentVariable:
@@ -40,12 +41,14 @@ class TestCredentials(NativeResourceTest):
         credentials = awscrt.auth.AwsCredentials(
             EXAMPLE_ACCESS_KEY_ID,
             EXAMPLE_SECRET_ACCESS_KEY,
-            EXAMPLE_SESSION_TOKEN)
+            EXAMPLE_SESSION_TOKEN,
+            EXAMPLE_SESSION_EXPIRATION)
 
         # Don't use assertEqual(), which could log actual credentials if test fails.
         self.assertTrue(EXAMPLE_ACCESS_KEY_ID == credentials.access_key_id)
         self.assertTrue(EXAMPLE_SECRET_ACCESS_KEY == credentials.secret_access_key)
         self.assertTrue(EXAMPLE_SESSION_TOKEN == credentials.session_token)
+        self.assertTrue(EXAMPLE_SESSION_EXPIRATION == credentials.expiration)
 
     def test_create_no_session_token(self):
         credentials = awscrt.auth.AwsCredentials(EXAMPLE_ACCESS_KEY_ID, EXAMPLE_SECRET_ACCESS_KEY)
@@ -54,6 +57,14 @@ class TestCredentials(NativeResourceTest):
         self.assertTrue(EXAMPLE_ACCESS_KEY_ID == credentials.access_key_id)
         self.assertTrue(EXAMPLE_SECRET_ACCESS_KEY == credentials.secret_access_key)
         self.assertTrue(credentials.session_token is None)
+
+    def test_create_no_expiration(self):
+        credentials = awscrt.auth.AwsCredentials(EXAMPLE_ACCESS_KEY_ID, EXAMPLE_SECRET_ACCESS_KEY)
+
+        # Don't use assertEqual(), which could log actual credentials if test fails.
+        self.assertTrue(EXAMPLE_ACCESS_KEY_ID == credentials.access_key_id)
+        self.assertTrue(EXAMPLE_SECRET_ACCESS_KEY == credentials.secret_access_key)
+        self.assertTrue(credentials.expiration is None)
 
 
 class TestProvider(NativeResourceTest):
@@ -101,6 +112,108 @@ class TestProvider(NativeResourceTest):
             self.assertTrue(EXAMPLE_ACCESS_KEY_ID == credentials.access_key_id)
             self.assertTrue(EXAMPLE_SECRET_ACCESS_KEY == credentials.secret_access_key)
             self.assertTrue(credentials.session_token is None)
+
+    def test_profile_provider(self):
+        # Profile provider should pick up the profile file to provide the credentials.
+        profile_name = "crt_user"
+        credentials_filepath = "test/resources/example_profile"
+        event_loop_group = awscrt.io.EventLoopGroup()
+        host_resolver = awscrt.io.DefaultHostResolver(event_loop_group)
+        bootstrap = awscrt.io.ClientBootstrap(event_loop_group, host_resolver)
+        provider = awscrt.auth.AwsCredentialsProvider.new_profile(
+            bootstrap, profile_name=profile_name, credentials_filepath=credentials_filepath)
+
+        future = provider.get_credentials()
+        credentials = future.result(TIMEOUT)
+
+        # Don't use assertEqual(), which could log actual credentials if test fails.
+        self.assertTrue(EXAMPLE_ACCESS_KEY_ID == credentials.access_key_id)
+        self.assertTrue(EXAMPLE_SECRET_ACCESS_KEY == credentials.secret_access_key)
+        self.assertTrue(credentials.session_token is None)
+
+    def test_environment_provider(self):
+        with ScopedEnvironmentVariable('AWS_ACCESS_KEY_ID', EXAMPLE_ACCESS_KEY_ID), \
+                ScopedEnvironmentVariable('AWS_SECRET_ACCESS_KEY', EXAMPLE_SECRET_ACCESS_KEY), \
+                ScopedEnvironmentVariable('AWS_SESSION_TOKEN', EXAMPLE_SESSION_TOKEN):
+
+            provider = awscrt.auth.AwsCredentialsProvider.new_environment()
+            credentials = provider.get_credentials().result(TIMEOUT)
+
+            # Don't use assertEqual(), which could log actual credentials if test fails.
+            self.assertTrue(EXAMPLE_ACCESS_KEY_ID == credentials.access_key_id)
+            self.assertTrue(EXAMPLE_SECRET_ACCESS_KEY == credentials.secret_access_key)
+            self.assertTrue(EXAMPLE_SESSION_TOKEN == credentials.session_token)
+
+    def test_chain_provider(self):
+        provider = awscrt.auth.AwsCredentialsProvider.new_chain([
+            awscrt.auth.AwsCredentialsProvider.new_static('id_a', 'secret_a'),
+            awscrt.auth.AwsCredentialsProvider.new_static('id_b', 'secret_b'),
+        ])
+        credentials = provider.get_credentials().result(TIMEOUT)
+        self.assertTrue('id_a' == credentials.access_key_id)
+        self.assertTrue('secret_a' == credentials.secret_access_key)
+        self.assertTrue(credentials.session_token is None)
+
+    def test_chain_provider_bad_args(self):
+        with self.assertRaises(TypeError):
+            awscrt.auth.AwsCredentialsProvider.new_chain(None)
+
+        with self.assertRaises(ValueError):
+            awscrt.auth.AwsCredentialsProvider.new_chain([])
+
+        with self.assertRaises(TypeError):
+            provider = awscrt.auth.AwsCredentialsProvider.new_chain([
+                awscrt.auth.AwsCredentialsProvider.new_static('id_a', 'secret_a'),
+                "I am not an AwsCredentialsProvider",
+            ])
+
+    def test_process_provider(self):
+        with ScopedEnvironmentVariable("AWS_CONFIG_FILE", "test/resources/example_config"):
+            if sys.platform == 'win32':
+                profile = 'test_process_provider_win'
+            else:
+                profile = 'test_process_provider'
+            provider = awscrt.auth.AwsCredentialsProvider.new_process(profile)
+            credentials = provider.get_credentials().result(TIMEOUT)
+
+            # Don't use assertEqual(), which could log actual credentials if test fails.
+            self.assertTrue('process_access_key_id' == credentials.access_key_id)
+            self.assertTrue('process_secret_access_key' == credentials.secret_access_key)
+            self.assertTrue(credentials.session_token is None)
+
+    def test_delegate_provider(self):
+        def delegate_get_credentials():
+            return awscrt.auth.AwsCredentials("accesskey", "secretAccessKey", "sessionToken")
+
+        provider = awscrt.auth.AwsCredentialsProvider.new_delegate(delegate_get_credentials)
+        credentials = provider.get_credentials().result(TIMEOUT)
+
+        # Don't use assertEqual(), which could log actual credentials if test fails.
+        self.assertTrue('accesskey' == credentials.access_key_id)
+        self.assertTrue('secretAccessKey' == credentials.secret_access_key)
+        self.assertTrue('sessionToken' == credentials.session_token)
+
+    def test_delegate_provider_exception(self):
+        # delegate that raises exception should result in exception
+        def delegate_get_credentials():
+            raise Exception("purposefully thrown exception")
+
+        provider = awscrt.auth.AwsCredentialsProvider.new_delegate(delegate_get_credentials)
+
+        with self.assertRaises(Exception):
+            credentials_future = provider.get_credentials()
+            credentials = credentials_future.result(TIMEOUT)
+
+    def test_delegate_provider_exception_from_bad_return_type(self):
+        # delegate that returns wrong type should result in exception
+        def delegate_get_credentials():
+            return "purposefully return wrong type"
+
+        provider = awscrt.auth.AwsCredentialsProvider.new_delegate(delegate_get_credentials)
+
+        with self.assertRaises(Exception):
+            credentials_future = provider.get_credentials()
+            credentials = credentials_future.result(TIMEOUT)
 
 
 class TestSigningConfig(NativeResourceTest):

@@ -131,8 +131,10 @@ PyObject *aws_py_event_loop_group_new(PyObject *self, PyObject *args) {
     struct aws_allocator *allocator = aws_py_get_allocator();
 
     uint16_t num_threads;
+    int is_pinned;
+    uint16_t cpu_group;
     PyObject *shutdown_complete_py;
-    if (!PyArg_ParseTuple(args, "HO", &num_threads, &shutdown_complete_py)) {
+    if (!PyArg_ParseTuple(args, "HpHO", &num_threads, &is_pinned, &cpu_group, &shutdown_complete_py)) {
         return NULL;
     }
 
@@ -146,7 +148,12 @@ PyObject *aws_py_event_loop_group_new(PyObject *self, PyObject *args) {
         .shutdown_callback_user_data = binding,
     };
 
-    binding->native = aws_event_loop_group_new_default(allocator, num_threads, &shutdown_options);
+    if (is_pinned) {
+        binding->native =
+            aws_event_loop_group_new_default_pinned_to_cpu_group(allocator, num_threads, cpu_group, &shutdown_options);
+    } else {
+        binding->native = aws_event_loop_group_new_default(allocator, num_threads, &shutdown_options);
+    }
     if (binding->native == NULL) {
         PyErr_SetAwsLastError();
         goto elg_init_failed;
@@ -222,8 +229,12 @@ PyObject *aws_py_host_resolver_new_default(PyObject *self, PyObject *args) {
     }
 
     /* From hereon, we need to clean up if errors occur */
+    struct aws_host_resolver_default_options resolver_options = {
+        .max_entries = max_hosts,
+        .el_group = elg,
+    };
 
-    host_resolver->native = aws_host_resolver_new_default(allocator, max_hosts, elg, NULL);
+    host_resolver->native = aws_host_resolver_new_default(allocator, &resolver_options);
     if (host_resolver->native == NULL) {
         PyErr_SetAwsLastError();
         goto resolver_init_failed;
@@ -627,13 +638,13 @@ struct aws_input_stream_py_impl {
 
     bool is_end_of_stream;
 
-    /* Dependencies that must outlive this */
-    PyObject *io;
+    /* Weak reference proxy to python self. */
+    PyObject *self_proxy;
 };
 
 static void s_aws_input_stream_py_destroy(struct aws_input_stream *stream) {
     struct aws_input_stream_py_impl *impl = stream->impl;
-    Py_DECREF(impl->io);
+    Py_XDECREF(impl->self_proxy);
     aws_mem_release(stream->allocator, stream);
 }
 
@@ -653,7 +664,7 @@ static int s_aws_input_stream_py_seek(
         return AWS_OP_ERR; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
-    method_result = PyObject_CallMethod(impl->io, "seek", "(li)", offset, basis);
+    method_result = PyObject_CallMethod(impl->self_proxy, "_seek", "(li)", offset, basis);
     if (!method_result) {
         aws_result = aws_py_raise_error();
         goto done;
@@ -689,7 +700,7 @@ int s_aws_input_stream_py_read(struct aws_input_stream *stream, struct aws_byte_
         goto done;
     }
 
-    method_result = PyObject_CallMethod(impl->io, "readinto", "(O)", memory_view);
+    method_result = PyObject_CallMethod(impl->self_proxy, "_read_into_memoryview", "(O)", memory_view);
     if (!method_result) {
         aws_result = aws_py_raise_error();
         goto done;
@@ -745,9 +756,9 @@ static struct aws_input_stream_vtable s_aws_input_stream_py_vtable = {
     .destroy = s_aws_input_stream_py_destroy,
 };
 
-static struct aws_input_stream *aws_input_stream_new_from_py(PyObject *io) {
+static struct aws_input_stream *aws_input_stream_new_from_py(PyObject *py_self) {
 
-    if (!io || (io == Py_None)) {
+    if (!py_self || (py_self == Py_None)) {
         aws_raise_error(AWS_ERROR_INVALID_ARGUMENT);
         return NULL;
     }
@@ -761,10 +772,15 @@ static struct aws_input_stream *aws_input_stream_new_from_py(PyObject *io) {
     impl->base.allocator = alloc;
     impl->base.vtable = &s_aws_input_stream_py_vtable;
     impl->base.impl = impl;
-    impl->io = io;
-    Py_INCREF(impl->io);
+    impl->self_proxy = PyWeakref_NewProxy(py_self, NULL);
+    if (!impl->self_proxy) {
+        goto error;
+    }
 
     return &impl->base;
+error:
+    aws_input_stream_destroy(&impl->base);
+    return NULL;
 }
 
 /**
@@ -783,12 +799,12 @@ static void s_input_stream_capsule_destructor(PyObject *py_capsule) {
 PyObject *aws_py_input_stream_new(PyObject *self, PyObject *args) {
     (void)self;
 
-    PyObject *py_io;
-    if (!PyArg_ParseTuple(args, "O", &py_io)) {
+    PyObject *py_self;
+    if (!PyArg_ParseTuple(args, "O", &py_self)) {
         return NULL;
     }
 
-    struct aws_input_stream *stream = aws_input_stream_new_from_py(py_io);
+    struct aws_input_stream *stream = aws_input_stream_new_from_py(py_self);
     if (!stream) {
         return PyErr_AwsLastError();
     }

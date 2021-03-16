@@ -7,7 +7,6 @@ All network operations in `awscrt.http` are asynchronous.
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 
-from __future__ import absolute_import
 import _awscrt
 from concurrent.futures import Future
 from awscrt import NativeResource
@@ -179,7 +178,7 @@ class HttpClientConnection(HttpConnectionBase):
     def request(self, request, on_response=None, on_body=None):
         """Create :class:`HttpClientStream` to carry out the request/response exchange.
 
-        NOTE: The stream sends no data until :meth:`HttpClientStream.activate()`
+        NOTE: The HTTP stream sends no data until :meth:`HttpClientStream.activate()`
         is called. Call activate() when you're ready for callbacks and events to fire.
 
         Args:
@@ -188,31 +187,31 @@ class HttpClientConnection(HttpConnectionBase):
             on_response: Optional callback invoked once main response headers are received.
                 The function should take the following arguments and return nothing:
 
-                *   `http_stream` (:class:`HttpClientStream`): Stream carrying
-                    out this request/response exchange.
+                    *   `http_stream` (:class:`HttpClientStream`): HTTP stream carrying
+                        out this request/response exchange.
 
-                *   `status_code` (int): Response status code.
+                    *   `status_code` (int): Response status code.
 
-                *   `headers` (List[Tuple[str, str]]): Response headers as a
-                    list of (name,value) pairs.
+                    *   `headers` (List[Tuple[str, str]]): Response headers as a
+                        list of (name,value) pairs.
 
-                *   `**kwargs` (dict): Forward compatibility kwargs.
+                    *   `**kwargs` (dict): Forward compatibility kwargs.
 
-                An exception raise by this function will cause the stream to end in error.
+                An exception raise by this function will cause the HTTP stream to end in error.
                 This callback is always invoked on the connection's event-loop thread.
 
             on_body: Optional callback invoked 0+ times as response body data is received.
                 The function should take the following arguments and return nothing:
 
-                *   `http_stream` (:class:`HttpClientStream`): Stream carrying
-                    out this request/response exchange.
+                    *   `http_stream` (:class:`HttpClientStream`): HTTP stream carrying
+                        out this request/response exchange.
 
-                *   `chunk` (buffer): Response body data (not necessarily
-                    a whole "chunk" of chunked encoding).
+                    *   `chunk` (buffer): Response body data (not necessarily
+                        a whole "chunk" of chunked encoding).
 
-                *   `**kwargs` (dict): Forward-compatibility kwargs.
+                    *   `**kwargs` (dict): Forward-compatibility kwargs.
 
-                An exception raise by this function will cause the stream to end in error.
+                An exception raise by this function will cause the HTTP stream to end in error.
                 This callback is always invoked on the connection's event-loop thread.
 
         Returns:
@@ -245,11 +244,11 @@ class HttpStreamBase(NativeResource):
 
 
 class HttpClientStream(HttpStreamBase):
-    """Stream that sends a request and receives a response.
+    """HTTP stream that sends a request and receives a response.
 
     Create an HttpClientStream with :meth:`HttpClientConnection.request()`.
 
-    NOTE: The stream sends no data until :meth:`HttpClientStream.activate()`
+    NOTE: The HTTP stream sends no data until :meth:`HttpClientStream.activate()`
     is called. Call activate() when you're ready for callbacks and events to fire.
 
     Attributes:
@@ -288,7 +287,7 @@ class HttpClientStream(HttpStreamBase):
     def activate(self):
         """Begin sending the request.
 
-        The stream does nothing until this is called. Call activate() when you
+        The HTTP stream does nothing until this is called. Call activate() when you
         are ready for its callbacks and events to fire.
         """
         _awscrt.http_client_stream_activate(self)
@@ -332,7 +331,7 @@ class HttpMessageBase(NativeResource):
 
     @property
     def body_stream(self):
-        """InputStream: Stream of outgoing body."""
+        """InputStream: Binary stream of outgoing body."""
         return _awscrt.http_message_get_body_stream(self._binding)
 
     @body_stream.setter
@@ -352,7 +351,7 @@ class HttpRequest(HttpMessageBase):
         path (str): HTTP path-and-query value. Default value is "/".
         headers (Optional[HttpHeaders]): Optional headers. If None specified,
             an empty :class:`HttpHeaders` is created.
-        body_string(Optional[Union[InputStream, io.IOBase]]): Optional body as stream.
+        body_stream(Optional[Union[InputStream, io.IOBase]]): Optional body as binary stream.
     """
 
     __slots__ = ()

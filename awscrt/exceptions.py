@@ -51,4 +51,4 @@ class AwsCrtError(Exception):
             self.__class__.__name__, repr(self.name), repr(self.message), self.code)
 
     def __str__(self):
-        return self.__repr__()
+        return "{}: {}".format(self.name, self.message)

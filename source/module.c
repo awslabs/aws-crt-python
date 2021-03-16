@@ -5,20 +5,25 @@
 #include "module.h"
 
 #include "auth.h"
+#include "common.h"
 #include "crypto.h"
+#include "event_stream.h"
 #include "http.h"
 #include "io.h"
 #include "mqtt_client.h"
 #include "mqtt_client_connection.h"
+#include "s3.h"
 
 #include <aws/auth/auth.h>
 #include <aws/common/byte_buf.h>
 #include <aws/common/system_info.h>
+#include <aws/event-stream/event_stream.h>
 #include <aws/http/http.h>
 #include <aws/io/io.h>
 #include <aws/io/logging.h>
 #include <aws/io/tls_channel_handler.h>
 #include <aws/mqtt/mqtt.h>
+#include <aws/s3/s3.h>
 
 #include <memoryobject.h>
 
@@ -222,6 +227,22 @@ PyObject *PyErr_AwsLastError(void) {
     return PyErr_Format(PyExc_RuntimeError, "%d (%s): %s", err, name, msg);
 }
 
+#define AWS_DEFINE_ERROR_INFO_CRT(CODE, STR)                                                                           \
+    [(CODE)-AWS_ERROR_ENUM_BEGIN_RANGE(AWS_CRT_PYTHON_PACKAGE_ID)] = AWS_DEFINE_ERROR_INFO(CODE, STR, "aws-crt-python")
+
+/* clang-format off */
+static struct aws_error_info s_errors[] = {
+    AWS_DEFINE_ERROR_INFO_CRT(
+        AWS_ERROR_CRT_CALLBACK_EXCEPTION,
+        "Callback raised an exception."),
+};
+/* clang-format on */
+
+static struct aws_error_info_list s_error_list = {
+    .error_list = s_errors,
+    .count = AWS_ARRAY_SIZE(s_errors),
+};
+
 /* Mappings between Python built-in exception types and AWS_ERROR_ codes
  * Stored in hashtables as `PyObject*` of Python exception type, and `int` of AWS_ERROR_ enum (cast to void*) */
 static struct aws_hash_table s_py_to_aws_error_map;
@@ -363,13 +384,13 @@ int aws_py_gilstate_ensure(PyGILState_STATE *out_state) {
 
 void *aws_py_get_binding(PyObject *obj, const char *capsule_name, const char *class_name) {
     if (!obj || obj == Py_None) {
-        return PyErr_Format(PyExc_TypeError, "Excepted '%s', received 'NoneType'", class_name);
+        return PyErr_Format(PyExc_TypeError, "Expected '%s', received 'NoneType'", class_name);
     }
 
     PyObject *py_binding = PyObject_GetAttrString(obj, "_binding"); /* new reference */
     if (!py_binding) {
         return PyErr_Format(
-            PyExc_AttributeError,
+            PyExc_TypeError,
             "Expected valid '%s', received '%s' (no '_binding' attribute)",
             class_name,
             Py_TYPE(obj)->tp_name);
@@ -459,6 +480,8 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(get_error_name, METH_VARARGS),
     AWS_PY_METHOD_DEF(get_error_message, METH_VARARGS),
     AWS_PY_METHOD_DEF(get_corresponding_builtin_exception, METH_VARARGS),
+    AWS_PY_METHOD_DEF(get_cpu_group_count, METH_VARARGS),
+    AWS_PY_METHOD_DEF(get_cpu_count_for_group, METH_VARARGS),
 
     /* IO */
     AWS_PY_METHOD_DEF(is_alpn_available, METH_NOARGS),
@@ -525,9 +548,15 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(credentials_access_key_id, METH_VARARGS),
     AWS_PY_METHOD_DEF(credentials_secret_access_key, METH_VARARGS),
     AWS_PY_METHOD_DEF(credentials_session_token, METH_VARARGS),
+    AWS_PY_METHOD_DEF(credentials_expiration_timestamp_seconds, METH_VARARGS),
     AWS_PY_METHOD_DEF(credentials_provider_get_credentials, METH_VARARGS),
     AWS_PY_METHOD_DEF(credentials_provider_new_chain_default, METH_VARARGS),
     AWS_PY_METHOD_DEF(credentials_provider_new_static, METH_VARARGS),
+    AWS_PY_METHOD_DEF(credentials_provider_new_profile, METH_VARARGS),
+    AWS_PY_METHOD_DEF(credentials_provider_new_process, METH_VARARGS),
+    AWS_PY_METHOD_DEF(credentials_provider_new_environment, METH_VARARGS),
+    AWS_PY_METHOD_DEF(credentials_provider_new_chain, METH_VARARGS),
+    AWS_PY_METHOD_DEF(credentials_provider_new_delegate, METH_VARARGS),
     AWS_PY_METHOD_DEF(signing_config_new, METH_VARARGS),
     AWS_PY_METHOD_DEF(signing_config_get_algorithm, METH_VARARGS),
     AWS_PY_METHOD_DEF(signing_config_get_signature_type, METH_VARARGS),
@@ -542,6 +571,21 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(signing_config_get_expiration_in_seconds, METH_VARARGS),
     AWS_PY_METHOD_DEF(signing_config_get_omit_session_token, METH_VARARGS),
     AWS_PY_METHOD_DEF(sign_request_aws, METH_VARARGS),
+
+    /* Event Stream */
+    AWS_PY_METHOD_DEF(event_stream_rpc_client_connection_connect, METH_VARARGS),
+    AWS_PY_METHOD_DEF(event_stream_rpc_client_connection_close, METH_VARARGS),
+    AWS_PY_METHOD_DEF(event_stream_rpc_client_connection_is_open, METH_VARARGS),
+    AWS_PY_METHOD_DEF(event_stream_rpc_client_connection_send_protocol_message, METH_VARARGS),
+    AWS_PY_METHOD_DEF(event_stream_rpc_client_connection_new_stream, METH_VARARGS),
+    AWS_PY_METHOD_DEF(event_stream_rpc_client_continuation_activate, METH_VARARGS),
+    AWS_PY_METHOD_DEF(event_stream_rpc_client_continuation_send_message, METH_VARARGS),
+    AWS_PY_METHOD_DEF(event_stream_rpc_client_continuation_is_closed, METH_VARARGS),
+
+    /* S3 */
+    AWS_PY_METHOD_DEF(s3_client_new, METH_VARARGS),
+    AWS_PY_METHOD_DEF(s3_client_make_meta_request, METH_VARARGS),
+    AWS_PY_METHOD_DEF(s3_meta_request_cancel, METH_VARARGS),
 
     {NULL, NULL, 0, NULL},
 };
@@ -576,11 +620,16 @@ PyMODINIT_FUNC PyInit__awscrt(void) {
     aws_http_library_init(aws_py_get_allocator());
     aws_auth_library_init(aws_py_get_allocator());
     aws_mqtt_library_init(aws_py_get_allocator());
+    aws_event_stream_library_init(aws_py_get_allocator());
+    aws_s3_library_init(aws_py_get_allocator());
 
+#if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 9
     if (!PyEval_ThreadsInitialized()) {
         PyEval_InitThreads();
     }
+#endif
 
+    aws_register_error_info(&s_error_list);
     s_error_map_init();
 
     return m;

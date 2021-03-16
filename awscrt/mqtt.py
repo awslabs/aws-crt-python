@@ -173,25 +173,25 @@ class Connection(NativeResource):
             The MQTT client will automatically attempt to reconnect.
             The function should take the following arguments return nothing:
 
-            *   `connection` (:class:`Connection`): This MQTT Connection.
+                *   `connection` (:class:`Connection`): This MQTT Connection.
 
-            *   `error` (:class:`awscrt.exceptions.AwsCrtError`): Exception which caused connection loss.
+                *   `error` (:class:`awscrt.exceptions.AwsCrtError`): Exception which caused connection loss.
 
-            *   `**kwargs` (dict): Forward-compatibility kwargs.
+                *   `**kwargs` (dict): Forward-compatibility kwargs.
 
         on_connection_resumed: Optional callback invoked whenever the MQTT connection
             is automatically resumed. Function should take the following arguments and return nothing:
 
-            *   `connection` (:class:`Connection`): This MQTT Connection
+                *   `connection` (:class:`Connection`): This MQTT Connection
 
-            *   `return_code` (:class:`ConnectReturnCode`): Connect return
-                code received from the server.
+                *   `return_code` (:class:`ConnectReturnCode`): Connect return
+                    code received from the server.
 
-            *   `session_present` (bool): True if resuming existing session. False if new session.
-                Note that the server has forgotten all previous subscriptions if this is False.
-                Subscriptions can be re-established via resubscribe_existing_topics().
+                *   `session_present` (bool): True if resuming existing session. False if new session.
+                    Note that the server has forgotten all previous subscriptions if this is False.
+                    Subscriptions can be re-established via resubscribe_existing_topics().
 
-            *   `**kwargs` (dict): Forward-compatibility kwargs.
+                *   `**kwargs` (dict): Forward-compatibility kwargs.
 
         reconnect_min_timeout_secs (int): Minimum time to wait between reconnect attempts.
             Must be <= `reconnect_max_timeout_secs`.
@@ -208,10 +208,7 @@ class Connection(NativeResource):
 
         ping_timeout_ms (int): Milliseconds to wait for ping response before client assumes
             the connection is invalid and attempts to reconnect.
-            This duration must be shorter than keep_alive_secs.
-            Alternatively, TCP keep-alive via :attr:`SocketOptions.keep_alive`
-            may accomplish this in a more efficient (low-power) scenario,
-            but keep-alive options may not work the same way on every platform and OS version.
+            This duration must be shorter than `keep_alive_secs`.
 
         will (Will): Will to send with CONNECT packet. The will is
             published by the server when its connection to the client is unexpectedly lost.
@@ -233,11 +230,11 @@ class Connection(NativeResource):
             See :class:`WebsocketHandshakeTransformArgs` for more info.
             Function should take the following arguments and return nothing:
 
-            *   `transform_args` (:class:`WebsocketHandshakeTransformArgs`):
-                Contains HTTP request to be transformed. Function must call
-                `transform_args.done()` when complete.
+                *   `transform_args` (:class:`WebsocketHandshakeTransformArgs`):
+                    Contains HTTP request to be transformed. Function must call
+                    `transform_args.done()` when complete.
 
-            *   `**kwargs` (dict): Forward-compatibility kwargs.
+                *   `**kwargs` (dict): Forward-compatibility kwargs.
         """
 
     def __init__(self,
@@ -444,11 +441,19 @@ class Connection(NativeResource):
             callback: Optional callback invoked when message received.
                 Function should take the following arguments and return nothing:
 
-                *   `topic` (str): Topic receiving message.
+                    *   `topic` (str): Topic receiving message.
 
-                *   `payload` (bytes): Payload of message.
+                    *   `payload` (bytes): Payload of message.
 
-                *   `**kwargs` (dict): Forward-compatibility kwargs.
+                    *   `dup` (bool): DUP flag. If True, this might be re-delivery
+                        of an earlier attempt to send the message.
+
+                    *   `qos` (:class:`QoS`): Quality of Service used to deliver the message.
+
+                    *   `retain` (bool): Retain flag. If True, the message was sent
+                        as a result of a new subscription being made by the client.
+
+                    *   `**kwargs` (dict): Forward-compatibility kwargs.
 
         Returns:
             Tuple[concurrent.futures.Future, int]: Tuple containing a Future and
@@ -456,12 +461,12 @@ class Connection(NativeResource):
             SUBACK is received from the server. If successful, the Future will
             contain a dict with the following members:
 
-            *   ['packet_id'] (int): ID of the SUBSCRIBE packet being acknowledged.
+                *   ['packet_id'] (int): ID of the SUBSCRIBE packet being acknowledged.
 
-            *   ['topic'] (str): Topic filter of the SUBSCRIBE packet being acknowledged.
+                *   ['topic'] (str): Topic filter of the SUBSCRIBE packet being acknowledged.
 
-            *   ['qos'] (:class:`QoS`): Maximum QoS that was granted by the server.
-                This may be lower than the requested QoS.
+                *   ['qos'] (:class:`QoS`): Maximum QoS that was granted by the server.
+                    This may be lower than the requested QoS.
 
             If unsuccessful, the Future contains an exception. The exception
             will be a :class:`SubscribeError` if a SUBACK was received
@@ -473,8 +478,14 @@ class Connection(NativeResource):
         packet_id = 0
 
         if callback:
-            def callback_wrapper(topic, payload):
-                callback(topic=topic, payload=payload)
+            def callback_wrapper(topic, payload, dup, qos, retain):
+                try:
+                    callback(topic=topic, payload=payload, dup=dup, qos=QoS(qos), retain=retain)
+                except TypeError:
+                    # This callback used to have fewer args.
+                    # Try again, passing only those those args, to cover case where
+                    # user function failed to take forward-compatibility **kwargs.
+                    callback(topic=topic, payload=payload)
         else:
             callback_wrapper = None
 
@@ -508,17 +519,31 @@ class Connection(NativeResource):
         callback: Callback to invoke when message received, or None to disable.
             Function should take the following arguments and return nothing:
 
-            *   `topic` (str): Topic receiving message.
+                *   `topic` (str): Topic receiving message.
 
-            *   `payload` (bytes): Payload of message.
+                *   `payload` (bytes): Payload of message.
 
-            *   `**kwargs` (dict): Forward-compatibility kwargs.
+                *   `dup` (bool): DUP flag. If True, this might be re-delivery
+                    of an earlier attempt to send the message.
+
+                *   `qos` (:class:`QoS`): Quality of Service used to deliver the message.
+
+                *   `retain` (bool): Retain flag. If True, the message was sent
+                    as a result of a new subscription being made by the client.
+
+                *   `**kwargs` (dict): Forward-compatibility kwargs.
         """
         assert callable(callback) or callback is None
 
         if callback:
-            def callback_wrapper(topic, payload):
-                callback(topic=topic, payload=payload)
+            def callback_wrapper(topic, payload, dup, qos, retain):
+                try:
+                    callback(topic=topic, payload=payload, dup=dup, qos=QoS(qos), retain=retain)
+                except TypeError:
+                    # This callback used to have fewer args.
+                    # Try again, passing only those those args, to cover case where
+                    # user function failed to take forward-compatibility **kwargs.
+                    callback(topic=topic, payload=payload)
         else:
             callback_wrapper = None
 

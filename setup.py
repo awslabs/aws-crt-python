@@ -1,14 +1,15 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 
-from __future__ import print_function
 import distutils.ccompiler
 import glob
 import os
 import os.path
 import platform
+import re
 import setuptools
 import setuptools.command.build_ext
+import shutil
 import subprocess
 import sys
 
@@ -73,17 +74,68 @@ def determine_generator_args():
     return []
 
 
-cmake_found = False
+cmake_found = None
 
 
-def check_cmake_installed():
+def get_cmake_path():
     global cmake_found
-    if not cmake_found:
-        try:
-            subprocess.check_call(['cmake', '--version'])
-            cmake_found = True
-        except Exception:
-            raise Exception("'cmake' not found. cmake must be installed to build from source.")
+    if cmake_found:
+        return cmake_found
+
+    for cmake_alias in ['cmake3', 'cmake']:
+        cmake_found = shutil.which(cmake_alias)
+        if cmake_found:
+            return cmake_found
+
+    raise Exception("CMake must be installed to build from source.")
+
+
+cmake_version = None
+
+
+def get_cmake_version():
+    global cmake_version
+    if cmake_version:
+        return cmake_version
+    cmake = get_cmake_path()
+    stdout = subprocess.check_output([cmake, '--version']).decode('utf-8')
+    # output looks like: "cmake version 3.18.2\n\nCMake suite maintained ..."
+    match = re.search(r'([0-9]+)\.([0-9]+)\.([0-9]+)', stdout)
+    return (int(match.group(1)), int(match.group(2)), int(match.group(3)))
+
+
+def get_libcrypto_static_library(libcrypto_dir):
+    lib_path = os.path.join(libcrypto_dir, 'lib64', 'libcrypt')
+    if is_64bit() and os.path.exists(lib_path):
+        return lib_path
+
+    lib_path = os.path.join(libcrypto_dir, 'lib32', 'libcrypto.a')
+    if is_32bit() and os.path.exists(lib_path):
+        return lib_path
+
+    lib_path = os.path.join(libcrypto_dir, 'lib', 'libcrypto.a')
+    if os.path.exists(lib_path):
+        return lib_path
+
+    raise Exception('Bad AWS_LIBCRYPTO_INSTALL, file not found: ' + lib_path)
+
+
+def get_libcrypto_paths():
+    # return None if not using libcrypto
+    if sys.platform == 'darwin' or sys.platform == 'win32':
+        return None
+    libcrypto_dir = os.environ.get('AWS_LIBCRYPTO_INSTALL')
+    if not libcrypto_dir:
+        return None
+
+    # find include dir
+    include_dir = os.path.join(libcrypto_dir, 'include')
+    expected_file = os.path.join(include_dir, 'openssl', 'crypto.h')
+    if not os.path.exists(expected_file):
+        raise Exception('Bad AWS_LIBCRYPTO_INSTALL, file not found: ' + expected_file)
+
+    static_library = get_libcrypto_static_library(libcrypto_dir)
+    return {'include_dir': include_dir, 'static_library': static_library}
 
 
 class AwsLib:
@@ -98,12 +150,15 @@ AWS_LIBS = []
 if sys.platform != 'darwin' and sys.platform != 'win32':
     AWS_LIBS.append(AwsLib('s2n'))
 AWS_LIBS.append(AwsLib('aws-c-common'))
-AWS_LIBS.append(AwsLib('aws-c-io'))
 AWS_LIBS.append(AwsLib('aws-c-cal'))
+AWS_LIBS.append(AwsLib('aws-c-io'))
+AWS_LIBS.append(AwsLib('aws-checksums'))
 AWS_LIBS.append(AwsLib('aws-c-compression'))
+AWS_LIBS.append(AwsLib('aws-c-event-stream'))
 AWS_LIBS.append(AwsLib('aws-c-http'))
 AWS_LIBS.append(AwsLib('aws-c-auth'))
 AWS_LIBS.append(AwsLib('aws-c-mqtt'))
+AWS_LIBS.append(AwsLib('aws-c-s3'))
 
 
 PROJECT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -112,11 +167,11 @@ DEP_INSTALL_PATH = os.environ.get('AWS_C_INSTALL', os.path.join(DEP_BUILD_DIR, '
 
 
 class awscrt_build_ext(setuptools.command.build_ext.build_ext):
-    def _build_dependency(self, aws_lib):
-        check_cmake_installed()
+    def _build_dependency(self, aws_lib, libcrypto_paths):
+        cmake = get_cmake_path()
 
         prev_cwd = os.getcwd()  # restore cwd at end of function
-        lib_source_dir = os.path.join(PROJECT_DIR, 'aws-common-runtime', aws_lib.name)
+        lib_source_dir = os.path.join(PROJECT_DIR, 'crt', aws_lib.name)
 
         build_type = 'Debug' if self.debug else 'RelWithDebInfo'
 
@@ -133,7 +188,7 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
         os.chdir(lib_build_dir)
 
         # cmake configure
-        cmake_args = ['cmake']
+        cmake_args = [cmake]
         cmake_args.extend(determine_generator_args())
         cmake_args.extend(determine_cross_compile_args())
         cmake_args.extend([
@@ -142,32 +197,42 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
             '-DBUILD_SHARED_LIBS=OFF',
             '-DCMAKE_BUILD_TYPE={}'.format(build_type),
             '-DBUILD_TESTING=OFF',
-            '-DS2N_NO_PQ_ASM=ON',
         ])
         if self.include_dirs:
-            cmake_args.append('-DCMAKE_INCLUDE_PATH={}'.format(';'.join(self.include_dirs)))
+            cmake_args.append('-DCMAKE_INCLUDE_PATH="{}"'.format(';'.join(self.include_dirs)))
         if self.library_dirs:
-            cmake_args.append('-DCMAKE_LIBRARY_PATH={}'.format(';'.join(self.library_dirs)))
+            cmake_args.append('-DCMAKE_LIBRARY_PATH="{}"'.format(';'.join(self.library_dirs)))
+        if libcrypto_paths:
+            cmake_args.append('-DLibCrypto_INCLUDE_DIR={}'.format(libcrypto_paths['include_dir']))
+            cmake_args.append('-DLibCrypto_STATIC_LIBRARY={}'.format(libcrypto_paths['static_library']))
         cmake_args.extend(aws_lib.extra_cmake_args)
         cmake_args.append(lib_source_dir)
 
+        print(subprocess.list2cmdline(cmake_args))
         subprocess.check_call(cmake_args)
 
         # cmake build/install
         build_cmd = [
-            'cmake',
+            cmake,
             '--build', './',
             '--config', build_type,
             '--target', 'install',
         ]
+        if get_cmake_version() >= (3, 12):
+            build_cmd += ['--parallel']
+        print(subprocess.list2cmdline(build_cmd))
         subprocess.check_call(build_cmd)
 
         os.chdir(prev_cwd)
 
     def run(self):
+        libcrypto_paths = get_libcrypto_paths()
+        if libcrypto_paths:
+            self.library_dirs.append(os.path.dirname(libcrypto_paths['static_library']))
+
         # build dependencies
         for lib in AWS_LIBS:
-            self._build_dependency(lib)
+            self._build_dependency(lib, libcrypto_paths)
 
         # update paths so awscrt_ext can access dependencies
         self.include_dirs.append(os.path.join(DEP_INSTALL_PATH, 'include'))
@@ -236,11 +301,13 @@ def awscrt_ext():
 setuptools.setup(
     name="awscrt",
     version="1.0.0-dev",
+    license="License :: OSI Approved :: Apache Software License",
     author="Amazon Web Services, Inc",
     author_email="aws-sdk-common-runtime@amazon.com",
     description="A common runtime for AWS Python projects",
     url="https://github.com/awslabs/aws-crt-python",
-    packages=['awscrt'],
+    # Note: find_packages() without extra args will end up installing test/
+    packages=setuptools.find_packages(include=['awscrt*']),
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: Apache Software License",

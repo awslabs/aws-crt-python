@@ -5,21 +5,21 @@
 <html>
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>awscrt.http &#8212; awscrt  documentation</title>
-    <link rel="stylesheet" href="../_static/bizstyle.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/bizstyle.css" type="text/css" />
     
     <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
     <script src="../_static/jquery.js"></script>
     <script src="../_static/underscore.js"></script>
     <script src="../_static/doctools.js"></script>
-    <script src="../_static/language_data.js"></script>
     <script src="../_static/bizstyle.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="awscrt.io" href="io.html" />
-    <link rel="prev" title="awscrt.exceptions" href="exceptions.html" />
-    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <link rel="prev" title="awscrt.eventstream" href="eventstream.html" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <!--[if lt IE 9]>
     <script src="_static/css3-mediaqueries.js"></script>
     <![endif]-->
@@ -37,38 +37,12 @@
           <a href="io.html" title="awscrt.io"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="exceptions.html" title="awscrt.exceptions"
+          <a href="eventstream.html" title="awscrt.eventstream"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../index.html">awscrt  documentation</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="../index.html">awscrt  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">awscrt.http</a></li> 
       </ul>
-    </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper">
-  <h4>Previous topic</h4>
-  <p class="topless"><a href="exceptions.html"
-                        title="previous chapter">awscrt.exceptions</a></p>
-  <h4>Next topic</h4>
-  <p class="topless"><a href="io.html"
-                        title="next chapter">awscrt.io</a></p>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="../_sources/api/http.rst.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
-<div id="searchbox" style="display: none" role="search">
-  <h3 id="searchlabel">Quick search</h3>
-    <div class="searchformwrapper">
-    <form class="search" action="../search.html" method="get">
-      <input type="text" name="q" aria-labelledby="searchlabel" />
-      <input type="submit" value="Go" />
-    </form>
-    </div>
-</div>
-<script>$('#searchbox').show(0);</script>
-        </div>
-      </div>
+    </div>  
 
     <div class="document">
       <div class="documentwrapper">
@@ -81,29 +55,29 @@
 <p>All network operations in <cite>awscrt.http</cite> are asynchronous.</p>
 <dl class="py class">
 <dt id="awscrt.http.HttpVersion">
-<em class="property">class </em><code class="sig-prename descclassname">awscrt.http.</code><code class="sig-name descname">HttpVersion</code><a class="headerlink" href="#awscrt.http.HttpVersion" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">awscrt.http.</span></code><code class="sig-name descname"><span class="pre">HttpVersion</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpVersion" title="Permalink to this definition">¶</a></dt>
 <dd><p>HTTP protocol version enumeration</p>
 <dl class="py attribute">
 <dt id="awscrt.http.HttpVersion.Unknown">
-<code class="sig-name descname">Unknown</code><em class="property"> = 0</em><a class="headerlink" href="#awscrt.http.HttpVersion.Unknown" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">Unknown</span></code><em class="property"> <span class="pre">=</span> <span class="pre">0</span></em><a class="headerlink" href="#awscrt.http.HttpVersion.Unknown" title="Permalink to this definition">¶</a></dt>
 <dd><p>Unknown</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt id="awscrt.http.HttpVersion.Http1_0">
-<code class="sig-name descname">Http1_0</code><em class="property"> = 1</em><a class="headerlink" href="#awscrt.http.HttpVersion.Http1_0" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">Http1_0</span></code><em class="property"> <span class="pre">=</span> <span class="pre">1</span></em><a class="headerlink" href="#awscrt.http.HttpVersion.Http1_0" title="Permalink to this definition">¶</a></dt>
 <dd><p>HTTP/1.0</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt id="awscrt.http.HttpVersion.Http1_1">
-<code class="sig-name descname">Http1_1</code><em class="property"> = 2</em><a class="headerlink" href="#awscrt.http.HttpVersion.Http1_1" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">Http1_1</span></code><em class="property"> <span class="pre">=</span> <span class="pre">2</span></em><a class="headerlink" href="#awscrt.http.HttpVersion.Http1_1" title="Permalink to this definition">¶</a></dt>
 <dd><p>HTTP/1.1</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt id="awscrt.http.HttpVersion.Http2">
-<code class="sig-name descname">Http2</code><em class="property"> = 3</em><a class="headerlink" href="#awscrt.http.HttpVersion.Http2" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">Http2</span></code><em class="property"> <span class="pre">=</span> <span class="pre">3</span></em><a class="headerlink" href="#awscrt.http.HttpVersion.Http2" title="Permalink to this definition">¶</a></dt>
 <dd><p>HTTP/2</p>
 </dd></dl>
 
@@ -111,12 +85,12 @@
 
 <dl class="py class">
 <dt id="awscrt.http.HttpClientConnection">
-<em class="property">class </em><code class="sig-prename descclassname">awscrt.http.</code><code class="sig-name descname">HttpClientConnection</code><a class="headerlink" href="#awscrt.http.HttpClientConnection" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">awscrt.http.</span></code><code class="sig-name descname"><span class="pre">HttpClientConnection</span></code><a class="headerlink" href="#awscrt.http.HttpClientConnection" title="Permalink to this definition">¶</a></dt>
 <dd><p>An HTTP client connection.</p>
 <p>Use <a class="reference internal" href="#awscrt.http.HttpClientConnection.new" title="awscrt.http.HttpClientConnection.new"><code class="xref py py-meth docutils literal notranslate"><span class="pre">HttpClientConnection.new()</span></code></a> to establish a new connection.</p>
 <dl class="py method">
 <dt id="awscrt.http.HttpClientConnection.new">
-<em class="property">classmethod </em><code class="sig-name descname">new</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">host_name</span></em>, <em class="sig-param"><span class="n">port</span></em>, <em class="sig-param"><span class="n">bootstrap</span></em>, <em class="sig-param"><span class="n">socket_options</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">tls_connection_options</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">proxy_options</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpClientConnection.new" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">new</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">host_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">port</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bootstrap</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">socket_options</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tls_connection_options</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">proxy_options</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpClientConnection.new" title="Permalink to this definition">¶</a></dt>
 <dd><p>Asynchronously establish a new HttpClientConnection.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -143,21 +117,21 @@ Otherwise, it will contain an exception.</p>
 
 <dl class="py method">
 <dt id="awscrt.http.HttpClientConnection.host_name">
-<em class="property">property </em><code class="sig-name descname">host_name</code><a class="headerlink" href="#awscrt.http.HttpClientConnection.host_name" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">host_name</span></code><a class="headerlink" href="#awscrt.http.HttpClientConnection.host_name" title="Permalink to this definition">¶</a></dt>
 <dd><p>Remote hostname</p>
 </dd></dl>
 
 <dl class="py method">
 <dt id="awscrt.http.HttpClientConnection.port">
-<em class="property">property </em><code class="sig-name descname">port</code><a class="headerlink" href="#awscrt.http.HttpClientConnection.port" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">port</span></code><a class="headerlink" href="#awscrt.http.HttpClientConnection.port" title="Permalink to this definition">¶</a></dt>
 <dd><p>Remote port</p>
 </dd></dl>
 
 <dl class="py method">
 <dt id="awscrt.http.HttpClientConnection.request">
-<code class="sig-name descname">request</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">request</span></em>, <em class="sig-param"><span class="n">on_response</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">on_body</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpClientConnection.request" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">request</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_response</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_body</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpClientConnection.request" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create <a class="reference internal" href="#awscrt.http.HttpClientStream" title="awscrt.http.HttpClientStream"><code class="xref py py-class docutils literal notranslate"><span class="pre">HttpClientStream</span></code></a> to carry out the request/response exchange.</p>
-<p>NOTE: The stream sends no data until <a class="reference internal" href="#awscrt.http.HttpClientStream.activate" title="awscrt.http.HttpClientStream.activate"><code class="xref py py-meth docutils literal notranslate"><span class="pre">HttpClientStream.activate()</span></code></a>
+<p>NOTE: The HTTP stream sends no data until <a class="reference internal" href="#awscrt.http.HttpClientStream.activate" title="awscrt.http.HttpClientStream.activate"><code class="xref py py-meth docutils literal notranslate"><span class="pre">HttpClientStream.activate()</span></code></a>
 is called. Call activate() when you’re ready for callbacks and events to fire.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -165,27 +139,31 @@ is called. Call activate() when you’re ready for callbacks and events to fire.
 <li><p><strong>request</strong> (<a class="reference internal" href="#awscrt.http.HttpRequest" title="awscrt.http.HttpRequest"><em>HttpRequest</em></a>) – Definition for outgoing request.</p></li>
 <li><p><strong>on_response</strong> – <p>Optional callback invoked once main response headers are received.
 The function should take the following arguments and return nothing:</p>
-<ul>
-<li><p><cite>http_stream</cite> (<a class="reference internal" href="#awscrt.http.HttpClientStream" title="awscrt.http.HttpClientStream"><code class="xref py py-class docutils literal notranslate"><span class="pre">HttpClientStream</span></code></a>): Stream carrying
+<blockquote>
+<div><ul>
+<li><p><cite>http_stream</cite> (<a class="reference internal" href="#awscrt.http.HttpClientStream" title="awscrt.http.HttpClientStream"><code class="xref py py-class docutils literal notranslate"><span class="pre">HttpClientStream</span></code></a>): HTTP stream carrying
 out this request/response exchange.</p></li>
 <li><p><cite>status_code</cite> (int): Response status code.</p></li>
 <li><p><cite>headers</cite> (List[Tuple[str, str]]): Response headers as a
 list of (name,value) pairs.</p></li>
 <li><p><cite>**kwargs</cite> (dict): Forward compatibility kwargs.</p></li>
 </ul>
-<p>An exception raise by this function will cause the stream to end in error.
+</div></blockquote>
+<p>An exception raise by this function will cause the HTTP stream to end in error.
 This callback is always invoked on the connection’s event-loop thread.</p>
 </p></li>
 <li><p><strong>on_body</strong> – <p>Optional callback invoked 0+ times as response body data is received.
 The function should take the following arguments and return nothing:</p>
-<ul>
-<li><p><cite>http_stream</cite> (<a class="reference internal" href="#awscrt.http.HttpClientStream" title="awscrt.http.HttpClientStream"><code class="xref py py-class docutils literal notranslate"><span class="pre">HttpClientStream</span></code></a>): Stream carrying
+<blockquote>
+<div><ul>
+<li><p><cite>http_stream</cite> (<a class="reference internal" href="#awscrt.http.HttpClientStream" title="awscrt.http.HttpClientStream"><code class="xref py py-class docutils literal notranslate"><span class="pre">HttpClientStream</span></code></a>): HTTP stream carrying
 out this request/response exchange.</p></li>
 <li><p><cite>chunk</cite> (buffer): Response body data (not necessarily
 a whole “chunk” of chunked encoding).</p></li>
 <li><p><cite>**kwargs</cite> (dict): Forward-compatibility kwargs.</p></li>
 </ul>
-<p>An exception raise by this function will cause the stream to end in error.
+</div></blockquote>
+<p>An exception raise by this function will cause the HTTP stream to end in error.
 This callback is always invoked on the connection’s event-loop thread.</p>
 </p></li>
 </ul>
@@ -198,7 +176,7 @@ This callback is always invoked on the connection’s event-loop thread.</p>
 
 <dl class="py method">
 <dt id="awscrt.http.HttpClientConnection.close">
-<code class="sig-name descname">close</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpClientConnection.close" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">close</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpClientConnection.close" title="Permalink to this definition">¶</a></dt>
 <dd><p>Close the connection.</p>
 <p>Shutdown is asynchronous. This call has no effect if the connection is already
 closing.</p>
@@ -212,7 +190,7 @@ which completes when shutdown has finished.</p>
 
 <dl class="py method">
 <dt id="awscrt.http.HttpClientConnection.is_open">
-<code class="sig-name descname">is_open</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpClientConnection.is_open" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">is_open</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpClientConnection.is_open" title="Permalink to this definition">¶</a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
 <dd class="field-odd"><p><em>bool</em> – True if this connection is open and usable, False otherwise.
@@ -224,7 +202,7 @@ finished shutting down.</p>
 
 <dl class="py method">
 <dt id="awscrt.http.HttpClientConnection.shutdown_future">
-<em class="property">property </em><code class="sig-name descname">shutdown_future</code><a class="headerlink" href="#awscrt.http.HttpClientConnection.shutdown_future" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">shutdown_future</span></code><a class="headerlink" href="#awscrt.http.HttpClientConnection.shutdown_future" title="Permalink to this definition">¶</a></dt>
 <dd><p>Completes when this connection has finished shutting down.
 Future will contain a result of None, or an exception indicating why shutdown occurred.
 Note that the connection may have been garbage-collected before this future completes.</p>
@@ -237,7 +215,7 @@ Note that the connection may have been garbage-collected before this future comp
 
 <dl class="py method">
 <dt id="awscrt.http.HttpClientConnection.version">
-<em class="property">property </em><code class="sig-name descname">version</code><a class="headerlink" href="#awscrt.http.HttpClientConnection.version" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">version</span></code><a class="headerlink" href="#awscrt.http.HttpClientConnection.version" title="Permalink to this definition">¶</a></dt>
 <dd><p>Protocol used by this connection</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
@@ -250,14 +228,14 @@ Note that the connection may have been garbage-collected before this future comp
 
 <dl class="py class">
 <dt id="awscrt.http.HttpClientStream">
-<em class="property">class </em><code class="sig-prename descclassname">awscrt.http.</code><code class="sig-name descname">HttpClientStream</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">connection</span></em>, <em class="sig-param"><span class="n">request</span></em>, <em class="sig-param"><span class="n">on_response</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">on_body</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpClientStream" title="Permalink to this definition">¶</a></dt>
-<dd><p>Stream that sends a request and receives a response.</p>
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">awscrt.http.</span></code><code class="sig-name descname"><span class="pre">HttpClientStream</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">connection</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">request</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_response</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_body</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpClientStream" title="Permalink to this definition">¶</a></dt>
+<dd><p>HTTP stream that sends a request and receives a response.</p>
 <p>Create an HttpClientStream with <a class="reference internal" href="#awscrt.http.HttpClientConnection.request" title="awscrt.http.HttpClientConnection.request"><code class="xref py py-meth docutils literal notranslate"><span class="pre">HttpClientConnection.request()</span></code></a>.</p>
-<p>NOTE: The stream sends no data until <a class="reference internal" href="#awscrt.http.HttpClientStream.activate" title="awscrt.http.HttpClientStream.activate"><code class="xref py py-meth docutils literal notranslate"><span class="pre">HttpClientStream.activate()</span></code></a>
+<p>NOTE: The HTTP stream sends no data until <a class="reference internal" href="#awscrt.http.HttpClientStream.activate" title="awscrt.http.HttpClientStream.activate"><code class="xref py py-meth docutils literal notranslate"><span class="pre">HttpClientStream.activate()</span></code></a>
 is called. Call activate() when you’re ready for callbacks and events to fire.</p>
 <dl class="py attribute">
 <dt id="awscrt.http.HttpClientStream.connection">
-<code class="sig-name descname">connection</code><a class="headerlink" href="#awscrt.http.HttpClientStream.connection" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">connection</span></code><a class="headerlink" href="#awscrt.http.HttpClientStream.connection" title="Permalink to this definition">¶</a></dt>
 <dd><p>This stream’s connection.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
@@ -268,7 +246,7 @@ is called. Call activate() when you’re ready for callbacks and events to fire.
 
 <dl class="py attribute">
 <dt id="awscrt.http.HttpClientStream.completion_future">
-<code class="sig-name descname">completion_future</code><a class="headerlink" href="#awscrt.http.HttpClientStream.completion_future" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">completion_future</span></code><a class="headerlink" href="#awscrt.http.HttpClientStream.completion_future" title="Permalink to this definition">¶</a></dt>
 <dd><p>Future that will contain
 the response status code (int) when the request/response exchange
 completes. If the exchange fails to complete, the Future will
@@ -282,7 +260,7 @@ contain an exception indicating why it failed.</p>
 
 <dl class="py method">
 <dt id="awscrt.http.HttpClientStream.response_status_code">
-<em class="property">property </em><code class="sig-name descname">response_status_code</code><a class="headerlink" href="#awscrt.http.HttpClientStream.response_status_code" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">response_status_code</span></code><a class="headerlink" href="#awscrt.http.HttpClientStream.response_status_code" title="Permalink to this definition">¶</a></dt>
 <dd><p>The response status code.</p>
 <p>This is None until a response arrives.</p>
 <dl class="field-list simple">
@@ -294,9 +272,9 @@ contain an exception indicating why it failed.</p>
 
 <dl class="py method">
 <dt id="awscrt.http.HttpClientStream.activate">
-<code class="sig-name descname">activate</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpClientStream.activate" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">activate</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpClientStream.activate" title="Permalink to this definition">¶</a></dt>
 <dd><p>Begin sending the request.</p>
-<p>The stream does nothing until this is called. Call activate() when you
+<p>The HTTP stream does nothing until this is called. Call activate() when you
 are ready for its callbacks and events to fire.</p>
 </dd></dl>
 
@@ -304,7 +282,7 @@ are ready for its callbacks and events to fire.</p>
 
 <dl class="py class">
 <dt id="awscrt.http.HttpRequest">
-<em class="property">class </em><code class="sig-prename descclassname">awscrt.http.</code><code class="sig-name descname">HttpRequest</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">method</span><span class="o">=</span><span class="default_value">'GET'</span></em>, <em class="sig-param"><span class="n">path</span><span class="o">=</span><span class="default_value">'/'</span></em>, <em class="sig-param"><span class="n">headers</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">body_stream</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpRequest" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">awscrt.http.</span></code><code class="sig-name descname"><span class="pre">HttpRequest</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'GET'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'/'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">headers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">body_stream</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpRequest" title="Permalink to this definition">¶</a></dt>
 <dd><p>Definition for an outgoing HTTP request.</p>
 <p>The request may be transformed (ex: signing the request) before its data is eventually sent.</p>
 <dl class="field-list simple">
@@ -314,13 +292,13 @@ are ready for its callbacks and events to fire.</p>
 <li><p><strong>path</strong> (<em>str</em>) – HTTP path-and-query value. Default value is “/”.</p></li>
 <li><p><strong>headers</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="#awscrt.http.HttpHeaders" title="awscrt.http.HttpHeaders"><em>HttpHeaders</em></a><em>]</em>) – Optional headers. If None specified,
 an empty <a class="reference internal" href="#awscrt.http.HttpHeaders" title="awscrt.http.HttpHeaders"><code class="xref py py-class docutils literal notranslate"><span class="pre">HttpHeaders</span></code></a> is created.</p></li>
-<li><p><strong>body_string</strong> (<em>Optional</em><em>[</em><em>Union</em><em>[</em><a class="reference internal" href="io.html#awscrt.io.InputStream" title="awscrt.io.InputStream"><em>InputStream</em></a><em>, </em><em>io.IOBase</em><em>]</em><em>]</em>) – Optional body as stream.</p></li>
+<li><p><strong>body_stream</strong> (<em>Optional</em><em>[</em><em>Union</em><em>[</em><a class="reference internal" href="io.html#awscrt.io.InputStream" title="awscrt.io.InputStream"><em>InputStream</em></a><em>, </em><em>io.IOBase</em><em>]</em><em>]</em>) – Optional body as binary stream.</p></li>
 </ul>
 </dd>
 </dl>
 <dl class="py method">
 <dt id="awscrt.http.HttpRequest.method">
-<em class="property">property </em><code class="sig-name descname">method</code><a class="headerlink" href="#awscrt.http.HttpRequest.method" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">method</span></code><a class="headerlink" href="#awscrt.http.HttpRequest.method" title="Permalink to this definition">¶</a></dt>
 <dd><p>HTTP request method (verb).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
@@ -331,7 +309,7 @@ an empty <a class="reference internal" href="#awscrt.http.HttpHeaders" title="aw
 
 <dl class="py method">
 <dt id="awscrt.http.HttpRequest.path">
-<em class="property">property </em><code class="sig-name descname">path</code><a class="headerlink" href="#awscrt.http.HttpRequest.path" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">path</span></code><a class="headerlink" href="#awscrt.http.HttpRequest.path" title="Permalink to this definition">¶</a></dt>
 <dd><p>HTTP path-and-query value.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
@@ -342,8 +320,8 @@ an empty <a class="reference internal" href="#awscrt.http.HttpHeaders" title="aw
 
 <dl class="py method">
 <dt id="awscrt.http.HttpRequest.body_stream">
-<em class="property">property </em><code class="sig-name descname">body_stream</code><a class="headerlink" href="#awscrt.http.HttpRequest.body_stream" title="Permalink to this definition">¶</a></dt>
-<dd><p>Stream of outgoing body.</p>
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">body_stream</span></code><a class="headerlink" href="#awscrt.http.HttpRequest.body_stream" title="Permalink to this definition">¶</a></dt>
+<dd><p>Binary stream of outgoing body.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
 <dd class="field-odd"><p><a class="reference internal" href="io.html#awscrt.io.InputStream" title="awscrt.io.InputStream">InputStream</a></p>
@@ -353,7 +331,7 @@ an empty <a class="reference internal" href="#awscrt.http.HttpHeaders" title="aw
 
 <dl class="py method">
 <dt id="awscrt.http.HttpRequest.headers">
-<em class="property">property </em><code class="sig-name descname">headers</code><a class="headerlink" href="#awscrt.http.HttpRequest.headers" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">headers</span></code><a class="headerlink" href="#awscrt.http.HttpRequest.headers" title="Permalink to this definition">¶</a></dt>
 <dd><p>Headers to send.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
@@ -366,7 +344,7 @@ an empty <a class="reference internal" href="#awscrt.http.HttpHeaders" title="aw
 
 <dl class="py class">
 <dt id="awscrt.http.HttpHeaders">
-<em class="property">class </em><code class="sig-prename descclassname">awscrt.http.</code><code class="sig-name descname">HttpHeaders</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name_value_pairs</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpHeaders" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">awscrt.http.</span></code><code class="sig-name descname"><span class="pre">HttpHeaders</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name_value_pairs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpHeaders" title="Permalink to this definition">¶</a></dt>
 <dd><p>Collection of HTTP headers.</p>
 <p>A given header name may have multiple values.
 Header names are always treated in a case-insensitive manner.
@@ -379,7 +357,7 @@ collection of (name,value) pairs.</p>
 </dl>
 <dl class="py method">
 <dt id="awscrt.http.HttpHeaders.add">
-<code class="sig-name descname">add</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em>, <em class="sig-param"><span class="n">value</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpHeaders.add" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">add</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpHeaders.add" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add a name-value pair.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -393,7 +371,7 @@ collection of (name,value) pairs.</p>
 
 <dl class="py method">
 <dt id="awscrt.http.HttpHeaders.add_pairs">
-<code class="sig-name descname">add_pairs</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name_value_pairs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpHeaders.add_pairs" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">add_pairs</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name_value_pairs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpHeaders.add_pairs" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add list of (name,value) pairs.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -404,7 +382,7 @@ collection of (name,value) pairs.</p>
 
 <dl class="py method">
 <dt id="awscrt.http.HttpHeaders.set">
-<code class="sig-name descname">set</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em>, <em class="sig-param"><span class="n">value</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpHeaders.set" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">set</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpHeaders.set" title="Permalink to this definition">¶</a></dt>
 <dd><p>Set a name-value pair, any existing values for the name are removed.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -418,7 +396,7 @@ collection of (name,value) pairs.</p>
 
 <dl class="py method">
 <dt id="awscrt.http.HttpHeaders.get_values">
-<code class="sig-name descname">get_values</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpHeaders.get_values" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">get_values</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpHeaders.get_values" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return an iterator over the values for this name.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -432,7 +410,7 @@ collection of (name,value) pairs.</p>
 
 <dl class="py method">
 <dt id="awscrt.http.HttpHeaders.get">
-<code class="sig-name descname">get</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em>, <em class="sig-param"><span class="n">default</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpHeaders.get" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">get</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpHeaders.get" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get the first value for this name, ignoring any additional values.
 Returns <cite>default</cite> if no values exist.</p>
 <dl class="field-list simple">
@@ -451,7 +429,7 @@ Defaults to None.</p></li>
 
 <dl class="py method">
 <dt id="awscrt.http.HttpHeaders.remove">
-<code class="sig-name descname">remove</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpHeaders.remove" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">remove</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpHeaders.remove" title="Permalink to this definition">¶</a></dt>
 <dd><p>Remove all values for this name.
 Raises a KeyError if name not found.</p>
 <dl class="field-list simple">
@@ -463,7 +441,7 @@ Raises a KeyError if name not found.</p>
 
 <dl class="py method">
 <dt id="awscrt.http.HttpHeaders.remove_value">
-<code class="sig-name descname">remove_value</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em>, <em class="sig-param"><span class="n">value</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpHeaders.remove_value" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">remove_value</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpHeaders.remove_value" title="Permalink to this definition">¶</a></dt>
 <dd><p>Remove a specific value for this name.
 Raises a ValueError if value not found.</p>
 <dl class="field-list simple">
@@ -478,7 +456,7 @@ Raises a ValueError if value not found.</p>
 
 <dl class="py method">
 <dt id="awscrt.http.HttpHeaders.clear">
-<code class="sig-name descname">clear</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpHeaders.clear" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">clear</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpHeaders.clear" title="Permalink to this definition">¶</a></dt>
 <dd><p>Clear all headers.</p>
 </dd></dl>
 
@@ -486,17 +464,17 @@ Raises a ValueError if value not found.</p>
 
 <dl class="py class">
 <dt id="awscrt.http.HttpProxyAuthenticationType">
-<em class="property">class </em><code class="sig-prename descclassname">awscrt.http.</code><code class="sig-name descname">HttpProxyAuthenticationType</code><a class="headerlink" href="#awscrt.http.HttpProxyAuthenticationType" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">awscrt.http.</span></code><code class="sig-name descname"><span class="pre">HttpProxyAuthenticationType</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpProxyAuthenticationType" title="Permalink to this definition">¶</a></dt>
 <dd><p>Proxy authentication type enumeration.</p>
 <dl class="py attribute">
 <dt id="awscrt.http.HttpProxyAuthenticationType.Nothing">
-<code class="sig-name descname">Nothing</code><em class="property"> = 0</em><a class="headerlink" href="#awscrt.http.HttpProxyAuthenticationType.Nothing" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">Nothing</span></code><em class="property"> <span class="pre">=</span> <span class="pre">0</span></em><a class="headerlink" href="#awscrt.http.HttpProxyAuthenticationType.Nothing" title="Permalink to this definition">¶</a></dt>
 <dd><p>No authentication</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt id="awscrt.http.HttpProxyAuthenticationType.Basic">
-<code class="sig-name descname">Basic</code><em class="property"> = 1</em><a class="headerlink" href="#awscrt.http.HttpProxyAuthenticationType.Basic" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">Basic</span></code><em class="property"> <span class="pre">=</span> <span class="pre">1</span></em><a class="headerlink" href="#awscrt.http.HttpProxyAuthenticationType.Basic" title="Permalink to this definition">¶</a></dt>
 <dd><p>Username and password</p>
 </dd></dl>
 
@@ -504,7 +482,7 @@ Raises a ValueError if value not found.</p>
 
 <dl class="py class">
 <dt id="awscrt.http.HttpProxyOptions">
-<em class="property">class </em><code class="sig-prename descclassname">awscrt.http.</code><code class="sig-name descname">HttpProxyOptions</code><span class="sig-paren">(</span><em class="sig-param">host_name</em>, <em class="sig-param">port</em>, <em class="sig-param">tls_connection_options=None</em>, <em class="sig-param">auth_type=&lt;HttpProxyAuthenticationType.Nothing: 0&gt;</em>, <em class="sig-param">auth_username=None</em>, <em class="sig-param">auth_password=None</em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpProxyOptions" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">awscrt.http.</span></code><code class="sig-name descname"><span class="pre">HttpProxyOptions</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="pre">host_name</span></em>, <em class="sig-param"><span class="pre">port</span></em>, <em class="sig-param"><span class="pre">tls_connection_options=None</span></em>, <em class="sig-param"><span class="pre">auth_type=&lt;HttpProxyAuthenticationType.Nothing:</span> <span class="pre">0&gt;</span></em>, <em class="sig-param"><span class="pre">auth_username=None</span></em>, <em class="sig-param"><span class="pre">auth_password=None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpProxyOptions" title="Permalink to this definition">¶</a></dt>
 <dd><p>Proxy options for HTTP clients.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -526,7 +504,7 @@ Default is <a class="reference internal" href="#awscrt.http.HttpProxyAuthenticat
 </dl>
 <dl class="py attribute">
 <dt id="awscrt.http.HttpProxyOptions.host_name">
-<code class="sig-name descname">host_name</code><a class="headerlink" href="#awscrt.http.HttpProxyOptions.host_name" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">host_name</span></code><a class="headerlink" href="#awscrt.http.HttpProxyOptions.host_name" title="Permalink to this definition">¶</a></dt>
 <dd><p>Name of the proxy server to connect through.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
@@ -537,7 +515,7 @@ Default is <a class="reference internal" href="#awscrt.http.HttpProxyAuthenticat
 
 <dl class="py attribute">
 <dt id="awscrt.http.HttpProxyOptions.port">
-<code class="sig-name descname">port</code><a class="headerlink" href="#awscrt.http.HttpProxyOptions.port" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">port</span></code><a class="headerlink" href="#awscrt.http.HttpProxyOptions.port" title="Permalink to this definition">¶</a></dt>
 <dd><p>Port number of the proxy server to connect through.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
@@ -548,7 +526,7 @@ Default is <a class="reference internal" href="#awscrt.http.HttpProxyAuthenticat
 
 <dl class="py attribute">
 <dt id="awscrt.http.HttpProxyOptions.tls_connection_options">
-<code class="sig-name descname">tls_connection_options</code><a class="headerlink" href="#awscrt.http.HttpProxyOptions.tls_connection_options" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">tls_connection_options</span></code><a class="headerlink" href="#awscrt.http.HttpProxyOptions.tls_connection_options" title="Permalink to this definition">¶</a></dt>
 <dd><p>Optional
 <cite>TlsConnectionOptions</cite> for the Local to Proxy connection.
 Must be distinct from the <cite>TlsConnectionOptions</cite>
@@ -562,7 +540,7 @@ provided to the HTTP connection.</p>
 
 <dl class="py attribute">
 <dt id="awscrt.http.HttpProxyOptions.auth_type">
-<code class="sig-name descname">auth_type</code><a class="headerlink" href="#awscrt.http.HttpProxyOptions.auth_type" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">auth_type</span></code><a class="headerlink" href="#awscrt.http.HttpProxyOptions.auth_type" title="Permalink to this definition">¶</a></dt>
 <dd><p>Type of proxy authentication to use.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
@@ -573,7 +551,7 @@ provided to the HTTP connection.</p>
 
 <dl class="py attribute">
 <dt id="awscrt.http.HttpProxyOptions.auth_username">
-<code class="sig-name descname">auth_username</code><a class="headerlink" href="#awscrt.http.HttpProxyOptions.auth_username" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">auth_username</span></code><a class="headerlink" href="#awscrt.http.HttpProxyOptions.auth_username" title="Permalink to this definition">¶</a></dt>
 <dd><p>Username to use when <cite>auth_type</cite> is
 <a class="reference internal" href="#awscrt.http.HttpProxyAuthenticationType.Basic" title="awscrt.http.HttpProxyAuthenticationType.Basic"><code class="xref py py-const docutils literal notranslate"><span class="pre">HttpProxyAuthenticationType.Basic</span></code></a>.</p>
 <dl class="field-list simple">
@@ -585,7 +563,7 @@ provided to the HTTP connection.</p>
 
 <dl class="py attribute">
 <dt id="awscrt.http.HttpProxyOptions.auth_password">
-<code class="sig-name descname">auth_password</code><a class="headerlink" href="#awscrt.http.HttpProxyOptions.auth_password" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname"><span class="pre">auth_password</span></code><a class="headerlink" href="#awscrt.http.HttpProxyOptions.auth_password" title="Permalink to this definition">¶</a></dt>
 <dd><p>Username to use when <cite>auth_type</cite> is
 <a class="reference internal" href="#awscrt.http.HttpProxyAuthenticationType.Basic" title="awscrt.http.HttpProxyAuthenticationType.Basic"><code class="xref py py-const docutils literal notranslate"><span class="pre">HttpProxyAuthenticationType.Basic</span></code></a>.</p>
 <dl class="field-list simple">
@@ -600,7 +578,35 @@ provided to the HTTP connection.</p>
 </div>
 
 
+            <div class="clearer"></div>
           </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="eventstream.html"
+                        title="previous chapter">awscrt.eventstream</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="io.html"
+                        title="next chapter">awscrt.io</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/api/http.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -618,14 +624,15 @@ provided to the HTTP connection.</p>
           <a href="io.html" title="awscrt.io"
              >next</a> |</li>
         <li class="right" >
-          <a href="exceptions.html" title="awscrt.exceptions"
+          <a href="eventstream.html" title="awscrt.eventstream"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../index.html">awscrt  documentation</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="../index.html">awscrt  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">awscrt.http</a></li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2020, Amazon Web Services, Inc.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 3.0.3.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.5.1.
     </div>
   </body>
 </html>

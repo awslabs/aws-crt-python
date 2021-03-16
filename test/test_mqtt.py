@@ -1,8 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 
-from __future__ import absolute_import
-from awscrt import awsiot_mqtt_connection_builder
 from awscrt.auth import AwsCredentialsProvider
 from awscrt.http import HttpProxyOptions
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions, LogLevel, init_logging
@@ -19,7 +17,7 @@ import time
 import uuid
 import warnings
 
-TIMEOUT = 10.0
+TIMEOUT = 100.0
 PROXY_HOST = os.environ.get('proxyhost')
 PROXY_PORT = int(os.environ.get('proxyport', '0'))
 
@@ -130,6 +128,9 @@ class MqttConnectionTest(NativeResourceTest):
         rcv = received.result(TIMEOUT)
         self.assertEqual(self.TEST_TOPIC, rcv['topic'])
         self.assertEqual(self.TEST_MSG, rcv['payload'])
+        self.assertFalse(rcv['dup'])
+        self.assertEqual(QoS.AT_LEAST_ONCE, rcv['qos'])
+        self.assertFalse(rcv['retain'])
 
         # unsubscribe
         unsubscribed, packet_id = connection.unsubscribe(self.TEST_TOPIC)
@@ -175,105 +176,64 @@ class MqttConnectionTest(NativeResourceTest):
         rcv = received.result(TIMEOUT)
         self.assertEqual(self.TEST_TOPIC, rcv['topic'])
         self.assertEqual(self.TEST_MSG, rcv['payload'])
+        self.assertFalse(rcv['dup'])
+        self.assertEqual(QoS.AT_LEAST_ONCE, rcv['qos'])
+        self.assertFalse(rcv['retain'])
 
         # disconnect
         connection.disconnect().result(TIMEOUT)
 
+    def test_on_message_old_fn_signature(self):
+        # ensure that message-received callbacks with the old function signature still work
+        config = Config.get()
+        elg = EventLoopGroup()
+        resolver = DefaultHostResolver(elg)
+        bootstrap = ClientBootstrap(elg, resolver)
 
-class MqttBuilderTest(NativeResourceTest):
-    def _test_connection(self, connection):
+        tls_opts = TlsContextOptions.create_client_with_mtls(config.cert, config.key)
+        tls = ClientTlsContext(tls_opts)
+
+        client = Client(bootstrap, tls)
+        connection = Connection(
+            client=client,
+            client_id=create_client_id(),
+            host_name=config.endpoint,
+            port=8883)
+
+        any_received = Future()
+        sub_received = Future()
+
+        # Note: Testing degenerate callback signature that failed to take
+        # forward-compatibility **kwargs.
+        def on_any_message(topic, payload):
+            any_received.set_result({'topic': topic, 'payload': payload})
+
+        def on_sub_message(topic, payload):
+            sub_received.set_result({'topic': topic, 'payload': payload})
+
+        # on_message for connection has to be set before connect, or possible race will happen
+        connection.on_message(on_any_message)
+
         connection.connect().result(TIMEOUT)
+        # subscribe without callback
+        subscribed, packet_id = connection.subscribe(self.TEST_TOPIC, QoS.AT_LEAST_ONCE, on_sub_message)
+        subscribed.result(TIMEOUT)
+
+        # publish
+        published, packet_id = connection.publish(self.TEST_TOPIC, self.TEST_MSG, QoS.AT_LEAST_ONCE)
+        puback = published.result(TIMEOUT)
+
+        # receive message
+        rcv = any_received.result(TIMEOUT)
+        self.assertEqual(self.TEST_TOPIC, rcv['topic'])
+        self.assertEqual(self.TEST_MSG, rcv['payload'])
+
+        rcv = sub_received.result(TIMEOUT)
+        self.assertEqual(self.TEST_TOPIC, rcv['topic'])
+        self.assertEqual(self.TEST_MSG, rcv['payload'])
+
+        # disconnect
         connection.disconnect().result(TIMEOUT)
-
-    def test_mtls_from_bytes(self):
-        config = Config.get()
-        elg = EventLoopGroup()
-        resolver = DefaultHostResolver(elg)
-        bootstrap = ClientBootstrap(elg, resolver)
-        connection = awsiot_mqtt_connection_builder.mtls_from_bytes(
-            cert_bytes=config.cert,
-            pri_key_bytes=config.key,
-            endpoint=config.endpoint,
-            client_id=create_client_id(),
-            client_bootstrap=bootstrap)
-        self._test_connection(connection)
-
-    def test_mtls_from_path(self):
-        config = Config.get()
-        elg = EventLoopGroup()
-        resolver = DefaultHostResolver(elg)
-        bootstrap = ClientBootstrap(elg, resolver)
-
-        # test "from path" builder by writing secrets to tempfiles
-        tmp_dirpath = tempfile.mkdtemp()
-        try:
-            cert_filepath = os.path.join(tmp_dirpath, 'cert')
-            with open(cert_filepath, 'wb') as cert_file:
-                cert_file.write(config.cert)
-
-            key_filepath = os.path.join(tmp_dirpath, 'key')
-            with open(key_filepath, 'wb') as key_file:
-                key_file.write(config.key)
-
-            connection = awsiot_mqtt_connection_builder.mtls_from_path(
-                cert_filepath=cert_filepath,
-                pri_key_filepath=key_filepath,
-                endpoint=config.endpoint,
-                client_id=create_client_id(),
-                client_bootstrap=bootstrap)
-
-        finally:
-            shutil.rmtree(tmp_dirpath)
-
-        self._test_connection(connection)
-
-    def test_websockets_default(self):
-        config = Config.get()
-        elg = EventLoopGroup()
-        resolver = DefaultHostResolver(elg)
-        bootstrap = ClientBootstrap(elg, resolver)
-        cred_provider = AwsCredentialsProvider.new_default_chain(bootstrap)
-        connection = awsiot_mqtt_connection_builder.websockets_with_default_aws_signing(
-            region=config.region,
-            credentials_provider=cred_provider,
-            endpoint=config.endpoint,
-            client_id=create_client_id(),
-            client_bootstrap=bootstrap)
-        self._test_connection(connection)
-
-    def test_websockets_sts(self):
-        """Websocket connection with X-Amz-Security-Token query param"""
-        config = Config.get()
-        elg = EventLoopGroup()
-        resolver = DefaultHostResolver(elg)
-        bootstrap = ClientBootstrap(elg, resolver)
-        cred_provider = AwsCredentialsProvider.new_static(
-            access_key_id=config.cognito_creds['AccessKeyId'],
-            secret_access_key=config.cognito_creds['SecretKey'],
-            session_token=config.cognito_creds['SessionToken'])
-        connection = awsiot_mqtt_connection_builder.websockets_with_default_aws_signing(
-            region=config.region,
-            credentials_provider=cred_provider,
-            endpoint=config.endpoint,
-            client_id=create_client_id(),
-            client_bootstrap=bootstrap)
-        self._test_connection(connection)
-
-    @unittest.skipIf(PROXY_HOST is None, 'requires "proxyhost" and "proxyport" env vars')
-    def test_websockets_proxy(self):
-        config = Config.get()
-        elg = EventLoopGroup()
-        resolver = DefaultHostResolver(elg)
-        bootstrap = ClientBootstrap(elg, resolver)
-        cred_provider = AwsCredentialsProvider.new_default_chain(bootstrap)
-        connection = awsiot_mqtt_connection_builder.websockets_with_default_aws_signing(
-            credentials_provider=cred_provider,
-            websocket_proxy_options=HttpProxyOptions(PROXY_HOST, PROXY_PORT),
-            endpoint=config.endpoint,
-            region=config.region,
-            client_id=create_client_id(),
-            client_bootstrap=bootstrap)
-        self._test_connection(connection)
 
 
 if __name__ == 'main':
