@@ -212,7 +212,9 @@ class Connection(NativeResource):
 
         protocol_operation_timeout_ms (int): Milliseconds to wait for the response to the operation
             requires response by protocol. Set to zero to disable timeout. Otherwise,
-            the operation will fail. It applied to PUBLISH (QoS>0) and UNSUBSCRIBE now.
+            the operation will fail if no response is received within this amount of time after
+ *          the packet is written to the socket
+            It applied to PUBLISH (QoS>0) and UNSUBSCRIBE now.
 
         will (Will): Will to send with CONNECT packet. The will is
             published by the server when its connection to the client is unexpectedly lost.
