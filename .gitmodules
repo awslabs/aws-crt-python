@@ -31,3 +31,6 @@
 [submodule "aws-common-runtime/aws-checksums"]
 	path = crt/aws-checksums
 	url = https://github.com/awslabs/aws-checksums.git
+[submodule "crt/aws-lc"]
+	path = crt/aws-lc
+	url = https://github.com/awslabs/aws-lc.git

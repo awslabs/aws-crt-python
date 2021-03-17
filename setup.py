@@ -120,34 +120,18 @@ def get_libcrypto_static_library(libcrypto_dir):
     raise Exception('Bad AWS_LIBCRYPTO_INSTALL, file not found: ' + lib_path)
 
 
-def get_libcrypto_paths():
-    # return None if not using libcrypto
-    if sys.platform == 'darwin' or sys.platform == 'win32':
-        return None
-    libcrypto_dir = os.environ.get('AWS_LIBCRYPTO_INSTALL')
-    if not libcrypto_dir:
-        return None
-
-    # find include dir
-    include_dir = os.path.join(libcrypto_dir, 'include')
-    expected_file = os.path.join(include_dir, 'openssl', 'crypto.h')
-    if not os.path.exists(expected_file):
-        raise Exception('Bad AWS_LIBCRYPTO_INSTALL, file not found: ' + expected_file)
-
-    static_library = get_libcrypto_static_library(libcrypto_dir)
-    return {'include_dir': include_dir, 'static_library': static_library}
-
-
 class AwsLib:
-    def __init__(self, name, extra_cmake_args=[]):
+    def __init__(self, name, extra_cmake_args=[], libname=None):
         self.name = name
         self.extra_cmake_args = extra_cmake_args
+        self.libname = libname if libname else name
 
 
 # The extension depends on these libs.
 # They're built along with the extension, in the order listed.
 AWS_LIBS = []
 if sys.platform != 'darwin' and sys.platform != 'win32':
+    AWS_LIBS.append(AwsLib('aws-lc', ['BUILD_LIBSSL=OFF'], 'crypto'))
     AWS_LIBS.append(AwsLib('s2n'))
 AWS_LIBS.append(AwsLib('aws-c-common'))
 AWS_LIBS.append(AwsLib('aws-c-cal'))
@@ -167,7 +151,7 @@ DEP_INSTALL_PATH = os.environ.get('AWS_C_INSTALL', os.path.join(DEP_BUILD_DIR, '
 
 
 class awscrt_build_ext(setuptools.command.build_ext.build_ext):
-    def _build_dependency(self, aws_lib, libcrypto_paths):
+    def _build_dependency(self, aws_lib):
         cmake = get_cmake_path()
 
         prev_cwd = os.getcwd()  # restore cwd at end of function
@@ -197,14 +181,9 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
             '-DBUILD_SHARED_LIBS=OFF',
             '-DCMAKE_BUILD_TYPE={}'.format(build_type),
             '-DBUILD_TESTING=OFF',
+            '-DCMAKE_POSITION_INDEPENDENT_CODE=ON'
         ])
-        if self.include_dirs:
-            cmake_args.append('-DCMAKE_INCLUDE_PATH="{}"'.format(';'.join(self.include_dirs)))
-        if self.library_dirs:
-            cmake_args.append('-DCMAKE_LIBRARY_PATH="{}"'.format(';'.join(self.library_dirs)))
-        if libcrypto_paths:
-            cmake_args.append('-DLibCrypto_INCLUDE_DIR={}'.format(libcrypto_paths['include_dir']))
-            cmake_args.append('-DLibCrypto_STATIC_LIBRARY={}'.format(libcrypto_paths['static_library']))
+
         cmake_args.extend(aws_lib.extra_cmake_args)
         cmake_args.append(lib_source_dir)
 
@@ -226,13 +205,9 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
         os.chdir(prev_cwd)
 
     def run(self):
-        libcrypto_paths = get_libcrypto_paths()
-        if libcrypto_paths:
-            self.library_dirs.append(os.path.dirname(libcrypto_paths['static_library']))
-
         # build dependencies
         for lib in AWS_LIBS:
-            self._build_dependency(lib, libcrypto_paths)
+            self._build_dependency(lib)
 
         # update paths so awscrt_ext can access dependencies
         self.include_dirs.append(os.path.join(DEP_INSTALL_PATH, 'include'))
@@ -256,7 +231,7 @@ def awscrt_ext():
     extra_link_args = os.environ.get('LDFLAGS', '').split()
     extra_objects = []
 
-    libraries = [x.name for x in AWS_LIBS]
+    libraries = [x.libname for x in AWS_LIBS]
 
     # libraries must be passed to the linker with upstream dependencies listed last.
     libraries.reverse()
@@ -275,14 +250,14 @@ def awscrt_ext():
         # HACK: Don't understand why, but if AWS_LIBS are linked normally on macos, we get this error:
         # ImportError: dlopen(_awscrt.cpython-37m-darwin.so, 2): Symbol not found: _aws_byte_cursor_eq_ignore_case
         # Workaround is to pass them as 'extra_objects' instead of 'libraries'.
-        extra_objects = [os.path.join(DEP_INSTALL_PATH, 'lib', 'lib{}.a'.format(x.name)) for x in AWS_LIBS]
+        extra_objects = [os.path.join(DEP_INSTALL_PATH, 'lib', 'lib{}.a'.format(x)) for x in libraries]
         libraries = []
 
     else:  # unix
         # linker will prefer shared libraries over static if it can find both.
-        # force linker to choose static variant by using using "-l:lib<name>.a" syntax instead of just "-lcrypto".
+        # force linker to choose static variant by using using "-l:libcrypto.a" syntax instead of just "-lcrypto".
         libraries = [':lib{}.a'.format(x) for x in libraries]
-        libraries += [':libcrypto.a', 'rt']
+        libraries += ['rt']
 
     if distutils.ccompiler.get_default_compiler() != 'msvc':
         extra_compile_args += ['-Wextra', '-Werror', '-Wno-strict-aliasing', '-std=gnu99']
