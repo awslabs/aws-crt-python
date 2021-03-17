@@ -7,7 +7,6 @@ phases:
   pre_build:
     commands:
       - export CC=gcc
-      - export AWS_LIBCRYPTO_INSTALL=/opt/openssl
       - cd aws-crt-python
       - /opt/python/cp37-cp37m/bin/python ./continuous-delivery/update-version.py
   build:
