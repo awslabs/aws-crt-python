@@ -506,7 +506,7 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
     PyObject *ws_proxy_options_py;
     if (!PyArg_ParseTuple(
             args,
-            "Os#s#HOOKKHIOz#z#OOO",
+            "Os#s#HOOKKHIIOz#z#OOO",
             &impl_capsule,
             &client_id,
             &client_id_len,
