@@ -104,22 +104,6 @@ def get_cmake_version():
     return (int(match.group(1)), int(match.group(2)), int(match.group(3)))
 
 
-def get_libcrypto_static_library(libcrypto_dir):
-    lib_path = os.path.join(libcrypto_dir, 'lib64', 'libcrypt')
-    if is_64bit() and os.path.exists(lib_path):
-        return lib_path
-
-    lib_path = os.path.join(libcrypto_dir, 'lib32', 'libcrypto.a')
-    if is_32bit() and os.path.exists(lib_path):
-        return lib_path
-
-    lib_path = os.path.join(libcrypto_dir, 'lib', 'libcrypto.a')
-    if os.path.exists(lib_path):
-        return lib_path
-
-    raise Exception('Bad AWS_LIBCRYPTO_INSTALL, file not found: ' + lib_path)
-
-
 class AwsLib:
     def __init__(self, name, extra_cmake_args=[], libname=None):
         self.name = name
