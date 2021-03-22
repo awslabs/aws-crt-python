@@ -4,14 +4,6 @@
         "android": {
             "enabled": false,
             "_comment": "disabled until we have a reason to support python on android"
-        },
-        "linux": {
-            "imports": [
-                "libcrypto"
-            ],
-            "build_env": {
-                "AWS_LIBCRYPTO_INSTALL": "{deps_dir}/libcrypto"
-            }
         }
     },
     "hosts": {
