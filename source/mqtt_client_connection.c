@@ -495,6 +495,7 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
     uint64_t reconnect_max_timeout_secs;
     uint16_t keep_alive_time;
     uint32_t ping_timeout;
+    uint32_t protocol_operation_timeout;
     PyObject *will;
     const char *username;
     Py_ssize_t username_len;
@@ -505,7 +506,7 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
     PyObject *ws_proxy_options_py;
     if (!PyArg_ParseTuple(
             args,
-            "Os#s#HOOKKHIOz#z#OOO",
+            "Os#s#HOOKKHIIOz#z#OOO",
             &impl_capsule,
             &client_id,
             &client_id_len,
@@ -518,6 +519,7 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
             &reconnect_max_timeout_secs,
             &keep_alive_time,
             &ping_timeout,
+            &protocol_operation_timeout,
             &will,
             &username,
             &username_len,
@@ -620,6 +622,7 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
         .client_id = client_id_cur,
         .keep_alive_time_secs = keep_alive_time,
         .ping_timeout_ms = ping_timeout,
+        .protocol_operation_timeout_ms = protocol_operation_timeout,
         .on_connection_complete = s_on_connect,
         .user_data = py_connection,
         .clean_session = PyObject_IsTrue(is_clean_session),

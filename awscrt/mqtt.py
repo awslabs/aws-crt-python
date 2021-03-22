@@ -210,6 +210,12 @@ class Connection(NativeResource):
             the connection is invalid and attempts to reconnect.
             This duration must be shorter than `keep_alive_secs`.
 
+        protocol_operation_timeout_ms (int): Milliseconds to wait for the response to the operation
+            requires response by protocol. Set to zero to disable timeout. Otherwise,
+            the operation will fail if no response is received within this amount of time after
+ *          the packet is written to the socket
+            It applied to PUBLISH (QoS>0) and UNSUBSCRIBE now.
+
         will (Will): Will to send with CONNECT packet. The will is
             published by the server when its connection to the client is unexpectedly lost.
 
@@ -249,6 +255,7 @@ class Connection(NativeResource):
                  reconnect_max_timeout_secs=60,
                  keep_alive_secs=1200,
                  ping_timeout_ms=3000,
+                 protocol_operation_timeout_ms=0,
                  will=None,
                  username=None,
                  password=None,
@@ -290,6 +297,7 @@ class Connection(NativeResource):
         self.reconnect_max_timeout_secs = reconnect_max_timeout_secs
         self.keep_alive_secs = keep_alive_secs
         self.ping_timeout_ms = ping_timeout_ms
+        self.protocol_operation_timeout_ms = protocol_operation_timeout_ms
         self.will = will
         self.username = username
         self.password = password
@@ -365,6 +373,7 @@ class Connection(NativeResource):
                 self.reconnect_max_timeout_secs,
                 self.keep_alive_secs,
                 self.ping_timeout_ms,
+                self.protocol_operation_timeout_ms,
                 self.will,
                 self.username,
                 self.password,
