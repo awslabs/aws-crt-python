@@ -115,7 +115,7 @@ class AwsLib:
 # They're built along with the extension, in the order listed.
 AWS_LIBS = []
 if sys.platform != 'darwin' and sys.platform != 'win32':
-    AWS_LIBS.append(AwsLib('aws-lc', ['BUILD_LIBSSL=OFF'], 'crypto'))
+    AWS_LIBS.append(AwsLib('aws-lc', ['-DBUILD_LIBSSL=OFF'], 'crypto'))
     AWS_LIBS.append(AwsLib('s2n'))
 AWS_LIBS.append(AwsLib('aws-c-common'))
 AWS_LIBS.append(AwsLib('aws-c-cal'))
