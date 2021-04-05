@@ -11,6 +11,7 @@
 #include <aws/mqtt/client.h>
 
 #include <aws/http/connection.h>
+#include <aws/http/proxy.h>
 #include <aws/http/request_response.h>
 
 #include <aws/io/channel.h>
