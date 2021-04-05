@@ -216,6 +216,7 @@ PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args) {
 
     /* proxy options are optional */
     struct aws_http_proxy_options proxy_options_storage;
+    AWS_ZERO_STRUCT(proxy_options_storage);
     struct aws_http_proxy_options *proxy_options = NULL;
     if (proxy_options_py != Py_None) {
         proxy_options = &proxy_options_storage;
