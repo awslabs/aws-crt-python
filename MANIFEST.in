@@ -16,8 +16,11 @@ prune crt/s2n/tests
 # s2n's cmake relies on a some files under test/ for compile time feature tests
 include crt/s2n/tests/unit/s2n_pq_asm_noop_test.c
 graft crt/s2n/tests/features
+exclude crt/aws-lc/**/*.go
+exclude crt/aws-lc/**/*.json
+exclude crt/aws-lc/**/*.py
+exclude crt/aws-lc/**/*test*.txt
 prune crt/aws-lc/crypto/cipher_extra/test
-exclude crt/aws-lc/crtypo/hpke/test-vectors.json
 prune crt/aws-lc/fuzz
 prune crt/aws-lc/ssl
 prune crt/aws-lc/tests
