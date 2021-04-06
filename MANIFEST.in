@@ -15,7 +15,3 @@ prune crt/aws-c-s3/benchmarks
 prune crt/s2n/tests
 prune crt/aws-lc/tests
 prune crt/aws-lc/fuzz
-prune crt/aws-lc/ssl
-prune crt/aws-lc/third_party
-prune crt/aws-lc/tool
-prune crt/aws-lc/util
