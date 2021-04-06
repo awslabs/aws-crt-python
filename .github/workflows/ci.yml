@@ -108,3 +108,19 @@ jobs:
         python3 -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder')"
         chmod a+x builder
         ./builder build -p ${{ env.PACKAGE_NAME }}
+
+  package-source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+      - name: Package source + install
+        env:
+          # aws-lc forbids some gcc versions due to security bugs
+          CC: gcc-10
+        run: |
+          python3 setup.py sdist
+          cd dist
+          python3 -m pip install -v awscrt-1.0.0.dev0.tar.gz
+          python3 -c "import awscrt.io"
