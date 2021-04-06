@@ -115,8 +115,9 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: true
-      - run: |
-        python3 setup.py sdist
-        cd dist
-        python3 -m pip install awscrt-1.0.0.dev0.tar.gz
-        python3 -c "import awscrt.io"
+      - name: Package source + install
+        run: |
+          python3 setup.py sdist
+          cd dist
+          python3 -m pip install awscrt-1.0.0.dev0.tar.gz
+          python3 -c "import awscrt.io"
