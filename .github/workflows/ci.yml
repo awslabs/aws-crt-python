@@ -111,13 +111,14 @@ jobs:
 
   package-source:
     runs-on: ubuntu-latest
-      compiler: gcc
-      gcc: 10
     steps:
       - uses: actions/checkout@v2
         with:
           submodules: true
       - name: Package source + install
+        env:
+          # aws-lc forbids some gcc versions due to security bugs
+          CC: gcc-10
         run: |
           python3 setup.py sdist
           cd dist
