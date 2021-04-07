@@ -182,7 +182,10 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
             '--target', 'install',
         ]
         if get_cmake_version() >= (3, 12):
-            build_cmd += ['--parallel']
+            # cmake 3.12+ allows --parallel for faster builds.
+            # Be sure to set a number, otherwise "make" will go absolutely
+            # bananas and run out of memory on low-end machines.
+            build_cmd += ['--parallel', str(os.cpu_count())]
         print(subprocess.list2cmdline(build_cmd))
         subprocess.check_call(build_cmd)
 
