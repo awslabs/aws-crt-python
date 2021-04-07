@@ -8,6 +8,7 @@
 
 #include <aws/common/array_list.h>
 #include <aws/http/connection.h>
+#include <aws/http/proxy.h>
 #include <aws/http/request_response.h>
 #include <aws/io/socket.h>
 
