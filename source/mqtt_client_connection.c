@@ -685,7 +685,6 @@ PyObject *aws_py_mqtt_client_connection_reconnect(PyObject *self, PyObject *args
  ******************************************************************************/
 
 struct publish_complete_userdata {
-    Py_buffer topic;
     PyObject *callback;
 };
 
@@ -714,7 +713,6 @@ static void s_publish_complete(
     }
 
     Py_DECREF(metadata->callback);
-    PyBuffer_Release(&metadata->topic);
 
     PyGILState_Release(state);
 
@@ -757,12 +755,11 @@ PyObject *aws_py_mqtt_client_connection_publish(PyObject *self, PyObject *args) 
         goto metadata_alloc_failed;
     }
 
-    metadata->topic = topic_stack;
     metadata->callback = puback_callback;
     Py_INCREF(metadata->callback);
 
     struct aws_byte_cursor topic_cursor;
-    topic_cursor = aws_byte_cursor_from_array(metadata->topic.buf, metadata->topic.len);
+    topic_cursor = aws_byte_cursor_from_array(topic_stack.buf, topic_stack.len);
 
     struct aws_byte_cursor payload_cursor;
     payload_cursor = aws_byte_cursor_from_array(payload_stack.buf, payload_stack.len);
@@ -776,6 +773,7 @@ PyObject *aws_py_mqtt_client_connection_publish(PyObject *self, PyObject *args) 
         PyErr_SetAwsLastError();
         goto publish_failed;
     }
+    PyBuffer_Release(&topic_stack);
     PyBuffer_Release(&payload_stack);
 
     return PyLong_FromUnsignedLong(msg_id);
