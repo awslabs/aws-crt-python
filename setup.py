@@ -225,7 +225,7 @@ def awscrt_ext():
 
     if sys.platform == 'win32':
         # the windows apis being used under the hood. Since we're static linking we have to follow the entire chain down
-        libraries += ['Secur32', 'Crypt32', 'Advapi32', 'BCrypt', 'Kernel32', 'Ws2_32', 'Shlwapi']
+        libraries += ['Secur32', 'Crypt32', 'Advapi32', 'NCrypt', 'BCrypt', 'Kernel32', 'Ws2_32', 'Shlwapi']
         # Ensure that debug info is in the obj files, and that it is linked into the .pyd so that
         # stack traces and dumps are useful
         extra_compile_args += ['/Z7']
