@@ -1,9 +1,11 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 
+from awscrt import NativeResource
 from awscrt.eventstream import *
 from awscrt.eventstream.rpc import *
 from awscrt.io import (ClientBootstrap, DefaultHostResolver, EventLoopGroup, init_logging, LogLevel)
+from awscrt._test import native_memory_usage
 import gc
 import os
 from queue import Queue
@@ -319,7 +321,7 @@ class TestClient(NativeResourceTest):
             on_flush=on_msg_flush)
 
         self.assertIsNone(msg_future.exception(TIMEOUT))
-        msg_flushed.wait(TIMEOUT)
+        self.assertTrue(msg_flushed.wait(TIMEOUT))
 
         # wait to receive response, which should end the stream
         msg = stream_handler.record.message_calls.get(timeout=TIMEOUT)
@@ -404,6 +406,35 @@ class TestClient(NativeResourceTest):
 
         self._assertNoFailuresFromCallbacks()
 
+    def test_streams_clean_up_on_close(self):
+        # ensure that a stream cleans up immediately after it's closed and references to it are dropped
+        handler = self._connect_fully()
+
+        # use function to create and run stream.
+        # if we just did it in loop below, local references would stick around
+        # and show up when we checked for leaks
+        def _run_stream_operation():
+            stream_handler = ContinuationHandler(self._fail_test_from_callback)
+            continuation = handler.connection.new_stream(stream_handler)
+            continuation.activate(
+                operation='awstest#EchoMessage',
+                headers=[],
+                payload=b'{}',
+                message_type=MessageType.APPLICATION_MESSAGE,
+                flags=MessageFlag.NONE)
+            self.assertTrue(stream_handler.record.close_call.wait(TIMEOUT))
+
+        living_resources_at_start = len(NativeResource._living)
+        native_mem_usage_at_start = native_memory_usage()
+        for i in range(100):
+            _run_stream_operation()
+            gc.collect()
+            self.assertEqual(living_resources_at_start, len(NativeResource._living))
+            self.assertEqual(native_mem_usage_at_start, native_memory_usage())
+
+        handler.connection.close().result(TIMEOUT)
+        self._assertNoFailuresFromCallbacks()
+
     def test_on_closed_deadlock_regression(self):
         # ensure that during the on_closed() callback of the first stream,
         # we can activate a second stream without deadlocking
@@ -422,9 +453,9 @@ class TestClient(NativeResourceTest):
         first_stream.activate(operation="first",
                               message_type=MessageType.APPLICATION_MESSAGE)
 
-        first_stream_handler.activated_second_stream.wait(TIMEOUT)
+        self.assertTrue(first_stream_handler.activated_second_stream.wait(TIMEOUT))
 
-        handler.connection.close().result()
+        handler.connection.close().result(TIMEOUT)
 
 
 class DeadlockStreamHandler(ClientContinuationHandler):
