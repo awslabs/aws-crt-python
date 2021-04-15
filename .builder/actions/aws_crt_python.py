@@ -37,6 +37,9 @@ class AWSCrtPython(Builder.Action):
         self.name = name if name else 'aws-crt-python'
 
     def run(self, env):
+        # tests must run with leak detection turned on
+        env.shell.setenv('AWS_CRT_MEMORY_TRACING', '2')
+
         install_options = []
         actions = [
             InstallPythonReqs(deps=['boto3'], python=self.custom_python),

@@ -593,11 +593,12 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
     AWS_ZERO_STRUCT(tls_options);
 
     /* From hereon, we need to clean up if errors occur */
+    bool success = false;
 
     if (tls_ctx_py != Py_None) {
         tls_ctx = aws_py_get_tls_ctx(tls_ctx_py);
         if (!tls_ctx) {
-            goto error;
+            goto done;
         }
 
         aws_tls_connection_options_init_from_ctx(&tls_options, tls_ctx);
@@ -605,7 +606,7 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
         struct aws_byte_cursor server_name_cur = aws_byte_cursor_from_c_str(server_name);
         if (aws_tls_connection_options_set_server_name(&tls_options, allocator, &server_name_cur)) {
             PyErr_SetAwsLastError();
-            goto error;
+            goto done;
         }
     }
 
@@ -630,13 +631,16 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
     };
     if (aws_mqtt_client_connection_connect(py_connection->native, &options)) {
         PyErr_SetAwsLastError();
-        goto error;
+        goto done;
     }
 
-    Py_RETURN_NONE;
-
-error:
+    success = true;
+done:
     aws_tls_connection_options_clean_up(&tls_options);
+    if (success) {
+        Py_RETURN_NONE;
+    }
+
     Py_CLEAR(py_connection->on_connect);
     return NULL;
 }

@@ -92,6 +92,9 @@ PyObject *aws_py_event_stream_rpc_client_connection_connect(PyObject *self, PyOb
         goto error;
     }
 
+    /* Now that connection._binding holds reference to capsule, we can decref the creation reference */
+    Py_DECREF(capsule);
+
     struct aws_event_stream_rpc_client_connection_options conn_options = {
         .host_name = host_name,
         .port = port,
