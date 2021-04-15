@@ -7,6 +7,7 @@
 #include "io.h"
 
 #include <aws/http/connection.h>
+#include <aws/http/proxy.h>
 
 bool aws_py_http_proxy_options_init(struct aws_http_proxy_options *proxy_options, PyObject *py_proxy_options) {
     AWS_ZERO_STRUCT(*proxy_options);

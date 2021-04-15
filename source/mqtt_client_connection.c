@@ -11,6 +11,7 @@
 #include <aws/mqtt/client.h>
 
 #include <aws/http/connection.h>
+#include <aws/http/proxy.h>
 #include <aws/http/request_response.h>
 
 #include <aws/io/channel.h>
@@ -582,7 +583,7 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
             return NULL;
         }
 
-        if (aws_mqtt_client_connection_set_websocket_proxy_options(py_connection->native, &proxy_options)) {
+        if (aws_mqtt_client_connection_set_http_proxy_options(py_connection->native, &proxy_options)) {
             return PyErr_AwsLastError();
         }
     }
@@ -684,8 +685,6 @@ PyObject *aws_py_mqtt_client_connection_reconnect(PyObject *self, PyObject *args
  ******************************************************************************/
 
 struct publish_complete_userdata {
-    Py_buffer topic;
-    Py_buffer payload;
     PyObject *callback;
 };
 
@@ -714,8 +713,6 @@ static void s_publish_complete(
     }
 
     Py_DECREF(metadata->callback);
-    PyBuffer_Release(&metadata->topic);
-    PyBuffer_Release(&metadata->payload);
 
     PyGILState_Release(state);
 
@@ -758,16 +755,14 @@ PyObject *aws_py_mqtt_client_connection_publish(PyObject *self, PyObject *args) 
         goto metadata_alloc_failed;
     }
 
-    metadata->topic = topic_stack;
-    metadata->payload = payload_stack;
     metadata->callback = puback_callback;
     Py_INCREF(metadata->callback);
 
     struct aws_byte_cursor topic_cursor;
-    topic_cursor = aws_byte_cursor_from_array(metadata->topic.buf, metadata->topic.len);
+    topic_cursor = aws_byte_cursor_from_array(topic_stack.buf, topic_stack.len);
 
     struct aws_byte_cursor payload_cursor;
-    payload_cursor = aws_byte_cursor_from_array(metadata->payload.buf, metadata->payload.len);
+    payload_cursor = aws_byte_cursor_from_array(payload_stack.buf, payload_stack.len);
 
     enum aws_mqtt_qos qos = (enum aws_mqtt_qos)qos_val;
 
@@ -778,6 +773,8 @@ PyObject *aws_py_mqtt_client_connection_publish(PyObject *self, PyObject *args) 
         PyErr_SetAwsLastError();
         goto publish_failed;
     }
+    PyBuffer_Release(&topic_stack);
+    PyBuffer_Release(&payload_stack);
 
     return PyLong_FromUnsignedLong(msg_id);
 
