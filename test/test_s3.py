@@ -303,7 +303,7 @@ class S3RequestTest(NativeResourceTest):
         headers = HttpHeaders([("host", self._build_endpoint_string(self.region, self.bucket_name)),
                                ("Content-Type", "text/plain"), ("Content-Length", str(data_len))])
         http_request = HttpRequest("PUT", "/cancelled_request", headers, put_body_stream)
-        s3_client = s3_client_new(False, self.region, 5 * 1024 * 1024)
+        s3_client = s3_client_new(False, self.region, 8 * 1024 * 1024)
         s3_request = s3_client.make_request(
             request=http_request,
             type=S3RequestType.PUT_OBJECT,
