@@ -1,6 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 
+import codecs
 import distutils.ccompiler
 import glob
 import os
@@ -133,6 +134,8 @@ PROJECT_DIR = os.path.dirname(os.path.realpath(__file__))
 DEP_BUILD_DIR = os.path.join(PROJECT_DIR, 'build', 'deps')
 DEP_INSTALL_PATH = os.environ.get('AWS_C_INSTALL', os.path.join(DEP_BUILD_DIR, 'install'))
 
+VERSION_RE = re.compile(r""".*__version__ = ["'](.*?)['"]""", re.S)
+
 
 class awscrt_build_ext(setuptools.command.build_ext.build_ext):
     def _build_dependency(self, aws_lib):
@@ -259,14 +262,25 @@ def awscrt_ext():
         extra_objects=extra_objects
     )
 
+def _load_readme():
+    readme_path = os.path.join(PROJECT_DIR, 'README.md')
+    with codecs.open(readme_path, 'r', 'utf-8') as f:
+        return f.read()
+
+def _load_version():
+    init_path = os.path.join(PROJECT_DIR, 'awscrt', '__init__.py')
+    with open(init_path) as fp:
+        return VERSION_RE.match(fp.read()).group(1)
 
 setuptools.setup(
     name="awscrt",
-    version="1.0.0-dev",
-    license="License :: OSI Approved :: Apache Software License",
+    version=_load_version(),
+    license="Apache 2.0",
     author="Amazon Web Services, Inc",
     author_email="aws-sdk-common-runtime@amazon.com",
     description="A common runtime for AWS Python projects",
+    long_description=_load_readme(),
+    long_description_content_type='text/markdown',
     url="https://github.com/awslabs/aws-crt-python",
     # Note: find_packages() without extra args will end up installing test/
     packages=setuptools.find_packages(include=['awscrt*']),
