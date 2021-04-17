@@ -93,7 +93,7 @@ PyObject *aws_py_event_stream_rpc_client_connection_connect(PyObject *self, PyOb
     }
 
     /* Now that connection._binding holds reference to capsule, we can decref the creation reference */
-    Py_DECREF(capsule);
+    Py_CLEAR(capsule);
 
     struct aws_event_stream_rpc_client_connection_options conn_options = {
         .host_name = host_name,
@@ -118,8 +118,9 @@ error:
     /* clear circular reference */
     Py_CLEAR(connection->self_py);
 
-    /* capsule's destructor will clean up anything inside of it */
-    Py_DECREF(capsule);
+    /* if capsule pointer still valid, this will invoke its destructor,
+     * which will clean up anything inside of it */
+    Py_CLEAR(capsule);
     return NULL;
 }
 
@@ -130,6 +131,7 @@ static void s_on_connection_setup(
 
     struct connection_binding *connection = user_data;
     connection->native = native;
+    aws_event_stream_rpc_client_connection_acquire(connection->native);
 
     AWS_FATAL_ASSERT(((bool)native != (bool)error_code) && "illegal event-stream connection args");
 

@@ -249,6 +249,12 @@ class TestClient(NativeResourceTest):
 
         return handler
 
+    def test_connection_close_without_waiting_for_completion(self):
+        # Regression test: check that it's safe to call close and drop local references,
+        # without waiting for close() to complete.
+        handler = self._connect_fully()
+        handler.connection.close()
+
     def test_stream_cleans_up_if_never_activated(self):
         # check that there are no resource leaks if a stream/continuation is never activated
         handler = self._connect_fully()
@@ -406,7 +412,7 @@ class TestClient(NativeResourceTest):
 
         self._assertNoFailuresFromCallbacks()
 
-    def test_streams_clean_up_on_close(self):
+    def test_stream_cleans_up_on_close(self):
         # ensure that a stream cleans up immediately after it's closed and references to it are dropped
         handler = self._connect_fully()
 
@@ -426,7 +432,9 @@ class TestClient(NativeResourceTest):
 
         living_resources_at_start = len(NativeResource._living)
         native_mem_usage_at_start = native_memory_usage()
-        for i in range(100):
+
+        # run a few streams
+        for i in range(10):
             _run_stream_operation()
             gc.collect()
             self.assertEqual(living_resources_at_start, len(NativeResource._living))
@@ -434,6 +442,32 @@ class TestClient(NativeResourceTest):
 
         handler.connection.close().result(TIMEOUT)
         self._assertNoFailuresFromCallbacks()
+
+    def test_stream_reference_can_outlive_connection(self):
+        # Regression test. Ensure we don't crash if a stream reference stays alive
+        # after connection has been closed and references to connection have been dropped
+        connection_handler = self._connect_fully()
+
+        # run stream and keep its reference around
+        stream_handler = ContinuationHandler(self._fail_test_from_callback)
+        continuation = connection_handler.connection.new_stream(stream_handler)
+        continuation.activate(
+            operation='awstest#EchoMessage',
+            headers=[],
+            payload=b'{}',
+            message_type=MessageType.APPLICATION_MESSAGE,
+            flags=MessageFlag.NONE)
+        self.assertTrue(stream_handler.record.close_call.wait(TIMEOUT))
+
+        # close connection and nuke local references
+        connection_handler.connection.close().result(TIMEOUT)
+        connection_weakref = weakref.ref(connection_handler.connection)
+        del connection_handler
+        gc.collect()
+
+        del stream_handler
+        del continuation
+        gc.collect()
 
     def test_on_closed_deadlock_regression(self):
         # ensure that during the on_closed() callback of the first stream,
