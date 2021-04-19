@@ -233,6 +233,12 @@ static void s_s3_request_on_finish(
     PyObject *header_list = NULL;
     PyObject *result = NULL;
 
+    if (request_binding->input_body) {
+        /* close the input file stream now, request has finished, we will not read from there anymore */
+        aws_input_stream_destroy(request_binding->input_body);
+        request_binding->input_body = NULL;
+    }
+
     if (request_binding->size_transferred) {
         /* report the remaining progress */
         result =
