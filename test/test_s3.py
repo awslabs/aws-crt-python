@@ -11,6 +11,10 @@ from awscrt.http import HttpHeaders, HttpRequest
 from awscrt.s3 import S3Client, S3RequestType
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions
 from awscrt.auth import AwsCredentialsProvider
+from test import FileCreator
+
+MB = 1024 ** 2
+GB = 1024 ** 3
 
 
 def s3_client_new(secure, region, part_size=0):
@@ -88,6 +92,11 @@ class S3RequestTest(NativeResourceTest):
 
         self.put_body_stream = None
 
+        self.files = FileCreator()
+
+    def tearDown(self):
+        self.files.remove_all()
+
     def _build_endpoint_string(self, region, bucket_name):
         return bucket_name + ".s3." + region + ".amazonaws.com"
 
@@ -96,8 +105,9 @@ class S3RequestTest(NativeResourceTest):
         request = HttpRequest("GET", object_path, headers)
         return request
 
-    def _put_object_request(self, file_name, path=None):
-        self.put_body_stream = open(file_name, "r+b")
+    def _put_object_request(self, file_name=None, path=None):
+        if file_name:
+            self.put_body_stream = open(file_name, "r+b")
         file_stats = os.stat(file_name)
         self.data_len = file_stats.st_size
         headers = HttpHeaders([("host", self._build_endpoint_string(self.region, self.bucket_name)),
@@ -131,7 +141,7 @@ class S3RequestTest(NativeResourceTest):
                 "Received body length does not match the Content-Length header")
 
     def _test_s3_put_get_object(self, request, request_type, exception_name=None):
-        s3_client = s3_client_new(False, self.region, 5 * 1024 * 1024)
+        s3_client = s3_client_new(False, self.region, 5 * MB)
         s3_request = s3_client.make_request(
             request=request,
             type=request_type,
@@ -159,7 +169,7 @@ class S3RequestTest(NativeResourceTest):
         self.put_body_stream.close()
 
     def test_put_object_multiple_times(self):
-        s3_client = s3_client_new(False, self.region, 5 * 1024 * 1024)
+        s3_client = s3_client_new(False, self.region, 5 * MB)
         finished_futures = []
         for i in range(3):
             path = "/put_object_test_py_10MB_{}.txt".format(str(i))
@@ -186,7 +196,7 @@ class S3RequestTest(NativeResourceTest):
     def test_get_object_file_object(self):
         request = self._get_object_request(self.get_test_object_path)
         request_type = S3RequestType.GET_OBJECT
-        s3_client = s3_client_new(False, self.region, 5 * 1024 * 1024)
+        s3_client = s3_client_new(False, self.region, 5 * MB)
         with NamedTemporaryFile(mode="w", delete=False) as file:
             file.close()
             s3_request = s3_client.make_request(
@@ -219,13 +229,40 @@ class S3RequestTest(NativeResourceTest):
         request_type = S3RequestType.PUT_OBJECT
         # close the stream, to test if the C FILE pointer as the input stream working well.
         self.put_body_stream.close()
-        s3_client = s3_client_new(False, self.region, 5 * 1024 * 1024)
+        s3_client = s3_client_new(False, self.region, 5 * MB)
         s3_request = s3_client.make_request(
             request=request,
             type=request_type,
             send_filepath="test/resources/s3_put_object.txt",
             on_headers=self._on_request_headers,
             on_progress=self._on_progress)
+        finished_future = s3_request.finished_future
+        finished_future.result(self.timeout)
+
+        # check result
+        self.assertEqual(
+            self.data_len,
+            self.transferred_len,
+            "the transferred length reported does not match body we sent")
+        self._validate_successful_get_response(request_type is S3RequestType.PUT_OBJECT)
+
+    def test_put_object_file_object_move(self):
+        # remove the input file when request done
+        tempfile = self.files.create_file_with_size("temp_file", 10 * MB)
+        request = self._put_object_request()
+        s3_client = s3_client_new(False, self.region, 5 * MB)
+        request_type = S3RequestType.PUT_OBJECT
+
+        def on_done_remove_file():
+            os.remove(tempfile)
+
+        s3_request = s3_client.make_request(
+            request=request,
+            type=request_type,
+            send_filepath=tempfile,
+            on_headers=self._on_request_headers,
+            on_progress=self._on_progress,
+            on_done=on_done_remove_file)
         finished_future = s3_request.finished_future
         finished_future.result(self.timeout)
 
@@ -244,7 +281,7 @@ class S3RequestTest(NativeResourceTest):
     def test_multipart_get_object_cancel(self):
         # a 5 GB file
         request = self._get_object_request("/crt-canary-obj-single-part-9223372036854775807")
-        s3_client = s3_client_new(False, self.region, 5 * 1024 * 1024)
+        s3_client = s3_client_new(False, self.region, 5 * MB)
         with NamedTemporaryFile(mode="w", delete=False) as file:
             file.close()
             self.s3_request = s3_client.make_request(
@@ -276,7 +313,7 @@ class S3RequestTest(NativeResourceTest):
     def test_get_object_quick_cancel(self):
         # a 5 GB file
         request = self._get_object_request("/crt-canary-obj-single-part-9223372036854775807")
-        s3_client = s3_client_new(False, self.region, 5 * 1024 * 1024)
+        s3_client = s3_client_new(False, self.region, 5 * MB)
         with NamedTemporaryFile(mode="w", delete=False) as file:
             file.close()
             s3_request = s3_client.make_request(
@@ -299,11 +336,11 @@ class S3RequestTest(NativeResourceTest):
     def _put_object_cancel_helper(self, cancel_after_read):
         read_futrue = Future()
         put_body_stream = FakeReadStream(read_futrue)
-        data_len = 10 * 1024 * 1024 * 1024  # some fake length
+        data_len = 10 * GB  # some fake length
         headers = HttpHeaders([("host", self._build_endpoint_string(self.region, self.bucket_name)),
                                ("Content-Type", "text/plain"), ("Content-Length", str(data_len))])
         http_request = HttpRequest("PUT", "/cancelled_request", headers, put_body_stream)
-        s3_client = s3_client_new(False, self.region, 8 * 1024 * 1024)
+        s3_client = s3_client_new(False, self.region, 8 * MB)
         s3_request = s3_client.make_request(
             request=http_request,
             type=S3RequestType.PUT_OBJECT,

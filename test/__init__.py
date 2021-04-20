@@ -8,6 +8,10 @@ import sys
 import time
 import types
 import unittest
+import tempfile
+import math
+import os
+import shutil
 
 TIMEOUT = 10.0
 
@@ -71,3 +75,53 @@ class NativeResourceTest(unittest.TestCase):
                         _printobj('  -', r)
 
         self.assertEqual(0, len(NativeResource._living))
+
+
+class FileCreator(object):
+    def __init__(self):
+        self.rootdir = tempfile.mkdtemp()
+
+    def remove_all(self):
+        shutil.rmtree(self.rootdir)
+
+    def create_file(self, filename, contents, mode='w'):
+        """Creates a file in a tmpdir
+        ``filename`` should be a relative path, e.g. "foo/bar/baz.txt"
+        It will be translated into a full path in a tmp dir.
+        ``mode`` is the mode the file should be opened either as ``w`` or
+        `wb``.
+        Returns the full path to the file.
+        """
+        full_path = os.path.join(self.rootdir, filename)
+        if not os.path.isdir(os.path.dirname(full_path)):
+            os.makedirs(os.path.dirname(full_path))
+        with open(full_path, mode) as f:
+            f.write(contents)
+        return full_path
+
+    def create_file_with_size(self, filename, filesize):
+        filename = self.create_file(filename, contents='')
+        chunksize = 8192
+        with open(filename, 'wb') as f:
+            for i in range(int(math.ceil(filesize / float(chunksize)))):
+                f.write(b'a' * chunksize)
+        return filename
+
+    def append_file(self, filename, contents):
+        """Append contents to a file
+        ``filename`` should be a relative path, e.g. "foo/bar/baz.txt"
+        It will be translated into a full path in a tmp dir.
+        Returns the full path to the file.
+        """
+        full_path = os.path.join(self.rootdir, filename)
+        if not os.path.isdir(os.path.dirname(full_path)):
+            os.makedirs(os.path.dirname(full_path))
+        with open(full_path, 'a') as f:
+            f.write(contents)
+        return full_path
+
+    def full_path(self, filename):
+        """Translate relative path to full path in temp dir.
+        f.full_path('foo/bar.txt') -> /tmp/asdfasd/foo/bar.txt
+        """
+        return os.path.join(self.rootdir, filename)
