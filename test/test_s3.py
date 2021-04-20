@@ -105,9 +105,9 @@ class S3RequestTest(NativeResourceTest):
         request = HttpRequest("GET", object_path, headers)
         return request
 
-    def _put_object_request(self, file_name=None, path=None):
-        if file_name:
-            self.put_body_stream = open(file_name, "r+b")
+    def _put_object_request(self, file_name, path=None):
+        # if send file path is set, the body_stream of http request will be ignored (using file handler from C instead)
+        self.put_body_stream = open(file_name, "r+b")
         file_stats = os.stat(file_name)
         self.data_len = file_stats.st_size
         headers = HttpHeaders([("host", self._build_endpoint_string(self.region, self.bucket_name)),
@@ -249,7 +249,7 @@ class S3RequestTest(NativeResourceTest):
     def test_put_object_file_object_move(self):
         # remove the input file when request done
         tempfile = self.files.create_file_with_size("temp_file", 10 * MB)
-        request = self._put_object_request()
+        request = self._put_object_request(tempfile)
         s3_client = s3_client_new(False, self.region, 5 * MB)
         request_type = S3RequestType.PUT_OBJECT
 
