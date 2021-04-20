@@ -250,6 +250,7 @@ class S3RequestTest(NativeResourceTest):
         # remove the input file when request done
         tempfile = self.files.create_file_with_size("temp_file", 10 * MB)
         request = self._put_object_request(tempfile)
+        self.put_body_stream.close()
         s3_client = s3_client_new(False, self.region, 5 * MB)
         request_type = S3RequestType.PUT_OBJECT
 
