@@ -10,6 +10,7 @@
 #include <errno.h>
 
 #include <aws/common/clock.h>
+#include <aws/common/file_open.h>
 #include <aws/http/request_response.h>
 #include <aws/io/file_utils.h>
 #include <aws/io/stream.h>
@@ -557,7 +558,7 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     Py_INCREF(meta_request->py_core);
 
     if (recv_filepath) {
-        meta_request->recv_file = fopen(recv_filepath, "wb+");
+        meta_request->recv_file = aws_fopen(recv_filepath, "wb+");
         if (!meta_request->recv_file) {
             aws_translate_and_raise_io_error(errno);
             PyErr_SetAwsLastError();
