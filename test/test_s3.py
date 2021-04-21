@@ -3,7 +3,9 @@
 
 import unittest
 import os
-from tempfile import NamedTemporaryFile
+import tempfile
+import math
+import shutil
 from test import NativeResourceTest
 from concurrent.futures import Future
 
@@ -11,10 +13,59 @@ from awscrt.http import HttpHeaders, HttpRequest
 from awscrt.s3 import S3Client, S3RequestType
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions
 from awscrt.auth import AwsCredentialsProvider
-from test import FileCreator
 
 MB = 1024 ** 2
 GB = 1024 ** 3
+
+
+class FileCreator(object):
+    def __init__(self):
+        self.rootdir = tempfile.mkdtemp()
+
+    def remove_all(self):
+        shutil.rmtree(self.rootdir)
+
+    def create_file(self, filename, contents, mode='w'):
+        """Creates a file in a tmpdir
+        ``filename`` should be a relative path, e.g. "foo/bar/baz.txt"
+        It will be translated into a full path in a tmp dir.
+        ``mode`` is the mode the file should be opened either as ``w`` or
+        `wb``.
+        Returns the full path to the file.
+        """
+        full_path = os.path.join(self.rootdir, filename)
+        if not os.path.isdir(os.path.dirname(full_path)):
+            os.makedirs(os.path.dirname(full_path))
+        with open(full_path, mode) as f:
+            f.write(contents)
+        return full_path
+
+    def create_file_with_size(self, filename, filesize):
+        filename = self.create_file(filename, contents='')
+        chunksize = 8192
+        with open(filename, 'wb') as f:
+            for i in range(int(math.ceil(filesize / float(chunksize)))):
+                f.write(b'a' * chunksize)
+        return filename
+
+    def append_file(self, filename, contents):
+        """Append contents to a file
+        ``filename`` should be a relative path, e.g. "foo/bar/baz.txt"
+        It will be translated into a full path in a tmp dir.
+        Returns the full path to the file.
+        """
+        full_path = os.path.join(self.rootdir, filename)
+        if not os.path.isdir(os.path.dirname(full_path)):
+            os.makedirs(os.path.dirname(full_path))
+        with open(full_path, 'a') as f:
+            f.write(contents)
+        return full_path
+
+    def full_path(self, filename):
+        """Translate relative path to full path in temp dir.
+        f.full_path('foo/bar.txt') -> /tmp/asdfasd/foo/bar.txt
+        """
+        return os.path.join(self.rootdir, filename)
 
 
 def s3_client_new(secure, region, part_size=0):
@@ -96,6 +147,7 @@ class S3RequestTest(NativeResourceTest):
 
     def tearDown(self):
         self.files.remove_all()
+        super().tearDown()
 
     def _build_endpoint_string(self, region, bucket_name):
         return bucket_name + ".s3." + region + ".amazonaws.com"
@@ -197,7 +249,7 @@ class S3RequestTest(NativeResourceTest):
         request = self._get_object_request(self.get_test_object_path)
         request_type = S3RequestType.GET_OBJECT
         s3_client = s3_client_new(False, self.region, 5 * MB)
-        with NamedTemporaryFile(mode="w", delete=False) as file:
+        with tempfile.NamedTemporaryFile(mode="w", delete=False) as file:
             file.close()
             s3_request = s3_client.make_request(
                 request=request,
@@ -283,7 +335,7 @@ class S3RequestTest(NativeResourceTest):
         # a 5 GB file
         request = self._get_object_request("/crt-canary-obj-single-part-9223372036854775807")
         s3_client = s3_client_new(False, self.region, 5 * MB)
-        with NamedTemporaryFile(mode="w", delete=False) as file:
+        with tempfile.NamedTemporaryFile(mode="w", delete=False) as file:
             file.close()
             self.s3_request = s3_client.make_request(
                 request=request,
@@ -315,7 +367,7 @@ class S3RequestTest(NativeResourceTest):
         # a 5 GB file
         request = self._get_object_request("/crt-canary-obj-single-part-9223372036854775807")
         s3_client = s3_client_new(False, self.region, 5 * MB)
-        with NamedTemporaryFile(mode="w", delete=False) as file:
+        with tempfile.NamedTemporaryFile(mode="w", delete=False) as file:
             file.close()
             s3_request = s3_client.make_request(
                 request=request,
