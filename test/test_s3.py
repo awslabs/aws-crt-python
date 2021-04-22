@@ -311,7 +311,7 @@ class S3RequestTest(NativeResourceTest):
         request_type = S3RequestType.PUT_OBJECT
 
         def on_done_remove_file(**kwargs):
-            os.remove(tempfile)
+            self.files.remove_all()
 
         s3_request = s3_client.make_request(
             request=request,
