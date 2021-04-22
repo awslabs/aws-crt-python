@@ -261,12 +261,8 @@ PyObject *aws_py_event_stream_python_headers_create(
         }
 
         /* create (name, value, type) tuple */
-        PyObject *tuple_py = Py_BuildValue(
-            "(s#Oi)",
-            header->header_name,
-            header->header_name_len,
-            value_py,
-            header->header_value_type);
+        PyObject *tuple_py =
+            Py_BuildValue("(s#Oi)", header->header_name, header->header_name_len, value_py, header->header_value_type);
 
         Py_DECREF(value_py);
 
