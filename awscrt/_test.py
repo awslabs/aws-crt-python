@@ -134,7 +134,7 @@ def check_for_leaks(*, timeout_sec=10.0):
                 if isinstance(r, types.FrameType):
                     frameinfo = inspect.getframeinfo(r)
                     our_fault = (frameinfo.filename.endswith('_weakrefset.py') or
-                                 frameinfo.filename.endswith('test/__init__.py'))
+                                 frameinfo.filename.endswith('awscrt/_test.py'))
                     if our_fault:
                         continue
 
