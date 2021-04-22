@@ -313,7 +313,7 @@ class S3RequestTest(NativeResourceTest):
 
         def on_done_remove_file(**kwargs):
             os.remove(tempfile)
-            done_future.set_result()
+            done_future.set_result(None)
 
         s3_client.make_request(
             request=request,
