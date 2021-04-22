@@ -134,7 +134,7 @@ class S3RequestTest(NativeResourceTest):
         self.default_file_path = "test/resources/s3_put_object.txt"
         self.timeout = 100  # seconds
         self.num_threads = 0
-        self.non_ascii_file_name = u"ÉxÅmple.txt".encode('utf-8').decode('utf-8')
+        self.non_ascii_file_name = u"ÉxÅmple.txt"
 
         self.response_headers = None
         self.response_status_code = None
@@ -229,6 +229,7 @@ class S3RequestTest(NativeResourceTest):
             tempfile = self.files.create_file_with_size("temp_file_{}".format(str(i)), 10 * MB)
             path = "/put_object_test_py_10MB_{}.txt".format(str(i))
             request = self._put_object_request(tempfile, path)
+            self.put_body_stream.close()
             s3_request = s3_client.make_request(
                 request=request,
                 type=S3RequestType.PUT_OBJECT,
