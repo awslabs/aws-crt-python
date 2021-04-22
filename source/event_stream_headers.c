@@ -264,7 +264,7 @@ PyObject *aws_py_event_stream_python_headers_create(
         PyObject *tuple_py =
             Py_BuildValue("(s#Oi)", header->header_name, header->header_name_len, value_py, header->header_value_type);
 
-        Py_DECREF(value_py);
+        Py_DECREF(value_py); /* drop local ref, tuple_py has its own ref to value_py now */
 
         if (!tuple_py) {
             goto error;
