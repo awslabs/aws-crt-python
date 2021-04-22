@@ -452,6 +452,33 @@ class S3RequestTest(NativeResourceTest):
             "the transferred length reported does not match body we sent")
         self._validate_successful_get_response(request_type is S3RequestType.PUT_OBJECT)
 
+    def test_non_ascii_filepath_download(self):
+        tempfile = self.files.create_file("ÉxÅmple.txt")
+        request = self._get_object_request(self.get_test_object_path)
+        request_type = S3RequestType.GET_OBJECT
+        s3_client = s3_client_new(False, self.region, 5 * MB)
+        s3_request = s3_client.make_request(
+            request=request,
+            type=request_type,
+            recv_filepath=tempfile,
+            on_headers=self._on_request_headers,
+            on_progress=self._on_progress)
+        finished_future = s3_request.finished_future
+        finished_future.result(self.timeout)
+
+        # Result check
+        self.data_len = int(HttpHeaders(self.response_headers).get("Content-Length"))
+        file_stats = os.stat(tempfile)
+        file_len = file_stats.st_size
+        self.assertEqual(
+            file_len,
+            self.transferred_len,
+            "the length of written file does not match the transferred length reported")
+        self.assertEqual(
+            self.data_len,
+            self.transferred_len,
+            "the transferred length reported does not match the content-length header")
+        self.assertEqual(self.response_status_code, 200, "status code is not 200")
 
 if __name__ == '__main__':
     unittest.main()
