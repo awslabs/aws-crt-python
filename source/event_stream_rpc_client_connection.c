@@ -92,6 +92,9 @@ PyObject *aws_py_event_stream_rpc_client_connection_connect(PyObject *self, PyOb
         goto error;
     }
 
+    /* Now that connection._binding holds reference to capsule, we can decref the creation reference */
+    Py_CLEAR(capsule);
+
     struct aws_event_stream_rpc_client_connection_options conn_options = {
         .host_name = host_name,
         .port = port,
@@ -115,8 +118,9 @@ error:
     /* clear circular reference */
     Py_CLEAR(connection->self_py);
 
-    /* capsule's destructor will clean up anything inside of it */
-    Py_DECREF(capsule);
+    /* if capsule pointer still valid, this will invoke its destructor,
+     * which will clean up anything inside of it */
+    Py_CLEAR(capsule);
     return NULL;
 }
 
@@ -127,6 +131,7 @@ static void s_on_connection_setup(
 
     struct connection_binding *connection = user_data;
     connection->native = native;
+    aws_event_stream_rpc_client_connection_acquire(connection->native);
 
     AWS_FATAL_ASSERT(((bool)native != (bool)error_code) && "illegal event-stream connection args");
 
@@ -207,23 +212,33 @@ static void s_on_protocol_message(
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
-    PyObject *result = PyObject_CallMethod(
+    PyObject *headers = NULL;
+    PyObject *result = NULL;
+
+    headers = aws_py_event_stream_python_headers_create(message_args->headers, message_args->headers_count);
+    if (!headers) {
+        PyErr_WriteUnraisable(connection->self_py);
+        goto done;
+    }
+
+    result = PyObject_CallMethod(
         connection->self_py,
         "_on_protocol_message",
         "(Oy#iI)",
-        /* NOTE: if headers_create() returns NULL, then PyObject_CallFunction() fails too, which is convenient */
-        aws_py_event_stream_python_headers_create(message_args->headers, message_args->headers_count),
+        headers,
         message_args->payload->buffer,
         message_args->payload->len,
         message_args->message_type,
         message_args->message_flags);
-    if (result) {
-        Py_DECREF(result);
-    } else {
+    if (!result) {
         /* Callback might fail during application shutdown */
         PyErr_WriteUnraisable(connection->self_py);
+        goto done;
     }
 
+done:
+    Py_XDECREF(headers);
+    Py_XDECREF(result);
     PyGILState_Release(state);
 }
 

@@ -101,6 +101,10 @@ PyObject *aws_py_http_message_new_request(PyObject *self, PyObject *args) {
         return NULL;
     }
 
+    /* The capsule has its own reference to the request now,
+     * release the reference we got for creating it */
+    aws_http_message_release(request);
+
     return py_capsule;
 }
 

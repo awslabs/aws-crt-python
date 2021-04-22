@@ -2,7 +2,6 @@
 Cross-platform library for `awscrt`.
 """
 import _awscrt
-from typing import List
 
 
 def get_cpu_group_count() -> int:
