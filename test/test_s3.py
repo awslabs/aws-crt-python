@@ -438,7 +438,8 @@ class S3RequestTest(NativeResourceTest):
 
     def test_non_ascii_filepath_upload(self):
         # remove the input file when request done
-        tempfile = self.files.create_file_with_size(self.non_ascii_file_name, 10 * MB)
+        with open(self.non_ascii_file_name, 'wb') as file:
+            file.write(b"a" * 10 * MB)
         request = self._put_object_request(tempfile)
         self.put_body_stream.close()
         s3_client = s3_client_new(False, self.region, 5 * MB)
@@ -459,9 +460,11 @@ class S3RequestTest(NativeResourceTest):
             self.transferred_len,
             "the transferred length reported does not match body we sent")
         self._validate_successful_get_response(request_type is S3RequestType.PUT_OBJECT)
+        os.remove(self.non_ascii_file_name)
 
     def test_non_ascii_filepath_download(self):
-        tempfile = self.files.create_file(self.non_ascii_file_name, "simple")
+        with open(self.non_ascii_file_name, 'wb') as file:
+            file.write(b"")
         request = self._get_object_request(self.get_test_object_path)
         request_type = S3RequestType.GET_OBJECT
         s3_client = s3_client_new(False, self.region, 5 * MB)
@@ -487,6 +490,7 @@ class S3RequestTest(NativeResourceTest):
             self.transferred_len,
             "the transferred length reported does not match the content-length header")
         self.assertEqual(self.response_status_code, 200, "status code is not 200")
+        os.remove(self.non_ascii_file_name)
 
 
 if __name__ == '__main__':
