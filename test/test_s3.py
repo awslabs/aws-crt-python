@@ -134,7 +134,7 @@ class S3RequestTest(NativeResourceTest):
         self.default_file_path = "test/resources/s3_put_object.txt"
         self.timeout = 100  # seconds
         self.num_threads = 0
-        self.non_ascii_file_name = u"ÉxÅmple.txt"
+        self.non_ascii_file_name = "ÉxÅmple.txt".encode("utf-8")
 
         self.response_headers = None
         self.response_status_code = None
@@ -432,13 +432,9 @@ class S3RequestTest(NativeResourceTest):
         self._test_s3_put_get_object(request, S3RequestType.PUT_OBJECT, "AWS_ERROR_S3_INVALID_RESPONSE_STATUS")
         self.put_body_stream.close()
 
-    def test_non_ascii_filepath_test(self):
-        with open(self.non_ascii_file_name, 'wb') as file:
-            file.write(b"something")
-
     def test_non_ascii_filepath_upload(self):
         # remove the input file when request done
-        with open(self.non_ascii_file_name.encode("utf-8"), 'wb') as file:
+        with open(self.non_ascii_file_name, 'wb') as file:
             file.write(b"a" * 10 * MB)
         request = self._put_object_request(self.non_ascii_file_name)
         self.put_body_stream.close()
@@ -448,7 +444,7 @@ class S3RequestTest(NativeResourceTest):
         s3_request = s3_client.make_request(
             request=request,
             type=request_type,
-            send_filepath=self.non_ascii_file_name,
+            send_filepath=self.non_ascii_file_name.decode("utf-8"),
             on_headers=self._on_request_headers,
             on_progress=self._on_progress)
         finished_future = s3_request.finished_future
@@ -463,7 +459,7 @@ class S3RequestTest(NativeResourceTest):
         os.remove(self.non_ascii_file_name)
 
     def test_non_ascii_filepath_download(self):
-        with open(self.non_ascii_file_name.encode("utf-8"), 'wb') as file:
+        with open(self.non_ascii_file_name, 'wb') as file:
             file.write(b"")
         request = self._get_object_request(self.get_test_object_path)
         request_type = S3RequestType.GET_OBJECT
@@ -471,7 +467,7 @@ class S3RequestTest(NativeResourceTest):
         s3_request = s3_client.make_request(
             request=request,
             type=request_type,
-            recv_filepath=self.non_ascii_file_name,
+            recv_filepath=self.non_ascii_file_name.decode("utf-8"),
             on_headers=self._on_request_headers,
             on_progress=self._on_progress)
         finished_future = s3_request.finished_future
