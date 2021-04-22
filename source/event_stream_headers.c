@@ -255,15 +255,21 @@ PyObject *aws_py_event_stream_python_headers_create(
     for (size_t i = 0; i < count; ++i) {
         struct aws_event_stream_header_value_pair *header = &native_headers[i];
 
+        PyObject *value_py = s_create_python_header_value(header); /* new reference */
+        if (!value_py) {
+            goto error;
+        }
+
         /* create (name, value, type) tuple */
         PyObject *tuple_py = Py_BuildValue(
             "(s#Oi)",
             header->header_name,
             header->header_name_len,
-            /* NOTE: if s_create_python_header_value() returns NULL,
-             * then PyObject_CallFunction() fails too, which is convenient */
-            s_create_python_header_value(header),
+            value_py,
             header->header_value_type);
+
+        Py_DECREF(value_py);
+
         if (!tuple_py) {
             goto error;
         }

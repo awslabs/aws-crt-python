@@ -212,23 +212,33 @@ static void s_on_protocol_message(
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
-    PyObject *result = PyObject_CallMethod(
+    PyObject *headers = NULL;
+    PyObject *result = NULL;
+
+    headers = aws_py_event_stream_python_headers_create(message_args->headers, message_args->headers_count);
+    if (!headers) {
+        PyErr_WriteUnraisable(connection->self_py);
+        goto done;
+    }
+
+    result = PyObject_CallMethod(
         connection->self_py,
         "_on_protocol_message",
         "(Oy#iI)",
-        /* NOTE: if headers_create() returns NULL, then PyObject_CallFunction() fails too, which is convenient */
-        aws_py_event_stream_python_headers_create(message_args->headers, message_args->headers_count),
+        headers,
         message_args->payload->buffer,
         message_args->payload->len,
         message_args->message_type,
         message_args->message_flags);
-    if (result) {
-        Py_DECREF(result);
-    } else {
+    if (!result) {
         /* Callback might fail during application shutdown */
         PyErr_WriteUnraisable(connection->self_py);
+        goto done;
     }
 
+done:
+    Py_XDECREF(headers);
+    Py_XDECREF(result);
     PyGILState_Release(state);
 }
 
