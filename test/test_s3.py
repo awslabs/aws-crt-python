@@ -3,8 +3,6 @@
 
 import unittest
 import os
-import sys
-import importlib
 import tempfile
 import math
 import shutil
@@ -18,7 +16,6 @@ from awscrt.auth import AwsCredentialsProvider
 
 MB = 1024 ** 2
 GB = 1024 ** 3
-importlib.reload(sys)
 
 
 class FileCreator(object):
@@ -372,7 +369,6 @@ class S3RequestTest(NativeResourceTest):
             os.remove(file.name)
 
     def test_get_object_quick_cancel(self):
-        print(sys.getdefaultencoding())
         # a 5 GB file
         request = self._get_object_request("/crt-canary-obj-single-part-9223372036854775807")
         s3_client = s3_client_new(False, self.region, 5 * MB)
@@ -425,7 +421,6 @@ class S3RequestTest(NativeResourceTest):
         # Nothing should printout
 
     def test_multipart_put_object_cancel(self):
-        self.assertEqual(sys.getdefaultencoding(), "something else")
         return self._put_object_cancel_helper(True)
 
     def test_put_object_quick_cancel(self):
