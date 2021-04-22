@@ -225,12 +225,13 @@ class S3RequestTest(NativeResourceTest):
         s3_client = s3_client_new(False, self.region, 5 * MB)
         finished_futures = []
         for i in range(3):
+            tempfile = self.files.create_file_with_size("temp_file_{}".format(str(i)), 10 * MB)
             path = "/put_object_test_py_10MB_{}.txt".format(str(i))
-            request = self._put_object_request(self.default_file_path, path)
+            request = self._put_object_request(tempfile, path)
             s3_request = s3_client.make_request(
                 request=request,
                 type=S3RequestType.PUT_OBJECT,
-                send_filepath=self.default_file_path,
+                send_filepath=tempfile,
                 on_headers=self._on_request_headers,
                 on_body=self._on_request_body)
             finished_futures.append(s3_request.finished_future)
@@ -453,7 +454,7 @@ class S3RequestTest(NativeResourceTest):
         self._validate_successful_get_response(request_type is S3RequestType.PUT_OBJECT)
 
     def test_non_ascii_filepath_download(self):
-        tempfile = self.files.create_file(u"ÉxÅmple.txt".encode('utf-8'))
+        tempfile = self.files.create_file(u"ÉxÅmple.txt".encode('utf-8'), "simple")
         request = self._get_object_request(self.get_test_object_path)
         request_type = S3RequestType.GET_OBJECT
         s3_client = s3_client_new(False, self.region, 5 * MB)
@@ -479,6 +480,7 @@ class S3RequestTest(NativeResourceTest):
             self.transferred_len,
             "the transferred length reported does not match the content-length header")
         self.assertEqual(self.response_status_code, 200, "status code is not 200")
+
 
 if __name__ == '__main__':
     unittest.main()
