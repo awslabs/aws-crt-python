@@ -430,7 +430,7 @@ class S3RequestTest(NativeResourceTest):
 
     def test_non_ascii_filepath_upload(self):
         # remove the input file when request done
-        tempfile = self.files.create_file_with_size("ÉxÅmple.txt", 10 * MB)
+        tempfile = self.files.create_file_with_size(u"ÉxÅmple.txt".encode('utf-8'), 10 * MB)
         request = self._put_object_request(tempfile)
         self.put_body_stream.close()
         s3_client = s3_client_new(False, self.region, 5 * MB)
@@ -453,7 +453,7 @@ class S3RequestTest(NativeResourceTest):
         self._validate_successful_get_response(request_type is S3RequestType.PUT_OBJECT)
 
     def test_non_ascii_filepath_download(self):
-        tempfile = self.files.create_file("ÉxÅmple.txt")
+        tempfile = self.files.create_file(u"ÉxÅmple.txt".encode('utf-8'))
         request = self._get_object_request(self.get_test_object_path)
         request_type = S3RequestType.GET_OBJECT
         s3_client = s3_client_new(False, self.region, 5 * MB)
