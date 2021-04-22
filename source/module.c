@@ -16,6 +16,7 @@
 
 #include <aws/auth/auth.h>
 #include <aws/common/byte_buf.h>
+#include <aws/common/environment.h>
 #include <aws/common/system_info.h>
 #include <aws/event-stream/event_stream.h>
 #include <aws/http/http.h>
@@ -40,7 +41,9 @@ PyObject *aws_py_init_logging(PyObject *self, PyObject *args) {
 
     s_logger_init = true;
 
-    struct aws_allocator *allocator = aws_py_get_allocator();
+    /* NOTE: We are NOT using aws_py_default_allocator() for logging.
+     * This avoid deadlock during aws_mem_tracer_dump() */
+    struct aws_allocator *allocator = aws_default_allocator();
 
     int log_level = 0;
     const char *file_path = NULL;
@@ -270,7 +273,7 @@ static void s_error_map_init(void) {
 
     if (aws_hash_table_init(
             &s_py_to_aws_error_map,
-            aws_py_get_allocator(),
+            aws_default_allocator(), /* non-tracing allocator so this doesn't show up in leak dumps */
             AWS_ARRAY_SIZE(s_error_array),
             aws_hash_ptr,
             aws_ptr_eq,
@@ -281,7 +284,7 @@ static void s_error_map_init(void) {
 
     if (aws_hash_table_init(
             &s_aws_to_py_error_map,
-            aws_py_get_allocator(),
+            aws_default_allocator(), /* non-tracing allocator so this doesn't show up in leak dumps */
             AWS_ARRAY_SIZE(s_error_array),
             aws_hash_ptr,
             aws_ptr_eq,
@@ -425,9 +428,59 @@ done:
 /*******************************************************************************
  * Allocator
  ******************************************************************************/
+static struct aws_allocator *s_allocator = NULL;
 
 struct aws_allocator *aws_py_get_allocator(void) {
-    return aws_default_allocator();
+    return s_allocator;
+}
+
+AWS_STATIC_STRING_FROM_LITERAL(s_mem_tracing_env_var, "AWS_CRT_MEMORY_TRACING");
+
+static void s_init_allocator(void) {
+    /* use non-tracing allocator by default */
+    s_allocator = aws_default_allocator();
+
+    /* read environment variable. must be number correlating to trace mode */
+    struct aws_string *value_str = NULL;
+    aws_get_environment_value(aws_default_allocator(), s_mem_tracing_env_var, &value_str);
+    if (value_str == NULL) {
+        return;
+    }
+
+    int level = atoi(aws_string_c_str(value_str));
+    aws_string_destroy(value_str);
+    value_str = NULL;
+
+    if (level <= AWS_MEMTRACE_NONE || level > AWS_MEMTRACE_STACKS) {
+        return;
+    }
+
+    s_allocator = aws_mem_tracer_new(aws_default_allocator(), NULL, level, 16);
+}
+
+PyObject *aws_py_native_memory_usage(PyObject *self, PyObject *args) {
+    (void)self;
+    (void)args;
+
+    size_t bytes = 0;
+    struct aws_allocator *alloc = aws_py_get_allocator();
+    if (alloc != aws_default_allocator()) {
+        bytes = aws_mem_tracer_bytes(alloc);
+    }
+
+    return PyLong_FromSize_t(bytes);
+}
+
+PyObject *aws_py_native_memory_dump(PyObject *self, PyObject *args) {
+    (void)self;
+    (void)args;
+
+    struct aws_allocator *alloc = aws_py_get_allocator();
+    if (alloc != aws_default_allocator()) {
+        aws_mem_tracer_dump(alloc);
+    }
+
+    Py_RETURN_NONE;
 }
 
 /*******************************************************************************
@@ -482,6 +535,9 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(get_corresponding_builtin_exception, METH_VARARGS),
     AWS_PY_METHOD_DEF(get_cpu_group_count, METH_VARARGS),
     AWS_PY_METHOD_DEF(get_cpu_count_for_group, METH_VARARGS),
+    AWS_PY_METHOD_DEF(native_memory_usage, METH_NOARGS),
+    AWS_PY_METHOD_DEF(native_memory_dump, METH_NOARGS),
+    AWS_PY_METHOD_DEF(thread_join_all_managed, METH_VARARGS),
 
     /* IO */
     AWS_PY_METHOD_DEF(is_alpn_available, METH_NOARGS),
@@ -615,13 +671,17 @@ PyMODINIT_FUNC PyInit__awscrt(void) {
         return NULL;
     }
 
+    s_init_allocator();
     s_install_crash_handler();
 
-    aws_http_library_init(aws_py_get_allocator());
-    aws_auth_library_init(aws_py_get_allocator());
-    aws_mqtt_library_init(aws_py_get_allocator());
-    aws_event_stream_library_init(aws_py_get_allocator());
-    aws_s3_library_init(aws_py_get_allocator());
+    /* Don't report this memory when dumping possible leaks. */
+    struct aws_allocator *nontracing_allocator = aws_default_allocator();
+
+    aws_http_library_init(nontracing_allocator);
+    aws_auth_library_init(nontracing_allocator);
+    aws_mqtt_library_init(nontracing_allocator);
+    aws_event_stream_library_init(nontracing_allocator);
+    aws_s3_library_init(nontracing_allocator);
 
 #if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 9
     if (!PyEval_ThreadsInitialized()) {
