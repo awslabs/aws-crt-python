@@ -459,7 +459,6 @@ class S3RequestTest(NativeResourceTest):
     def test_non_ascii_filepath_test(self):
         with open(self.non_ascii_file_name, 'wb') as file:
             file.write(b"something")
-        os.remove(file)
 
     def test_non_ascii_filepath_download(self):
         tempfile = self.files.create_file(self.non_ascii_file_name, "simple")
