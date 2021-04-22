@@ -465,7 +465,7 @@ class S3RequestTest(NativeResourceTest):
     def test_non_ascii_filepath_download(self):
         with open(self.non_ascii_file_name, 'wb') as file:
             file.write(b"")
-        request = self._get_object_request(self.non_ascii_file_name)
+        request = self._get_object_request(self.get_test_object_path)
         request_type = S3RequestType.GET_OBJECT
         s3_client = s3_client_new(False, self.region, 5 * MB)
         s3_request = s3_client.make_request(
