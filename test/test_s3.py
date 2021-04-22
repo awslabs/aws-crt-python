@@ -18,6 +18,56 @@ MB = 1024 ** 2
 GB = 1024 ** 3
 
 
+class FileCreator(object):
+    def __init__(self):
+        self.rootdir = tempfile.mkdtemp()
+
+    def remove_all(self):
+        shutil.rmtree(self.rootdir)
+
+    def create_file(self, filename, contents, mode='w'):
+        """Creates a file in a tmpdir
+        ``filename`` should be a relative path, e.g. "foo/bar/baz.txt"
+        It will be translated into a full path in a tmp dir.
+        ``mode`` is the mode the file should be opened either as ``w`` or
+        `wb``.
+        Returns the full path to the file.
+        """
+        full_path = os.path.join(self.rootdir, filename)
+        if not os.path.isdir(os.path.dirname(full_path)):
+            os.makedirs(os.path.dirname(full_path))
+        with open(full_path, mode) as f:
+            f.write(contents)
+        return full_path
+
+    def create_file_with_size(self, filename, filesize):
+        filename = self.create_file(filename, contents='')
+        chunksize = 8192
+        with open(filename, 'wb') as f:
+            for i in range(int(math.ceil(filesize / float(chunksize)))):
+                f.write(b'a' * chunksize)
+        return filename
+
+    def append_file(self, filename, contents):
+        """Append contents to a file
+        ``filename`` should be a relative path, e.g. "foo/bar/baz.txt"
+        It will be translated into a full path in a tmp dir.
+        Returns the full path to the file.
+        """
+        full_path = os.path.join(self.rootdir, filename)
+        if not os.path.isdir(os.path.dirname(full_path)):
+            os.makedirs(os.path.dirname(full_path))
+        with open(full_path, 'a') as f:
+            f.write(contents)
+        return full_path
+
+    def full_path(self, filename):
+        """Translate relative path to full path in temp dir.
+        f.full_path('foo/bar.txt') -> /tmp/asdfasd/foo/bar.txt
+        """
+        return os.path.join(self.rootdir, filename)
+
+
 def s3_client_new(secure, region, part_size=0):
 
     event_loop_group = EventLoopGroup()
@@ -95,11 +145,11 @@ class S3RequestTest(NativeResourceTest):
 
         self.put_body_stream = None
 
-    def _create_tempory_file(self, prefix=None, size=10 * MB):
-        # create a tempory file with size in MB, return the full path
-        with tempfile.NamedTemporaryFile(mode="w", delete=False, prefix=prefix) as file:
-            file.write("a" * size)
-        return file.name
+        self.files = FileCreator()
+
+    def tearDown(self):
+        self.files.remove_all()
+        super().tearDown()
 
     def _build_endpoint_string(self, region, bucket_name):
         return bucket_name + ".s3." + region + ".amazonaws.com"
@@ -176,13 +226,14 @@ class S3RequestTest(NativeResourceTest):
         s3_client = s3_client_new(False, self.region, 5 * MB)
         finished_futures = []
         for i in range(3):
+            tempfile = self.files.create_file_with_size("temp_file_{}".format(str(i)), 10 * MB)
             path = "/put_object_test_py_10MB_{}.txt".format(str(i))
-            request = self._put_object_request(self.default_file_path, path)
+            request = self._put_object_request(tempfile, path)
             self.put_body_stream.close()
             s3_request = s3_client.make_request(
                 request=request,
                 type=S3RequestType.PUT_OBJECT,
-                send_filepath=self.default_file_path,
+                send_filepath=tempfile,
                 on_headers=self._on_request_headers,
                 on_body=self._on_request_body)
             finished_futures.append(s3_request.finished_future)
@@ -253,7 +304,7 @@ class S3RequestTest(NativeResourceTest):
 
     def test_put_object_file_object_move(self):
         # remove the input file when request done
-        tempfile = self._create_tempory_file()
+        tempfile = self.files.create_file_with_size("temp_file", 10 * MB)
         request = self._put_object_request(tempfile)
         self.put_body_stream.close()
         s3_client = s3_client_new(False, self.region, 5 * MB)
@@ -383,7 +434,7 @@ class S3RequestTest(NativeResourceTest):
 
     def test_non_ascii_filepath_upload(self):
         # remove the input file when request done
-        tempfile = self._create_tempory_file(self.non_ascii_file_name)
+        tempfile = self.files.create_file_with_size(self.non_ascii_file_name, 10 * MB)
         request = self._put_object_request(tempfile)
         self.put_body_stream.close()
         s3_client = s3_client_new(False, self.region, 5 * MB)
@@ -404,10 +455,13 @@ class S3RequestTest(NativeResourceTest):
             self.transferred_len,
             "the transferred length reported does not match body we sent")
         self._validate_successful_get_response(request_type is S3RequestType.PUT_OBJECT)
-        os.remove(tempfile)
+
+    def test_non_ascii_filepath_test(self):
+        with open(self.non_ascii_file_name, 'wb') as file:
+            file.write(b"something")
 
     def test_non_ascii_filepath_download(self):
-        tempfile = self._create_tempory_file(self.non_ascii_file_name, size=0)
+        tempfile = self.files.create_file(self.non_ascii_file_name, "simple")
         request = self._get_object_request(self.get_test_object_path)
         request_type = S3RequestType.GET_OBJECT
         s3_client = s3_client_new(False, self.region, 5 * MB)
@@ -433,7 +487,6 @@ class S3RequestTest(NativeResourceTest):
             self.transferred_len,
             "the transferred length reported does not match the content-length header")
         self.assertEqual(self.response_status_code, 200, "status code is not 200")
-        os.remove(tempfile)
 
 
 if __name__ == '__main__':
