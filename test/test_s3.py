@@ -425,7 +425,7 @@ class S3RequestTest(NativeResourceTest):
         # Nothing should printout
 
     def test_multipart_put_object_cancel(self):
-        print(sys.getdefaultencoding())
+        self.assertEqual(sys.getdefaultencoding(), "something else")
         return self._put_object_cancel_helper(True)
 
     def test_put_object_quick_cancel(self):
