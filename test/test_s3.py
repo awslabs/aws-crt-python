@@ -134,7 +134,7 @@ class S3RequestTest(NativeResourceTest):
         self.default_file_path = "test/resources/s3_put_object.txt"
         self.timeout = 100  # seconds
         self.num_threads = 0
-        self.non_ascii_file_name = u"ÉxÅmple.txt".encode('utf-8')
+        self.non_ascii_file_name = u"ÉxÅmple.txt".encode('utf-8').decode('utf-8')
 
         self.response_headers = None
         self.response_status_code = None
