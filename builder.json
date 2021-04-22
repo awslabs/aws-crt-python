@@ -9,11 +9,13 @@
     "hosts": {
         "manylinux": {
             "!build_steps": [
+                "export PYTHONIOENCODING=UTF-8",
                 "manylinux-ci"
             ]
         }
     },
     "build_steps": [
+        "export PYTHONIOENCODING=UTF-8",
         "aws-crt-python"
     ],
     "upstream": [],
