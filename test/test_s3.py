@@ -438,7 +438,7 @@ class S3RequestTest(NativeResourceTest):
 
     def test_non_ascii_filepath_upload(self):
         # remove the input file when request done
-        with open(self.non_ascii_file_name, 'wb') as file:
+        with open(self.non_ascii_file_name.encode("utf-8"), 'wb') as file:
             file.write(b"a" * 10 * MB)
         request = self._put_object_request(self.non_ascii_file_name)
         self.put_body_stream.close()
@@ -463,7 +463,7 @@ class S3RequestTest(NativeResourceTest):
         os.remove(self.non_ascii_file_name)
 
     def test_non_ascii_filepath_download(self):
-        with open(self.non_ascii_file_name, 'wb') as file:
+        with open(self.non_ascii_file_name.encode("utf-8"), 'wb') as file:
             file.write(b"")
         request = self._get_object_request(self.get_test_object_path)
         request_type = S3RequestType.GET_OBJECT
