@@ -440,7 +440,7 @@ class S3RequestTest(NativeResourceTest):
         # remove the input file when request done
         with open(self.non_ascii_file_name, 'wb') as file:
             file.write(b"a" * 10 * MB)
-        request = self._put_object_request(tempfile)
+        request = self._put_object_request(self.non_ascii_file_name)
         self.put_body_stream.close()
         s3_client = s3_client_new(False, self.region, 5 * MB)
         request_type = S3RequestType.PUT_OBJECT
@@ -448,7 +448,7 @@ class S3RequestTest(NativeResourceTest):
         s3_request = s3_client.make_request(
             request=request,
             type=request_type,
-            send_filepath=tempfile,
+            send_filepath=self.non_ascii_file_name,
             on_headers=self._on_request_headers,
             on_progress=self._on_progress)
         finished_future = s3_request.finished_future
@@ -465,13 +465,13 @@ class S3RequestTest(NativeResourceTest):
     def test_non_ascii_filepath_download(self):
         with open(self.non_ascii_file_name, 'wb') as file:
             file.write(b"")
-        request = self._get_object_request(self.get_test_object_path)
+        request = self._get_object_request(self.non_ascii_file_name)
         request_type = S3RequestType.GET_OBJECT
         s3_client = s3_client_new(False, self.region, 5 * MB)
         s3_request = s3_client.make_request(
             request=request,
             type=request_type,
-            recv_filepath=tempfile,
+            recv_filepath=self.non_ascii_file_name,
             on_headers=self._on_request_headers,
             on_progress=self._on_progress)
         finished_future = s3_request.finished_future
@@ -479,7 +479,7 @@ class S3RequestTest(NativeResourceTest):
 
         # Result check
         self.data_len = int(HttpHeaders(self.response_headers).get("Content-Length"))
-        file_stats = os.stat(tempfile)
+        file_stats = os.stat(self.non_ascii_file_name)
         file_len = file_stats.st_size
         self.assertEqual(
             file_len,
