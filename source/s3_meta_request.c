@@ -10,7 +10,7 @@
 #include <errno.h>
 
 #include <aws/common/clock.h>
-#include <aws/common/file_open.h>
+#include <aws/common/file.h>
 #include <aws/http/request_response.h>
 #include <aws/io/file_utils.h>
 #include <aws/io/stream.h>
