@@ -243,7 +243,7 @@ class S3Request(NativeResource):
         finished_future (concurrent.futures.Future): Future that will
             resolve when the s3 request has finished successfully.
             If the error happens, the Future will contain an exception
-            indicating why it failed.
+            indicating why it failed. Note: Future will set before on_done invoked
 
         shutdown_event (threading.Event): Signals when underlying threads and
             structures have all finished shutting down. Shutdown begins when the
