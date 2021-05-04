@@ -116,7 +116,8 @@ class AwsLib:
 AWS_LIBS = []
 if sys.platform != 'darwin' and sys.platform != 'win32':
     AWS_LIBS.append(AwsLib('aws-lc',
-                    libname='crypto', # compiled library name is not "aws-lc"
+                    # We're linking against "libcrypto.a" not "libaws-lc.a"
+                    libname='crypto',
                     extra_cmake_args=[
                         # We don't need libssl.a, we're only using libcrypto.a
                         '-DBUILD_LIBSSL=OFF',
