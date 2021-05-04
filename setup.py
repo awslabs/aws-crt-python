@@ -115,7 +115,24 @@ class AwsLib:
 # They're built along with the extension, in the order listed.
 AWS_LIBS = []
 if sys.platform != 'darwin' and sys.platform != 'win32':
-    AWS_LIBS.append(AwsLib('aws-lc', ['-DBUILD_LIBSSL=OFF'], 'crypto'))
+    awslc_cmake_args = [
+        # Only need libcrypto.a, don't need libssl.a
+        '-DBUILD_LIBSSL=OFF',
+        # Don't need to run codegen on user's machine,
+        # up-to-date generated code is already in source control.
+        '-DDISABLE_PERL=ON', '-DDISABLE_GO=ON']
+    AWS_LIBS.append(AwsLib('aws-lc', awslc_cmake_args, libname='crypto'))
+
+    AWS_LIBS.append(AwsLib('aws-lc',
+                    extra_cmake_args=[
+                        # We don't need libssl.a, we're only using libcrypto.a
+                        '-DBUILD_LIBSSL=OFF',
+                        # Disable running codegen on user's machine.
+                        # Up-to-date generated code is already in repo.
+                        '-DDISABLE_PERL=ON', '-DDISABLE_GO=ON'],
+                    # repo name is different than compiled library name
+                    libname='crypto'))
+
     AWS_LIBS.append(AwsLib('s2n'))
 AWS_LIBS.append(AwsLib('aws-c-common'))
 AWS_LIBS.append(AwsLib('aws-c-cal'))
