@@ -13,6 +13,7 @@ git submodule update --init
 # build package
 cd $CODEBUILD_SRC_DIR
 
+python --version
 curl https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py
 python /tmp/get-pip.py
 python -m pip install .
