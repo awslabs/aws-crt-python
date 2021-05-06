@@ -9,7 +9,7 @@ phases:
       - apt-get install gcc-7 cmake ninja-build python3 -y
   pre_build:
     commands:
-      - export CC=gcc
+      - export CC=gcc-7
   build:
     commands:
       - echo Build started on `date`
