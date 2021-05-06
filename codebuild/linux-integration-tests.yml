@@ -5,11 +5,11 @@ phases:
   install:
     commands:
       - add-apt-repository ppa:ubuntu-toolchain-r/test
-      - sudo apt-get update -y
-      - sudo apt-get install gcc-7 cmake3 ninja-build python3 -y
+      - apt-get update -y
+      - apt-get install gcc-7 cmake3 ninja-build python3 -y
       - curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip"
       - unzip -q -d /tmp /tmp/awscliv2.zip
-      - sudo /tmp/aws/install
+      - /tmp/aws/install
   pre_build:
     commands:
       - export CC=gcc
