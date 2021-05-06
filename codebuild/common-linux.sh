@@ -13,5 +13,5 @@ git submodule update --init
 # build package
 cd $CODEBUILD_SRC_DIR
 
-python3 -m pip install .
-python3 -m unittest discover test
+python -m pip install .
+python -m unittest discover test
