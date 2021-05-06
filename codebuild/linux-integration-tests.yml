@@ -1,0 +1,22 @@
+version: 0.2
+#this build spec assumes the manylinux1 image for pypi
+#additional packages we installed: cmake 3.5, libcrypto 1.1.0j, gcc 4.8.4
+phases:
+  install:
+    commands:
+#      - curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip"
+#      - unzip -q -d /tmp /tmp/awscliv2.zip
+#      - sudo /tmp/aws/install
+  pre_build:
+    commands:
+      - export CC=gcc
+  build:
+    commands:
+      - echo Build started on `date`
+      - aws s3 cp s3://aws-crt-test-stuff/setup_proxy_test_env.sh /tmp/setup_proxy_test_env.sh
+      - sudo chmod a+xr /tmp/setup_proxy_test_env.sh
+      - $CODEBUILD_SRC_DIR/codebuild/common-linux.sh
+  post_build:
+    commands:
+      - echo Build completed on `date`
+
