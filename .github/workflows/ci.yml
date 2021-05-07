@@ -21,13 +21,13 @@ jobs:
   linux-compat:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         image:
           - manylinux1-x64
           - manylinux1-x86
           - manylinux2014-x64
           - manylinux2014-x86
-          - manylinux2014-armv7l
           - manylinux2014-aarch64
     steps:
         # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
