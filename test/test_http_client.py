@@ -61,9 +61,8 @@ class TestClient(NativeResourceTest):
         self.server = HTTPServer((self.hostname, 0), TestRequestHandler)
         if secure:
             self.server.socket = ssl.wrap_socket(self.server.socket,
-                                                 keyfile="test/resources/crt.unittests.key",
-                                                 certfile='test/resources/crt.unittests.crt',
-                                                 ssl_version=ssl.PROTOCOL_TLSv1,
+                                                 keyfile="test/resources/unittest.key",
+                                                 certfile='test/resources/unittest.crt',
                                                  server_side=True)
         self.port = self.server.server_address[1]
 
@@ -81,7 +80,7 @@ class TestClient(NativeResourceTest):
     def _new_client_connection(self, secure, proxy_options=None):
         if secure:
             tls_ctx_opt = TlsContextOptions()
-            tls_ctx_opt.override_default_trust_store_from_path(None, 'test/resources/ca.crt')
+            tls_ctx_opt.override_default_trust_store_from_path(None, 'test/resources/rootCA.crt')
             tls_ctx = ClientTlsContext(tls_ctx_opt)
             tls_conn_opt = tls_ctx.new_connection_options()
             tls_conn_opt.set_server_name(self.hostname)
