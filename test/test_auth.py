@@ -203,7 +203,7 @@ class TestProvider(NativeResourceTest):
         with self.assertRaises(Exception):
             credentials_future = provider.get_credentials()
             credentials = credentials_future.result(TIMEOUT)
-"""
+
     def test_delegate_provider_exception_from_bad_return_type(self):
         # delegate that returns wrong type should result in exception
         def delegate_get_credentials():
@@ -214,7 +214,7 @@ class TestProvider(NativeResourceTest):
         with self.assertRaises(Exception):
             credentials_future = provider.get_credentials()
             credentials = credentials_future.result(TIMEOUT)
-"""
+
 
 class TestSigningConfig(NativeResourceTest):
     def test_create(self):
