@@ -63,6 +63,7 @@ class TestClient(NativeResourceTest):
             self.server.socket = ssl.wrap_socket(self.server.socket,
                                                  keyfile="test/resources/crt.unittests.key",
                                                  certfile='test/resources/crt.unittests.crt',
+                                                 ssl_version=ssl.PROTOCOL_TLSv1,
                                                  server_side=True)
         self.port = self.server.server_address[1]
 
