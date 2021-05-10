@@ -18,8 +18,8 @@ import uuid
 import warnings
 
 TIMEOUT = 100.0
-PROXY_HOST = os.environ.get('proxyhost')
-PROXY_PORT = int(os.environ.get('proxyport', '0'))
+
+
 
 
 class MqttClientTest(NativeResourceTest):

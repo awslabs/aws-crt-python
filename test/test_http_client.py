@@ -14,9 +14,6 @@ import threading
 import unittest
 from urllib.parse import urlparse
 
-PROXY_HOST = os.environ.get('proxyhost')
-PROXY_PORT = int(os.environ.get('proxyport', '0'))
-
 
 class Response:
     """Holds contents of incoming response"""
@@ -313,9 +310,9 @@ class TestClient(NativeResourceTest):
     def test_stream_cleans_up_if_never_activated_https(self):
         self._test_stream_cleans_up_if_never_activated(secure=True)
 
-    @unittest.skipIf(PROXY_HOST is None, 'requires "proxyhost" and "proxyport" env vars')
+    @unittest.skipIf(not is_proxy_environment_initialized(), 'requires proxy test env vars')
     def test_proxy_http(self):
-        proxy_options = HttpProxyOptions(host_name=PROXY_HOST, port=PROXY_PORT)
+        proxy_options = create_http_proxy_options_from_environment()
         self._test_get(secure=False, proxy_options=proxy_options)
 
     def _new_h2_client_connection(self, url):
