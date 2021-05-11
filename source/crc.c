@@ -29,7 +29,7 @@ PyObject *aws_py_checksums_crc32(PyObject *self, PyObject *args) {
 
     uint32_t crc_res = aws_checksums_crc32(input.buffer, input.len, previousCrc32);
 
-    return PyLong_FromLong(crc_res);
+    return PyLong_FromUnsignedLong(crc_res);
 }
 
 PyObject *aws_py_checksums_crc32c(PyObject *self, PyObject *args) {
