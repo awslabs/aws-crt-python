@@ -5,6 +5,7 @@
 from test import NativeResourceTest
 from awscrt.crypto import Hash, HMAC
 
+
 class TestCredentials(NativeResourceTest):
 
     def test_sha256_empty(self):
@@ -19,7 +20,7 @@ class TestCredentials(NativeResourceTest):
         digest = h.digest()
         expected = b'\xba\x78\x16\xbf\x8f\x01\xcf\xea\x41\x41\x40\xde\x5d\xae\x22\x23\xb0\x03\x61\xa3\x96\x17\x7a\x9c\xb4\x10\xff\x61\xf2\x00\x15\xad'
         self.assertEqual(expected, digest)
-    
+
     def test_sha256_iterated(self):
         h = Hash.sha256_new()
         h.update('a')
@@ -41,7 +42,7 @@ class TestCredentials(NativeResourceTest):
         digest = h.digest()
         expected = b'\xa9\x99\x3e\x36\x47\x06\x81\x6a\xba\x3e\x25\x71\x78\x50\xc2\x6c\x9c\xd0\xd8\x9d'
         self.assertEqual(expected, digest)
-    
+
     def test_sha1_iterated(self):
         h = Hash.sha1_new()
         h.update('a')
@@ -63,7 +64,7 @@ class TestCredentials(NativeResourceTest):
         digest = h.digest()
         expected = b'\x90\x01\x50\x98\x3c\xd2\x4f\xb0\xd6\x96\x3f\x7d\x28\xe1\x7f\x72'
         self.assertEqual(expected, digest)
-    
+
     def test_md5_iterated(self):
         h = Hash.md5_new()
         h.update('a')
@@ -72,6 +73,7 @@ class TestCredentials(NativeResourceTest):
         digest = h.digest()
         expected = b'\x90\x01\x50\x98\x3c\xd2\x4f\xb0\xd6\x96\x3f\x7d\x28\xe1\x7f\x72'
         self.assertEqual(expected, digest)
+
 
 if __name__ == '__main__':
     unittest.main()

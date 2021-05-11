@@ -3,6 +3,7 @@
 
 import _awscrt
 
+
 class Hash:
 
     def __init__(self, native_handle):
