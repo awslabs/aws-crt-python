@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -ex
 
 if test -f "/tmp/setup_proxy_test_env.sh"; then
     source /tmp/setup_proxy_test_env.sh
@@ -14,5 +14,5 @@ git submodule update --init
 cd $CODEBUILD_SRC_DIR
 
 export AWS_CRT_MEMORY_TRACING=2
-python -m pip install .
+python -m pip install --verbose .
 python -m unittest discover test
