@@ -3,7 +3,6 @@
 
 import _awscrt
 
-
 class Hash:
 
     def __init__(self, native_handle):
@@ -11,6 +10,13 @@ class Hash:
         don't call me, I'm private
         """
         self._hash = native_handle
+
+    @staticmethod
+    def sha1_new():
+        """
+        Creates a new instance of Hash, using the sha1 algorithm
+        """
+        return Hash(native_handle=_awscrt.sha1_new())
 
     @staticmethod
     def sha256_new():

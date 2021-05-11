@@ -5,6 +5,7 @@
 #include "module.h"
 
 #include "auth.h"
+#include "checksums.h"
 #include "common.h"
 #include "crypto.h"
 #include "event_stream.h"
@@ -569,11 +570,16 @@ static PyMethodDef s_module_methods[] = {
     /* Cryptographic primitives */
     AWS_PY_METHOD_DEF(md5_new, METH_NOARGS),
     AWS_PY_METHOD_DEF(sha256_new, METH_NOARGS),
+    AWS_PY_METHOD_DEF(sha1_new, METH_NOARGS),
     AWS_PY_METHOD_DEF(hash_update, METH_VARARGS),
     AWS_PY_METHOD_DEF(hash_digest, METH_VARARGS),
     AWS_PY_METHOD_DEF(sha256_hmac_new, METH_VARARGS),
     AWS_PY_METHOD_DEF(hash_update, METH_VARARGS),
     AWS_PY_METHOD_DEF(hash_digest, METH_VARARGS),
+
+    /* Checksum primitives */
+    AWS_PY_METHOD_DEF(checksums_crc32, METH_VARARGS),
+    AWS_PY_METHOD_DEF(checksums_crc32c, METH_VARARGS),
 
     /* HTTP */
     AWS_PY_METHOD_DEF(http_connection_close, METH_VARARGS),
