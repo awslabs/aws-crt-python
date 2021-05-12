@@ -20,8 +20,6 @@ import warnings
 TIMEOUT = 100.0
 
 
-
-
 class MqttClientTest(NativeResourceTest):
     def test_lifetime(self):
         elg = EventLoopGroup()

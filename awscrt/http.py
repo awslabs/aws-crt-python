@@ -545,6 +545,7 @@ class HttpProxyConnectionType(IntEnum):
     Tunneling = 2
     """Establish a tunneling connection through the proxy to the ultimate endpoint."""
 
+
 class HttpProxyAuthenticationType(IntEnum):
     """Proxy authentication type enumeration."""
     Nothing = 0

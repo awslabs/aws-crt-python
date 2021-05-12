@@ -41,4 +41,3 @@ class NativeResourceTest(unittest.TestCase):
         except Exception:
             NativeResourceTest._previous_test_failed = True
             raise
-

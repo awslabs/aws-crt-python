@@ -15,12 +15,12 @@ from test.test_mqtt import create_client_id
 
 # AWS_TEST_HTTP_PROXY_HOST - host address of the proxy to use for tests that make open connections to the proxy
 # AWS_TEST_HTTP_PROXY_PORT - port to use for tests that make open connections to the proxy
-# AWS_TEST_HTTPS_PROXY_HOST - host address of the proxy to use for tests that make tls-protected connections to the 
+# AWS_TEST_HTTPS_PROXY_HOST - host address of the proxy to use for tests that make tls-protected connections to the
     proxy
 # AWS_TEST_HTTPS_PROXY_PORT - port to use for tests that make tls-protected connections to the proxy
-# AWS_TEST_HTTP_PROXY_BASIC_HOST - host address of the proxy to use for tests that make open connections to the proxy 
+# AWS_TEST_HTTP_PROXY_BASIC_HOST - host address of the proxy to use for tests that make open connections to the proxy
     with basic authentication
-# AWS_TEST_HTTP_PROXY_BASIC_PORT - port to use for tests that make open connections to the proxy with basic 
+# AWS_TEST_HTTP_PROXY_BASIC_PORT - port to use for tests that make open connections to the proxy with basic
     authentication
 
 # AWS_TEST_BASIC_AUTH_USERNAME - username to use when using basic authentication to the proxy
@@ -66,13 +66,13 @@ class ProxyTestConfiguration():
     @staticmethod
     def is_proxy_environment_initialized():
         return ProxyTestConfiguration.HTTP_PROXY_HOST is not None and \
-               ProxyTestConfiguration.HTTP_PROXY_PORT > 0 and \
-               ProxyTestConfiguration.HTTPS_PROXY_HOST is not None and \
-               ProxyTestConfiguration.HTTPS_PROXY_PORT > 0 and \
-               ProxyTestConfiguration.HTTP_PROXY_BASIC_HOST is not None and \
-               ProxyTestConfiguration.HTTP_PROXY_BASIC_PORT > 0 and \
-               ProxyTestConfiguration.HTTP_PROXY_BASIC_AUTH_USERNAME is not None and \
-               ProxyTestConfiguration.HTTP_PROXY_BASIC_AUTH_PASSWORD is not None
+            ProxyTestConfiguration.HTTP_PROXY_PORT > 0 and \
+            ProxyTestConfiguration.HTTPS_PROXY_HOST is not None and \
+            ProxyTestConfiguration.HTTPS_PROXY_PORT > 0 and \
+            ProxyTestConfiguration.HTTP_PROXY_BASIC_HOST is not None and \
+            ProxyTestConfiguration.HTTP_PROXY_BASIC_PORT > 0 and \
+            ProxyTestConfiguration.HTTP_PROXY_BASIC_AUTH_USERNAME is not None and \
+            ProxyTestConfiguration.HTTP_PROXY_BASIC_AUTH_PASSWORD is not None
 
     @staticmethod
     def get_proxy_host_for_test(test_type, auth_type):
@@ -119,14 +119,18 @@ class ProxyTestConfiguration():
 
     @staticmethod
     def create_http_proxy_options_from_environment(test_type, auth_type):
-        return HttpProxyOptions(ProxyTestConfiguration.get_proxy_host_for_test(test_type, auth_type),
-                                ProxyTestConfiguration.get_proxy_port_for_test(test_type, auth_type),
-                                tls_connection_options=ProxyTestConfiguration.get_proxy_tls_connection_options_for_test(test_type),
-                                auth_type=auth_type,
-                                auth_username=ProxyTestConfiguration.HTTP_PROXY_BASIC_AUTH_USERNAME,
-                                auth_password=ProxyTestConfiguration.HTTP_PROXY_BASIC_AUTH_PASSWORD,
-                                connection_type=ProxyTestConfiguration.get_proxy_connection_type_for_test(test_type))
-
+        return HttpProxyOptions(
+            ProxyTestConfiguration.get_proxy_host_for_test(
+                test_type,
+                auth_type),
+            ProxyTestConfiguration.get_proxy_port_for_test(
+                test_type,
+                auth_type),
+            tls_connection_options=ProxyTestConfiguration.get_proxy_tls_connection_options_for_test(test_type),
+            auth_type=auth_type,
+            auth_username=ProxyTestConfiguration.HTTP_PROXY_BASIC_AUTH_USERNAME,
+            auth_password=ProxyTestConfiguration.HTTP_PROXY_BASIC_AUTH_PASSWORD,
+            connection_type=ProxyTestConfiguration.get_proxy_connection_type_for_test(test_type))
 
     @staticmethod
     def get_tls_connection_options_for_test(test_type, host_name):
@@ -163,11 +167,14 @@ class ProxyHttpTest(NativeResourceTest):
         host_resolver = DefaultHostResolver(event_loop_group)
         bootstrap = ClientBootstrap(event_loop_group, host_resolver)
 
-        connection_future = HttpClientConnection.new(host_name=uri,
-                                                     port=ProxyTestConfiguration.get_port_from_test_type(test_type),
-                                                     bootstrap=bootstrap,
-                                                     tls_connection_options=ProxyTestConfiguration.get_tls_connection_options_for_test(test_type, uri),
-                                                     proxy_options=proxy_options)
+        connection_future = HttpClientConnection.new(
+            host_name=uri,
+            port=ProxyTestConfiguration.get_port_from_test_type(test_type),
+            bootstrap=bootstrap,
+            tls_connection_options=ProxyTestConfiguration.get_tls_connection_options_for_test(
+                test_type,
+                uri),
+            proxy_options=proxy_options)
         return connection_future.result(self.timeout)
 
     def _do_proxy_http_test(self, test_type, auth_type):
@@ -249,7 +256,9 @@ class ProxyHttpTest(NativeResourceTest):
         host_resolver = DefaultHostResolver(event_loop_group)
         bootstrap = ClientBootstrap(event_loop_group, host_resolver)
 
-        tls_opts = TlsContextOptions.create_client_with_mtls_from_path(ProxyTestConfiguration.HTTP_PROXY_TLS_CERT_PATH, ProxyTestConfiguration.HTTP_PROXY_TLS_KEY_PATH)
+        tls_opts = TlsContextOptions.create_client_with_mtls_from_path(
+            ProxyTestConfiguration.HTTP_PROXY_TLS_CERT_PATH,
+            ProxyTestConfiguration.HTTP_PROXY_TLS_KEY_PATH)
         tls_opts.override_default_trust_store_from_path(ca_filepath=ProxyTestConfiguration.HTTP_PROXY_TLS_ROOT_CA_PATH)
         tls = ClientTlsContext(tls_opts)
 
