@@ -270,15 +270,18 @@ def awscrt_ext():
         extra_objects=extra_objects
     )
 
+
 def _load_readme():
     readme_path = os.path.join(PROJECT_DIR, 'README.md')
     with codecs.open(readme_path, 'r', 'utf-8') as f:
         return f.read()
 
+
 def _load_version():
     init_path = os.path.join(PROJECT_DIR, 'awscrt', '__init__.py')
     with open(init_path) as fp:
         return VERSION_RE.match(fp.read()).group(1)
+
 
 setuptools.setup(
     name="awscrt",
