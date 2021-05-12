@@ -43,7 +43,6 @@ PyObject *aws_py_sha1_new(PyObject *self, PyObject *args) {
 
     PyObject *capsule = PyCapsule_New(sha1, s_capsule_name_hash, s_hash_destructor);
 
-    /* Why do we return NULL instead of PyErr */
     if (capsule == NULL) {
         aws_hash_destroy(sha1);
         return NULL;

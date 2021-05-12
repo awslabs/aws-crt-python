@@ -10,7 +10,6 @@
 
 PyObject *aws_py_checksums_crc32(PyObject *self, PyObject *args) {
     (void)self;
-    // (void)args;
 
     Py_buffer input_buf;
     PyObject *py_previousCrc32;
@@ -25,16 +24,17 @@ PyObject *aws_py_checksums_crc32(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    struct aws_byte_buf input = aws_byte_buf_from_array(input_buf.buf, input_buf.len);
+    // struct aws_byte_buf input = aws_byte_buf_from_array(input_buf.buf, input_buf.len);
 
-    uint32_t crc_res = aws_checksums_crc32(input.buffer, input.len, previousCrc32);
+    // uint32_t crc_res = aws_checksums_crc32(input.buffer, input.len, previousCrc32);
+
+    uint32_t crc_res = aws_checksums_crc32(input_buf.buf, input_buf.len, previousCrc32);
 
     return PyLong_FromUnsignedLong(crc_res);
 }
 
 PyObject *aws_py_checksums_crc32c(PyObject *self, PyObject *args) {
     (void)self;
-    // (void)args;
 
     Py_buffer input_buf;
     PyObject *py_previousCrc32c;
