@@ -10,6 +10,7 @@
 #include <errno.h>
 
 #include <aws/common/clock.h>
+#include <aws/common/file.h>
 #include <aws/http/request_response.h>
 #include <aws/io/file_utils.h>
 #include <aws/io/stream.h>
@@ -232,6 +233,12 @@ static void s_s3_request_on_finish(
 
     PyObject *header_list = NULL;
     PyObject *result = NULL;
+
+    if (request_binding->input_body) {
+        /* close the input file stream now, request has finished, we will not read from there anymore */
+        aws_input_stream_destroy(request_binding->input_body);
+        request_binding->input_body = NULL;
+    }
 
     if (request_binding->size_transferred) {
         /* report the remaining progress */
@@ -557,7 +564,7 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     Py_INCREF(meta_request->py_core);
 
     if (recv_filepath) {
-        meta_request->recv_file = fopen(recv_filepath, "wb+");
+        meta_request->recv_file = aws_fopen(recv_filepath, "wb+");
         if (!meta_request->recv_file) {
             aws_translate_and_raise_io_error(errno);
             PyErr_SetAwsLastError();
