@@ -4,9 +4,11 @@
 from test import NativeResourceTest, TIMEOUT
 from awscrt.http import HttpProxyOptions, HttpProxyAuthenticationType, HttpProxyConnectionType, HttpClientConnection, HttpClientStream, HttpRequest
 from awscrt.io import init_logging, LogLevel, ClientTlsContext, TlsContextOptions, ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup
+from awscrt.mqtt import Client, Connection
 import os
 import unittest
 from test.test_http_client import Response
+from test.test_mqtt import create_client_id
 
 
 """
@@ -151,6 +153,7 @@ class ProxyTestConfiguration():
         else:
             return 443
 
+
 class ProxyHttpTest(NativeResourceTest):
 
     timeout = 10  # seconds
@@ -168,8 +171,6 @@ class ProxyHttpTest(NativeResourceTest):
         return connection_future.result(self.timeout)
 
     def _do_proxy_http_test(self, test_type, auth_type):
-        #pdb.set_trace()
-
         uri = ProxyTestConfiguration.get_uri_from_test_type(test_type)
         proxy_options = ProxyTestConfiguration.create_http_proxy_options_from_environment(test_type, auth_type)
         connection = self._establish_http_connection(test_type, uri, proxy_options)
@@ -241,6 +242,46 @@ class ProxyHttpTest(NativeResourceTest):
     @unittest.skipIf(not ProxyTestConfiguration.is_proxy_environment_initialized(), 'requires proxy test env vars')
     def test_tunneling_proxy_https_basic_auth(self):
         self._do_proxy_http_test(ProxyTestType.TUNNELING_HTTPS, HttpProxyAuthenticationType.Basic)
+        return
+
+    def _establish_mqtt_connection(self, proxy_options):
+        event_loop_group = EventLoopGroup()
+        host_resolver = DefaultHostResolver(event_loop_group)
+        bootstrap = ClientBootstrap(event_loop_group, host_resolver)
+
+        tls_opts = TlsContextOptions.create_client_with_mtls_from_path(ProxyTestConfiguration.HTTP_PROXY_TLS_CERT_PATH, ProxyTestConfiguration.HTTP_PROXY_TLS_KEY_PATH)
+        tls_opts.override_default_trust_store_from_path(ca_filepath=ProxyTestConfiguration.HTTP_PROXY_TLS_ROOT_CA_PATH)
+        tls = ClientTlsContext(tls_opts)
+
+        client = Client(bootstrap, tls)
+        connection = Connection(
+            client=client,
+            client_id=create_client_id(),
+            host_name=ProxyTestConfiguration.HTTP_PROXY_MQTT_ENDPOINT,
+            port=8883,
+            proxy_options=proxy_options)
+        connection.connect().result(self.timeout)
+        return connection
+
+    def _do_proxy_mqtt_test(self, test_type, auth_type):
+        proxy_options = ProxyTestConfiguration.create_http_proxy_options_from_environment(test_type, auth_type)
+        connection = self._establish_mqtt_connection(proxy_options)
+
+        return
+
+    @unittest.skipIf(not ProxyTestConfiguration.is_proxy_environment_initialized(), 'requires proxy test env vars')
+    def test_tunneling_http_proxy_mqtt_no_auth(self):
+        self._do_proxy_mqtt_test(ProxyTestType.TUNNELING_HTTP, HttpProxyAuthenticationType.Nothing)
+        return
+
+    @unittest.skipIf(not ProxyTestConfiguration.is_proxy_environment_initialized(), 'requires proxy test env vars')
+    def test_tunneling_http_proxy_mqtt_basic_auth(self):
+        self._do_proxy_mqtt_test(ProxyTestType.TUNNELING_HTTP, HttpProxyAuthenticationType.Basic)
+        return
+
+    @unittest.skipIf(not ProxyTestConfiguration.is_proxy_environment_initialized(), 'requires proxy test env vars')
+    def test_tunneling_http_proxy_mqtt_double_tls(self):
+        self._do_proxy_mqtt_test(ProxyTestType.TUNNELING_DOUBLE_TLS, HttpProxyAuthenticationType.Nothing)
         return
 
 
