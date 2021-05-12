@@ -1,5 +1,7 @@
 ## AWS CRT Python
 
+[![Version](https://img.shields.io/pypi/v/awscrt.svg?style=flat)](https://pypi.org/project/awscrt/)
+
 Python 3 bindings for the AWS Common Runtime.
 
 API documentation: https://awslabs.github.io/aws-crt-python/
