@@ -65,7 +65,6 @@ PyObject *aws_py_sha256_new(PyObject *self, PyObject *args) {
 
     PyObject *capsule = PyCapsule_New(sha256, s_capsule_name_hash, s_hash_destructor);
 
-    /* Why do we return NULL instead of PyErr */
     if (capsule == NULL) {
         aws_hash_destroy(sha256);
         return NULL;

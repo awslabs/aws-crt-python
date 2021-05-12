@@ -15,7 +15,7 @@ PyObject *aws_py_checksums_crc32(PyObject *self, PyObject *args) {
     PyObject *py_previousCrc32;
 
     if (!PyArg_ParseTuple(args, "s*O", &input_buf, &py_previousCrc32)) {
-        return PyErr_AwsLastError();
+        return NULL;
     }
 
     uint32_t previousCrc32 = PyLong_AsUnsignedLong(py_previousCrc32);
@@ -23,10 +23,6 @@ PyObject *aws_py_checksums_crc32(PyObject *self, PyObject *args) {
     if (previousCrc32 == (uint32_t)-1 && PyErr_Occurred()) {
         return NULL;
     }
-
-    // struct aws_byte_buf input = aws_byte_buf_from_array(input_buf.buf, input_buf.len);
-
-    // uint32_t crc_res = aws_checksums_crc32(input.buffer, input.len, previousCrc32);
 
     uint32_t crc_res = aws_checksums_crc32(input_buf.buf, input_buf.len, previousCrc32);
 
