@@ -69,6 +69,7 @@ const main = async function() {
     core.info(`GITHUB_SHA: ${github.context.sha}`)
     core.info(`GITHUB_REF: ${github.context.ref}`)
     core.info(`GITHUB_BASE_REF: ${process.env.GITHUB_BASE_REF}`)
+    core.info(`github.context.payload: ${github.context.payload}`)
     const rootDir = process.cwd();
 
     const submodules = await getSubmodules();
