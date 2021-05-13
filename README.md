@@ -11,7 +11,7 @@ API documentation: https://awslabs.github.io/aws-crt-python/
 This library is licensed under the Apache 2.0 License.
 
 ## Minimum Requirements:
-*   Python 3.5+
+*   Python 3.6+
 
 ## Installation
 
