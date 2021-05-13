@@ -175,25 +175,27 @@ PyObject *aws_py_event_stream_rpc_client_continuation_activate(PyObject *self, P
         return NULL;
     }
 
-    struct continuation_binding *continuation = PyCapsule_GetPointer(capsule_py, s_capsule_name);
-    if (!continuation) {
-        return NULL;
-    }
-
-    if (continuation->self_py != NULL) {
-        PyErr_SetString(PyExc_RuntimeError, "Continuation already activated");
-        return NULL;
-    }
-
     /* From hereon, we need to clean up if errors occur */
 
     bool success = false;
     struct aws_array_list headers;
     AWS_ZERO_STRUCT(headers);
+    bool set_self_py = false;
     Py_INCREF(on_flush_py); /* Keep completion callback alive until it fires */
+
+    struct continuation_binding *continuation = PyCapsule_GetPointer(capsule_py, s_capsule_name);
+    if (!continuation) {
+        goto done;
+    }
+
+    if (continuation->self_py != NULL) {
+        PyErr_SetString(PyExc_RuntimeError, "Continuation already activated");
+        goto done;
+    }
 
     continuation->self_py = self_py;
     Py_INCREF(continuation->self_py);
+    set_self_py = true;
 
     if (!aws_py_event_stream_native_headers_init(&headers, headers_py)) {
         goto done;
@@ -231,7 +233,9 @@ done:
 
     /* failed */
     Py_DECREF(on_flush_py);
-    Py_CLEAR(continuation->self_py);
+    if (set_self_py) {
+        Py_CLEAR(continuation->self_py);
+    }
 
     return NULL;
 }
