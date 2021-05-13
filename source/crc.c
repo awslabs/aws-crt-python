@@ -18,9 +18,16 @@ PyObject *aws_py_checksums_crc32(PyObject *self, PyObject *args) {
         return NULL;
     }
 
+    /* Note: PyArg_ParseTuple() doesn't do overflow checking on unsigned values
+     * so use PyLong_AsUnsignedLong() to get the value of the previousCrc arg */
     uint32_t previousCrc32 = PyLong_AsUnsignedLong(py_previousCrc32);
 
     if (previousCrc32 == (uint32_t)-1 && PyErr_Occurred()) {
+        return NULL;
+    }
+
+    if (!PyBuffer_IsContiguous(&input, 'C')) {
+        PyErr_SetString(PyExc_ValueError, "input must be contiguous buffer");
         return NULL;
     }
 
@@ -36,12 +43,19 @@ PyObject *aws_py_checksums_crc32c(PyObject *self, PyObject *args) {
     PyObject *py_previousCrc32c;
 
     if (!PyArg_ParseTuple(args, "s*O", &input, &py_previousCrc32c)) {
-        return PyErr_AwsLastError();
+        return NULL;
     }
 
+    /* Note: PyArg_ParseTuple() doesn't do overflow checking on unsigned values
+     * so use PyLong_AsUnsignedLong() to get the value of the previousCrc arg */
     uint32_t previousCrc32c = PyLong_AsUnsignedLong(py_previousCrc32c);
 
     if (previousCrc32c == (uint32_t)-1 && PyErr_Occurred()) {
+        return NULL;
+    }
+
+    if (!PyBuffer_IsContiguous(&input, 'C')) {
+        PyErr_SetString(PyExc_ValueError, "input must be contiguous buffer");
         return NULL;
     }
 
