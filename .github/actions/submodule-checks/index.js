@@ -66,6 +66,8 @@ const getSubmodules = async function() {
 
 
 const main = async function() {
+    core.info(`GITHUB_SHA: ${github.context.sha}`)
+    core.info(`GITHUB_REF: ${github.context.ref}`)
     const rootDir = process.cwd();
 
     const submodules = await getSubmodules();
