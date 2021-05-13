@@ -180,7 +180,7 @@ PyObject *aws_py_event_stream_rpc_client_continuation_activate(PyObject *self, P
     bool success = false;
     struct aws_array_list headers;
     AWS_ZERO_STRUCT(headers);
-    bool set_self_py = false;
+    bool self_py_set = false;
     Py_INCREF(on_flush_py); /* Keep completion callback alive until it fires */
 
     struct continuation_binding *continuation = PyCapsule_GetPointer(capsule_py, s_capsule_name);
@@ -195,7 +195,7 @@ PyObject *aws_py_event_stream_rpc_client_continuation_activate(PyObject *self, P
 
     continuation->self_py = self_py;
     Py_INCREF(continuation->self_py);
-    set_self_py = true;
+    self_py_set = true;
 
     if (!aws_py_event_stream_native_headers_init(&headers, headers_py)) {
         goto done;
@@ -233,7 +233,7 @@ done:
 
     /* failed */
     Py_DECREF(on_flush_py);
-    if (set_self_py) {
+    if (self_py_set) {
         Py_CLEAR(continuation->self_py);
     }
 
