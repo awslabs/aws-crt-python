@@ -1,5 +1,5 @@
 const core = require('@actions/core');
-//const github = require('@actions/github');
+const github = require('@actions/github');
 const exec = require('@actions/exec');
 
 // cwd: optional string
@@ -66,7 +66,6 @@ const getSubmodules = async function() {
 
 
 const main = async function() {
-    process.chdir('/Users/graebm/dev/aws-crt-python');
     const rootDir = process.cwd();
 
     const submodules = await getSubmodules();
