@@ -30,3 +30,13 @@ jobs:
         python3 -m pip install --upgrade wheel
         python3 -m pip install --upgrade autopep8
         python3 -m autopep8 --exit-code --diff --recursive awscrt test .builder setup.py
+
+  submodule-checks:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Source
+      uses: actions/checkout@v2
+        with:
+          submodules: true
+    - name: Submodule Checks
+      uses: ./.github/actions/submodule-checks

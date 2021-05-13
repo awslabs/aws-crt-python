@@ -1,0 +1,5 @@
+name: 'Submodule Checks'
+description: 'Checks that submodule changes are safe for merging'
+runs:
+  using: 'node12'
+  main: 'index.js'
