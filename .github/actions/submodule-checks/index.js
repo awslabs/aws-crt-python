@@ -6,10 +6,10 @@ const exec = require('@actions/exec');
 // cwd: optional string
 // check: whether to raise an exception if returnCode is non-zero. Defaults to true.
 const run = async function (args, opts = {}) {
-    let result = {};
+    var result = {};
     result.stdout = '';
 
-    const execOpts = {};
+    var execOpts = {};
     execOpts.listeners = {
         stdout: (data) => {
             result.stdout += data.toString();
@@ -32,14 +32,14 @@ const getSubmodules = async function () {
     // submodule.aws-common-runtime/aws-c-common.path=crt/aws-c-common
     // submodule.aws-common-runtime/aws-c-common.url=https://github.com/awslabs/aws-c-common.git
     // ...
-    const pattern = new RegExp('submodule\.(.+)\.(path|url)=(.+)');
+    const re = /submodule\.(.+)\.(path|url)=(.+)/;
 
     // build map with properties of each submodule
-    let map = {};
+    var map = {};
 
     const lines = gitResult.stdout.split('\n');
     for (var i = 0; i < lines.length; i++) {
-        const match = pattern.exec(lines[i]);
+        const match = re.exec(lines[i]);
         if (!match) {
             continue;
         }
@@ -66,6 +66,9 @@ const getSubmodules = async function () {
     return Object.values(map).sort((a, b) => a.name.localeCompare(b.name));
 }
 
+// Diff the submodule's current commit against a target branch
+// Returns null if they're the same.
+// Otherwise returns something like {sourceCommit: 'c74534c', targetCommit: 'b6656aa'}
 const diffSubmodule = async function (submodule, targetBranch) {
     const gitResult = await run(['git', 'diff', `origin/${targetBranch}`, '--', submodule.path]);
     const stdout = gitResult.stdout;
@@ -91,10 +94,36 @@ const diffSubmodule = async function (submodule, targetBranch) {
     }
 }
 
+// Returns whether one commit is an ancestor of another.
+const isAncestor = async function (ancestor, descendant, cwd) {
+    const gitResult = await run(['git', 'merge-base', '--is-ancestor', ancestor, descendant], { check: false, cwd: cwd });
+    if (gitResult.returnCode == 0) {
+        return true;
+    }
+    if (gitResult.returnCode == 1) {
+        return false;
+    }
+    throw new Error(`The process 'git' failed with exit code ${gitResult.returnCode}`);
+}
+
+// Returns the release tag for a commit, or null if there is none
+const getReleaseTag = async function (commit, cwd) {
+    const gitResult = await run(['git', 'describe', '--tags', '--exact-match', commit], { cwd: cwd, check: false });
+    if (gitResult.returnCode != 0) {
+        return null;
+    }
+
+    // ensure it's a properly formatted release tag
+    const match = gitResult.stdout.match(/^(v[0-9]+\.[0-9]+\.[0-9]+)$/m);
+    if (!match) {
+        return null;
+    }
+
+    return match[1];
+}
+
 
 const checkSubmodules = async function () {
-    const rootDir = process.cwd();
-
     // TODO: figure out how to access target branch
     // instead of hardcoding 'main'
     const targetBranch = 'main';
@@ -105,10 +134,41 @@ const checkSubmodules = async function () {
 
         // diff submodule against target branch
         // if there's no difference, there's no need to analyze further
-        diff = await diffSubmodule(submodule, targetBranch);
+        const diff = await diffSubmodule(submodule, targetBranch);
         if (diff == null) {
-            continue
+            continue;
         }
+
+        // Ensure submodule is at an acceptable commit:
+        // For repos the Common Runtime team controls, it must be at a tagged release.
+        // For other repos, where we can't just cut a release ourselves, it needs to at least be on the main branch.
+        const sourceTag = await getReleaseTag(diff.sourceCommit, submodule.path);
+        if (!sourceTag) {
+            const nonCrtRepo = /^(aws-lc|s2n|s2n-tls)$/
+            if (nonCrtRepo.test(submodule.name)) {
+                const isOnMain = await isAncestor(diff.sourceCommit, 'origin/main', submodule.path);
+                if (!isOnMain) {
+                    core.setFailed(`Submodule ${submodule.name} is using a branch`);
+                    return;
+                }
+            } else {
+                core.setFailed(`Submodule ${submodule.name} is not using a tagged release`);
+                return;
+            }
+        }
+
+        // prefer to use tags for further operations since they're easier to grok than commit hashes
+        const targetTag = await getReleaseTag(diff.targetCommit, submodule.path);
+        const sourceCommit = sourceTag || diff.sourceCommit;
+        const targetCommit = targetTag || diff.targetCommit;
+
+        // freak out if our branch's submodule is older than where we're merging
+        if (await isAncestor(sourceCommit, targetCommit, submodule.path)) {
+            core.setFailed(`Submodule ${submodule.name} is newer on ${targetBranch}:`
+                + ` ${targetCommit} vs ${sourceCommit} on this branch`);
+            return;
+        }
+
     }
 }
 
