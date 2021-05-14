@@ -115,8 +115,22 @@ PyObject *aws_py_hash_update(PyObject *self, PyObject *args) {
     struct aws_byte_cursor to_hash_cursor;
     to_hash_cursor = aws_byte_cursor_from_array(to_hash_c_str, to_hash_len);
 
-    if (aws_hash_update(hash, &to_hash_cursor)) {
-        return PyErr_AwsLastError();
+    if (to_hash_len > 1024 * 5) {
+        int aws_op = AWS_OP_SUCCESS;
+
+        /* clang-format off */
+        Py_BEGIN_ALLOW_THREADS
+            aws_op = aws_hash_update(hash, &to_hash_cursor);
+        Py_END_ALLOW_THREADS
+
+        if (aws_op != AWS_OP_SUCCESS) {
+            return PyErr_AwsLastError();
+        }
+        /* clang-format on */
+    } else {
+        if (aws_hash_update(hash, &to_hash_cursor)) {
+            return PyErr_AwsLastError();
+        }
     }
 
     Py_RETURN_NONE;
