@@ -67,7 +67,7 @@ const getSubmodules = async function () {
 }
 
 const diffSubmodule = async function (submodule, targetBranch) {
-    const gitResult = await run(['git', 'diff', targetBranch, '--', submodule.path]);
+    const gitResult = await run(['git', 'diff', `origin/${targetBranch}`, '--', submodule.path]);
     const stdout = gitResult.stdout;
 
     // output looks like this:
