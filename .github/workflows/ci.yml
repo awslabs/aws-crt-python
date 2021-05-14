@@ -163,6 +163,6 @@ jobs:
         submodules: true
         fetch-depth: 0
     - name: Check Submodules
-      env:
-        ACTION_VERSION: ${{ env.BUILDER_VERSION }}
-      uses: awslabs/aws-crt-builder/.github/actions/check-submodules@${{ ACTION_VERSION }}
+      # note: using "@main" because "@${{env.BUILDER_VERSION}}" doesn't work
+      # https://github.com/actions/runner/issues/480
+      uses: awslabs/aws-crt-builder/.github/actions/check-submodules@main
