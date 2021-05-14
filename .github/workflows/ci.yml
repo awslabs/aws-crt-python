@@ -7,7 +7,7 @@ on:
       - '!main'
 
 env:
-  BUILDER_VERSION: v0.8.15
+  BUILDER_VERSION: v0.8.16
   BUILDER_SOURCE: releases
   BUILDER_HOST: https://d19elf31gohf1l.cloudfront.net
   PACKAGE_NAME: aws-crt-python
@@ -163,4 +163,6 @@ jobs:
         submodules: true
         fetch-depth: 0
     - name: Check Submodules
-      uses: awslabs/aws-crt-builder/.github/actions/check-submodules
+      env:
+        ACTION_VERSION: ${{ env.BUILDER_VERSION }}
+      uses: awslabs/aws-crt-builder/.github/actions/check-submodules@${ ACTION_VERSION }
