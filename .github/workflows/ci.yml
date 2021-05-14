@@ -7,8 +7,8 @@ on:
       - '!main'
 
 env:
-  BUILDER_VERSION: v0.8.15
-  BUILDER_SOURCE: releases
+  BUILDER_VERSION: submodule-checks
+  BUILDER_SOURCE: channels
   BUILDER_HOST: https://d19elf31gohf1l.cloudfront.net
   PACKAGE_NAME: aws-crt-python
   LINUX_BASE_IMAGE: ubuntu-16-x64
@@ -153,3 +153,14 @@ jobs:
           cd dist
           python3 -m pip install -v awscrt-1.0.0.dev0.tar.gz
           python3 -c "import awscrt.io"
+
+  check-submodules:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Source
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+        fetch-depth: 0
+    - name: Check Submodules
+      uses: awslabs/aws-crt-builder/.github/actions/check-submodules@${{ BUILDER_VERSION }}
