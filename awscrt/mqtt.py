@@ -243,7 +243,7 @@ class Connection(NativeResource):
                 *   `**kwargs` (dict): Forward-compatibility kwargs.
 
         proxy_options (Optional[awscrt.http.HttpProxyOptions]):
-            Optional proxy options for all connections.  
+            Optional proxy options for all connections.
         """
 
     def __init__(self,
