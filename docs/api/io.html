@@ -5,12 +5,13 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>awscrt.io &#8212; awscrt  documentation</title>
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/bizstyle.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/bizstyle.css" />
     
-    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
     <script src="../_static/jquery.js"></script>
     <script src="../_static/underscore.js"></script>
     <script src="../_static/doctools.js"></script>
@@ -49,55 +50,55 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="module-awscrt.io">
+  <section id="module-awscrt.io">
 <span id="awscrt-io"></span><h1>awscrt.io<a class="headerlink" href="#module-awscrt.io" title="Permalink to this headline">¶</a></h1>
 <p>I/O library for <cite>awscrt</cite>.</p>
 <p>All networking in <cite>awscrt</cite> is asynchronous.
 Long-running event-loop threads are used for concurrency.</p>
 <dl class="py class">
-<dt id="awscrt.io.LogLevel">
-<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">awscrt.io.</span></code><code class="sig-name descname"><span class="pre">LogLevel</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.LogLevel" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.LogLevel">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">awscrt.io.</span></span><span class="sig-name descname"><span class="pre">LogLevel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.LogLevel" title="Permalink to this definition">¶</a></dt>
 <dd><p>An enumeration.</p>
 <dl class="py attribute">
-<dt id="awscrt.io.LogLevel.NoLogs">
-<code class="sig-name descname"><span class="pre">NoLogs</span></code><em class="property"> <span class="pre">=</span> <span class="pre">0</span></em><a class="headerlink" href="#awscrt.io.LogLevel.NoLogs" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.LogLevel.NoLogs">
+<span class="sig-name descname"><span class="pre">NoLogs</span></span><em class="property"> <span class="pre">=</span> <span class="pre">0</span></em><a class="headerlink" href="#awscrt.io.LogLevel.NoLogs" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt id="awscrt.io.LogLevel.Fatal">
-<code class="sig-name descname"><span class="pre">Fatal</span></code><em class="property"> <span class="pre">=</span> <span class="pre">1</span></em><a class="headerlink" href="#awscrt.io.LogLevel.Fatal" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.LogLevel.Fatal">
+<span class="sig-name descname"><span class="pre">Fatal</span></span><em class="property"> <span class="pre">=</span> <span class="pre">1</span></em><a class="headerlink" href="#awscrt.io.LogLevel.Fatal" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt id="awscrt.io.LogLevel.Error">
-<code class="sig-name descname"><span class="pre">Error</span></code><em class="property"> <span class="pre">=</span> <span class="pre">2</span></em><a class="headerlink" href="#awscrt.io.LogLevel.Error" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.LogLevel.Error">
+<span class="sig-name descname"><span class="pre">Error</span></span><em class="property"> <span class="pre">=</span> <span class="pre">2</span></em><a class="headerlink" href="#awscrt.io.LogLevel.Error" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt id="awscrt.io.LogLevel.Warn">
-<code class="sig-name descname"><span class="pre">Warn</span></code><em class="property"> <span class="pre">=</span> <span class="pre">3</span></em><a class="headerlink" href="#awscrt.io.LogLevel.Warn" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.LogLevel.Warn">
+<span class="sig-name descname"><span class="pre">Warn</span></span><em class="property"> <span class="pre">=</span> <span class="pre">3</span></em><a class="headerlink" href="#awscrt.io.LogLevel.Warn" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt id="awscrt.io.LogLevel.Info">
-<code class="sig-name descname"><span class="pre">Info</span></code><em class="property"> <span class="pre">=</span> <span class="pre">4</span></em><a class="headerlink" href="#awscrt.io.LogLevel.Info" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.LogLevel.Info">
+<span class="sig-name descname"><span class="pre">Info</span></span><em class="property"> <span class="pre">=</span> <span class="pre">4</span></em><a class="headerlink" href="#awscrt.io.LogLevel.Info" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt id="awscrt.io.LogLevel.Debug">
-<code class="sig-name descname"><span class="pre">Debug</span></code><em class="property"> <span class="pre">=</span> <span class="pre">5</span></em><a class="headerlink" href="#awscrt.io.LogLevel.Debug" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.LogLevel.Debug">
+<span class="sig-name descname"><span class="pre">Debug</span></span><em class="property"> <span class="pre">=</span> <span class="pre">5</span></em><a class="headerlink" href="#awscrt.io.LogLevel.Debug" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt id="awscrt.io.LogLevel.Trace">
-<code class="sig-name descname"><span class="pre">Trace</span></code><em class="property"> <span class="pre">=</span> <span class="pre">6</span></em><a class="headerlink" href="#awscrt.io.LogLevel.Trace" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.LogLevel.Trace">
+<span class="sig-name descname"><span class="pre">Trace</span></span><em class="property"> <span class="pre">=</span> <span class="pre">6</span></em><a class="headerlink" href="#awscrt.io.LogLevel.Trace" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
 
 <dl class="py function">
-<dt id="awscrt.io.init_logging">
-<code class="sig-prename descclassname"><span class="pre">awscrt.io.</span></code><code class="sig-name descname"><span class="pre">init_logging</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">log_level</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.init_logging" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.init_logging">
+<span class="sig-prename descclassname"><span class="pre">awscrt.io.</span></span><span class="sig-name descname"><span class="pre">init_logging</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">log_level</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.init_logging" title="Permalink to this definition">¶</a></dt>
 <dd><p>Initialize logging in <cite>awscrt</cite>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -112,8 +113,8 @@ Long-running event-loop threads are used for concurrency.</p>
 </dd></dl>
 
 <dl class="py class">
-<dt id="awscrt.io.EventLoopGroup">
-<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">awscrt.io.</span></code><code class="sig-name descname"><span class="pre">EventLoopGroup</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_threads</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cpu_group</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.EventLoopGroup" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.EventLoopGroup">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">awscrt.io.</span></span><span class="sig-name descname"><span class="pre">EventLoopGroup</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_threads</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cpu_group</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.EventLoopGroup" title="Permalink to this definition">¶</a></dt>
 <dd><p>A collection of event-loops.</p>
 <p>An event-loop is a thread for doing async work, such as I/O. Classes that
 need to do async work will ask the EventLoopGroup for an event-loop to use.</p>
@@ -130,8 +131,8 @@ will be capped at the number of processors in the group.</p></li>
 </dd>
 </dl>
 <dl class="py attribute">
-<dt id="awscrt.io.EventLoopGroup.shutdown_event">
-<code class="sig-name descname"><span class="pre">shutdown_event</span></code><a class="headerlink" href="#awscrt.io.EventLoopGroup.shutdown_event" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.EventLoopGroup.shutdown_event">
+<span class="sig-name descname"><span class="pre">shutdown_event</span></span><a class="headerlink" href="#awscrt.io.EventLoopGroup.shutdown_event" title="Permalink to this definition">¶</a></dt>
 <dd><p>Signals when EventLoopGroup’s threads
 have all finished shutting down. Shutdown begins when the
 EventLoopGroup object is destroyed.</p>
@@ -145,14 +146,14 @@ EventLoopGroup object is destroyed.</p>
 </dd></dl>
 
 <dl class="py class">
-<dt id="awscrt.io.HostResolverBase">
-<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">awscrt.io.</span></code><code class="sig-name descname"><span class="pre">HostResolverBase</span></code><a class="headerlink" href="#awscrt.io.HostResolverBase" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.HostResolverBase">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">awscrt.io.</span></span><span class="sig-name descname"><span class="pre">HostResolverBase</span></span><a class="headerlink" href="#awscrt.io.HostResolverBase" title="Permalink to this definition">¶</a></dt>
 <dd><p>DNS host resolver.</p>
 </dd></dl>
 
 <dl class="py class">
-<dt id="awscrt.io.DefaultHostResolver">
-<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">awscrt.io.</span></code><code class="sig-name descname"><span class="pre">DefaultHostResolver</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">event_loop_group</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_hosts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">16</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.DefaultHostResolver" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.DefaultHostResolver">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">awscrt.io.</span></span><span class="sig-name descname"><span class="pre">DefaultHostResolver</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">event_loop_group</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_hosts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">16</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.DefaultHostResolver" title="Permalink to this definition">¶</a></dt>
 <dd><p>Default DNS host resolver.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -165,8 +166,8 @@ EventLoopGroup object is destroyed.</p>
 </dd></dl>
 
 <dl class="py class">
-<dt id="awscrt.io.ClientBootstrap">
-<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">awscrt.io.</span></code><code class="sig-name descname"><span class="pre">ClientBootstrap</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">event_loop_group</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">host_resolver</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.ClientBootstrap" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.ClientBootstrap">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">awscrt.io.</span></span><span class="sig-name descname"><span class="pre">ClientBootstrap</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">event_loop_group</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">host_resolver</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.ClientBootstrap" title="Permalink to this definition">¶</a></dt>
 <dd><p>Handles creation and setup of client socket connections.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -177,8 +178,8 @@ EventLoopGroup object is destroyed.</p>
 </dd>
 </dl>
 <dl class="py attribute">
-<dt id="awscrt.io.ClientBootstrap.shutdown_event">
-<code class="sig-name descname"><span class="pre">shutdown_event</span></code><a class="headerlink" href="#awscrt.io.ClientBootstrap.shutdown_event" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.ClientBootstrap.shutdown_event">
+<span class="sig-name descname"><span class="pre">shutdown_event</span></span><a class="headerlink" href="#awscrt.io.ClientBootstrap.shutdown_event" title="Permalink to this definition">¶</a></dt>
 <dd><p>Signals when the ClientBootstrap’s
 internal resources finish shutting down.
 Shutdown begins when the ClientBootstrap object is destroyed.</p>
@@ -192,42 +193,42 @@ Shutdown begins when the ClientBootstrap object is destroyed.</p>
 </dd></dl>
 
 <dl class="py class">
-<dt id="awscrt.io.SocketDomain">
-<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">awscrt.io.</span></code><code class="sig-name descname"><span class="pre">SocketDomain</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.SocketDomain" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.SocketDomain">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">awscrt.io.</span></span><span class="sig-name descname"><span class="pre">SocketDomain</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.SocketDomain" title="Permalink to this definition">¶</a></dt>
 <dd><p>An enumeration.</p>
 <dl class="py attribute">
-<dt id="awscrt.io.SocketDomain.IPv4">
-<code class="sig-name descname"><span class="pre">IPv4</span></code><em class="property"> <span class="pre">=</span> <span class="pre">0</span></em><a class="headerlink" href="#awscrt.io.SocketDomain.IPv4" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.SocketDomain.IPv4">
+<span class="sig-name descname"><span class="pre">IPv4</span></span><em class="property"> <span class="pre">=</span> <span class="pre">0</span></em><a class="headerlink" href="#awscrt.io.SocketDomain.IPv4" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt id="awscrt.io.SocketDomain.IPv6">
-<code class="sig-name descname"><span class="pre">IPv6</span></code><em class="property"> <span class="pre">=</span> <span class="pre">1</span></em><a class="headerlink" href="#awscrt.io.SocketDomain.IPv6" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.SocketDomain.IPv6">
+<span class="sig-name descname"><span class="pre">IPv6</span></span><em class="property"> <span class="pre">=</span> <span class="pre">1</span></em><a class="headerlink" href="#awscrt.io.SocketDomain.IPv6" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt id="awscrt.io.SocketDomain.Local">
-<code class="sig-name descname"><span class="pre">Local</span></code><em class="property"> <span class="pre">=</span> <span class="pre">2</span></em><a class="headerlink" href="#awscrt.io.SocketDomain.Local" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.SocketDomain.Local">
+<span class="sig-name descname"><span class="pre">Local</span></span><em class="property"> <span class="pre">=</span> <span class="pre">2</span></em><a class="headerlink" href="#awscrt.io.SocketDomain.Local" title="Permalink to this definition">¶</a></dt>
 <dd><p>Unix domain sockets (at at least something like them)</p>
 </dd></dl>
 
 </dd></dl>
 
 <dl class="py class">
-<dt id="awscrt.io.SocketType">
-<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">awscrt.io.</span></code><code class="sig-name descname"><span class="pre">SocketType</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.SocketType" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.SocketType">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">awscrt.io.</span></span><span class="sig-name descname"><span class="pre">SocketType</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.SocketType" title="Permalink to this definition">¶</a></dt>
 <dd><p>An enumeration.</p>
 <dl class="py attribute">
-<dt id="awscrt.io.SocketType.Stream">
-<code class="sig-name descname"><span class="pre">Stream</span></code><em class="property"> <span class="pre">=</span> <span class="pre">0</span></em><a class="headerlink" href="#awscrt.io.SocketType.Stream" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.SocketType.Stream">
+<span class="sig-name descname"><span class="pre">Stream</span></span><em class="property"> <span class="pre">=</span> <span class="pre">0</span></em><a class="headerlink" href="#awscrt.io.SocketType.Stream" title="Permalink to this definition">¶</a></dt>
 <dd><p>A streaming socket sends reliable messages over a two-way connection.
 This means TCP when used with <cite>SocketDomain.IPv4/6</cite>,
 and Unix domain sockets when used with <cite>SocketDomain.Local</cite></p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt id="awscrt.io.SocketType.DGram">
-<code class="sig-name descname"><span class="pre">DGram</span></code><em class="property"> <span class="pre">=</span> <span class="pre">1</span></em><a class="headerlink" href="#awscrt.io.SocketType.DGram" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.SocketType.DGram">
+<span class="sig-name descname"><span class="pre">DGram</span></span><em class="property"> <span class="pre">=</span> <span class="pre">1</span></em><a class="headerlink" href="#awscrt.io.SocketType.DGram" title="Permalink to this definition">¶</a></dt>
 <dd><p>A datagram socket is connectionless and sends unreliable messages.
 This means UDP when used with <cite>SocketDomain.IPv4/6</cite>.
 <cite>SocketDomain.Local</cite> is not compatible with <cite>DGram</cite></p>
@@ -236,12 +237,12 @@ This means UDP when used with <cite>SocketDomain.IPv4/6</cite>.
 </dd></dl>
 
 <dl class="py class">
-<dt id="awscrt.io.SocketOptions">
-<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">awscrt.io.</span></code><code class="sig-name descname"><span class="pre">SocketOptions</span></code><a class="headerlink" href="#awscrt.io.SocketOptions" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.SocketOptions">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">awscrt.io.</span></span><span class="sig-name descname"><span class="pre">SocketOptions</span></span><a class="headerlink" href="#awscrt.io.SocketOptions" title="Permalink to this definition">¶</a></dt>
 <dd><p>Socket options.</p>
 <dl class="py attribute">
-<dt id="awscrt.io.SocketOptions.domain">
-<code class="sig-name descname"><span class="pre">domain</span></code><a class="headerlink" href="#awscrt.io.SocketOptions.domain" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.SocketOptions.domain">
+<span class="sig-name descname"><span class="pre">domain</span></span><a class="headerlink" href="#awscrt.io.SocketOptions.domain" title="Permalink to this definition">¶</a></dt>
 <dd><p>Socket domain.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
@@ -251,8 +252,8 @@ This means UDP when used with <cite>SocketDomain.IPv4/6</cite>.
 </dd></dl>
 
 <dl class="py attribute">
-<dt id="awscrt.io.SocketOptions.type">
-<code class="sig-name descname"><span class="pre">type</span></code><a class="headerlink" href="#awscrt.io.SocketOptions.type" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.SocketOptions.type">
+<span class="sig-name descname"><span class="pre">type</span></span><a class="headerlink" href="#awscrt.io.SocketOptions.type" title="Permalink to this definition">¶</a></dt>
 <dd><p>Socket type.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
@@ -262,8 +263,8 @@ This means UDP when used with <cite>SocketDomain.IPv4/6</cite>.
 </dd></dl>
 
 <dl class="py attribute">
-<dt id="awscrt.io.SocketOptions.connect_timeout_ms">
-<code class="sig-name descname"><span class="pre">connect_timeout_ms</span></code><a class="headerlink" href="#awscrt.io.SocketOptions.connect_timeout_ms" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.SocketOptions.connect_timeout_ms">
+<span class="sig-name descname"><span class="pre">connect_timeout_ms</span></span><a class="headerlink" href="#awscrt.io.SocketOptions.connect_timeout_ms" title="Permalink to this definition">¶</a></dt>
 <dd><p>Connection timeout, in milliseconds.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
@@ -273,8 +274,8 @@ This means UDP when used with <cite>SocketDomain.IPv4/6</cite>.
 </dd></dl>
 
 <dl class="py attribute">
-<dt id="awscrt.io.SocketOptions.keep_alive">
-<code class="sig-name descname"><span class="pre">keep_alive</span></code><a class="headerlink" href="#awscrt.io.SocketOptions.keep_alive" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.SocketOptions.keep_alive">
+<span class="sig-name descname"><span class="pre">keep_alive</span></span><a class="headerlink" href="#awscrt.io.SocketOptions.keep_alive" title="Permalink to this definition">¶</a></dt>
 <dd><p>If set True, periodically transmit keepalive messages
 for detecting a disconnected peer.</p>
 <dl class="field-list simple">
@@ -285,8 +286,8 @@ for detecting a disconnected peer.</p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt id="awscrt.io.SocketOptions.keep_alive_timeout_secs">
-<code class="sig-name descname"><span class="pre">keep_alive_timeout_secs</span></code><a class="headerlink" href="#awscrt.io.SocketOptions.keep_alive_timeout_secs" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.SocketOptions.keep_alive_timeout_secs">
+<span class="sig-name descname"><span class="pre">keep_alive_timeout_secs</span></span><a class="headerlink" href="#awscrt.io.SocketOptions.keep_alive_timeout_secs" title="Permalink to this definition">¶</a></dt>
 <dd><p>Duration, in seconds, between keepalive
 transmissions in idle condition. If 0, then a default value is used.</p>
 <dl class="field-list simple">
@@ -297,8 +298,8 @@ transmissions in idle condition. If 0, then a default value is used.</p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt id="awscrt.io.SocketOptions.keep_alive_interval_secs">
-<code class="sig-name descname"><span class="pre">keep_alive_interval_secs</span></code><a class="headerlink" href="#awscrt.io.SocketOptions.keep_alive_interval_secs" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.SocketOptions.keep_alive_interval_secs">
+<span class="sig-name descname"><span class="pre">keep_alive_interval_secs</span></span><a class="headerlink" href="#awscrt.io.SocketOptions.keep_alive_interval_secs" title="Permalink to this definition">¶</a></dt>
 <dd><p>Duration, in seconds, between keepalive
 retransmissions, if acknowledgement of previous keepalive transmission
 is not received. If 0, then a default value is used.</p>
@@ -310,8 +311,8 @@ is not received. If 0, then a default value is used.</p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt id="awscrt.io.SocketOptions.keep_alive_max_probes">
-<code class="sig-name descname"><span class="pre">keep_alive_max_probes</span></code><a class="headerlink" href="#awscrt.io.SocketOptions.keep_alive_max_probes" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.SocketOptions.keep_alive_max_probes">
+<span class="sig-name descname"><span class="pre">keep_alive_max_probes</span></span><a class="headerlink" href="#awscrt.io.SocketOptions.keep_alive_max_probes" title="Permalink to this definition">¶</a></dt>
 <dd><p>If set, sets the number of keepalive probes
 allowed to fail before a connection is considered lost.</p>
 <dl class="field-list simple">
@@ -324,50 +325,50 @@ allowed to fail before a connection is considered lost.</p>
 </dd></dl>
 
 <dl class="py class">
-<dt id="awscrt.io.TlsVersion">
-<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">awscrt.io.</span></code><code class="sig-name descname"><span class="pre">TlsVersion</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.TlsVersion" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.TlsVersion">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">awscrt.io.</span></span><span class="sig-name descname"><span class="pre">TlsVersion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.TlsVersion" title="Permalink to this definition">¶</a></dt>
 <dd><p>An enumeration.</p>
 <dl class="py attribute">
-<dt id="awscrt.io.TlsVersion.SSLv3">
-<code class="sig-name descname"><span class="pre">SSLv3</span></code><em class="property"> <span class="pre">=</span> <span class="pre">0</span></em><a class="headerlink" href="#awscrt.io.TlsVersion.SSLv3" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.TlsVersion.SSLv3">
+<span class="sig-name descname"><span class="pre">SSLv3</span></span><em class="property"> <span class="pre">=</span> <span class="pre">0</span></em><a class="headerlink" href="#awscrt.io.TlsVersion.SSLv3" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt id="awscrt.io.TlsVersion.TLSv1">
-<code class="sig-name descname"><span class="pre">TLSv1</span></code><em class="property"> <span class="pre">=</span> <span class="pre">1</span></em><a class="headerlink" href="#awscrt.io.TlsVersion.TLSv1" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.TlsVersion.TLSv1">
+<span class="sig-name descname"><span class="pre">TLSv1</span></span><em class="property"> <span class="pre">=</span> <span class="pre">1</span></em><a class="headerlink" href="#awscrt.io.TlsVersion.TLSv1" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt id="awscrt.io.TlsVersion.TLSv1_1">
-<code class="sig-name descname"><span class="pre">TLSv1_1</span></code><em class="property"> <span class="pre">=</span> <span class="pre">2</span></em><a class="headerlink" href="#awscrt.io.TlsVersion.TLSv1_1" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.TlsVersion.TLSv1_1">
+<span class="sig-name descname"><span class="pre">TLSv1_1</span></span><em class="property"> <span class="pre">=</span> <span class="pre">2</span></em><a class="headerlink" href="#awscrt.io.TlsVersion.TLSv1_1" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt id="awscrt.io.TlsVersion.TLSv1_2">
-<code class="sig-name descname"><span class="pre">TLSv1_2</span></code><em class="property"> <span class="pre">=</span> <span class="pre">3</span></em><a class="headerlink" href="#awscrt.io.TlsVersion.TLSv1_2" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.TlsVersion.TLSv1_2">
+<span class="sig-name descname"><span class="pre">TLSv1_2</span></span><em class="property"> <span class="pre">=</span> <span class="pre">3</span></em><a class="headerlink" href="#awscrt.io.TlsVersion.TLSv1_2" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt id="awscrt.io.TlsVersion.TLSv1_3">
-<code class="sig-name descname"><span class="pre">TLSv1_3</span></code><em class="property"> <span class="pre">=</span> <span class="pre">4</span></em><a class="headerlink" href="#awscrt.io.TlsVersion.TLSv1_3" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.TlsVersion.TLSv1_3">
+<span class="sig-name descname"><span class="pre">TLSv1_3</span></span><em class="property"> <span class="pre">=</span> <span class="pre">4</span></em><a class="headerlink" href="#awscrt.io.TlsVersion.TLSv1_3" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt id="awscrt.io.TlsVersion.DEFAULT">
-<code class="sig-name descname"><span class="pre">DEFAULT</span></code><em class="property"> <span class="pre">=</span> <span class="pre">128</span></em><a class="headerlink" href="#awscrt.io.TlsVersion.DEFAULT" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.TlsVersion.DEFAULT">
+<span class="sig-name descname"><span class="pre">DEFAULT</span></span><em class="property"> <span class="pre">=</span> <span class="pre">128</span></em><a class="headerlink" href="#awscrt.io.TlsVersion.DEFAULT" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
 
 <dl class="py class">
-<dt id="awscrt.io.TlsContextOptions">
-<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">awscrt.io.</span></code><code class="sig-name descname"><span class="pre">TlsContextOptions</span></code><a class="headerlink" href="#awscrt.io.TlsContextOptions" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.TlsContextOptions">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">awscrt.io.</span></span><span class="sig-name descname"><span class="pre">TlsContextOptions</span></span><a class="headerlink" href="#awscrt.io.TlsContextOptions" title="Permalink to this definition">¶</a></dt>
 <dd><p>Options to create a TLS context.</p>
 <p>The static <cite>TlsContextOptions.create_X()</cite> methods provide common TLS configurations.
 A default-initialized TlsContextOptions has <cite>verify_peer</cite> set True.</p>
 <dl class="py attribute">
-<dt id="awscrt.io.TlsContextOptions.min_tls_ver">
-<code class="sig-name descname"><span class="pre">min_tls_ver</span></code><a class="headerlink" href="#awscrt.io.TlsContextOptions.min_tls_ver" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.TlsContextOptions.min_tls_ver">
+<span class="sig-name descname"><span class="pre">min_tls_ver</span></span><a class="headerlink" href="#awscrt.io.TlsContextOptions.min_tls_ver" title="Permalink to this definition">¶</a></dt>
 <dd><p>Minimum TLS version to use.
 System defaults are used by default.</p>
 <dl class="field-list simple">
@@ -378,8 +379,8 @@ System defaults are used by default.</p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt id="awscrt.io.TlsContextOptions.verify_peer">
-<code class="sig-name descname"><span class="pre">verify_peer</span></code><a class="headerlink" href="#awscrt.io.TlsContextOptions.verify_peer" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.TlsContextOptions.verify_peer">
+<span class="sig-name descname"><span class="pre">verify_peer</span></span><a class="headerlink" href="#awscrt.io.TlsContextOptions.verify_peer" title="Permalink to this definition">¶</a></dt>
 <dd><p>Whether to validate the peer’s x.509 certificate.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
@@ -389,8 +390,8 @@ System defaults are used by default.</p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt id="awscrt.io.TlsContextOptions.alpn_list">
-<code class="sig-name descname"><span class="pre">alpn_list</span></code><a class="headerlink" href="#awscrt.io.TlsContextOptions.alpn_list" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.TlsContextOptions.alpn_list">
+<span class="sig-name descname"><span class="pre">alpn_list</span></span><a class="headerlink" href="#awscrt.io.TlsContextOptions.alpn_list" title="Permalink to this definition">¶</a></dt>
 <dd><p>If set, names to use in Application Layer
 Protocol Negotiation (ALPN). ALPN is not supported on all systems,
 see <a class="reference internal" href="#awscrt.io.is_alpn_available" title="awscrt.io.is_alpn_available"><code class="xref py py-meth docutils literal notranslate"><span class="pre">is_alpn_available()</span></code></a>. This can be customized per connection,
@@ -403,8 +404,8 @@ via <a class="reference internal" href="#awscrt.io.TlsConnectionOptions.set_alpn
 </dd></dl>
 
 <dl class="py method">
-<dt id="awscrt.io.TlsContextOptions.create_client_with_mtls_from_path">
-<em class="property"><span class="pre">static</span> </em><code class="sig-name descname"><span class="pre">create_client_with_mtls_from_path</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cert_filepath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pk_filepath</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.TlsContextOptions.create_client_with_mtls_from_path" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.TlsContextOptions.create_client_with_mtls_from_path">
+<em class="property"><span class="pre">static</span> </em><span class="sig-name descname"><span class="pre">create_client_with_mtls_from_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cert_filepath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pk_filepath</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.TlsContextOptions.create_client_with_mtls_from_path" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create options configured for use with mutual TLS in client mode.</p>
 <p>Both files are treated as PKCS #7 PEM armored.
 They are loaded from disk and stored in buffers internally.</p>
@@ -422,8 +423,8 @@ They are loaded from disk and stored in buffers internally.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="awscrt.io.TlsContextOptions.create_client_with_mtls">
-<em class="property"><span class="pre">static</span> </em><code class="sig-name descname"><span class="pre">create_client_with_mtls</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cert_buffer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key_buffer</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.TlsContextOptions.create_client_with_mtls" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.TlsContextOptions.create_client_with_mtls">
+<em class="property"><span class="pre">static</span> </em><span class="sig-name descname"><span class="pre">create_client_with_mtls</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cert_buffer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key_buffer</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.TlsContextOptions.create_client_with_mtls" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create options configured for use with mutual TLS in client mode.</p>
 <p>Both buffers are treated as PKCS #7 PEM armored.</p>
 <dl class="field-list simple">
@@ -440,8 +441,8 @@ They are loaded from disk and stored in buffers internally.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="awscrt.io.TlsContextOptions.create_client_with_mtls_pkcs12">
-<em class="property"><span class="pre">static</span> </em><code class="sig-name descname"><span class="pre">create_client_with_mtls_pkcs12</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pkcs12_filepath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pkcs12_password</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.TlsContextOptions.create_client_with_mtls_pkcs12" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.TlsContextOptions.create_client_with_mtls_pkcs12">
+<em class="property"><span class="pre">static</span> </em><span class="sig-name descname"><span class="pre">create_client_with_mtls_pkcs12</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pkcs12_filepath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pkcs12_password</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.TlsContextOptions.create_client_with_mtls_pkcs12" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create options configured for use with mutual TLS in client mode.</p>
 <p>NOTE: This configuration only works on Apple devices.</p>
 <dl class="field-list simple">
@@ -459,8 +460,8 @@ The file is loaded from disk and stored internally.</p></li>
 </dd></dl>
 
 <dl class="py method">
-<dt id="awscrt.io.TlsContextOptions.create_server_from_path">
-<em class="property"><span class="pre">static</span> </em><code class="sig-name descname"><span class="pre">create_server_from_path</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cert_filepath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pk_filepath</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.TlsContextOptions.create_server_from_path" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.TlsContextOptions.create_server_from_path">
+<em class="property"><span class="pre">static</span> </em><span class="sig-name descname"><span class="pre">create_server_from_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cert_filepath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pk_filepath</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.TlsContextOptions.create_server_from_path" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create options configured for use in server mode.</p>
 <p>Both files are treated as PKCS #7 PEM armored.
 They are loaded from disk and stored in buffers internally.</p>
@@ -478,8 +479,8 @@ They are loaded from disk and stored in buffers internally.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="awscrt.io.TlsContextOptions.create_server">
-<em class="property"><span class="pre">static</span> </em><code class="sig-name descname"><span class="pre">create_server</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cert_buffer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key_buffer</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.TlsContextOptions.create_server" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.TlsContextOptions.create_server">
+<em class="property"><span class="pre">static</span> </em><span class="sig-name descname"><span class="pre">create_server</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cert_buffer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key_buffer</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.TlsContextOptions.create_server" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create options configured for use in server mode.</p>
 <p>Both buffers are treated as PKCS #7 PEM armored.</p>
 <dl class="field-list simple">
@@ -496,8 +497,8 @@ They are loaded from disk and stored in buffers internally.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="awscrt.io.TlsContextOptions.create_server_pkcs12">
-<em class="property"><span class="pre">static</span> </em><code class="sig-name descname"><span class="pre">create_server_pkcs12</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pkcs12_filepath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pkcs12_password</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.TlsContextOptions.create_server_pkcs12" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.TlsContextOptions.create_server_pkcs12">
+<em class="property"><span class="pre">static</span> </em><span class="sig-name descname"><span class="pre">create_server_pkcs12</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pkcs12_filepath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pkcs12_password</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.TlsContextOptions.create_server_pkcs12" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create options configured for use in server mode.</p>
 <p>NOTE: This configuration only works on Apple devices.</p>
 <dl class="field-list simple">
@@ -514,8 +515,8 @@ They are loaded from disk and stored in buffers internally.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="awscrt.io.TlsContextOptions.override_default_trust_store_from_path">
-<code class="sig-name descname"><span class="pre">override_default_trust_store_from_path</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ca_dirpath</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ca_filepath</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.TlsContextOptions.override_default_trust_store_from_path" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.TlsContextOptions.override_default_trust_store_from_path">
+<span class="sig-name descname"><span class="pre">override_default_trust_store_from_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ca_dirpath</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ca_filepath</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.TlsContextOptions.override_default_trust_store_from_path" title="Permalink to this definition">¶</a></dt>
 <dd><p>Override default trust store.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -531,8 +532,8 @@ of trusted CA certificates.</p></li>
 </dd></dl>
 
 <dl class="py method">
-<dt id="awscrt.io.TlsContextOptions.override_default_trust_store">
-<code class="sig-name descname"><span class="pre">override_default_trust_store</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rootca_buffer</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.TlsContextOptions.override_default_trust_store" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.TlsContextOptions.override_default_trust_store">
+<span class="sig-name descname"><span class="pre">override_default_trust_store</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rootca_buffer</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.TlsContextOptions.override_default_trust_store" title="Permalink to this definition">¶</a></dt>
 <dd><p>Override default trust store.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -544,8 +545,8 @@ of trusted CA certificates.</p></li>
 </dd></dl>
 
 <dl class="py class">
-<dt id="awscrt.io.ClientTlsContext">
-<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">awscrt.io.</span></code><code class="sig-name descname"><span class="pre">ClientTlsContext</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">options</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.ClientTlsContext" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.ClientTlsContext">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">awscrt.io.</span></span><span class="sig-name descname"><span class="pre">ClientTlsContext</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">options</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.ClientTlsContext" title="Permalink to this definition">¶</a></dt>
 <dd><p>Client TLS context.</p>
 <p>A context is expensive, but can be used for the lifetime of the application
 by all outgoing connections that wish to use the same TLS configuration.</p>
@@ -555,8 +556,8 @@ by all outgoing connections that wish to use the same TLS configuration.</p>
 </dd>
 </dl>
 <dl class="py method">
-<dt id="awscrt.io.ClientTlsContext.new_connection_options">
-<code class="sig-name descname"><span class="pre">new_connection_options</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.ClientTlsContext.new_connection_options" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.ClientTlsContext.new_connection_options">
+<span class="sig-name descname"><span class="pre">new_connection_options</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.ClientTlsContext.new_connection_options" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a <a class="reference internal" href="#awscrt.io.TlsConnectionOptions" title="awscrt.io.TlsConnectionOptions"><code class="xref py py-class docutils literal notranslate"><span class="pre">TlsConnectionOptions</span></code></a> that makes use of this TLS context.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
@@ -568,8 +569,8 @@ by all outgoing connections that wish to use the same TLS configuration.</p>
 </dd></dl>
 
 <dl class="py class">
-<dt id="awscrt.io.TlsConnectionOptions">
-<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">awscrt.io.</span></code><code class="sig-name descname"><span class="pre">TlsConnectionOptions</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tls_ctx</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.TlsConnectionOptions" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.TlsConnectionOptions">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">awscrt.io.</span></span><span class="sig-name descname"><span class="pre">TlsConnectionOptions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tls_ctx</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.TlsConnectionOptions" title="Permalink to this definition">¶</a></dt>
 <dd><p>Connection-specific TLS options.</p>
 <p>Note that, while a TLS context is an expensive object, a <a class="reference internal" href="#awscrt.io.TlsConnectionOptions" title="awscrt.io.TlsConnectionOptions"><code class="xref py py-class docutils literal notranslate"><span class="pre">TlsConnectionOptions</span></code></a> is cheap.</p>
 <dl class="field-list simple">
@@ -578,8 +579,8 @@ by all outgoing connections that wish to use the same TLS configuration.</p>
 </dd>
 </dl>
 <dl class="py attribute">
-<dt id="awscrt.io.TlsConnectionOptions.tls_ctx">
-<code class="sig-name descname"><span class="pre">tls_ctx</span></code><a class="headerlink" href="#awscrt.io.TlsConnectionOptions.tls_ctx" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.TlsConnectionOptions.tls_ctx">
+<span class="sig-name descname"><span class="pre">tls_ctx</span></span><a class="headerlink" href="#awscrt.io.TlsConnectionOptions.tls_ctx" title="Permalink to this definition">¶</a></dt>
 <dd><p>TLS context.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
@@ -589,8 +590,8 @@ by all outgoing connections that wish to use the same TLS configuration.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="awscrt.io.TlsConnectionOptions.set_alpn_list">
-<code class="sig-name descname"><span class="pre">set_alpn_list</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">alpn_list</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.TlsConnectionOptions.set_alpn_list" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.TlsConnectionOptions.set_alpn_list">
+<span class="sig-name descname"><span class="pre">set_alpn_list</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">alpn_list</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.TlsConnectionOptions.set_alpn_list" title="Permalink to this definition">¶</a></dt>
 <dd><p>Set names to use in Application Layer Protocol Negotiation (ALPN).</p>
 <p>This overrides any ALPN list on the TLS context, see <a class="reference internal" href="#awscrt.io.TlsContextOptions.alpn_list" title="awscrt.io.TlsContextOptions.alpn_list"><code class="xref py py-attr docutils literal notranslate"><span class="pre">TlsContextOptions.alpn_list</span></code></a>.
 ALPN is not supported on all systems, see <a class="reference internal" href="#awscrt.io.is_alpn_available" title="awscrt.io.is_alpn_available"><code class="xref py py-meth docutils literal notranslate"><span class="pre">is_alpn_available()</span></code></a>.</p>
@@ -602,8 +603,8 @@ ALPN is not supported on all systems, see <a class="reference internal" href="#a
 </dd></dl>
 
 <dl class="py method">
-<dt id="awscrt.io.TlsConnectionOptions.set_server_name">
-<code class="sig-name descname"><span class="pre">set_server_name</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">server_name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.TlsConnectionOptions.set_server_name" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.TlsConnectionOptions.set_server_name">
+<span class="sig-name descname"><span class="pre">set_server_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">server_name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.TlsConnectionOptions.set_server_name" title="Permalink to this definition">¶</a></dt>
 <dd><p>Set server name.</p>
 <p>Sets name for TLS Server Name Indication (SNI).
 Name is also used for x.509 validation.</p>
@@ -617,15 +618,15 @@ Name is also used for x.509 validation.</p>
 </dd></dl>
 
 <dl class="py function">
-<dt id="awscrt.io.is_alpn_available">
-<code class="sig-prename descclassname"><span class="pre">awscrt.io.</span></code><code class="sig-name descname"><span class="pre">is_alpn_available</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.is_alpn_available" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.is_alpn_available">
+<span class="sig-prename descclassname"><span class="pre">awscrt.io.</span></span><span class="sig-name descname"><span class="pre">is_alpn_available</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.is_alpn_available" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns True if Application Layer Protocol Negotiation (ALPN)
 is supported on this system.</p>
 </dd></dl>
 
 <dl class="py class">
-<dt id="awscrt.io.InputStream">
-<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">awscrt.io.</span></code><code class="sig-name descname"><span class="pre">InputStream</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">stream</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.InputStream" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.InputStream">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">awscrt.io.</span></span><span class="sig-name descname"><span class="pre">InputStream</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">stream</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.InputStream" title="Permalink to this definition">¶</a></dt>
 <dd><p>InputStream allows <cite>awscrt</cite> native code to read from Python binary I/O classes.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -633,8 +634,8 @@ is supported on this system.</p>
 </dd>
 </dl>
 <dl class="py method">
-<dt id="awscrt.io.InputStream.wrap">
-<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">wrap</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">stream</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">allow_none</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.InputStream.wrap" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.io.InputStream.wrap">
+<em class="property"><span class="pre">classmethod</span> </em><span class="sig-name descname"><span class="pre">wrap</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">stream</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">allow_none</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.InputStream.wrap" title="Permalink to this definition">¶</a></dt>
 <dd><p>Given some stream type, returns an <a class="reference internal" href="#awscrt.io.InputStream" title="awscrt.io.InputStream"><code class="xref py py-class docutils literal notranslate"><span class="pre">InputStream</span></code></a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -654,7 +655,7 @@ If <cite>allow_none</cite> is True, and <cite>stream</cite> is None, then None i
 
 </dd></dl>
 
-</div>
+</section>
 
 
             <div class="clearer"></div>
@@ -711,7 +712,7 @@ If <cite>allow_none</cite> is True, and <cite>stream</cite> is None, then None i
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2020, Amazon Web Services, Inc.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.5.1.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.0.1.
     </div>
   </body>
 </html>
