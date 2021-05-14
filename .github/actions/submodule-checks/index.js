@@ -92,9 +92,9 @@ const diffSubmodule = async function (submodule, targetBranch) {
 }
 
 
-const main = async function () {
+const checkSubmodules = async function () {
     const rootDir = process.cwd();
-    console.log(github.context.payload);
+
     // TODO: figure out how to access target branch
     // instead of hardcoding 'main'
     const targetBranch = 'origin/main';
@@ -112,6 +112,12 @@ const main = async function () {
     }
 }
 
-main().catch(error => {
-    core.setFailed(error.message);
-});
+async function main() {
+    try {
+        await checkSubmodules();
+    } catch (error) {
+        core.setFailed(error.message);
+    }
+}
+
+main()
