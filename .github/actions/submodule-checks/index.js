@@ -98,7 +98,6 @@ const checkSubmodules = async function () {
     // TODO: figure out how to access target branch
     // instead of hardcoding 'main'
     const targetBranch = 'main';
-    await run(['git', 'fetch', 'origin', targetBranch])
 
     const submodules = await getSubmodules();
     for (var i = 0; i < submodules.length; i++) {
