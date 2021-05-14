@@ -165,4 +165,4 @@ jobs:
     - name: Check Submodules
       env:
         ACTION_VERSION: ${{ env.BUILDER_VERSION }}
-      uses: awslabs/aws-crt-builder/.github/actions/check-submodules@${ ACTION_VERSION }
+      uses: awslabs/aws-crt-builder/.github/actions/check-submodules@${{ ACTION_VERSION }}
