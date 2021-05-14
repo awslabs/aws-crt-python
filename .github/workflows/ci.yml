@@ -163,4 +163,4 @@ jobs:
         submodules: true
         fetch-depth: 0
     - name: Check Submodules
-      uses: awslabs/aws-crt-builder/.github/actions/check-submodules@${{ BUILDER_VERSION }}
+      uses: awslabs/aws-crt-builder/.github/actions/check-submodules@${{ env.BUILDER_VERSION }}
