@@ -228,7 +228,7 @@ class Connection(NativeResource):
         use_websocket (bool): If true, connect to MQTT over websockets.
 
         websocket_proxy_options (Optional[awscrt.http.HttpProxyOptions]):
-            Optional proxy options for websocket connections.  Deprecated, use 'proxy_options' instead.
+            Optional proxy options for websocket connections.  Deprecated, use `proxy_options` instead.
 
         websocket_handshake_transform: Optional function to transform websocket handshake request.
             If provided, function is called each time a websocket connection is attempted.

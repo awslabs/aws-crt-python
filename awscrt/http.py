@@ -535,12 +535,19 @@ class HttpHeaders(NativeResource):
 class HttpProxyConnectionType(IntEnum):
     """Proxy connection type enumeration"""
     Legacy = 0
-    """Use the old connection establishment logic that would use
-         (1) Forwarding if not using TLS
-         (2) Tunneling if using TLS"""
+    """
+    Use the old connection establishment logic that would use:
+
+         1. Forwarding if not using TLS
+         2. Tunneling if using TLS
+    """
 
     Forwarding = 1
-    """Establish a request forwarding connection to the proxy.  In this case, TLS is not a valid option."""
+    """
+    Establish a request forwarding connection to the proxy.
+
+    In this case, TLS is not a valid option.
+    """
 
     Tunneling = 2
     """Establish a tunneling connection through the proxy to the ultimate endpoint."""
