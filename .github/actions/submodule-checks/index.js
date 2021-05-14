@@ -2,8 +2,9 @@ const core = require('@actions/core');
 const github = require('@actions/github');
 const exec = require('@actions/exec');
 
+// Run an external command.
 // cwd: optional string
-// check: set false
+// check: whether to raise an exception if returnCode is non-zero. Defaults to true.
 const run = async function (args, opts = {}) {
     let result = {};
     result.stdout = '';
@@ -14,6 +15,7 @@ const run = async function (args, opts = {}) {
             result.stdout += data.toString();
         },
     };
+    execOpts.ignoreReturnCode = !opts.check;
 
     if ('cwd' in opts) {
         execOpts.cwd = opts.cwd;
@@ -110,8 +112,6 @@ const main = async function () {
     }
 }
 
-try {
-    main();
-} catch (error) {
+main().catch(error => {
     core.setFailed(error.message);
-}
+});
