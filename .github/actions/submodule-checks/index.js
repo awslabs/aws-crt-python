@@ -15,7 +15,7 @@ const run = async function (args, opts = {}) {
             result.stdout += data.toString();
         },
     };
-    execOpts.ignoreReturnCode = !opts.check;
+    execOpts.ignoreReturnCode = opts.check == false;
 
     if ('cwd' in opts) {
         execOpts.cwd = opts.cwd;
@@ -112,7 +112,7 @@ const checkSubmodules = async function () {
     }
 }
 
-async function main() {
+const main = async function () {
     try {
         await checkSubmodules();
     } catch (error) {
