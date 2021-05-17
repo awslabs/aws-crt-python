@@ -33,12 +33,21 @@ class TestChecksums(NativeResourceTest):
         expected = 0x91267E8A
         self.assertEqual(expected, output)
 
-# stress the internal logic that handles buffers larger than C's INT_MAX
+# stress test gil optimization for 32 bit architecture which cannot handle hug buffer
     def test_crc32_large_buffer(self):
+        try:
+            giant_buffer = bytes(25 * 2**20)
+        except (MemoryError, OverflowError):
+            raise unittest.SkipTest('Machine cant allocate giant buffer for giant buffer test')
+        val = checksums.crc32(giant_buffer)
+        self.assertEqual(0x72103906, val)
+
+# stress the internal logic that handles buffers larger than C's INT_MAX
+    def test_crc32_huge_buffer(self):
         try:
             INT_MAX = 2**32 - 1
             giant_buffer = bytes(INT_MAX + 5)
-        except MemoryError:
+        except (MemoryError, OverflowError):
             raise unittest.SkipTest('Machine cant allocate giant buffer for giant buffer test')
         val = checksums.crc32(giant_buffer)
         self.assertEqual(0xc622f71d, val)
@@ -67,12 +76,21 @@ class TestChecksums(NativeResourceTest):
         expected = 0x46DD794E
         self.assertEqual(expected, output)
 
-# stress the internal logic that handles buffers larger than C's INT_MAX
+# stress test gil optimization for 32 bit architecture which cannot handle hug buffer
     def test_crc32c_large_buffer(self):
+        try:
+            giant_buffer = bytes(25 * 2**20)
+        except (MemoryError, OverflowError):
+            raise unittest.SkipTest('Machine cant allocate giant buffer for giant buffer test')
+        val = checksums.crc32c(giant_buffer)
+        self.assertEqual(0xfb5b991d, val)
+
+# stress the internal logic that handles buffers larger than C's INT_MAX
+    def test_crc32c_huge_buffer(self):
         try:
             INT_MAX = 2**32 - 1
             giant_buffer = bytes(INT_MAX + 5)
-        except MemoryError:
+        except (MemoryError, OverflowError):
             raise unittest.SkipTest('Machine cant allocate giant buffer for giant buffer test')
         val = checksums.crc32c(giant_buffer)
         self.assertEqual(0x572a7c8a, val)
