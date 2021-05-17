@@ -87,7 +87,6 @@ PyObject *aws_py_md5_new(PyObject *self, PyObject *args) {
 
     PyObject *capsule = PyCapsule_New(md5, s_capsule_name_hash, s_hash_destructor);
 
-    /* Why do we return NULL instead of PyErr */
     if (capsule == NULL) {
         aws_hash_destroy(md5);
         return NULL;

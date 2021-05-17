@@ -3,7 +3,8 @@
 
 
 from test import NativeResourceTest
-from awscrt.crypto import Hash, HMAC
+from awscrt.crypto import Hash
+import unittest
 
 
 class TestCredentials(NativeResourceTest):
