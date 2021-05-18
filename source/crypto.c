@@ -114,6 +114,8 @@ PyObject *aws_py_hash_update(PyObject *self, PyObject *args) {
     struct aws_byte_cursor to_hash_cursor;
     to_hash_cursor = aws_byte_cursor_from_array(to_hash_c_str, to_hash_len);
 
+    /* Releasing the GIL for very small buffers is inefficient
+       and may lower performance */
     if (to_hash_len > 1024 * 5) {
         int aws_op = AWS_OP_SUCCESS;
 
