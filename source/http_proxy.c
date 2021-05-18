@@ -65,6 +65,11 @@ bool aws_py_http_proxy_options_init(struct aws_http_proxy_options *proxy_options
         }
     }
 
+    proxy_options->connection_type = PyObject_GetAttrAsIntEnum(py_proxy_options, "HttpProxyOptions", "connection_type");
+    if (PyErr_Occurred()) {
+        goto done;
+    }
+
     success = true;
 done:
     Py_XDECREF(py_host_name);

@@ -504,7 +504,7 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
     Py_ssize_t password_len;
     PyObject *is_clean_session;
     PyObject *on_connect;
-    PyObject *ws_proxy_options_py;
+    PyObject *proxy_options_py;
     if (!PyArg_ParseTuple(
             args,
             "Os#s#HOOKKHIIOz#z#OOO",
@@ -528,7 +528,7 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
             &password_len,
             &is_clean_session,
             &on_connect,
-            &ws_proxy_options_py)) {
+            &proxy_options_py)) {
         return NULL;
     }
 
@@ -577,9 +577,9 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
         }
     }
 
-    if (ws_proxy_options_py != Py_None) {
+    if (proxy_options_py != Py_None) {
         struct aws_http_proxy_options proxy_options;
-        if (!aws_py_http_proxy_options_init(&proxy_options, ws_proxy_options_py)) {
+        if (!aws_py_http_proxy_options_init(&proxy_options, proxy_options_py)) {
             return NULL;
         }
 

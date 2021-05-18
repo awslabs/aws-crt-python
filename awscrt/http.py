@@ -532,6 +532,27 @@ class HttpHeaders(NativeResource):
         return self.__class__.__name__ + "(" + str([pair for pair in self]) + ")"
 
 
+class HttpProxyConnectionType(IntEnum):
+    """Proxy connection type enumeration"""
+    Legacy = 0
+    """
+    Use the old connection establishment logic that would use:
+
+         1. Forwarding if not using TLS
+         2. Tunneling if using TLS
+    """
+
+    Forwarding = 1
+    """
+    Establish a request forwarding connection to the proxy.
+
+    In this case, TLS is not a valid option.
+    """
+
+    Tunneling = 2
+    """Establish a tunneling connection through the proxy to the ultimate endpoint."""
+
+
 class HttpProxyAuthenticationType(IntEnum):
     """Proxy authentication type enumeration."""
     Nothing = 0
@@ -564,6 +585,10 @@ class HttpProxyOptions:
         auth_password (Optional[str]): Username to use when `auth_type` is
             :const:`HttpProxyAuthenticationType.Basic`.
 
+        connection_type (Optional[HttpProxyConnectionType): Type of proxy connection to make.
+            Default is :const:`HttpProxyConnectionType.Legacy`.
+
+
     Attributes:
         host_name (str): Name of the proxy server to connect through.
 
@@ -582,6 +607,8 @@ class HttpProxyOptions:
         auth_password (Optional[str]): Username to use when `auth_type` is
             :const:`HttpProxyAuthenticationType.Basic`.
 
+        connection_type (HttpProxyConnectionType): Type of proxy connection to make.
+
     """
 
     def __init__(self,
@@ -590,10 +617,12 @@ class HttpProxyOptions:
                  tls_connection_options=None,
                  auth_type=HttpProxyAuthenticationType.Nothing,
                  auth_username=None,
-                 auth_password=None):
+                 auth_password=None,
+                 connection_type=HttpProxyConnectionType.Legacy):
         self.host_name = host_name
         self.port = port
         self.tls_connection_options = tls_connection_options
         self.auth_type = auth_type
         self.auth_username = auth_username
         self.auth_password = auth_password
+        self.connection_type = connection_type
