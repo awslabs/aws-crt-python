@@ -228,7 +228,7 @@ class Connection(NativeResource):
         use_websocket (bool): If true, connect to MQTT over websockets.
 
         websocket_proxy_options (Optional[awscrt.http.HttpProxyOptions]):
-            Optional proxy options for websocket connections.
+            Optional proxy options for websocket connections.  Deprecated, use `proxy_options` instead.
 
         websocket_handshake_transform: Optional function to transform websocket handshake request.
             If provided, function is called each time a websocket connection is attempted.
@@ -241,6 +241,9 @@ class Connection(NativeResource):
                     `transform_args.done()` when complete.
 
                 *   `**kwargs` (dict): Forward-compatibility kwargs.
+
+        proxy_options (Optional[awscrt.http.HttpProxyOptions]):
+            Optional proxy options for all connections.
         """
 
     def __init__(self,
@@ -263,6 +266,7 @@ class Connection(NativeResource):
                  use_websockets=False,
                  websocket_proxy_options=None,
                  websocket_handshake_transform=None,
+                 proxy_options=None
                  ):
 
         assert isinstance(client, Client)
@@ -271,6 +275,7 @@ class Connection(NativeResource):
         assert isinstance(will, Will) or will is None
         assert isinstance(socket_options, SocketOptions) or socket_options is None
         assert isinstance(websocket_proxy_options, HttpProxyOptions) or websocket_proxy_options is None
+        assert isinstance(proxy_options, HttpProxyOptions) or proxy_options is None
         assert callable(websocket_handshake_transform) or websocket_handshake_transform is None
 
         if reconnect_min_timeout_secs > reconnect_max_timeout_secs:
@@ -278,6 +283,10 @@ class Connection(NativeResource):
 
         if keep_alive_secs * 1000 <= ping_timeout_ms:
             raise ValueError("'keep_alive_secs' duration must be longer than 'ping_timeout_ms'")
+
+        if proxy_options and websocket_proxy_options:
+            raise ValueError("'websocket_proxy_options' has been deprecated in favor of 'proxy_options'.  "
+                             "Both parameters may not be set.")
 
         super().__init__()
 
@@ -302,7 +311,7 @@ class Connection(NativeResource):
         self.username = username
         self.password = password
         self.socket_options = socket_options if socket_options else SocketOptions()
-        self.websocket_proxy_options = websocket_proxy_options
+        self.proxy_options = proxy_options if proxy_options else websocket_proxy_options
 
         self._binding = _awscrt.mqtt_client_connection_new(
             self,
@@ -379,7 +388,7 @@ class Connection(NativeResource):
                 self.password,
                 self.clean_session,
                 on_connect,
-                self.websocket_proxy_options
+                self.proxy_options
             )
 
         except Exception as e:
