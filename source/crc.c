@@ -29,7 +29,7 @@ PyObject *checksums_crc_common(PyObject *args, uint32_t (*checksum_fn)(const uin
         goto done;
     }
 
-    uint32_t signed_val = previousCrc;
+    uint32_t val = previousCrc;
 
     /* Releasing the GIL for very small buffers is inefficient
        and may lower performance */
@@ -42,17 +42,17 @@ PyObject *checksums_crc_common(PyObject *args, uint32_t (*checksum_fn)(const uin
             /* Avoid truncation of length for very large buffers. crc() takes
                length as an int, which may be narrower than Py_ssize_t. */
             while ((size_t)len > INT_MAX) {
-                signed_val = checksum_fn(buf, INT_MAX, signed_val);
+                val = checksum_fn(buf, INT_MAX, val);
                 buf += (size_t)INT_MAX;
                 len -= (size_t)INT_MAX;
             }
-            signed_val = checksum_fn(buf, (int)len, signed_val);
+            val = checksum_fn(buf, (int)len, val);
         Py_END_ALLOW_THREADS
         /* clang-format on */
     } else {
-        signed_val = checksum_fn(input.buf, (int)input.len, signed_val);
+        val = checksum_fn(input.buf, (int)input.len, val);
     }
-    py_result = PyLong_FromUnsignedLong(signed_val);
+    py_result = PyLong_FromUnsignedLong(val);
 done:
     if (input.obj) {
         PyBuffer_Release(&input);
