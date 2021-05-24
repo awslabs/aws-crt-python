@@ -128,10 +128,12 @@ static void s_on_connection_setup(
     struct aws_event_stream_rpc_client_connection *native,
     int error_code,
     void *user_data) {
-
     struct connection_binding *connection = user_data;
     connection->native = native;
-    aws_event_stream_rpc_client_connection_acquire(connection->native);
+
+    if (native) {
+        aws_event_stream_rpc_client_connection_acquire(connection->native);
+    }
 
     AWS_FATAL_ASSERT(((bool)native != (bool)error_code) && "illegal event-stream connection args");
 
