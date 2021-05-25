@@ -91,6 +91,7 @@ class ContinuationHandler(ClientContinuationHandler):
             self.fail_test("shutdown can only fire once")
         self.record.close_call.set()
 
+
 class FailureClientTests(NativeResourceTest):
     def _fail_test_from_callback(self, msg):
         print("ERROR FROM CALLBACK", msg)
