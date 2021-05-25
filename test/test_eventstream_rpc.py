@@ -119,6 +119,7 @@ class FailureClientTests(NativeResourceTest):
         self.assertIsNone(handler.record.shutdown_call)
         self._assertNoFailuresFromCallbacks()
 
+
 @skipUnless(RUN_LOCALHOST_TESTS, "Skipping until we have permanent echo server")
 class TestClient(NativeResourceTest):
     def _fail_test_from_callback(self, msg):
