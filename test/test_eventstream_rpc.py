@@ -1,9 +1,11 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 
+from awscrt import NativeResource
 from awscrt.eventstream import *
 from awscrt.eventstream.rpc import *
 from awscrt.io import (ClientBootstrap, DefaultHostResolver, EventLoopGroup, init_logging, LogLevel)
+from awscrt._test import native_memory_usage
 import gc
 import os
 from queue import Queue
@@ -90,9 +92,7 @@ class ContinuationHandler(ClientContinuationHandler):
         self.record.close_call.set()
 
 
-@skipUnless(RUN_LOCALHOST_TESTS, "Skipping until we have permanent echo server")
-class TestClient(NativeResourceTest):
-
+class FailureClientTests(NativeResourceTest):
     def _fail_test_from_callback(self, msg):
         print("ERROR FROM CALLBACK", msg)
         self._failure_from_callback = msg
@@ -118,6 +118,16 @@ class TestClient(NativeResourceTest):
         self.assertTrue(isinstance(handler.record.setup_call['error'], Exception))
         self.assertIsNone(handler.record.shutdown_call)
         self._assertNoFailuresFromCallbacks()
+
+
+@skipUnless(RUN_LOCALHOST_TESTS, "Skipping until we have permanent echo server")
+class TestClient(NativeResourceTest):
+    def _fail_test_from_callback(self, msg):
+        print("ERROR FROM CALLBACK", msg)
+        self._failure_from_callback = msg
+
+    def _assertNoFailuresFromCallbacks(self):
+        self.assertIsNone(getattr(self, '_failure_from_callback', None))
 
     def test_connect_success(self):
         elg = EventLoopGroup()
@@ -247,6 +257,12 @@ class TestClient(NativeResourceTest):
 
         return handler
 
+    def test_connection_close_without_waiting_for_completion(self):
+        # Regression test: check that it's safe to call close and drop local references,
+        # without waiting for close() to complete.
+        handler = self._connect_fully()
+        handler.connection.close()
+
     def test_stream_cleans_up_if_never_activated(self):
         # check that there are no resource leaks if a stream/continuation is never activated
         handler = self._connect_fully()
@@ -319,7 +335,7 @@ class TestClient(NativeResourceTest):
             on_flush=on_msg_flush)
 
         self.assertIsNone(msg_future.exception(TIMEOUT))
-        msg_flushed.wait(TIMEOUT)
+        self.assertTrue(msg_flushed.wait(TIMEOUT))
 
         # wait to receive response, which should end the stream
         msg = stream_handler.record.message_calls.get(timeout=TIMEOUT)
@@ -404,6 +420,63 @@ class TestClient(NativeResourceTest):
 
         self._assertNoFailuresFromCallbacks()
 
+    def test_stream_cleans_up_on_close(self):
+        # ensure that a stream cleans up immediately after it's closed and references to it are dropped
+        handler = self._connect_fully()
+
+        # use function to create and run stream.
+        # if we just did it in loop below, local references would stick around
+        # and show up when we checked for leaks
+        def _run_stream_operation():
+            stream_handler = ContinuationHandler(self._fail_test_from_callback)
+            continuation = handler.connection.new_stream(stream_handler)
+            continuation.activate(
+                operation='awstest#EchoMessage',
+                headers=[],
+                payload=b'{}',
+                message_type=MessageType.APPLICATION_MESSAGE,
+                flags=MessageFlag.NONE)
+            self.assertTrue(stream_handler.record.close_call.wait(TIMEOUT))
+
+        living_resources_at_start = len(NativeResource._living)
+        native_mem_usage_at_start = native_memory_usage()
+
+        # run a few streams
+        for i in range(10):
+            _run_stream_operation()
+            gc.collect()
+            self.assertEqual(living_resources_at_start, len(NativeResource._living))
+            self.assertEqual(native_mem_usage_at_start, native_memory_usage())
+
+        handler.connection.close().result(TIMEOUT)
+        self._assertNoFailuresFromCallbacks()
+
+    def test_stream_reference_can_outlive_connection(self):
+        # Regression test. Ensure we don't crash if a stream reference stays alive
+        # after connection has been closed and references to connection have been dropped
+        connection_handler = self._connect_fully()
+
+        # run stream and keep its reference around
+        stream_handler = ContinuationHandler(self._fail_test_from_callback)
+        continuation = connection_handler.connection.new_stream(stream_handler)
+        continuation.activate(
+            operation='awstest#EchoMessage',
+            headers=[],
+            payload=b'{}',
+            message_type=MessageType.APPLICATION_MESSAGE,
+            flags=MessageFlag.NONE)
+        self.assertTrue(stream_handler.record.close_call.wait(TIMEOUT))
+
+        # close connection and nuke local references
+        connection_handler.connection.close().result(TIMEOUT)
+        connection_weakref = weakref.ref(connection_handler.connection)
+        del connection_handler
+        gc.collect()
+
+        del stream_handler
+        del continuation
+        gc.collect()
+
     def test_on_closed_deadlock_regression(self):
         # ensure that during the on_closed() callback of the first stream,
         # we can activate a second stream without deadlocking
@@ -422,9 +495,9 @@ class TestClient(NativeResourceTest):
         first_stream.activate(operation="first",
                               message_type=MessageType.APPLICATION_MESSAGE)
 
-        first_stream_handler.activated_second_stream.wait(TIMEOUT)
+        self.assertTrue(first_stream_handler.activated_second_stream.wait(TIMEOUT))
 
-        handler.connection.close().result()
+        handler.connection.close().result(TIMEOUT)
 
 
 class DeadlockStreamHandler(ClientContinuationHandler):

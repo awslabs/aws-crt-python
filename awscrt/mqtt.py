@@ -210,6 +210,12 @@ class Connection(NativeResource):
             the connection is invalid and attempts to reconnect.
             This duration must be shorter than `keep_alive_secs`.
 
+        protocol_operation_timeout_ms (int): Milliseconds to wait for the response to the operation
+            requires response by protocol. Set to zero to disable timeout. Otherwise,
+            the operation will fail if no response is received within this amount of time after
+            the packet is written to the socket
+            It applied to PUBLISH (QoS>0) and UNSUBSCRIBE now.
+
         will (Will): Will to send with CONNECT packet. The will is
             published by the server when its connection to the client is unexpectedly lost.
 
@@ -222,7 +228,7 @@ class Connection(NativeResource):
         use_websocket (bool): If true, connect to MQTT over websockets.
 
         websocket_proxy_options (Optional[awscrt.http.HttpProxyOptions]):
-            Optional proxy options for websocket connections.
+            Optional proxy options for websocket connections.  Deprecated, use `proxy_options` instead.
 
         websocket_handshake_transform: Optional function to transform websocket handshake request.
             If provided, function is called each time a websocket connection is attempted.
@@ -235,6 +241,9 @@ class Connection(NativeResource):
                     `transform_args.done()` when complete.
 
                 *   `**kwargs` (dict): Forward-compatibility kwargs.
+
+        proxy_options (Optional[awscrt.http.HttpProxyOptions]):
+            Optional proxy options for all connections.
         """
 
     def __init__(self,
@@ -249,6 +258,7 @@ class Connection(NativeResource):
                  reconnect_max_timeout_secs=60,
                  keep_alive_secs=1200,
                  ping_timeout_ms=3000,
+                 protocol_operation_timeout_ms=0,
                  will=None,
                  username=None,
                  password=None,
@@ -256,6 +266,7 @@ class Connection(NativeResource):
                  use_websockets=False,
                  websocket_proxy_options=None,
                  websocket_handshake_transform=None,
+                 proxy_options=None
                  ):
 
         assert isinstance(client, Client)
@@ -264,6 +275,7 @@ class Connection(NativeResource):
         assert isinstance(will, Will) or will is None
         assert isinstance(socket_options, SocketOptions) or socket_options is None
         assert isinstance(websocket_proxy_options, HttpProxyOptions) or websocket_proxy_options is None
+        assert isinstance(proxy_options, HttpProxyOptions) or proxy_options is None
         assert callable(websocket_handshake_transform) or websocket_handshake_transform is None
 
         if reconnect_min_timeout_secs > reconnect_max_timeout_secs:
@@ -271,6 +283,10 @@ class Connection(NativeResource):
 
         if keep_alive_secs * 1000 <= ping_timeout_ms:
             raise ValueError("'keep_alive_secs' duration must be longer than 'ping_timeout_ms'")
+
+        if proxy_options and websocket_proxy_options:
+            raise ValueError("'websocket_proxy_options' has been deprecated in favor of 'proxy_options'.  "
+                             "Both parameters may not be set.")
 
         super().__init__()
 
@@ -290,11 +306,12 @@ class Connection(NativeResource):
         self.reconnect_max_timeout_secs = reconnect_max_timeout_secs
         self.keep_alive_secs = keep_alive_secs
         self.ping_timeout_ms = ping_timeout_ms
+        self.protocol_operation_timeout_ms = protocol_operation_timeout_ms
         self.will = will
         self.username = username
         self.password = password
         self.socket_options = socket_options if socket_options else SocketOptions()
-        self.websocket_proxy_options = websocket_proxy_options
+        self.proxy_options = proxy_options if proxy_options else websocket_proxy_options
 
         self._binding = _awscrt.mqtt_client_connection_new(
             self,
@@ -365,12 +382,13 @@ class Connection(NativeResource):
                 self.reconnect_max_timeout_secs,
                 self.keep_alive_secs,
                 self.ping_timeout_ms,
+                self.protocol_operation_timeout_ms,
                 self.will,
                 self.username,
                 self.password,
                 self.clean_session,
                 on_connect,
-                self.websocket_proxy_options
+                self.proxy_options
             )
 
         except Exception as e:

@@ -118,23 +118,33 @@ static void s_on_continuation_message(
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
-    PyObject *result = PyObject_CallMethod(
+    PyObject *headers = NULL;
+    PyObject *result = NULL;
+
+    headers = aws_py_event_stream_python_headers_create(message_args->headers, message_args->headers_count);
+    if (!headers) {
+        PyErr_WriteUnraisable(continuation->self_py);
+        goto done;
+    }
+
+    result = PyObject_CallMethod(
         continuation->self_py,
         "_on_continuation_message",
         "(Oy#iI)",
-        /* NOTE: if headers_create() returns NULL, then PyObject_CallFunction() fails too, which is convenient */
-        aws_py_event_stream_python_headers_create(message_args->headers, message_args->headers_count),
+        headers,
         message_args->payload->buffer,
         message_args->payload->len,
         message_args->message_type,
         message_args->message_flags);
-    if (result) {
-        Py_DECREF(result);
-    } else {
+    if (!result) {
         /* Callback might fail during application shutdown */
         PyErr_WriteUnraisable(continuation->self_py);
+        goto done;
     }
 
+done:
+    Py_XDECREF(headers);
+    Py_XDECREF(result);
     PyGILState_Release(state);
 }
 
@@ -170,17 +180,22 @@ PyObject *aws_py_event_stream_rpc_client_continuation_activate(PyObject *self, P
     bool success = false;
     struct aws_array_list headers;
     AWS_ZERO_STRUCT(headers);
-    PyObject *self_py_prev_value = NULL;
+    bool self_py_set = false;
     Py_INCREF(on_flush_py); /* Keep completion callback alive until it fires */
-    Py_INCREF(self_py);
 
     struct continuation_binding *continuation = PyCapsule_GetPointer(capsule_py, s_capsule_name);
     if (!continuation) {
         goto done;
     }
 
-    self_py_prev_value = continuation->self_py;
+    if (continuation->self_py != NULL) {
+        PyErr_SetString(PyExc_RuntimeError, "Continuation already activated");
+        goto done;
+    }
+
     continuation->self_py = self_py;
+    Py_INCREF(continuation->self_py);
+    self_py_set = true;
 
     if (!aws_py_event_stream_native_headers_init(&headers, headers_py)) {
         goto done;
@@ -218,10 +233,10 @@ done:
 
     /* failed */
     Py_DECREF(on_flush_py);
-    Py_DECREF(self_py);
-    if (continuation) {
-        continuation->self_py = self_py_prev_value;
+    if (self_py_set) {
+        Py_CLEAR(continuation->self_py);
     }
+
     return NULL;
 }
 

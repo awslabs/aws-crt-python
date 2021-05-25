@@ -5,12 +5,13 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>awscrt.exceptions &#8212; awscrt  documentation</title>
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/bizstyle.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/bizstyle.css" />
     
-    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
     <script src="../_static/jquery.js"></script>
     <script src="../_static/underscore.js"></script>
     <script src="../_static/doctools.js"></script>
@@ -49,11 +50,11 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="module-awscrt.exceptions">
+  <section id="module-awscrt.exceptions">
 <span id="awscrt-exceptions"></span><h1>awscrt.exceptions<a class="headerlink" href="#module-awscrt.exceptions" title="Permalink to this headline">¶</a></h1>
 <dl class="py function">
-<dt id="awscrt.exceptions.from_code">
-<code class="sig-prename descclassname"><span class="pre">awscrt.exceptions.</span></code><code class="sig-name descname"><span class="pre">from_code</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">code</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.exceptions.from_code" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.exceptions.from_code">
+<span class="sig-prename descclassname"><span class="pre">awscrt.exceptions.</span></span><span class="sig-name descname"><span class="pre">from_code</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">code</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.exceptions.from_code" title="Permalink to this definition">¶</a></dt>
 <dd><p>Given an AWS Common Runtime error code, return an exception.</p>
 <p>Returns a common Python exception type, if it’s appropriate.
 For example, <cite>code=1</cite> aka <cite>AWS_ERROR_OOM</cite> will result in <cite>MemoryError</cite>.
@@ -69,8 +70,8 @@ Otherwise, an <a class="reference internal" href="#awscrt.exceptions.AwsCrtError
 </dd></dl>
 
 <dl class="py exception">
-<dt id="awscrt.exceptions.AwsCrtError">
-<em class="property"><span class="pre">exception</span> </em><code class="sig-prename descclassname"><span class="pre">awscrt.exceptions.</span></code><code class="sig-name descname"><span class="pre">AwsCrtError</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">code</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">message</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.exceptions.AwsCrtError" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.exceptions.AwsCrtError">
+<em class="property"><span class="pre">exception</span> </em><span class="sig-prename descclassname"><span class="pre">awscrt.exceptions.</span></span><span class="sig-name descname"><span class="pre">AwsCrtError</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">code</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">message</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.exceptions.AwsCrtError" title="Permalink to this definition">¶</a></dt>
 <dd><p>Base exception class for AWS Common Runtime exceptions.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -82,8 +83,8 @@ Otherwise, an <a class="reference internal" href="#awscrt.exceptions.AwsCrtError
 </dd>
 </dl>
 <dl class="py attribute">
-<dt id="awscrt.exceptions.AwsCrtError.code">
-<code class="sig-name descname"><span class="pre">code</span></code><a class="headerlink" href="#awscrt.exceptions.AwsCrtError.code" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.exceptions.AwsCrtError.code">
+<span class="sig-name descname"><span class="pre">code</span></span><a class="headerlink" href="#awscrt.exceptions.AwsCrtError.code" title="Permalink to this definition">¶</a></dt>
 <dd><p>Int value of error.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
@@ -93,8 +94,8 @@ Otherwise, an <a class="reference internal" href="#awscrt.exceptions.AwsCrtError
 </dd></dl>
 
 <dl class="py attribute">
-<dt id="awscrt.exceptions.AwsCrtError.name">
-<code class="sig-name descname"><span class="pre">name</span></code><a class="headerlink" href="#awscrt.exceptions.AwsCrtError.name" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.exceptions.AwsCrtError.name">
+<span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#awscrt.exceptions.AwsCrtError.name" title="Permalink to this definition">¶</a></dt>
 <dd><p>Name of error.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
@@ -104,8 +105,8 @@ Otherwise, an <a class="reference internal" href="#awscrt.exceptions.AwsCrtError
 </dd></dl>
 
 <dl class="py attribute">
-<dt id="awscrt.exceptions.AwsCrtError.message">
-<code class="sig-name descname"><span class="pre">message</span></code><a class="headerlink" href="#awscrt.exceptions.AwsCrtError.message" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="awscrt.exceptions.AwsCrtError.message">
+<span class="sig-name descname"><span class="pre">message</span></span><a class="headerlink" href="#awscrt.exceptions.AwsCrtError.message" title="Permalink to this definition">¶</a></dt>
 <dd><p>Message about error.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
@@ -116,7 +117,7 @@ Otherwise, an <a class="reference internal" href="#awscrt.exceptions.AwsCrtError
 
 </dd></dl>
 
-</div>
+</section>
 
 
             <div class="clearer"></div>
@@ -173,7 +174,7 @@ Otherwise, an <a class="reference internal" href="#awscrt.exceptions.AwsCrtError
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2020, Amazon Web Services, Inc.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.5.1.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.0.1.
     </div>
   </body>
 </html>

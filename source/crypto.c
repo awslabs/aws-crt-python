@@ -29,6 +29,28 @@ static void s_hmac_destructor(PyObject *hmac_capsule) {
     aws_hmac_destroy(hmac);
 }
 
+PyObject *aws_py_sha1_new(PyObject *self, PyObject *args) {
+    (void)self;
+    (void)args;
+
+    struct aws_allocator *allocator = aws_py_get_allocator();
+
+    struct aws_hash *sha1 = aws_sha1_new(allocator);
+
+    if (!sha1) {
+        return PyErr_AwsLastError();
+    }
+
+    PyObject *capsule = PyCapsule_New(sha1, s_capsule_name_hash, s_hash_destructor);
+
+    if (capsule == NULL) {
+        aws_hash_destroy(sha1);
+        return NULL;
+    }
+
+    return capsule;
+}
+
 PyObject *aws_py_sha256_new(PyObject *self, PyObject *args) {
     (void)self;
     (void)args;
@@ -41,7 +63,14 @@ PyObject *aws_py_sha256_new(PyObject *self, PyObject *args) {
         return PyErr_AwsLastError();
     }
 
-    return PyCapsule_New(sha256, s_capsule_name_hash, s_hash_destructor);
+    PyObject *capsule = PyCapsule_New(sha256, s_capsule_name_hash, s_hash_destructor);
+
+    if (capsule == NULL) {
+        aws_hash_destroy(sha256);
+        return NULL;
+    }
+
+    return capsule;
 }
 
 PyObject *aws_py_md5_new(PyObject *self, PyObject *args) {
@@ -56,7 +85,14 @@ PyObject *aws_py_md5_new(PyObject *self, PyObject *args) {
         return PyErr_AwsLastError();
     }
 
-    return PyCapsule_New(md5, s_capsule_name_hash, s_hash_destructor);
+    PyObject *capsule = PyCapsule_New(md5, s_capsule_name_hash, s_hash_destructor);
+
+    if (capsule == NULL) {
+        aws_hash_destroy(md5);
+        return NULL;
+    }
+
+    return capsule;
 }
 
 PyObject *aws_py_hash_update(PyObject *self, PyObject *args) {
@@ -78,8 +114,24 @@ PyObject *aws_py_hash_update(PyObject *self, PyObject *args) {
     struct aws_byte_cursor to_hash_cursor;
     to_hash_cursor = aws_byte_cursor_from_array(to_hash_c_str, to_hash_len);
 
-    if (aws_hash_update(hash, &to_hash_cursor)) {
-        return PyErr_AwsLastError();
+    /* Releasing the GIL for very small buffers is inefficient
+       and may lower performance */
+    if (to_hash_len > 1024 * 5) {
+        int aws_op = AWS_OP_SUCCESS;
+
+        /* clang-format off */
+        Py_BEGIN_ALLOW_THREADS
+            aws_op = aws_hash_update(hash, &to_hash_cursor);
+        Py_END_ALLOW_THREADS
+
+        if (aws_op != AWS_OP_SUCCESS) {
+            return PyErr_AwsLastError();
+        }
+        /* clang-format on */
+    } else {
+        if (aws_hash_update(hash, &to_hash_cursor)) {
+            return PyErr_AwsLastError();
+        }
     }
 
     Py_RETURN_NONE;

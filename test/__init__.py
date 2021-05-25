@@ -2,12 +2,10 @@
 # SPDX-License-Identifier: Apache-2.0.
 
 from awscrt import NativeResource
-import gc
-import inspect
-import sys
-import time
-import types
+from awscrt._test import check_for_leaks
+from awscrt.io import init_logging, LogLevel
 import unittest
+import sys
 
 TIMEOUT = 10.0
 
@@ -17,57 +15,29 @@ class NativeResourceTest(unittest.TestCase):
     Test fixture asserts there are no living NativeResources when a test completes.
     """
 
+    _previous_test_failed = False
+
     def setUp(self):
         NativeResource._track_lifetime = True
+        #init_logging(LogLevel.Trace, 'stderr')
 
     def tearDown(self):
-        gc.collect()
+        # Stop checking for leaks if any test has failed.
+        # It's likely that the failed test leaks data, which will make
+        # all future tests look like they're leaking too.
+        if NativeResourceTest._previous_test_failed:
+            return
 
-        # Native resources might need a few more ticks to finish cleaning themselves up.
-        wait_until = time.time() + TIMEOUT
-        while NativeResource._living and time.time() < wait_until:
-            time.sleep(0.1)
+        # Determine whether the current test just failed.
+        # We check private members in unittest.TestCase to do this,
+        # so the technique may stop working in some future python version.
+        for outcome_err in self._outcome.errors:
+            if outcome_err[1] is not None:
+                NativeResourceTest._previous_test_failed = True
+                return
 
-        # Print out debugging info on leaking resources
-        if NativeResource._living:
-
-            def _printobj(prefix, obj):
-                s = str(obj)
-                if len(s) > 1000:
-                    s = s[:1000] + '...TRUNCATED total-len=' + str(len(s))
-                print(prefix, obj)
-
-            print('Leaking NativeResources:')
-            for i in NativeResource._living:
-                _printobj('-', i)
-
-                # getrefcount(i) returns 4+ here, but 2 of those are due to debugging.
-                # Don't show:
-                # - 1 for WeakSet iterator due to this for-loop.
-                # - 1 for getrefcount(i)'s reference.
-                # But do show:
-                # - 1 for item's self-reference.
-                # - the rest are what's causing this leak.
-                refcount = sys.getrefcount(i) - 2
-
-                # Gather list of referrers, but don't show those created by the act of iterating the WeakSet
-                referrers = []
-                for r in gc.get_referrers(i):
-                    if isinstance(r, types.FrameType):
-                        frameinfo = inspect.getframeinfo(r)
-                        our_fault = (frameinfo.filename.endswith('_weakrefset.py') or
-                                     frameinfo.filename.endswith('test/__init__.py'))
-                        if our_fault:
-                            continue
-
-                    referrers.append(r)
-
-                print('  sys.getrefcount():', refcount)
-                print('  gc.referrers():', len(referrers))
-                for r in referrers:
-                    if isinstance(r, types.FrameType):
-                        _printobj('  -', inspect.getframeinfo(r))
-                    else:
-                        _printobj('  -', r)
-
-        self.assertEqual(0, len(NativeResource._living))
+        try:
+            check_for_leaks(timeout_sec=TIMEOUT)
+        except Exception:
+            NativeResourceTest._previous_test_failed = True
+            raise

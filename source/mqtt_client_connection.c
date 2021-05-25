@@ -11,6 +11,7 @@
 #include <aws/mqtt/client.h>
 
 #include <aws/http/connection.h>
+#include <aws/http/proxy.h>
 #include <aws/http/request_response.h>
 
 #include <aws/io/channel.h>
@@ -495,6 +496,7 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
     uint64_t reconnect_max_timeout_secs;
     uint16_t keep_alive_time;
     uint32_t ping_timeout;
+    uint32_t protocol_operation_timeout;
     PyObject *will;
     const char *username;
     Py_ssize_t username_len;
@@ -502,10 +504,10 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
     Py_ssize_t password_len;
     PyObject *is_clean_session;
     PyObject *on_connect;
-    PyObject *ws_proxy_options_py;
+    PyObject *proxy_options_py;
     if (!PyArg_ParseTuple(
             args,
-            "Os#s#HOOKKHIOz#z#OOO",
+            "Os#s#HOOKKHIIOz#z#OOO",
             &impl_capsule,
             &client_id,
             &client_id_len,
@@ -518,6 +520,7 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
             &reconnect_max_timeout_secs,
             &keep_alive_time,
             &ping_timeout,
+            &protocol_operation_timeout,
             &will,
             &username,
             &username_len,
@@ -525,7 +528,7 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
             &password_len,
             &is_clean_session,
             &on_connect,
-            &ws_proxy_options_py)) {
+            &proxy_options_py)) {
         return NULL;
     }
 
@@ -574,13 +577,13 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
         }
     }
 
-    if (ws_proxy_options_py != Py_None) {
+    if (proxy_options_py != Py_None) {
         struct aws_http_proxy_options proxy_options;
-        if (!aws_py_http_proxy_options_init(&proxy_options, ws_proxy_options_py)) {
+        if (!aws_py_http_proxy_options_init(&proxy_options, proxy_options_py)) {
             return NULL;
         }
 
-        if (aws_mqtt_client_connection_set_websocket_proxy_options(py_connection->native, &proxy_options)) {
+        if (aws_mqtt_client_connection_set_http_proxy_options(py_connection->native, &proxy_options)) {
             return PyErr_AwsLastError();
         }
     }
@@ -590,11 +593,12 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
     AWS_ZERO_STRUCT(tls_options);
 
     /* From hereon, we need to clean up if errors occur */
+    bool success = false;
 
     if (tls_ctx_py != Py_None) {
         tls_ctx = aws_py_get_tls_ctx(tls_ctx_py);
         if (!tls_ctx) {
-            goto error;
+            goto done;
         }
 
         aws_tls_connection_options_init_from_ctx(&tls_options, tls_ctx);
@@ -602,7 +606,7 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
         struct aws_byte_cursor server_name_cur = aws_byte_cursor_from_c_str(server_name);
         if (aws_tls_connection_options_set_server_name(&tls_options, allocator, &server_name_cur)) {
             PyErr_SetAwsLastError();
-            goto error;
+            goto done;
         }
     }
 
@@ -620,19 +624,23 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
         .client_id = client_id_cur,
         .keep_alive_time_secs = keep_alive_time,
         .ping_timeout_ms = ping_timeout,
+        .protocol_operation_timeout_ms = protocol_operation_timeout,
         .on_connection_complete = s_on_connect,
         .user_data = py_connection,
         .clean_session = PyObject_IsTrue(is_clean_session),
     };
     if (aws_mqtt_client_connection_connect(py_connection->native, &options)) {
         PyErr_SetAwsLastError();
-        goto error;
+        goto done;
     }
 
-    Py_RETURN_NONE;
-
-error:
+    success = true;
+done:
     aws_tls_connection_options_clean_up(&tls_options);
+    if (success) {
+        Py_RETURN_NONE;
+    }
+
     Py_CLEAR(py_connection->on_connect);
     return NULL;
 }
@@ -681,8 +689,6 @@ PyObject *aws_py_mqtt_client_connection_reconnect(PyObject *self, PyObject *args
  ******************************************************************************/
 
 struct publish_complete_userdata {
-    Py_buffer topic;
-    Py_buffer payload;
     PyObject *callback;
 };
 
@@ -711,8 +717,6 @@ static void s_publish_complete(
     }
 
     Py_DECREF(metadata->callback);
-    PyBuffer_Release(&metadata->topic);
-    PyBuffer_Release(&metadata->payload);
 
     PyGILState_Release(state);
 
@@ -755,16 +759,14 @@ PyObject *aws_py_mqtt_client_connection_publish(PyObject *self, PyObject *args) 
         goto metadata_alloc_failed;
     }
 
-    metadata->topic = topic_stack;
-    metadata->payload = payload_stack;
     metadata->callback = puback_callback;
     Py_INCREF(metadata->callback);
 
     struct aws_byte_cursor topic_cursor;
-    topic_cursor = aws_byte_cursor_from_array(metadata->topic.buf, metadata->topic.len);
+    topic_cursor = aws_byte_cursor_from_array(topic_stack.buf, topic_stack.len);
 
     struct aws_byte_cursor payload_cursor;
-    payload_cursor = aws_byte_cursor_from_array(metadata->payload.buf, metadata->payload.len);
+    payload_cursor = aws_byte_cursor_from_array(payload_stack.buf, payload_stack.len);
 
     enum aws_mqtt_qos qos = (enum aws_mqtt_qos)qos_val;
 
@@ -775,6 +777,8 @@ PyObject *aws_py_mqtt_client_connection_publish(PyObject *self, PyObject *args) 
         PyErr_SetAwsLastError();
         goto publish_failed;
     }
+    PyBuffer_Release(&topic_stack);
+    PyBuffer_Release(&payload_stack);
 
     return PyLong_FromUnsignedLong(msg_id);
 

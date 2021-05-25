@@ -7,7 +7,7 @@ on:
       - '!main'
 
 env:
-  BUILDER_VERSION: v0.7.0
+  BUILDER_VERSION: v0.8.16
   BUILDER_SOURCE: releases
   BUILDER_HOST: https://d19elf31gohf1l.cloudfront.net
   PACKAGE_NAME: aws-crt-python
@@ -18,23 +18,52 @@ env:
   AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
 
 jobs:
-  linux-compat:
+  manylinux1:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         image:
-          - manylinux1-x64
-          - manylinux1-x86
-          - manylinux2014-x64
-          - manylinux2014-x86
+          - x64
+          - x86
+        python:
+          - cp36-cp36m
+          - cp37-cp37m
+          - cp38-cp38
+          - cp39-cp39
     steps:
-        # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
     - name: Build ${{ env.PACKAGE_NAME }}
       run: |
         echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u awslabs --password-stdin
-        export DOCKER_IMAGE=docker.pkg.github.com/awslabs/aws-crt-builder/aws-crt-${{ matrix.image }}:${{ env.BUILDER_VERSION }}
+        export DOCKER_IMAGE=docker.pkg.github.com/awslabs/aws-crt-builder/aws-crt-manylinux1-${{ matrix.image }}:${{ env.BUILDER_VERSION }}
         docker pull $DOCKER_IMAGE
-        docker run --env GITHUB_REF --env AWS_ACCESS_KEY_ID --env AWS_SECRET_ACCESS_KEY --env AWS_DEFAULT_REGION $DOCKER_IMAGE build -p ${{ env.PACKAGE_NAME }}
+        docker run --env GITHUB_REF --env AWS_ACCESS_KEY_ID --env AWS_SECRET_ACCESS_KEY --env AWS_DEFAULT_REGION $DOCKER_IMAGE build -p ${{ env.PACKAGE_NAME }} --python /opt/python/${{ matrix.python }}/bin/python
+
+  manylinux2014:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - x64
+          - x86
+          - aarch64
+        python:
+          - cp36-cp36m
+          - cp37-cp37m
+          - cp38-cp38
+          - cp39-cp39
+    steps:
+    # Only aarch64 needs this, but it doesn't hurt anything
+    - name: Install qemu/docker
+      run: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+
+    - name: Build ${{ env.PACKAGE_NAME }}
+      run: |
+        echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u awslabs --password-stdin
+        export DOCKER_IMAGE=docker.pkg.github.com/awslabs/aws-crt-builder/aws-crt-manylinux2014-${{ matrix.image }}:${{ env.BUILDER_VERSION }}
+        docker pull $DOCKER_IMAGE
+        docker run --env GITHUB_REF --env AWS_ACCESS_KEY_ID --env AWS_SECRET_ACCESS_KEY --env AWS_DEFAULT_REGION $DOCKER_IMAGE build -p ${{ env.PACKAGE_NAME }} --python /opt/python/${{ matrix.python }}/bin/python
 
   al2:
     runs-on: ubuntu-latest
@@ -108,3 +137,32 @@ jobs:
         python3 -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder')"
         chmod a+x builder
         ./builder build -p ${{ env.PACKAGE_NAME }}
+
+  package-source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+      - name: Package source + install
+        env:
+          # aws-lc forbids some gcc versions due to security bugs
+          CC: gcc-10
+        run: |
+          python3 setup.py sdist
+          cd dist
+          python3 -m pip install -v awscrt-1.0.0.dev0.tar.gz
+          python3 -c "import awscrt.io"
+
+  check-submodules:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Source
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+        fetch-depth: 0
+    - name: Check Submodules
+      # note: using "@main" because "@${{env.BUILDER_VERSION}}" doesn't work
+      # https://github.com/actions/runner/issues/480
+      uses: awslabs/aws-crt-builder/.github/actions/check-submodules@main

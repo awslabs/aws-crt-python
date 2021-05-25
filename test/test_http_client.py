@@ -14,9 +14,6 @@ import threading
 import unittest
 from urllib.parse import urlparse
 
-PROXY_HOST = os.environ.get('proxyhost')
-PROXY_PORT = int(os.environ.get('proxyport', '0'))
-
 
 class Response:
     """Holds contents of incoming response"""
@@ -61,8 +58,8 @@ class TestClient(NativeResourceTest):
         self.server = HTTPServer((self.hostname, 0), TestRequestHandler)
         if secure:
             self.server.socket = ssl.wrap_socket(self.server.socket,
-                                                 keyfile="test/resources/crt.unittests.key",
-                                                 certfile='test/resources/crt.unittests.crt',
+                                                 keyfile="test/resources/unittest.key",
+                                                 certfile='test/resources/unittest.crt',
                                                  server_side=True)
         self.port = self.server.server_address[1]
 
@@ -80,7 +77,7 @@ class TestClient(NativeResourceTest):
     def _new_client_connection(self, secure, proxy_options=None):
         if secure:
             tls_ctx_opt = TlsContextOptions()
-            tls_ctx_opt.override_default_trust_store_from_path(None, 'test/resources/ca.crt')
+            tls_ctx_opt.override_default_trust_store_from_path(None, 'test/resources/rootCA.crt')
             tls_ctx = ClientTlsContext(tls_ctx_opt)
             tls_conn_opt = tls_ctx.new_connection_options()
             tls_conn_opt.set_server_name(self.hostname)
@@ -312,11 +309,6 @@ class TestClient(NativeResourceTest):
 
     def test_stream_cleans_up_if_never_activated_https(self):
         self._test_stream_cleans_up_if_never_activated(secure=True)
-
-    @unittest.skipIf(PROXY_HOST is None, 'requires "proxyhost" and "proxyport" env vars')
-    def test_proxy_http(self):
-        proxy_options = HttpProxyOptions(host_name=PROXY_HOST, port=PROXY_PORT)
-        self._test_get(secure=False, proxy_options=proxy_options)
 
     def _new_h2_client_connection(self, url):
         event_loop_group = EventLoopGroup()

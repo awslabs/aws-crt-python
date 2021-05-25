@@ -1,5 +1,6 @@
 
 import Builder
+import argparse
 import os
 import sys
 
@@ -27,27 +28,26 @@ class InstallPythonReqs(Builder.Action):
 
 
 class AWSCrtPython(Builder.Action):
-    def __init__(self, custom_python=None, name=None):
-        """
-        Prefer the current python3 executable (so that venv is used).
-        But allow a custom python to be used for installing and testing awscrt on.
-        """
-        self.python3 = sys.executable
-        self.custom_python = custom_python if custom_python else self.python3
-        self.name = name if name else 'aws-crt-python'
 
     def run(self, env):
-        install_options = []
+        # allow custom python to be used
+        parser = argparse.ArgumentParser()
+        parser.add_argument('--python')
+        args = parser.parse_known_args(env.args.args)[0]
+        python = args.python if args.python else sys.executable
+
+        # tests must run with leak detection turned on
+        env.shell.setenv('AWS_CRT_MEMORY_TRACING', '2')
+
         actions = [
-            InstallPythonReqs(deps=['boto3'], python=self.custom_python),
-            [self.custom_python, '-m', 'pip', 'install', '.', '--install-option=--verbose',
-                '--install-option=build_ext', *install_options],
+            InstallPythonReqs(deps=['boto3'], python=python),
+            [python, '-m', 'pip', 'install', '--verbose', '.'],
             # "--failfast" because, given how our leak-detection in tests currently works,
             # once one test fails all the rest usually fail too.
-            [self.custom_python, '-m', 'unittest', 'discover', '--verbose', '--failfast'],
-            # http_client_test.py is python3-only. It launches external processes using the extra args
-            [self.python3, 'crt/aws-c-http/integration-testing/http_client_test.py',
-                self.custom_python, 'elasticurl.py'],
+            [python, '-m', 'unittest', 'discover', '--verbose', '--failfast'],
+            # http_client_test.py launches external processes using the extra args
+            [python, 'crt/aws-c-http/integration-testing/http_client_test.py',
+                python, 'elasticurl.py'],
         ]
 
-        return Builder.Script(actions, name=self.name)
+        return Builder.Script(actions, name='aws-crt-python')
