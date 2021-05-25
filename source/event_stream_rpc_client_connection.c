@@ -128,12 +128,14 @@ static void s_on_connection_setup(
     struct aws_event_stream_rpc_client_connection *native,
     int error_code,
     void *user_data) {
-
     struct connection_binding *connection = user_data;
-    connection->native = native;
-    aws_event_stream_rpc_client_connection_acquire(connection->native);
 
     AWS_FATAL_ASSERT(((bool)native != (bool)error_code) && "illegal event-stream connection args");
+
+    if (native) {
+        connection->native = native;
+        aws_event_stream_rpc_client_connection_acquire(connection->native);
+    }
 
     PyGILState_STATE state;
     if (aws_py_gilstate_ensure(&state)) {
@@ -152,8 +154,9 @@ static void s_on_connection_setup(
             (void *)connection->native);
 
         PyErr_WriteUnraisable(connection->self_py);
-
-        aws_event_stream_rpc_client_connection_close(connection->native, AWS_ERROR_CRT_CALLBACK_EXCEPTION);
+        if (native) {
+            aws_event_stream_rpc_client_connection_close(connection->native, AWS_ERROR_CRT_CALLBACK_EXCEPTION);
+        }
     }
 
     if (!native) {
