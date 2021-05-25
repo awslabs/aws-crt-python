@@ -91,10 +91,7 @@ class ContinuationHandler(ClientContinuationHandler):
             self.fail_test("shutdown can only fire once")
         self.record.close_call.set()
 
-
-@skipUnless(RUN_LOCALHOST_TESTS, "Skipping until we have permanent echo server")
-class TestClient(NativeResourceTest):
-
+class FailureClientTests(NativeResourceTest):
     def _fail_test_from_callback(self, msg):
         print("ERROR FROM CALLBACK", msg)
         self._failure_from_callback = msg
@@ -120,6 +117,15 @@ class TestClient(NativeResourceTest):
         self.assertTrue(isinstance(handler.record.setup_call['error'], Exception))
         self.assertIsNone(handler.record.shutdown_call)
         self._assertNoFailuresFromCallbacks()
+
+@skipUnless(RUN_LOCALHOST_TESTS, "Skipping until we have permanent echo server")
+class TestClient(NativeResourceTest):
+    def _fail_test_from_callback(self, msg):
+        print("ERROR FROM CALLBACK", msg)
+        self._failure_from_callback = msg
+
+    def _assertNoFailuresFromCallbacks(self):
+        self.assertIsNone(getattr(self, '_failure_from_callback', None))
 
     def test_connect_success(self):
         elg = EventLoopGroup()

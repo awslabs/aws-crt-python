@@ -154,8 +154,9 @@ static void s_on_connection_setup(
             (void *)connection->native);
 
         PyErr_WriteUnraisable(connection->self_py);
-
-        aws_event_stream_rpc_client_connection_close(connection->native, AWS_ERROR_CRT_CALLBACK_EXCEPTION);
+        if (native) {
+            aws_event_stream_rpc_client_connection_close(connection->native, AWS_ERROR_CRT_CALLBACK_EXCEPTION);
+        }
     }
 
     if (!native) {
