@@ -13,7 +13,7 @@ from test import NativeResourceTest
 import threading
 import unittest
 from urllib.parse import urlparse
-
+from awscrt.io import LogLevel
 
 class Response:
     """Holds contents of incoming response"""
@@ -112,6 +112,7 @@ class TestClient(NativeResourceTest):
         self._test_connect(secure=False)
 
     def test_connect_https(self):
+        awscrt.io.init_logging(LogLevel.Trace, 'stderr')
         self._test_connect(secure=True)
 
     def _test_connection_closes_on_zero_refcount(self, secure):
