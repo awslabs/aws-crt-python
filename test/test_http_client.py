@@ -77,7 +77,7 @@ class TestClient(NativeResourceTest):
     def _new_client_connection(self, secure, proxy_options=None):
         if secure:
             tls_ctx_opt = TlsContextOptions()
-            tls_ctx_opt.override_default_trust_store_from_path(None, 'test/resources/rootCA.crt')
+            tls_ctx_opt.verify_peer = False
             tls_ctx = ClientTlsContext(tls_ctx_opt)
             tls_conn_opt = tls_ctx.new_connection_options()
             tls_conn_opt.set_server_name(self.hostname)
@@ -113,7 +113,6 @@ class TestClient(NativeResourceTest):
         self._test_connect(secure=False)
 
     def test_connect_https(self):
-        awscrt.io.init_logging(LogLevel.Trace, 'stderr')
         self._test_connect(secure=True)
 
     def _test_connection_closes_on_zero_refcount(self, secure):
