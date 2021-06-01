@@ -141,8 +141,7 @@ class HttpClientConnection(HttpConnectionBase):
                     connection._version = HttpVersion(http_version)
                     future.set_result(connection)
                 else:
-                    print("Python on_connection_setup called with an error: {}!".format(error_code))
-                    sys.exit(1)
+                    print("***** Python on_connection_setup called with an error: {}!".format(error_code), file=sys.stderr)
                     future.set_exception(awscrt.exceptions.from_code(error_code))
 
             # on_shutdown MUST NOT reference the connection itself, just the shutdown_future within it.
