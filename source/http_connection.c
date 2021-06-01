@@ -7,7 +7,6 @@
 #include "io.h"
 
 #include <aws/common/array_list.h>
-#include <aws/common/logging.h>
 #include <aws/http/connection.h>
 #include <aws/http/proxy.h>
 #include <aws/http/request_response.h>
@@ -72,12 +71,6 @@ static void s_connection_capsule_destructor(PyObject *capsule) {
 
 static void s_on_connection_shutdown(struct aws_http_connection *native_connection, int error_code, void *user_data) {
     (void)native_connection;
-
-    AWS_LOGF_INFO(
-        AWS_LS_HTTP_CONNECTION,
-        "s_on_connection_shutdown with ec (%d) and connection (%p)",
-        error_code,
-        (void *)native_connection);
 
     struct http_connection_binding *connection = user_data;
     AWS_FATAL_ASSERT(!connection->shutdown_called);
