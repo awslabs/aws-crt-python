@@ -133,11 +133,14 @@ class HttpClientConnection(HttpConnectionBase):
             connection._port = port
 
             def on_connection_setup(binding, error_code, http_version):
+                print("Python on_connection_setup called!")
                 if error_code == 0:
+                    print("Python on_connection_setup called with a new connection!")
                     connection._binding = binding
                     connection._version = HttpVersion(http_version)
                     future.set_result(connection)
                 else:
+                    print("Python on_connection_setup called with an error: {}!".format(error_code))
                     future.set_exception(awscrt.exceptions.from_code(error_code))
 
             # on_shutdown MUST NOT reference the connection itself, just the shutdown_future within it.
