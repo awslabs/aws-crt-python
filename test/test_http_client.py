@@ -97,17 +97,18 @@ class TestClient(NativeResourceTest):
 
     def _test_connect(self, secure):
         self._start_server(secure)
-        connection = self._new_client_connection(secure)
+        try:
+            connection = self._new_client_connection(secure)
 
-        # close connection
-        shutdown_error_from_close_future = connection.close().exception(self.timeout)
+            # close connection
+            shutdown_error_from_close_future = connection.close().exception(self.timeout)
 
-        # assert that error was reported via close_future and shutdown callback
-        # error should be None (normal shutdown)
-        self.assertEqual(None, shutdown_error_from_close_future)
-        self.assertFalse(connection.is_open())
-
-        self._stop_server()
+            # assert that error was reported via close_future and shutdown callback
+            # error should be None (normal shutdown)
+            self.assertEqual(None, shutdown_error_from_close_future)
+            self.assertFalse(connection.is_open())
+        finally:
+            self._stop_server()
 
     def test_connect_http(self):
         self._test_connect(secure=False)
