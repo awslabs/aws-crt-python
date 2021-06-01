@@ -78,7 +78,6 @@ class TestClient(NativeResourceTest):
         if secure:
             tls_ctx_opt = TlsContextOptions()
             tls_ctx_opt.override_default_trust_store_from_path(None, 'test/resources/rootCA.crt')
-            tls_ctx_opt.verify_peer = False
             tls_ctx = ClientTlsContext(tls_ctx_opt)
             tls_conn_opt = tls_ctx.new_connection_options()
             tls_conn_opt.set_server_name(self.hostname)
@@ -93,7 +92,7 @@ class TestClient(NativeResourceTest):
                                                      bootstrap=bootstrap,
                                                      tls_connection_options=tls_conn_opt,
                                                      proxy_options=proxy_options)
-        return connection_future.result(3)
+        return connection_future.result(self.timeout)
 
     def _test_connect(self, secure):
         self._start_server(secure)
