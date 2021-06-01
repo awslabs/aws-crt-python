@@ -7,6 +7,7 @@
 #include "io.h"
 
 #include <aws/common/array_list.h>
+#include <aws/common/logging.h>
 #include <aws/http/connection.h>
 #include <aws/http/proxy.h>
 #include <aws/http/request_response.h>
@@ -71,6 +72,13 @@ static void s_connection_capsule_destructor(PyObject *capsule) {
 
 static void s_on_connection_shutdown(struct aws_http_connection *native_connection, int error_code, void *user_data) {
     (void)native_connection;
+
+    AWS_LOGF_INFO(
+        AWS_LS_HTTP_CONNECTION,
+        "s_on_connection_shutdown with ec (%d) and connection (%p)",
+        error_code,
+        (void *)native_connection);
+
     struct http_connection_binding *connection = user_data;
     AWS_FATAL_ASSERT(!connection->shutdown_called);
 
@@ -105,6 +113,12 @@ static void s_on_client_connection_setup(
     int error_code,
     void *user_data) {
 
+    AWS_LOGF_INFO(
+        AWS_LS_HTTP_CONNECTION,
+        "s_on_client_connection_setup with ec (%d) and connection (%p)",
+        error_code,
+        (void *)native_connection);
+
     struct http_connection_binding *connection = user_data;
     AWS_FATAL_ASSERT((native_connection != NULL) ^ error_code);
     AWS_FATAL_ASSERT(connection->on_setup);
@@ -126,14 +140,18 @@ static void s_on_client_connection_setup(
         http_version = aws_http_connection_get_version(native_connection);
     }
 
+    AWS_LOGF_INFO(AWS_LS_HTTP_CONNECTION, "s_on_client_connection_setup invoking on_setup");
+
     /* Invoke on_setup, then clear our reference to it */
     PyObject *result =
         PyObject_CallFunction(connection->on_setup, "(Oii)", capsule ? capsule : Py_None, error_code, http_version);
 
     if (result) {
         Py_DECREF(result);
+        AWS_LOGF_INFO(AWS_LS_HTTP_CONNECTION, "s_on_client_connection_setup on_setup SUCCESS!");
     } else {
         /* Callback might fail during application shutdown */
+        AWS_LOGF_INFO(AWS_LS_HTTP_CONNECTION, "s_on_client_connection_setup on_setup FAILURE!");
         PyErr_WriteUnraisable(PyErr_Occurred());
     }
 

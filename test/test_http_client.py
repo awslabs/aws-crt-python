@@ -92,7 +92,7 @@ class TestClient(NativeResourceTest):
                                                      bootstrap=bootstrap,
                                                      tls_connection_options=tls_conn_opt,
                                                      proxy_options=proxy_options)
-        return connection_future.result(self.timeout)
+        return connection_future.result(3)
 
     def _test_connect(self, secure):
         self._start_server(secure)
