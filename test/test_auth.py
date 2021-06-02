@@ -476,10 +476,10 @@ class TestSigner(NativeResourceTest):
         http_request = awscrt.http.HttpRequest('GET', '/')
         http_request.headers.add('Host', 'example.amazonaws.com')
 
-        signing_future=awscrt.auth.aws_sign_request(http_request, signing_config)
-        signed_request=signing_future.result(TIMEOUT)
+        signing_future = awscrt.auth.aws_sign_request(http_request, signing_config)
+        signed_request = signing_future.result(TIMEOUT)
 
-        auth_header_value=signed_request.headers.get('Authorization')
+        auth_header_value = signed_request.headers.get('Authorization')
         self.assertIsNotNone(auth_header_value)
         self.assertTrue(auth_header_value.startswith(
             'AWS4-ECDSA-P256-SHA256 Credential=AKIDEXAMPLE/20150830/service/aws4_request, SignedHeaders=host;x-amz-date;x-amz-region-set, Signature='))
