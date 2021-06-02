@@ -14,6 +14,7 @@ import threading
 import unittest
 from urllib.parse import urlparse
 
+
 class Response:
     """Holds contents of incoming response"""
 
