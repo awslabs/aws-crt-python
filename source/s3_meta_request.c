@@ -372,7 +372,7 @@ static int s_aws_input_stream_file_read(struct aws_input_stream *stream, struct 
 }
 static int s_aws_input_stream_file_seek(
     struct aws_input_stream *stream,
-    aws_off_t offset,
+    int64_t offset,
     enum aws_stream_seek_basis basis) {
     struct aws_input_py_stream_file_impl *impl = stream->impl;
     return aws_input_stream_seek(impl->actual_stream, offset, basis);
