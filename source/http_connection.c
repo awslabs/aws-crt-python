@@ -71,7 +71,6 @@ static void s_connection_capsule_destructor(PyObject *capsule) {
 
 static void s_on_connection_shutdown(struct aws_http_connection *native_connection, int error_code, void *user_data) {
     (void)native_connection;
-
     struct http_connection_binding *connection = user_data;
     AWS_FATAL_ASSERT(!connection->shutdown_called);
 
