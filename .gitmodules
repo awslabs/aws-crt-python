@@ -21,7 +21,7 @@
 	url = https://github.com/awslabs/aws-c-compression.git
 [submodule "aws-common-runtime/aws-c-auth"]
 	path = crt/aws-c-auth
-	url = git@github.com:awslabs/aws-c-auth-staging.git
+	url = https://github.com/awslabs/aws-c-auth.git
 [submodule "aws-common-runtime/aws-c-s3"]
 	path = crt/aws-c-s3
 	url = https://github.com/awslabs/aws-c-s3.git
