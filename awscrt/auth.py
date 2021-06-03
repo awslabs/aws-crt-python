@@ -332,7 +332,10 @@ class AwsSigningAlgorithm(IntEnum):
     """AWS signing algorithm enumeration."""
 
     V4 = 0
-    """Use Signature Version 4"""
+    """Signature Version 4"""
+
+    V4_ASYMMETRIC = 1
+    """Signature Version 4 - Asymmetric"""
 
 
 class AwsSignatureType(IntEnum):
@@ -401,9 +404,13 @@ class AwsSigningConfig(NativeResource):
             computed from the signable.
 
         credentials_provider (AwsCredentialsProvider): Credentials provider
-            to fetch signing credentials with.
+            to fetch signing credentials with. If the algorithm is
+            :attr:`AwsSigningAlgorithm.V4_ASYMMETRIC`, ECC-based credentials will be derived from the
+            fetched credentials.
 
-        region (str): The region to sign against.
+        region (str): If the algorithm is :attr:`AwsSigningAlgorithm.V4`, the region to sign against.
+            If the algorithm is :attr:`AwsSigningAlgorithm.V4_ASYMMETRIC`, the value of the
+            "X-amzn-region-set" header (added in signing).
 
         service (str): Name of service to sign a request for.
 
@@ -429,7 +436,7 @@ class AwsSigningConfig(NativeResource):
             encoded). Default is True. All services except S3 use double encoding.
 
         should_normalize_uri_path (bool): Whether the resource paths are
-            normalized when building the canonical request.
+            normalized when building the canonical request. Default is True.
 
         signed_body_value (Optional[str]): If set, this value is used as the
             canonical request's body value. Typically, this is the SHA-256
@@ -550,12 +557,20 @@ class AwsSigningConfig(NativeResource):
 
     @property
     def credentials_provider(self):
-        """AwsCredentialsProvider: Credentials provider to fetch signing credentials with"""
+        """
+        AwsCredentialsProvider: Credentials provider to fetch signing credentials with.
+        If the algorithm is :attr:`AwsSigningAlgorithm.V4_ASYMMETRIC`, ECC-based credentials will be derived
+        from the fetched credentials.
+        """
         return _awscrt.signing_config_get_credentials_provider(self._binding)
 
     @property
     def region(self):
-        """str: The region to sign against"""
+        """
+        str: If signing algorithm is :attr:`AwsSigningAlgorithm.V4`, the region to sign against.
+        If the algorithm is :attr:`AwsSigningAlgorithm.V4_ASYMMETRIC`, the value of the
+        "X-amzn-region-set header" (added in signing).
+        """
         return _awscrt.signing_config_get_region(self._binding)
 
     @property
