@@ -300,7 +300,13 @@ The operation may complete on a different thread.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="awscrt.auth.AwsSigningAlgorithm.V4">
 <span class="sig-name descname"><span class="pre">V4</span></span><em class="property"> <span class="pre">=</span> <span class="pre">0</span></em><a class="headerlink" href="#awscrt.auth.AwsSigningAlgorithm.V4" title="Permalink to this definition">¶</a></dt>
-<dd><p>Use Signature Version 4</p>
+<dd><p>Signature Version 4</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.auth.AwsSigningAlgorithm.V4_ASYMMETRIC">
+<span class="sig-name descname"><span class="pre">V4_ASYMMETRIC</span></span><em class="property"> <span class="pre">=</span> <span class="pre">1</span></em><a class="headerlink" href="#awscrt.auth.AwsSigningAlgorithm.V4_ASYMMETRIC" title="Permalink to this definition">¶</a></dt>
+<dd><p>Signature Version 4 - Asymmetric</p>
 </dd></dl>
 
 </dd></dl>
@@ -389,8 +395,12 @@ is not being signed in the usual way.</p>
 <li><p><strong>signature_type</strong> (<a class="reference internal" href="#awscrt.auth.AwsSignatureType" title="awscrt.auth.AwsSignatureType"><em>AwsSignatureType</em></a>) – Which sort of signature should be
 computed from the signable.</p></li>
 <li><p><strong>credentials_provider</strong> (<a class="reference internal" href="#awscrt.auth.AwsCredentialsProvider" title="awscrt.auth.AwsCredentialsProvider"><em>AwsCredentialsProvider</em></a>) – Credentials provider
-to fetch signing credentials with.</p></li>
-<li><p><strong>region</strong> (<em>str</em>) – The region to sign against.</p></li>
+to fetch signing credentials with. If the algorithm is
+<a class="reference internal" href="#awscrt.auth.AwsSigningAlgorithm.V4_ASYMMETRIC" title="awscrt.auth.AwsSigningAlgorithm.V4_ASYMMETRIC"><code class="xref py py-attr docutils literal notranslate"><span class="pre">AwsSigningAlgorithm.V4_ASYMMETRIC</span></code></a>, ECC-based credentials will be derived from the
+fetched credentials.</p></li>
+<li><p><strong>region</strong> (<em>str</em>) – If the algorithm is <a class="reference internal" href="#awscrt.auth.AwsSigningAlgorithm.V4" title="awscrt.auth.AwsSigningAlgorithm.V4"><code class="xref py py-attr docutils literal notranslate"><span class="pre">AwsSigningAlgorithm.V4</span></code></a>, the region to sign against.
+If the algorithm is <a class="reference internal" href="#awscrt.auth.AwsSigningAlgorithm.V4_ASYMMETRIC" title="awscrt.auth.AwsSigningAlgorithm.V4_ASYMMETRIC"><code class="xref py py-attr docutils literal notranslate"><span class="pre">AwsSigningAlgorithm.V4_ASYMMETRIC</span></code></a>, the value of the
+“X-amzn-region-set” header (added in signing).</p></li>
 <li><p><strong>service</strong> (<em>str</em>) – Name of service to sign a request for.</p></li>
 <li><p><strong>date</strong> (<em>Optional</em><em>[</em><em>datetime.datetime</em><em>]</em>) – Date and time to use during the
 signing process. If None is provided then
@@ -410,7 +420,7 @@ and this function (if defined).</p>
 when constructing the canonical request (assuming the path is already
 encoded). Default is True. All services except S3 use double encoding.</p></li>
 <li><p><strong>should_normalize_uri_path</strong> (<em>bool</em>) – Whether the resource paths are
-normalized when building the canonical request.</p></li>
+normalized when building the canonical request. Default is True.</p></li>
 <li><p><strong>signed_body_value</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – If set, this value is used as the
 canonical request’s body value. Typically, this is the SHA-256
 of the payload, written as lowercase hex. If this has been
@@ -462,7 +472,9 @@ attributes given new values by whichever keyword arguments are specified.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="awscrt.auth.AwsSigningConfig.credentials_provider">
 <em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">credentials_provider</span></span><a class="headerlink" href="#awscrt.auth.AwsSigningConfig.credentials_provider" title="Permalink to this definition">¶</a></dt>
-<dd><p>Credentials provider to fetch signing credentials with</p>
+<dd><p>Credentials provider to fetch signing credentials with.
+If the algorithm is <a class="reference internal" href="#awscrt.auth.AwsSigningAlgorithm.V4_ASYMMETRIC" title="awscrt.auth.AwsSigningAlgorithm.V4_ASYMMETRIC"><code class="xref py py-attr docutils literal notranslate"><span class="pre">AwsSigningAlgorithm.V4_ASYMMETRIC</span></code></a>, ECC-based credentials will be derived
+from the fetched credentials.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
 <dd class="field-odd"><p><a class="reference internal" href="#awscrt.auth.AwsCredentialsProvider" title="awscrt.auth.AwsCredentialsProvider">AwsCredentialsProvider</a></p>
@@ -473,7 +485,9 @@ attributes given new values by whichever keyword arguments are specified.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="awscrt.auth.AwsSigningConfig.region">
 <em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">region</span></span><a class="headerlink" href="#awscrt.auth.AwsSigningConfig.region" title="Permalink to this definition">¶</a></dt>
-<dd><p>The region to sign against</p>
+<dd><p>If signing algorithm is <a class="reference internal" href="#awscrt.auth.AwsSigningAlgorithm.V4" title="awscrt.auth.AwsSigningAlgorithm.V4"><code class="xref py py-attr docutils literal notranslate"><span class="pre">AwsSigningAlgorithm.V4</span></code></a>, the region to sign against.
+If the algorithm is <a class="reference internal" href="#awscrt.auth.AwsSigningAlgorithm.V4_ASYMMETRIC" title="awscrt.auth.AwsSigningAlgorithm.V4_ASYMMETRIC"><code class="xref py py-attr docutils literal notranslate"><span class="pre">AwsSigningAlgorithm.V4_ASYMMETRIC</span></code></a>, the value of the
+“X-amzn-region-set header” (added in signing).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
 <dd class="field-odd"><p>str</p>
