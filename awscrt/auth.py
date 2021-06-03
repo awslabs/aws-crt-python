@@ -405,12 +405,12 @@ class AwsSigningConfig(NativeResource):
 
         credentials_provider (AwsCredentialsProvider): Credentials provider
             to fetch signing credentials with. If the signing algorithm is
-            V4_ASYMMETRIC, ecc-based credentials will be derived from the
+            `:attr:AwsSigningAlgorithm.V4_ASYMMETRIC`, ECC-based credentials will be derived from the
             fetched credentials.
 
-        region (str): If signing algorithm is V4, the region to sign against.
-            If signing algorithm is V4_ASYMMETRIC, the value of the
-            X-amzn-region-set header (added in signing).
+        region (str): If signing algorithm is `:attr:AwsSigningAlgorithm.V4`, the region to sign against.
+            If signing algorithm is `:attr:AwsSigningAlgorithm.V4_ASYMMETRIC`, the value of the
+            "X-amzn-region-set" header (added in signing).
 
         service (str): Name of service to sign a request for.
 
@@ -559,7 +559,7 @@ class AwsSigningConfig(NativeResource):
     def credentials_provider(self):
         """
         AwsCredentialsProvider: Credentials provider to fetch signing credentials with.
-        If the signing algorithm is V4_ASYMMETRIC, ecc-based credentials will be derived
+        If the signing algorithm is `:attr:AwsSigningAlgorithm.V4_ASYMMETRIC`, ECC-based credentials will be derived
         from the fetched credentials.
         """
         return _awscrt.signing_config_get_credentials_provider(self._binding)
@@ -567,9 +567,9 @@ class AwsSigningConfig(NativeResource):
     @property
     def region(self):
         """
-        str: If signing algorithm is V4, the region to sign against.
-        If signing algorithm is V4_ASYMMETRIC, the value of the
-        X-amzn-region-set header (added in signing).
+        str: If signing algorithm is `:attr:AwsSigningAlgorithm.V4`, the region to sign against.
+        If signing algorithm is `:attr:AwsSigningAlgorithm.V4_ASYMMETRIC`, the value of the
+        "X-amzn-region-set header" (added in signing).
         """
         return _awscrt.signing_config_get_region(self._binding)
 
