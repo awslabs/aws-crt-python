@@ -24,7 +24,7 @@ To install from Github:
 ````bash
 git clone https://github.com/awslabs/aws-crt-python.git
 cd aws-crt-python
-git submodule update --init
+git submodule update --init --recursive
 python3 -m pip install .
 ````
 
