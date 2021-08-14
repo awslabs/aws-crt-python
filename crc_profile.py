@@ -5,6 +5,7 @@
 
 import os
 import time
+import zlib
 from awscrt import checksums
 
 
@@ -78,6 +79,8 @@ def profile(size, chunk_sizes, num_sequences, iterations_per_sequence, checksum_
 
 
 print("crc32")
-profile(2 ** 22, [2 ** 22, 2 ** 20, 2 ** 10, 2 ** 9, 2 ** 8, 2 ** 7], 10000, 1, checksums.crc32)
+profile(2 ** 22, [2 ** 22, 2 ** 20, 2 ** 10, 2 ** 9, 2 ** 8, 2 ** 7], 1000, 1, checksums.crc32)
 print("crc32c")
-profile(2 ** 22, [2 ** 22, 2 ** 20, 2 ** 10, 2 ** 9, 2 ** 8, 2 ** 7], 10000, 1, checksums.crc32c)
+profile(2 ** 22, [2 ** 22, 2 ** 20, 2 ** 10, 2 ** 9, 2 ** 8, 2 ** 7], 1000, 1, checksums.crc32c)
+print("zlib crc32")
+profile(2 ** 22, [2 ** 22, 2 ** 20, 2 ** 10, 2 ** 9, 2 ** 8, 2 ** 7], 1000, 1, zlib.crc32)
