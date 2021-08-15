@@ -73,7 +73,7 @@ def profile(size, chunk_sizes, num_sequences, iterations_per_sequence, checksum_
                     iterations_per_sequence,
                     checksum_fn))]
     for (stat, chunk) in zip(stats, chunk_sizes):
-        stat["variance"] = finalize_summary(iterations_per_sequence, stat["M2"])
+        stat["variance"] = finalize_summary(num_sequences, stat["M2"])
         stat["chunk_size"] = chunk
     print_stats(stats)
 
