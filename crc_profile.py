@@ -33,10 +33,11 @@ def print_stats(stats):
 
 def profile_sequence_chunks(to_hash, chunk_size, iterations, checksum_fn):
     stats = {"mean": 0, "M2": 0, "min": float('inf'), "max": 0}
+    dif = 0
     for x in range(iterations):
-        start = time.time_ns()
         i = 0
         prev = 0
+        start = time.time_ns()
         while(i + chunk_size < len(to_hash)):
             prev = checksum_fn(to_hash[i:i + chunk_size], prev)
             i = i + chunk_size
@@ -78,9 +79,10 @@ def profile(size, chunk_sizes, num_sequences, iterations_per_sequence, checksum_
     print_stats(stats)
 
 
-print("crc32")
-profile(2 ** 22, [2 ** 22, 2 ** 20, 2 ** 10, 2 ** 9, 2 ** 8, 2 ** 7], 1000, 1, checksums.crc32)
-print("crc32c")
-profile(2 ** 22, [2 ** 22, 2 ** 20, 2 ** 10, 2 ** 9, 2 ** 8, 2 ** 7], 1000, 1, checksums.crc32c)
-print("zlib crc32")
-profile(2 ** 22, [2 ** 22, 2 ** 20, 2 ** 10, 2 ** 9, 2 ** 8, 2 ** 7], 1000, 1, zlib.crc32)
+chunks = [2 ** x for x in range(22, 6, -1)]
+print("Python crc32")
+profile(2 ** 22, chunks, 1000, 1, checksums.crc32)
+print("Python crc32c")
+profile(2 ** 22, chunks, 1000, 1, checksums.crc32c)
+print("Python zlib crc32")
+profile(2 ** 22, chunks, 1000, 1, zlib.crc32)
