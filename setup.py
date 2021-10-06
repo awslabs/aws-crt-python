@@ -223,21 +223,6 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
         super().run()
 
 
-cmdclass = {'build_ext': awscrt_build_ext}
-
-if sys.version_info > (3,) and platform.python_implementation() == "CPython":
-    try:
-        import wheel.bdist_wheel
-    except ImportError:
-        pass
-    else:
-        class BDistWheel(wheel.bdist_wheel.bdist_wheel):
-            def finalize_options(self):
-                self.py_limited_api = "cp3{}".format(sys.version_info[1])
-                wheel.bdist_wheel.bdist_wheel.finalize_options(self)
-        cmdclass['bdist_wheel'] = BDistWheel
-
-
 def awscrt_ext():
     # fetch the CFLAGS/LDFLAGS from env
     extra_compile_args = os.environ.get('CFLAGS', '').split()
@@ -317,7 +302,7 @@ setuptools.setup(
     ],
     python_requires='>=3.6',
     ext_modules=[awscrt_ext()],
-    cmdclass=cmdclass,
+    cmdclass={'build_ext': awscrt_build_ext},
     test_suite='test',
     tests_require=[
         'boto3'
