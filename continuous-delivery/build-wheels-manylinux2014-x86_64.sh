@@ -16,6 +16,9 @@ auditwheel repair --plat manylinux2014_x86_64 dist/awscrt-*cp38*.whl
 /opt/python/cp39-cp39/bin/python setup.py sdist bdist_wheel
 auditwheel repair --plat manylinux2014_x86_64 dist/awscrt-*cp39*.whl
 
+/opt/python/cp310-cp310/bin/python setup.py sdist bdist_wheel
+auditwheel repair --plat manylinux2014_x86_64 dist/awscrt-*cp310*.whl
+
 rm dist/*.whl
 cp -rv wheelhouse/* dist/
 

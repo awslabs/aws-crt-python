@@ -31,6 +31,7 @@ jobs:
           - cp37-cp37m
           - cp38-cp38
           - cp39-cp39
+          - cp310-cp310
     steps:
     - name: Build ${{ env.PACKAGE_NAME }}
       run: |
@@ -53,6 +54,7 @@ jobs:
           - cp37-cp37m
           - cp38-cp38
           - cp39-cp39
+          - cp310-cp310
     steps:
     # Only aarch64 needs this, but it doesn't hurt anything
     - name: Install qemu/docker
