@@ -59,6 +59,11 @@ PyObject *aws_py_tls_connection_options_set_server_name(PyObject *self, PyObject
  */
 PyObject *aws_py_input_stream_new(PyObject *self, PyObject *args);
 
+/**
+ * Create a new aws_pkcs11_lib to be managed by a Python capsule.
+ */
+PyObject *aws_py_pkcs11_lib_new(PyObject *self, PyObject *args);
+
 /* Given a python object, return a pointer to its underlying native type.
  * If NULL is returned, a python error has been set */
 

@@ -565,3 +565,48 @@ class InputStream(NativeResource):
         if isinstance(stream, InputStream):
             return stream
         return cls(stream)
+
+
+class Pkcs11Lib(NativeResource):
+    """
+    Handle to a loaded PKCS#11 library.
+
+    For most use cases, a single instance of Pkcs11Lib should be used for the
+    lifetime of your application.
+    """
+
+    class InitializeFinalizeBehavior(IntEnum):
+        """
+        Controls how Pkcs11Lib calls `C_Initialize()` and `C_Finalize()`
+        on the PKCS#11 library.
+        """
+
+        Default = 0
+        """
+        Default behavior that accommodates most use cases.
+
+        `C_Initialize()` is called on creation, and "already-initialized"
+        errors are ignored. `C_Finalize()` is never called, just in case
+        another part of your application is still using the PKCS#11 library.
+        """
+
+        Omit = 1
+        """
+        Skip calling `C_Initialize()` and `C_Finalize()`.
+
+        Use this if your application has already initialized the PKCS#11 library, and
+        you do not want `C_Initialize()` called again.
+        """
+
+        Strict = 2  #:
+        """
+        `C_Initialize()` is called on creation and `C_Finalize()` is
+        called on cleanup.
+
+        If `C_Initialize()` reports that's it's already initialized, this is
+        treated as an error. Use this if you need perfect cleanup (ex: running
+        valgrind with --leak-check).
+        """
+
+    def __init__(self, filename: str, *, behavior: InitializeFinalizeBehavior = InitializeFinalizeBehavior.Default):
+        self._binding = _awscrt.pkcs11_lib_new(filename, behavior)
