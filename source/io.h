@@ -73,5 +73,6 @@ struct aws_client_bootstrap *aws_py_get_client_bootstrap(PyObject *client_bootst
 struct aws_tls_ctx *aws_py_get_tls_ctx(PyObject *tls_ctx);
 struct aws_tls_connection_options *aws_py_get_tls_connection_options(PyObject *tls_connection_options);
 struct aws_input_stream *aws_py_get_input_stream(PyObject *input_stream);
+struct aws_pkcs11_lib *aws_py_get_pkcs11_lib(PyObject *pkcs11_lib);
 
 #endif /* AWS_CRT_PYTHON_IO_H */
