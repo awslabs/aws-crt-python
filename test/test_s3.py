@@ -102,6 +102,7 @@ class FakeReadStream(object):
         return fake_data
 
 
+@unittest.skipUnless(os.environ.get('AWS_TEST_S3'), 'set env var to run test: AWS_TEST_S3')
 class S3ClientTest(NativeResourceTest):
 
     def setUp(self):
@@ -125,8 +126,10 @@ class S3ClientTest(NativeResourceTest):
         self.assertTrue(shutdown_event.wait(self.timeout))
 
 
+@unittest.skipUnless(os.environ.get('AWS_TEST_S3'), 'set env var to run test: AWS_TEST_S3')
 class S3RequestTest(NativeResourceTest):
     def setUp(self):
+        # TODO: use env-vars to customize how these tests are run, instead of relying on hard-coded values
         self.get_test_object_path = "/get_object_test_10MB.txt"
         self.put_test_object_path = "/put_object_test_py_10MB.txt"
         self.region = "us-west-2"

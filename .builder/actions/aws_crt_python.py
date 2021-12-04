@@ -65,6 +65,9 @@ class SetupForTests(Builder.Action):
         # tests must run with leak detection turned on
         env.shell.setenv('AWS_CRT_MEMORY_TRACING', '2')
 
+        # enable S3 tests
+        env.shell.setenv('AWS_TEST_S3', '1')
+
 
 class AWSCrtPython(Builder.Action):
 

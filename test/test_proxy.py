@@ -158,6 +158,7 @@ class ProxyTestConfiguration():
             return 443
 
 
+@unittest.skipIf(not ProxyTestConfiguration.is_proxy_environment_initialized(), 'requires proxy test env vars')
 class ProxyHttpTest(NativeResourceTest):
 
     def _establish_http_connection(self, test_type, uri, proxy_options):
@@ -192,47 +193,36 @@ class ProxyHttpTest(NativeResourceTest):
         self.assertEqual(200, response.status_code)
         self.assertEqual(200, stream_completion_result)
 
-    @unittest.skipIf(not ProxyTestConfiguration.is_proxy_environment_initialized(), 'requires proxy test env vars')
     def test_forwarding_proxy_no_auth(self):
         self._do_proxy_http_test(ProxyTestType.FORWARDING, HttpProxyAuthenticationType.Nothing)
 
-    @unittest.skipIf(not ProxyTestConfiguration.is_proxy_environment_initialized(), 'requires proxy test env vars')
     def test_forwarding_proxy_legacy_http_no_auth(self):
         self._do_proxy_http_test(ProxyTestType.LEGACY_HTTP, HttpProxyAuthenticationType.Nothing)
 
-    @unittest.skipIf(not ProxyTestConfiguration.is_proxy_environment_initialized(), 'requires proxy test env vars')
     def test_proxy_legacy_https_no_auth(self):
         self._do_proxy_http_test(ProxyTestType.LEGACY_HTTPS, HttpProxyAuthenticationType.Nothing)
 
-    @unittest.skipIf(not ProxyTestConfiguration.is_proxy_environment_initialized(), 'requires proxy test env vars')
     def test_tunneling_proxy_http_no_auth(self):
         self._do_proxy_http_test(ProxyTestType.TUNNELING_HTTP, HttpProxyAuthenticationType.Nothing)
 
-    @unittest.skipIf(not ProxyTestConfiguration.is_proxy_environment_initialized(), 'requires proxy test env vars')
     def test_tunneling_proxy_https_no_auth(self):
         self._do_proxy_http_test(ProxyTestType.TUNNELING_HTTPS, HttpProxyAuthenticationType.Nothing)
 
-    @unittest.skipIf(not ProxyTestConfiguration.is_proxy_environment_initialized(), 'requires proxy test env vars')
     def test_tunneling_proxy_double_tls_no_auth(self):
         self._do_proxy_http_test(ProxyTestType.TUNNELING_DOUBLE_TLS, HttpProxyAuthenticationType.Nothing)
 
-    @unittest.skipIf(not ProxyTestConfiguration.is_proxy_environment_initialized(), 'requires proxy test env vars')
     def test_forwarding_proxy_basic_auth(self):
         self._do_proxy_http_test(ProxyTestType.FORWARDING, HttpProxyAuthenticationType.Basic)
 
-    @unittest.skipIf(not ProxyTestConfiguration.is_proxy_environment_initialized(), 'requires proxy test env vars')
     def test_forwarding_proxy_legacy_http_basic_auth(self):
         self._do_proxy_http_test(ProxyTestType.LEGACY_HTTP, HttpProxyAuthenticationType.Basic)
 
-    @unittest.skipIf(not ProxyTestConfiguration.is_proxy_environment_initialized(), 'requires proxy test env vars')
     def test_proxy_legacy_https_basic_auth(self):
         self._do_proxy_http_test(ProxyTestType.LEGACY_HTTPS, HttpProxyAuthenticationType.Basic)
 
-    @unittest.skipIf(not ProxyTestConfiguration.is_proxy_environment_initialized(), 'requires proxy test env vars')
     def test_tunneling_proxy_http_basic_auth(self):
         self._do_proxy_http_test(ProxyTestType.TUNNELING_HTTP, HttpProxyAuthenticationType.Basic)
 
-    @unittest.skipIf(not ProxyTestConfiguration.is_proxy_environment_initialized(), 'requires proxy test env vars')
     def test_tunneling_proxy_https_basic_auth(self):
         self._do_proxy_http_test(ProxyTestType.TUNNELING_HTTPS, HttpProxyAuthenticationType.Basic)
 
@@ -261,15 +251,12 @@ class ProxyHttpTest(NativeResourceTest):
         proxy_options = ProxyTestConfiguration.create_http_proxy_options_from_environment(test_type, auth_type)
         connection = self._establish_mqtt_connection(proxy_options)
 
-    @unittest.skipIf(not ProxyTestConfiguration.is_proxy_environment_initialized(), 'requires proxy test env vars')
     def test_tunneling_http_proxy_mqtt_no_auth(self):
         self._do_proxy_mqtt_test(ProxyTestType.TUNNELING_HTTP, HttpProxyAuthenticationType.Nothing)
 
-    @unittest.skipIf(not ProxyTestConfiguration.is_proxy_environment_initialized(), 'requires proxy test env vars')
     def test_tunneling_http_proxy_mqtt_basic_auth(self):
         self._do_proxy_mqtt_test(ProxyTestType.TUNNELING_HTTP, HttpProxyAuthenticationType.Basic)
 
-    @unittest.skipIf(not ProxyTestConfiguration.is_proxy_environment_initialized(), 'requires proxy test env vars')
     def test_tunneling_http_proxy_mqtt_double_tls(self):
         self._do_proxy_mqtt_test(ProxyTestType.TUNNELING_DOUBLE_TLS, HttpProxyAuthenticationType.Nothing)
 
