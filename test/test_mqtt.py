@@ -7,15 +7,11 @@ from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, Ev
 from awscrt.mqtt import Client, Connection, QoS
 from test import NativeResourceTest
 from concurrent.futures import Future
+import enum
 import os
+import pathlib
 import unittest
-import boto3
-import botocore.exceptions
-import shutil
-import tempfile
-import time
 import uuid
-import warnings
 
 TIMEOUT = 100.0
 
@@ -28,49 +24,30 @@ class MqttClientTest(NativeResourceTest):
         client = Client(bootstrap)
 
 
+AuthType = enum.Enum('AuthType', ['CERT_AND_KEY', 'PKCS11'])
+
+
 class Config:
-    cache = None
+    def __init__(self, auth_type):
+        self.endpoint = self._get_env('AWS_TEST_IOT_MQTT_ENDPOINT')
 
-    def __init__(self, endpoint, cert, key, region, cognito_creds):
-        self.cert = cert
-        self.key = key
-        self.endpoint = endpoint
-        self.region = region
-        self.cognito_creds = cognito_creds
+        if auth_type == AuthType.CERT_AND_KEY:
+            self.cert_path = self._get_env('AWS_TEST_TLS_CERT_PATH')
+            self.cert = pathlib.Path(self.cert_path).read_text().encode('utf-8')
+            self.key_path = self._get_env('AWS_TEST_TLS_KEY_PATH')
+            self.key = pathlib.Path(self.key_path).read_text().encode('utf-8')
 
-    @staticmethod
-    def get():
-        """Raises SkipTest if credentials aren't set up correctly"""
-        if Config.cache:
-            return Config.cache
+        if auth_type == AuthType.PKCS11:
+            self.pkcs11_lib_path = self._get_env('AWS_TEST_PKCS11_LIB')
+            self.pkcs11_pin = self._get_env('AWS_TEST_PKCS11_PIN')
+            self.pkcs11_token_label = self._get_env('AWS_TEST_PKCS11_TOKEN_LABEL')
+            self.pkcs11_key_label = self._get_env('AWS_TEST_PKCS11_KEY_LABEL')
 
-        # boto3 caches the HTTPS connection for the API calls, which appears to the unit test
-        # framework as a leak, so ignore it, that's not what we're testing here
-        warnings.simplefilter('ignore', ResourceWarning)
-
-        try:
-            secrets = boto3.client('secretsmanager')
-            response = secrets.get_secret_value(SecretId='unit-test/endpoint')
-            endpoint = response['SecretString']
-            response = secrets.get_secret_value(SecretId='unit-test/certificate')
-            cert = response['SecretString'].encode('utf8')
-            response = secrets.get_secret_value(SecretId='unit-test/privatekey')
-            key = response['SecretString'].encode('utf8')
-            region = secrets.meta.region_name
-            response = secrets.get_secret_value(SecretId='unit-test/cognitopool')
-            cognito_pool = response['SecretString']
-
-            cognito = boto3.client('cognito-identity')
-            response = cognito.get_id(IdentityPoolId=cognito_pool)
-            cognito_id = response['IdentityId']
-            response = cognito.get_credentials_for_identity(IdentityId=cognito_id)
-            cognito_creds = response['Credentials']
-
-            Config.cache = Config(endpoint, cert, key, region, cognito_creds)
-        except (botocore.exceptions.BotoCoreError, botocore.exceptions.ClientError) as ex:
-            raise unittest.SkipTest("No credentials")
-
-        return Config.cache
+    def _get_env(self, name):
+        val = os.environ.get(name)
+        if not val:
+            raise unittest.SkipTest(f"test requires env var: {name}")
+        return val
 
 
 def create_client_id():
@@ -82,7 +59,7 @@ class MqttConnectionTest(NativeResourceTest):
     TEST_MSG = 'NOTICE ME!'.encode('utf8')
 
     def _test_connection(self):
-        config = Config.get()
+        config = Config(AuthType.CERT_AND_KEY)
         elg = EventLoopGroup()
         resolver = DefaultHostResolver(elg)
         bootstrap = ClientBootstrap(elg, resolver)
@@ -139,7 +116,7 @@ class MqttConnectionTest(NativeResourceTest):
         connection.disconnect().result(TIMEOUT)
 
     def test_on_message(self):
-        config = Config.get()
+        config = Config(AuthType.CERT_AND_KEY)
         elg = EventLoopGroup()
         resolver = DefaultHostResolver(elg)
         bootstrap = ClientBootstrap(elg, resolver)
@@ -183,7 +160,7 @@ class MqttConnectionTest(NativeResourceTest):
 
     def test_on_message_old_fn_signature(self):
         # ensure that message-received callbacks with the old function signature still work
-        config = Config.get()
+        config = Config(AuthType.CERT_AND_KEY)
         elg = EventLoopGroup()
         resolver = DefaultHostResolver(elg)
         bootstrap = ClientBootstrap(elg, resolver)
