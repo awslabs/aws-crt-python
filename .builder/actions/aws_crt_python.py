@@ -54,7 +54,7 @@ class SetupForTests(Builder.Action):
             response = secrets.get_secret_value(SecretId=secret_name)
             file_contents = response['SecretString']
             file_path = os.path.join(tempfile.gettempdir(), file_name)
-            pathlib.File(file_path).write_text(file_contents)
+            pathlib.Path(file_path).write_text(file_contents)
             env.shell.setenv(env_var_name, file_path)
 
         setenv_from_secret('AWS_TEST_IOT_MQTT_ENDPOINT', 'unit-test/endpoint')
@@ -77,8 +77,8 @@ class AWSCrtPython(Builder.Action):
 
         actions = [
             InstallPythonReqs(deps=['boto3'], python=python),
+            SetupForTests(),
             [python, '-m', 'pip', 'install', '--verbose', '.'],
-            SetupForTests(python=python),
             # "--failfast" because, given how our leak-detection in tests currently works,
             # once one test fails all the rest usually fail too.
             [python, '-m', 'unittest', 'discover', '--verbose', '--failfast'],
