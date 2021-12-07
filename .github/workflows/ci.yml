@@ -155,7 +155,7 @@ jobs:
           # aws-lc forbids some gcc versions due to security bugs
           CC: gcc-10
         run: |
-          python3 -m pip install --verbose
+          python3 -m pip install . --verbose
           python3 -m unittest discover --failfast --verbose
 
   package-source:
