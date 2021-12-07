@@ -1,6 +1,12 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 
+# Enable native memory tracing so that tests can detect leaks.
+# This env-var MUST be set before awscrt is imported.
+# the "noqa" comment prevents the autoformatter from moving this line below other imports
+import os
+os.environ['AWS_CRT_MEMORY_TRACING'] = '2'  # noqa
+
 from awscrt import NativeResource
 from awscrt._test import check_for_leaks
 from awscrt.io import init_logging, LogLevel

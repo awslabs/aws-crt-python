@@ -30,7 +30,6 @@ from test.test_mqtt import create_client_id
 # AWS_TEST_TLS_KEY_PATH - file path to the key used to initialize the tls context of the mqtt connection
 # AWS_TEST_TLS_ROOT_CERT_PATH - file path to the root CA used to initialize the tls context of the mqtt connection
 
-# AWS_TEST_IOT_SIGNING_REGION - AWS region to make a websocket connection to
 # AWS_TEST_IOT_MQTT_ENDPOINT - AWS account-specific endpoint to connect to IoT core by
 
 """
@@ -60,7 +59,6 @@ class ProxyTestConfiguration():
     HTTP_PROXY_TLS_KEY_PATH = os.environ.get('AWS_TEST_TLS_KEY_PATH')
     HTTP_PROXY_TLS_ROOT_CA_PATH = os.environ.get('AWS_TEST_TLS_ROOT_CERT_PATH')
 
-    HTTP_PROXY_WS_SIGNING_REGION = os.environ.get('AWS_TEST_IOT_SIGNING_REGION')
     HTTP_PROXY_MQTT_ENDPOINT = os.environ.get('AWS_TEST_IOT_MQTT_ENDPOINT')
 
     @staticmethod
@@ -73,6 +71,14 @@ class ProxyTestConfiguration():
             ProxyTestConfiguration.HTTP_PROXY_BASIC_PORT > 0 and \
             ProxyTestConfiguration.HTTP_PROXY_BASIC_AUTH_USERNAME is not None and \
             ProxyTestConfiguration.HTTP_PROXY_BASIC_AUTH_PASSWORD is not None
+
+    @staticmethod
+    def is_mqtt_env_initialized():
+        return ProxyTestConfiguration.is_proxy_environment_initialized() and \
+            ProxyTestConfiguration.HTTP_PROXY_MQTT_ENDPOINT is not None and \
+            ProxyTestConfiguration.HTTP_PROXY_TLS_CERT_PATH is not None and \
+            ProxyTestConfiguration.HTTP_PROXY_TLS_KEY_PATH is not None and \
+            ProxyTestConfiguration.HTTP_PROXY_TLS_KEY_PATH is not None
 
     @staticmethod
     def get_proxy_host_for_test(test_type, auth_type):
@@ -158,7 +164,6 @@ class ProxyTestConfiguration():
             return 443
 
 
-@unittest.skipIf(not ProxyTestConfiguration.is_proxy_environment_initialized(), 'requires proxy test env vars')
 class ProxyHttpTest(NativeResourceTest):
 
     def _establish_http_connection(self, test_type, uri, proxy_options):
@@ -193,36 +198,47 @@ class ProxyHttpTest(NativeResourceTest):
         self.assertEqual(200, response.status_code)
         self.assertEqual(200, stream_completion_result)
 
+    @unittest.skipIf(not ProxyTestConfiguration.is_proxy_environment_initialized(), 'requires proxy test env vars')
     def test_forwarding_proxy_no_auth(self):
         self._do_proxy_http_test(ProxyTestType.FORWARDING, HttpProxyAuthenticationType.Nothing)
 
+    @unittest.skipIf(not ProxyTestConfiguration.is_proxy_environment_initialized(), 'requires proxy test env vars')
     def test_forwarding_proxy_legacy_http_no_auth(self):
         self._do_proxy_http_test(ProxyTestType.LEGACY_HTTP, HttpProxyAuthenticationType.Nothing)
 
+    @unittest.skipIf(not ProxyTestConfiguration.is_proxy_environment_initialized(), 'requires proxy test env vars')
     def test_proxy_legacy_https_no_auth(self):
         self._do_proxy_http_test(ProxyTestType.LEGACY_HTTPS, HttpProxyAuthenticationType.Nothing)
 
+    @unittest.skipIf(not ProxyTestConfiguration.is_proxy_environment_initialized(), 'requires proxy test env vars')
     def test_tunneling_proxy_http_no_auth(self):
         self._do_proxy_http_test(ProxyTestType.TUNNELING_HTTP, HttpProxyAuthenticationType.Nothing)
 
+    @unittest.skipIf(not ProxyTestConfiguration.is_proxy_environment_initialized(), 'requires proxy test env vars')
     def test_tunneling_proxy_https_no_auth(self):
         self._do_proxy_http_test(ProxyTestType.TUNNELING_HTTPS, HttpProxyAuthenticationType.Nothing)
 
+    @unittest.skipIf(not ProxyTestConfiguration.is_proxy_environment_initialized(), 'requires proxy test env vars')
     def test_tunneling_proxy_double_tls_no_auth(self):
         self._do_proxy_http_test(ProxyTestType.TUNNELING_DOUBLE_TLS, HttpProxyAuthenticationType.Nothing)
 
+    @unittest.skipIf(not ProxyTestConfiguration.is_proxy_environment_initialized(), 'requires proxy test env vars')
     def test_forwarding_proxy_basic_auth(self):
         self._do_proxy_http_test(ProxyTestType.FORWARDING, HttpProxyAuthenticationType.Basic)
 
+    @unittest.skipIf(not ProxyTestConfiguration.is_proxy_environment_initialized(), 'requires proxy test env vars')
     def test_forwarding_proxy_legacy_http_basic_auth(self):
         self._do_proxy_http_test(ProxyTestType.LEGACY_HTTP, HttpProxyAuthenticationType.Basic)
 
+    @unittest.skipIf(not ProxyTestConfiguration.is_proxy_environment_initialized(), 'requires proxy test env vars')
     def test_proxy_legacy_https_basic_auth(self):
         self._do_proxy_http_test(ProxyTestType.LEGACY_HTTPS, HttpProxyAuthenticationType.Basic)
 
+    @unittest.skipIf(not ProxyTestConfiguration.is_proxy_environment_initialized(), 'requires proxy test env vars')
     def test_tunneling_proxy_http_basic_auth(self):
         self._do_proxy_http_test(ProxyTestType.TUNNELING_HTTP, HttpProxyAuthenticationType.Basic)
 
+    @unittest.skipIf(not ProxyTestConfiguration.is_proxy_environment_initialized(), 'requires proxy test env vars')
     def test_tunneling_proxy_https_basic_auth(self):
         self._do_proxy_http_test(ProxyTestType.TUNNELING_HTTPS, HttpProxyAuthenticationType.Basic)
 
@@ -251,12 +267,15 @@ class ProxyHttpTest(NativeResourceTest):
         proxy_options = ProxyTestConfiguration.create_http_proxy_options_from_environment(test_type, auth_type)
         connection = self._establish_mqtt_connection(proxy_options)
 
+    @unittest.skipIf(not ProxyTestConfiguration.is_mqtt_env_initialized(), 'requires proxy and MQTT test env vars')
     def test_tunneling_http_proxy_mqtt_no_auth(self):
         self._do_proxy_mqtt_test(ProxyTestType.TUNNELING_HTTP, HttpProxyAuthenticationType.Nothing)
 
+    @unittest.skipIf(not ProxyTestConfiguration.is_mqtt_env_initialized(), 'requires proxy and MQTT test env vars')
     def test_tunneling_http_proxy_mqtt_basic_auth(self):
         self._do_proxy_mqtt_test(ProxyTestType.TUNNELING_HTTP, HttpProxyAuthenticationType.Basic)
 
+    @unittest.skipIf(not ProxyTestConfiguration.is_mqtt_env_initialized(), 'requires proxy and MQTT test env vars')
     def test_tunneling_http_proxy_mqtt_double_tls(self):
         self._do_proxy_mqtt_test(ProxyTestType.TUNNELING_DOUBLE_TLS, HttpProxyAuthenticationType.Nothing)
 

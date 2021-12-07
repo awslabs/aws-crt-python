@@ -62,9 +62,6 @@ class SetupForTests(Builder.Action):
         setenv_tmpfile_from_secret('AWS_TEST_TLS_CERT_PATH', 'unit-test/certificate', 'certificate.pem')
         setenv_tmpfile_from_secret('AWS_TEST_TLS_KEY_PATH', 'unit-test/privatekey', 'privatekey.pem')
 
-        # tests must run with leak detection turned on
-        env.shell.setenv('AWS_CRT_MEMORY_TRACING', '2')
-
         # enable S3 tests
         env.shell.setenv('AWS_TEST_S3', '1')
 

@@ -13,7 +13,6 @@ git submodule update --init
 # build package
 cd $CODEBUILD_SRC_DIR
 
-export AWS_CRT_MEMORY_TRACING=2
 export AWS_TEST_S3=YES
 python -m pip install --verbose .
-python -m unittest discover test
+python -m unittest discover --failfast --verbose
