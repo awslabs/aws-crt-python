@@ -139,6 +139,25 @@ jobs:
         chmod a+x builder
         ./builder build -p ${{ env.PACKAGE_NAME }}
 
+  # check that tests requiring custom env-vars or AWS credentials are simply skipped
+  tests-ok-without-env-vars:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+      - name: Run tests without env-vars or AWS creds
+        env:
+          # unset env-vars that provide AWS credentials
+          AWS_ACCESS_KEY_ID:
+          AWS_SECRET_ACCESS_KEY:
+          AWS_DEFAULT_REGION:
+          # aws-lc forbids some gcc versions due to security bugs
+          CC: gcc-10
+        run: |
+          python3 -m pip install --verbose
+          python3 -m unittest discover --failfast --verbose
+
   package-source:
     runs-on: ubuntu-latest
     steps:
