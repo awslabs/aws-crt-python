@@ -21,7 +21,6 @@ Stage = enum.Enum('Stage', [
     'HttpClientConnected',
     'HttpStreamStart',
     'HttpStreamReceivingBody',
-    'HttpStreamReceivingBodyMainThread',
     'HttpStreamDone',
     'HttpConnectionClose',
     'HttpConnectionDone',
@@ -92,17 +91,15 @@ if __name__ == '__main__':
     receiving_body_event = threading.Event()
 
     def on_incoming_body(http_stream, chunk):
-        # HttpStreamReceivingBody: Exit from event-loop thread while receiving body
-        set_stage(Stage.HttpStreamReceivingBody)
         receiving_body_event.set()
 
     http_stream = http_connection.request(request, on_body=on_incoming_body)
     http_stream.activate()
     set_stage(Stage.HttpStreamStart)
 
-    # HttpStreamReceivingBodyMainThread: Exit from main thread while receiving body
+    # HttpStreamReceivingBody
     assert receiving_body_event.wait(TIMEOUT)
-    set_stage(Stage.HttpStreamReceivingBodyMainThread)
+    set_stage(Stage.HttpStreamReceivingBody)
 
     # HttpStreamDone
     status_code = http_stream.completion_future.result(TIMEOUT)
