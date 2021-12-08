@@ -37,7 +37,7 @@ class SetupForTests(Builder.Action):
         # boto3 might need to be installed first...
         try:
             import boto3
-        except BaseException:
+        except Exception:
             subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'boto3'])
             import boto3
 

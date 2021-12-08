@@ -1,15 +1,14 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 
-from awscrt.auth import AwsCredentialsProvider
-from awscrt.http import HttpProxyOptions
-from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, Pkcs11Lib, TlsConnectionOptions, TlsContextOptions, LogLevel, init_logging
+from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, Pkcs11Lib, TlsContextOptions, LogLevel, init_logging
 from awscrt.mqtt import Client, Connection, QoS
 from test import NativeResourceTest
 from concurrent.futures import Future
 import enum
 import os
 import pathlib
+import sys
 import unittest
 import uuid
 
@@ -66,20 +65,29 @@ class MqttConnectionTest(NativeResourceTest):
 
         if auth_type == AuthType.CERT_AND_KEY:
             tls_opts = TlsContextOptions.create_client_with_mtls_from_path(config.cert_path, config.key_path)
+            tls = ClientTlsContext(tls_opts)
 
         elif auth_type == AuthType.PKCS11:
-            pkcs11_lib = Pkcs11Lib(
-                file=config.pkcs11_lib_path,
-                behavior=Pkcs11Lib.InitializeFinalizeBehavior.STRICT)
+            try:
+                pkcs11_lib = Pkcs11Lib(
+                    file=config.pkcs11_lib_path,
+                    behavior=Pkcs11Lib.InitializeFinalizeBehavior.STRICT)
 
-            tls_opts = TlsContextOptions.create_client_with_mtls_pkcs11(
-                pkcs11_lib=pkcs11_lib,
-                user_pin=config.pkcs11_pin,
-                token_label=config.pkcs11_token_label,
-                private_key_label=config.pkcs11_key_label,
-                cert_file_path=config.cert_path)
+                tls_opts = TlsContextOptions.create_client_with_mtls_pkcs11(
+                    pkcs11_lib=pkcs11_lib,
+                    user_pin=config.pkcs11_pin,
+                    token_label=config.pkcs11_token_label,
+                    private_key_label=config.pkcs11_key_label,
+                    cert_file_path=config.cert_path)
 
-        tls = ClientTlsContext(tls_opts)
+                tls = ClientTlsContext(tls_opts)
+
+            except Exception as e:
+                if 'AWS_ERROR_UNIMPLEMENTED' in str(e):
+                    raise unittest.SkipTest(f'TLS with PKCS#11 not supported on this platform ({sys.platform})')
+                else:
+                    # re-raise exception
+                    raise
 
         client = Client(bootstrap, tls)
         connection = Connection(

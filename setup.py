@@ -55,7 +55,7 @@ def determine_generator_args():
                 vs_version = 14
                 vs_year = 2015
             assert(vs_version and vs_year)
-        except BaseException:
+        except Exception:
             raise RuntimeError('No supported version of MSVC compiler could be found!')
 
         print('Using Visual Studio', vs_version, vs_year)
