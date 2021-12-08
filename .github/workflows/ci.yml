@@ -152,8 +152,6 @@ jobs:
           AWS_ACCESS_KEY_ID:
           AWS_SECRET_ACCESS_KEY:
           AWS_DEFAULT_REGION:
-          # aws-lc forbids some gcc versions due to security bugs
-          CC: gcc-10
         run: |
           python3 -m pip install . --verbose
           python3 -m unittest discover --failfast --verbose
@@ -165,9 +163,6 @@ jobs:
         with:
           submodules: true
       - name: Package source + install
-        env:
-          # aws-lc forbids some gcc versions due to security bugs
-          CC: gcc-10
         run: |
           python3 setup.py sdist
           cd dist
