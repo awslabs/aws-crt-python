@@ -90,32 +90,23 @@ class SetupForTests(Builder.Action):
         init_token_result = self._exec_softhsm2_util('--init-token', '--free', '--label', token_label,
                                                      '--pin', pin, '--so-pin', '0000')
 
-        # print the state of the world
-        self._exec_softhsm2_util('--show-slots', '--pin', pin)
-
-        # Newer versions of SoftHSM2 let us use --label name to specify a token
-        # but older versions of SoftHSM2 force us to use --slot number.
-        # Also, the output to learn the slot number varies depending on version.
-        match = re.search('reassigned to slot ([0-9]+)', init_token_result.output)  # seen in v2.6.1
-        if match is None:
-            match = re.search('Slot ([0-9]+) has a free/uninitialized token', init_token_result.output)  # v2.2.0
-        if match is None:
-            match = re.search('Token ([0-9]+) is free', init_token_result.output)  # seen in v2.1.0
-        if match is None:
-            raise Exception('Cannot determine slot of new token')
-
-        slot_id = match.group(1)
+        # figure out which slot the token ended up in.
+        #
+        # older versions of SoftHSM2 (2.1.0) make us pass --slot number to the --import command.
+        # (newer version let us pass --label name instead)
+        #
+        # to learn the slot of our new token examine the output of the --show-slots command.
+        # we can't just examine the output of --init-token because some versions
+        # of SoftHSM2 (2.2.0) reassign tokens to random slots without printing out where they went.
+        token_slot = self._find_sofhsm2_token_slot()
 
         # add private key to token
         # key must be in PKCS#8 format
         # we have this stored in secretsmanager
         key_path = self._tmpfile_from_secret('unit-test/privatekey-p8', 'privatekey.p8.pem')
         key_label = 'my-key'
-        self._exec_softhsm2_util('--import', key_path, '--slot', slot_id,
+        self._exec_softhsm2_util('--import', key_path, '--slot', token_slot,
                                  '--label', key_label, '--id', 'BEEFCAFE', '--pin', pin)
-
-        # print the state of the world
-        self._exec_softhsm2_util('--show-slots', '--pin', pin)
 
         # set env vars for tests
         self.env.shell.setenv('AWS_TEST_PKCS11_LIB', softhsm2_lib)
@@ -175,6 +166,49 @@ class SetupForTests(Builder.Action):
             raise Exception('softhsm2-util failed')
 
         return result
+
+    def _find_sofhsm2_token_slot(self):
+        """Return slot ID of first initialized token"""
+
+        output = self._exec_softhsm2_util('--show-slots').output
+
+        # --- output looks like ---
+        # Available slots:
+        # Slot 0
+        #    Slot info:
+        #        ...
+        #        Token present:    yes
+        #    Token info:
+        #        ...
+        #        Initialized:      yes
+        current_slot = None
+        current_info_block = None
+        for line in output.splitlines():
+            # check for start of "Slot <ID>" block
+            m = re.match(r"Slot ([0-9]+)", line)
+            if m:
+                current_slot = m.group(1)
+                current_info_block = None
+                continue
+
+            if current_slot is None:
+                continue
+
+            # check for start of next indented block, like "Token info"
+            m = re.match(r"    ([^ ].*)", line)
+            if m:
+                current_info_block = m.group(1)
+                continue
+
+            if current_info_block is None:
+                continue
+
+            # if we're in token block, check for "Initialized: yes"
+            if "Token info" in current_info_block:
+                if re.match(r" *Initialized: *yes", line):
+                    return current_slot
+
+        raise Exception('No initialized tokens found')
 
 
 class AWSCrtPython(Builder.Action):
