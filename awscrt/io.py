@@ -694,6 +694,7 @@ class Pkcs11Lib(NativeResource):
         """
 
     def __init__(self, *, file: str, behavior: InitializeFinalizeBehavior = None):
+        super().__init__()
         if behavior is None:
             behavior = Pkcs11Lib.InitializeFinalizeBehavior.DEFAULT
 
