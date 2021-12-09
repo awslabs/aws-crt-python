@@ -75,7 +75,8 @@ class SetupForTests(Builder.Action):
         softhsm2_dir = os.path.join(tempfile.gettempdir(), 'softhsm2')
         conf_path = os.path.join(softhsm2_dir, 'softhsm2.conf')
         token_dir = os.path.join(softhsm2_dir, 'tokens')
-        self.env.shell.rm(token_dir)  # nuke any old tokens from previous run
+        if os.path.exists(token_dir):
+            self.env.shell.rm(token_dir)
         self.env.shell.mkdir(token_dir)
         self.env.shell.setenv('SOFTHSM2_CONF', conf_path)
         pathlib.Path(conf_path).write_text(f"directories.tokendir = {token_dir}\n")
@@ -91,9 +92,12 @@ class SetupForTests(Builder.Action):
 
         # Newer versions of SoftHSM2 let us use --label name to specify a token
         # but older versions of SoftHSM2 force us to use --slot number.
-        match = re.search('reassigned to slot ([0-9]+)', init_token_result.output)  # what newer versions do
+        # Also, the output to learn the slot number varies depending on version.
+        match = re.search('reassigned to slot ([0-9]+)', init_token_result.output)  # v2.6.1
         if match is None:
-            match = re.search('Token ([0-9]+) is free', init_token_result.output)  # what older versions do
+            match = re.search('Slot ([0-9]+) has a free/uninitialized token', init_token_result.output)  # v2.2.0
+        if match is None:
+            match = re.search('Token ([0-9]+) is free', init_token_result.output)  # v2.1.0
         if match is None:
             raise Exception('Cannot determine slot of new token')
 
