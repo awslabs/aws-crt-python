@@ -90,6 +90,9 @@ class SetupForTests(Builder.Action):
         init_token_result = self._exec_softhsm2_util('--init-token', '--free', '--label', token_label,
                                                      '--pin', pin, '--so-pin', '0000')
 
+        # print the state of the world
+        self._exec_softhsm2_util('--show-slots', '--pin', pin)
+
         # Newer versions of SoftHSM2 let us use --label name to specify a token
         # but older versions of SoftHSM2 force us to use --slot number.
         # Also, the output to learn the slot number varies depending on version.
