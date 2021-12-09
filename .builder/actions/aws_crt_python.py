@@ -93,11 +93,11 @@ class SetupForTests(Builder.Action):
         # Newer versions of SoftHSM2 let us use --label name to specify a token
         # but older versions of SoftHSM2 force us to use --slot number.
         # Also, the output to learn the slot number varies depending on version.
-        match = re.search('reassigned to slot ([0-9]+)', init_token_result.output)  # v2.6.1
+        match = re.search('reassigned to slot ([0-9]+)', init_token_result.output)  # seen in v2.6.1
         if match is None:
             match = re.search('Slot ([0-9]+) has a free/uninitialized token', init_token_result.output)  # v2.2.0
         if match is None:
-            match = re.search('Token ([0-9]+) is free', init_token_result.output)  # v2.1.0
+            match = re.search('Token ([0-9]+) is free', init_token_result.output)  # seen in v2.1.0
         if match is None:
             raise Exception('Cannot determine slot of new token')
 
