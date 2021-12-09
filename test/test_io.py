@@ -4,6 +4,7 @@
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, InputStream, TlsConnectionOptions, TlsContextOptions
 from test import NativeResourceTest, TIMEOUT
 import io
+import sys
 import unittest
 
 
@@ -53,9 +54,12 @@ class ClientTlsContextTest(NativeResourceTest):
         ctx = ClientTlsContext(opt)
 
     def test_with_mtls_pkcs12(self):
-        opt = TlsContextOptions.create_client_with_mtls_pkcs12(
-            'test/resources/unittest.p12', '1234')
-        ctx = ClientTlsContext(opt)
+        try:
+            opt = TlsContextOptions.create_client_with_mtls_pkcs12(
+                'test/resources/unittest.p12', '1234')
+            ctx = ClientTlsContext(opt)
+        except NotImplementedError:
+            raise unittest.SkipTest(f'PKCS#12 not supported on this platform ({sys.platform})')
 
     def test_override_default_trust_store_dir(self):
         opt = TlsContextOptions()

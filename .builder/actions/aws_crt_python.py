@@ -4,6 +4,7 @@ import argparse
 import os.path
 import pathlib
 import subprocess
+import re
 import sys
 import tempfile
 
@@ -41,29 +42,131 @@ class SetupForTests(Builder.Action):
             subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'boto3'])
             import boto3
 
-        secrets = boto3.client('secretsmanager')
+        self.env = env
+        self.secrets = boto3.client('secretsmanager')
 
-        # get string from secretsmanager and store in environment variable
-        def setenv_from_secret(env_var_name, secret_name):
-            response = secrets.get_secret_value(SecretId=secret_name)
-            env.shell.setenv(env_var_name, response['SecretString'])
+        self._setenv_from_secret('AWS_TEST_IOT_MQTT_ENDPOINT', 'unit-test/endpoint')
 
-        # get file contents from secretsmanager, store as file under /tmp
-        # and store path in environment variable
-        def setenv_tmpfile_from_secret(env_var_name, secret_name, file_name):
-            response = secrets.get_secret_value(SecretId=secret_name)
-            file_contents = response['SecretString']
-            file_path = os.path.join(tempfile.gettempdir(), file_name)
-            pathlib.Path(file_path).write_text(file_contents)
-            env.shell.setenv(env_var_name, file_path)
-
-        setenv_from_secret('AWS_TEST_IOT_MQTT_ENDPOINT', 'unit-test/endpoint')
-
-        setenv_tmpfile_from_secret('AWS_TEST_TLS_CERT_PATH', 'unit-test/certificate', 'certificate.pem')
-        setenv_tmpfile_from_secret('AWS_TEST_TLS_KEY_PATH', 'unit-test/privatekey', 'privatekey.pem')
+        self._setenv_tmpfile_from_secret('AWS_TEST_TLS_CERT_PATH', 'unit-test/certificate', 'certificate.pem')
+        self._setenv_tmpfile_from_secret('AWS_TEST_TLS_KEY_PATH', 'unit-test/privatekey', 'privatekey.pem')
 
         # enable S3 tests
         env.shell.setenv('AWS_TEST_S3', '1')
+
+        self._try_setup_pkcs11()
+
+    def _try_setup_pkcs11(self):
+        """Attempt to setup for PKCS#11 tests, but bail out if we can't get SoftHSM2 installed"""
+
+        # try to install SoftHSM2, so we can run PKCS#11 tests
+        try:
+            softhsm2_install_action = Builder.InstallPackages(['softhsm'])
+            softhsm2_install_action.run(self.env)
+        except Exception:
+            print("WARNING: SoftHSM2 could not be installed. PKCS#11 tests are disabled")
+            return
+
+        softhsm2_lib = self._find_softhsm2_lib()
+        if softhsm2_lib is None:
+            print("WARNING: libsofthsm2.so not found. PKCS#11 tests are disabled")
+            return
+
+        # put SoftHSM2 config file and token directory under the temp dir.
+        softhsm2_dir = os.path.join(tempfile.gettempdir(), 'softhsm2')
+        conf_path = os.path.join(softhsm2_dir, 'softhsm2.conf')
+        token_dir = os.path.join(softhsm2_dir, 'tokens')
+        self.env.shell.rm(token_dir)  # nuke any old tokens from previous run
+        self.env.shell.mkdir(token_dir)
+        self.env.shell.setenv('SOFTHSM2_CONF', conf_path)
+        pathlib.Path(conf_path).write_text(f"directories.tokendir = {token_dir}\n")
+
+        # print SoftHSM2 version
+        self._exec_softhsm2_util('--version')
+
+        # create token
+        token_label = 'my-token'
+        pin = '0000'
+        init_token_result = self._exec_softhsm2_util('--init-token', '--free', '--label', token_label,
+                                                     '--pin', pin, '--so-pin', '0000')
+
+        # Newer versions of SoftHSM2 let us use --label name to specify a token
+        # but older versions of SoftHSM2 force us to use --slot number.
+        match = re.search('reassigned to slot ([0-9]+)', init_token_result.output)  # what newer versions do
+        if match is None:
+            match = re.search('Token ([0-9]+) is free', init_token_result.output)  # what older versions do
+        if match is None:
+            raise Exception('Cannot determine slot of new token')
+
+        slot_id = match.group(1)
+
+        # add private key to token (key must be converted to PKCS#8 format first)
+        orig_key_path = self.env.shell.getenv('AWS_TEST_TLS_KEY_PATH')
+        p8_key_path = os.path.join(os.path.dirname(orig_key_path), 'privatekey.p8.pem')
+        key_label = 'my-key'
+
+        self.env.shell.exec('openssl', 'pkcs8', '-topk8', '-in', orig_key_path,
+                            '-out', p8_key_path, '-nocrypt', check=True)
+
+        self._exec_softhsm2_util('--import', p8_key_path, '--slot', slot_id,
+                                 '--label', key_label, '--id', 'BEEFCAFE', '--pin', pin)
+
+        # print the state of the world
+        self._exec_softhsm2_util('--show-slots', '--pin', pin)
+
+        # set env vars for tests
+        self.env.shell.setenv('AWS_TEST_PKCS11_LIB', softhsm2_lib)
+        self.env.shell.setenv('AWS_TEST_PKCS11_PIN', pin)
+        self.env.shell.setenv('AWS_TEST_PKCS11_TOKEN_LABEL', token_label)
+        self.env.shell.setenv('AWS_TEST_PKCS11_KEY_LABEL', key_label)
+
+    def _setenv_from_secret(self, env_var_name, secret_name):
+        """get string from secretsmanager and store in environment variable"""
+
+        response = self.secrets.get_secret_value(SecretId=secret_name)
+        self.env.shell.setenv(env_var_name, response['SecretString'])
+
+    def _setenv_tmpfile_from_secret(self, env_var_name, secret_name, file_name):
+        """get file contents from secretsmanager, store as file under /tmp, and store path in environment variable"""
+
+        response = self.secrets.get_secret_value(SecretId=secret_name)
+        file_contents = response['SecretString']
+        file_path = os.path.join(tempfile.gettempdir(), file_name)
+        pathlib.Path(file_path).write_text(file_contents)
+        self.env.shell.setenv(env_var_name, file_path)
+
+    def _find_softhsm2_lib(self):
+        """Return path to SoftHSM2 shared lib, or None if not found"""
+
+        # note: not using `ldconfig --print-cache` to find it because
+        # some installers put it in weird places where ldconfig doesn't look
+        # (like in a subfolder under lib/)
+
+        for lib_dir in ['lib64', 'lib']:  # search lib64 before lib
+            for base_dir in ['/usr/local', '/usr', '/', ]:
+                search_dir = os.path.join(base_dir, lib_dir)
+                for root, dirs, files in os.walk(search_dir):
+                    for file_name in files:
+                        if 'libsofthsm2.so' in file_name:
+                            return os.path.join(root, file_name)
+        return None
+
+    def _exec_softhsm2_util(self, *args, **kwargs):
+        if 'check' not in kwargs:
+            kwargs['check'] = True
+
+        result = self.env.shell.exec('softhsm2-util', *args, **kwargs)
+
+        # older versions of softhsm2-util (2.1.0 is a known offender)
+        # return error code 0 and print the help if invalid args are passed.
+        # This should be an error.
+        #
+        # invalid args can happen because newer versions of softhsm2-util
+        # support more args than older versions, so what works on your
+        # machine might not work on some ancient docker image.
+        if 'Usage: softhsm2-util' in result.output:
+            raise Exception('softhsm2-util failed')
+
+        return result
 
 
 class AWSCrtPython(Builder.Action):
