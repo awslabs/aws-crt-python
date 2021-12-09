@@ -103,15 +103,12 @@ class SetupForTests(Builder.Action):
 
         slot_id = match.group(1)
 
-        # add private key to token (key must be converted to PKCS#8 format first)
-        orig_key_path = self.env.shell.getenv('AWS_TEST_TLS_KEY_PATH')
-        p8_key_path = os.path.join(os.path.dirname(orig_key_path), 'privatekey.p8.pem')
+        # add private key to token
+        # key must be in PKCS#8 format
+        # we have this stored in secretsmanager
+        key_path = self._tmpfile_from_secret('unit-test/privatekey-p8', 'privatekey.p8.pem')
         key_label = 'my-key'
-
-        self.env.shell.exec('openssl', 'pkcs8', '-topk8', '-in', orig_key_path,
-                            '-out', p8_key_path, '-nocrypt', check=True)
-
-        self._exec_softhsm2_util('--import', p8_key_path, '--slot', slot_id,
+        self._exec_softhsm2_util('--import', key_path, '--slot', slot_id,
                                  '--label', key_label, '--id', 'BEEFCAFE', '--pin', pin)
 
         # print the state of the world
@@ -123,6 +120,14 @@ class SetupForTests(Builder.Action):
         self.env.shell.setenv('AWS_TEST_PKCS11_TOKEN_LABEL', token_label)
         self.env.shell.setenv('AWS_TEST_PKCS11_KEY_LABEL', key_label)
 
+    def _tmpfile_from_secret(self, secret_name, file_name):
+        """get file contents from secretsmanager, store as file under /tmp, return file path"""
+        response = self.secrets.get_secret_value(SecretId=secret_name)
+        file_contents = response['SecretString']
+        file_path = os.path.join(tempfile.gettempdir(), file_name)
+        pathlib.Path(file_path).write_text(file_contents)
+        return file_path
+
     def _setenv_from_secret(self, env_var_name, secret_name):
         """get string from secretsmanager and store in environment variable"""
 
@@ -131,11 +136,7 @@ class SetupForTests(Builder.Action):
 
     def _setenv_tmpfile_from_secret(self, env_var_name, secret_name, file_name):
         """get file contents from secretsmanager, store as file under /tmp, and store path in environment variable"""
-
-        response = self.secrets.get_secret_value(SecretId=secret_name)
-        file_contents = response['SecretString']
-        file_path = os.path.join(tempfile.gettempdir(), file_name)
-        pathlib.Path(file_path).write_text(file_contents)
+        file_path = self._tmpfile_from_secret(secret_name, file_name)
         self.env.shell.setenv(env_var_name, file_path)
 
     def _find_softhsm2_lib(self):
