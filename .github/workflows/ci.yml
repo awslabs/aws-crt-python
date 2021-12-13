@@ -7,38 +7,18 @@ on:
       - '!main'
 
 env:
-  BUILDER_VERSION: v0.8.16
+  BUILDER_VERSION: v0.9.5
   BUILDER_SOURCE: releases
   BUILDER_HOST: https://d19elf31gohf1l.cloudfront.net
   PACKAGE_NAME: aws-crt-python
-  LINUX_BASE_IMAGE: ubuntu-16-x64
+  LINUX_BASE_IMAGE: ubuntu-18-x64
   RUN: ${{ github.run_id }}-${{ github.run_number }}
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
   AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+  AWS_REGION: us-east-1
 
 jobs:
-  manylinux1:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        image:
-          - x64
-          - x86
-        python:
-          - cp36-cp36m
-          - cp37-cp37m
-          - cp38-cp38
-          - cp39-cp39
-    steps:
-    - name: Build ${{ env.PACKAGE_NAME }}
-      run: |
-        echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u awslabs --password-stdin
-        export DOCKER_IMAGE=docker.pkg.github.com/awslabs/aws-crt-builder/aws-crt-manylinux1-${{ matrix.image }}:${{ env.BUILDER_VERSION }}
-        docker pull $DOCKER_IMAGE
-        docker run --env GITHUB_REF --env AWS_ACCESS_KEY_ID --env AWS_SECRET_ACCESS_KEY --env AWS_DEFAULT_REGION $DOCKER_IMAGE build -p ${{ env.PACKAGE_NAME }} --python /opt/python/${{ matrix.python }}/bin/python
-
   manylinux2014:
     runs-on: ubuntu-latest
     strategy:
@@ -61,49 +41,46 @@ jobs:
 
     - name: Build ${{ env.PACKAGE_NAME }}
       run: |
-        echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u awslabs --password-stdin
-        export DOCKER_IMAGE=docker.pkg.github.com/awslabs/aws-crt-builder/aws-crt-manylinux2014-${{ matrix.image }}:${{ env.BUILDER_VERSION }}
-        docker pull $DOCKER_IMAGE
-        docker run --env GITHUB_REF --env AWS_ACCESS_KEY_ID --env AWS_SECRET_ACCESS_KEY --env AWS_DEFAULT_REGION $DOCKER_IMAGE build -p ${{ env.PACKAGE_NAME }} --python /opt/python/${{ matrix.python }}/bin/python
+        aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
+        ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-manylinux2014-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }} --python /opt/python/${{ matrix.python }}/bin/python
 
-  al2:
-    runs-on: ubuntu-latest
-    steps:
-        # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
-    - name: Build ${{ env.PACKAGE_NAME }} + consumers
-      run: |
-        echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u awslabs --password-stdin
-        export DOCKER_IMAGE=docker.pkg.github.com/awslabs/aws-crt-builder/aws-crt-al2-x64:${{ env.BUILDER_VERSION }}
-        docker pull $DOCKER_IMAGE
-        docker run --env GITHUB_REF --env AWS_ACCESS_KEY_ID --env AWS_SECRET_ACCESS_KEY --env AWS_DEFAULT_REGION $DOCKER_IMAGE build -p ${{ env.PACKAGE_NAME }}
-
-  clang-compat:
+  linux-compat:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        version: [3, 6, 8, 9]
+        image:
+          - al2-x64
+          - fedora-34-x64
+          - opensuse-leap
+          - rhel8-x64
     steps:
         # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
     - name: Build ${{ env.PACKAGE_NAME }}
       run: |
-        echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u awslabs --password-stdin
-        export DOCKER_IMAGE=docker.pkg.github.com/awslabs/aws-crt-builder/aws-crt-${{ env.LINUX_BASE_IMAGE }}:${{ env.BUILDER_VERSION }}
-        docker pull $DOCKER_IMAGE
-        docker run --env GITHUB_REF --env AWS_ACCESS_KEY_ID --env AWS_SECRET_ACCESS_KEY --env AWS_DEFAULT_REGION $DOCKER_IMAGE build -p ${{ env.PACKAGE_NAME }} --compiler=clang-${{ matrix.version }}
+        aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
+        ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }}
 
-  gcc-compat:
+  linux-compiler-compat:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        version: [5, 6, 7, 8] # no 4.8 on ubuntu due to the -Wdate-time missing command line options
+        compiler:
+          - clang-3
+          - clang-6
+          - clang-8
+          - clang-9
+          - clang-10
+          - clang-11
+          - gcc-5
+          - gcc-6
+          - gcc-7
+          - gcc-8
     steps:
-        # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
-    - name: Build ${{ env.PACKAGE_NAME }}
-      run: |
-        echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u awslabs --password-stdin
-        export DOCKER_IMAGE=docker.pkg.github.com/awslabs/aws-crt-builder/aws-crt-${{ env.LINUX_BASE_IMAGE }}:${{ env.BUILDER_VERSION }}
-        docker pull $DOCKER_IMAGE
-        docker run --env GITHUB_REF --env AWS_ACCESS_KEY_ID --env AWS_SECRET_ACCESS_KEY --env AWS_DEFAULT_REGION $DOCKER_IMAGE build -p ${{ env.PACKAGE_NAME }} --compiler=gcc-${{ matrix.version }}
+      # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
+      - name: Build ${{ env.PACKAGE_NAME }}
+        run: |
+          aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
+          ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-${{ env.LINUX_BASE_IMAGE }} build -p ${{ env.PACKAGE_NAME }} --compiler=${{ matrix.compiler }}
 
   windows:
     runs-on: windows-latest
