@@ -1,9 +1,10 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 
-from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, InputStream, TlsConnectionOptions, TlsContextOptions
+from awscrt.io import *
 from test import NativeResourceTest, TIMEOUT
 import io
+import os
 import sys
 import unittest
 
@@ -145,6 +146,48 @@ class InputStreamTest(NativeResourceTest):
         src_data = b'a man a can a planal canada'
         python_stream = MockPythonStream(src_data)
         self._test(python_stream, src_data)
+
+
+class Pkcs11LibTest(NativeResourceTest):
+    def _lib_path(self):
+        name = 'AWS_TEST_PKCS11_LIB'
+        val = os.environ.get(name)
+        if not val:
+            raise unittest.SkipTest(f"test requires env var: {name}")
+        return val
+
+    def test_init(self):
+        # sanity check that we can create/destroy
+        lib_path = self._lib_path()
+        pcks11_lib = Pkcs11Lib(file=lib_path, behavior=Pkcs11Lib.InitializeFinalizeBehavior.STRICT)
+
+    def test_exceptions(self):
+        # check that initialization errors bubble up as exceptions
+        with self.assertRaises(Exception):
+            pkcs11_lib = Pkcs11Lib(file='obviously-invalid-path.so')
+
+        with self.assertRaises(Exception):
+            with open(self._lib_path()) as literal_open_file:
+                # a filepath str should passed, not a literal open file
+                pkcs11_lib = Pkcs11Lib(file=literal_open_file)
+
+    def test_strict_behavior(self):
+        lib_path = self._lib_path()
+        lib1 = Pkcs11Lib(file=lib_path, behavior=Pkcs11Lib.InitializeFinalizeBehavior.STRICT)
+        # InitializeFinalizeBehavior.STRICT behavior should fail if the PKCS#11 lib is already loaded
+        with self.assertRaises(Exception):
+            lib2 = Pkcs11Lib(file=lib_path, behavior=Pkcs11Lib.InitializeFinalizeBehavior.STRICT)
+
+    def test_omit_behavior(self):
+        lib_path = self._lib_path()
+        # InitializeFinalizeBehavior.OMIT should fail unless another instance of the PKCS#11 lib is already loaded
+        with self.assertRaises(Exception):
+            lib = Pkcs11Lib(file=lib_path, behavior=Pkcs11Lib.InitializeFinalizeBehavior.OMIT)
+
+        # InitializeFinalizeBehavior.OMIT behavior should be fine when another
+        # instance of the PKCS#11 lib is already loaded
+        strict_lib = Pkcs11Lib(file=lib_path, behavior=Pkcs11Lib.InitializeFinalizeBehavior.STRICT)
+        omit_lib = Pkcs11Lib(file=lib_path, behavior=Pkcs11Lib.InitializeFinalizeBehavior.OMIT)
 
 
 if __name__ == '__main__':

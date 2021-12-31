@@ -22,7 +22,7 @@ PyObject *aws_py_pkcs11_lib_new(PyObject *self, PyObject *args) {
 
     struct aws_byte_cursor filename;
     int behavior;
-    if (!PyArg_ParseTuple(args, "s#b", &filename.ptr, &filename.len, &behavior)) {
+    if (!PyArg_ParseTuple(args, "s#i", &filename.ptr, &filename.len, &behavior)) {
         return NULL;
     }
 
