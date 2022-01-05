@@ -125,8 +125,9 @@ if sys.platform != 'darwin' and sys.platform != 'win32':
                                # Up-to-date generated code is already in repo.
                                '-DDISABLE_PERL=ON', '-DDISABLE_GO=ON',
                            ]))
-    AWS_LIBS.append(AwsLib('s2n'))
+    AWS_LIBS.append(AwsLib(name='s2n', extra_cmake_args=['-DUNSAFE_TREAT_WARNINGS_AS_ERRORS=OFF']))
 AWS_LIBS.append(AwsLib('aws-c-common'))
+AWS_LIBS.append(AwsLib('aws-c-sdkutils'))
 AWS_LIBS.append(AwsLib('aws-c-cal'))
 AWS_LIBS.append(AwsLib('aws-c-io'))
 AWS_LIBS.append(AwsLib('aws-checksums'))
