@@ -76,6 +76,8 @@ class AWSCrtPython(Builder.Action):
         python = args.python if args.python else sys.executable
 
         actions = [
+            [sys.executable, '-m', 'pip', 'install', '--upgrade', 'pip', 'setuptools', 'wheel'],
+            [sys.executable, '-m', 'pip', 'install', '--upgrade', 'boto3'],
             InstallPythonReqs(deps=['boto3'], python=python),
             SetupForTests(),
             [python, '-m', 'pip', 'install', '--verbose', '.'],
