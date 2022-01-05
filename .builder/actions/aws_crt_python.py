@@ -97,12 +97,12 @@ class SetupForTests(Builder.Action):
 
         # figure out which slot the token ended up in.
         #
-        # older versions of SoftHSM2 (2.1.0) make us pass --slot number to the --import command.
-        # (newer version let us pass --label name instead)
+        # older versions of SoftHSM2 (ex: 2.1.0) make us pass --slot number to the --import command.
+        # (newer versions let us pass --label name instead)
         #
         # to learn the slot of our new token examine the output of the --show-slots command.
         # we can't just examine the output of --init-token because some versions
-        # of SoftHSM2 (2.2.0) reassign tokens to random slots without printing out where they went.
+        # of SoftHSM2 (ex: 2.2.0) reassign tokens to random slots without printing out where they went.
         token_slot = self._find_sofhsm2_token_slot()
 
         # add private key to token

@@ -517,14 +517,14 @@ PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args) {
 
     ctx_options.minimum_tls_version = min_tls_version;
 
-    if (ca_dirpath) {
+    if (ca_dirpath != NULL) {
         if (aws_tls_ctx_options_override_default_trust_store_from_path(&ctx_options, ca_dirpath, NULL)) {
             PyErr_SetAwsLastError();
             goto ctx_options_failure;
         }
     }
 
-    if (ca_buffer) {
+    if (ca_buffer != NULL) {
         struct aws_byte_cursor ca = aws_byte_cursor_from_array(ca_buffer, ca_buffer_len);
 
         if (aws_tls_ctx_options_override_default_trust_store(&ctx_options, &ca)) {
@@ -533,7 +533,7 @@ PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args) {
         }
     }
 
-    if (alpn_list) {
+    if (alpn_list != NULL) {
         if (aws_tls_ctx_options_set_alpn_list(&ctx_options, alpn_list)) {
             PyErr_SetAwsLastError();
             goto ctx_options_failure;
