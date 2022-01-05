@@ -60,7 +60,7 @@ class SetupForTests(Builder.Action):
 
         # currently, we only support PKCS#11 on unix
         if sys.platform == 'darwin' or sys.platform == 'win32':
-            print(f"WARNING: PKCS#11 tests are disabled on this platform")
+            print(f"PKCS#11 on '{sys.platform}' is not currently supported. PKCS#11 tests are disabled")
             return
 
         # try to install SoftHSM2, so we can run PKCS#11 tests
