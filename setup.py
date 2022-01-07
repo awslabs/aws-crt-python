@@ -258,6 +258,10 @@ def awscrt_ext():
         libraries = [':lib{}.a'.format(x) for x in libraries]
         libraries += ['rt']
 
+        # python usually adds -pthread automatically, but we've observed
+        # rare cases where that didn't happen, so let's be explicit.
+        extra_link_args += ['-pthread']
+
     if distutils.ccompiler.get_default_compiler() != 'msvc':
         extra_compile_args += ['-Wextra', '-Werror', '-Wno-strict-aliasing', '-std=gnu99']
 
