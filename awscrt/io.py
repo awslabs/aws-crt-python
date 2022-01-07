@@ -310,7 +310,7 @@ class TlsContextOptions:
         Keyword Args:
             pkcs11_lib (Pkcs11Lib): Use this PKCS#11 library
 
-            user_pin (Optional[str]): User PIN, for logging into the PKCS#11 token.
+            user_pin (str): User PIN, for logging into the PKCS#11 token.
                 Pass `None` to log into a token with a "protected authentication path".
 
             slot_id (Optional[int]): ID of slot containing PKCS#11 token.
