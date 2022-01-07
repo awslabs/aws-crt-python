@@ -1,6 +1,7 @@
 
 import Builder
 import argparse
+import json
 import os.path
 import pathlib
 import subprocess
@@ -12,7 +13,7 @@ import tempfile
 class InstallPythonReqs(Builder.Action):
     def __init__(self, trust_hosts=False, deps=[], python=sys.executable):
         self.trust_hosts = trust_hosts
-        self.core = ('pip', 'setuptools')
+        self.core = ('pip', 'setuptools', 'wheel')
         self.deps = deps
         self.python = python
 
@@ -26,7 +27,8 @@ class InstallPythonReqs(Builder.Action):
         # package database in time for the subsequent install and pip fails
         steps = []
         for deps in (self.core, self.deps):
-            steps.append([self.python, '-m', 'pip', 'install', '--upgrade', *trusted_hosts, *deps])
+            if deps:
+                steps.append([self.python, '-m', 'pip', 'install', '--upgrade', *trusted_hosts, *deps])
 
         return Builder.Script(steps, name='install-python-reqs')
 
@@ -34,16 +36,7 @@ class InstallPythonReqs(Builder.Action):
 class SetupForTests(Builder.Action):
 
     def run(self, env):
-        # we want to use boto3 to pull data from secretsmanager
-        # boto3 might need to be installed first...
-        try:
-            import boto3
-        except Exception:
-            subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'boto3'])
-            import boto3
-
         self.env = env
-        self.secrets = boto3.client('secretsmanager')
 
         self._setenv_from_secret('AWS_TEST_IOT_MQTT_ENDPOINT', 'unit-test/endpoint')
 
@@ -54,6 +47,41 @@ class SetupForTests(Builder.Action):
         env.shell.setenv('AWS_TEST_S3', '1')
 
         self._try_setup_pkcs11()
+
+    def _get_secret(self, secret_id):
+        """get string from secretsmanager"""
+
+        # NOTE: using AWS CLI instead of boto3 because we know CLI is already
+        # installed wherever builder is run. Once upon a time we tried using
+        # boto3 by installing it while the builder was running but this didn't
+        # work in some rare scenarios.
+
+        cmd = ['aws', 'secretsmanager', 'get-secret-value', '--secret-id', secret_id]
+        # NOTE: print command args, but use "quiet" mode so that output isn't printed.
+        # we don't want secrets leaked to the build log
+        print('>', subprocess.list2cmdline(cmd))
+        result = self.env.shell.exec(*cmd, check=True, quiet=True)
+        secret_value = json.loads(result.output)
+        return secret_value['SecretString']
+
+    def _tmpfile_from_secret(self, secret_name, file_name):
+        """get file contents from secretsmanager, store as file under /tmp, return file path"""
+        file_contents = self._get_secret(secret_name)
+        file_path = os.path.join(tempfile.gettempdir(), file_name)
+        print(f"Writing to: {file_path}")
+        pathlib.Path(file_path).write_text(file_contents)
+        return file_path
+
+    def _setenv_from_secret(self, env_var_name, secret_name):
+        """get string from secretsmanager and store in environment variable"""
+
+        secret_value = self._get_secret(secret_name)
+        self.env.shell.setenv(env_var_name, secret_value)
+
+    def _setenv_tmpfile_from_secret(self, env_var_name, secret_name, file_name):
+        """get file contents from secretsmanager, store as file under /tmp, and store path in environment variable"""
+        file_path = self._tmpfile_from_secret(secret_name, file_name)
+        self.env.shell.setenv(env_var_name, file_path)
 
     def _try_setup_pkcs11(self):
         """Attempt to setup for PKCS#11 tests, but bail out if we can't get SoftHSM2 installed"""
@@ -118,25 +146,6 @@ class SetupForTests(Builder.Action):
         self.env.shell.setenv('AWS_TEST_PKCS11_PIN', pin)
         self.env.shell.setenv('AWS_TEST_PKCS11_TOKEN_LABEL', token_label)
         self.env.shell.setenv('AWS_TEST_PKCS11_KEY_LABEL', key_label)
-
-    def _tmpfile_from_secret(self, secret_name, file_name):
-        """get file contents from secretsmanager, store as file under /tmp, return file path"""
-        response = self.secrets.get_secret_value(SecretId=secret_name)
-        file_contents = response['SecretString']
-        file_path = os.path.join(tempfile.gettempdir(), file_name)
-        pathlib.Path(file_path).write_text(file_contents)
-        return file_path
-
-    def _setenv_from_secret(self, env_var_name, secret_name):
-        """get string from secretsmanager and store in environment variable"""
-
-        response = self.secrets.get_secret_value(SecretId=secret_name)
-        self.env.shell.setenv(env_var_name, response['SecretString'])
-
-    def _setenv_tmpfile_from_secret(self, env_var_name, secret_name, file_name):
-        """get file contents from secretsmanager, store as file under /tmp, and store path in environment variable"""
-        file_path = self._tmpfile_from_secret(secret_name, file_name)
-        self.env.shell.setenv(env_var_name, file_path)
 
     def _find_softhsm2_lib(self):
         """Return path to SoftHSM2 shared lib, or None if not found"""
@@ -226,7 +235,7 @@ class AWSCrtPython(Builder.Action):
         python = args.python if args.python else sys.executable
 
         actions = [
-            InstallPythonReqs(deps=['boto3'], python=python),
+            InstallPythonReqs(deps=[], python=python),
             SetupForTests(),
             [python, '-m', 'pip', 'install', '--verbose', '.'],
             # "--failfast" because, given how our leak-detection in tests currently works,
