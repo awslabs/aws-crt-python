@@ -60,6 +60,13 @@ MQTT
 * AWS_TEST_TLS_KEY_PATH - file path to the private key used to initialize the TLS context of the MQTT connection
 * AWS_TEST_TLS_ROOT_CERT_PATH - file path to the root CA used to initialize the TLS context of the MQTT connection
 
+PKCS11
+* AWS_TEST_PKCS11_LIB - path to PKCS#11 library
+* AWS_TEST_PKCS11_PIN - user PIN for logging into PKCS#11 token
+* AWS_TEST_PKCS11_TOKEN_LABEL - label of PKCS#11 token
+* AWS_TEST_PKCS11_KEY_LABEL - label of private key on PKCS#11 token,
+  which must correspond to the cert at AWS_TEST_TLS_CERT_PATH.
+
 PROXY
 * AWS_TEST_HTTP_PROXY_HOST - host address of the proxy to use for tests that make open connections to the proxy
 * AWS_TEST_HTTP_PROXY_PORT - port to use for tests that make open connections to the proxy

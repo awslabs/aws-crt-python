@@ -1,15 +1,14 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 
-from awscrt.auth import AwsCredentialsProvider
-from awscrt.http import HttpProxyOptions
-from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions, LogLevel, init_logging
+from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, Pkcs11Lib, TlsContextOptions, LogLevel, init_logging
 from awscrt.mqtt import Client, Connection, QoS
 from test import NativeResourceTest
 from concurrent.futures import Future
 import enum
 import os
 import pathlib
+import sys
 import unittest
 import uuid
 
@@ -30,14 +29,14 @@ AuthType = enum.Enum('AuthType', ['CERT_AND_KEY', 'PKCS11'])
 class Config:
     def __init__(self, auth_type):
         self.endpoint = self._get_env('AWS_TEST_IOT_MQTT_ENDPOINT')
+        self.cert_path = self._get_env('AWS_TEST_TLS_CERT_PATH')
+        self.cert = pathlib.Path(self.cert_path).read_text().encode('utf-8')
 
         if auth_type == AuthType.CERT_AND_KEY:
-            self.cert_path = self._get_env('AWS_TEST_TLS_CERT_PATH')
-            self.cert = pathlib.Path(self.cert_path).read_text().encode('utf-8')
             self.key_path = self._get_env('AWS_TEST_TLS_KEY_PATH')
             self.key = pathlib.Path(self.key_path).read_text().encode('utf-8')
 
-        if auth_type == AuthType.PKCS11:
+        elif auth_type == AuthType.PKCS11:
             self.pkcs11_lib_path = self._get_env('AWS_TEST_PKCS11_LIB')
             self.pkcs11_pin = self._get_env('AWS_TEST_PKCS11_PIN')
             self.pkcs11_token_label = self._get_env('AWS_TEST_PKCS11_TOKEN_LABEL')
@@ -58,14 +57,37 @@ class MqttConnectionTest(NativeResourceTest):
     TEST_TOPIC = '/test/me/senpai'
     TEST_MSG = 'NOTICE ME!'.encode('utf8')
 
-    def _test_connection(self):
-        config = Config(AuthType.CERT_AND_KEY)
+    def _create_connection(self, auth_type=AuthType.CERT_AND_KEY):
+        config = Config(auth_type)
         elg = EventLoopGroup()
         resolver = DefaultHostResolver(elg)
         bootstrap = ClientBootstrap(elg, resolver)
 
-        tls_opts = TlsContextOptions.create_client_with_mtls(config.cert, config.key)
-        tls = ClientTlsContext(tls_opts)
+        if auth_type == AuthType.CERT_AND_KEY:
+            tls_opts = TlsContextOptions.create_client_with_mtls_from_path(config.cert_path, config.key_path)
+            tls = ClientTlsContext(tls_opts)
+
+        elif auth_type == AuthType.PKCS11:
+            try:
+                pkcs11_lib = Pkcs11Lib(
+                    file=config.pkcs11_lib_path,
+                    behavior=Pkcs11Lib.InitializeFinalizeBehavior.STRICT)
+
+                tls_opts = TlsContextOptions.create_client_with_mtls_pkcs11(
+                    pkcs11_lib=pkcs11_lib,
+                    user_pin=config.pkcs11_pin,
+                    token_label=config.pkcs11_token_label,
+                    private_key_label=config.pkcs11_key_label,
+                    cert_file_path=config.cert_path)
+
+                tls = ClientTlsContext(tls_opts)
+
+            except Exception as e:
+                if 'AWS_ERROR_UNIMPLEMENTED' in str(e):
+                    raise unittest.SkipTest(f'TLS with PKCS#11 not supported on this platform ({sys.platform})')
+                else:
+                    # re-raise exception
+                    raise
 
         client = Client(bootstrap, tls)
         connection = Connection(
@@ -73,15 +95,21 @@ class MqttConnectionTest(NativeResourceTest):
             client_id=create_client_id(),
             host_name=config.endpoint,
             port=8883)
-        connection.connect().result(TIMEOUT)
         return connection
 
     def test_connect_disconnect(self):
-        connection = self._test_connection()
+        connection = self._create_connection()
+        connection.connect().result(TIMEOUT)
+        connection.disconnect().result(TIMEOUT)
+
+    def test_pkcs11(self):
+        connection = self._create_connection(AuthType.PKCS11)
+        connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
     def test_pub_sub(self):
-        connection = self._test_connection()
+        connection = self._create_connection()
+        connection.connect().result(TIMEOUT)
         received = Future()
 
         def on_message(**kwargs):
@@ -116,20 +144,7 @@ class MqttConnectionTest(NativeResourceTest):
         connection.disconnect().result(TIMEOUT)
 
     def test_on_message(self):
-        config = Config(AuthType.CERT_AND_KEY)
-        elg = EventLoopGroup()
-        resolver = DefaultHostResolver(elg)
-        bootstrap = ClientBootstrap(elg, resolver)
-
-        tls_opts = TlsContextOptions.create_client_with_mtls(config.cert, config.key)
-        tls = ClientTlsContext(tls_opts)
-
-        client = Client(bootstrap, tls)
-        connection = Connection(
-            client=client,
-            client_id=create_client_id(),
-            host_name=config.endpoint,
-            port=8883)
+        connection = self._create_connection()
         received = Future()
 
         def on_message(**kwargs):
@@ -160,20 +175,7 @@ class MqttConnectionTest(NativeResourceTest):
 
     def test_on_message_old_fn_signature(self):
         # ensure that message-received callbacks with the old function signature still work
-        config = Config(AuthType.CERT_AND_KEY)
-        elg = EventLoopGroup()
-        resolver = DefaultHostResolver(elg)
-        bootstrap = ClientBootstrap(elg, resolver)
-
-        tls_opts = TlsContextOptions.create_client_with_mtls(config.cert, config.key)
-        tls = ClientTlsContext(tls_opts)
-
-        client = Client(bootstrap, tls)
-        connection = Connection(
-            client=client,
-            client_id=create_client_id(),
-            host_name=config.endpoint,
-            port=8883)
+        connection = self._create_connection()
 
         any_received = Future()
         sub_received = Future()

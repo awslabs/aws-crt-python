@@ -219,9 +219,23 @@ class TlsContextOptions:
             via :meth:`TlsConnectionOptions.set_alpn_list()`.
     """
     __slots__ = (
-        'min_tls_ver', 'ca_dirpath', 'ca_buffer', 'alpn_list',
-        'certificate_buffer', 'private_key_buffer',
-        'pkcs12_filepath', 'pkcs12_password', 'verify_peer')
+        'min_tls_ver',
+        'ca_dirpath',
+        'ca_buffer',
+        'alpn_list',
+        'certificate_buffer',
+        'private_key_buffer',
+        'pkcs12_filepath',
+        'pkcs12_password',
+        'verify_peer',
+        '_pkcs11_lib',
+        '_pkcs11_user_pin',
+        '_pkcs11_slot_id',
+        '_pkcs11_token_label',
+        '_pkcs11_private_key_label',
+        '_pkcs11_cert_file_path',
+        '_pkcs11_cert_file_contents',
+    )
 
     def __init__(self):
 
@@ -276,7 +290,65 @@ class TlsContextOptions:
         opt.certificate_buffer = cert_buffer
         opt.private_key_buffer = key_buffer
 
-        opt.verify_peer = True
+        return opt
+
+    @staticmethod
+    def create_client_with_mtls_pkcs11(*,
+                                       pkcs11_lib: 'Pkcs11Lib',
+                                       user_pin: str,
+                                       slot_id: int = None,
+                                       token_label: str = None,
+                                       private_key_label: str = None,
+                                       cert_file_path: str = None,
+                                       cert_file_contents=None):
+        """
+        Create options configured for use with mutual TLS in client mode,
+        using a PKCS#11 library for private key operations.
+
+        NOTE: This configuration only works on Unix devices.
+
+        Keyword Args:
+            pkcs11_lib (Pkcs11Lib): Use this PKCS#11 library
+
+            user_pin (Optional[str]): User PIN, for logging into the PKCS#11 token.
+                Pass `None` to log into a token with a "protected authentication path".
+
+            slot_id (Optional[int]): ID of slot containing PKCS#11 token.
+                If not specified, the token will be chosen based on other criteria (such as token label).
+
+            token_label (Optional[str]): Label of the PKCS#11 token to use.
+                If not specified, the token will be chosen based on other criteria (such as slot ID).
+
+            private_key_label (Optional[str]): Label of private key object on PKCS#11 token.
+                If not specified, the key will be chosen based on other criteria
+                (such as being the only available private key on the token).
+
+            cert_file_path (Optional[str]): Use this X.509 certificate (file on disk).
+                The certificate must be PEM-formatted. The certificate may be
+                specified by other means instead (ex: `cert_file_contents`)
+
+            cert_file_contents (Optional[bytes-like object]):
+                Use this X.509 certificate (contents in memory).
+                The certificate must be PEM-formatted. The certificate may be
+                specified by other means instead (ex: `cert_file_path`)
+        """
+
+        assert isinstance(pkcs11_lib, Pkcs11Lib)
+        assert isinstance(user_pin, str) or user_pin is None
+        assert isinstance(slot_id, int) or slot_id is None
+        assert isinstance(token_label, str) or token_label is None
+        assert isinstance(private_key_label, str) or private_key_label is None
+        assert isinstance(cert_file_path, str) or cert_file_path is None
+        # note: not validating cert_file_contents, because "bytes-like object" isn't a strict type
+
+        opt = TlsContextOptions()
+        opt._pkcs11_lib = pkcs11_lib
+        opt._pkcs11_user_pin = user_pin
+        opt._pkcs11_slot_id = slot_id
+        opt._pkcs11_token_label = token_label
+        opt._pkcs11_private_key_label = private_key_label
+        opt._pkcs11_cert_file_path = cert_file_path
+        opt._pkcs11_cert_file_contents = cert_file_contents
         return opt
 
     @staticmethod
@@ -301,7 +373,6 @@ class TlsContextOptions:
         opt = TlsContextOptions()
         opt.pkcs12_filepath = pkcs12_filepath
         opt.pkcs12_password = pkcs12_password
-        opt.verify_peer = True
         return opt
 
     @staticmethod
@@ -430,7 +501,14 @@ class ClientTlsContext(NativeResource):
             options.private_key_buffer,
             options.pkcs12_filepath,
             options.pkcs12_password,
-            options.verify_peer
+            options.verify_peer,
+            options._pkcs11_lib,
+            options._pkcs11_user_pin,
+            options._pkcs11_slot_id,
+            options._pkcs11_token_label,
+            options._pkcs11_private_key_label,
+            options._pkcs11_cert_file_path,
+            options._pkcs11_cert_file_contents,
         )
 
     def new_connection_options(self):
@@ -565,3 +643,59 @@ class InputStream(NativeResource):
         if isinstance(stream, InputStream):
             return stream
         return cls(stream)
+
+
+class Pkcs11Lib(NativeResource):
+    """
+    Handle to a loaded PKCS#11 library.
+
+    For most use cases, a single instance of :class:`Pkcs11Lib` should be used for the
+    lifetime of your application.
+
+    Keyword Args:
+        file (str): Path to PKCS#11 library.
+        behavior (Optional[InitializeFinalizeBehavior]):
+            Specifies how `C_Initialize()` and `C_Finalize()` will be called
+            on the PKCS#11 library (default is :attr:`InitializeFinalizeBehavior.DEFAULT`)
+    """
+
+    class InitializeFinalizeBehavior(IntEnum):
+        """
+        An enumeration.
+
+        Controls how `C_Initialize()` and `C_Finalize()` are called on the PKCS#11 library.
+        """
+
+        DEFAULT = 0
+        """
+        Relaxed behavior that accommodates most use cases.
+
+        `C_Initialize()` is called on creation, and "already-initialized"
+        errors are ignored. `C_Finalize()` is never called, just in case
+        another part of your application is still using the PKCS#11 library.
+        """
+
+        OMIT = 1
+        """
+        Skip calling `C_Initialize()` and `C_Finalize()`.
+
+        Use this if your application has already initialized the PKCS#11 library, and
+        you do not want `C_Initialize()` called again.
+        """
+
+        STRICT = 2
+        """
+        `C_Initialize()` is called on creation and `C_Finalize()` is
+        called on cleanup.
+
+        If `C_Initialize()` reports that's it's already initialized, this is
+        treated as an error. Use this if you need perfect cleanup (ex: running
+        valgrind with --leak-check).
+        """
+
+    def __init__(self, *, file: str, behavior: InitializeFinalizeBehavior = None):
+        super().__init__()
+        if behavior is None:
+            behavior = Pkcs11Lib.InitializeFinalizeBehavior.DEFAULT
+
+        self._binding = _awscrt.pkcs11_lib_new(file, behavior)

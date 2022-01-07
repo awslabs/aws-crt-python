@@ -3,3 +3,17 @@ extraction:
     index:
       # not sure why cpp builds are using python 2, but this should stop it
       build_command: "python3 setup.py build"
+
+# add tags for folders and files that we don't want alerts about
+# LGTM already has defaults tagging folders like "test/", so we're just adding non-obvious things here
+path_classifiers:
+  library:
+    # ignore alerts in libraries that the Common Runtime team doesn't own
+    - crt/s2n
+    - crt/aws-lc
+  test:
+    - codebuild
+    - continuous-delivery
+    - elasticurl.py
+    - mqtt_test.py
+    - s3_benchmark.py

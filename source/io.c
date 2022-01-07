@@ -412,9 +412,22 @@ PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args) {
     const char *pkcs12_filepath;
     const char *pkcs12_password;
     uint8_t verify_peer;
+    PyObject *py_pkcs11_lib;
+    const char *pkcs11_user_pin;
+    Py_ssize_t pkcs11_user_pin_len;
+    PyObject *py_pkcs11_slot_id;
+    const char *pkcs11_token_label;
+    Py_ssize_t pkcs11_token_label_len;
+    const char *pkcs11_priv_key_label;
+    Py_ssize_t pkcs11_priv_key_label_len;
+    const char *pkcs11_cert_file_path;
+    Py_ssize_t pkcs11_cert_file_path_len;
+    const char *pkcs11_cert_file_contents;
+    Py_ssize_t pkcs11_cert_file_contents_len;
+
     if (!PyArg_ParseTuple(
             args,
-            "bzz#zz#z#zzb",
+            "bzz#zz#z#zzbOz#Oz#z#z#z#",
             &min_tls_version,
             &ca_dirpath,
             &ca_buffer,
@@ -426,20 +439,77 @@ PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args) {
             &private_key_buffer_len,
             &pkcs12_filepath,
             &pkcs12_password,
-            &verify_peer)) {
+            &verify_peer,
+            &py_pkcs11_lib,
+            &pkcs11_user_pin,
+            &pkcs11_user_pin_len,
+            &py_pkcs11_slot_id,
+            &pkcs11_token_label,
+            &pkcs11_token_label_len,
+            &pkcs11_priv_key_label,
+            &pkcs11_priv_key_label_len,
+            &pkcs11_cert_file_path,
+            &pkcs11_cert_file_path_len,
+            &pkcs11_cert_file_contents,
+            &pkcs11_cert_file_contents_len)) {
         return NULL;
     }
 
     struct aws_tls_ctx_options ctx_options;
     AWS_ZERO_STRUCT(ctx_options);
-    if (certificate_buffer_len > 0 && private_key_buffer_len > 0) {
+    if (certificate_buffer != NULL) {
+        /* mTLS with certificate and private key*/
         struct aws_byte_cursor cert = aws_byte_cursor_from_array(certificate_buffer, certificate_buffer_len);
         struct aws_byte_cursor key = aws_byte_cursor_from_array(private_key_buffer, private_key_buffer_len);
         if (aws_tls_ctx_options_init_client_mtls(&ctx_options, allocator, &cert, &key)) {
             PyErr_SetAwsLastError();
             return NULL;
         }
+    } else if (py_pkcs11_lib != Py_None) {
+        /* mTLS with PKCS#11 */
+        struct aws_pkcs11_lib *pkcs11_lib = aws_py_get_pkcs11_lib(py_pkcs11_lib);
+        if (pkcs11_lib == NULL) {
+            return NULL;
+        }
+
+        bool has_slot_id = false;
+        uint64_t slot_id_value = 0;
+        if (py_pkcs11_slot_id != Py_None) {
+            has_slot_id = true;
+            slot_id_value = PyLong_AsUnsignedLongLong(py_pkcs11_slot_id);
+            if ((slot_id_value == (uint64_t)-1) && PyErr_Occurred()) {
+                PyErr_SetString(PyExc_ValueError, "PKCS#11 slot_id is not a valid int");
+                return NULL;
+            }
+        }
+
+        struct aws_tls_ctx_pkcs11_options pkcs11_options = {
+            .pkcs11_lib = pkcs11_lib,
+            .user_pin = aws_byte_cursor_from_array(pkcs11_user_pin, pkcs11_user_pin_len),
+            .slot_id = has_slot_id ? &slot_id_value : NULL,
+            .token_label = aws_byte_cursor_from_array(pkcs11_token_label, pkcs11_token_label_len),
+            .private_key_object_label = aws_byte_cursor_from_array(pkcs11_priv_key_label, pkcs11_priv_key_label_len),
+            .cert_file_path = aws_byte_cursor_from_array(pkcs11_cert_file_path, pkcs11_cert_file_path_len),
+            .cert_file_contents = aws_byte_cursor_from_array(pkcs11_cert_file_contents, pkcs11_cert_file_contents_len),
+        };
+
+        if (aws_tls_ctx_options_init_client_mtls_with_pkcs11(&ctx_options, allocator, &pkcs11_options)) {
+            return PyErr_AwsLastError();
+        }
+    } else if (pkcs12_filepath != NULL) {
+        /* mTLS with PKCS#12 */
+#ifdef __APPLE__
+        struct aws_byte_cursor password = aws_byte_cursor_from_c_str(pkcs12_password);
+        if (aws_tls_ctx_options_init_client_mtls_pkcs12_from_path(
+                &ctx_options, allocator, pkcs12_filepath, &password)) {
+            return PyErr_AwsLastError();
+        }
+#else
+        PyErr_SetString(PyExc_NotImplementedError, "PKCS#12 is currently only supported on Apple devices");
+        return NULL;
+#endif
     } else {
+        /* no mTLS */
         aws_tls_ctx_options_init_default_client(&ctx_options, allocator);
     }
 
@@ -447,13 +517,14 @@ PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args) {
 
     ctx_options.minimum_tls_version = min_tls_version;
 
-    if (ca_dirpath) {
+    if (ca_dirpath != NULL) {
         if (aws_tls_ctx_options_override_default_trust_store_from_path(&ctx_options, ca_dirpath, NULL)) {
             PyErr_SetAwsLastError();
             goto ctx_options_failure;
         }
     }
-    if (ca_buffer_len > 0) {
+
+    if (ca_buffer != NULL) {
         struct aws_byte_cursor ca = aws_byte_cursor_from_array(ca_buffer, ca_buffer_len);
 
         if (aws_tls_ctx_options_override_default_trust_store(&ctx_options, &ca)) {
@@ -462,23 +533,13 @@ PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args) {
         }
     }
 
-    if (alpn_list) {
+    if (alpn_list != NULL) {
         if (aws_tls_ctx_options_set_alpn_list(&ctx_options, alpn_list)) {
             PyErr_SetAwsLastError();
             goto ctx_options_failure;
         }
     }
 
-#ifdef __APPLE__
-    if (pkcs12_filepath && pkcs12_password) {
-        struct aws_byte_cursor password = aws_byte_cursor_from_c_str(pkcs12_password);
-        if (aws_tls_ctx_options_init_client_mtls_pkcs12_from_path(
-                &ctx_options, allocator, pkcs12_filepath, &password)) {
-            PyErr_SetAwsLastError();
-            goto ctx_options_failure;
-        }
-    }
-#endif
     ctx_options.verify_peer = (bool)verify_peer;
     struct aws_tls_ctx *tls_ctx = aws_tls_client_ctx_new(allocator, &ctx_options);
     if (!tls_ctx) {
