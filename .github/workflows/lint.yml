@@ -5,7 +5,7 @@ on: [push]
 jobs:
   clang-format:
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04 # latest
 
     steps:
     - name: Checkout Sources
@@ -18,7 +18,7 @@ jobs:
         extensions: c,h
 
   autopep8:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04 # latest
 
     steps:
     - name: Checkout Source
