@@ -94,7 +94,6 @@ class EventLoopGroup(NativeResource):
         self.shutdown_event = shutdown_event
         self._binding = _awscrt.event_loop_group_new(num_threads, is_pinned, cpu_group, on_shutdown)
 
-
     @staticmethod
     def get_or_create_static_default():
         global _static_event_loop_group
@@ -103,23 +102,22 @@ class EventLoopGroup(NativeResource):
                 return _static_event_loop_group
 
         os_cpu_count = os.cpu_count()
-        if os_cpu_count == None:
+        if os_cpu_count is None:
             os_cpu_count = 1 # could not find the processor count - default to 1
         else:
-            #os.cpu_count returns all cores on the system (including virtual ones)
-            #so we divide by two to avoid using all cores on the entire system.
-            os_cpu_count = max(1, int(os_cpu_count/2))
+            # os.cpu_count returns all cores on the system (including virtual ones)
+            # so we divide by two to avoid using all cores on the entire system.
+            os_cpu_count = max(1, int(os_cpu_count / 2))
 
         _static_event_loop_group = EventLoopGroup(os_cpu_count)
         return _static_event_loop_group
-
 
     @staticmethod
     def release_static_default():
         global _static_event_loop_group
         if '_static_event_loop_group' in globals():
             if isinstance(_static_event_loop_group, EventLoopGroup):
-                del _static_event_loop_group
+                del _static_event_loop_group # lgtm [py/unnecessary-delete]
 
 
 class HostResolverBase(NativeResource):
@@ -142,7 +140,6 @@ class DefaultHostResolver(HostResolverBase):
         super().__init__()
         self._binding = _awscrt.host_resolver_new_default(max_hosts, event_loop_group)
 
-
     @staticmethod
     def get_or_create_static_default():
         global _static_default_host_resolver
@@ -152,12 +149,11 @@ class DefaultHostResolver(HostResolverBase):
         _static_default_host_resolver = DefaultHostResolver(EventLoopGroup.get_or_create_static_default())
         return _static_default_host_resolver
 
-
     @staticmethod
     def release_static_default():
         global _static_default_host_resolver
         if isinstance(_static_default_host_resolver, DefaultHostResolver):
-            del _static_default_host_resolver
+            del _static_default_host_resolver # lgtm [py/unnecessary-delete]
 
 
 class ClientBootstrap(NativeResource):
@@ -188,7 +184,6 @@ class ClientBootstrap(NativeResource):
         self.shutdown_event = shutdown_event
         self._binding = _awscrt.client_bootstrap_new(event_loop_group, host_resolver, on_shutdown)
 
-
     @staticmethod
     def get_or_create_static_default():
         global _static_client_bootstrap
@@ -200,12 +195,11 @@ class ClientBootstrap(NativeResource):
             DefaultHostResolver.get_or_create_static_default())
         return _static_client_bootstrap
 
-
     @staticmethod
     def release_static_default():
         global _static_client_bootstrap
         if isinstance(_static_client_bootstrap, ClientBootstrap):
-            del _static_client_bootstrap
+            del _static_client_bootstrap # lgtm [py/unnecessary-delete]
 
 
 def _read_binary_file(filepath):
