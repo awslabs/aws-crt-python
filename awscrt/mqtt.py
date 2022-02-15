@@ -13,7 +13,7 @@ from enum import IntEnum
 from awscrt import NativeResource
 import awscrt.exceptions
 from awscrt.http import HttpProxyOptions, HttpRequest
-from awscrt.io import ClientBootstrap, ClientTlsContext, SocketOptions
+from awscrt.io import ClientBootstrap, ClientTlsContext, SocketOptions, EventLoopGroup, DefaultHostResolver
 
 
 class QoS(IntEnum):
@@ -244,6 +244,9 @@ class Connection(NativeResource):
 
         proxy_options (Optional[awscrt.http.HttpProxyOptions]):
             Optional proxy options for all connections.
+        
+        using_static_default (Optional[bool]):
+            If true, the connection will clean the static default ClientHandler, EventLoopGroup, and HostResolver.
         """
 
     def __init__(self,
@@ -266,7 +269,8 @@ class Connection(NativeResource):
                  use_websockets=False,
                  websocket_proxy_options=None,
                  websocket_handshake_transform=None,
-                 proxy_options=None
+                 proxy_options=None,
+                 using_static_defaults=None
                  ):
 
         assert isinstance(client, Client)
@@ -296,6 +300,7 @@ class Connection(NativeResource):
         self._on_connection_resumed_cb = on_connection_resumed
         self._use_websockets = use_websockets
         self._ws_handshake_transform_cb = websocket_handshake_transform
+        self.using_static_defaults = using_static_defaults if using_static_defaults else False
 
         # may be changed at runtime, take effect the the next time connect/reconnect occurs
         self.client_id = client_id
@@ -435,6 +440,12 @@ class Connection(NativeResource):
 
         try:
             _awscrt.mqtt_client_connection_disconnect(self._binding, on_disconnect)
+
+            if self.using_static_defaults == True:
+                ClientBootstrap.release_static_default()
+                DefaultHostResolver.release_static_default()
+                EventLoopGroup.release_static_default()
+
         except Exception as e:
             future.set_exception(e)
 
