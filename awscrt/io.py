@@ -39,6 +39,7 @@ def init_logging(log_level, file_name):
 
     _awscrt.init_logging(log_level, file_name)
 
+
 """
 Static Defaults (singletons - or as close as possible in Python)
 
@@ -47,6 +48,7 @@ Will be garbage collected when program ends or module is unloaded
 _static_client_bootstrap = None
 _static_default_host_resolver = None
 _static_event_loop_group = None
+
 
 class EventLoopGroup(NativeResource):
     """A collection of event-loops.
@@ -91,14 +93,15 @@ class EventLoopGroup(NativeResource):
 
         self.shutdown_event = shutdown_event
         self._binding = _awscrt.event_loop_group_new(num_threads, is_pinned, cpu_group, on_shutdown)
-    
+
+
     @staticmethod
     def get_or_create_static_default():
         global _static_event_loop_group
         if '_static_event_loop_group' in globals():
             if isinstance(_static_event_loop_group, EventLoopGroup):
                 return _static_event_loop_group
-        
+
         os_cpu_count = os.cpu_count()
         if os_cpu_count == None:
             os_cpu_count = 1 # could not find the processor count - default to 1
@@ -106,16 +109,18 @@ class EventLoopGroup(NativeResource):
             #os.cpu_count returns all cores on the system (including virtual ones)
             #so we divide by two to avoid using all cores on the entire system.
             os_cpu_count = max(1, int(os_cpu_count/2))
-        
+
         _static_event_loop_group = EventLoopGroup(os_cpu_count)
         return _static_event_loop_group
-    
+
+
     @staticmethod
     def release_static_default():
         global _static_event_loop_group
         if '_static_event_loop_group' in globals():
             if isinstance(_static_event_loop_group, EventLoopGroup):
                 del _static_event_loop_group
+
 
 class HostResolverBase(NativeResource):
     """DNS host resolver."""
@@ -136,7 +141,8 @@ class DefaultHostResolver(HostResolverBase):
 
         super().__init__()
         self._binding = _awscrt.host_resolver_new_default(max_hosts, event_loop_group)
-    
+
+
     @staticmethod
     def get_or_create_static_default():
         global _static_default_host_resolver
@@ -145,7 +151,8 @@ class DefaultHostResolver(HostResolverBase):
                 return _static_default_host_resolver
         _static_default_host_resolver = DefaultHostResolver(EventLoopGroup.get_or_create_static_default())
         return _static_default_host_resolver
-    
+
+
     @staticmethod
     def release_static_default():
         global _static_default_host_resolver
@@ -180,21 +187,26 @@ class ClientBootstrap(NativeResource):
 
         self.shutdown_event = shutdown_event
         self._binding = _awscrt.client_bootstrap_new(event_loop_group, host_resolver, on_shutdown)
-    
+
+
     @staticmethod
     def get_or_create_static_default():
         global _static_client_bootstrap
         if '_static_client_bootstrap' in globals():
             if isinstance(_static_client_bootstrap, ClientBootstrap):
                 return _static_client_bootstrap
-        _static_client_bootstrap = ClientBootstrap(EventLoopGroup.get_or_create_static_default(), DefaultHostResolver.get_or_create_static_default())
+        _static_client_bootstrap = ClientBootstrap(
+            EventLoopGroup.get_or_create_static_default(),
+            DefaultHostResolver.get_or_create_static_default())
         return _static_client_bootstrap
-    
+
+
     @staticmethod
     def release_static_default():
         global _static_client_bootstrap
         if isinstance(_static_client_bootstrap, ClientBootstrap):
             del _static_client_bootstrap
+
 
 def _read_binary_file(filepath):
     with open(filepath, mode='rb') as fh:
@@ -761,54 +773,3 @@ class Pkcs11Lib(NativeResource):
             behavior = Pkcs11Lib.InitializeFinalizeBehavior.DEFAULT
 
         self._binding = _awscrt.pkcs11_lib_new(file, behavior)
-
-
-"""
-class Defaults:
-    # A class containing default, preconfigured instances of ClientBootstrap,
-    # EventLoopGroup, and HostResolver
-
-    def __init__(self):
-        self._static_client_bootstrap = None
-        self._static_event_loop_group = None
-        self._static_default_host_resolver = None
-    
-    def __del__(self):
-        if self._static_client_bootstrap is ClientBootstrap:
-            del self._static_client_bootstrap
-            self._static_client_bootstrap = None
-        if self._static_default_host_resolver is DefaultHostResolver:
-            del self._static_default_host_resolver
-            self._static_default_host_resolver = None
-        if self._static_event_loop_group is EventLoopGroup:
-            del self._static_event_loop_group
-            self._static_event_loop_group = None
-    
-    def client_bootstrap_get_or_create_static_default(self):
-        if self._static_client_bootstrap is ClientBootstrap:
-            return self._static_client_bootstrap
-        self._static_client_bootstrap = ClientBootstrap(self.event_loop_group_get_or_create_static_default(), self.host_resolver_get_or_create_static_default())
-        print ("\n Made (class) ClientBootstrap \n")
-        return self._static_client_bootstrap
-    
-    def event_loop_group_get_or_create_static_default(self):
-        if self._static_event_loop_group is EventLoopGroup:
-            return self._static_event_loop_group
-        
-        os_cpu_count = os.cpu_count()
-        if os_cpu_count == None:
-            os_cpu_count = 1 # could not find the processor count - default to 1
-        else:
-            # os.cpu_count returns all cores on the system (including virtual ones)
-            # so we divide by two to avoid using all cores on the entire system.
-            os_cpu_count = max(1, int(os_cpu_count/2))
-        self._static_event_loop_group = EventLoopGroup(os_cpu_count)
-        
-        return self._static_event_loop_group
-    
-    def host_resolver_get_or_create_static_default(self):
-        if self._static_default_host_resolver is DefaultHostResolver:
-            return self._static_default_host_resolver
-        self._static_default_host_resolver = DefaultHostResolver(self.event_loop_group_get_or_create_static_default())
-        return self._static_default_host_resolver
-"""

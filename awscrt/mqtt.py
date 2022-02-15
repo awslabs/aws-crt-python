@@ -244,7 +244,7 @@ class Connection(NativeResource):
 
         proxy_options (Optional[awscrt.http.HttpProxyOptions]):
             Optional proxy options for all connections.
-        
+
         using_static_default (Optional[bool]):
             If true, the connection will clean the static default ClientHandler, EventLoopGroup, and HostResolver.
         """
@@ -441,7 +441,7 @@ class Connection(NativeResource):
         try:
             _awscrt.mqtt_client_connection_disconnect(self._binding, on_disconnect)
 
-            if self.using_static_defaults == True:
+            if self.using_static_defaults:
                 ClientBootstrap.release_static_default()
                 DefaultHostResolver.release_static_default()
                 EventLoopGroup.release_static_default()
