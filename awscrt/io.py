@@ -103,7 +103,7 @@ class EventLoopGroup(NativeResource):
 
         os_cpu_count = os.cpu_count()
         if os_cpu_count is None:
-            os_cpu_count = 1 # could not find the processor count - default to 1
+            os_cpu_count = 1  # could not find the processor count - default to 1
         else:
             # os.cpu_count returns all cores on the system (including virtual ones)
             # so we divide by two to avoid using all cores on the entire system.
@@ -117,7 +117,7 @@ class EventLoopGroup(NativeResource):
         global _static_event_loop_group
         if '_static_event_loop_group' in globals():
             if isinstance(_static_event_loop_group, EventLoopGroup):
-                del _static_event_loop_group # lgtm [py/unnecessary-delete]
+                del _static_event_loop_group  # lgtm [py/unnecessary-delete]
 
 
 class HostResolverBase(NativeResource):
@@ -153,7 +153,7 @@ class DefaultHostResolver(HostResolverBase):
     def release_static_default():
         global _static_default_host_resolver
         if isinstance(_static_default_host_resolver, DefaultHostResolver):
-            del _static_default_host_resolver # lgtm [py/unnecessary-delete]
+            del _static_default_host_resolver  # lgtm [py/unnecessary-delete]
 
 
 class ClientBootstrap(NativeResource):
@@ -199,7 +199,7 @@ class ClientBootstrap(NativeResource):
     def release_static_default():
         global _static_client_bootstrap
         if isinstance(_static_client_bootstrap, ClientBootstrap):
-            del _static_client_bootstrap # lgtm [py/unnecessary-delete]
+            del _static_client_bootstrap  # lgtm [py/unnecessary-delete]
 
 
 def _read_binary_file(filepath):
