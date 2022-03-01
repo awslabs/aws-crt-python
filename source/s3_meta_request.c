@@ -50,7 +50,7 @@ struct aws_s3_meta_request *aws_py_get_s3_meta_request(PyObject *meta_request) {
 
 static void s_destroy(struct s3_meta_request_binding *meta_request) {
     if (meta_request->input_body) {
-        aws_input_stream_destroy(meta_request->input_body);
+        aws_input_stream_release(meta_request->input_body);
     }
 
     if (meta_request->copied_message) {
@@ -236,7 +236,7 @@ static void s_s3_request_on_finish(
 
     if (request_binding->input_body) {
         /* close the input file stream now, request has finished, we will not read from there anymore */
-        aws_input_stream_destroy(request_binding->input_body);
+        aws_input_stream_release(request_binding->input_body);
         request_binding->input_body = NULL;
     }
 
@@ -391,7 +391,7 @@ static int s_aws_input_stream_file_get_length(struct aws_input_stream *stream, i
 }
 
 static void s_aws_input_stream_file_destroy(struct aws_input_py_stream_file_impl *impl) {
-    aws_input_stream_destroy(impl->actual_stream);
+    aws_input_stream_release(impl->actual_stream);
 
     aws_mem_release(impl->allocator, impl);
 }
