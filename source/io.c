@@ -814,7 +814,6 @@ static struct aws_input_stream_vtable s_aws_input_stream_py_vtable = {
     .read = s_aws_input_stream_py_read,
     .get_status = s_aws_input_stream_py_get_status,
     .get_length = s_aws_input_stream_py_get_length,
-    .destroy = s_aws_input_stream_py_destroy,
 };
 
 static struct aws_input_stream *aws_input_stream_new_from_py(PyObject *py_self) {
