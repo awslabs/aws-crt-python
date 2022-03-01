@@ -696,6 +696,7 @@ PyObject *aws_py_tls_connection_options_set_server_name(PyObject *self, PyObject
 /* aws_input_stream implementation for accessing Python I/O classes */
 struct aws_input_stream_py_impl {
     struct aws_input_stream base;
+    struct aws_allocator *allocator;
 
     bool is_end_of_stream;
 
@@ -703,10 +704,9 @@ struct aws_input_stream_py_impl {
     PyObject *self_proxy;
 };
 
-static void s_aws_input_stream_py_destroy(struct aws_input_stream *stream) {
-    struct aws_input_stream_py_impl *impl = stream->impl;
+static void s_aws_input_stream_py_destroy(struct aws_input_stream_py_impl *impl) {
     Py_XDECREF(impl->self_proxy);
-    aws_mem_release(stream->allocator, stream);
+    aws_mem_release(impl->allocator, impl);
 }
 
 static int s_aws_input_stream_py_seek(
@@ -714,7 +714,7 @@ static int s_aws_input_stream_py_seek(
     int64_t offset,
     enum aws_stream_seek_basis basis) {
 
-    struct aws_input_stream_py_impl *impl = stream->impl;
+    struct aws_input_stream_py_impl *impl = AWS_CONTAINER_OF(stream, struct aws_input_stream_py_impl, base);
 
     int aws_result = AWS_OP_SUCCESS;
     PyObject *method_result = NULL;
@@ -743,7 +743,7 @@ done:
 }
 
 int s_aws_input_stream_py_read(struct aws_input_stream *stream, struct aws_byte_buf *dest) {
-    struct aws_input_stream_py_impl *impl = stream->impl;
+    struct aws_input_stream_py_impl *impl = AWS_CONTAINER_OF(stream, struct aws_input_stream_py_impl, base);
 
     int aws_result = AWS_OP_SUCCESS;
     PyObject *memory_view = NULL;
@@ -795,7 +795,7 @@ done:
 }
 
 int s_aws_input_stream_py_get_status(struct aws_input_stream *stream, struct aws_stream_status *status) {
-    struct aws_input_stream_py_impl *impl = stream->impl;
+    struct aws_input_stream_py_impl *impl = AWS_CONTAINER_OF(stream, struct aws_input_stream_py_impl, base);
 
     status->is_valid = true;
     status->is_end_of_stream = impl->is_end_of_stream;
@@ -806,7 +806,7 @@ int s_aws_input_stream_py_get_status(struct aws_input_stream *stream, struct aws
 int s_aws_input_stream_py_get_length(struct aws_input_stream *stream, int64_t *out_length) {
     (void)stream;
     (void)out_length;
-    return AWS_ERROR_UNIMPLEMENTED;
+    return aws_raise_error(AWS_ERROR_UNIMPLEMENTED);
 }
 
 static struct aws_input_stream_vtable s_aws_input_stream_py_vtable = {
@@ -830,9 +830,10 @@ static struct aws_input_stream *aws_input_stream_new_from_py(PyObject *py_self) 
         return NULL;
     }
 
-    impl->base.allocator = alloc;
+    impl->allocator = alloc;
     impl->base.vtable = &s_aws_input_stream_py_vtable;
-    impl->base.impl = impl;
+    aws_ref_count_init(&impl->base.ref_count, impl, (aws_simple_completion_callback *)s_aws_input_stream_py_destroy);
+
     impl->self_proxy = PyWeakref_NewProxy(py_self, NULL);
     if (!impl->self_proxy) {
         goto error;
