@@ -407,7 +407,8 @@ static struct aws_input_stream *s_input_stream_new_from_file(
     struct aws_allocator *allocator,
     const char *file_name,
     struct s3_meta_request_binding *request_binding) {
-    struct aws_input_py_stream_file_impl *impl = aws_mem_calloc(allocator, 1, sizeof(struct aws_input_py_stream_file_impl));
+    struct aws_input_py_stream_file_impl *impl =
+        aws_mem_calloc(allocator, 1, sizeof(struct aws_input_py_stream_file_impl));
 
     impl->allocator = allocator;
     impl->base.vtable = &s_aws_input_stream_file_vtable;
