@@ -840,7 +840,7 @@ static struct aws_input_stream *aws_input_stream_new_from_py(PyObject *py_self) 
 
     return &impl->base;
 error:
-    aws_input_stream_destroy(&impl->base);
+    aws_input_stream_release(&impl->base);
     return NULL;
 }
 
@@ -854,7 +854,7 @@ error:
 
 static void s_input_stream_capsule_destructor(PyObject *py_capsule) {
     struct aws_input_stream *stream = PyCapsule_GetPointer(py_capsule, s_capsule_name_input_stream);
-    aws_input_stream_destroy(stream);
+    aws_input_stream_release(stream);
 }
 
 PyObject *aws_py_input_stream_new(PyObject *self, PyObject *args) {
@@ -872,7 +872,7 @@ PyObject *aws_py_input_stream_new(PyObject *self, PyObject *args) {
 
     PyObject *py_capsule = PyCapsule_New(stream, s_capsule_name_input_stream, s_input_stream_capsule_destructor);
     if (!py_capsule) {
-        aws_input_stream_destroy(stream);
+        aws_input_stream_release(stream);
         return NULL;
     }
 
