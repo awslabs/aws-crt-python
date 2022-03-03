@@ -246,9 +246,6 @@ class Connection(NativeResource):
             Optional proxy options for all connections.
         """
 
-    # For backward compability to handle the user callback missmatch.
-    _exception_str = "got an unexpected keyword argument"
-
     def __init__(self,
                  client,
                  host_name,
@@ -503,7 +500,7 @@ class Connection(NativeResource):
                 try:
                     callback(topic=topic, payload=payload, dup=dup, qos=QoS(qos), retain=retain)
                 except TypeError as e:
-                    if self._exception_str in str(e) and callback.__name__ in str(e):
+                    if "got an unexpected keyword argument" in str(e) and callback.__name__ in str(e):
                         # This callback used to have fewer args.
                         # Try again, passing only those those args, to cover case where
                         # user function failed to take forward-compatibility **kwargs.
@@ -564,7 +561,7 @@ class Connection(NativeResource):
                 try:
                     callback(topic=topic, payload=payload, dup=dup, qos=QoS(qos), retain=retain)
                 except TypeError as e:
-                    if self._exception_str in str(e) and callback.__name__ in str(e):
+                    if "got an unexpected keyword argument" in str(e) and callback.__name__ in str(e):
                         # This callback used to have fewer args.
                         # Try again, passing only those those args, to cover case where
                         # user function failed to take forward-compatibility **kwargs.
