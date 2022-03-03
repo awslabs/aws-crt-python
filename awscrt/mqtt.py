@@ -7,6 +7,7 @@ All network operations in `awscrt.mqtt` are asynchronous.
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 
+import this
 import _awscrt
 from concurrent.futures import Future
 from enum import IntEnum
@@ -245,6 +246,9 @@ class Connection(NativeResource):
         proxy_options (Optional[awscrt.http.HttpProxyOptions]):
             Optional proxy options for all connections.
         """
+
+    # For backward compability to handle the user callback missmatch.
+    _exception_str = "got an unexpected keyword argument"
 
     def __init__(self,
                  client,
@@ -499,11 +503,14 @@ class Connection(NativeResource):
             def callback_wrapper(topic, payload, dup, qos, retain):
                 try:
                     callback(topic=topic, payload=payload, dup=dup, qos=QoS(qos), retain=retain)
-                except TypeError:
-                    # This callback used to have fewer args.
-                    # Try again, passing only those those args, to cover case where
-                    # user function failed to take forward-compatibility **kwargs.
-                    callback(topic=topic, payload=payload)
+                except TypeError as e:
+                    if self._exception_str in str(e) and callback.__name__ in str(e):
+                        # This callback used to have fewer args.
+                        # Try again, passing only those those args, to cover case where
+                        # user function failed to take forward-compatibility **kwargs.
+                        callback(topic=topic, payload=payload)
+                    else:
+                        raise e
         else:
             callback_wrapper = None
 
@@ -557,11 +564,15 @@ class Connection(NativeResource):
             def callback_wrapper(topic, payload, dup, qos, retain):
                 try:
                     callback(topic=topic, payload=payload, dup=dup, qos=QoS(qos), retain=retain)
-                except TypeError:
-                    # This callback used to have fewer args.
-                    # Try again, passing only those those args, to cover case where
-                    # user function failed to take forward-compatibility **kwargs.
-                    callback(topic=topic, payload=payload)
+                except TypeError as e:
+                    if self._exception_str in str(e) and callback.__name__ in str(e):
+                        # This callback used to have fewer args.
+                        # Try again, passing only those those args, to cover case where
+                        # user function failed to take forward-compatibility **kwargs.
+                        callback(topic=topic, payload=payload)
+                    else:
+                        raise e
+
         else:
             callback_wrapper = None
 
