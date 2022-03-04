@@ -441,11 +441,6 @@ class Connection(NativeResource):
         try:
             _awscrt.mqtt_client_connection_disconnect(self._binding, on_disconnect)
 
-            if self.using_static_defaults:
-                ClientBootstrap.release_static_default()
-                DefaultHostResolver.release_static_default()
-                EventLoopGroup.release_static_default()
-
         except Exception as e:
             future.set_exception(e)
 
