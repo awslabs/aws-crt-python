@@ -10,6 +10,7 @@ All network operations in `awscrt.mqtt` are asynchronous.
 import _awscrt
 from concurrent.futures import Future
 from enum import IntEnum
+import inspect
 from awscrt import NativeResource
 import awscrt.exceptions
 from awscrt.http import HttpProxyOptions, HttpRequest
@@ -496,17 +497,18 @@ class Connection(NativeResource):
         packet_id = 0
 
         if callback:
+            callback_argspec = inspect.getfullargspec(callback)
+
             def callback_wrapper(topic, payload, dup, qos, retain):
-                try:
+                if callback_argspec.varargs is None and callback_argspec.varkw is None and len(
+                        callback_argspec.args) == 2:
+                    # This callback used to have fewer args. Passing only those args, if it
+                    # only has two args and no forward-compatibility to cover case where
+                    # user function failed to take forward-compatibility **kwargs.
+                    callback(topic=topic, payload=payload)
+                else:
                     callback(topic=topic, payload=payload, dup=dup, qos=QoS(qos), retain=retain)
-                except TypeError as e:
-                    if "got an unexpected keyword argument" in str(e) and callback.__name__ in str(e):
-                        # This callback used to have fewer args.
-                        # Try again, passing only those those args, to cover case where
-                        # user function failed to take forward-compatibility **kwargs.
-                        callback(topic=topic, payload=payload)
-                    else:
-                        raise e
+
         else:
             callback_wrapper = None
 
@@ -557,17 +559,17 @@ class Connection(NativeResource):
         assert callable(callback) or callback is None
 
         if callback:
+            callback_argspec = inspect.getfullargspec(callback)
+
             def callback_wrapper(topic, payload, dup, qos, retain):
-                try:
+                if callback_argspec.varargs is None and callback_argspec.varkw is None and len(
+                        callback_argspec.args) == 2:
+                    # This callback used to have fewer args. Passing only those args, if it
+                    # only has two args and no forward-compatibility to cover case where
+                    # user function failed to take forward-compatibility **kwargs.
+                    callback(topic=topic, payload=payload)
+                else:
                     callback(topic=topic, payload=payload, dup=dup, qos=QoS(qos), retain=retain)
-                except TypeError as e:
-                    if "got an unexpected keyword argument" in str(e) and callback.__name__ in str(e):
-                        # This callback used to have fewer args.
-                        # Try again, passing only those those args, to cover case where
-                        # user function failed to take forward-compatibility **kwargs.
-                        callback(topic=topic, payload=payload)
-                    else:
-                        raise e
 
         else:
             callback_wrapper = None
