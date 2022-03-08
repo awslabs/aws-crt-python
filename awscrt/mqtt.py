@@ -6,10 +6,11 @@ All network operations in `awscrt.mqtt` are asynchronous.
 
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
+from ast import Not
 import _awscrt
 from concurrent.futures import Future
 from enum import IntEnum
-import inspect
+from inspect import getcallargs
 from awscrt import NativeResource
 import awscrt.exceptions
 from awscrt.http import HttpProxyOptions, HttpRequest
@@ -323,14 +324,13 @@ class Connection(NativeResource):
         # The callback used to have fewer args. Passing only those args, if it
         # only has two args and no forward-compatibility to cover case where
         # user function failed to take forward-compatibility **kwargs.
-        callback_params = inspect.signature(callback).parameters
+
         try_backward_callback = False
-        if len(callback_params) == 2:
+        try:
+            try_backward_callback = getcallargs(
+                callback, topic='topic', payload='payload', dup=True, qos=QoS(1), retain=True) is None
+        except Exception as e:
             try_backward_callback = True
-            for i in callback_params.values():
-                if i.kind == i.VAR_POSITIONAL or i.kind == i.VAR_KEYWORD:
-                    try_backward_callback = False
-                    break
         return try_backward_callback
 
     def _on_connection_interrupted(self, error_code):
@@ -568,6 +568,7 @@ class Connection(NativeResource):
         assert callable(callback) or callback is None
 
         if callback:
+
             try_backward_callback = self._check_try_backward_message_callback(callback)
 
             def callback_wrapper(topic, payload, dup, qos, retain):
