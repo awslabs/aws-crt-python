@@ -6,7 +6,6 @@ All network operations in `awscrt.mqtt` are asynchronous.
 
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
-
 import _awscrt
 from concurrent.futures import Future
 from enum import IntEnum
@@ -320,6 +319,20 @@ class Connection(NativeResource):
             use_websockets,
         )
 
+    def _check_try_backward_message_callback(self, callback):
+        # The callback used to have fewer args. Passing only those args, if it
+        # only has two args and no forward-compatibility to cover case where
+        # user function failed to take forward-compatibility **kwargs.
+        callback_params = inspect.signature(callback).parameters
+        try_backward_callback = False
+        if len(callback_params) == 2:
+            try_backward_callback = True
+            for i in callback_params.values():
+                if i.kind == i.VAR_POSITIONAL or i.kind == i.VAR_KEYWORD:
+                    try_backward_callback = False
+                    break
+        return try_backward_callback
+
     def _on_connection_interrupted(self, error_code):
         if self._on_connection_interrupted_cb:
             self._on_connection_interrupted_cb(connection=self, error=awscrt.exceptions.from_code(error_code))
@@ -497,14 +510,10 @@ class Connection(NativeResource):
         packet_id = 0
 
         if callback:
-            callback_argspec = inspect.getfullargspec(callback)
+            try_backward_callback = self._check_try_backward_message_callback(callback)
 
             def callback_wrapper(topic, payload, dup, qos, retain):
-                if callback_argspec.varargs is None and callback_argspec.varkw is None and len(
-                        callback_argspec.args) == 2:
-                    # This callback used to have fewer args. Passing only those args, if it
-                    # only has two args and no forward-compatibility to cover case where
-                    # user function failed to take forward-compatibility **kwargs.
+                if try_backward_callback:
                     callback(topic=topic, payload=payload)
                 else:
                     callback(topic=topic, payload=payload, dup=dup, qos=QoS(qos), retain=retain)
@@ -559,14 +568,10 @@ class Connection(NativeResource):
         assert callable(callback) or callback is None
 
         if callback:
-            callback_argspec = inspect.getfullargspec(callback)
+            try_backward_callback = self._check_try_backward_message_callback(callback)
 
             def callback_wrapper(topic, payload, dup, qos, retain):
-                if callback_argspec.varargs is None and callback_argspec.varkw is None and len(
-                        callback_argspec.args) == 2:
-                    # This callback used to have fewer args. Passing only those args, if it
-                    # only has two args and no forward-compatibility to cover case where
-                    # user function failed to take forward-compatibility **kwargs.
+                if try_backward_callback:
                     callback(topic=topic, payload=payload)
                 else:
                     callback(topic=topic, payload=payload, dup=dup, qos=QoS(qos), retain=retain)
