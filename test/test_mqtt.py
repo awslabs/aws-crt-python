@@ -224,7 +224,7 @@ class MqttConnectionSingletonTest(NativeResourceTest):
             tls_opts = TlsContextOptions.create_client_with_mtls_from_path(config.cert_path, config.key_path)
             tls = ClientTlsContext(tls_opts)
 
-        client = Client(tls)
+        client = Client(tls_ctx=tls)
         connection = Connection(
             client=client,
             client_id=create_client_id(),

@@ -12,7 +12,6 @@ import _awscrt
 from awscrt import NativeResource
 from enum import IntEnum
 import threading
-import os
 
 
 class LogLevel(IntEnum):
