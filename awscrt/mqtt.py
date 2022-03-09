@@ -9,7 +9,7 @@ All network operations in `awscrt.mqtt` are asynchronous.
 import _awscrt
 from concurrent.futures import Future
 from enum import IntEnum
-from inspect import getcallargs
+from inspect import signature
 from awscrt import NativeResource
 import awscrt.exceptions
 from awscrt.http import HttpProxyOptions, HttpRequest
@@ -325,9 +325,9 @@ class Connection(NativeResource):
         # user function failed to take forward-compatibility **kwargs.
 
         try_backward_callback = False
+        callback_sig = signature(callback)
         try:
-            try_backward_callback = getcallargs(
-                callback, topic='topic', payload='payload', dup=True, qos=QoS(1), retain=True) is None
+            callback_sig.bind(topic='topic', payload='payload', dup=True, qos=QoS(1), retain=True)
         except Exception as e:
             try_backward_callback = True
         return try_backward_callback
