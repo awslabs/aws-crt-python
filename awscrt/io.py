@@ -40,16 +40,6 @@ def init_logging(log_level, file_name):
     _awscrt.init_logging(log_level, file_name)
 
 
-"""
-Static Defaults (singletons - or as close as possible in Python)
-
-Will be garbage collected when program ends or module is unloaded
-"""
-_static_client_bootstrap = None
-_static_default_host_resolver = None
-_static_event_loop_group = None
-
-
 class EventLoopGroup(NativeResource):
     """A collection of event-loops.
 
@@ -71,6 +61,8 @@ class EventLoopGroup(NativeResource):
             EventLoopGroup object is destroyed.
     """
 
+    _static_event_loop_group = None
+    _static_event_loop_group_lock = threading.Lock()
     __slots__ = ('shutdown_event')
 
     def __init__(self, num_threads=None, cpu_group=None):
@@ -96,28 +88,22 @@ class EventLoopGroup(NativeResource):
 
     @staticmethod
     def get_or_create_static_default():
-        global _static_event_loop_group
-        if '_static_event_loop_group' in globals():
-            if isinstance(_static_event_loop_group, EventLoopGroup):
-                return _static_event_loop_group
-
-        os_cpu_count = os.cpu_count()
-        if os_cpu_count is None:
-            os_cpu_count = 1  # could not find the processor count - default to 1
-        else:
-            # os.cpu_count returns all cores on the system (including virtual ones)
-            # so we divide by two to avoid using all cores on the entire system.
-            os_cpu_count = max(1, int(os_cpu_count / 2))
-
-        _static_event_loop_group = EventLoopGroup(os_cpu_count)
-        return _static_event_loop_group
+        EventLoopGroup._static_event_loop_group_lock.acquire()
+        if EventLoopGroup._static_event_loop_group is not None:
+            if isinstance(EventLoopGroup._static_event_loop_group, EventLoopGroup):
+                EventLoopGroup._static_event_loop_group_lock.release()
+                return EventLoopGroup._static_event_loop_group
+        EventLoopGroup._static_event_loop_group = EventLoopGroup()
+        EventLoopGroup._static_event_loop_group_lock.release()
+        return EventLoopGroup._static_event_loop_group
 
     @staticmethod
     def release_static_default():
-        global _static_event_loop_group
-        if '_static_event_loop_group' in globals():
-            if isinstance(_static_event_loop_group, EventLoopGroup):
-                del _static_event_loop_group  # lgtm [py/unnecessary-delete]
+        EventLoopGroup._static_event_loop_group_lock.acquire()
+        if EventLoopGroup._static_event_loop_group is not None:
+            if isinstance(EventLoopGroup._static_event_loop_group, EventLoopGroup):
+                EventLoopGroup._static_event_loop_group = None
+        EventLoopGroup._static_event_loop_group_lock.release()
 
 
 class HostResolverBase(NativeResource):
@@ -132,6 +118,9 @@ class DefaultHostResolver(HostResolverBase):
         event_loop_group (EventLoopGroup): EventLoopGroup to use.
         max_hosts(int): Max host names to cache.
     """
+
+    _static_host_resolver = None
+    _static_host_resolver_lock = threading.Lock()
     __slots__ = ()
 
     def __init__(self, event_loop_group, max_hosts=16):
@@ -142,18 +131,22 @@ class DefaultHostResolver(HostResolverBase):
 
     @staticmethod
     def get_or_create_static_default():
-        global _static_default_host_resolver
-        if '_static_default_host_resolver' in globals():
-            if isinstance(_static_default_host_resolver, DefaultHostResolver):
-                return _static_default_host_resolver
-        _static_default_host_resolver = DefaultHostResolver(EventLoopGroup.get_or_create_static_default())
-        return _static_default_host_resolver
+        DefaultHostResolver._static_host_resolver_lock.acquire()
+        if DefaultHostResolver._static_host_resolver is not None:
+            if isinstance(DefaultHostResolver._static_host_resolver, DefaultHostResolver):
+                DefaultHostResolver._static_host_resolver_lock.release()
+                return DefaultHostResolver._static_host_resolver
+        DefaultHostResolver._static_host_resolver = DefaultHostResolver(EventLoopGroup.get_or_create_static_default())
+        DefaultHostResolver._static_host_resolver_lock.release()
+        return DefaultHostResolver._static_host_resolver
 
     @staticmethod
     def release_static_default():
-        global _static_default_host_resolver
-        if isinstance(_static_default_host_resolver, DefaultHostResolver):
-            del _static_default_host_resolver  # lgtm [py/unnecessary-delete]
+        DefaultHostResolver._static_host_resolver_lock.acquire()
+        if DefaultHostResolver._static_host_resolver is not None:
+            if isinstance(DefaultHostResolver._static_host_resolver, DefaultHostResolver):
+                DefaultHostResolver._static_host_resolver = None
+        DefaultHostResolver._static_host_resolver_lock.release()
 
 
 class ClientBootstrap(NativeResource):
@@ -168,6 +161,9 @@ class ClientBootstrap(NativeResource):
             internal resources finish shutting down.
             Shutdown begins when the ClientBootstrap object is destroyed.
     """
+
+    _static_client_bootstrap = None
+    _static_client_bootstrap_lock = threading.Lock()
     __slots__ = ('shutdown_event')
 
     def __init__(self, event_loop_group, host_resolver):
@@ -186,20 +182,24 @@ class ClientBootstrap(NativeResource):
 
     @staticmethod
     def get_or_create_static_default():
-        global _static_client_bootstrap
-        if '_static_client_bootstrap' in globals():
-            if isinstance(_static_client_bootstrap, ClientBootstrap):
-                return _static_client_bootstrap
-        _static_client_bootstrap = ClientBootstrap(
+        ClientBootstrap._static_client_bootstrap_lock.acquire()
+        if ClientBootstrap._static_client_bootstrap is not None:
+            if isinstance(ClientBootstrap._static_client_bootstrap, ClientBootstrap):
+                ClientBootstrap._static_client_bootstrap_lock.release()
+                return ClientBootstrap._static_client_bootstrap
+        ClientBootstrap._static_client_bootstrap = ClientBootstrap(
             EventLoopGroup.get_or_create_static_default(),
             DefaultHostResolver.get_or_create_static_default())
-        return _static_client_bootstrap
+        ClientBootstrap._static_client_bootstrap_lock.release()
+        return ClientBootstrap._static_client_bootstrap
 
     @staticmethod
     def release_static_default():
-        global _static_client_bootstrap
-        if isinstance(_static_client_bootstrap, ClientBootstrap):
-            del _static_client_bootstrap  # lgtm [py/unnecessary-delete]
+        ClientBootstrap._static_client_bootstrap_lock.acquire()
+        if ClientBootstrap._static_client_bootstrap is not None:
+            if isinstance(ClientBootstrap._static_client_bootstrap, ClientBootstrap):
+                ClientBootstrap._static_client_bootstrap = None
+        ClientBootstrap._static_client_bootstrap_lock.release()
 
 
 def _read_binary_file(filepath):

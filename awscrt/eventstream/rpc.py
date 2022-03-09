@@ -271,6 +271,7 @@ class ClientConnection(NativeResource):
             port: Connect to port.
 
             bootstrap: Client bootstrap to use when initiating socket connection.
+                If None is provided, the default singleton is used.
 
             socket_options: Optional socket options.
                 If None is provided, then default options are used.
@@ -296,6 +297,9 @@ class ClientConnection(NativeResource):
 
         # Connection is not made available to user until setup callback fires
         connection = cls(host_name, port, handler)
+
+        if not bootstrap:
+            bootstrap = ClientBootstrap.get_or_create_static_default()
 
         # connection._binding is set within the following call */
         _awscrt.event_stream_rpc_client_connection_connect(

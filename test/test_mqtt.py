@@ -213,5 +213,95 @@ class MqttConnectionTest(NativeResourceTest):
         connection.disconnect().result(TIMEOUT)
 
 
+class MqttConnectionSingletonTest(NativeResourceTest):
+    TEST_TOPIC = '/test/me/senpai'
+    TEST_MSG = 'NOTICE ME!'.encode('utf8')
+
+    def _create_connection(self, auth_type=AuthType.CERT_AND_KEY):
+        config = Config(auth_type)
+
+        if auth_type == AuthType.CERT_AND_KEY:
+            tls_opts = TlsContextOptions.create_client_with_mtls_from_path(config.cert_path, config.key_path)
+            tls = ClientTlsContext(tls_opts)
+
+        client = Client(tls)
+        connection = Connection(
+            client=client,
+            client_id=create_client_id(),
+            host_name=config.endpoint,
+            port=8883)
+        return connection
+
+    def test_connect_disconnect(self):
+        connection = self._create_connection()
+        connection.connect().result(TIMEOUT)
+        connection.disconnect().result(TIMEOUT)
+
+    def test_pub_sub(self):
+        connection = self._create_connection()
+        connection.connect().result(TIMEOUT)
+        received = Future()
+
+        def on_message(**kwargs):
+            received.set_result(kwargs)
+
+        # subscribe
+        subscribed, packet_id = connection.subscribe(self.TEST_TOPIC, QoS.AT_LEAST_ONCE, on_message)
+        suback = subscribed.result(TIMEOUT)
+        self.assertEqual(packet_id, suback['packet_id'])
+        self.assertEqual(self.TEST_TOPIC, suback['topic'])
+        self.assertIs(QoS.AT_LEAST_ONCE, suback['qos'])
+
+        # publish
+        published, packet_id = connection.publish(self.TEST_TOPIC, self.TEST_MSG, QoS.AT_LEAST_ONCE)
+        puback = published.result(TIMEOUT)
+        self.assertEqual(packet_id, puback['packet_id'])
+
+        # receive message
+        rcv = received.result(TIMEOUT)
+        self.assertEqual(self.TEST_TOPIC, rcv['topic'])
+        self.assertEqual(self.TEST_MSG, rcv['payload'])
+        self.assertFalse(rcv['dup'])
+        self.assertEqual(QoS.AT_LEAST_ONCE, rcv['qos'])
+        self.assertFalse(rcv['retain'])
+
+        # unsubscribe
+        unsubscribed, packet_id = connection.unsubscribe(self.TEST_TOPIC)
+        unsuback = unsubscribed.result(TIMEOUT)
+        self.assertEqual(packet_id, unsuback['packet_id'])
+
+        # disconnect
+        connection.disconnect().result(TIMEOUT)
+
+    def test_on_message(self):
+        connection = self._create_connection()
+        received = Future()
+
+        def on_message(**kwargs):
+            received.set_result(kwargs)
+
+        # on_message for connection has to be set before connect, or possible race will happen
+        connection.on_message(on_message)
+
+        connection.connect().result(TIMEOUT)
+        # subscribe without callback
+        subscribed, packet_id = connection.subscribe(self.TEST_TOPIC, QoS.AT_LEAST_ONCE)
+        subscribed.result(TIMEOUT)
+
+        # publish
+        published, packet_id = connection.publish(self.TEST_TOPIC, self.TEST_MSG, QoS.AT_LEAST_ONCE)
+        puback = published.result(TIMEOUT)
+
+        # receive message
+        rcv = received.result(TIMEOUT)
+        self.assertEqual(self.TEST_TOPIC, rcv['topic'])
+        self.assertEqual(self.TEST_MSG, rcv['payload'])
+        self.assertFalse(rcv['dup'])
+        self.assertEqual(QoS.AT_LEAST_ONCE, rcv['qos'])
+        self.assertFalse(rcv['retain'])
+
+        # disconnect
+        connection.disconnect().result(TIMEOUT)
+
 if __name__ == 'main':
     unittest.main()

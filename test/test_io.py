@@ -27,13 +27,11 @@ class EventLoopGroupTest(NativeResourceTest):
 
     def test_init_defaults_singleton(self):
         event_loop_group = EventLoopGroup.get_or_create_static_default()
-        EventLoopGroup.release_static_default()
 
     def test_init_defaults_singleton_is_singleton(self):
         event_loop_group_one = EventLoopGroup.get_or_create_static_default()
         event_loop_group_two = EventLoopGroup.get_or_create_static_default()
         self.assertTrue(event_loop_group_one == event_loop_group_two)
-        EventLoopGroup.release_static_default()
 
     def test_shutdown_complete_singleton(self):
         event_loop_group = EventLoopGroup.get_or_create_static_default()
@@ -50,15 +48,11 @@ class DefaultHostResolverTest(NativeResourceTest):
 
     def test_init_singleton(self):
         host_resolver = DefaultHostResolver.get_or_create_static_default()
-        DefaultHostResolver.release_static_default()
-        EventLoopGroup.release_static_default()
 
     def test_init_singleton_is_singleton(self):
         host_resolver_one = DefaultHostResolver.get_or_create_static_default()
         host_resolver_two = DefaultHostResolver.get_or_create_static_default()
         self.assertTrue(host_resolver_one == host_resolver_two)
-        DefaultHostResolver.release_static_default()
-        EventLoopGroup.release_static_default()
 
 
 class ClientBootstrapTest(NativeResourceTest):
@@ -78,20 +72,12 @@ class ClientBootstrapTest(NativeResourceTest):
         # ensure shutdown_event fires
         bootstrap_shutdown_event = bootstrap.shutdown_event
         del bootstrap
-
         ClientBootstrap.release_static_default()
-        EventLoopGroup.release_static_default()
-        DefaultHostResolver.release_static_default()
-
         self.assertTrue(bootstrap_shutdown_event.wait(TIMEOUT))
 
     def test_init_singleton_is_singleton(self):
         client_one = ClientBootstrap.get_or_create_static_default()
         client_two = ClientBootstrap.get_or_create_static_default()
-        self.assertTrue(client_one == client_two)
-        ClientBootstrap.release_static_default()
-        EventLoopGroup.release_static_default()
-        DefaultHostResolver.release_static_default()
 
 
 class ClientTlsContextTest(NativeResourceTest):

@@ -13,7 +13,7 @@ from enum import IntEnum
 from awscrt import NativeResource
 import awscrt.exceptions
 from awscrt.http import HttpProxyOptions, HttpRequest
-from awscrt.io import ClientBootstrap, ClientTlsContext, SocketOptions, EventLoopGroup, DefaultHostResolver
+from awscrt.io import ClientBootstrap, ClientTlsContext, SocketOptions
 
 
 class QoS(IntEnum):
@@ -131,6 +131,7 @@ class Client(NativeResource):
 
     Args:
         bootstrap (ClientBootstrap): Client bootstrap to use when initiating new socket connections.
+            If None is provided, the default singleton is used.
 
         tls_ctx (Optional[ClientTlsContext]): TLS context for secure socket connections.
             If None is provided, then an unencrypted connection is used.
@@ -139,11 +140,13 @@ class Client(NativeResource):
     __slots__ = ('tls_ctx')
 
     def __init__(self, bootstrap, tls_ctx=None):
-        assert isinstance(bootstrap, ClientBootstrap)
+        assert isinstance(bootstrap, ClientBootstrap) or bootstrap is None
         assert tls_ctx is None or isinstance(tls_ctx, ClientTlsContext)
 
         super().__init__()
         self.tls_ctx = tls_ctx
+        if not bootstrap:
+            bootstrap = ClientBootstrap.get_or_create_static_default()
         self._binding = _awscrt.mqtt_client_new(bootstrap, tls_ctx)
 
 
@@ -244,9 +247,6 @@ class Connection(NativeResource):
 
         proxy_options (Optional[awscrt.http.HttpProxyOptions]):
             Optional proxy options for all connections.
-
-        using_static_default (Optional[bool]):
-            If true, the connection will clean the static default ClientHandler, EventLoopGroup, and HostResolver.
         """
 
     def __init__(self,
@@ -269,8 +269,7 @@ class Connection(NativeResource):
                  use_websockets=False,
                  websocket_proxy_options=None,
                  websocket_handshake_transform=None,
-                 proxy_options=None,
-                 using_static_defaults=None
+                 proxy_options=None
                  ):
 
         assert isinstance(client, Client)
@@ -300,7 +299,6 @@ class Connection(NativeResource):
         self._on_connection_resumed_cb = on_connection_resumed
         self._use_websockets = use_websockets
         self._ws_handshake_transform_cb = websocket_handshake_transform
-        self.using_static_defaults = using_static_defaults if using_static_defaults else False
 
         # may be changed at runtime, take effect the the next time connect/reconnect occurs
         self.client_id = client_id
