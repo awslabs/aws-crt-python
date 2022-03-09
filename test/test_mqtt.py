@@ -303,5 +303,6 @@ class MqttConnectionSingletonTest(NativeResourceTest):
         # disconnect
         connection.disconnect().result(TIMEOUT)
 
+
 if __name__ == 'main':
     unittest.main()
