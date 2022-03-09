@@ -237,6 +237,11 @@ class MqttConnectionSingletonTest(NativeResourceTest):
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
+        # free singletons
+        ClientBootstrap.release_static_default()
+        EventLoopGroup.release_static_default()
+        DefaultHostResolver.release_static_default()
+
     def test_pub_sub(self):
         connection = self._create_connection()
         connection.connect().result(TIMEOUT)
@@ -273,6 +278,11 @@ class MqttConnectionSingletonTest(NativeResourceTest):
         # disconnect
         connection.disconnect().result(TIMEOUT)
 
+        # free singletons
+        ClientBootstrap.release_static_default()
+        EventLoopGroup.release_static_default()
+        DefaultHostResolver.release_static_default()
+
     def test_on_message(self):
         connection = self._create_connection()
         received = Future()
@@ -302,6 +312,11 @@ class MqttConnectionSingletonTest(NativeResourceTest):
 
         # disconnect
         connection.disconnect().result(TIMEOUT)
+
+        # free singletons
+        ClientBootstrap.release_static_default()
+        EventLoopGroup.release_static_default()
+        DefaultHostResolver.release_static_default()
 
 
 if __name__ == 'main':
