@@ -82,7 +82,7 @@ class HttpClientConnection(HttpConnectionBase):
     def new(cls,
             host_name,
             port,
-            bootstrap,
+            bootstrap=None,
             socket_options=None,
             tls_connection_options=None,
             proxy_options=None):

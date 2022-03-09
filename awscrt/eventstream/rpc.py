@@ -258,7 +258,7 @@ class ClientConnection(NativeResource):
             handler: ClientConnectionHandler,
             host_name: str,
             port: int,
-            bootstrap: ClientBootstrap,
+            bootstrap: ClientBootstrap = None,
             socket_options: Optional[SocketOptions] = None,
             tls_connection_options: Optional[TlsConnectionOptions] = None) -> Future:
         """Asynchronously establish a new ClientConnection.

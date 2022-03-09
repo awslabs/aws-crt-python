@@ -139,7 +139,7 @@ class Client(NativeResource):
 
     __slots__ = ('tls_ctx')
 
-    def __init__(self, bootstrap, tls_ctx=None):
+    def __init__(self, bootstrap=None, tls_ctx=None):
         assert isinstance(bootstrap, ClientBootstrap) or bootstrap is None
         assert tls_ctx is None or isinstance(tls_ctx, ClientTlsContext)
 
