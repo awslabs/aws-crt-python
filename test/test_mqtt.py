@@ -60,11 +60,6 @@ class MqttConnectionTest(NativeResourceTest):
     def _create_connection(self, auth_type=AuthType.CERT_AND_KEY, use_static_singletons=False):
         config = Config(auth_type)
 
-        if not use_static_singletons:
-            elg = EventLoopGroup()
-            resolver = DefaultHostResolver(elg)
-            bootstrap = ClientBootstrap(elg, resolver)
-
         if auth_type == AuthType.CERT_AND_KEY:
             tls_opts = TlsContextOptions.create_client_with_mtls_from_path(config.cert_path, config.key_path)
             tls = ClientTlsContext(tls_opts)
@@ -92,8 +87,11 @@ class MqttConnectionTest(NativeResourceTest):
                     raise
 
         if use_static_singletons:
-            client = Client(tls)
+            client = Client(tls_ctx=tls)
         else:
+            elg = EventLoopGroup()
+            resolver = DefaultHostResolver(elg)
+            bootstrap = ClientBootstrap(elg, resolver)
             client = Client(bootstrap, tls)
 
         connection = Connection(
