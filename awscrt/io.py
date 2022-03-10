@@ -126,7 +126,7 @@ class DefaultHostResolver(HostResolverBase):
         with DefaultHostResolver._static_host_resolver_lock:
             if DefaultHostResolver._static_host_resolver is None:
                 DefaultHostResolver._static_host_resolver = DefaultHostResolver(
-                    EventLoopGroup.get_or_create_static_default)
+                    EventLoopGroup.get_or_create_static_default())
             return DefaultHostResolver._static_host_resolver
 
     @staticmethod
@@ -169,7 +169,7 @@ class ClientBootstrap(NativeResource):
     @staticmethod
     def get_or_create_static_default():
         with ClientBootstrap._static_client_bootstrap_lock:
-            if ClientBootstrap._static_client_bootstrap_lock is None:
+            if ClientBootstrap._static_client_bootstrap is None:
                 ClientBootstrap._static_client_bootstrap = ClientBootstrap(
                     EventLoopGroup.get_or_create_static_default(),
                     DefaultHostResolver.get_or_create_static_default())
