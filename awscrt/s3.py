@@ -54,7 +54,7 @@ class S3Client(NativeResource):
     """S3 client
 
     Keyword Args:
-        bootstrap (ClientBootstrap): Client bootstrap to use when initiating socket connection.
+        bootstrap (Optional [ClientBootstrap]): Client bootstrap to use when initiating socket connection.
             If None is provided, the default singleton is used.
 
         region (str): Region that the S3 bucket lives in.

@@ -57,11 +57,13 @@ class MqttConnectionTest(NativeResourceTest):
     TEST_TOPIC = '/test/me/senpai'
     TEST_MSG = 'NOTICE ME!'.encode('utf8')
 
-    def _create_connection(self, auth_type=AuthType.CERT_AND_KEY):
+    def _create_connection(self, auth_type=AuthType.CERT_AND_KEY, use_static_singletons=False):
         config = Config(auth_type)
-        elg = EventLoopGroup()
-        resolver = DefaultHostResolver(elg)
-        bootstrap = ClientBootstrap(elg, resolver)
+
+        if not use_static_singletons:
+            elg = EventLoopGroup()
+            resolver = DefaultHostResolver(elg)
+            bootstrap = ClientBootstrap(elg, resolver)
 
         if auth_type == AuthType.CERT_AND_KEY:
             tls_opts = TlsContextOptions.create_client_with_mtls_from_path(config.cert_path, config.key_path)
@@ -89,7 +91,11 @@ class MqttConnectionTest(NativeResourceTest):
                     # re-raise exception
                     raise
 
-        client = Client(bootstrap, tls)
+        if use_static_singletons:
+            client = Client(tls)
+        else:
+            client = Client(bootstrap, tls)
+
         connection = Connection(
             client=client,
             client_id=create_client_id(),
@@ -212,105 +218,9 @@ class MqttConnectionTest(NativeResourceTest):
         # disconnect
         connection.disconnect().result(TIMEOUT)
 
-
-class MqttConnectionSingletonTest(NativeResourceTest):
-    TEST_TOPIC = '/test/me/senpai'
-    TEST_MSG = 'NOTICE ME!'.encode('utf8')
-
-    def _create_connection(self, auth_type=AuthType.CERT_AND_KEY):
-        config = Config(auth_type)
-
-        if auth_type == AuthType.CERT_AND_KEY:
-            tls_opts = TlsContextOptions.create_client_with_mtls_from_path(config.cert_path, config.key_path)
-            tls = ClientTlsContext(tls_opts)
-
-        client = Client(tls_ctx=tls)
-        connection = Connection(
-            client=client,
-            client_id=create_client_id(),
-            host_name=config.endpoint,
-            port=8883)
-        return connection
-
-    def test_connect_disconnect(self):
-        connection = self._create_connection()
+    def test_connect_disconnect_with_default_singletons(self):
+        connection = self._create_connection(use_static_singletons=True)
         connection.connect().result(TIMEOUT)
-        connection.disconnect().result(TIMEOUT)
-
-        # free singletons
-        ClientBootstrap.release_static_default()
-        EventLoopGroup.release_static_default()
-        DefaultHostResolver.release_static_default()
-
-    def test_pub_sub(self):
-        connection = self._create_connection()
-        connection.connect().result(TIMEOUT)
-        received = Future()
-
-        def on_message(**kwargs):
-            received.set_result(kwargs)
-
-        # subscribe
-        subscribed, packet_id = connection.subscribe(self.TEST_TOPIC, QoS.AT_LEAST_ONCE, on_message)
-        suback = subscribed.result(TIMEOUT)
-        self.assertEqual(packet_id, suback['packet_id'])
-        self.assertEqual(self.TEST_TOPIC, suback['topic'])
-        self.assertIs(QoS.AT_LEAST_ONCE, suback['qos'])
-
-        # publish
-        published, packet_id = connection.publish(self.TEST_TOPIC, self.TEST_MSG, QoS.AT_LEAST_ONCE)
-        puback = published.result(TIMEOUT)
-        self.assertEqual(packet_id, puback['packet_id'])
-
-        # receive message
-        rcv = received.result(TIMEOUT)
-        self.assertEqual(self.TEST_TOPIC, rcv['topic'])
-        self.assertEqual(self.TEST_MSG, rcv['payload'])
-        self.assertFalse(rcv['dup'])
-        self.assertEqual(QoS.AT_LEAST_ONCE, rcv['qos'])
-        self.assertFalse(rcv['retain'])
-
-        # unsubscribe
-        unsubscribed, packet_id = connection.unsubscribe(self.TEST_TOPIC)
-        unsuback = unsubscribed.result(TIMEOUT)
-        self.assertEqual(packet_id, unsuback['packet_id'])
-
-        # disconnect
-        connection.disconnect().result(TIMEOUT)
-
-        # free singletons
-        ClientBootstrap.release_static_default()
-        EventLoopGroup.release_static_default()
-        DefaultHostResolver.release_static_default()
-
-    def test_on_message(self):
-        connection = self._create_connection()
-        received = Future()
-
-        def on_message(**kwargs):
-            received.set_result(kwargs)
-
-        # on_message for connection has to be set before connect, or possible race will happen
-        connection.on_message(on_message)
-
-        connection.connect().result(TIMEOUT)
-        # subscribe without callback
-        subscribed, packet_id = connection.subscribe(self.TEST_TOPIC, QoS.AT_LEAST_ONCE)
-        subscribed.result(TIMEOUT)
-
-        # publish
-        published, packet_id = connection.publish(self.TEST_TOPIC, self.TEST_MSG, QoS.AT_LEAST_ONCE)
-        puback = published.result(TIMEOUT)
-
-        # receive message
-        rcv = received.result(TIMEOUT)
-        self.assertEqual(self.TEST_TOPIC, rcv['topic'])
-        self.assertEqual(self.TEST_MSG, rcv['payload'])
-        self.assertFalse(rcv['dup'])
-        self.assertEqual(QoS.AT_LEAST_ONCE, rcv['qos'])
-        self.assertFalse(rcv['retain'])
-
-        # disconnect
         connection.disconnect().result(TIMEOUT)
 
         # free singletons

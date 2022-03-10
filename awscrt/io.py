@@ -87,22 +87,15 @@ class EventLoopGroup(NativeResource):
 
     @staticmethod
     def get_or_create_static_default():
-        EventLoopGroup._static_event_loop_group_lock.acquire()
-        if EventLoopGroup._static_event_loop_group is not None:
-            if isinstance(EventLoopGroup._static_event_loop_group, EventLoopGroup):
-                EventLoopGroup._static_event_loop_group_lock.release()
-                return EventLoopGroup._static_event_loop_group
-        EventLoopGroup._static_event_loop_group = EventLoopGroup()
-        EventLoopGroup._static_event_loop_group_lock.release()
-        return EventLoopGroup._static_event_loop_group
+        with EventLoopGroup._static_event_loop_group_lock:
+            if EventLoopGroup._static_event_loop_group is None:
+                EventLoopGroup._static_event_loop_group = EventLoopGroup()
+            return EventLoopGroup._static_event_loop_group
 
     @staticmethod
     def release_static_default():
-        EventLoopGroup._static_event_loop_group_lock.acquire()
-        if EventLoopGroup._static_event_loop_group is not None:
-            if isinstance(EventLoopGroup._static_event_loop_group, EventLoopGroup):
-                EventLoopGroup._static_event_loop_group = None
-        EventLoopGroup._static_event_loop_group_lock.release()
+        with EventLoopGroup._static_event_loop_group_lock:
+            EventLoopGroup._static_event_loop_group = None
 
 
 class HostResolverBase(NativeResource):
@@ -130,22 +123,16 @@ class DefaultHostResolver(HostResolverBase):
 
     @staticmethod
     def get_or_create_static_default():
-        DefaultHostResolver._static_host_resolver_lock.acquire()
-        if DefaultHostResolver._static_host_resolver is not None:
-            if isinstance(DefaultHostResolver._static_host_resolver, DefaultHostResolver):
-                DefaultHostResolver._static_host_resolver_lock.release()
-                return DefaultHostResolver._static_host_resolver
-        DefaultHostResolver._static_host_resolver = DefaultHostResolver(EventLoopGroup.get_or_create_static_default())
-        DefaultHostResolver._static_host_resolver_lock.release()
-        return DefaultHostResolver._static_host_resolver
+        with DefaultHostResolver._static_host_resolver_lock:
+            if DefaultHostResolver._static_host_resolver is None:
+                DefaultHostResolver._static_host_resolver = DefaultHostResolver(
+                    EventLoopGroup.get_or_create_static_default)
+            return DefaultHostResolver._static_host_resolver
 
     @staticmethod
     def release_static_default():
-        DefaultHostResolver._static_host_resolver_lock.acquire()
-        if DefaultHostResolver._static_host_resolver is not None:
-            if isinstance(DefaultHostResolver._static_host_resolver, DefaultHostResolver):
-                DefaultHostResolver._static_host_resolver = None
-        DefaultHostResolver._static_host_resolver_lock.release()
+        with DefaultHostResolver._static_host_resolver_lock:
+            DefaultHostResolver._static_host_resolver = None
 
 
 class ClientBootstrap(NativeResource):
@@ -181,24 +168,17 @@ class ClientBootstrap(NativeResource):
 
     @staticmethod
     def get_or_create_static_default():
-        ClientBootstrap._static_client_bootstrap_lock.acquire()
-        if ClientBootstrap._static_client_bootstrap is not None:
-            if isinstance(ClientBootstrap._static_client_bootstrap, ClientBootstrap):
-                ClientBootstrap._static_client_bootstrap_lock.release()
-                return ClientBootstrap._static_client_bootstrap
-        ClientBootstrap._static_client_bootstrap = ClientBootstrap(
-            EventLoopGroup.get_or_create_static_default(),
-            DefaultHostResolver.get_or_create_static_default())
-        ClientBootstrap._static_client_bootstrap_lock.release()
-        return ClientBootstrap._static_client_bootstrap
+        with ClientBootstrap._static_client_bootstrap_lock:
+            if ClientBootstrap._static_client_bootstrap_lock is None:
+                ClientBootstrap._static_client_bootstrap = ClientBootstrap(
+                    EventLoopGroup.get_or_create_static_default(),
+                    DefaultHostResolver.get_or_create_static_default())
+            return ClientBootstrap._static_client_bootstrap
 
     @staticmethod
     def release_static_default():
-        ClientBootstrap._static_client_bootstrap_lock.acquire()
-        if ClientBootstrap._static_client_bootstrap is not None:
-            if isinstance(ClientBootstrap._static_client_bootstrap, ClientBootstrap):
-                ClientBootstrap._static_client_bootstrap = None
-        ClientBootstrap._static_client_bootstrap_lock.release()
+        with ClientBootstrap._static_client_bootstrap_lock:
+            ClientBootstrap._static_client_bootstrap = None
 
 
 def _read_binary_file(filepath):

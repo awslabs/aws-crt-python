@@ -78,6 +78,7 @@ class ClientBootstrapTest(NativeResourceTest):
     def test_init_singleton_is_singleton(self):
         client_one = ClientBootstrap.get_or_create_static_default()
         client_two = ClientBootstrap.get_or_create_static_default()
+        self.assertTrue(client_one == client_two)
 
 
 class ClientTlsContextTest(NativeResourceTest):

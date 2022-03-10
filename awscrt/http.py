@@ -94,7 +94,7 @@ class HttpClientConnection(HttpConnectionBase):
 
             port (int): Connect to port.
 
-            bootstrap (ClientBootstrap): Client bootstrap to use when initiating socket connection.
+            bootstrap (Optional [ClientBootstrap]): Client bootstrap to use when initiating socket connection.
                 If None is provided, the default singleton is used.
 
             socket_options (Optional[SocketOptions]): Optional socket options.

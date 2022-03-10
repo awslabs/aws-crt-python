@@ -130,7 +130,7 @@ class Client(NativeResource):
     """MQTT client.
 
     Args:
-        bootstrap (ClientBootstrap): Client bootstrap to use when initiating new socket connections.
+        bootstrap (Optional [ClientBootstrap]): Client bootstrap to use when initiating new socket connections.
             If None is provided, the default singleton is used.
 
         tls_ctx (Optional[ClientTlsContext]): TLS context for secure socket connections.
