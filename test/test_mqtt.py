@@ -57,11 +57,8 @@ class MqttConnectionTest(NativeResourceTest):
     TEST_TOPIC = '/test/me/senpai'
     TEST_MSG = 'NOTICE ME!'.encode('utf8')
 
-    def _create_connection(self, auth_type=AuthType.CERT_AND_KEY):
+    def _create_connection(self, auth_type=AuthType.CERT_AND_KEY, use_static_singletons=False):
         config = Config(auth_type)
-        elg = EventLoopGroup()
-        resolver = DefaultHostResolver(elg)
-        bootstrap = ClientBootstrap(elg, resolver)
 
         if auth_type == AuthType.CERT_AND_KEY:
             tls_opts = TlsContextOptions.create_client_with_mtls_from_path(config.cert_path, config.key_path)
@@ -89,7 +86,14 @@ class MqttConnectionTest(NativeResourceTest):
                     # re-raise exception
                     raise
 
-        client = Client(bootstrap, tls)
+        if use_static_singletons:
+            client = Client(tls_ctx=tls)
+        else:
+            elg = EventLoopGroup()
+            resolver = DefaultHostResolver(elg)
+            bootstrap = ClientBootstrap(elg, resolver)
+            client = Client(bootstrap, tls)
+
         connection = Connection(
             client=client,
             client_id=create_client_id(),
@@ -211,6 +215,16 @@ class MqttConnectionTest(NativeResourceTest):
 
         # disconnect
         connection.disconnect().result(TIMEOUT)
+
+    def test_connect_disconnect_with_default_singletons(self):
+        connection = self._create_connection(use_static_singletons=True)
+        connection.connect().result(TIMEOUT)
+        connection.disconnect().result(TIMEOUT)
+
+        # free singletons
+        ClientBootstrap.release_static_default()
+        EventLoopGroup.release_static_default()
+        DefaultHostResolver.release_static_default()
 
 
 if __name__ == 'main':
