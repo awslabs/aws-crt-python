@@ -10,6 +10,8 @@ import sys
 import time
 import types
 
+from awscrt.io import ClientBootstrap, DefaultHostResolver, EventLoopGroup
+
 
 def native_memory_usage() -> int:
     """
@@ -80,6 +82,10 @@ def check_for_leaks(*, timeout_sec=10.0):
             if the test results will be made public as it may result in secrets
             being leaked.
     """
+    ClientBootstrap.release_static_default()
+    EventLoopGroup.release_static_default()
+    DefaultHostResolver.release_static_default()
+
     if os.getenv('AWS_CRT_MEMORY_TRACING') != '2':
         raise RuntimeError("environment variable AWS_CRT_MEMORY_TRACING=2 must be set for accurate leak checks")
 

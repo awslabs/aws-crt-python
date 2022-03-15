@@ -60,6 +60,8 @@ class EventLoopGroup(NativeResource):
             EventLoopGroup object is destroyed.
     """
 
+    _static_event_loop_group = None
+    _static_event_loop_group_lock = threading.Lock()
     __slots__ = ('shutdown_event')
 
     def __init__(self, num_threads=None, cpu_group=None):
@@ -83,6 +85,18 @@ class EventLoopGroup(NativeResource):
         self.shutdown_event = shutdown_event
         self._binding = _awscrt.event_loop_group_new(num_threads, is_pinned, cpu_group, on_shutdown)
 
+    @staticmethod
+    def get_or_create_static_default():
+        with EventLoopGroup._static_event_loop_group_lock:
+            if EventLoopGroup._static_event_loop_group is None:
+                EventLoopGroup._static_event_loop_group = EventLoopGroup()
+            return EventLoopGroup._static_event_loop_group
+
+    @staticmethod
+    def release_static_default():
+        with EventLoopGroup._static_event_loop_group_lock:
+            EventLoopGroup._static_event_loop_group = None
+
 
 class HostResolverBase(NativeResource):
     """DNS host resolver."""
@@ -96,6 +110,9 @@ class DefaultHostResolver(HostResolverBase):
         event_loop_group (EventLoopGroup): EventLoopGroup to use.
         max_hosts(int): Max host names to cache.
     """
+
+    _static_host_resolver = None
+    _static_host_resolver_lock = threading.Lock()
     __slots__ = ()
 
     def __init__(self, event_loop_group, max_hosts=16):
@@ -103,6 +120,19 @@ class DefaultHostResolver(HostResolverBase):
 
         super().__init__()
         self._binding = _awscrt.host_resolver_new_default(max_hosts, event_loop_group)
+
+    @staticmethod
+    def get_or_create_static_default():
+        with DefaultHostResolver._static_host_resolver_lock:
+            if DefaultHostResolver._static_host_resolver is None:
+                DefaultHostResolver._static_host_resolver = DefaultHostResolver(
+                    EventLoopGroup.get_or_create_static_default())
+            return DefaultHostResolver._static_host_resolver
+
+    @staticmethod
+    def release_static_default():
+        with DefaultHostResolver._static_host_resolver_lock:
+            DefaultHostResolver._static_host_resolver = None
 
 
 class ClientBootstrap(NativeResource):
@@ -117,6 +147,9 @@ class ClientBootstrap(NativeResource):
             internal resources finish shutting down.
             Shutdown begins when the ClientBootstrap object is destroyed.
     """
+
+    _static_client_bootstrap = None
+    _static_client_bootstrap_lock = threading.Lock()
     __slots__ = ('shutdown_event')
 
     def __init__(self, event_loop_group, host_resolver):
@@ -132,6 +165,20 @@ class ClientBootstrap(NativeResource):
 
         self.shutdown_event = shutdown_event
         self._binding = _awscrt.client_bootstrap_new(event_loop_group, host_resolver, on_shutdown)
+
+    @staticmethod
+    def get_or_create_static_default():
+        with ClientBootstrap._static_client_bootstrap_lock:
+            if ClientBootstrap._static_client_bootstrap is None:
+                ClientBootstrap._static_client_bootstrap = ClientBootstrap(
+                    EventLoopGroup.get_or_create_static_default(),
+                    DefaultHostResolver.get_or_create_static_default())
+            return ClientBootstrap._static_client_bootstrap
+
+    @staticmethod
+    def release_static_default():
+        with ClientBootstrap._static_client_bootstrap_lock:
+            ClientBootstrap._static_client_bootstrap = None
 
 
 def _read_binary_file(filepath):

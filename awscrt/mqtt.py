@@ -130,7 +130,8 @@ class Client(NativeResource):
     """MQTT client.
 
     Args:
-        bootstrap (ClientBootstrap): Client bootstrap to use when initiating new socket connections.
+        bootstrap (Optional [ClientBootstrap]): Client bootstrap to use when initiating new socket connections.
+            If None is provided, the default singleton is used.
 
         tls_ctx (Optional[ClientTlsContext]): TLS context for secure socket connections.
             If None is provided, then an unencrypted connection is used.
@@ -138,12 +139,14 @@ class Client(NativeResource):
 
     __slots__ = ('tls_ctx')
 
-    def __init__(self, bootstrap, tls_ctx=None):
-        assert isinstance(bootstrap, ClientBootstrap)
+    def __init__(self, bootstrap=None, tls_ctx=None):
+        assert isinstance(bootstrap, ClientBootstrap) or bootstrap is None
         assert tls_ctx is None or isinstance(tls_ctx, ClientTlsContext)
 
         super().__init__()
         self.tls_ctx = tls_ctx
+        if not bootstrap:
+            bootstrap = ClientBootstrap.get_or_create_static_default()
         self._binding = _awscrt.mqtt_client_new(bootstrap, tls_ctx)
 
 
@@ -448,6 +451,7 @@ class Connection(NativeResource):
 
         try:
             _awscrt.mqtt_client_connection_disconnect(self._binding, on_disconnect)
+
         except Exception as e:
             future.set_exception(e)
 

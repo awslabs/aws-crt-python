@@ -25,11 +25,34 @@ class EventLoopGroupTest(NativeResourceTest):
         del event_loop_group
         self.assertTrue(shutdown_event.wait(TIMEOUT))
 
+    def test_init_defaults_singleton(self):
+        event_loop_group = EventLoopGroup.get_or_create_static_default()
+
+    def test_init_defaults_singleton_is_singleton(self):
+        event_loop_group_one = EventLoopGroup.get_or_create_static_default()
+        event_loop_group_two = EventLoopGroup.get_or_create_static_default()
+        self.assertTrue(event_loop_group_one == event_loop_group_two)
+
+    def test_shutdown_complete_singleton(self):
+        event_loop_group = EventLoopGroup.get_or_create_static_default()
+        shutdown_event = event_loop_group.shutdown_event
+        del event_loop_group
+        EventLoopGroup.release_static_default()
+        self.assertTrue(shutdown_event.wait(TIMEOUT))
+
 
 class DefaultHostResolverTest(NativeResourceTest):
     def test_init(self):
         event_loop_group = EventLoopGroup()
         host_resolver = DefaultHostResolver(event_loop_group)
+
+    def test_init_singleton(self):
+        host_resolver = DefaultHostResolver.get_or_create_static_default()
+
+    def test_init_singleton_is_singleton(self):
+        host_resolver_one = DefaultHostResolver.get_or_create_static_default()
+        host_resolver_two = DefaultHostResolver.get_or_create_static_default()
+        self.assertTrue(host_resolver_one == host_resolver_two)
 
 
 class ClientBootstrapTest(NativeResourceTest):
@@ -42,6 +65,20 @@ class ClientBootstrapTest(NativeResourceTest):
         bootstrap_shutdown_event = bootstrap.shutdown_event
         del bootstrap
         self.assertTrue(bootstrap_shutdown_event.wait(TIMEOUT))
+
+    def test_create_destroy_singleton(self):
+        bootstrap = ClientBootstrap.get_or_create_static_default()
+
+        # ensure shutdown_event fires
+        bootstrap_shutdown_event = bootstrap.shutdown_event
+        del bootstrap
+        ClientBootstrap.release_static_default()
+        self.assertTrue(bootstrap_shutdown_event.wait(TIMEOUT))
+
+    def test_init_singleton_is_singleton(self):
+        client_one = ClientBootstrap.get_or_create_static_default()
+        client_two = ClientBootstrap.get_or_create_static_default()
+        self.assertTrue(client_one == client_two)
 
 
 class ClientTlsContextTest(NativeResourceTest):
