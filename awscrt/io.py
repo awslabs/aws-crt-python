@@ -434,7 +434,7 @@ class TlsContextOptions:
         Args:
             cert_path (str): Path to certificate in a Windows certificate store.
                 The path must use backslashes and end with the certificate's thumbprint.
-                Example: "CurrentUser\\MY\\A11F8A9B5DF5B98BA3508FBCA575D09570E0D2C6"
+                Example: ``CurrentUser\MY\A11F8A9B5DF5B98BA3508FBCA575D09570E0D2C6``
 
         Returns:
             TlsContextOptions
