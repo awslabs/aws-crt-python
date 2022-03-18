@@ -490,6 +490,24 @@ The file is loaded from disk and stored internally.</p></li>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="awscrt.io.TlsContextOptions.create_client_with_mtls_windows_cert_store_path">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">create_client_with_mtls_windows_cert_store_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cert_path</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.TlsContextOptions.create_client_with_mtls_windows_cert_store_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create options configured for use with mutual TLS in client mode,
+using a certificate in a Windows certificate store.</p>
+<p>NOTE: This configuration only works on Windows devices.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>cert_path</strong> (<em>str</em>) – Path to certificate in a Windows certificate store.
+The path must use backslashes and end with the certificate’s thumbprint.
+Example: <code class="docutils literal notranslate"><span class="pre">CurrentUser\MY\A11F8A9B5DF5B98BA3508FBCA575D09570E0D2C6</span></code></p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>TlsContextOptions</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="awscrt.io.TlsContextOptions.create_server_from_path">
 <em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">create_server_from_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cert_filepath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pk_filepath</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.io.TlsContextOptions.create_server_from_path" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create options configured for use in server mode.</p>
@@ -745,12 +763,16 @@ valgrind with –leak-check).</p>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-  <h4>Previous topic</h4>
-  <p class="topless"><a href="http.html"
-                        title="previous chapter">awscrt.http</a></p>
-  <h4>Next topic</h4>
-  <p class="topless"><a href="mqtt.html"
-                        title="next chapter">awscrt.mqtt</a></p>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="http.html"
+                          title="previous chapter">awscrt.http</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="mqtt.html"
+                          title="next chapter">awscrt.mqtt</a></p>
+  </div>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -793,7 +815,7 @@ valgrind with –leak-check).</p>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2020, Amazon Web Services, Inc.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.3.2.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.4.0.
     </div>
   </body>
 </html>
