@@ -282,6 +282,7 @@ class TlsContextOptions:
         '_pkcs11_private_key_label',
         '_pkcs11_cert_file_path',
         '_pkcs11_cert_file_contents',
+        '_windows_cert_store_path',
     )
 
     def __init__(self):
@@ -423,6 +424,27 @@ class TlsContextOptions:
         return opt
 
     @staticmethod
+    def create_client_with_mtls_windows_cert_store_path(cert_path):
+        """
+        Create options configured for use with mutual TLS in client mode,
+        using a certificate in a Windows certificate store.
+
+        NOTE: This configuration only works on Windows devices.
+
+        Args:
+            cert_path (str): Path to certificate in a Windows certificate store.
+                The path must use backslashes and end with the certificate's thumbprint.
+                Example: ``CurrentUser\\MY\\A11F8A9B5DF5B98BA3508FBCA575D09570E0D2C6``
+
+        Returns:
+            TlsContextOptions
+        """
+        assert isinstance(cert_path, str)
+        opt = TlsContextOptions()
+        opt._windows_cert_store_path = cert_path
+        return opt
+
+    @staticmethod
     def create_server_from_path(cert_filepath, pk_filepath):
         """
         Create options configured for use in server mode.
@@ -556,6 +578,7 @@ class ClientTlsContext(NativeResource):
             options._pkcs11_private_key_label,
             options._pkcs11_cert_file_path,
             options._pkcs11_cert_file_contents,
+            options._windows_cert_store_path,
         )
 
     def new_connection_options(self):
