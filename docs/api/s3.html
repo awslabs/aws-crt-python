@@ -99,7 +99,8 @@
 <dl class="field-list simple">
 <dt class="field-odd">Keyword Arguments</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>bootstrap</strong> (<a class="reference internal" href="io.html#awscrt.io.ClientBootstrap" title="awscrt.io.ClientBootstrap"><em>ClientBootstrap</em></a>) – Client bootstrap to use when initiating socket connection.</p></li>
+<li><p><strong>bootstrap</strong> (<em>Optional</em><em> [</em><a class="reference internal" href="io.html#awscrt.io.ClientBootstrap" title="awscrt.io.ClientBootstrap"><em>ClientBootstrap</em></a><em>]</em>) – Client bootstrap to use when initiating socket connection.
+If None is provided, the default singleton is used.</p></li>
 <li><p><strong>region</strong> (<em>str</em>) – Region that the S3 bucket lives in.</p></li>
 <li><p><strong>tls_mode</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="#awscrt.s3.S3RequestTlsMode" title="awscrt.s3.S3RequestTlsMode"><em>S3RequestTlsMode</em></a><em>]</em>) – <p>How TLS should be used while performing the request</p>
 <dl class="simple">
@@ -251,9 +252,11 @@ S3Request object is destroyed.</p>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-  <h4>Previous topic</h4>
-  <p class="topless"><a href="mqtt.html"
-                        title="previous chapter">awscrt.mqtt</a></p>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="mqtt.html"
+                          title="previous chapter">awscrt.mqtt</a></p>
+  </div>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -293,7 +296,7 @@ S3Request object is destroyed.</p>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2020, Amazon Web Services, Inc.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.3.2.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.4.0.
     </div>
   </body>
 </html>

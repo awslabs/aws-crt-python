@@ -130,7 +130,7 @@ Timezone is always UTC.</p>
 To define a custom provider, use the <a class="reference internal" href="#awscrt.auth.AwsCredentialsProvider.new_delegate" title="awscrt.auth.AwsCredentialsProvider.new_delegate"><code class="xref py py-meth docutils literal notranslate"><span class="pre">new_delegate()</span></code></a> function.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="awscrt.auth.AwsCredentialsProvider.new_default_chain">
-<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">new_default_chain</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">client_bootstrap</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.auth.AwsCredentialsProvider.new_default_chain" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">new_default_chain</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">client_bootstrap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.auth.AwsCredentialsProvider.new_default_chain" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create the default provider chain used by most AWS SDKs.</p>
 <p>Generally:</p>
 <ol class="arabic simple">
@@ -141,7 +141,8 @@ To define a custom provider, use the <a class="reference internal" href="#awscrt
 </ol>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>client_bootstrap</strong> (<a class="reference internal" href="io.html#awscrt.io.ClientBootstrap" title="awscrt.io.ClientBootstrap"><em>ClientBootstrap</em></a>) – Client bootstrap to use when initiating socket connection.</p>
+<dd class="field-odd"><p><strong>client_bootstrap</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="io.html#awscrt.io.ClientBootstrap" title="awscrt.io.ClientBootstrap"><em>ClientBootstrap</em></a><em>]</em>) – Client bootstrap to use when initiating socket connection.
+If not set, uses the default static ClientBootstrap instead.</p>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p><em>AwsCredentialsProvider</em></p>
@@ -169,13 +170,14 @@ To define a custom provider, use the <a class="reference internal" href="#awscrt
 
 <dl class="py method">
 <dt class="sig sig-object py" id="awscrt.auth.AwsCredentialsProvider.new_profile">
-<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">new_profile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">client_bootstrap</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">profile_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config_filepath</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">credentials_filepath</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.auth.AwsCredentialsProvider.new_profile" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">new_profile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">client_bootstrap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">profile_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config_filepath</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">credentials_filepath</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.auth.AwsCredentialsProvider.new_profile" title="Permalink to this definition">¶</a></dt>
 <dd><p>Creates a provider that sources credentials from key-value profiles
 loaded from the aws credentials file.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>client_bootstrap</strong> (<a class="reference internal" href="io.html#awscrt.io.ClientBootstrap" title="awscrt.io.ClientBootstrap"><em>ClientBootstrap</em></a>) – Client bootstrap to use when initiating socket connection.</p></li>
+<li><p><strong>client_bootstrap</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="io.html#awscrt.io.ClientBootstrap" title="awscrt.io.ClientBootstrap"><em>ClientBootstrap</em></a><em>]</em>) – Client bootstrap to use when initiating socket connection.
+If not set, uses the static default ClientBootstrap instead.</p></li>
 <li><p><strong>profile_name</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – Name of profile to use.
 If not set, uses value from AWS_PROFILE environment variable.
 If that is not set, uses value of “default”</p></li>
@@ -663,12 +665,16 @@ if the signing process fails.</p>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-  <h4>Previous topic</h4>
-  <p class="topless"><a href="../index.html"
-                        title="previous chapter">Welcome to awscrt’s documentation!</a></p>
-  <h4>Next topic</h4>
-  <p class="topless"><a href="common.html"
-                        title="next chapter">awscrt.common</a></p>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="../index.html"
+                          title="previous chapter">Welcome to awscrt’s documentation!</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="common.html"
+                          title="next chapter">awscrt.common</a></p>
+  </div>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -711,7 +717,7 @@ if the signing process fails.</p>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2020, Amazon Web Services, Inc.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.3.2.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.4.0.
     </div>
   </body>
 </html>

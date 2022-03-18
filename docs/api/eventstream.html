@@ -484,7 +484,7 @@ result of None, or an exception indicating why shutdown occurred.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="awscrt.eventstream.rpc.ClientConnection.connect">
-<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">connect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">handler</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#awscrt.eventstream.rpc.ClientConnectionHandler" title="awscrt.eventstream.rpc.ClientConnectionHandler"><span class="pre">awscrt.eventstream.rpc.ClientConnectionHandler</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">host_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">port</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bootstrap</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="io.html#awscrt.io.ClientBootstrap" title="awscrt.io.ClientBootstrap"><span class="pre">awscrt.io.ClientBootstrap</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">socket_options</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="io.html#awscrt.io.SocketOptions" title="awscrt.io.SocketOptions"><span class="pre">awscrt.io.SocketOptions</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tls_connection_options</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="io.html#awscrt.io.TlsConnectionOptions" title="awscrt.io.TlsConnectionOptions"><span class="pre">awscrt.io.TlsConnectionOptions</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">concurrent.futures._base.Future</span></span></span><a class="headerlink" href="#awscrt.eventstream.rpc.ClientConnection.connect" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">connect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">handler</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#awscrt.eventstream.rpc.ClientConnectionHandler" title="awscrt.eventstream.rpc.ClientConnectionHandler"><span class="pre">awscrt.eventstream.rpc.ClientConnectionHandler</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">host_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">port</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bootstrap</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="io.html#awscrt.io.ClientBootstrap" title="awscrt.io.ClientBootstrap"><span class="pre">awscrt.io.ClientBootstrap</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">socket_options</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="io.html#awscrt.io.SocketOptions" title="awscrt.io.SocketOptions"><span class="pre">awscrt.io.SocketOptions</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tls_connection_options</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="io.html#awscrt.io.TlsConnectionOptions" title="awscrt.io.TlsConnectionOptions"><span class="pre">awscrt.io.TlsConnectionOptions</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">concurrent.futures._base.Future</span></span></span><a class="headerlink" href="#awscrt.eventstream.rpc.ClientConnection.connect" title="Permalink to this definition">¶</a></dt>
 <dd><p>Asynchronously establish a new ClientConnection.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -492,7 +492,8 @@ result of None, or an exception indicating why shutdown occurred.</p>
 <li><p><strong>handler</strong> – Handler for connection events.</p></li>
 <li><p><strong>host_name</strong> – Connect to host.</p></li>
 <li><p><strong>port</strong> – Connect to port.</p></li>
-<li><p><strong>bootstrap</strong> – Client bootstrap to use when initiating socket connection.</p></li>
+<li><p><strong>bootstrap</strong> – Client bootstrap to use when initiating socket connection.
+If None is provided, the default singleton is used.</p></li>
 <li><p><strong>socket_options</strong> – Optional socket options.
 If None is provided, then default options are used.</p></li>
 <li><p><strong>tls_connection_options</strong> – Optional TLS
@@ -774,12 +775,16 @@ the TERMINATE_STREAM flag, or when the connection shuts down.</p>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-  <h4>Previous topic</h4>
-  <p class="topless"><a href="exceptions.html"
-                        title="previous chapter">awscrt.exceptions</a></p>
-  <h4>Next topic</h4>
-  <p class="topless"><a href="http.html"
-                        title="next chapter">awscrt.http</a></p>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="exceptions.html"
+                          title="previous chapter">awscrt.exceptions</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="http.html"
+                          title="next chapter">awscrt.http</a></p>
+  </div>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -822,7 +827,7 @@ the TERMINATE_STREAM flag, or when the connection shuts down.</p>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2020, Amazon Web Services, Inc.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.3.2.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.4.0.
     </div>
   </body>
 </html>
