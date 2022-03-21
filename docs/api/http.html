@@ -91,14 +91,15 @@
 <p>Use <a class="reference internal" href="#awscrt.http.HttpClientConnection.new" title="awscrt.http.HttpClientConnection.new"><code class="xref py py-meth docutils literal notranslate"><span class="pre">HttpClientConnection.new()</span></code></a> to establish a new connection.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="awscrt.http.HttpClientConnection.new">
-<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">new</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">host_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">port</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bootstrap</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">socket_options</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tls_connection_options</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">proxy_options</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpClientConnection.new" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">new</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">host_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">port</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bootstrap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">socket_options</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tls_connection_options</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">proxy_options</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpClientConnection.new" title="Permalink to this definition">¶</a></dt>
 <dd><p>Asynchronously establish a new HttpClientConnection.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>host_name</strong> (<em>str</em>) – Connect to host.</p></li>
 <li><p><strong>port</strong> (<em>int</em>) – Connect to port.</p></li>
-<li><p><strong>bootstrap</strong> (<a class="reference internal" href="io.html#awscrt.io.ClientBootstrap" title="awscrt.io.ClientBootstrap"><em>ClientBootstrap</em></a>) – Client bootstrap to use when initiating socket connection.</p></li>
+<li><p><strong>bootstrap</strong> (<em>Optional</em><em> [</em><a class="reference internal" href="io.html#awscrt.io.ClientBootstrap" title="awscrt.io.ClientBootstrap"><em>ClientBootstrap</em></a><em>]</em>) – Client bootstrap to use when initiating socket connection.
+If None is provided, the default singleton is used.</p></li>
 <li><p><strong>socket_options</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="io.html#awscrt.io.SocketOptions" title="awscrt.io.SocketOptions"><em>SocketOptions</em></a><em>]</em>) – Optional socket options.
 If None is provided, then default options are used.</p></li>
 <li><p><strong>tls_connection_options</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="io.html#awscrt.io.TlsConnectionOptions" title="awscrt.io.TlsConnectionOptions"><em>TlsConnectionOptions</em></a><em>]</em>) – Optional TLS
@@ -627,12 +628,16 @@ provided to the HTTP connection.</p>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-  <h4>Previous topic</h4>
-  <p class="topless"><a href="eventstream.html"
-                        title="previous chapter">awscrt.eventstream</a></p>
-  <h4>Next topic</h4>
-  <p class="topless"><a href="io.html"
-                        title="next chapter">awscrt.io</a></p>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="eventstream.html"
+                          title="previous chapter">awscrt.eventstream</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="io.html"
+                          title="next chapter">awscrt.io</a></p>
+  </div>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -675,7 +680,7 @@ provided to the HTTP connection.</p>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2020, Amazon Web Services, Inc.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.3.2.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.4.0.
     </div>
   </body>
 </html>

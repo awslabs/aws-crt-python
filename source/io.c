@@ -424,10 +424,11 @@ PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args) {
     Py_ssize_t pkcs11_cert_file_path_len;
     const char *pkcs11_cert_file_contents;
     Py_ssize_t pkcs11_cert_file_contents_len;
+    const char *windows_cert_store_path;
 
     if (!PyArg_ParseTuple(
             args,
-            "bzz#zz#z#zzbOz#Oz#z#z#z#",
+            "bzz#zz#z#zzbOz#Oz#z#z#z#z",
             &min_tls_version,
             &ca_dirpath,
             &ca_buffer,
@@ -451,7 +452,8 @@ PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args) {
             &pkcs11_cert_file_path,
             &pkcs11_cert_file_path_len,
             &pkcs11_cert_file_contents,
-            &pkcs11_cert_file_contents_len)) {
+            &pkcs11_cert_file_contents_len,
+            &windows_cert_store_path)) {
         return NULL;
     }
 
@@ -498,16 +500,16 @@ PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args) {
         }
     } else if (pkcs12_filepath != NULL) {
         /* mTLS with PKCS#12 */
-#ifdef __APPLE__
         struct aws_byte_cursor password = aws_byte_cursor_from_c_str(pkcs12_password);
         if (aws_tls_ctx_options_init_client_mtls_pkcs12_from_path(
                 &ctx_options, allocator, pkcs12_filepath, &password)) {
             return PyErr_AwsLastError();
         }
-#else
-        PyErr_SetString(PyExc_NotImplementedError, "PKCS#12 is currently only supported on Apple devices");
-        return NULL;
-#endif
+    } else if (windows_cert_store_path != NULL) {
+        /* mTLS with certificate from a Windows certificate store */
+        if (aws_tls_ctx_options_init_client_mtls_from_system_path(&ctx_options, allocator, windows_cert_store_path)) {
+            return PyErr_AwsLastError();
+        }
     } else {
         /* no mTLS */
         aws_tls_ctx_options_init_default_client(&ctx_options, allocator);
