@@ -322,7 +322,7 @@ class Connection(NativeResource):
             use_websockets,
         )
 
-    def _check_uses_new_message_callback_signature(self, callback):
+    def _check_uses_old_message_callback_signature(self, callback):
         # The callback used to have fewer args. Passing only those args, if it
         # only has two args and no forward-compatibility to cover case where
         # user function failed to take forward-compatibility **kwargs.
@@ -515,7 +515,7 @@ class Connection(NativeResource):
         packet_id = 0
 
         if callback:
-            uses_old_signature = self._check_uses_new_message_callback_signature(callback)
+            uses_old_signature = self._check_uses_old_message_callback_signature(callback)
 
             def callback_wrapper(topic, payload, dup, qos, retain):
                 if uses_old_signature:
@@ -574,7 +574,7 @@ class Connection(NativeResource):
 
         if callback:
 
-            uses_old_signature = self._check_uses_new_message_callback_signature(callback)
+            uses_old_signature = self._check_uses_old_message_callback_signature(callback)
 
             def callback_wrapper(topic, payload, dup, qos, retain):
                 if uses_old_signature:
