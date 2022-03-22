@@ -14,7 +14,6 @@ prune crt/aws-c-auth/tests/fuzz/corpus
 prune crt/aws-c-s3/benchmarks
 prune crt/s2n/tests
 # s2n's cmake relies on a some files under test/ for compile time feature tests
-include crt/s2n/tests/unit/s2n_pq_asm_noop_test.c
 graft crt/s2n/tests/features
 exclude crt/aws-lc/**/*test*.go
 exclude crt/aws-lc/**/*test*.json
@@ -27,6 +26,7 @@ prune crt/aws-lc/tests
 graft crt/aws-lc/tests/compiler_features_tests
 prune crt/aws-lc/third_party
 graft crt/aws-lc/third_party/fiat
+graft crt/aws-lc/third_party/s2n-bignum
 prune crt/aws-lc/tool
 prune crt/aws-lc/util
 graft crt/aws-lc/util/fipstools/acvp/modulewrapper

@@ -7,7 +7,7 @@ on:
       - '!main'
 
 env:
-  BUILDER_VERSION: v0.9.5
+  BUILDER_VERSION: v0.9.10
   BUILDER_SOURCE: releases
   BUILDER_HOST: https://d19elf31gohf1l.cloudfront.net
   PACKAGE_NAME: aws-crt-python
@@ -20,7 +20,7 @@ env:
 
 jobs:
   manylinux2014:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04 # latest
     strategy:
       fail-fast: false
       matrix:
@@ -45,7 +45,7 @@ jobs:
         ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-manylinux2014-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }} --python /opt/python/${{ matrix.python }}/bin/python
 
   linux-compat:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04 # latest
     strategy:
       matrix:
         image:
@@ -61,7 +61,7 @@ jobs:
         ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }}
 
   linux-compiler-compat:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04 # latest
     strategy:
       matrix:
         compiler:
@@ -83,32 +83,18 @@ jobs:
           ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-${{ env.LINUX_BASE_IMAGE }} build -p ${{ env.PACKAGE_NAME }} --compiler=${{ matrix.compiler }}
 
   windows:
-    runs-on: windows-latest
-    steps:
-    - name: Build ${{ env.PACKAGE_NAME }} + consumers
-      run: |
-        python -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder.pyz')"
-        python builder.pyz build -p ${{ env.PACKAGE_NAME }}
-
-  windows-vc14:
-    runs-on: windows-latest
+    runs-on: windows-2022 # latest
     strategy:
       matrix:
         arch: [x86, x64]
     steps:
-    - uses: ilammy/msvc-dev-cmd@v1
-      with:
-        toolset: 14.0
-        arch: ${{ matrix.arch }}
-        uwp: false
-        spectre: true
     - name: Build ${{ env.PACKAGE_NAME }} + consumers
       run: |
         python -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder.pyz')"
-        python builder.pyz build -p ${{ env.PACKAGE_NAME }}
+        python builder.pyz build -p ${{ env.PACKAGE_NAME }} --python "C:\\hostedtoolcache\\windows\\Python\\3.7.9\\${{ matrix.arch }}\\python.exe"
 
   osx:
-    runs-on: macos-latest
+    runs-on: macos-11 # latest
     steps:
     - name: Build ${{ env.PACKAGE_NAME }} + consumers
       run: |
@@ -118,7 +104,7 @@ jobs:
 
   # check that tests requiring custom env-vars or AWS credentials are simply skipped
   tests-ok-without-env-vars:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04 # latest
     steps:
       - uses: actions/checkout@v2
         with:
@@ -134,7 +120,7 @@ jobs:
           python3 -m unittest discover --failfast --verbose
 
   package-source:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04 # latest
     steps:
       - uses: actions/checkout@v2
         with:
@@ -147,7 +133,7 @@ jobs:
           python3 -c "import awscrt.io"
 
   check-submodules:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04 # latest
     steps:
     - name: Checkout Source
       uses: actions/checkout@v2

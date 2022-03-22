@@ -54,7 +54,8 @@ class S3Client(NativeResource):
     """S3 client
 
     Keyword Args:
-        bootstrap (ClientBootstrap): Client bootstrap to use when initiating socket connection.
+        bootstrap (Optional [ClientBootstrap]): Client bootstrap to use when initiating socket connection.
+            If None is provided, the default singleton is used.
 
         region (str): Region that the S3 bucket lives in.
 
@@ -94,7 +95,7 @@ class S3Client(NativeResource):
             tls_connection_options=None,
             part_size=None,
             throughput_target_gbps=None):
-        assert isinstance(bootstrap, ClientBootstrap)
+        assert isinstance(bootstrap, ClientBootstrap) or bootstrap is None
         assert isinstance(region, str)
         assert isinstance(credential_provider, AwsCredentialsProvider) or credential_provider is None
         assert isinstance(tls_connection_options, TlsConnectionOptions) or tls_connection_options is None
@@ -113,6 +114,9 @@ class S3Client(NativeResource):
             shutdown_event.set()
         self._region = region
         self.shutdown_event = shutdown_event
+
+        if not bootstrap:
+            bootstrap = ClientBootstrap.get_or_create_static_default()
         s3_client_core = _S3ClientCore(bootstrap, credential_provider, tls_connection_options)
 
         # C layer uses 0 to indicate defaults

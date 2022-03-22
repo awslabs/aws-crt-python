@@ -45,7 +45,10 @@ def determine_generator_args():
             # This technique may not work with customized VS install paths.
             # An alternative would be to utilize private python calls:
             # (distutils._msvccompiler._find_vc2017() and _find_vc2015()).
-            if '\\Microsoft Visual Studio\\2019' in compiler.cc:
+            if '\\Microsoft Visual Studio\\2022' in compiler.cc:
+                vs_version = 17
+                vs_year = 2022
+            elif '\\Microsoft Visual Studio\\2019' in compiler.cc:
                 vs_version = 16
                 vs_year = 2019
             elif '\\Microsoft Visual Studio\\2017' in compiler.cc:
@@ -55,7 +58,7 @@ def determine_generator_args():
                 vs_version = 14
                 vs_year = 2015
             assert(vs_version and vs_year)
-        except BaseException:
+        except Exception:
             raise RuntimeError('No supported version of MSVC compiler could be found!')
 
         print('Using Visual Studio', vs_version, vs_year)
@@ -272,6 +275,10 @@ def awscrt_ext():
         # force linker to choose static variant by using using "-l:libcrypto.a" syntax instead of just "-lcrypto".
         libraries = [':lib{}.a'.format(x) for x in libraries]
         libraries += ['rt']
+
+        # python usually adds -pthread automatically, but we've observed
+        # rare cases where that didn't happen, so let's be explicit.
+        extra_link_args += ['-pthread']
 
     if distutils.ccompiler.get_default_compiler() != 'msvc':
         extra_compile_args += ['-Wextra', '-Werror', '-Wno-strict-aliasing', '-std=gnu99']

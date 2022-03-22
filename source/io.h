@@ -59,6 +59,11 @@ PyObject *aws_py_tls_connection_options_set_server_name(PyObject *self, PyObject
  */
 PyObject *aws_py_input_stream_new(PyObject *self, PyObject *args);
 
+/**
+ * Create a new aws_pkcs11_lib to be managed by a Python capsule.
+ */
+PyObject *aws_py_pkcs11_lib_new(PyObject *self, PyObject *args);
+
 /* Given a python object, return a pointer to its underlying native type.
  * If NULL is returned, a python error has been set */
 
@@ -68,5 +73,6 @@ struct aws_client_bootstrap *aws_py_get_client_bootstrap(PyObject *client_bootst
 struct aws_tls_ctx *aws_py_get_tls_ctx(PyObject *tls_ctx);
 struct aws_tls_connection_options *aws_py_get_tls_connection_options(PyObject *tls_connection_options);
 struct aws_input_stream *aws_py_get_input_stream(PyObject *input_stream);
+struct aws_pkcs11_lib *aws_py_get_pkcs11_lib(PyObject *pkcs11_lib);
 
 #endif /* AWS_CRT_PYTHON_IO_H */
