@@ -322,18 +322,20 @@ class Connection(NativeResource):
             use_websockets,
         )
 
-    def _check_try_backward_message_callback(self, callback):
+    def _check_uses_new_message_callback_signature(self, callback):
         # The callback used to have fewer args. Passing only those args, if it
         # only has two args and no forward-compatibility to cover case where
         # user function failed to take forward-compatibility **kwargs.
 
-        try_backward_callback = False
         callback_sig = signature(callback)
         try:
+            # try new signature
             callback_sig.bind(topic='topic', payload='payload', dup=True, qos=QoS(1), retain=True)
-        except Exception as e:
-            try_backward_callback = True
-        return try_backward_callback
+            return False
+        except TypeError:
+            # try old signature
+            callback_sig.bind(topic='topic', payload='payload')
+            return True
 
     def _on_connection_interrupted(self, error_code):
         if self._on_connection_interrupted_cb:
@@ -513,10 +515,10 @@ class Connection(NativeResource):
         packet_id = 0
 
         if callback:
-            try_backward_callback = self._check_try_backward_message_callback(callback)
+            uses_old_signature = self._check_uses_new_message_callback_signature(callback)
 
             def callback_wrapper(topic, payload, dup, qos, retain):
-                if try_backward_callback:
+                if uses_old_signature:
                     callback(topic=topic, payload=payload)
                 else:
                     callback(topic=topic, payload=payload, dup=dup, qos=QoS(qos), retain=retain)
@@ -572,10 +574,10 @@ class Connection(NativeResource):
 
         if callback:
 
-            try_backward_callback = self._check_try_backward_message_callback(callback)
+            uses_old_signature = self._check_uses_new_message_callback_signature(callback)
 
             def callback_wrapper(topic, payload, dup, qos, retain):
-                if try_backward_callback:
+                if uses_old_signature:
                     callback(topic=topic, payload=payload)
                 else:
                     callback(topic=topic, payload=payload, dup=dup, qos=QoS(qos), retain=retain)
