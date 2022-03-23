@@ -239,6 +239,10 @@ static void s_s3_request_on_finish(
         aws_input_stream_release(request_binding->input_body);
         request_binding->input_body = NULL;
     }
+    if (request_binding->copied_message) {
+        aws_http_message_release(request_binding->copied_message);
+        request_binding->copied_message = NULL;
+    }
 
     if (request_binding->size_transferred) {
         /* report the remaining progress */
