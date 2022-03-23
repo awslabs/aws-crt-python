@@ -311,14 +311,20 @@ static void s_s3_request_on_shutdown(void *user_data) {
     if (aws_py_gilstate_ensure(&state)) {
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
+    /* Clean thing up before invoking the callback, as the callback means everything has been shutdown, which is not
+     * true if we clean the resource after the callback */
+
+    PyObject *py_core = request_binding->py_core;
+    Py_INCREF(py_core);
+    s_destroy(request_binding);
 
     /* Deliver the built up list of (name,value) tuples */
-    PyObject *result = PyObject_CallMethod(request_binding->py_core, "_on_shutdown", NULL);
+    PyObject *result = PyObject_CallMethod(py_core, "_on_shutdown", NULL);
     if (!result) {
-        PyErr_WriteUnraisable(request_binding->py_core);
+        PyErr_WriteUnraisable(py_core);
     }
 
-    s_destroy(request_binding);
+    Py_XDECREF(py_core);
     PyGILState_Release(state);
     /*************** GIL RELEASE ***************/
 }
