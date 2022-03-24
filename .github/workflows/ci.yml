@@ -7,7 +7,7 @@ on:
       - '!main'
 
 env:
-  BUILDER_VERSION: v0.9.14
+  BUILDER_VERSION: v0.9.15
   BUILDER_SOURCE: releases
   BUILDER_HOST: https://d19elf31gohf1l.cloudfront.net
   PACKAGE_NAME: aws-crt-python
@@ -28,6 +28,7 @@ jobs:
           - x64
           - x86
           - aarch64
+          - arm
         python:
           - cp36-cp36m
           - cp37-cp37m
