@@ -28,7 +28,6 @@ jobs:
           - x64
           - x86
           - aarch64
-          - arm
         python:
           - cp36-cp36m
           - cp37-cp37m
