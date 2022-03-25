@@ -1,0 +1,24 @@
+name: docs
+
+on:
+  push:
+    branches:
+      - 'autodocs'
+
+jobs:
+  update-docs:
+    runs-on: ubuntu-20.04 # latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Update docs
+        run: |
+          python3 -m pip install sphinx
+          ./make-docs.sh
+
+      - name: Push changes
+        run: |
+          git add docs/
+          git commit -m "update docs"
+          git push --force --set-upstream origin docs

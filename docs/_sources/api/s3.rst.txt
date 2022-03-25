@@ -1,5 +1,0 @@
-awscrt.s3
-=========
-
-.. automodule:: awscrt.s3
-    :members:
