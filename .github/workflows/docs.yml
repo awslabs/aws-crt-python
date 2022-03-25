@@ -19,6 +19,6 @@ jobs:
 
       - name: Push changes
         run: |
-          git add docs/
-          git commit -m "update docs"
+          git add --force docs/
+          git commit --message="update docs"
           git push --force --set-upstream origin docs
