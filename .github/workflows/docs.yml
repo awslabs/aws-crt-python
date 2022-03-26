@@ -25,3 +25,4 @@ jobs:
           commit_message: update docs
           branch: docs
           push_options: --force
+          skip_dirty_check: true
