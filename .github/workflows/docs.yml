@@ -18,7 +18,10 @@ jobs:
           ./make-docs.sh
 
       - name: Push changes
-        run: |
-          git add --force docs/
-          git commit --message="update docs"
-          git push --force --set-upstream origin docs
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          file_pattern: docs/
+          add_options: --force
+          commit_message: update docs
+          branch: docs
+          push_options: --force
