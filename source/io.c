@@ -702,14 +702,9 @@ struct aws_input_stream_py_impl {
 
     bool is_end_of_stream;
 
-    /* Weak reference proxy to python self. */
-    PyObject *self_proxy;
+    /* Pointer to python self. The stream will have a same lifetime as the python Object */
+    PyObject *py_self;
 };
-
-static void s_aws_input_stream_py_destroy(struct aws_input_stream_py_impl *impl) {
-    Py_XDECREF(impl->self_proxy);
-    aws_mem_release(impl->allocator, impl);
-}
 
 static int s_aws_input_stream_py_seek(
     struct aws_input_stream *stream,
@@ -727,7 +722,7 @@ static int s_aws_input_stream_py_seek(
         return AWS_OP_ERR; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
-    method_result = PyObject_CallMethod(impl->self_proxy, "_seek", "(Li)", offset, basis);
+    method_result = PyObject_CallMethod(impl->py_self, "_seek", "(Li)", offset, basis);
     if (!method_result) {
         aws_result = aws_py_raise_error();
         goto done;
@@ -763,7 +758,7 @@ int s_aws_input_stream_py_read(struct aws_input_stream *stream, struct aws_byte_
         goto done;
     }
 
-    method_result = PyObject_CallMethod(impl->self_proxy, "_read_into_memoryview", "(O)", memory_view);
+    method_result = PyObject_CallMethod(impl->py_self, "_read_into_memoryview", "(O)", memory_view);
     if (!method_result) {
         aws_result = aws_py_raise_error();
         goto done;
@@ -811,11 +806,29 @@ int s_aws_input_stream_py_get_length(struct aws_input_stream *stream, int64_t *o
     return aws_raise_error(AWS_ERROR_UNIMPLEMENTED);
 }
 
+struct aws_input_stream s_aws_input_stream_py_acquire(struct aws_input_stream *stream) {
+    if (stream) {
+        struct aws_input_stream_py_impl *impl = AWS_CONTAINER_OF(stream, struct aws_input_stream_py_impl, base);
+        Py_INCREF(impl->py_self);
+    }
+    return stream;
+}
+
+struct aws_input_stream s_aws_input_stream_py_release(struct aws_input_stream *stream) {
+    if (stream) {
+        struct aws_input_stream_py_impl *impl = AWS_CONTAINER_OF(stream, struct aws_input_stream_py_impl, base);
+        Py_DECREF(impl->py_self);
+    }
+    return stream;
+}
+
 static struct aws_input_stream_vtable s_aws_input_stream_py_vtable = {
     .seek = s_aws_input_stream_py_seek,
     .read = s_aws_input_stream_py_read,
     .get_status = s_aws_input_stream_py_get_status,
     .get_length = s_aws_input_stream_py_get_length,
+    .acquire = s_aws_input_stream_py_acquire,
+    .release = s_aws_input_stream_py_release,
 };
 
 static struct aws_input_stream *aws_input_stream_new_from_py(PyObject *py_self) {
@@ -825,6 +838,7 @@ static struct aws_input_stream *aws_input_stream_new_from_py(PyObject *py_self) 
         return NULL;
     }
 
+    /* The lifetime of the input stream will be exactly the same as python object passed in */
     struct aws_allocator *alloc = aws_py_get_allocator();
     struct aws_input_stream_py_impl *impl = aws_mem_calloc(alloc, 1, sizeof(struct aws_input_stream_py_impl));
     if (!impl) {
@@ -833,17 +847,8 @@ static struct aws_input_stream *aws_input_stream_new_from_py(PyObject *py_self) 
 
     impl->allocator = alloc;
     impl->base.vtable = &s_aws_input_stream_py_vtable;
-    aws_ref_count_init(&impl->base.ref_count, impl, (aws_simple_completion_callback *)s_aws_input_stream_py_destroy);
-
-    impl->self_proxy = PyWeakref_NewProxy(py_self, NULL);
-    if (!impl->self_proxy) {
-        goto error;
-    }
 
     return &impl->base;
-error:
-    aws_input_stream_release(&impl->base);
-    return NULL;
 }
 
 /**
@@ -856,7 +861,8 @@ error:
 
 static void s_input_stream_capsule_destructor(PyObject *py_capsule) {
     struct aws_input_stream *stream = PyCapsule_GetPointer(py_capsule, s_capsule_name_input_stream);
-    aws_input_stream_release(stream);
+    struct aws_input_stream_py_impl *impl = AWS_CONTAINER_OF(stream, struct aws_input_stream_py_impl, base);
+    aws_mem_release(impl->allocator, impl);
 }
 
 PyObject *aws_py_input_stream_new(PyObject *self, PyObject *args) {
