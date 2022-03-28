@@ -806,7 +806,7 @@ int s_aws_input_stream_py_get_length(struct aws_input_stream *stream, int64_t *o
     return aws_raise_error(AWS_ERROR_UNIMPLEMENTED);
 }
 
-struct aws_input_stream s_aws_input_stream_py_acquire(struct aws_input_stream *stream) {
+struct aws_input_stream *s_aws_input_stream_py_acquire(struct aws_input_stream *stream) {
     if (stream) {
         struct aws_input_stream_py_impl *impl = AWS_CONTAINER_OF(stream, struct aws_input_stream_py_impl, base);
         Py_INCREF(impl->py_self);
@@ -814,7 +814,7 @@ struct aws_input_stream s_aws_input_stream_py_acquire(struct aws_input_stream *s
     return stream;
 }
 
-struct aws_input_stream s_aws_input_stream_py_release(struct aws_input_stream *stream) {
+struct aws_input_stream *s_aws_input_stream_py_release(struct aws_input_stream *stream) {
     if (stream) {
         struct aws_input_stream_py_impl *impl = AWS_CONTAINER_OF(stream, struct aws_input_stream_py_impl, base);
         Py_DECREF(impl->py_self);
