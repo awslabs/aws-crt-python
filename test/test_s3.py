@@ -459,10 +459,6 @@ class S3RequestTest(NativeResourceTest):
             self.transferred_len,
             "the transferred length reported does not match body we sent")
         self._validate_successful_get_response(request_type is S3RequestType.PUT_OBJECT)
-        # wait for shutdown, so no underlying recourse is still hold, we can safely clean up
-        shutdown_event = s3_request.shutdown_event
-        del s3_request
-        self.assertTrue(shutdown_event.wait(self.timeout))
         os.remove(self.non_ascii_file_name)
 
     def test_non_ascii_filepath_download(self):
