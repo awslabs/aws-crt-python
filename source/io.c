@@ -847,6 +847,7 @@ static struct aws_input_stream *aws_input_stream_new_from_py(PyObject *py_self) 
 
     impl->allocator = alloc;
     impl->base.vtable = &s_aws_input_stream_py_vtable;
+    impl->py_self = py_self;
 
     return &impl->base;
 }
