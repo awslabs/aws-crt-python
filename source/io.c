@@ -845,27 +845,6 @@ static struct aws_input_stream_vtable s_aws_input_stream_py_vtable = {
     .release = s_aws_input_stream_py_release,
 };
 
-static struct aws_input_stream *aws_input_stream_new_from_py(PyObject *py_self) {
-
-    if (!py_self || (py_self == Py_None)) {
-        aws_raise_error(AWS_ERROR_INVALID_ARGUMENT);
-        return NULL;
-    }
-
-    /* The lifetime of the input stream will be exactly the same as python object passed in */
-    struct aws_allocator *alloc = aws_py_get_allocator();
-    struct aws_input_stream_py_impl *impl = aws_mem_calloc(alloc, 1, sizeof(struct aws_input_stream_py_impl));
-    if (!impl) {
-        return NULL;
-    }
-
-    impl->allocator = alloc;
-    impl->base.vtable = &s_aws_input_stream_py_vtable;
-    impl->py_self = py_self;
-
-    return &impl->base;
-}
-
 /**
  * Begin aws_input_stream <--> InputStream binding code.
  * This is distinct from the aws_input_stream_from_pyobject() code because
@@ -888,15 +867,20 @@ PyObject *aws_py_input_stream_new(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    struct aws_input_stream *stream = aws_input_stream_new_from_py(py_self);
-    if (!stream) {
-        return PyErr_AwsLastError();
+    if (!py_self || (py_self == Py_None)) {
+        aws_raise_error(AWS_ERROR_INVALID_ARGUMENT);
+        return NULL;
     }
 
-    PyObject *py_capsule = PyCapsule_New(stream, s_capsule_name_input_stream, s_input_stream_capsule_destructor);
+    struct aws_allocator *alloc = aws_py_get_allocator();
+    struct aws_input_stream_py_impl *impl = aws_mem_calloc(alloc, 1, sizeof(struct aws_input_stream_py_impl));
+    impl->allocator = alloc;
+    impl->base.vtable = &s_aws_input_stream_py_vtable;
+    impl->py_self = py_self;
+    PyObject *py_capsule = PyCapsule_New(&impl->base, s_capsule_name_input_stream, s_input_stream_capsule_destructor);
+
     if (!py_capsule) {
-        aws_input_stream_release(stream);
-        return NULL;
+        aws_mem_release(impl->allocator, impl);
     }
 
     return py_capsule;
