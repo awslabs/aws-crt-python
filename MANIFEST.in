@@ -11,6 +11,7 @@ global-exclude docker-images/**
 prune crt/**/AWSCRTAndroidTestRunner
 prune crt/aws-c-auth/tests/aws-sig-v4-test-suite
 prune crt/aws-c-auth/tests/fuzz/corpus
+prune crt/aws-c-cal/ecdsa-fuzz-corpus
 prune crt/aws-c-s3/benchmarks
 prune crt/s2n/tests
 # s2n's cmake relies on a some files under test/ for compile time feature tests
