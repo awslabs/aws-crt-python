@@ -500,6 +500,8 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     PyObject *s3_client_py = NULL;
     PyObject *http_request_py = NULL;
     int type;
+    int checksum_algorithm = 0;
+    bool validate_response = false;
     PyObject *credential_provider_py = NULL;
     const char *recv_filepath;
     const char *send_filepath;
@@ -508,11 +510,13 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     PyObject *py_core = NULL;
     if (!PyArg_ParseTuple(
             args,
-            "OOOiOzzs#O",
+            "OOOiipOzzs#O",
             &py_s3_request,
             &s3_client_py,
             &http_request_py,
             &type,
+            &checksum_algorithm,
+            &validate_response,
             &credential_provider_py,
             &recv_filepath,
             &send_filepath,
@@ -587,6 +591,8 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
 
     struct aws_s3_meta_request_options s3_meta_request_opt = {
         .type = type,
+        .checksum_algorithm = checksum_algorithm,
+        .validate_get_response_checksum = validate_response,
         .message = meta_request->copied_message ? meta_request->copied_message : http_request,
         .signing_config = credential_provider ? &signing_config : NULL,
         .headers_callback = s_s3_request_on_headers,

@@ -36,6 +36,35 @@ class S3RequestType(IntEnum):
     """
 
 
+class S3ChecksumAlgorithm(IntEnum):
+    """The type of the AWS S3 request"""
+
+    AWS_SCA_NONE = 0
+    """
+    Do not calculate and upload a checksum of the object.
+    """
+
+    AWS_SCA_CRC32C = 1
+    """
+    Calculate and upload a CRC32C checksum of the object
+    """
+
+    AWS_SCA_CRC32 = 2
+    """
+    Calculate and upload a CRC32 checksum of the object
+    """
+
+    AWS_SCA_SHA1 = 3
+    """
+    Calculate and upload a SHA1 checksum of the object
+    """
+
+    AWS_SCA_SHA256 = 4
+    """
+    Calculate and upload a SHA256 checksum of the object
+    """
+
+
 class S3RequestTlsMode(IntEnum):
     """TLS mode for S3 request"""
 
@@ -139,6 +168,8 @@ class S3Client(NativeResource):
             *,
             request,
             type,
+            checksum_algorithm=S3ChecksumAlgorithm.AWS_SCA_NONE,
+            validate_checksum=False,
             credential_provider=None,
             recv_filepath=None,
             send_filepath=None,
@@ -225,6 +256,8 @@ class S3Client(NativeResource):
             client=self,
             request=request,
             type=type,
+            checksum_algorithm=checksum_algorithm,
+            validate_checksum=validate_checksum,
             credential_provider=credential_provider,
             recv_filepath=recv_filepath,
             send_filepath=send_filepath,
@@ -257,6 +290,8 @@ class S3Request(NativeResource):
             client,
             request,
             type,
+            checksum_algorithm=S3ChecksumAlgorithm.AWS_SCA_NONE,
+            validate_checksum=False,
             credential_provider=None,
             recv_filepath=None,
             send_filepath=None,
@@ -291,6 +326,8 @@ class S3Request(NativeResource):
             client,
             request,
             type,
+            checksum_algorithm,
+            validate_checksum,
             credential_provider,
             recv_filepath,
             send_filepath,
