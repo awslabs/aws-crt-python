@@ -125,7 +125,7 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
         self._binding = binding
 
     @classmethod
-    def new_default_chain(cls, client_bootstrap):
+    def new_default_chain(cls, client_bootstrap=None):
         """
         Create the default provider chain used by most AWS SDKs.
 
@@ -137,12 +137,16 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
         4.  (conditional, on by default) EC2 Instance Metadata
 
         Args:
-            client_bootstrap (ClientBootstrap): Client bootstrap to use when initiating socket connection.
+            client_bootstrap (Optional[ClientBootstrap]): Client bootstrap to use when initiating socket connection.
+                If not set, uses the default static ClientBootstrap instead.
 
         Returns:
             AwsCredentialsProvider:
         """
-        assert isinstance(client_bootstrap, ClientBootstrap)
+        assert isinstance(client_bootstrap, ClientBootstrap) or client_bootstrap is None
+
+        if client_bootstrap is None:
+            client_bootstrap = ClientBootstrap.get_or_create_static_default()
 
         binding = _awscrt.credentials_provider_new_chain_default(client_bootstrap)
         return cls(binding)
@@ -170,7 +174,7 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
     @classmethod
     def new_profile(
             cls,
-            client_bootstrap,
+            client_bootstrap=None,
             profile_name=None,
             config_filepath=None,
             credentials_filepath=None):
@@ -179,7 +183,8 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
         loaded from the aws credentials file.
 
         Args:
-            client_bootstrap (ClientBootstrap): Client bootstrap to use when initiating socket connection.
+            client_bootstrap (Optional[ClientBootstrap]): Client bootstrap to use when initiating socket connection.
+                If not set, uses the static default ClientBootstrap instead.
 
             profile_name (Optional[str]): Name of profile to use.
                 If not set, uses value from AWS_PROFILE environment variable.
@@ -196,10 +201,13 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
         Returns:
             AwsCredentialsProvider:
         """
-        assert isinstance(client_bootstrap, ClientBootstrap)
+        assert isinstance(client_bootstrap, ClientBootstrap) or client_bootstrap is None
         assert isinstance(profile_name, str) or profile_name is None
         assert isinstance(config_filepath, str) or config_filepath is None
         assert isinstance(credentials_filepath, str) or credentials_filepath is None
+
+        if client_bootstrap is None:
+            client_bootstrap = ClientBootstrap.get_or_create_static_default()
 
         binding = _awscrt.credentials_provider_new_profile(
             client_bootstrap, profile_name, config_filepath, credentials_filepath)

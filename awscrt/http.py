@@ -11,7 +11,7 @@ import _awscrt
 from concurrent.futures import Future
 from awscrt import NativeResource
 import awscrt.exceptions
-from awscrt.io import ClientBootstrap, EventLoopGroup, DefaultHostResolver, InputStream, TlsConnectionOptions, SocketOptions
+from awscrt.io import ClientBootstrap, InputStream, TlsConnectionOptions, SocketOptions
 from enum import IntEnum
 
 
@@ -82,7 +82,7 @@ class HttpClientConnection(HttpConnectionBase):
     def new(cls,
             host_name,
             port,
-            bootstrap,
+            bootstrap=None,
             socket_options=None,
             tls_connection_options=None,
             proxy_options=None):
@@ -94,7 +94,8 @@ class HttpClientConnection(HttpConnectionBase):
 
             port (int): Connect to port.
 
-            bootstrap (ClientBootstrap): Client bootstrap to use when initiating socket connection.
+            bootstrap (Optional [ClientBootstrap]): Client bootstrap to use when initiating socket connection.
+                If None is provided, the default singleton is used.
 
             socket_options (Optional[SocketOptions]): Optional socket options.
                 If None is provided, then default options are used.
@@ -124,9 +125,7 @@ class HttpClientConnection(HttpConnectionBase):
                 socket_options = SocketOptions()
 
             if not bootstrap:
-                event_loop_group = EventLoopGroup(1)
-                host_resolver = DefaultHostResolver(event_loop_group)
-                bootstrap = ClientBootstrap(event_loop_group, host_resolver)
+                bootstrap = ClientBootstrap.get_or_create_static_default()
 
             connection = cls()
             connection._host_name = host_name
