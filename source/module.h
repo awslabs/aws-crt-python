@@ -10,6 +10,7 @@
  */
 
 #define PY_SSIZE_T_CLEAN 1
+#define Py_LIMITED_API 0x03060000
 #include <Python.h>
 
 #include <aws/common/common.h>
