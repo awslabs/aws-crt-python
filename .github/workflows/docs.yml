@@ -1,12 +1,14 @@
+# Update the API documentation whenever the `main` branch changes.
+# This documentation lives in its own `docs` branch.
 name: docs
 
 on:
   push:
     branches:
-      - 'autodocs'
+      - 'main'
 
 jobs:
-  update-docs:
+  update-docs-branch:
     runs-on: ubuntu-20.04 # latest
     steps:
       - name: Checkout
@@ -14,7 +16,7 @@ jobs:
         with:
           submodules: true
 
-      - name: Update docs
+      - name: Update docs branch
         run: |
           python3 -m pip install sphinx
           python3 -m pip install --verbose .
@@ -32,4 +34,8 @@ jobs:
         with:
           github_token: ${{ github.token }}
           branch: docs
+          # Force push so that `docs` branch always looks like `main`,
+          # but with 1 additional "update docs" commit.
+          # This seems simpler than trying to cleanly merge `main` into
+          # `docs` each time.
           force: true
