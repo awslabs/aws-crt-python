@@ -464,7 +464,7 @@ class ClientContinuation(NativeResource):
     is called. Call activate() when you're ready for callbacks and events to fire.
 
     Attributes:
-        connection (ClientConnection): This stream's connection.
+        connection (ClientConnectionBIGFATERROR): This stream's connection.
 
         closed_future (concurrent.futures.Future) : Future which completes with a result of None
             when the continuation has closed.
