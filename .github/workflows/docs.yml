@@ -15,6 +15,7 @@ jobs:
       - name: Update docs
         run: |
           python3 -m pip install sphinx
+          python3 -m pip install --verbose .
           ./make-docs.sh
 
       - name: Commit

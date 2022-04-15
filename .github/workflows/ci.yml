@@ -140,7 +140,8 @@ jobs:
           submodules: true
       - name: Check docs
         run: |
-          python3 -m pip install -v .
+          python3 -m pip install sphinx
+          python3 -m pip install --verbose .
           ./make-docs.sh
 
   check-submodules:
