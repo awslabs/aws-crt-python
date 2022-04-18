@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches:
-      - '*'
-      - '!main'
+    branches-ignore:
+      - 'main'
+      - 'docs'
 
 env:
   BUILDER_VERSION: v0.9.10
@@ -131,6 +131,19 @@ jobs:
           cd dist
           python3 -m pip install -v awscrt-1.0.0.dev0.tar.gz
           python3 -c "import awscrt.io"
+
+  # check that docs can still build
+  check-docs:
+    runs-on: ubuntu-20.04 # latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+      - name: Check docs
+        run: |
+          python3 -m pip install sphinx
+          python3 -m pip install --verbose .
+          ./make-docs.sh
 
   check-submodules:
     runs-on: ubuntu-20.04 # latest
