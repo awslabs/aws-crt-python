@@ -14,8 +14,4 @@ popd > /dev/null
 
 cp -a docsrc/build/html/. docs
 
-# The existence of this file tells GitHub Pages to just host the HTML as-is
-# https://github.blog/2009-12-29-bypassing-jekyll-on-github-pages/
-touch docs/.nojekyll
-
 popd > /dev/null
