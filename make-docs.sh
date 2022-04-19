@@ -1,8 +1,17 @@
 #!/usr/bin/env bash
 set -e
-pushd `dirname $0`/docsrc > /dev/null
-make html
-rm -rf ../docs/
-cp -a build/html/. ../docs
-touch ../docs/.nojekyll
+
+pushd `dirname $0` > /dev/null
+
+# clean
+rm -rf docs/
+rm -rf docsrc/build/
+
+# build
+pushd docsrc > /dev/null
+make html SPHINXOPTS="-W --keep-going"
+popd > /dev/null
+
+cp -a docsrc/build/html/. docs
+
 popd > /dev/null

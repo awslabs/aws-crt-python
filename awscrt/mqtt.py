@@ -669,7 +669,7 @@ class Connection(NativeResource):
 
         Args:
             topic (str): Topic name.
-            payload (buffer): Contents of message.
+            payload (Union[str, bytes, bytearray]): Contents of message.
             qos (QoS): Quality of Service for delivering this message.
             retain (bool): If True, the server will store the message and its QoS
                 so that it can be delivered to future subscribers whose subscriptions
