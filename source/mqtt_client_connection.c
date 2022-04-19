@@ -1064,7 +1064,7 @@ static void s_suback_multi_callback(
             goto done_prepping_args;
         }
 
-        PyList_SET_ITEM(topic_qos_list, i, tuple); /* Steals reference to tuple */
+        PyList_SetItem(topic_qos_list, i, tuple); /* Steals reference to tuple */
     }
 
 done_prepping_args:;

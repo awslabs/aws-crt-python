@@ -117,7 +117,7 @@ static int s_on_incoming_header_block_done(
             goto done;
         }
 
-        PyList_SET_ITEM(header_list, i, tuple); /* steals reference to tuple */
+        PyList_SetItem(header_list, i, tuple); /* steals reference to tuple */
     }
 
     /* TODO: handle informational and trailing headers */

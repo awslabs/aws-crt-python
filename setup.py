@@ -237,7 +237,7 @@ if sys.version_info > (3,) and platform.python_implementation() == "CPython":
     else:
         class BDistWheel(wheel.bdist_wheel.bdist_wheel):
             def finalize_options(self):
-                self.py_limited_api = "cp36"
+                self.py_limited_api = "cp311"
                 wheel.bdist_wheel.bdist_wheel.finalize_options(self)
         cmdclass['bdist_wheel'] = BDistWheel
 

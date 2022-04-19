@@ -510,7 +510,7 @@ PyObject *aws_py_credentials_provider_new_chain(PyObject *self, PyObject *args) 
     if (!providers_pyseq) {
         goto done;
     }
-    size_t provider_count = (size_t)PySequence_Fast_GET_SIZE(providers_pyseq);
+    size_t provider_count = (size_t)PySequence_Size(providers_pyseq);
     if (provider_count == 0) {
         PyErr_SetString(PyExc_ValueError, "Must supply at least one AwsCredentialsProvider.");
         goto done;
@@ -523,7 +523,7 @@ PyObject *aws_py_credentials_provider_new_chain(PyObject *self, PyObject *args) 
     }
 
     for (size_t i = 0; i < provider_count; ++i) {
-        PyObject *provider_py = PySequence_Fast_GET_ITEM(providers_pyseq, i);
+        PyObject *provider_py = PySequence_GetItem(providers_pyseq, i);
         providers_carray[i] = aws_py_get_credentials_provider(provider_py);
         if (!providers_carray[i]) {
             goto done;
