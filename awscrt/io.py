@@ -371,11 +371,11 @@ class TlsContextOptions:
                 If not specified, the key will be chosen based on other criteria
                 (such as being the only available private key on the token).
 
-            cert_file_path (Optional[str]): Use this X.509 certificate (file on disk).
+            cert_file_path (Optional[str]): Use this X.509 certificate (path to file on disk).
                 The certificate must be PEM-formatted. The certificate may be
                 specified by other means instead (ex: `cert_file_contents`)
 
-            cert_file_contents (Optional[bytes-like object]):
+            cert_file_contents (Optional[Union[str, bytes, bytearray]]):
                 Use this X.509 certificate (contents in memory).
                 The certificate must be PEM-formatted. The certificate may be
                 specified by other means instead (ex: `cert_file_path`)
