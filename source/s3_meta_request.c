@@ -29,11 +29,6 @@ struct s3_meta_request_binding {
      * passing chunks from C into python. One for recv/writing, the other for send/reading
      **/
     FILE *recv_file;
-    /**
-     * input stream for using FILE pointer as the input body of a put request, keep it alive until the meta request
-     * finishes.
-     */
-    struct aws_input_stream *input_body;
 
     struct aws_http_message *copied_message;
 
@@ -49,10 +44,6 @@ struct aws_s3_meta_request *aws_py_get_s3_meta_request(PyObject *meta_request) {
 }
 
 static void s_destroy(struct s3_meta_request_binding *meta_request) {
-    if (meta_request->input_body) {
-        aws_input_stream_release(meta_request->input_body);
-    }
-
     if (meta_request->copied_message) {
         aws_http_message_release(meta_request->copied_message);
     }
@@ -234,15 +225,7 @@ static void s_s3_request_on_finish(
     PyObject *header_list = NULL;
     PyObject *result = NULL;
 
-    if (request_binding->input_body) {
-        /* close the input file stream now, request has finished, we will not read from there anymore */
-        aws_input_stream_release(request_binding->input_body);
-        request_binding->input_body = NULL;
-    }
-    if (request_binding->copied_message) {
-        aws_http_message_release(request_binding->copied_message);
-        request_binding->copied_message = NULL;
-    }
+    request_binding->copied_message = aws_http_message_release(request_binding->copied_message);
 
     if (request_binding->size_transferred) {
         /* report the remaining progress */
@@ -570,13 +553,15 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
         if (type == AWS_S3_META_REQUEST_TYPE_PUT_OBJECT) {
             /* Copy the http request from python object and replace the old pointer with new pointer */
             meta_request->copied_message = s_copy_http_message(allocator, http_request);
-            meta_request->input_body = s_input_stream_new_from_file(allocator, send_filepath, meta_request);
-            if (!meta_request->input_body) {
+            struct aws_input_stream *input_body = s_input_stream_new_from_file(allocator, send_filepath, meta_request);
+            if (!input_body) {
                 PyErr_SetAwsLastError();
                 goto error;
             }
             /* rewrite the input stream of the original request */
-            aws_http_message_set_body_stream(meta_request->copied_message, meta_request->input_body);
+            aws_http_message_set_body_stream(meta_request->copied_message, input_body);
+            /* Input body is owned by copied message */
+            aws_input_stream_release(input_body);
         }
     }
 

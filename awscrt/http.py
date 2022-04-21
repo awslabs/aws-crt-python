@@ -330,13 +330,14 @@ class HttpMessageBase(NativeResource):
 
     @property
     def body_stream(self):
-        """InputStream: Binary stream of outgoing body."""
-        return _awscrt.http_message_get_body_stream(self._binding)
+        return self._body_stream
 
     @body_stream.setter
     def body_stream(self, stream):
+        wrapper = InputStream.wrap(stream)
+        _awscrt.http_message_set_body_stream(self._binding, wrapper)
+        self._body_stream = stream
         stream = InputStream.wrap(stream)
-        return _awscrt.http_message_set_body_stream(self._binding, stream)
 
 
 class HttpRequest(HttpMessageBase):

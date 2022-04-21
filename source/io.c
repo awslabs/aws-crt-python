@@ -867,8 +867,8 @@ PyObject *aws_py_input_stream_new(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    if (!py_self || (py_self == Py_None)) {
-        aws_raise_error(AWS_ERROR_INVALID_ARGUMENT);
+    if (py_self == Py_None) {
+        PyErr_SetString(PyExc_TypeError, "InputStream cannot be None");
         return NULL;
     }
 
