@@ -267,11 +267,13 @@ static void s_s3_request_on_finish(
     result = PyObject_CallMethod(
         request_binding->py_core,
         "_on_finish",
-        "(iOy#)",
+        "(iOy#|pi)",
         meta_request_result->error_code,
         header_list ? header_list : Py_None,
         (const char *)(error_body.buffer),
-        (Py_ssize_t)error_body.len);
+        (Py_ssize_t)error_body.len,
+        meta_request_result->did_validate,
+        meta_request_result->validation_algorithm);
 
     if (result) {
         Py_DECREF(result);

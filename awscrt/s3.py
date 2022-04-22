@@ -397,7 +397,8 @@ class _S3RequestCore:
     def _on_shutdown(self):
         self._shutdown_event.set()
 
-    def _on_finish(self, error_code, error_headers, error_body):
+    def _on_finish(self, error_code, error_headers, error_body, did_validate=False,
+                   validation_algorithm=S3ChecksumAlgorithm.AWS_SCA_NONE):
         error = None
         if error_code:
             error = awscrt.exceptions.from_code(error_code)
@@ -409,7 +410,12 @@ class _S3RequestCore:
         else:
             self._finished_future.set_result(None)
         if self._on_done_cb:
-            self._on_done_cb(error=error, error_headers=error_headers, error_body=error_body)
+            self._on_done_cb(
+                error=error,
+                error_headers=error_headers,
+                error_body=error_body,
+                did_validate=did_validate,
+                validation_algorithm=validation_algorithm)
 
     def _on_progress(self, progress):
         if self._on_progress_cb:
