@@ -334,10 +334,8 @@ class HttpMessageBase(NativeResource):
 
     @body_stream.setter
     def body_stream(self, stream):
-        wrapper = InputStream.wrap(stream)
-        _awscrt.http_message_set_body_stream(self._binding, wrapper)
-        self._body_stream = stream
-        stream = InputStream.wrap(stream)
+        self._body_stream = InputStream.wrap(stream)
+        _awscrt.http_message_set_body_stream(self._binding, self._body_stream)
 
 
 class HttpRequest(HttpMessageBase):

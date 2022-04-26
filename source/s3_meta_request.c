@@ -321,7 +321,6 @@ static void s_s3_request_on_shutdown(void *user_data) {
  */
 struct aws_input_py_stream_file_impl {
     struct aws_input_stream base;
-    struct aws_allocator *allocator;
     struct aws_input_stream *actual_stream;
     struct s3_meta_request_binding *binding;
 };
@@ -384,9 +383,9 @@ static int s_aws_input_stream_file_get_length(struct aws_input_stream *stream, i
 }
 
 static void s_aws_input_stream_file_destroy(struct aws_input_py_stream_file_impl *impl) {
+    struct aws_allocator *allocator = aws_py_get_allocator();
     aws_input_stream_release(impl->actual_stream);
-
-    aws_mem_release(impl->allocator, impl);
+    aws_mem_release(allocator, impl);
 }
 
 static struct aws_input_stream_vtable s_aws_input_stream_file_vtable = {
