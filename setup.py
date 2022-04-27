@@ -148,11 +148,11 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
         cmake = get_cmake_path()
 
         # enable parallel builds for cmake 3.12+
-        # using an environment variables because the "--parallel" arg doesn't exist in older versions.
+        # setting environ because "--parallel" arg doesn't exist in older cmake versions.
         # setting a number because if it's blank then "make" will go absolutely
         # bananas and run out of memory on low-end machines.
         if 'CMAKE_BUILD_PARALLEL_LEVEL' not in os.environ:
-            os.environ['CMAKE_BUILD_PARALLEL_LEVEL'] = os.cpu_count()
+            os.environ['CMAKE_BUILD_PARALLEL_LEVEL'] = f'{os.cpu_count()}'
 
         lib_source_dir = os.path.join(PROJECT_DIR, 'crt', aws_lib.name)
 
