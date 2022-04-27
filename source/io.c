@@ -4,6 +4,8 @@
  */
 #include "io.h"
 
+#include <aws/common/atomics.h>
+
 #include <aws/io/channel_bootstrap.h>
 #include <aws/io/event_loop.h>
 #include <aws/io/socket.h>
@@ -702,6 +704,9 @@ struct aws_input_stream_py_impl {
 
     bool is_end_of_stream;
 
+    /* Track the refcount from C land */
+    struct aws_atomic_var c_ref;
+
     /* Pointer to python self. The stream will have a same lifetime as the python Object */
     PyObject *py_self;
 };
@@ -807,27 +812,35 @@ int s_aws_input_stream_py_get_length(struct aws_input_stream *stream, int64_t *o
 }
 
 void s_aws_input_stream_py_acquire(struct aws_input_stream *stream) {
-    /*************** GIL ACQUIRE ***************/
-    PyGILState_STATE state;
-    if (aws_py_gilstate_ensure(&state)) {
-        return stream; /* Python has shut down. Nothing matters anymore, but don't crash */
-    }
     struct aws_input_stream_py_impl *impl = AWS_CONTAINER_OF(stream, struct aws_input_stream_py_impl, base);
-    Py_INCREF(impl->py_self);
-    PyGILState_Release(state);
-    /*************** GIL RELEASE ***************/
+    size_t pre_ref = aws_atomic_fetch_add(&impl->c_ref, 1);
+    if (pre_ref == 0) {
+        /* Only acquire the python ref when it's a new C ref */
+        /*************** GIL ACQUIRE ***************/
+        PyGILState_STATE state;
+        if (aws_py_gilstate_ensure(&state)) {
+            return; /* Python has shut down. Nothing matters anymore, but don't crash */
+        }
+        Py_INCREF(impl->py_self);
+        PyGILState_Release(state);
+        /*************** GIL RELEASE ***************/
+    }
 }
 
 void s_aws_input_stream_py_release(struct aws_input_stream *stream) {
-    /*************** GIL ACQUIRE ***************/
-    PyGILState_STATE state;
-    if (aws_py_gilstate_ensure(&state)) {
-        return stream; /* Python has shut down. Nothing matters anymore, but don't crash */
-    }
     struct aws_input_stream_py_impl *impl = AWS_CONTAINER_OF(stream, struct aws_input_stream_py_impl, base);
-    Py_DECREF(impl->py_self);
-    PyGILState_Release(state);
-    /*************** GIL RELEASE ***************/
+    size_t pre_ref = aws_atomic_fetch_sub(&impl->c_ref, 1);
+    if (pre_ref == 1) {
+        /* Only release the python ref when all the C refs gone */
+        /*************** GIL ACQUIRE ***************/
+        PyGILState_STATE state;
+        if (aws_py_gilstate_ensure(&state)) {
+            return; /* Python has shut down. Nothing matters anymore, but don't crash */
+        }
+        Py_DECREF(impl->py_self);
+        PyGILState_Release(state);
+        /*************** GIL RELEASE ***************/
+    }
 }
 
 static struct aws_input_stream_vtable s_aws_input_stream_py_vtable = {
@@ -871,6 +884,8 @@ PyObject *aws_py_input_stream_new(PyObject *self, PyObject *args) {
     impl->allocator = alloc;
     impl->base.vtable = &s_aws_input_stream_py_vtable;
     impl->py_self = py_self;
+    aws_atomic_init_int(&impl->c_ref, 0);
+    /* Lifetime of the impl will be the same as py_capsule and being handled by python */
     PyObject *py_capsule = PyCapsule_New(&impl->base, s_capsule_name_input_stream, s_input_stream_capsule_destructor);
 
     if (!py_capsule) {
