@@ -13,6 +13,7 @@ import setuptools.command.build_ext
 import shutil
 import subprocess
 import sys
+import sysconfig
 
 
 def is_64bit():
@@ -23,8 +24,17 @@ def is_32bit():
     return is_64bit() == False
 
 
-def is_arm():
-    return platform.machine().startswith('arm')
+def run_cmd(args):
+    print('>', subprocess.list2cmdline(args))
+    subprocess.check_call(args)
+
+
+def copy_tree(src, dst):
+    if sys.version_info >= (3, 8):
+        shutil.copytree(src, dst, dirs_exist_ok=True)
+    else:
+        shutil.rmtree(dst, ignore_errors=True)
+        shutil.copytree(src, dst)
 
 
 def determine_cross_compile_args():
@@ -94,20 +104,6 @@ def get_cmake_path():
     raise Exception("CMake must be installed to build from source.")
 
 
-cmake_version = None
-
-
-def get_cmake_version():
-    global cmake_version
-    if cmake_version:
-        return cmake_version
-    cmake = get_cmake_path()
-    stdout = subprocess.check_output([cmake, '--version']).decode('utf-8')
-    # output looks like: "cmake version 3.18.2\n\nCMake suite maintained ..."
-    match = re.search(r'([0-9]+)\.([0-9]+)\.([0-9]+)', stdout)
-    return (int(match.group(1)), int(match.group(2)), int(match.group(3)))
-
-
 class AwsLib:
     def __init__(self, name, extra_cmake_args=[], libname=None):
         self.name = name
@@ -143,85 +139,126 @@ AWS_LIBS.append(AwsLib('aws-c-s3'))
 
 
 PROJECT_DIR = os.path.dirname(os.path.realpath(__file__))
-DEP_BUILD_DIR = os.path.join(PROJECT_DIR, 'build', 'deps')
-DEP_INSTALL_PATH = os.environ.get('AWS_C_INSTALL', os.path.join(DEP_BUILD_DIR, 'install'))
 
 VERSION_RE = re.compile(r""".*__version__ = ["'](.*?)['"]""", re.S)
 
 
 class awscrt_build_ext(setuptools.command.build_ext.build_ext):
-    def _build_dependency(self, aws_lib):
+    def _build_dependency_impl(self, aws_lib, build_dir, install_path, osx_arch=None):
         cmake = get_cmake_path()
 
-        prev_cwd = os.getcwd()  # restore cwd at end of function
+        # enable parallel builds for cmake 3.12+
+        # using an environment variables because the "--parallel" arg doesn't exist in older versions.
+        # setting a number because if it's blank then "make" will go absolutely
+        # bananas and run out of memory on low-end machines.
+        if 'CMAKE_BUILD_PARALLEL_LEVEL' not in os.environ:
+            os.environ['CMAKE_BUILD_PARALLEL_LEVEL'] = os.cpu_count()
+
         lib_source_dir = os.path.join(PROJECT_DIR, 'crt', aws_lib.name)
 
         build_type = 'Debug' if self.debug else 'RelWithDebInfo'
 
-        # Skip library if it wasn't pulled
-        if not os.path.exists(os.path.join(lib_source_dir, 'CMakeLists.txt')):
-            print("--- Skipping dependency: '{}' source not found ---".format(aws_lib.name))
-            return
+        if osx_arch:
+            print(f"--- Building dependency: {aws_lib.name} ({osx_arch}) ---")
+        else:
+            print(f"--- Building dependency: {aws_lib.name} ---")
 
-        print("--- Building dependency: {} ({}) ---".format(aws_lib.name, build_type))
-        lib_build_dir = os.path.join(DEP_BUILD_DIR, aws_lib.name)
-        if not os.path.exists(lib_build_dir):
-            os.makedirs(lib_build_dir)
-
-        os.chdir(lib_build_dir)
+        lib_build_dir = os.path.join(build_dir, aws_lib.name)
+        os.makedirs(lib_build_dir, exist_ok=True)
 
         # cmake configure
         cmake_args = [cmake]
+        cmake_args.append(f'-H{lib_source_dir}')
+        cmake_args.append(f'-B{lib_build_dir}')
         cmake_args.extend(determine_generator_args())
         cmake_args.extend(determine_cross_compile_args())
         cmake_args.extend([
-            '-DCMAKE_PREFIX_PATH={}'.format(DEP_INSTALL_PATH),
-            '-DCMAKE_INSTALL_PREFIX={}'.format(DEP_INSTALL_PATH),
+            f'-DCMAKE_PREFIX_PATH={os.path.abspath(install_path)}',
+            f'-DCMAKE_INSTALL_PREFIX={install_path}',
             '-DBUILD_SHARED_LIBS=OFF',
-            '-DCMAKE_BUILD_TYPE={}'.format(build_type),
+            f'-DCMAKE_BUILD_TYPE={build_type}',
             '-DBUILD_TESTING=OFF',
             '-DCMAKE_POSITION_INDEPENDENT_CODE=ON'
         ])
 
         cmake_args.extend(aws_lib.extra_cmake_args)
-        cmake_args.append(lib_source_dir)
 
-        print(subprocess.list2cmdline(cmake_args))
-        subprocess.check_call(cmake_args)
+        if sys.platform == 'darwin':
+            # build lib with same MACOSX_DEPLOYMENT_TARGET that python will ultimately
+            # use to link everything together, otherwise there will be linker warnings.
+            macosx_target_ver = sysconfig.get_config_var('MACOSX_DEPLOYMENT_TARGET')
+            if macosx_target_ver and 'MACOSX_DEPLOYMENT_TARGET' not in os.environ:
+                cmake_args.append(f'-DCMAKE_OSX_DEPLOYMENT_TARGET={macosx_target_ver}')
+
+            if osx_arch:
+                cmake_args.append(f'-DCMAKE_OSX_ARCHITECTURES={osx_arch}')
+
+        run_cmd(cmake_args)
 
         # cmake build/install
         build_cmd = [
             cmake,
-            '--build', './',
+            '--build', lib_build_dir,
             '--config', build_type,
             '--target', 'install',
         ]
-        if get_cmake_version() >= (3, 12):
-            # cmake 3.12+ allows --parallel for faster builds.
-            # Be sure to set a number, otherwise "make" will go absolutely
-            # bananas and run out of memory on low-end machines.
-            build_cmd += ['--parallel', str(os.cpu_count())]
-        print(subprocess.list2cmdline(build_cmd))
-        subprocess.check_call(build_cmd)
+        run_cmd(build_cmd)
 
-        os.chdir(prev_cwd)
+    def _build_dependency(self, aws_lib, build_dir, install_path):
+        if sys.platform == 'darwin' and self.plat_name.endswith('universal2'):
+            # create macOS Universal Binary by compiling for x86_64 and arm64,
+            # each in its own subfolder, and then creating a Universal Binary
+            # by gluing the two together using `lipo`.
+
+            # x86_64
+            self._build_dependency_impl(
+                aws_lib=aws_lib,
+                build_dir=os.path.join(build_dir, 'x86_64'),
+                install_path=os.path.join(build_dir, 'x86_64', 'install'),
+                osx_arch='x86_64')
+
+            # arm64
+            self._build_dependency_impl(
+                aws_lib=aws_lib,
+                build_dir=os.path.join(build_dir, 'arm64'),
+                install_path=os.path.join(build_dir, 'arm64', 'install'),
+                osx_arch='arm64')
+
+            # create Universal Binary at expected install_path
+            lib_dir = os.path.join(install_path, 'lib')
+            os.makedirs(lib_dir, exist_ok=True)
+            lib_file = f'lib{aws_lib.libname}.a'
+            run_cmd(['lipo', '-create',
+                     '-output', os.path.join(lib_dir, lib_file),
+                     os.path.join(build_dir, 'x86_64', 'install', 'lib', lib_file),
+                     os.path.join(build_dir, 'arm64', 'install', 'lib', lib_file)])
+
+            # copy headers to expected install_path
+            copy_tree(os.path.join(build_dir, 'arm64', 'install', 'include'),
+                      os.path.join(install_path, 'include'))
+
+        else:
+            # normal build for a single architecture
+            self._build_dependency_impl(aws_lib, build_dir, install_path)
 
     def run(self):
         # build dependencies
+        dep_build_dir = os.path.join(self.build_temp, 'deps')
+        dep_install_path = os.path.join(self.build_temp, 'deps', 'install')
         for lib in AWS_LIBS:
-            self._build_dependency(lib)
+            self._build_dependency(lib, dep_build_dir, dep_install_path)
 
         # update paths so awscrt_ext can access dependencies
-        self.include_dirs.append(os.path.join(DEP_INSTALL_PATH, 'include'))
+        self.include_dirs.append(os.path.join(dep_install_path, 'include'))
 
         # some platforms (ex: fedora) use /lib64 instead of just /lib
         lib_dir = 'lib'
-        if is_64bit() and os.path.exists(os.path.join(DEP_INSTALL_PATH, 'lib64')):
+        if is_64bit() and os.path.exists(os.path.join(dep_install_path, 'lib64')):
             lib_dir = 'lib64'
-        if is_32bit() and os.path.exists(os.path.join(DEP_INSTALL_PATH, 'lib32')):
+        if is_32bit() and os.path.exists(os.path.join(dep_install_path, 'lib32')):
             lib_dir = 'lib32'
 
-        self.library_dirs.append(os.path.join(DEP_INSTALL_PATH, lib_dir))
+        self.library_dirs.append(os.path.join(dep_install_path, lib_dir))
 
         # continue with normal build_ext.run()
         super().run()
@@ -249,12 +286,6 @@ def awscrt_ext():
     elif sys.platform == 'darwin':
         extra_link_args += ['-framework', 'Security']
 
-        # HACK: Don't understand why, but if AWS_LIBS are linked normally on macos, we get this error:
-        # ImportError: dlopen(_awscrt.cpython-37m-darwin.so, 2): Symbol not found: _aws_byte_cursor_eq_ignore_case
-        # Workaround is to pass them as 'extra_objects' instead of 'libraries'.
-        extra_objects = [os.path.join(DEP_INSTALL_PATH, 'lib', 'lib{}.a'.format(x)) for x in libraries]
-        libraries = []
-
     else:  # unix
         # linker will prefer shared libraries over static if it can find both.
         # force linker to choose static variant by using using "-l:libcrypto.a" syntax instead of just "-lcrypto".
@@ -267,6 +298,7 @@ def awscrt_ext():
 
     if distutils.ccompiler.get_default_compiler() != 'msvc':
         extra_compile_args += ['-Wextra', '-Werror', '-Wno-strict-aliasing', '-std=gnu99']
+        extra_link_args += ['-Wl,-fatal_warnings']
 
     return setuptools.Extension(
         '_awscrt',
