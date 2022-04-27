@@ -206,8 +206,8 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
 
     def _build_dependency(self, aws_lib, build_dir, install_path):
         if sys.platform == 'darwin' and self.plat_name.endswith('universal2'):
-            # create macOS Universal Binary by compiling for x86_64 and arm64,
-            # each in its own subfolder, and then creating a Universal Binary
+            # create macOS universal binary by compiling for x86_64 and arm64,
+            # each in its own subfolder, and then creating a universal binary
             # by gluing the two together using `lipo`.
 
             # x86_64
@@ -224,7 +224,7 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
                 install_path=os.path.join(build_dir, 'arm64', 'install'),
                 osx_arch='arm64')
 
-            # create Universal Binary at expected install_path
+            # create universal binary at expected install_path
             lib_dir = os.path.join(install_path, 'lib')
             os.makedirs(lib_dir, exist_ok=True)
             lib_file = f'lib{aws_lib.libname}.a'
