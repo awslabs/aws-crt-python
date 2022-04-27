@@ -50,7 +50,6 @@ PyObject *aws_py_http_message_get_request_method(PyObject *self, PyObject *args)
 PyObject *aws_py_http_message_set_request_method(PyObject *self, PyObject *args);
 PyObject *aws_py_http_message_get_request_path(PyObject *self, PyObject *args);
 PyObject *aws_py_http_message_set_request_path(PyObject *self, PyObject *args);
-PyObject *aws_py_http_message_get_body_stream(PyObject *self, PyObject *args);
 PyObject *aws_py_http_message_set_body_stream(PyObject *self, PyObject *args);
 
 /* Create capsule to bind existing aws_http_headers struct. */
