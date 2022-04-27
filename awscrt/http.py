@@ -311,7 +311,7 @@ class HttpMessageBase(NativeResource):
     """
     Base for HttpRequest and HttpResponse classes.
     """
-    __slots__ = ('_headers')
+    __slots__ = ('_headers', '_body_stream')
 
     def __init__(self, binding, headers, body_stream=None):
         assert isinstance(headers, HttpHeaders)
@@ -319,6 +319,7 @@ class HttpMessageBase(NativeResource):
         super().__init__()
         self._binding = binding
         self._headers = headers
+        self._body_stream = None
 
         if body_stream:
             self.body_stream = body_stream
