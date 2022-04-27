@@ -593,7 +593,6 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(http_message_set_request_method, METH_VARARGS),
     AWS_PY_METHOD_DEF(http_message_get_request_path, METH_VARARGS),
     AWS_PY_METHOD_DEF(http_message_set_request_path, METH_VARARGS),
-    AWS_PY_METHOD_DEF(http_message_get_body_stream, METH_VARARGS),
     AWS_PY_METHOD_DEF(http_message_set_body_stream, METH_VARARGS),
     AWS_PY_METHOD_DEF(http_headers_new, METH_VARARGS),
     AWS_PY_METHOD_DEF(http_headers_add, METH_VARARGS),
