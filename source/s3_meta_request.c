@@ -402,7 +402,6 @@ static struct aws_input_stream *s_input_stream_new_from_file(
     struct aws_input_py_stream_file_impl *impl =
         aws_mem_calloc(allocator, 1, sizeof(struct aws_input_py_stream_file_impl));
 
-    impl->allocator = allocator;
     impl->base.vtable = &s_aws_input_stream_file_vtable;
     aws_ref_count_init(&impl->base.ref_count, impl, (aws_simple_completion_callback *)s_aws_input_stream_file_destroy);
 
