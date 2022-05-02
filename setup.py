@@ -37,6 +37,15 @@ def copy_tree(src, dst):
         shutil.copytree(src, dst)
 
 
+def is_building_macos_universal2():
+    """Return whether extension will be built as an Apple universal binary (works on both x86_64 and arm64)"""
+    if not sys.platform == 'darwin':
+        return False
+
+    cflags = sysconfig.get_config_var('CFLAGS')
+    return '-arch x86_64' in cflags and '-arch x86_64' in cflags
+
+
 def determine_cross_compile_args():
     host_arch = platform.machine()
     if (host_arch == 'AMD64' or host_arch == 'x86_64') and is_32bit() and sys.platform != 'win32':
@@ -205,10 +214,14 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
         run_cmd(build_cmd)
 
     def _build_dependency(self, aws_lib, build_dir, install_path):
-        if sys.platform == 'darwin' and self.plat_name.endswith('universal2'):
+        if is_building_macos_universal2():
             # create macOS universal binary by compiling for x86_64 and arm64,
             # each in its own subfolder, and then creating a universal binary
             # by gluing the two together using `lipo`.
+            #
+            # The AWS C libs don't support building for multiple architectures
+            # simultaneously (too much confusion at cmake configure time).
+            # So we build each architecture one at a time.
 
             # x86_64
             self._build_dependency_impl(
