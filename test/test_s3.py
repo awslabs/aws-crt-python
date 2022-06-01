@@ -181,7 +181,7 @@ class S3RequestTest(NativeResourceTest):
     def _on_request_body(self, chunk, offset, **kargs):
         self.received_body_len = self.received_body_len + len(chunk)
 
-    def _on_request_done_fc(self, error, error_headers, error_body, **kargs):
+    # def _on_request_done_fc(self, error, error_headers, error_body, **kargs):
 
     def _on_progress(self, progress):
         self.transferred_len += progress
