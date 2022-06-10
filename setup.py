@@ -167,6 +167,10 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
 
         build_type = 'Debug' if self.debug else 'RelWithDebInfo'
 
+        if not os.path.exists(os.path.join(lib_source_dir, 'CMakeLists.txt')):
+            print("--- Skipping dependency: '{}' source not found ---".format(aws_lib.name))
+            return
+
         if osx_arch:
             print(f"--- Building dependency: {aws_lib.name} ({osx_arch}) ---")
         else:
