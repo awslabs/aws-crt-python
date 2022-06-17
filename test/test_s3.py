@@ -364,7 +364,7 @@ class S3RequestTest(NativeResourceTest):
 
     def test_multipart_get_object_cancel(self):
         # a 5 GB file
-        request = self._get_object_request("/crt-canary-obj-single-part-9223372036854775807")
+        request = self._get_object_request("/get_object_test_5120MB.txt")
         s3_client = s3_client_new(False, self.region, 5 * MB)
         with tempfile.NamedTemporaryFile(mode="w", delete=False) as file:
             file.close()
@@ -396,7 +396,7 @@ class S3RequestTest(NativeResourceTest):
 
     def test_get_object_quick_cancel(self):
         # a 5 GB file
-        request = self._get_object_request("/crt-canary-obj-single-part-9223372036854775807")
+        request = self._get_object_request("/get_object_test_5120MB.txt")
         s3_client = s3_client_new(False, self.region, 5 * MB)
         with tempfile.NamedTemporaryFile(mode="w", delete=False) as file:
             file.close()
