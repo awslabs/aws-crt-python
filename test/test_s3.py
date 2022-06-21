@@ -174,14 +174,19 @@ class S3RequestTest(NativeResourceTest):
         request = HttpRequest("PUT", path, headers, self.put_body_stream)
         return request
 
-    def _on_request_headers(self, status_code, headers, **kargs):
+    def _on_request_headers(self, status_code, headers, **kwargs):
         self.response_status_code = status_code
         self.response_headers = headers
 
-    def _on_request_body(self, chunk, offset, **kargs):
+    def _on_request_body(self, chunk, offset, **kwargs):
         self.received_body_len = self.received_body_len + len(chunk)
 
-    # def _on_request_done_fc(self, error, error_headers, error_body, **kargs):
+    def _on_request_done_fc(self, error, error_headers, error_body, **kwargs):
+        print("!!!FC!!!")
+        print(kwargs)
+        print("!!!CF!!!")
+        self.assertTrue(kwargs["did_validate"])
+        self.assertEqual(S3ChecksumAlgorithm.AWS_SCA_CRC32, kwargs["validation_algorithm"])
 
     def _on_progress(self, progress):
         self.transferred_len += progress
@@ -238,15 +243,19 @@ class S3RequestTest(NativeResourceTest):
         self.put_body_stream.close()
 
     def test_round_trip_fc(self):
-        round_trip_path = "test/python/roundtrip_fc"
-        request = self._put_object_request(round_trip_path)
+        round_trip_path = "/test/python/roundtrip_fc"
+        request = self._put_object_request(self.default_file_path, path=round_trip_path)
         self._test_s3_put_get_object(
             request,
             S3RequestType.PUT_OBJECT,
             checksum_algorithm=S3ChecksumAlgorithm.AWS_SCA_CRC32)
         self.put_body_stream.close()
         request = self._get_object_request(round_trip_path)
-        self._test_s3_put_get_object(request, S3RequestType.GET_OBJECT, validate_checksum=True)
+        self._test_s3_put_get_object(
+            request,
+            S3RequestType.GET_OBJECT,
+            validate_checksum=True,
+            on_done=self._on_request_done_fc)
 
     def test_put_object_multiple_times(self):
         s3_client = s3_client_new(False, self.region, 5 * MB)
@@ -455,7 +464,10 @@ class S3RequestTest(NativeResourceTest):
     def test_multipart_upload_with_invalid_request(self):
         request = self._put_object_request(self.default_file_path)
         request.headers.set("Content-MD5", "something")
-        self._test_s3_put_get_object(request, S3RequestType.PUT_OBJECT, "AWS_ERROR_S3_INVALID_RESPONSE_STATUS")
+        self._test_s3_put_get_object(
+            request,
+            S3RequestType.PUT_OBJECT,
+            exception_name="AWS_ERROR_S3_INVALID_RESPONSE_STATUS")
         self.put_body_stream.close()
 
     def test_non_ascii_filepath_upload(self):

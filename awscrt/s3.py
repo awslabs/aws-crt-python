@@ -387,6 +387,7 @@ class _S3RequestCore:
         self._shutdown_event = shutdown_event
 
     def _on_headers(self, status_code, headers):
+        print(f"headers: {headers}")
         if self._on_headers_cb:
             self._on_headers_cb(status_code=status_code, headers=headers)
 
@@ -399,6 +400,7 @@ class _S3RequestCore:
 
     def _on_finish(self, error_code, error_headers, error_body, did_validate=False,
                    validation_algorithm=S3ChecksumAlgorithm.AWS_SCA_NONE):
+        print(f"error_code: {error_code}, error_headers: {error_headers}, error_body: {error_body}, did_validate: {did_validate}, validation_algorithm: {validation_algorithm}")
         error = None
         if error_code:
             error = awscrt.exceptions.from_code(error_code)

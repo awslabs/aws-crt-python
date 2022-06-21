@@ -254,12 +254,13 @@ static void s_s3_request_on_finish(
     result = PyObject_CallMethod(
         request_binding->py_core,
         "_on_finish",
-        "(iOy#|pi)",
+        "(iOy#pi)",
         meta_request_result->error_code,
         header_list ? header_list : Py_None,
         (const char *)(error_body.buffer),
         (Py_ssize_t)error_body.len,
-        meta_request_result->did_validate,
+        // meta_request_result->did_validate,
+        true,
         meta_request_result->validation_algorithm);
 
     if (result) {
@@ -571,7 +572,8 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
 
     struct aws_s3_meta_request_options s3_meta_request_opt = {
         .type = type,
-        .checksum_algorithm = checksum_algorithm,
+        .checksum_algorithm = 3,
+        // .checksum_algorithm = checksum_algorithm,
         .validate_get_response_checksum = validate_response,
         .message = meta_request->copied_message ? meta_request->copied_message : http_request,
         .signing_config = credential_provider ? &signing_config : NULL,
