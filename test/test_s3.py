@@ -11,7 +11,7 @@ from concurrent.futures import Future
 
 from awscrt.http import HttpHeaders, HttpRequest
 from awscrt.s3 import S3ChecksumAlgorithm, S3Client, S3RequestType
-from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions
+from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions, LogLevel, init_logging
 from awscrt.auth import AwsCredentialsProvider
 
 MB = 1024 ** 2
@@ -179,12 +179,10 @@ class S3RequestTest(NativeResourceTest):
         self.response_headers = headers
 
     def _on_request_body(self, chunk, offset, **kwargs):
-        self.received_body_len = self.received_body_len + len(chunk)
+        if chunk:
+            self.received_body_len = self.received_body_len + len(chunk)
 
     def _on_request_done_fc(self, error, error_headers, error_body, **kwargs):
-        print("!!!FC!!!")
-        print(kwargs)
-        print("!!!CF!!!")
         self.assertTrue(kwargs["did_validate"])
         self.assertEqual(S3ChecksumAlgorithm.AWS_SCA_CRC32, kwargs["validation_algorithm"])
 
@@ -211,8 +209,9 @@ class S3RequestTest(NativeResourceTest):
             checksum_algorithm=S3ChecksumAlgorithm.AWS_SCA_NONE,
             validate_checksum=False,
             exception_name=None,
+            part_size_mb=5,
             on_done=None):
-        s3_client = s3_client_new(False, self.region, 5 * MB)
+        s3_client = s3_client_new(False, self.region, part_size_mb * MB)
         s3_request = s3_client.make_request(
             request=request,
             type=request_type,
@@ -242,14 +241,18 @@ class S3RequestTest(NativeResourceTest):
         self._test_s3_put_get_object(request, S3RequestType.PUT_OBJECT)
         self.put_body_stream.close()
 
-    def test_round_trip_fc(self):
+    def test_put_object_fc(self):
         round_trip_path = "/test/python/roundtrip_fc"
         request = self._put_object_request(self.default_file_path, path=round_trip_path)
         self._test_s3_put_get_object(
             request,
             S3RequestType.PUT_OBJECT,
-            checksum_algorithm=S3ChecksumAlgorithm.AWS_SCA_CRC32)
+            checksum_algorithm=S3ChecksumAlgorithm.AWS_SCA_CRC32,
+            part_size_mb=10)
         self.put_body_stream.close()
+
+    def test_get_object_fc(self):
+        round_trip_path = "/test/python/roundtrip_fc"
         request = self._get_object_request(round_trip_path)
         self._test_s3_put_get_object(
             request,

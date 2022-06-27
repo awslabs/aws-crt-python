@@ -5,6 +5,7 @@ S3 client
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 
+from xmlrpc.client import Boolean
 import _awscrt
 from concurrent.futures import Future
 from awscrt import NativeResource
@@ -387,7 +388,6 @@ class _S3RequestCore:
         self._shutdown_event = shutdown_event
 
     def _on_headers(self, status_code, headers):
-        print(f"headers: {headers}")
         if self._on_headers_cb:
             self._on_headers_cb(status_code=status_code, headers=headers)
 
@@ -398,9 +398,9 @@ class _S3RequestCore:
     def _on_shutdown(self):
         self._shutdown_event.set()
 
-    def _on_finish(self, error_code, error_headers, error_body, did_validate=False,
-                   validation_algorithm=S3ChecksumAlgorithm.AWS_SCA_NONE):
-        print(f"error_code: {error_code}, error_headers: {error_headers}, error_body: {error_body}, did_validate: {did_validate}, validation_algorithm: {validation_algorithm}")
+    def _on_finish(self, error_code, error_headers, error_body, did_validate, validation_algorithm):
+        did_validate = Boolean(did_validate)
+        validation_algorithm = S3ChecksumAlgorithm(validation_algorithm)
         error = None
         if error_code:
             error = awscrt.exceptions.from_code(error_code)
