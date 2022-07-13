@@ -129,9 +129,6 @@ instance/
 # Scrapy stuff:
 .scrapy
 
-# Sphinx documentation
-docs/_build/
-
 # PyBuilder
 target/
 
@@ -533,5 +530,5 @@ ASALocalRun/
 # deps from build-deps.sh
 deps/
 
-# docs are updated automatically by .github/workflows/docs.yml
-docs/
+# API docs are updated automatically by .github/workflows/docs.yml
+docs/api
