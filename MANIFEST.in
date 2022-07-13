@@ -6,8 +6,8 @@ global-exclude .travis*
 global-exclude .travis/**
 global-exclude codebuild/**
 global-exclude crt/*/verification/**
+global-exclude crt/*/docs/**
 global-exclude docker-images/**
-prune **/docs
 prune crt/**/AWSCRTAndroidTestRunner
 prune crt/aws-c-auth/tests/aws-sig-v4-test-suite
 prune crt/aws-c-auth/tests/fuzz/corpus
