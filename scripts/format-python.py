@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 import utils
 
-utils.chdir_project_root()
-
-files_and_folders_to_format = [
+FILES_AND_FOLDERS_TO_FORMAT = [
     '.builder/',
     'awscrt/',
     'scripts/',
@@ -11,9 +9,11 @@ files_and_folders_to_format = [
     'setup.py',
 ]
 
+utils.chdir_project_root()
+
 utils.run(['python3',
            '-m', 'autopep8',
            '--in-place',  # edit files in place
            '--recursive',
            '--jobs', '0',  # parallel with all CPUs
-           *files_and_folders_to_format])
+           *FILES_AND_FOLDERS_TO_FORMAT])
