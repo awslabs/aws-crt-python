@@ -4,6 +4,7 @@ This guide is for contributors to aws-crt-python's source code.
 Familiarity (but not necessarily expertise) with Python and C is assumed.
 
 ### Table of Contents
+
 *   [Git](#git)
 *   [Set up a Virtual Environment](#set-up-a-virtual-environment)
 *   [Install](#install)
@@ -13,6 +14,7 @@ Familiarity (but not necessarily expertise) with Python and C is assumed.
     *   [Visual Studio Code](#using-visual-studio-code-vscode)
         *   [Debugging Python](#debugging-python-with-vscode)
         *   [Debugging C](#debugging-c-with-vscode)
+
 ## Git
 
 Clone to a development folder:
