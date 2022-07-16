@@ -3,7 +3,7 @@
 This guide is for contributors to aws-crt-python's source code.
 Familiarity (but not necessarily expertise) with Python and C is assumed.
 
-## Table of Contents
+### Table of Contents
 *   [Git](#git)
 *   [Set up a Virtual Environment](#set-up-a-virtual-environment)
 *   [Install](#install)
