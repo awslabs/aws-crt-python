@@ -3,6 +3,16 @@
 This guide is for contributors to aws-crt-python's source code.
 Familiarity (but not necessarily expertise) with Python and C is assumed.
 
+## Table of Contents
+*   [Git](#git)
+*   [Set up a Virtual Environment](#set-up-a-virtual-environment)
+*   [Install](#install)
+*   [Run Tests](#run-tests)
+    *   [Environment Variables for Tests](#environment-variables-for-tests)
+*   [Using an IDE](#using-an-ide)
+    *   [Visual Studio Code](#using-visual-studio-code-vscode)
+        *   [Debugging Python](#debugging-python-with-vscode)
+        *   [Debugging C](#debugging-c-with-vscode)
 ## Git
 
 Clone to a development folder:
@@ -173,7 +183,7 @@ Use helper scripts to automatically format your code (or configure your IDE to d
         * install - pip install in develop mode. `cmd+shift+B` is a special shortcut for this task
         * format-python - format all .py files
 
-#### Debugging Python Code
+#### Debugging Python with VSCode
 The VSCode `Testing` tab (lab flask/beaker icon) helps run and debug Python tests.
 From this tab, click Configure Python Tests:
 *   Select a test framework/tool to enable - unittest
@@ -191,7 +201,7 @@ AWS_TEST_TLS_CERT_PATH=/Users/janedoe/iot/xxxxx-certificate.pem.crt
 AWS_TEST_TLS_KEY_PATH=/Users/janedoe/iot/xxxxx-private.pem.key
 ```
 
-#### Debugging C Code
+#### Debugging C with VSCode
 Unfortunately, we haven't figured out how to do interactive debugging of the C code.
 Python ultimately builds and links the module together, and it seems to always strip out the debug info.
 Please update this guide if you know how. For now, `printf()` is your best option.
