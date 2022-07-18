@@ -192,19 +192,23 @@ Use helper scripts to automatically format your code (or configure your IDE to d
 2)  Open the `aws-crt-python/` folder.
 
 3)  Edit workspace settings: `cmd+shift+P -> Preferences: Open Workspace Settings`
-    *   Python: Default Interpreter Path - ("python.defaultInterpreterPath" in json view)
-        set the absolute path to Python in your virtual environment.
+    *   `Python: Default Interpreter Path` - ("python.defaultInterpreterPath" in json view)
+        *   Set the absolute path to Python in your virtual environment.
         For example: `/Users/janedoe/dev/aws-crt-python/.venv/bin/python`
         *   Note that the VSCode terminal ignores this setting and will not use your virtual environment by default.
             You must manually run `source .venv/bin/activate` each time you start using the terminal.
             Or use the command `cmd+shift+P -> Python: Create Terminal`.
-    *   C_Cpp > Default: Include Path - ("C_Cpp.default.includePath" in json view)
+    *   `C_Cpp > Default: Include Path` - ("C_Cpp.default.includePath" in json view)
         *   Add item - set path to Python's C headers.
             For example: `/Library/Frameworks/Python.framework/Versions/3.10/include/python3.10`
         *   This is optional, it helps IntelliSense when viewing C files.
+    *   `Files: Insert Final Newline` - ("files.insertFinalNewline" in json view)
+        *   Set to true. It's just good practice.
+    *   `Files: Trim Trailing Whitespace` - ("files.trimTrailingWhitespace" in json view)
+        *   Set to true. It's just good practice.
 
 4)  Add helpful tasks you can run via `cmd+shift+P -> Tasks: Run Task`
-    *   Copy [this file](vscode/launch.json) to `aws-crt-python/.vscode/tasks.json` for the following tasks:
+    *   Copy [this file](vscode/tasks.json) to `aws-crt-python/.vscode/tasks.json` for the following tasks:
         * `install` - `pip install` in develop mode. `cmd+shift+B` is a special shortcut for this task
         * `format` - format all code files
 
