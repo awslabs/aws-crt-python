@@ -29,6 +29,17 @@ Note that you MUST manually update submodules any time you pull latest, or chang
 $ git submodule update
 ```
 
+## CMake
+
+CMake 3 is required to compile the C submodules. To install:
+
+*   On Mac, using homebrew:
+    ```sh
+    $ brew install cmake
+    ```
+* On Linux: use your system's package manager (apt, yum, etc).
+* On Windows: [download and install](https://cmake.org/download/)
+
 ## Set up a Virtual Environment
 
 Set up a [virtual environment](https://docs.python.org/3/library/venv.html)
@@ -39,9 +50,18 @@ $ python3 -m venv .venv/
 ```
 
 To activate the virtual environment in your current terminal:
-```sh
-$ source .venv/bin/activate
-```
+*   On Mac or Linux:
+    ```sh
+    $ source .venv/bin/activate
+    ```
+*   In Windows PowerShell:
+    ```pwsh
+    > .venv\Scripts\Activate.ps1
+    ```
+*   In Windows Command Prompt:
+    ```bat
+    > .venv\Scripts\Activate.bat
+    ```
 
 Your terminal looks something like this when the virtual environment is active:
 ```
@@ -63,7 +83,7 @@ Install dev dependencies:
 (.venv) $ python3 -m pip install --requirement requirements-dev.txt
 ```
 
-Install aws-crt-python (helper script `./scripts/install-dev.py` does this):
+Install aws-crt-python (helper script `python3 scripts/install-dev.py` does this):
 ```sh
 (.venv) $ python3 -m pip install --verbose --editable .
 ```
@@ -152,13 +172,13 @@ To install this on Mac using homebrew, run:
 Use helper scripts to automatically format your code (or configure your IDE to do it):
 ```sh
 # format all code
-(.venv) $ ./scripts/format-all.py
+(.venv) $ python3 scripts/format-all.py
 
 # just format Python files
-(.venv) $ ./scripts/format-python.py
+(.venv) $ python3 scripts/format-python.py
 
 # just format C files
-(.venv) $ ./scripts/format-c.py
+(.venv) $ python3 scripts/format-c.py
 ```
 
 ## Using an IDE
