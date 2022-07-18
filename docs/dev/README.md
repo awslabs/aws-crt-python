@@ -97,10 +97,10 @@ To run specific tests, specify a path. For example:
 ```
 
 More path examples:
-*   test - everything under `test/` folder
-*   test.test_http_client - every test in `test_http_client.py`
-*   test.test_http_client.TestClient - every test in `TestClient` class
-*   test.test_http_client.TestClient.test_connect_http - A single test
+*   `test` - everything under `test/` folder
+*   `test.test_http_client` - every test in `test_http_client.py`
+*   `test.test_http_client.TestClient` - every test in `TestClient` class
+*   `test.test_http_client.TestClient.test_connect_http` - A single test
 
 When creating new tests, note that the names of test files and test functions must be prefixed with `test_`.
 
@@ -108,38 +108,40 @@ When creating new tests, note that the names of test files and test functions mu
 Many tests require an AWS account. These tests are skipped unless
 specific environment variables are set:
 
-*   MQTT
-    *   AWS_TEST_IOT_MQTT_ENDPOINT - AWS account-specific endpoint to connect to IoT core by
-    *   AWS_TEST_TLS_CERT_PATH - file path to certificate used to initialize the TLS context of the MQTT connection
-    *   AWS_TEST_TLS_KEY_PATH - file path to the private key used to initialize the TLS context of the MQTT connection
-    *   AWS_TEST_TLS_ROOT_CERT_PATH - file path to the root CA used to initialize the TLS context of the MQTT connection
-*   PKCS11
-    *   AWS_TEST_PKCS11_LIB - path to PKCS#11 library
-    *   AWS_TEST_PKCS11_PIN - user PIN for logging into PKCS#11 token
-    *   AWS_TEST_PKCS11_TOKEN_LABEL - label of PKCS#11 token
-    *   AWS_TEST_PKCS11_KEY_LABEL - label of private key on PKCS#11 token,
-        which must correspond to the cert at AWS_TEST_TLS_CERT_PATH.
-*   PROXY
-    *   AWS_TEST_HTTP_PROXY_HOST - host address of the proxy to use for tests that make open connections to the proxy
-    *   AWS_TEST_HTTP_PROXY_PORT - port to use for tests that make open connections to the proxy
-    *   AWS_TEST_HTTPS_PROXY_HOST - host address of the proxy to use for tests that make TLS-protected connections to the proxy
-    *   AWS_TEST_HTTPS_PROXY_PORT - port to use for tests that make TLS-protected connections to the proxy
-    *   AWS_TEST_HTTP_PROXY_BASIC_HOST - host address of the proxy to use for tests that make open connections to the proxy with basic authentication
-    *   AWS_TEST_HTTP_PROXY_BASIC_PORT - port to use for tests that make open connections to the proxy with basic authentication
-    *   AWS_TEST_BASIC_AUTH_USERNAME - username to use when using basic authentication to the proxy
-    *   AWS_TEST_BASIC_AUTH_PASSWORD - password to use when using basic authentication to the proxy
-*   S3
-    *   AWS_TEST_S3 - set to any value to enable S3 tests.
-        Unfortunately, at this time these tests can only be run by members of the
-        Common Runtime team, due to use of hardcoded paths. TODO:
-        alter tests so anyone can run them.
+*   MQTT Tests
+    *   `AWS_TEST_IOT_MQTT_ENDPOINT` - AWS IoT Core endpoint. This is specific to your account.
+    *   `AWS_TEST_TLS_CERT_PATH` - file path to the certificate used to initialize the TLS context of the MQTT connection
+    *   `AWS_TEST_TLS_KEY_PATH` - file path to the private key used to initialize the TLS context of the MQTT connection
+    *   `AWS_TEST_TLS_ROOT_CERT_PATH` - file path to the root CA used to initialize the TLS context of the MQTT connection
+*   PKCS#11 Tests
+    *   `AWS_TEST_PKCS11_LIB` - path to PKCS#11 library
+    *   `AWS_TEST_PKCS11_PIN` - user PIN for logging into PKCS#11 token
+    *   `AWS_TEST_PKCS11_TOKEN_LABEL` - label of PKCS#11 token
+    *   `AWS_TEST_PKCS11_KEY_LABEL` - label of private key on PKCS#11 token, which must correspond to the cert at `AWS_TEST_TLS_CERT_PATH`.
+*   Proxy Tests
+    * TLS-protected connections to the proxy
+        *   `AWS_TEST_HTTPS_PROXY_HOST` - proxy host address
+        *   `AWS_TEST_HTTPS_PROXY_PORT` - proxy port
+    * Open connections to the proxy
+        *   `AWS_TEST_HTTP_PROXY_HOST` - proxy host address
+        *   `AWS_TEST_HTTP_PROXY_PORT` - port port
+    * Open connections to the proxy, with basic authentication
+        *   `AWS_TEST_HTTP_PROXY_BASIC_HOST` - proxy host address
+        *   `AWS_TEST_HTTP_PROXY_BASIC_PORT` - proxy port
+        *   `AWS_TEST_BASIC_AUTH_USERNAME` - username
+        *   `AWS_TEST_BASIC_AUTH_PASSWORD` - password
+*   S3 Tests
+    *   `AWS_TEST_S3` - set to any value to enable S3 tests.
+        *   **Unfortunately, at this time these tests can only be run by members of the
+            Common Runtime team, due to hardcoded paths.**
+        *   TODO: alter tests so anyone can run them.
 
 ## Code Formatting
 
 We use automatic code formatters in this project and pull requests will fail unless
 the code is formatted correctly.
 
-`autopep8` is used for python code. You should have installed via `requirements-dev.txt` above.
+`autopep8` is used for python code. You installed this earlier via `requirements-dev.txt`.
 
 For C code `clang-format` is used (specifically version 9).
 To install this on Mac using homebrew, run:
@@ -171,7 +173,8 @@ Use helper scripts to automatically format your code (or configure your IDE to d
 
 3)  Edit workspace settings: `cmd+shift+P -> Preferences: Open Workspace Settings`
     *   Python: Default Interpreter Path - ("python.defaultInterpreterPath" in json view)
-        set the absolute path to Python in your virtual environment. For example: `/Users/janedoe/dev/aws-crt-python/.venv/bin/python`
+        set the absolute path to Python in your virtual environment.
+        For example: `/Users/janedoe/dev/aws-crt-python/.venv/bin/python`
         *   Note that the VSCode terminal ignores this setting and will not use your virtual environment by default.
             You must manually run `source .venv/bin/activate` each time you start using the terminal.
             Or use the command `cmd+shift+P -> Python: Create Terminal`.
@@ -182,8 +185,8 @@ Use helper scripts to automatically format your code (or configure your IDE to d
 
 4)  Add helpful tasks you can run via `cmd+shift+P -> Tasks: Run Task`
     *   Copy [this file](vscode/launch.json) to `aws-crt-python/.vscode/tasks.json` for the following tasks:
-        * install - pip install in develop mode. `cmd+shift+B` is a special shortcut for this task
-        * format-python - format all .py files
+        * `install` - `pip install` in develop mode. `cmd+shift+B` is a special shortcut for this task
+        * `format` - format all code files
 
 #### Debugging Python with VSCode
 The VSCode `Testing` tab (lab flask/beaker icon) helps run and debug Python tests.
@@ -205,7 +208,7 @@ AWS_TEST_TLS_KEY_PATH=/Users/janedoe/iot/xxxxx-private.pem.key
 
 #### Debugging C with VSCode
 Unfortunately, we haven't figured out how to do interactive debugging of the C code.
-Python ultimately builds and links the module together, and it seems to always strip out the debug info.
+Python ultimately builds and links the C module together, and it seems to always strip out the debug info.
 Please update this guide if you know how. For now, `printf()` is your best option.
 
 If you suspect the bug is in the external C code (i.e. [aws-c-http](https://github.com/awslabs/aws-c-http))
