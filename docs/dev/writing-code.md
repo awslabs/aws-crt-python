@@ -16,28 +16,31 @@ Buckle up.
     *   [General](#general-python-rules)
         *   [Naming Conventions](#python-naming-conventions)
         *   [Use Type Hints](#use-type-hints)
-        *   [Asynchronous APIs](#asynchronous-apis)
     *   [Forward and Backward Compatibility](#forward-and-backward-compatibility)
         *   [Functions with Lots of Arguments](#functions-with-lots-of-arguments)
         *   [Use `None` for Optional Arguments](#use-none-as-the-default-value-for-optional-arguments)
         *   [Callback Signatures](#callback-signatures)
-        *   [Be Careful When...](#be-careful-when)
+        *   [Be Careful When Adding](#be-careful-when)
+    *   [Asynchronous APIs](#asynchronous-apis)
 *   [Lifetime Management](#lifetime-management)
 *   [Writing C Code](#writing-c-code)
 
 ## Required Reading
 
-*   `Developer Guide for the aws-c libraries`: (TODO: WRITE THIS)
-*   [Extending Python with C](https://docs.python.org/3/extending/extending.html):
+*   `Developer Guide for the aws-c libraries` - (TODO: WRITE THIS)
+*   [Extending Python with C](https://docs.python.org/3/extending/extending.html) -
     Tutorial from python.org. Worth reading in full.
-*   [Python/C API Reference Manual](https://docs.python.org/3/c-api/index.html): Docs from python.org. Choice bits are selected below
-    *   [Exception Handling](https://docs.python.org/3/c-api/exceptions.html): Check for every possible error
-    *   [Reference Counting](https://docs.python.org/3/c-api/refcounting.html): Don't leak memory
-    *   [Parsing arguments](https://docs.python.org/3/c-api/arg.html):
-        Defines the magic strings that [PyArg_ParseTuple()](https://docs.python.org/3/c-api/arg.html#c.PyArg_ParseTuple)
-        uses to marshal data between Python and C.
-    *   [The Global Interpreter Lock (GIL)](https://docs.python.org/3/c-api/init.html#thread-state-and-the-global-interpreter-lock):
-        Python is actually kinda single-threaded.
+*   [Python/C API Reference Manual](https://docs.python.org/3/c-api/index.html) -
+    Docs from python.org. Choice bits are listed below.
+    *   [Exception Handling](https://docs.python.org/3/c-api/exceptions.html)
+    *   [Reference Counting](https://docs.python.org/3/c-api/refcounting.html)
+    *   [Format strings: Python -> C](https://docs.python.org/3/c-api/arg.html) -
+        Used by [PyArg_ParseTuple()](https://docs.python.org/3/c-api/arg.html#c.PyArg_ParseTuple)
+    *   [Format strings: C -> Python](https://docs.python.org/3/c-api/arg.html#c.Py_BuildValue) -
+        Used by [Py_BuildValue()](https://docs.python.org/3/c-api/arg.html#c.Py_BuildValue),
+        [PyObject_CallMethod()](https://docs.python.org/3/c-api/call.html#c.PyObject_CallMethod),
+        [PyObject_CallFunction()](https://docs.python.org/3/c-api/call.html#c.PyObject_CallFunction)
+    *   [The Global Interpreter Lock (GIL)](https://docs.python.org/3/c-api/init.html#thread-state-and-the-global-interpreter-lock)
 
 
 # Writing Python Code
@@ -55,20 +58,20 @@ let's do it right.
 
 ### Python Naming Conventions
 
-*   Modules (files and folders): `lowercase`
+*   Modules (files and folders) - `lowercase`
     *   Smoosh words together, if it's not too confusing.
-    *   Examples: `awscrt.eventstream` (NOT: `aws_crt.event_stream`)
-*   Classes: `UpperCamelCase`
+    *   Example - `awscrt.eventstream` (NOT `aws_crt.event_stream`)
+*   Classes - `UpperCamelCase`
     *   For acronyms three letters or longer, only capitalize the first letter
-        *   Examples: `TlsContext` (NOT: `TLSContext`)
+        *   Example: `TlsContext` (NOT `TLSContext`)
     *   Don't repeat words in the full path.
-        *   Examples: `awscrt.mqtt.Client` (NOT: `awscrt.mqtt.MqttClient`)
-*   Member variables: `snake_case`
-*   Functions: `snake_case()`
-*   Anything private: prefix with underscore `_`
-*   Constants and Enum values: `ALL_CAPS`
+        *   Example: `awscrt.mqtt.Client` (NOT `awscrt.mqtt.MqttClient`)
+*   Member variables - `snake_case`
+*   Functions - `snake_case()`
+*   Anything private - prefix with underscore
+*   Constants and Enum values - `ALL_CAPS`
     *   Example: `MessageType.PING`
-*   For time durations, always suffix with: `_ms`, `_sec`, etc
+*   Time values - suffix with `_ms`, `_sec`, etc
 
 ### Use Type Hints
 
@@ -80,10 +83,6 @@ back when we supported older versions of Python
 Because type hints are newer, pay close attention in the docs before you use a feature,
 to ensure it's available in our minimum supported Python version.
 (TODO: add CI tests that would catch such errors)
-
-## Asynchronous APIs
-
-TODO: document when to use future vs callback
 
 ## Forward and Backward compatibility
 
@@ -98,11 +97,11 @@ such as class `__init__()` functions, use one of the techniques below.
 Complex functions inevitably get more optional arguments added over time.
 Sometimes an argument even changes from required to optional.
 
-OPTION 1 - Use [keyword-only](https://docs.python.org/3/tutorial/controlflow.html#keyword-only-arguments) arguments.
-These let you introduce more arguments over time
+TECHNIQUE 1 - Use [keyword-only](https://docs.python.org/3/tutorial/controlflow.html#keyword-only-arguments) arguments.
+These let you introduce more arguments over time,
 and they let you change an argument from required to optional.
-They can also make user code more readable (i.e. `do_a_thing(ignore_errors=True)` is more clear than `do_a_thing(True)`).
-Here's an example of a class with a keyword-only `__init__()`:
+They can also make user code more clear (i.e. `do_a_thing(ignore_errors=True)` vs `do_a_thing(True)`).
+Example:
 ```py
 class Client:
     def __init__(self, *,
@@ -112,7 +111,7 @@ class Client:
                  connect_timeout_ms: int = None):  # optional
 ```
 
-OPTION 2 - Use an "options class", and pass that as the only argument.
+TECHNIQUE 2 - Use an "options class", and pass that as the only argument.
 It's easy to build these as a [dataclass](https://docs.python.org/3/library/dataclasses.html).
 Example:
 ```py
@@ -127,7 +126,7 @@ class Client:
     def __init__(self, options: ClientOptions):
 ```
 
-The jury's currently out on which is better. Keyword arguments are graceful,
+The jury's currently out on which technique is better. Keyword arguments are graceful,
 but "options classes" let us easily nest one set of options inside another set of options.
 
 ### Use `None` as the Default Value for Optional Arguments
@@ -148,8 +147,7 @@ because the odds are good that the documentation will get out of sync with reali
 Similar to how we build `__init__()` functions so that more options can be added over time,
 we need to build callbacks so that more info can be passed to them in the future.
 
-Public callbacks should take a single argument, which is built as a
-[dataclass](https://docs.python.org/3/library/dataclasses.html).
+Public callbacks should take a single argument, which is built as a `dataclass`.
 This gives us freedom to add members to the class in the future.
 
 Example:
@@ -177,17 +175,20 @@ so that we are free to add more arguments over time without breaking user code.
 This is weirder and more fragile than passing a single object.
 Don't use this pattern unless you're adding to a class where it's already in use.
 
-### Be careful when...
+### Be careful when adding
 
-1)  If a function isn't using keyword-only arguments, you MUST add new arguments
-    to the end of the argument list. Otherwise you will break user code that
-    passes all arguments by position.
+1)  When adding arguments to a function that is NOT using keyword-only arguments,
+    you MUST add new arguments to the end of the argument list.
+    Otherwise you may break user code that passes arguments by position.
 
-2)  When adding members to a [dataclass](https://docs.python.org/3/library/dataclasses.html),
-    you MUST add new members at the end. Otherwise you will break user code that
-    initializes the class using positional arguments. (in Python 3.10+
-    there's a `kw_only` feature for dataclasses, but we still support older
-    Python versions, so can't use that feature)
+2)  When adding new members to a `dataclass`, you MUST add new members at the end.
+    Otherwise you may break user code that initializes the class using positional arguments.
+    (in Python 3.10+ there's a `kw_only` feature for `dataclass`,
+    but we can't use it since we support older Python versions)
+
+## Asynchronous APIs
+
+TODO: document when to use future vs callback
 
 # Lifetime Management
 

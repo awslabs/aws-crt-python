@@ -4,7 +4,7 @@ This guide is for contributors to aws-crt-python's source code.
 Familiarity (but not necessarily expertise) with Python and C is assumed.
 This document covers basic setup and workflow.
 
-More advanced topics, see [writing-code.md](writing-code.md).
+For more advanced topics, see [writing-code.md](writing-code.md).
 
 ### Table of Contents
 
