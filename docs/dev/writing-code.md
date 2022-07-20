@@ -27,7 +27,7 @@ Buckle up.
 
 ## Required Reading
 
-*   `Developer Guide for the aws-c libraries` - (TODO: WRITE THIS)
+*   [Coding Guidelines for the aws-c Libraries](https://github.com/awslabs/aws-c-common#coding-guidelines) - TODO: FLESH THIS OUT MORE
 *   [Extending Python with C](https://docs.python.org/3/extending/extending.html) -
     Tutorial from python.org. Worth reading in full.
 *   [Python/C API Reference Manual](https://docs.python.org/3/c-api/index.html) -
