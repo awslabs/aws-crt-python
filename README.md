@@ -4,7 +4,7 @@
 
 Python 3 bindings for the AWS Common Runtime.
 
-*   [API documentation](https://awslabs.github.io/aws-crt-python/)
+*   [API documentation](https://awslabs.github.io/aws-crt-python/api)
 *   [Development guide](docs/dev/README.md) for contributors to aws-crt-python's source code.
 
 ## License
