@@ -2,10 +2,14 @@
 
 This guide is for contributors to aws-crt-python's source code.
 Familiarity (but not necessarily expertise) with Python and C is assumed.
+This document covers basic setup and workflow.
+
+For more advanced topics, see [writing-code.md](writing-code.md).
 
 ### Table of Contents
 
 *   [Git](#git)
+*   [CMake](#cmake)
 *   [Set up a Virtual Environment](#set-up-a-virtual-environment)
 *   [Install](#install)
 *   [Run Tests](#run-tests)
