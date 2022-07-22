@@ -316,7 +316,7 @@ def awscrt_ext():
     if distutils.ccompiler.get_default_compiler() != 'msvc':
         extra_compile_args += ['-Wextra', '-Werror', '-Wno-strict-aliasing', '-std=gnu99']
         if sys.platform.startswith('freebsd'):
-            extra_link_args += ['-Wl,-fatal-warnings']
+            extra_link_args += ['-Wl,-fatal-warnings', '-lexecinfo']
         else:
             extra_link_args += ['-Wl,-fatal_warnings']
 
