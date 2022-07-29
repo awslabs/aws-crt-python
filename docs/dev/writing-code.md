@@ -206,7 +206,7 @@ TODO: document when to use future vs callback
 ### Strong References / Reference Counting
 
 A "strong reference" is one that keeps an object alive by incrementing its reference count.
-When all references to an object are released (reference count goes to zero) it gets cleaned up.
+When all references to an object are released (reference count goes to zero), it gets cleaned up.
 
 In Python code, every variable is a strong reference to an object.
 When the variable goes away, the reference is released.
@@ -214,10 +214,10 @@ C code can create a strong reference to a Python object by calling `Py_INCREF(x)
 and release the reference by calling `Py_DECREF(x)`.
 Note that EVERYTHING in Python is an object: even functions, even numbers, even `None`.
 
-In the aws-c libraries, calling a struct's `_acquire(x)` function creates a strong reference to it.
-Calling the struct's `_release(x)` function releases the reference.
-Within the aws-c libraries, structs use strong references to keep each other alive as long as they're needed.
-Not every struct in the aws-c libraries has these functions,
+In the aws-c libraries, you create a strong reference to a struct by calling
+its `_acquire(x)` function, and release by calling its `_release(x)` function.
+Within the aws-c libraries, structs keep each other alive as long as necessary using these functions.
+Not every struct in the aws-c libraries has `_acquire(x)` and `_release(x)` functions,
 only heap-allocated structs with complex or unpredictable lifetimes.
 Every struct bound to a Python class is considered to have an unpredictable lifetime.
 
@@ -227,14 +227,14 @@ A "reference cycle" is when a circle of strong references is created.
 Reference cycles cause memory to leak because the reference counts never get to zero.
 
 Python has a [garbage collector](https://devguide.python.org/internals/garbage-collector)
-that can detect and clean up reference cycles among Python objects.
+that can detect and clean up reference cycles among normal Python objects.
 HOWEVER, any cycle involving a `Py_INCREF(x)` from C creates an undetectable cycle.
 You MUST NOT create reference cycles when designing bindings.
 
 ### Capsule
 
 [PyCapsule](https://docs.python.org/3/extending/extending.html#using-capsules)
-lets use bind the lifetime of a C struct to the lifetime of a Python object.
+lets us bind the lifetime of a C struct to the lifetime of a Python object.
 The `PyCapsule` is a Python object holds a C pointer and a "destructor" function pointer.
 When Python cleans up the `PyCapsule`, the destructor function will be called.
 
@@ -314,21 +314,10 @@ Destruction goes like this (it's actually more complex, we'll cover that later):
         aws_mem_release(binding);
     }
     ```
-*   IF nothing else has a strong reference to `struct aws_event_loop_group` then
-    it begins its shutdown process, and its memory is cleaned up when shutdown completes.
-    *   ELSE something else has a strong reference to `struct aws_event_loop_group`.
-        It won't begin its shutdown until the last reference is released.
-
-Destruction goes like this (it's actually more complex, we'll cover that later):
-*   When the Python code has no references to `elg`, the `EventLoopGroup` instance...
-*   The garbage collector cleans up the `EventLoopGroup`,
-    and the `PyCapsule` referenced by `EventLoopGroup._binding`.
-*   The `PyCapsule` destructor function runs, which releases the strong
-    reference to `struct aws_event_loop_group` and destroys the `struct event_loop_group_binding`.
 *   IF nothing else has a strong reference to `struct aws_event_loop_group`:
-    *   then it begins its shutdown process, and its memory is freed when shutdown completes.
-*   ELSE something else still has a strong reference to `struct aws_event_loop_group`:
-    *   it won't begin its shutdown until the last reference is released.
+    *   then it begins its shutdown process, and its memory is cleaned up when shutdown completes.
+*   ELSE something else has a strong reference to `struct aws_event_loop_group`:
+    *   so it won't begin its shutdown until the last reference is released.
 
 Note: In the past, the aws-c libs didn't have any reference counting for its C structs.
 You will still find older code in our Python bindings that tries to keep the entire dependency trees
@@ -340,20 +329,19 @@ You can't always look at existing code to see "the right way" of doing things.
 The sample above is simplified. It shows Python calling into C,
 but never shows C calling back into Python.
 
-It's more typical that we're binding an object that has various C callbacks.
-At some future time, on some other thread, a callback
-will be invoked and C will need to call back into Python.
+But when a C callbacks happens, C needs to call into Python.
 C can't call into Python without a reference to a Python object
-(In Python, even a function is an object).
-So the binding needs to keep a strong reference to a Python object,
-but MUST NOT create a reference cycle.
+(in Python, even a function is an object).
+Therefore, the binding must store a strong reference to a Python object
+keeping it alive until the callback is done firing.
 
 ### The Wrong Way to Build it
 
-Here's an example of how NOT to build things.
-If `event_loop_group_binding` kept a strong reference to the `EventLoopGroup` instance,
-so that it could call `EventLoopGroup._on_shutdown_complete()`,
-that would create a reference cycle (see image below):
+You MUST NOT create a reference cycle!
+
+You might be tempted to give `event_loop_group_binding` a strong reference to the `EventLoopGroup` instance.
+Then C could simply call a private member function like `EventLoopGroup._on_shutdown_complete()`.
+But this design creates a reference cycle (see image below):
 
 ![Diagram of bad binding with reference cycle](./binding-bad-cycle.svg)
 
