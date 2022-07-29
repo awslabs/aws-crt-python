@@ -5,7 +5,7 @@ C libraries which make up the AWS SDK Common Runtime (CRT).
 
 This is not easy code to write. You must know Python. You must know C.
 You must learn how the aws-c libraries do error handling and memory management,
-you must learn how the Python C-API does error handling and memory management,
+you must learn how the Python C API does error handling and memory management,
 and you must mix the two styles together. This code is multithreaded and asynchronous.
 Buckle up.
 
@@ -23,15 +23,24 @@ Buckle up.
         *   [Be Careful When Adding](#be-careful-when)
     *   [Asynchronous APIs](#asynchronous-apis)
 *   [Lifetime Management](#lifetime-management)
+    *   [Terminology](#terminology)
+        *   [Strong References / Reference Counting](#strong-references--reference-counting)
+        *   [Reference Cycle](#reference-cycle)
+        *   [Capsule](#capsule)
+    *   [Bindings Design](#bindings-design)
+    *   [A More Complex Example](#a-more-complex-example)
+        *   [The Wrong Way to Build it](#the-wrong-way-to-build-it)
+        *   [Option 1 - Pass Callbacks to C](#option-1---pass-callbacks-to-c)
+        *   [Option 2 - Private Core Class](#option-2---private-core-class)
 *   [Writing C Code](#writing-c-code)
 
 ## Required Reading
 
-*   [Coding Guidelines for the aws-c Libraries](https://github.com/awslabs/aws-c-common#coding-guidelines) - TODO: FLESH THIS OUT MORE
+*   [Coding Guidelines for the aws-c Libraries](https://github.com/awslabs/aws-c-common#coding-guidelines) - Read this in full.
 *   [Extending Python with C](https://docs.python.org/3/extending/extending.html) -
-    Tutorial from python.org. Worth reading in full.
-*   [Python/C API Reference Manual](https://docs.python.org/3/c-api/index.html) -
-    Docs from python.org. Choice bits are listed below.
+    Tutorial from python.org. Read this in full.
+*   [Python C API Reference Manual](https://docs.python.org/3/c-api/index.html) -
+    Don't need to read in full, but choice links provided:
     *   [Exception Handling](https://docs.python.org/3/c-api/exceptions.html)
     *   [Reference Counting](https://docs.python.org/3/c-api/refcounting.html)
     *   [Format strings: Python -> C](https://docs.python.org/3/c-api/arg.html) -
@@ -192,15 +201,205 @@ TODO: document when to use future vs callback
 
 # Lifetime Management
 
-TODO: Write me.
-Talk about Garbage Collector vs Reference Counting. Have pictures.
-Talk about capsules. Talk about NativeResource. Warn about cycles.
-Talk about how our tests can and cannot check for leaks.
-Talk about which classes require a `close()` function, and which don't.
+## Terminology
+
+### Strong References / Reference Counting
+
+A "strong reference" is one that keeps an object alive by incrementing its reference count.
+When all references to an object are released (reference count goes to zero) it gets cleaned up.
+
+In Python code, every variable is a strong reference to an object.
+When the variable goes away, the reference is released.
+C code can create a strong reference to a Python object by calling `Py_INCREF(x)`,
+and release the reference by calling `Py_DECREF(x)`.
+Note that EVERYTHING in Python is an object: even functions, even numbers, even `None`.
+
+In the aws-c libraries, calling a struct's `_acquire(x)` function creates a strong reference to it.
+Calling the struct's `_release(x)` function releases the reference.
+Within the aws-c libraries, structs use strong references to keep each other alive as long as they're needed.
+Not every struct in the aws-c libraries has these functions,
+only heap-allocated structs with complex or unpredictable lifetimes.
+Every struct bound to a Python class is considered to have an unpredictable lifetime.
+
+### Reference Cycle
+
+A "reference cycle" is when a circle of strong references is created.
+Reference cycles cause memory to leak because the reference counts never get to zero.
+
+Python has a [garbage collector](https://devguide.python.org/internals/garbage-collector)
+that can detect and clean up reference cycles among Python objects.
+HOWEVER, any cycle involving a `Py_INCREF(x)` from C creates an undetectable cycle.
+You MUST NOT create reference cycles when designing bindings.
+
+### Capsule
+
+[PyCapsule](https://docs.python.org/3/extending/extending.html#using-capsules)
+lets use bind the lifetime of a C struct to the lifetime of a Python object.
+The `PyCapsule` is a Python object holds a C pointer and a "destructor" function pointer.
+When Python cleans up the `PyCapsule`, the destructor function will be called.
+
+## Bindings Design
+
+Let's look at the bindings for `aws_event_loop_group` (our I/O thread pool).
+This diagram shows the strong references between objects in Python and C:
+
+![Diagram of Simple Binding](./binding-simple.svg)
+
+Description of parts:
+*   `aws_event_loop_group` - The underlying native implementation struct,
+    which knows nothing about Python.
+    *   Lives in C library: `aws-c-io`
+    *   Header file: `crt/aws-c-io/include/aws/io/event_loop.h`
+*   `event_loop_group_binding` - The "bindings" struct.
+    Holds a strong reference to the underlying native implementation (usually in a member variable named "native")
+    *   Lives in Python/C extension module: `_awscrt`
+    *   Source file: `source/io.c`
+*   `PyCapsule` - The Python object which "owns" the pointer to `event_loop_group_binding`.
+*   `EventLoopGroup` - The Python class that users create and interact with.
+    Holds a reference to the `PyCapsule` in a member variable named "_binding".
+    *   Lives in Python module: `awscrt.io`
+    *   Source File: `awscrt/io.py`
+
+Creation goes like this:
+*   User's Python code creates an `EventLoopGroup`:
+    ```py
+    elg = EventLoopGroup()
+    ```
+*   `EventLoopGroup` initializer looks something like:
+    ```py
+    class EventLoopGroup:
+        def __init__(self, ...):
+            self._binding = _awscrt.event_loop_group_new(...)
+    ```
+*   `_awscrt.event_loop_group_new(...)` is Python calling down into C.
+    The C function looks something like:
+    ```C
+    PyObject *aws_py_event_loop_group_new(PyObject *self, PyObject *args) {
+        // ...parse arguments...
+
+        // allocate memory for binding struct
+        struct event_loop_group_binding *binding = aws_mem_calloc(...);
+
+        // create underlying implementation
+        binding->native = aws_event_loop_group_new(...);
+
+        // create PyCapsule which owns the binding struct.
+        // pass in "destructor" function that runs when
+        // PyCapsule is cleaned up by the garbage collector.
+        PyObject *capsule = PyCapsule_New(binding, on_capsule_destroyed_fn);
+        return capsule;
+    }
+    ```
+*   Things stay alive because:
+    *   The user's `elg` variable keeps the `EventLoopGroup` object alive.
+    *   Member variable `EventLoopGroup._binding` keeps the `PyCapsule` alive.
+    *   The `PyCapsule` keeps the `struct event_loop_group_binding` alive.
+    *   The `event_loop_group_binding.native` pointer is a "strong reference" that keeps
+        `struct aws_event_loop_group` alive.
+
+
+Destruction goes like this (it's actually more complex, we'll cover that later):
+*   When the user's Python code has no references to `elg`, the `EventLoopGroup` instance...
+*   The garbage collector cleans up the `EventLoopGroup`,
+    and the `PyCapsule` referenced by `EventLoopGroup._binding`.
+*   The `PyCapsule`'s destructor function runs, which looks something like:
+    ```C
+    static on_capsule_destroyed_fn(PyObject *capsule) {
+        struct event_loop_group_binding *binding = PyCapsule_GetPointer(capsule);
+
+        // release reference to underlying implementation
+        aws_event_loop_group_release(binding->native)
+
+        // free binding struct's memory
+        aws_mem_release(binding);
+    }
+    ```
+*   IF nothing else has a strong reference to `struct aws_event_loop_group` then
+    it begins its shutdown process, and its memory is cleaned up when shutdown completes.
+    *   ELSE something else has a strong reference to `struct aws_event_loop_group`.
+        It won't begin its shutdown until the last reference is released.
+
+Destruction goes like this (it's actually more complex, we'll cover that later):
+*   When the Python code has no references to `elg`, the `EventLoopGroup` instance...
+*   The garbage collector cleans up the `EventLoopGroup`,
+    and the `PyCapsule` referenced by `EventLoopGroup._binding`.
+*   The `PyCapsule` destructor function runs, which releases the strong
+    reference to `struct aws_event_loop_group` and destroys the `struct event_loop_group_binding`.
+*   IF nothing else has a strong reference to `struct aws_event_loop_group`:
+    *   then it begins its shutdown process, and its memory is freed when shutdown completes.
+*   ELSE something else still has a strong reference to `struct aws_event_loop_group`:
+    *   it won't begin its shutdown until the last reference is released.
+
+Note: In the past, the aws-c libs didn't have any reference counting for its C structs.
+You will still find older code in our Python bindings that tries to keep the entire dependency trees
+of Python objects alive via `Py_INCREF(x)` (TODO: remove needless complexity).
+You can't always look at existing code to see "the right way" of doing things.
+
+## A More Complex Example
+
+The sample above is simplified. It shows Python calling into C,
+but never shows C calling back into Python.
+
+It's more typical that we're binding an object that has various C callbacks.
+At some future time, on some other thread, a callback
+will be invoked and C will need to call back into Python.
+C can't call into Python without a reference to a Python object
+(In Python, even a function is an object).
+So the binding needs to keep a strong reference to a Python object,
+but MUST NOT create a reference cycle.
+
+### The Wrong Way to Build it
+
+Here's an example of how NOT to build things.
+If `event_loop_group_binding` kept a strong reference to the `EventLoopGroup` instance,
+so that it could call `EventLoopGroup._on_shutdown_complete()`,
+that would create a reference cycle (see image below):
+
+![Diagram of bad binding with reference cycle](./binding-bad-cycle.svg)
+
+### Option 1 - Pass Callbacks to C
+
+Most of our bindings work like this:
+
+![Diagram where C References callbacks](binding-callbacks.svg)
+
+Within `EventLoopGroup.__init__()` a "callable" is defined and passed down to C.
+`event_loop_group_binding` keeps a strong reference to this Python object.
+
+When the final shutdown callback happens in C, the Python callable
+is invoked, and then the reference is released via `Py_DECREF(x)`.
+
+Destruction goes like this:
+*   When the Python code has no references to `elg`, the `EventLoopGroup` instance...
+*   The garbage collector cleans up the `EventLoopGroup`,
+    and the `PyCapsule` referenced by `EventLoopGroup._binding`.
+*   The `PyCapsule` runs its destructor function.
+    *   The destructor function calls `aws_event_loop_group_release(binding->native)`,
+        but doesn't delete the `event_loop_group_binding` struct yet.
+*   The `aws_event_loop_group` won't shutdown until nothing else is referencing it.
+    Even when the final reference is released, it still needs to wait for the threads
+    in its thread-pool to finish their shutdown process.
+*   Finally, shutdown completes and the C callback is invoked.
+    *   The C callback invokes the Python `callable`, then releases it via `Py_DECREF(x)`.
+        *   Now the garbage collector can clean up the `callable` object.
+    *   The C callback finally deletes the `event_loop_group_binding`.
+        This struct only existed to keep two strong references,
+        but now they've both been released.
+
+### Option 2 - Private Core Class
+
+Another option is to build a private `_Core` class that contains anything
+that may need to outlive the main Python object.
+This technique hasn't actually been used, but the author of this doc
+thinks it might be a graceful way to build in the future:
+
+![Diagram with private Core class](./binding-private-core.svg)
 
 # Writing C Code
 
-TODO: Write me.
+TODO:
+Talk about how our tests can and cannot check for leaks.
+Talk about which classes require a `close()` function, and which don't.
 Suggest writing as little C code as possible.
 Recommend error-handling strategies.
 Talk about the allocators (tracked vs untracked)
