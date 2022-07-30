@@ -235,7 +235,7 @@ You MUST NOT create reference cycles when designing bindings.
 
 [PyCapsule](https://docs.python.org/3/extending/extending.html#using-capsules)
 lets us bind the lifetime of a C struct to the lifetime of a Python object.
-The `PyCapsule` is a Python object holds a C pointer and a "destructor" function pointer.
+It's a Python object that holds a C pointer and a "destructor" function pointer.
 When Python cleans up the `PyCapsule`, the destructor function will be called.
 
 ## Bindings Design
@@ -326,14 +326,14 @@ You can't always look at existing code to see "the right way" of doing things.
 
 ## A More Complex Example
 
-The sample above is simplified. It shows Python calling into C,
-but never shows C calling back into Python.
+The sample above is simplified, it only shows Python calling into C.
+But `aws_event_loop_group` has a callback that fires when it finishes shutting down.
+That means C needs to call into Python AFTER the Python `EventLoopGroup` object has been cleaned up.
 
-But when a C callbacks happens, C needs to call into Python.
-C can't call into Python without a reference to a Python object
-(in Python, even a function is an object).
-Therefore, the binding must store a strong reference to a Python object
-keeping it alive until the callback is done firing.
+For C to call into Python, it must reference a Python object
+(the function itself, or an object with a member function).
+This means our binding needs to store a strong reference and
+keep that Python object alive until the callback has fired.
 
 ### The Wrong Way to Build it
 
@@ -393,4 +393,3 @@ Recommend error-handling strategies.
 Talk about the allocators (tracked vs untracked)
 Talk about logging. Consider making it easier to turn on logging.
 Talk about sloppy shutdown.
-
