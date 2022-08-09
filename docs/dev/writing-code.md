@@ -22,6 +22,7 @@ Buckle up.
         *   [Callback Signatures](#callback-signatures)
         *   [Be Careful When Adding](#be-careful-when)
     *   [Asynchronous APIs](#asynchronous-apis)
+    *   [Don't Add Features](#dont-add-features)
 *   [Lifetime Management](#lifetime-management)
     *   [Terminology](#terminology)
         *   [Strong References / Reference Counting](#strong-references--reference-counting)
@@ -37,8 +38,7 @@ Buckle up.
 ## Required Reading
 
 *   [Coding Guidelines for the aws-c Libraries](https://github.com/awslabs/aws-c-common#coding-guidelines) - Read this in full.
-*   [Extending Python with C](https://docs.python.org/3/extending/extending.html) -
-    Tutorial from python.org. Read this in full.
+*   [Extending Python with C](https://docs.python.org/3/extending/extending.html) - Read this in full.
 *   [Python C API Reference Manual](https://docs.python.org/3/c-api/index.html) -
     Don't need to read in full, but choice links provided:
     *   [Exception Handling](https://docs.python.org/3/c-api/exceptions.html)
@@ -199,6 +199,15 @@ Don't use this pattern unless you're adding to a class where it's already in use
 
 TODO: document when to use future vs callback
 
+## Don't Add Features
+
+When binding an API from the aws-c libraries, don't start adding extra features.
+If you're tempted to add any "special logic" that would be valuable to the other aws-crt language bindings,
+add that logic in the underlying aws-c library so that every other language can benefit.
+
+Even for trivial things like picking nice default values, put it in the underlying aws-c library.
+(see [Use `None` for Optional Arguments](#use-none-as-the-default-value-for-optional-arguments)).
+
 # Lifetime Management
 
 ## Terminology
@@ -206,20 +215,15 @@ TODO: document when to use future vs callback
 ### Strong References / Reference Counting
 
 A "strong reference" is one that keeps an object alive by incrementing its reference count.
-When all references to an object are released (reference count goes to zero), it gets cleaned up.
+To "release" the reference is to decrement the object's reference count.
+When all references to an object are released, its reference count goes to zero and it gets cleaned up.
 
-In Python code, every variable is a strong reference to an object.
+In pure Python code, every variable is a strong reference to an object.
 When the variable goes away, the reference is released.
-C code can create a strong reference to a Python object by calling `Py_INCREF(x)`,
-and release the reference by calling `Py_DECREF(x)`.
-Note that EVERYTHING in Python is an object: even functions, even numbers, even `None`.
 
-In the aws-c libraries, you create a strong reference to a struct by calling
-its `_acquire(x)` function, and release by calling its `_release(x)` function.
-Within the aws-c libraries, structs keep each other alive as long as necessary using these functions.
-Not every struct in the aws-c libraries has `_acquire(x)` and `_release(x)` functions,
-only heap-allocated structs with complex or unpredictable lifetimes.
-Every struct bound to a Python class is considered to have an unpredictable lifetime.
+In C code, reference counts on Python objects are controlled using `Py_INCREF(x)` and `Py_DECREF(x)`.
+Structs from the aws-c libraries have `_acquire(x)` and `_release(x)` calls to control their reference counts.
+We'll talk more about this [later](#reference-counting-in-c).
 
 ### Reference Cycle
 
@@ -245,20 +249,21 @@ This diagram shows the strong references between objects in Python and C:
 
 ![Diagram of Simple Binding](./binding-simple.svg)
 
-Description of parts:
+Description of parts (from left to right):
 *   `aws_event_loop_group` - The underlying native implementation struct,
     which knows nothing about Python.
-    *   Lives in C library: `aws-c-io`
-    *   Header file: `crt/aws-c-io/include/aws/io/event_loop.h`
+    *   Lives in C library: [aws-c-io](https://github.com/awslabs/aws-c-io)
+        *   Git submodule location: [crt/aws-c-io](/crt/aws-c-io)
+    *   Header file: [<aws/io/event_loop.h>](https://github.com/awslabs/aws-c-io/blob/main/include/aws/io/event_loop.h)
 *   `event_loop_group_binding` - The "bindings" struct.
     Holds a strong reference to the underlying native implementation (usually in a member variable named "native")
     *   Lives in Python/C extension module: `_awscrt`
-    *   Source file: `source/io.c`
+    *   Source file: [source/io.c](/source/io.c)
 *   `PyCapsule` - The Python object which "owns" the pointer to `event_loop_group_binding`.
 *   `EventLoopGroup` - The Python class that users create and interact with.
     Holds a reference to the `PyCapsule` in a member variable named "_binding".
     *   Lives in Python module: `awscrt.io`
-    *   Source File: `awscrt/io.py`
+    *   Source File: [awscrt/io.py](/awscrt/io.py)
 
 Creation goes like this:
 *   User's Python code creates an `EventLoopGroup`:
@@ -319,7 +324,7 @@ Destruction goes like this (it's actually more complex, we'll cover that later):
 *   ELSE something else has a strong reference to `struct aws_event_loop_group`:
     *   so it won't begin its shutdown until the last reference is released.
 
-Note: In the past, the aws-c libs didn't have any reference counting for its C structs.
+Note: In the past, the aws-c libraries didn't have reference counting for any C structs.
 You will still find older code in our Python bindings that tries to keep the entire dependency trees
 of Python objects alive via `Py_INCREF(x)` (TODO: remove needless complexity).
 You can't always look at existing code to see "the right way" of doing things.
@@ -353,6 +358,17 @@ Most of our bindings work like this:
 
 Within `EventLoopGroup.__init__()` a "callable" is defined and passed down to C.
 `event_loop_group_binding` keeps a strong reference to this Python object.
+The code looks something like:
+```py
+    class EventLoopGroup:
+        def __init__(self, ...):
+
+            # define callable local function
+            def shutdown_callback():
+                ...do stuff...
+
+            self._binding = _awscrt.event_loop_group_new(shutdown_callback, ...)
+```
 
 When the final shutdown callback happens in C, the Python callable
 is invoked, and then the reference is released via `Py_DECREF(x)`.
@@ -376,14 +392,71 @@ Destruction goes like this:
 
 ### Option 2 - Private Core Class
 
-Another option is to build a private `_Core` class that contains anything
-that may need to outlive the main Python object.
-This technique hasn't actually been used, but the author of this doc
-thinks it might be a graceful way to build in the future:
+Another option is to build a private `_Core` class containing anything
+that may need to outlive the main Python object:
 
 ![Diagram with private Core class](./binding-private-core.svg)
 
+This is similar to [Option 1](#option-1---pass-callbacks-to-c),
+but we write callbacks as member functions on the `_Core` class,
+instead of defining local functions within the body of `EventLoopGroup.__init__(self)`.
+Code looks something like:
+```py
+    class EventLoopGroup:
+        def __init__(self, ...):
+            core = _EventLoopGroupCore()
+            self._binding = _awscrt.event_loop_group_new(core, ...)
+
+    class _EventLoopGroupCore:
+        def shutdown_callback(self):
+            ...do stuff...
+```
+
+This technique hasn't actually been used, but the author of this doc
+thinks it might be a graceful way to build in the future.
+
 # Writing C Code
+
+## Reference Counting in C
+
+Read python.org's guide to [Extending Python with C](https://docs.python.org/3/extending/extending.html)
+from top to bottom. It does an excellent job teaching about reference counts.
+
+Great, now you know what "strong references" and "borrowed references"
+are, all about `Py_INCREF(x)` and `Py_DECREF(x)` and when you do an do not
+need to call them. You know that you must be EXTREMELY CAREFUL with reference
+counts, because if you don't do it PERFECTLY then you will leak memory,
+or crash due to double-free, or crash due use-after-free.
+Thanks for reading that guide in full.
+
+Read the docs for EVERY SINGLE Python API call you make in C,
+to see whether it returns a new reference or borrowed reference.
+You should add `/* new reference */` and `/* borrowed reference */` comments
+next to these calls so it's clear to any future people that touch this code.
+
+You are also encouraged to use [Py_XDECREF(x)](https://docs.python.org/3/c-api/refcounting.html#c.Py_XDECREF)
+and [Py_CLEAR(x)](https://docs.python.org/3/c-api/refcounting.html#c.Py_CLEAR),
+which are safer versions of the basic `Py_DECREF(x)`.
+
+In the aws-c libraries, reference counting on structs is done using `_acquire(x)` and `_release(x)` functions.
+Structs will keep each other alive as long as necessary using these functions.
+For example, `struct aws_http_connection` needs `struct aws_event_loop_group` (an I/O thread pool)
+to exist for the duration of the connection.
+Therefore, the connection's creation function takes a pointer to the thread pool
+and calls `aws_event_loop_group_acquire(x)` to keep it alive.
+When the connection dies it calls `aws_event_loop_group_release(x)` to release
+the thread pool.
+
+Not every struct in the aws-c libraries has `_acquire(x)` and `_release(x)` functions
+(simple datastructures like `struct aws_byte_buf` are not reference counted).
+Only heap-allocated structs with complex or unpredictable lifetimes have these functions.
+Every struct bound to a Python class is considered to have an unpredictable lifetime
+because we don't know what our users' Python code will look like.
+We can't assume a Python programmer will carefully store variables to each item
+in a tree of dependencies, ensuring everything stays alive for "the right" length of time.
+Python programmers just don't work that way, and they shouldn't.
+Python is a garbage collected language. Garbage collected languages exist
+to free programmers from wasting their time on that kind of tedium.
 
 TODO:
 Talk about how our tests can and cannot check for leaks.
