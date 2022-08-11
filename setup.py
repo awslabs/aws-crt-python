@@ -76,7 +76,7 @@ def determine_generator_args():
             elif '\\Microsoft Visual Studio 14.0' in compiler.cc:
                 vs_version = 14
                 vs_year = 2015
-            assert(vs_version and vs_year)
+            assert (vs_version and vs_year)
         except Exception:
             raise RuntimeError('No supported version of MSVC compiler could be found!')
 
