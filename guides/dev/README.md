@@ -199,9 +199,10 @@ Use helper scripts to automatically format your code (or configure your IDE to d
     *   `Python: Default Interpreter Path` - ("python.defaultInterpreterPath" in json view)
         *   Set the absolute path to Python in your virtual environment.
         For example: `/Users/janedoe/dev/aws-crt-python/.venv/bin/python`
-        *   Note that the VSCode terminal ignores this setting and will not use your virtual environment by default.
-            You must manually run `source .venv/bin/activate` each time you start using the terminal.
-            Or use the command `cmd+shift+P -> Python: Create Terminal`.
+    *   `Python > Terminal: Activate Env In Current Terminal` -
+        ("python.terminal.activateEnvInCurrentTerminal" in json view)
+        *   Set to true.
+        *   Forces VSCode terminal to always use your virtual environment.
     *   `C_Cpp > Default: Include Path` - ("C_Cpp.default.includePath" in json view)
         *   Add item - set path to Python's C headers.
             For example: `/Library/Frameworks/Python.framework/Versions/3.10/include/python3.10`
