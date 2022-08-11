@@ -3,6 +3,10 @@
 `aws-crt-python` provides "language bindings", allowing Python to use the
 C libraries which make up the AWS SDK Common Runtime (CRT).
 
+You **MUST** read both [Extending Python with C](https://docs.python.org/3/extending/extending.html)
+and [Coding Guidelines for the aws-c Libraries](https://github.com/awslabs/aws-c-common#coding-guidelines)
+from top to bottom before going any further in this guide.
+
 This is not easy code to write. You must know Python. You must know C.
 You must learn how the aws-c libraries do error handling and memory management,
 you must learn how the Python C API does error handling and memory management,
@@ -11,7 +15,7 @@ Buckle up.
 
 ### Table of Contents
 
-*   [Required Reading](#required-reading)
+*   [Useful Links](#useful-links)
 *   [Writing Python Code](#writing-python-code)
     *   [General](#general-python-rules)
         *   [Naming Conventions](#python-naming-conventions)
@@ -35,22 +39,17 @@ Buckle up.
         *   [Option 2 - Private Core Class](#option-2---private-core-class)
 *   [Writing C Code](#writing-c-code)
 
-## Required Reading
-
-*   [Coding Guidelines for the aws-c Libraries](https://github.com/awslabs/aws-c-common#coding-guidelines) - Read this in full.
-*   [Extending Python with C](https://docs.python.org/3/extending/extending.html) - Read this in full.
-*   [Python C API Reference Manual](https://docs.python.org/3/c-api/index.html) -
-    Don't need to read in full, but choice links provided:
-    *   [Exception Handling](https://docs.python.org/3/c-api/exceptions.html)
-    *   [Reference Counting](https://docs.python.org/3/c-api/refcounting.html)
+## Useful Links
+*   Required reading:
+    *   [Extending Python with C](https://docs.python.org/3/extending/extending.html)
+    *   [Coding Guidelines for the aws-c Libraries](https://github.com/awslabs/aws-c-common#coding-guidelines)
+*   Reference pages you'll visit 3x per day:
     *   [Format strings: Python -> C](https://docs.python.org/3/c-api/arg.html) -
         Used by [PyArg_ParseTuple()](https://docs.python.org/3/c-api/arg.html#c.PyArg_ParseTuple)
     *   [Format strings: C -> Python](https://docs.python.org/3/c-api/arg.html#c.Py_BuildValue) -
         Used by [Py_BuildValue()](https://docs.python.org/3/c-api/arg.html#c.Py_BuildValue),
-        [PyObject_CallMethod()](https://docs.python.org/3/c-api/call.html#c.PyObject_CallMethod),
+        [PyObject_CallMethod()](https://docs.python.org/3/c-api/call.html#c.PyObject_CallMethod), and
         [PyObject_CallFunction()](https://docs.python.org/3/c-api/call.html#c.PyObject_CallFunction)
-    *   [The Global Interpreter Lock (GIL)](https://docs.python.org/3/c-api/init.html#thread-state-and-the-global-interpreter-lock)
-
 
 # Writing Python Code
 
@@ -249,7 +248,7 @@ This diagram shows the strong references between objects in Python and C:
 
 ![Diagram of Simple Binding](./binding-simple.svg)
 
-Description of parts (from left to right):
+Description of parts (from bottom to top):
 *   `aws_event_loop_group` - The underlying native implementation struct,
     which knows nothing about Python.
     *   Lives in C library: [aws-c-io](https://github.com/awslabs/aws-c-io)
@@ -356,10 +355,10 @@ Most of our bindings work like this:
 
 ![Diagram where C References callbacks](binding-callbacks.svg)
 
-Within `EventLoopGroup.__init__()` a "callable" is defined and passed down to C.
-`event_loop_group_binding` keeps a strong reference to this Python object.
-The code looks something like:
-```py
+Creation is similar to the [simple binding](#bindings-design), except:
+*   Within `EventLoopGroup.__init__()` a "callable" is defined and passed down to C.
+    The code looks something like:
+    ```py
     class EventLoopGroup:
         def __init__(self, ...):
 
@@ -368,7 +367,16 @@ The code looks something like:
                 ...do stuff...
 
             self._binding = _awscrt.event_loop_group_new(shutdown_callback, ...)
-```
+    ```
+*   `event_loop_group_binding` keeps a strong reference to this Python object.
+    The extra code looks something like:
+    ```C
+    PyObject *aws_py_event_loop_group_new(PyObject *self, PyObject *args) {
+        // ...parse arguments, creating binding struct, etc same as before...
+
+        // store strong reference to callable
+        binding->py_shutdown_callback = Py_INCREF(py_shutdown_callback);
+    ```
 
 When the final shutdown callback happens in C, the Python callable
 is invoked, and then the reference is released via `Py_DECREF(x)`.
@@ -402,14 +410,14 @@ but we write callbacks as member functions on the `_Core` class,
 instead of defining local functions within the body of `EventLoopGroup.__init__(self)`.
 Code looks something like:
 ```py
-    class EventLoopGroup:
-        def __init__(self, ...):
-            core = _EventLoopGroupCore()
-            self._binding = _awscrt.event_loop_group_new(core, ...)
+class EventLoopGroup:
+    def __init__(self, ...):
+        core = _EventLoopGroupCore()
+        self._binding = _awscrt.event_loop_group_new(core, ...)
 
-    class _EventLoopGroupCore:
-        def shutdown_callback(self):
-            ...do stuff...
+class _EventLoopGroupCore:
+    def shutdown_callback(self):
+        ...do stuff...
 ```
 
 This technique hasn't actually been used, but the author of this doc
