@@ -96,8 +96,12 @@ class ClientTlsContextTest(NativeResourceTest):
             opt = TlsContextOptions.create_client_with_mtls_pkcs12(
                 'test/resources/unittest.p12', '1234')
             ctx = ClientTlsContext(opt)
-        except NotImplementedError:
-            raise unittest.SkipTest(f'PKCS#12 not supported on this platform ({sys.platform})')
+        except Exception as e:
+            if 'PLATFORM_NOT_SUPPORTED' in str(e):
+                raise unittest.SkipTest(f'PKCS#12 not supported on this platform ({sys.platform})')
+            else:
+                # well then this is a real error
+                raise e
 
     def test_override_default_trust_store_dir(self):
         opt = TlsContextOptions()

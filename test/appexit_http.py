@@ -81,7 +81,13 @@ if __name__ == '__main__':
     set_stage(Stage.HttpClientStart)
 
     # HttpClientConnected
-    http_connection = http_connection.result(TIMEOUT)
+    try:
+        http_connection = http_connection.result(TIMEOUT)
+    except Exception:
+        # the internet's a flaky place and this isn't a correctness test
+        print("Connection failed. Exiting out early...")
+        set_stage(Stage.Done)
+
     set_stage(Stage.HttpClientConnected)
 
     # HttpStreamStart
@@ -102,8 +108,12 @@ if __name__ == '__main__':
     set_stage(Stage.HttpStreamReceivingBody)
 
     # HttpStreamDone
-    status_code = http_stream.completion_future.result(TIMEOUT)
-    assert(status_code == 200)
+    try:
+        status_code = http_stream.completion_future.result(TIMEOUT)
+    except Exception:
+        # the internet's a flaky place and this isn't a correctness test
+        print("Request failed. Continuing with cleanup...")
+
     del http_stream
     del request
     set_stage(Stage.HttpStreamDone)
