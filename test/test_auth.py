@@ -32,12 +32,12 @@ class ScopedEnvironmentVariable:
         else:
             os.environ[self.key] = self.value
 
-
     def __exit__(self, type, value, tb):
         if self.prev_value is None:
             os.environ.pop(self.key, None)
         else:
             os.environ[self.key] = self.prev_value
+
 
 class TestCredentials(NativeResourceTest):
     def test_create(self):
