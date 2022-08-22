@@ -2,9 +2,10 @@ import os
 import shlex
 import subprocess
 import sys
+from typing import Sequence, Union
 
 
-def run(args: str | list[str]):
+def run(args: Union[str, Sequence[str]]):
     """
     Run a program.
 
