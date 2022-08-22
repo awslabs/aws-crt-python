@@ -53,6 +53,14 @@ void PyErr_SetAwsLastError(void);
 PyObject *PyErr_AwsLastError(void);
 
 /**
+ * Prints the current Python error to stderr and clears the Python error indicator.
+ * Finds an AWS error code corresponding to the current Python error (fallback is AWS_ERROR_UNKNOWN).
+ * Returns aws_last_error().
+ *
+ * The Python error indicator MUST be set and the GIL MUST be held when calling this function. */
+int aws_py_translate_py_error(void);
+
+/**
  * Raise an AWS error corresponding to the current Python error.
  *
  * Prints the current Python error to stderr and clears the Python error indicator.
