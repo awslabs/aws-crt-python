@@ -6,10 +6,10 @@ All network operations in `awscrt.mqtt` are asynchronous.
 
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
-
 import _awscrt
 from concurrent.futures import Future
 from enum import IntEnum
+from inspect import signature
 from awscrt import NativeResource
 import awscrt.exceptions
 from awscrt.http import HttpProxyOptions, HttpRequest
@@ -130,7 +130,8 @@ class Client(NativeResource):
     """MQTT client.
 
     Args:
-        bootstrap (ClientBootstrap): Client bootstrap to use when initiating new socket connections.
+        bootstrap (Optional [ClientBootstrap]): Client bootstrap to use when initiating new socket connections.
+            If None is provided, the default singleton is used.
 
         tls_ctx (Optional[ClientTlsContext]): TLS context for secure socket connections.
             If None is provided, then an unencrypted connection is used.
@@ -138,12 +139,14 @@ class Client(NativeResource):
 
     __slots__ = ('tls_ctx')
 
-    def __init__(self, bootstrap, tls_ctx=None):
-        assert isinstance(bootstrap, ClientBootstrap)
+    def __init__(self, bootstrap=None, tls_ctx=None):
+        assert isinstance(bootstrap, ClientBootstrap) or bootstrap is None
         assert tls_ctx is None or isinstance(tls_ctx, ClientTlsContext)
 
         super().__init__()
         self.tls_ctx = tls_ctx
+        if not bootstrap:
+            bootstrap = ClientBootstrap.get_or_create_static_default()
         self._binding = _awscrt.mqtt_client_new(bootstrap, tls_ctx)
 
 
@@ -319,6 +322,21 @@ class Connection(NativeResource):
             use_websockets,
         )
 
+    def _check_uses_old_message_callback_signature(self, callback):
+        # The callback used to have fewer args. Passing only those args, if it
+        # only has two args and no forward-compatibility to cover case where
+        # user function failed to take forward-compatibility **kwargs.
+
+        callback_sig = signature(callback)
+        try:
+            # try new signature
+            callback_sig.bind(topic='topic', payload='payload', dup=True, qos=QoS(1), retain=True)
+            return False
+        except TypeError:
+            # try old signature
+            callback_sig.bind(topic='topic', payload='payload')
+            return True
+
     def _on_connection_interrupted(self, error_code):
         if self._on_connection_interrupted_cb:
             self._on_connection_interrupted_cb(connection=self, error=awscrt.exceptions.from_code(error_code))
@@ -435,6 +453,7 @@ class Connection(NativeResource):
 
         try:
             _awscrt.mqtt_client_connection_disconnect(self._binding, on_disconnect)
+
         except Exception as e:
             future.set_exception(e)
 
@@ -496,14 +515,14 @@ class Connection(NativeResource):
         packet_id = 0
 
         if callback:
+            uses_old_signature = self._check_uses_old_message_callback_signature(callback)
+
             def callback_wrapper(topic, payload, dup, qos, retain):
-                try:
-                    callback(topic=topic, payload=payload, dup=dup, qos=QoS(qos), retain=retain)
-                except TypeError:
-                    # This callback used to have fewer args.
-                    # Try again, passing only those those args, to cover case where
-                    # user function failed to take forward-compatibility **kwargs.
+                if uses_old_signature:
                     callback(topic=topic, payload=payload)
+                else:
+                    callback(topic=topic, payload=payload, dup=dup, qos=QoS(qos), retain=retain)
+
         else:
             callback_wrapper = None
 
@@ -554,14 +573,15 @@ class Connection(NativeResource):
         assert callable(callback) or callback is None
 
         if callback:
+
+            uses_old_signature = self._check_uses_old_message_callback_signature(callback)
+
             def callback_wrapper(topic, payload, dup, qos, retain):
-                try:
-                    callback(topic=topic, payload=payload, dup=dup, qos=QoS(qos), retain=retain)
-                except TypeError:
-                    # This callback used to have fewer args.
-                    # Try again, passing only those those args, to cover case where
-                    # user function failed to take forward-compatibility **kwargs.
+                if uses_old_signature:
                     callback(topic=topic, payload=payload)
+                else:
+                    callback(topic=topic, payload=payload, dup=dup, qos=QoS(qos), retain=retain)
+
         else:
             callback_wrapper = None
 
@@ -649,7 +669,7 @@ class Connection(NativeResource):
 
         Args:
             topic (str): Topic name.
-            payload (buffer): Contents of message.
+            payload (Union[str, bytes, bytearray]): Contents of message.
             qos (QoS): Quality of Service for delivering this message.
             retain (bool): If True, the server will store the message and its QoS
                 so that it can be delivered to future subscribers whose subscriptions

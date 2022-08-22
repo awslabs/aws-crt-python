@@ -11,7 +11,7 @@ import _awscrt
 from concurrent.futures import Future
 from awscrt import NativeResource
 import awscrt.exceptions
-from awscrt.io import ClientBootstrap, EventLoopGroup, DefaultHostResolver, InputStream, TlsConnectionOptions, SocketOptions
+from awscrt.io import ClientBootstrap, InputStream, TlsConnectionOptions, SocketOptions
 from enum import IntEnum
 
 
@@ -82,7 +82,7 @@ class HttpClientConnection(HttpConnectionBase):
     def new(cls,
             host_name,
             port,
-            bootstrap,
+            bootstrap=None,
             socket_options=None,
             tls_connection_options=None,
             proxy_options=None):
@@ -94,7 +94,8 @@ class HttpClientConnection(HttpConnectionBase):
 
             port (int): Connect to port.
 
-            bootstrap (ClientBootstrap): Client bootstrap to use when initiating socket connection.
+            bootstrap (Optional [ClientBootstrap]): Client bootstrap to use when initiating socket connection.
+                If None is provided, the default singleton is used.
 
             socket_options (Optional[SocketOptions]): Optional socket options.
                 If None is provided, then default options are used.
@@ -124,9 +125,7 @@ class HttpClientConnection(HttpConnectionBase):
                 socket_options = SocketOptions()
 
             if not bootstrap:
-                event_loop_group = EventLoopGroup(1)
-                host_resolver = DefaultHostResolver(event_loop_group)
-                bootstrap = ClientBootstrap(event_loop_group, host_resolver)
+                bootstrap = ClientBootstrap.get_or_create_static_default()
 
             connection = cls()
             connection._host_name = host_name
@@ -312,7 +311,7 @@ class HttpMessageBase(NativeResource):
     """
     Base for HttpRequest and HttpResponse classes.
     """
-    __slots__ = ('_headers')
+    __slots__ = ('_headers', '_body_stream')
 
     def __init__(self, binding, headers, body_stream=None):
         assert isinstance(headers, HttpHeaders)
@@ -320,6 +319,7 @@ class HttpMessageBase(NativeResource):
         super().__init__()
         self._binding = binding
         self._headers = headers
+        self._body_stream = None
 
         if body_stream:
             self.body_stream = body_stream
@@ -331,13 +331,12 @@ class HttpMessageBase(NativeResource):
 
     @property
     def body_stream(self):
-        """InputStream: Binary stream of outgoing body."""
-        return _awscrt.http_message_get_body_stream(self._binding)
+        return self._body_stream
 
     @body_stream.setter
     def body_stream(self, stream):
-        stream = InputStream.wrap(stream)
-        return _awscrt.http_message_set_body_stream(self._binding, stream)
+        self._body_stream = InputStream.wrap(stream)
+        _awscrt.http_message_set_body_stream(self._binding, self._body_stream)
 
 
 class HttpRequest(HttpMessageBase):

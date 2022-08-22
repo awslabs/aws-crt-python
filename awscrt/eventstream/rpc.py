@@ -258,9 +258,9 @@ class ClientConnection(NativeResource):
             handler: ClientConnectionHandler,
             host_name: str,
             port: int,
-            bootstrap: ClientBootstrap,
+            bootstrap: ClientBootstrap = None,
             socket_options: Optional[SocketOptions] = None,
-            tls_connection_options: Optional[TlsConnectionOptions] = None) -> Future:
+            tls_connection_options: Optional[TlsConnectionOptions] = None) -> 'concurrent.futures.Future':
         """Asynchronously establish a new ClientConnection.
 
         Args:
@@ -271,6 +271,7 @@ class ClientConnection(NativeResource):
             port: Connect to port.
 
             bootstrap: Client bootstrap to use when initiating socket connection.
+                If None is provided, the default singleton is used.
 
             socket_options: Optional socket options.
                 If None is provided, then default options are used.
@@ -296,6 +297,9 @@ class ClientConnection(NativeResource):
 
         # Connection is not made available to user until setup callback fires
         connection = cls(host_name, port, handler)
+
+        if not bootstrap:
+            bootstrap = ClientBootstrap.get_or_create_static_default()
 
         # connection._binding is set within the following call */
         _awscrt.event_stream_rpc_client_connection_connect(
@@ -380,7 +384,7 @@ class ClientConnection(NativeResource):
             payload: Optional[ByteString] = None,
             message_type: MessageType,
             flags: Optional[int] = None,
-            on_flush: Callable = None) -> Future:
+            on_flush: Callable = None) -> 'concurrent.futures.Future':
         """Send a protocol message.
 
         Protocol messages use stream-id 0.
@@ -462,7 +466,7 @@ class ClientContinuation(NativeResource):
     Attributes:
         connection (ClientConnection): This stream's connection.
 
-        closed_future (Future) : Future which completes with a result of None
+        closed_future (concurrent.futures.Future) : Future which completes with a result of None
             when the continuation has closed.
     """
 
@@ -552,7 +556,7 @@ class ClientContinuation(NativeResource):
             payload: ByteString = None,
             message_type: MessageType,
             flags: int = None,
-            on_flush: Callable = None) -> Future:
+            on_flush: Callable = None) -> 'concurrent.futures.Future':
         """
         Send a continuation message.
 

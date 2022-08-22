@@ -129,9 +129,6 @@ instance/
 # Scrapy stuff:
 .scrapy
 
-# Sphinx documentation
-docs/_build/
-
 # PyBuilder
 target/
 
@@ -185,7 +182,6 @@ dmypy.json
 [Ll]ib
 [Ll]ib64
 [Ll]ocal
-[Ss]cripts
 pyvenv.cfg
 pip-selfcheck.json
 
@@ -532,3 +528,6 @@ ASALocalRun/
 
 # deps from build-deps.sh
 deps/
+
+# API docs are updated automatically by .github/workflows/docs.yml
+docs/

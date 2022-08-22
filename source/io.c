@@ -4,6 +4,8 @@
  */
 #include "io.h"
 
+#include <aws/common/atomics.h>
+
 #include <aws/io/channel_bootstrap.h>
 #include <aws/io/event_loop.h>
 #include <aws/io/socket.h>
@@ -424,10 +426,11 @@ PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args) {
     Py_ssize_t pkcs11_cert_file_path_len;
     const char *pkcs11_cert_file_contents;
     Py_ssize_t pkcs11_cert_file_contents_len;
+    const char *windows_cert_store_path;
 
     if (!PyArg_ParseTuple(
             args,
-            "bzz#zz#z#zzbOz#Oz#z#z#z#",
+            "bzz#zz#z#zzbOz#Oz#z#z#z#z",
             &min_tls_version,
             &ca_dirpath,
             &ca_buffer,
@@ -451,7 +454,8 @@ PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args) {
             &pkcs11_cert_file_path,
             &pkcs11_cert_file_path_len,
             &pkcs11_cert_file_contents,
-            &pkcs11_cert_file_contents_len)) {
+            &pkcs11_cert_file_contents_len,
+            &windows_cert_store_path)) {
         return NULL;
     }
 
@@ -498,16 +502,16 @@ PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args) {
         }
     } else if (pkcs12_filepath != NULL) {
         /* mTLS with PKCS#12 */
-#ifdef __APPLE__
         struct aws_byte_cursor password = aws_byte_cursor_from_c_str(pkcs12_password);
         if (aws_tls_ctx_options_init_client_mtls_pkcs12_from_path(
                 &ctx_options, allocator, pkcs12_filepath, &password)) {
             return PyErr_AwsLastError();
         }
-#else
-        PyErr_SetString(PyExc_NotImplementedError, "PKCS#12 is currently only supported on Apple devices");
-        return NULL;
-#endif
+    } else if (windows_cert_store_path != NULL) {
+        /* mTLS with certificate from a Windows certificate store */
+        if (aws_tls_ctx_options_init_client_mtls_from_system_path(&ctx_options, allocator, windows_cert_store_path)) {
+            return PyErr_AwsLastError();
+        }
     } else {
         /* no mTLS */
         aws_tls_ctx_options_init_default_client(&ctx_options, allocator);
@@ -696,25 +700,23 @@ PyObject *aws_py_tls_connection_options_set_server_name(PyObject *self, PyObject
 /* aws_input_stream implementation for accessing Python I/O classes */
 struct aws_input_stream_py_impl {
     struct aws_input_stream base;
+    struct aws_allocator *allocator;
 
     bool is_end_of_stream;
 
-    /* Weak reference proxy to python self. */
-    PyObject *self_proxy;
-};
+    /* Track the refcount from C land */
+    struct aws_atomic_var c_ref;
 
-static void s_aws_input_stream_py_destroy(struct aws_input_stream *stream) {
-    struct aws_input_stream_py_impl *impl = stream->impl;
-    Py_XDECREF(impl->self_proxy);
-    aws_mem_release(stream->allocator, stream);
-}
+    /* Pointer to python self. The stream will have a same lifetime as the python Object */
+    PyObject *py_self;
+};
 
 static int s_aws_input_stream_py_seek(
     struct aws_input_stream *stream,
     int64_t offset,
     enum aws_stream_seek_basis basis) {
 
-    struct aws_input_stream_py_impl *impl = stream->impl;
+    struct aws_input_stream_py_impl *impl = AWS_CONTAINER_OF(stream, struct aws_input_stream_py_impl, base);
 
     int aws_result = AWS_OP_SUCCESS;
     PyObject *method_result = NULL;
@@ -725,7 +727,7 @@ static int s_aws_input_stream_py_seek(
         return AWS_OP_ERR; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
-    method_result = PyObject_CallMethod(impl->self_proxy, "_seek", "(Li)", offset, basis);
+    method_result = PyObject_CallMethod(impl->py_self, "_seek", "(Li)", offset, basis);
     if (!method_result) {
         aws_result = aws_py_raise_error();
         goto done;
@@ -743,7 +745,7 @@ done:
 }
 
 int s_aws_input_stream_py_read(struct aws_input_stream *stream, struct aws_byte_buf *dest) {
-    struct aws_input_stream_py_impl *impl = stream->impl;
+    struct aws_input_stream_py_impl *impl = AWS_CONTAINER_OF(stream, struct aws_input_stream_py_impl, base);
 
     int aws_result = AWS_OP_SUCCESS;
     PyObject *memory_view = NULL;
@@ -761,7 +763,7 @@ int s_aws_input_stream_py_read(struct aws_input_stream *stream, struct aws_byte_
         goto done;
     }
 
-    method_result = PyObject_CallMethod(impl->self_proxy, "_read_into_memoryview", "(O)", memory_view);
+    method_result = PyObject_CallMethod(impl->py_self, "_read_into_memoryview", "(O)", memory_view);
     if (!method_result) {
         aws_result = aws_py_raise_error();
         goto done;
@@ -795,7 +797,7 @@ done:
 }
 
 int s_aws_input_stream_py_get_status(struct aws_input_stream *stream, struct aws_stream_status *status) {
-    struct aws_input_stream_py_impl *impl = stream->impl;
+    struct aws_input_stream_py_impl *impl = AWS_CONTAINER_OF(stream, struct aws_input_stream_py_impl, base);
 
     status->is_valid = true;
     status->is_end_of_stream = impl->is_end_of_stream;
@@ -806,7 +808,39 @@ int s_aws_input_stream_py_get_status(struct aws_input_stream *stream, struct aws
 int s_aws_input_stream_py_get_length(struct aws_input_stream *stream, int64_t *out_length) {
     (void)stream;
     (void)out_length;
-    return AWS_ERROR_UNIMPLEMENTED;
+    return aws_raise_error(AWS_ERROR_UNIMPLEMENTED);
+}
+
+void s_aws_input_stream_py_acquire(struct aws_input_stream *stream) {
+    struct aws_input_stream_py_impl *impl = AWS_CONTAINER_OF(stream, struct aws_input_stream_py_impl, base);
+    size_t pre_ref = aws_atomic_fetch_add(&impl->c_ref, 1);
+    if (pre_ref == 0) {
+        /* Only acquire the python ref when it's a new C ref */
+        /*************** GIL ACQUIRE ***************/
+        PyGILState_STATE state;
+        if (aws_py_gilstate_ensure(&state)) {
+            return; /* Python has shut down. Nothing matters anymore, but don't crash */
+        }
+        Py_INCREF(impl->py_self);
+        PyGILState_Release(state);
+        /*************** GIL RELEASE ***************/
+    }
+}
+
+void s_aws_input_stream_py_release(struct aws_input_stream *stream) {
+    struct aws_input_stream_py_impl *impl = AWS_CONTAINER_OF(stream, struct aws_input_stream_py_impl, base);
+    size_t pre_ref = aws_atomic_fetch_sub(&impl->c_ref, 1);
+    if (pre_ref == 1) {
+        /* Only release the python ref when all the C refs gone */
+        /*************** GIL ACQUIRE ***************/
+        PyGILState_STATE state;
+        if (aws_py_gilstate_ensure(&state)) {
+            return; /* Python has shut down. Nothing matters anymore, but don't crash */
+        }
+        Py_DECREF(impl->py_self);
+        PyGILState_Release(state);
+        /*************** GIL RELEASE ***************/
+    }
 }
 
 static struct aws_input_stream_vtable s_aws_input_stream_py_vtable = {
@@ -814,35 +848,9 @@ static struct aws_input_stream_vtable s_aws_input_stream_py_vtable = {
     .read = s_aws_input_stream_py_read,
     .get_status = s_aws_input_stream_py_get_status,
     .get_length = s_aws_input_stream_py_get_length,
-    .destroy = s_aws_input_stream_py_destroy,
+    .acquire = s_aws_input_stream_py_acquire,
+    .release = s_aws_input_stream_py_release,
 };
-
-static struct aws_input_stream *aws_input_stream_new_from_py(PyObject *py_self) {
-
-    if (!py_self || (py_self == Py_None)) {
-        aws_raise_error(AWS_ERROR_INVALID_ARGUMENT);
-        return NULL;
-    }
-
-    struct aws_allocator *alloc = aws_py_get_allocator();
-    struct aws_input_stream_py_impl *impl = aws_mem_calloc(alloc, 1, sizeof(struct aws_input_stream_py_impl));
-    if (!impl) {
-        return NULL;
-    }
-
-    impl->base.allocator = alloc;
-    impl->base.vtable = &s_aws_input_stream_py_vtable;
-    impl->base.impl = impl;
-    impl->self_proxy = PyWeakref_NewProxy(py_self, NULL);
-    if (!impl->self_proxy) {
-        goto error;
-    }
-
-    return &impl->base;
-error:
-    aws_input_stream_destroy(&impl->base);
-    return NULL;
-}
 
 /**
  * Begin aws_input_stream <--> InputStream binding code.
@@ -854,7 +862,8 @@ error:
 
 static void s_input_stream_capsule_destructor(PyObject *py_capsule) {
     struct aws_input_stream *stream = PyCapsule_GetPointer(py_capsule, s_capsule_name_input_stream);
-    aws_input_stream_destroy(stream);
+    struct aws_input_stream_py_impl *impl = AWS_CONTAINER_OF(stream, struct aws_input_stream_py_impl, base);
+    aws_mem_release(impl->allocator, impl);
 }
 
 PyObject *aws_py_input_stream_new(PyObject *self, PyObject *args) {
@@ -865,15 +874,22 @@ PyObject *aws_py_input_stream_new(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    struct aws_input_stream *stream = aws_input_stream_new_from_py(py_self);
-    if (!stream) {
-        return PyErr_AwsLastError();
+    if (py_self == Py_None) {
+        PyErr_SetString(PyExc_TypeError, "InputStream cannot be None");
+        return NULL;
     }
 
-    PyObject *py_capsule = PyCapsule_New(stream, s_capsule_name_input_stream, s_input_stream_capsule_destructor);
+    struct aws_allocator *alloc = aws_py_get_allocator();
+    struct aws_input_stream_py_impl *impl = aws_mem_calloc(alloc, 1, sizeof(struct aws_input_stream_py_impl));
+    impl->allocator = alloc;
+    impl->base.vtable = &s_aws_input_stream_py_vtable;
+    impl->py_self = py_self;
+    aws_atomic_init_int(&impl->c_ref, 0);
+    /* Lifetime of the impl will be the same as py_capsule and being handled by python */
+    PyObject *py_capsule = PyCapsule_New(&impl->base, s_capsule_name_input_stream, s_input_stream_capsule_destructor);
+
     if (!py_capsule) {
-        aws_input_stream_destroy(stream);
-        return NULL;
+        aws_mem_release(impl->allocator, impl);
     }
 
     return py_capsule;

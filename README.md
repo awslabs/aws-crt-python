@@ -4,7 +4,8 @@
 
 Python 3 bindings for the AWS Common Runtime.
 
-API documentation: https://awslabs.github.io/aws-crt-python/
+*   [API documentation](https://awslabs.github.io/aws-crt-python)
+*   [Development guide](guides/dev/README.md) for contributors to aws-crt-python's source code.
 
 ## License
 
@@ -37,45 +38,3 @@ Please note that on Mac, once a private key is used with a certificate, that cer
 ```
 static: certificate has an existing certificate-key pair that was previously imported into the Keychain. Using key from Keychain instead of the one provided.
 ```
-
-## Running tests
-
-After install, run from project root:
-```bash
-python3 -m unittest discover --failfast --verbose
-```
-
-`--failfast` stops after one failed test.
-This is useful because a failed test is likely to leak memory,
-which will cause the rest of the tests to fail as well.
-
-`--verbose` makes it easier to see which tests are skipped.
-
-Many tests require an AWS account. These tests are skipped unless
-specific environment variables are set:
-
-MQTT
-* AWS_TEST_IOT_MQTT_ENDPOINT - AWS account-specific endpoint to connect to IoT core by
-* AWS_TEST_TLS_CERT_PATH - file path to certificate used to initialize the TLS context of the MQTT connection
-* AWS_TEST_TLS_KEY_PATH - file path to the private key used to initialize the TLS context of the MQTT connection
-* AWS_TEST_TLS_ROOT_CERT_PATH - file path to the root CA used to initialize the TLS context of the MQTT connection
-
-PKCS11
-* AWS_TEST_PKCS11_LIB - path to PKCS#11 library
-* AWS_TEST_PKCS11_PIN - user PIN for logging into PKCS#11 token
-* AWS_TEST_PKCS11_TOKEN_LABEL - label of PKCS#11 token
-* AWS_TEST_PKCS11_KEY_LABEL - label of private key on PKCS#11 token,
-  which must correspond to the cert at AWS_TEST_TLS_CERT_PATH.
-
-PROXY
-* AWS_TEST_HTTP_PROXY_HOST - host address of the proxy to use for tests that make open connections to the proxy
-* AWS_TEST_HTTP_PROXY_PORT - port to use for tests that make open connections to the proxy
-* AWS_TEST_HTTPS_PROXY_HOST - host address of the proxy to use for tests that make TLS-protected connections to the proxy
-* AWS_TEST_HTTPS_PROXY_PORT - port to use for tests that make TLS-protected connections to the proxy
-* AWS_TEST_HTTP_PROXY_BASIC_HOST - host address of the proxy to use for tests that make open connections to the proxy with basic authentication
-* AWS_TEST_HTTP_PROXY_BASIC_PORT - port to use for tests that make open connections to the proxy with basic authentication
-* AWS_TEST_BASIC_AUTH_USERNAME - username to use when using basic authentication to the proxy
-* AWS_TEST_BASIC_AUTH_PASSWORD - password to use when using basic authentication to the proxy
-
-S3
-* AWS_TEST_S3 - set to any value to enable S3 tests

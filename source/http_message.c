@@ -18,12 +18,6 @@ static const char *s_capsule_name_http_message = "aws_http_message";
  */
 struct http_message_binding {
     struct aws_http_message *native;
-
-    /* Dependencies that must outlive this */
-
-    /* InputStream for aws_http_message's aws_input_stream.
-     * This is Py_None when no stream is set */
-    PyObject *py_body_stream;
 };
 
 static void s_http_message_capsule_destructor(PyObject *capsule) {
@@ -31,7 +25,6 @@ static void s_http_message_capsule_destructor(PyObject *capsule) {
 
     /* Note that destructor may be cleaning up a message that failed part-way through initialization */
     aws_http_message_release(message->native);
-    Py_XDECREF(message->py_body_stream);
 
     aws_mem_release(aws_py_get_allocator(), message);
 }
@@ -61,10 +54,6 @@ PyObject *aws_py_http_message_new_request_from_native(struct aws_http_message *r
 
     binding->native = request;
     aws_http_message_acquire(binding->native);
-
-    /* Default py_body_stream ref to None, not NULL */
-    binding->py_body_stream = Py_None;
-    Py_INCREF(binding->py_body_stream);
 
     return py_capsule;
 
@@ -186,16 +175,6 @@ PyObject *aws_py_http_message_set_request_path(PyObject *self, PyObject *args) {
     Py_RETURN_NONE;
 }
 
-PyObject *aws_py_http_message_get_body_stream(PyObject *self, PyObject *args) {
-    struct http_message_binding *binding = s_get_binding_from_capsule_arg(self, args);
-    if (!binding) {
-        return NULL;
-    }
-
-    Py_INCREF(binding->py_body_stream);
-    return binding->py_body_stream;
-}
-
 PyObject *aws_py_http_message_set_body_stream(PyObject *self, PyObject *args) {
     (void)self;
 
@@ -219,10 +198,6 @@ PyObject *aws_py_http_message_set_body_stream(PyObject *self, PyObject *args) {
     }
 
     aws_http_message_set_body_stream(binding->native, stream);
-
-    Py_DECREF(binding->py_body_stream);
-    binding->py_body_stream = py_stream;
-    Py_INCREF(binding->py_body_stream);
 
     Py_RETURN_NONE;
 }
