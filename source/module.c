@@ -306,7 +306,7 @@ static void s_error_map_init(void) {
     }
 }
 
-int aws_py_raise_error(void) {
+int aws_py_translate_py_error(void) {
     AWS_ASSERT(PyErr_Occurred() != NULL);
     AWS_ASSERT(PyGILState_Check() == 1);
 
@@ -322,6 +322,13 @@ int aws_py_raise_error(void) {
     PyErr_Print();
     fprintf(stderr, "Treating Python exception as error %d(%s)\n", aws_error_code, aws_error_name(aws_error_code));
 
+    return aws_last_error();
+}
+
+int aws_py_raise_error(void) {
+
+    int aws_error_code = AWS_ERROR_UNKNOWN;
+    aws_error_code = aws_py_translate_py_error();
     return aws_raise_error(aws_error_code);
 }
 
