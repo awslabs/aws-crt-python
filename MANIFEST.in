@@ -30,5 +30,5 @@ graft crt/aws-lc/third_party/fiat
 graft crt/aws-lc/third_party/s2n-bignum
 prune crt/aws-lc/tool
 prune crt/aws-lc/util
-graft crt/aws-lc/util/fipstools/acvp/modulewrapper
-graft crt/aws-lc/util/fipstools/cavp
+include crt/aws-lc/util/fipstools/CMakeLists.txt
+include crt/aws-lc/util/fipstools/acvp/modulewrapper/CMakeLists.txt

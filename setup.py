@@ -309,6 +309,11 @@ def awscrt_ext():
         libraries = [':lib{}.a'.format(x) for x in libraries]
         libraries += ['rt']
 
+        # hide the symbols from libcrypto.a
+        # this prevents weird crashes if an application also ends up using
+        # libcrypto.so from the system's OpenSSL installation.
+        extra_link_args += ['-Wl,--exclude-libs,libcrypto.a']
+
         # python usually adds -pthread automatically, but we've observed
         # rare cases where that didn't happen, so let's be explicit.
         extra_link_args += ['-pthread']

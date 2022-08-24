@@ -44,6 +44,18 @@ CMake 3 is required to compile the C submodules. To install:
 * On Linux: use your system's package manager (apt, yum, etc).
 * On Windows: [download and install](https://cmake.org/download/)
 
+## Install Python Dev Libraries and Header files
+
+Install the libraries and headers necessary for Python development.
+These might already be installed. If you're not sure just skip ahead, and come back
+to this step if you get build errors like: `Python.h: No such file or directory`
+
+If you installed Python via [python.org](https://www.python.org/downloads/),
+then you already have these files.
+
+If you installed Python via a package manager, you might need the "dev" package.
+i.e. `sudo apt install python3-dev` or `sudo yum install python3-devel`
+
 ## Set up a Virtual Environment
 
 Set up a [virtual environment](https://docs.python.org/3/library/venv.html)
