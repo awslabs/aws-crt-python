@@ -27,11 +27,14 @@ class ScopedEnvironmentVariable:
         self.prev_value = os.environ.get(key)
 
     def __enter__(self):
-        os.environ[self.key] = self.value
+        if self.value is None:
+            os.environ.pop(self.key, None)
+        else:
+            os.environ[self.key] = self.value
 
     def __exit__(self, type, value, tb):
         if self.prev_value is None:
-            del os.environ[self.key]
+            os.environ.pop(self.key, None)
         else:
             os.environ[self.key] = self.prev_value
 
@@ -98,7 +101,8 @@ class TestProvider(NativeResourceTest):
     def test_default_provider(self):
         # Default credentials provider should pick up environment variables.
         with ScopedEnvironmentVariable('AWS_ACCESS_KEY_ID', EXAMPLE_ACCESS_KEY_ID), \
-                ScopedEnvironmentVariable('AWS_SECRET_ACCESS_KEY', EXAMPLE_SECRET_ACCESS_KEY):
+                ScopedEnvironmentVariable('AWS_SECRET_ACCESS_KEY', EXAMPLE_SECRET_ACCESS_KEY),\
+                ScopedEnvironmentVariable('AWS_SESSION_TOKEN', None):
 
             event_loop_group = awscrt.io.EventLoopGroup()
             host_resolver = awscrt.io.DefaultHostResolver(event_loop_group)
