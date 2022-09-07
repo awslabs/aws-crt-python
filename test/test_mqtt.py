@@ -239,5 +239,4 @@ class MqttConnectionTest(NativeResourceTest):
 
 
 if __name__ == 'main':
-    test=MqttConnectionTest()
-    test.test_ecc_connect_disconnect()
+    unittest.main()
