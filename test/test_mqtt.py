@@ -34,6 +34,7 @@ class Config:
 
         if auth_type == AuthType.ECC_CERT_AND_KEY:
             self.key_path = self._get_env('AWS_TEST_ECC_KEY_PATH')
+            self.key = pathlib.Path(self.key_path).read_text().encode('utf-8')
             self.cert_path = self._get_env('AWS_TEST_ECC_CERT_PATH')
             self.cert = pathlib.Path(self.cert_path).read_text().encode('utf-8')
 
@@ -68,8 +69,6 @@ class MqttConnectionTest(NativeResourceTest):
         if auth_type == AuthType.CERT_AND_KEY or auth_type == AuthType.ECC_CERT_AND_KEY:
             tls_opts = TlsContextOptions.create_client_with_mtls_from_path(config.cert_path, config.key_path)
             tls = ClientTlsContext(tls_opts)
-            
-            tls_opts = TlsContextOptions.create_client_with_mtls_from_path(config.cert_path, config.key_path)
 
         elif auth_type == AuthType.PKCS11:
             try:
