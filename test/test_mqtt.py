@@ -33,7 +33,7 @@ class Config:
         self.cert = pathlib.Path(self.cert_path).read_text().encode('utf-8')
 
         if auth_type == AuthType.ECC_CERT_AND_KEY:
-            self.key_path =  self._get_env('AWS_TEST_ECC_KEY_PATH')
+            self.key_path = self._get_env('AWS_TEST_ECC_KEY_PATH')
             self.cert_path = self._get_env('AWS_TEST_ECC_CERT_PATH')
             self.cert = pathlib.Path(self.cert_path).read_text().encode('utf-8')
 
@@ -240,4 +240,5 @@ class MqttConnectionTest(NativeResourceTest):
 
 
 if __name__ == 'main':
-    unittest.main()
+    test=MqttConnectionTest()
+    test.test_ecc_connect_disconnect()
