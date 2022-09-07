@@ -23,7 +23,7 @@ class MqttClientTest(NativeResourceTest):
         client = Client(bootstrap)
 
 
-AuthType = enum.Enum('AuthType', ['CERT_AND_KEY', 'PKCS11'])
+AuthType = enum.Enum('AuthType', ['CERT_AND_KEY', 'PKCS11', 'ECC_CERT_AND_KEY'])
 
 
 class Config:
@@ -31,6 +31,11 @@ class Config:
         self.endpoint = self._get_env('AWS_TEST_IOT_MQTT_ENDPOINT')
         self.cert_path = self._get_env('AWS_TEST_TLS_CERT_PATH')
         self.cert = pathlib.Path(self.cert_path).read_text().encode('utf-8')
+
+        if auth_type == AuthType.ECC_CERT_AND_KEY:
+            self.key_path =  self._get_env('AWS_TEST_ECC_KEY_PATH')
+            self.cert_path = self._get_env('AWS_TEST_ECC_CERT_PATH')
+            self.cert = pathlib.Path(self.cert_path).read_text().encode('utf-8')
 
         if auth_type == AuthType.CERT_AND_KEY:
             self.key_path = self._get_env('AWS_TEST_TLS_KEY_PATH')
@@ -60,9 +65,11 @@ class MqttConnectionTest(NativeResourceTest):
     def _create_connection(self, auth_type=AuthType.CERT_AND_KEY, use_static_singletons=False):
         config = Config(auth_type)
 
-        if auth_type == AuthType.CERT_AND_KEY:
+        if auth_type == AuthType.CERT_AND_KEY or auth_type == AuthType.ECC_CERT_AND_KEY:
             tls_opts = TlsContextOptions.create_client_with_mtls_from_path(config.cert_path, config.key_path)
             tls = ClientTlsContext(tls_opts)
+            
+            tls_opts = TlsContextOptions.create_client_with_mtls_from_path(config.cert_path, config.key_path)
 
         elif auth_type == AuthType.PKCS11:
             try:
@@ -103,6 +110,11 @@ class MqttConnectionTest(NativeResourceTest):
 
     def test_connect_disconnect(self):
         connection = self._create_connection()
+        connection.connect().result(TIMEOUT)
+        connection.disconnect().result(TIMEOUT)
+
+    def test_ecc_connect_disconnect(self):
+        connection = self._create_connection(AuthType.ECC_CERT_AND_KEY)
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
