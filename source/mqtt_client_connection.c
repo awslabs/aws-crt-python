@@ -1055,10 +1055,9 @@ static void s_suback_multi_callback(
     }
 
     for (size_t i = 0; i < num_topics; ++i) {
-        struct aws_mqtt_topic_subscription sub_i;
+        struct aws_mqtt_topic_subscription *sub_i = NULL;
         aws_array_list_get_at(topic_subacks, &sub_i, i);
-
-        PyObject *tuple = Py_BuildValue("(s#i)", sub_i.topic.ptr, sub_i.topic.len, sub_i.qos);
+        PyObject *tuple = Py_BuildValue("(s#i)", sub_i->topic.ptr, sub_i->topic.len, sub_i->qos);
         if (!tuple) {
             error_code = aws_py_translate_py_error();
             goto done_prepping_args;
