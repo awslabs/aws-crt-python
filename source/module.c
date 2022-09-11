@@ -123,7 +123,7 @@ uint64_t PyObject_GetAttrAsUint64(PyObject *o, const char *class_name, const cha
         return result;
     }
 
-    //Todo: confirm this
+    // Todo: confirm this
     /* Using PyLong_AsLongLong() because it will convert floating point numbers (PyLong_AsUnsignedLong() will not).
      * By using "long long" (not just "long") we can be sure to fit the whole range of 64bit numbers. */
     unsigned long long val = PyLong_AsUnsignedLong(attr);

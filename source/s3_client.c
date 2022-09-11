@@ -5,11 +5,11 @@
 #include "s3.h"
 
 #include "auth.h"
-#include "io.h"
 #include "http.h"
-#include <aws/s3/s3_client.h>
-#include <aws/http/proxy.h>
+#include "io.h"
 #include <aws/http/connection.h>
+#include <aws/http/proxy.h>
+#include <aws/s3/s3_client.h>
 
 static const char *s_capsule_name_s3_client = "aws_s3_client";
 
@@ -142,41 +142,41 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
 
     struct aws_http_proxy_options proxy_options_storage;
     struct aws_http_proxy_options *proxy_options = NULL;
-    if(proxy_options_py != Py_None){
+    if (proxy_options_py != Py_None) {
         proxy_options = &proxy_options_storage;
-        if(!aws_py_http_proxy_options_init(proxy_options, proxy_options_py)){
+        if (!aws_py_http_proxy_options_init(proxy_options, proxy_options_py)) {
             return NULL;
         }
     }
 
     struct proxy_env_var_settings proxy_environment_variable_setting_storage;
     struct proxy_env_var_settings *proxy_environment_variable_setting = NULL;
-    if(proxy_environment_variable_setting_py != Py_None){
+    if (proxy_environment_variable_setting_py != Py_None) {
         proxy_environment_variable_setting = &proxy_environment_variable_setting_storage;
-        if(!aws_py_http_proxy_environment_variable_setting_init(proxy_environment_variable_setting, proxy_environment_variable_setting_py)){
+        if (!aws_py_http_proxy_environment_variable_setting_init(
+                proxy_environment_variable_setting, proxy_environment_variable_setting_py)) {
             return NULL;
         }
-        fprintf(stderr,"%d",proxy_environment_variable_setting->env_var_type);
+        fprintf(stderr, "%d", proxy_environment_variable_setting->env_var_type);
     }
 
     struct aws_http_connection_monitoring_options monitoring_options_storage;
     struct aws_http_connection_monitoring_options *monitoring_options = NULL;
-    if(monitoring_options_py != Py_None){
+    if (monitoring_options_py != Py_None) {
         monitoring_options = &monitoring_options_storage;
-        if(!aws_http_connection_monitoring_options_init(monitoring_options, monitoring_options_py)){
+        if (!aws_http_connection_monitoring_options_init(monitoring_options, monitoring_options_py)) {
             return NULL;
         }
     }
 
     struct aws_s3_tcp_keep_alive_options tcp_keep_alive_options_storage;
     struct aws_s3_tcp_keep_alive_options *tcp_keep_alive_options = NULL;
-    if(tcp_keep_alive_options_py != Py_None){
-        tcp_keep_alive_options=&tcp_keep_alive_options_storage;
-        if(!aws_s3_tcp_keep_alive_options_init(tcp_keep_alive_options, tcp_keep_alive_options_py)){
+    if (tcp_keep_alive_options_py != Py_None) {
+        tcp_keep_alive_options = &tcp_keep_alive_options_storage;
+        if (!aws_s3_tcp_keep_alive_options_init(tcp_keep_alive_options, tcp_keep_alive_options_py)) {
             return NULL;
         }
     }
-
 
     struct s3_client_binding *s3_client = aws_mem_calloc(allocator, 1, sizeof(struct s3_client_binding));
     if (!s3_client) {

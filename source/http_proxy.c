@@ -82,7 +82,9 @@ done:
     return success;
 }
 
-bool aws_py_http_proxy_environment_variable_setting_init(struct proxy_env_var_settings *proxy_options, PyObject *py_proxy_environment_variable_setting) {
+bool aws_py_http_proxy_environment_variable_setting_init(
+    struct proxy_env_var_settings *proxy_options,
+    PyObject *py_proxy_environment_variable_setting) {
     AWS_ZERO_STRUCT(*proxy_options);
 
     bool success = false;
@@ -99,8 +101,12 @@ bool aws_py_http_proxy_environment_variable_setting_init(struct proxy_env_var_se
             goto done;
         }
     }
-    proxy_options->connection_type = PyObject_GetAttrAsIntEnum(py_proxy_environment_variable_setting, "HttpProxyEnvironmentVariableSetting", "connection_type");
-    proxy_options->env_var_type = PyObject_GetAttrAsIntEnum(py_proxy_environment_variable_setting, "HttpProxyEnvironmentVariableSetting", "proxy_environment_variable_type");
+    proxy_options->connection_type = PyObject_GetAttrAsIntEnum(
+        py_proxy_environment_variable_setting, "HttpProxyEnvironmentVariableSetting", "connection_type");
+    proxy_options->env_var_type = PyObject_GetAttrAsIntEnum(
+        py_proxy_environment_variable_setting,
+        "HttpProxyEnvironmentVariableSetting",
+        "proxy_environment_variable_type");
 
     if (PyErr_Occurred()) {
         goto done;

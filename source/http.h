@@ -25,13 +25,17 @@ bool aws_py_http_proxy_options_init(struct aws_http_proxy_options *proxy_options
  * Init proxy_env_var_settings from HttpProxyEnvironmentVariableSetting.
  * Returns false and sets python exception if error occurred.
  */
-bool aws_py_http_proxy_environment_variable_setting_init(struct proxy_env_var_settings *proxy_options, PyObject *py_proxy_environment_variable_setting);
+bool aws_py_http_proxy_environment_variable_setting_init(
+    struct proxy_env_var_settings *proxy_options,
+    PyObject *py_proxy_environment_variable_setting);
 
 /**
  * Init aws_http_connection_monitoring_options from HttpMonitoringOptions.
  * Returns false and sets python exception if error occurred.
  */
-bool aws_http_connection_monitoring_options_init(struct aws_http_connection_monitoring_options *monitoring_options, PyObject *py_monitoring_options);
+bool aws_http_connection_monitoring_options_init(
+    struct aws_http_connection_monitoring_options *monitoring_options,
+    PyObject *py_monitoring_options);
 
 /**
  * Close the connection if it's open.
