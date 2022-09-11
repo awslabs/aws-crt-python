@@ -112,7 +112,8 @@ class S3Client(NativeResource):
             throughput_target_gbps,
             float) or throughput_target_gbps is None
         assert isinstance(proxy_options, HttpProxyOptions) or proxy_options is None
-        assert isinstance(proxy_environment_variable_setting, HttpProxyEnvironmentVariableSetting) or proxy_environment_variable_setting is None
+        assert isinstance(proxy_environment_variable_setting,
+                          HttpProxyEnvironmentVariableSetting) or proxy_environment_variable_setting is None
         assert isinstance(connect_timeout_ms, int) or connect_timeout_ms is None
         assert isinstance(tcp_keep_alive_options, S3TcpKeepAliveOptions) or tcp_keep_alive_options is None
         assert isinstance(monitoring_options, HttpMonitoringOptions) or monitoring_options is None
@@ -279,6 +280,7 @@ class S3TcpKeepAliveOptions:
         self.keep_alive_interval_sec = keep_alive_interval_sec
         self.keep_alive_timeout_sec = keep_alive_timeout_sec
         self.keep_alive_max_failed_probes = keep_alive_max_failed_probes
+
 
 class S3Request(NativeResource):
     """S3 request
