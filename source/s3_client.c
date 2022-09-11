@@ -140,29 +140,38 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
         }
     }
 
+    struct aws_http_proxy_options proxy_options_storage;
     struct aws_http_proxy_options *proxy_options = NULL;
     if(proxy_options_py != Py_None){
+        proxy_options = &proxy_options_storage;
         if(!aws_py_http_proxy_options_init(proxy_options, proxy_options_py)){
             return NULL;
         }
     }
 
+    struct proxy_env_var_settings proxy_environment_variable_setting_storage;
     struct proxy_env_var_settings *proxy_environment_variable_setting = NULL;
     if(proxy_environment_variable_setting_py != Py_None){
+        proxy_environment_variable_setting = &proxy_environment_variable_setting_storage;
         if(!aws_py_http_proxy_environment_variable_setting_init(proxy_environment_variable_setting, proxy_environment_variable_setting_py)){
             return NULL;
         }
+        fprintf(stderr,"%d",proxy_environment_variable_setting->env_var_type);
     }
 
+    struct aws_http_connection_monitoring_options monitoring_options_storage;
     struct aws_http_connection_monitoring_options *monitoring_options = NULL;
     if(monitoring_options_py != Py_None){
+        monitoring_options = &monitoring_options_storage;
         if(!aws_http_connection_monitoring_options_init(monitoring_options, monitoring_options_py)){
             return NULL;
         }
     }
 
+    struct aws_s3_tcp_keep_alive_options tcp_keep_alive_options_storage;
     struct aws_s3_tcp_keep_alive_options *tcp_keep_alive_options = NULL;
     if(tcp_keep_alive_options_py != Py_None){
+        tcp_keep_alive_options=&tcp_keep_alive_options_storage;
         if(!aws_s3_tcp_keep_alive_options_init(tcp_keep_alive_options, tcp_keep_alive_options_py)){
             return NULL;
         }

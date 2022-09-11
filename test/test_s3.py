@@ -9,9 +9,11 @@ import shutil
 from test import NativeResourceTest
 from concurrent.futures import Future
 
-from awscrt.http import HttpHeaders, HttpRequest, HttpMonitoringOptions
-from awscrt.s3 import S3Client, S3RequestType
-from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions
+from awscrt.http import HttpHeaders, HttpRequest, HttpMonitoringOptions, HttpProxyEnvironmentVariableSetting, \
+    HttpProxyEnvironmentVariableType
+from awscrt.s3 import S3Client, S3RequestType, S3TcpKeepAliveOptions
+from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, \
+    TlsContextOptions
 from awscrt.auth import AwsCredentialsProvider
 
 MB = 1024 ** 2
@@ -69,13 +71,18 @@ class FileCreator(object):
 
 
 def s3_client_new(secure, region, part_size=0):
-
     event_loop_group = EventLoopGroup()
     host_resolver = DefaultHostResolver(event_loop_group)
     bootstrap = ClientBootstrap(event_loop_group, host_resolver)
     credential_provider = AwsCredentialsProvider.new_default_chain(bootstrap)
     tls_option = None
-    monitoring_options = HttpMonitoringOptions(min_throughput_bytes_per_second=10,allowable_throughput_failure_interval_seconds=20)
+    proxy_environment_setting = HttpProxyEnvironmentVariableSetting(
+        proxy_environment_variable_type=HttpProxyEnvironmentVariableType.Enabled)
+    connect_timeout_ms = 1000
+    tcp_keep_alive_options = S3TcpKeepAliveOptions(keep_alive_interval_sec=10, keep_alive_timeout_sec=20,
+                                                   keep_alive_max_failed_probes=30)
+    monitoring_options = HttpMonitoringOptions(min_throughput_bytes_per_second=10,
+                                               allowable_throughput_failure_interval_seconds=20)
     if secure:
         opt = TlsContextOptions()
         ctx = ClientTlsContext(opt)
@@ -86,7 +93,11 @@ def s3_client_new(secure, region, part_size=0):
         region=region,
         credential_provider=credential_provider,
         tls_connection_options=tls_option,
-        part_size=part_size
+        part_size=part_size,
+        proxy_environment_variable_setting=proxy_environment_setting,
+        connect_timeout_ms=connect_timeout_ms,
+        tcp_keep_alive_options=tcp_keep_alive_options,
+        monitoring_options=monitoring_options
     )
 
     return s3_client
@@ -106,10 +117,11 @@ class FakeReadStream(object):
 
 @unittest.skipUnless(os.environ.get('AWS_TEST_S3'), 'set env var to run test: AWS_TEST_S3')
 class S3ClientTest(NativeResourceTest):
+    region = "us-west-2"
+    timeout = 10  # seconds
 
-    def setUp(self):
-        self.region = "us-west-2"
-        self.timeout = 10  # seconds
+    # why in setup it doesn't work?
+    # def setUp(self):
 
     def test_sanity(self):
         s3_client = s3_client_new(False, self.region)

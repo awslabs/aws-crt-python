@@ -259,26 +259,26 @@ class S3TcpKeepAliveOptions:
     """S3TcpKeepAliveOptions options.
 
     Attributes:
-        keep_alive_timeout_secs (int): Duration, in seconds, between keepalive
+        keep_alive_timeout_sec (int): Duration, in seconds, between keepalive
             transmissions in idle condition. If 0, then a default value is used.
-        keep_alive_interval_secs (int): Duration, in seconds, between keepalive
+        keep_alive_interval_sec (int): Duration, in seconds, between keepalive
             retransmissions, if acknowledgement of previous keepalive transmission
             is not received. If 0, then a default value is used.
-        keep_alive_max_probes (int): If set, sets the number of keepalive probes
+        keep_alive_max_failed_probes (int): If set, sets the number of keepalive probes
             allowed to fail before a connection is considered lost.
     """
 
     __slots__ = (
-        'keep_alive_timeout_secs', 'keep_alive_interval_secs', 'keep_alive_max_probes'
+        'keep_alive_timeout_sec', 'keep_alive_interval_sec', 'keep_alive_max_failed_probes'
     )
 
-    def __init__(self):
+    def __init__(self, keep_alive_interval_sec=0, keep_alive_timeout_sec=0, keep_alive_max_failed_probes=0):
         for slot in self.__slots__:
             setattr(self, slot, None)
 
-        self.keep_alive_interval_secs = 0
-        self.keep_alive_timeout_secs = 0
-        self.keep_alive_max_probes = 0
+        self.keep_alive_interval_sec = keep_alive_interval_sec
+        self.keep_alive_timeout_sec = keep_alive_timeout_sec
+        self.keep_alive_max_failed_probes = keep_alive_max_failed_probes
 
 class S3Request(NativeResource):
     """S3 request
