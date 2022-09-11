@@ -132,10 +132,10 @@ uint64_t PyObject_GetAttrAsUint64(PyObject *o, const char *class_name, const cha
         goto done;
     }
 
-    if (val < 0) {
-        PyErr_Format(PyExc_OverflowError, "%s.%s cannot be negative", class_name, attr_name);
-        goto done;
-    }
+    //    if (val < 0) {
+    //        PyErr_Format(PyExc_OverflowError, "%s.%s cannot be negative", class_name, attr_name);
+    //        goto done;
+    //    }
 
     if (val > UINT64_MAX) {
         PyErr_Format(PyExc_OverflowError, "%s.%s too large to convert to C uint64_t", class_name, attr_name);
