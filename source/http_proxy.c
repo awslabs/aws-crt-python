@@ -81,3 +81,36 @@ done:
     }
     return success;
 }
+
+bool aws_py_http_proxy_environment_variable_setting_init(struct proxy_env_var_settings *proxy_options, PyObject *py_proxy_environment_variable_setting) {
+    AWS_ZERO_STRUCT(*proxy_options);
+
+    bool success = false;
+
+    /* These references all need to be cleaned up before function returns */
+    PyObject *py_tls_options = NULL;
+
+    py_tls_options = PyObject_GetAttrString(py_proxy_environment_variable_setting, "tls_connection_options");
+    if (py_tls_options != Py_None) {
+        proxy_options->tls_options = aws_py_get_tls_connection_options(py_tls_options);
+        if (!proxy_options->tls_options) {
+            PyErr_SetString(
+                PyExc_TypeError, "HttpProxyOptions.tls_connection_options is not a valid TlsConnectionOptions");
+            goto done;
+        }
+    }
+    proxy_options->connection_type = PyObject_GetAttrAsIntEnum(py_proxy_environment_variable_setting, "HttpProxyEnvironmentVariableSetting", "connection_type");
+    proxy_options->env_var_type = PyObject_GetAttrAsIntEnum(py_proxy_environment_variable_setting, "HttpProxyEnvironmentVariableSetting", "proxy_environment_variable_type");
+
+    if (PyErr_Occurred()) {
+        goto done;
+    }
+
+    success = true;
+done:
+    Py_XDECREF(py_tls_options);
+    if (!success) {
+        AWS_ZERO_STRUCT(*proxy_options);
+    }
+    return success;
+}

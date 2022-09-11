@@ -9,7 +9,8 @@
 struct aws_http_headers;
 struct aws_http_message;
 struct aws_http_proxy_options;
-
+struct proxy_env_var_settings;
+struct aws_http_connection_monitoring_options;
 /**
  * Init aws_http_proxy_options from HttpProxyOptions.
  * Returns false and sets python exception if error occurred.
@@ -19,6 +20,18 @@ struct aws_http_proxy_options;
  * If we need this struct to be a long-lived object, we'll need to do a full binding.
  */
 bool aws_py_http_proxy_options_init(struct aws_http_proxy_options *proxy_options, PyObject *py_proxy_options);
+
+/**
+ * Init proxy_env_var_settings from HttpProxyEnvironmentVariableSetting.
+ * Returns false and sets python exception if error occurred.
+ */
+bool aws_py_http_proxy_environment_variable_setting_init(struct proxy_env_var_settings *proxy_options, PyObject *py_proxy_environment_variable_setting);
+
+/**
+ * Init aws_http_connection_monitoring_options from HttpMonitoringOptions.
+ * Returns false and sets python exception if error occurred.
+ */
+bool aws_http_connection_monitoring_options_init(struct aws_http_connection_monitoring_options *monitoring_options, PyObject *py_monitoring_options);
 
 /**
  * Close the connection if it's open.

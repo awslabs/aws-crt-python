@@ -9,7 +9,7 @@ import shutil
 from test import NativeResourceTest
 from concurrent.futures import Future
 
-from awscrt.http import HttpHeaders, HttpRequest
+from awscrt.http import HttpHeaders, HttpRequest, HttpMonitoringOptions
 from awscrt.s3 import S3Client, S3RequestType
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions
 from awscrt.auth import AwsCredentialsProvider
@@ -75,6 +75,7 @@ def s3_client_new(secure, region, part_size=0):
     bootstrap = ClientBootstrap(event_loop_group, host_resolver)
     credential_provider = AwsCredentialsProvider.new_default_chain(bootstrap)
     tls_option = None
+    monitoring_options = HttpMonitoringOptions(min_throughput_bytes_per_second=10,allowable_throughput_failure_interval_seconds=20)
     if secure:
         opt = TlsContextOptions()
         ctx = ClientTlsContext(opt)
@@ -85,7 +86,8 @@ def s3_client_new(secure, region, part_size=0):
         region=region,
         credential_provider=credential_provider,
         tls_connection_options=tls_option,
-        part_size=part_size)
+        part_size=part_size
+    )
 
     return s3_client
 

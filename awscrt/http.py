@@ -552,6 +552,19 @@ class HttpProxyConnectionType(IntEnum):
     """Establish a tunneling connection through the proxy to the ultimate endpoint."""
 
 
+class HttpProxyEnvironmentVariableType(IntEnum):
+    """Proxy connection environment variable setting enumeration"""
+    Disabled = 0
+    """
+    Disable reading from environment variable for proxy.
+    """
+
+    Enabled = 1
+    """
+    Enabled reading from environment variable for proxy.
+    """
+
+
 class HttpProxyAuthenticationType(IntEnum):
     """Proxy authentication type enumeration."""
     Nothing = 0
@@ -625,3 +638,63 @@ class HttpProxyOptions:
         self.auth_username = auth_username
         self.auth_password = auth_password
         self.connection_type = connection_type
+
+
+class HttpProxyEnvironmentVariableSetting:
+    """
+    Proxy environment variable setting for HTTP clients.
+
+    Args: connection_type (Optional[HttpProxyEnvironmentVariableType): Enable/Disable reading of proxy configuration
+    from environment. Default is :const:`HttpProxyEnvironmentVariableType.Enabled`.
+
+        tls_connection_options (Optional[TlsConnectionOptions]): Optional
+            `TlsConnectionOptions` for the Local to Proxy connection.
+            Must be distinct from the `TlsConnectionOptions`
+            provided to the HTTP connection.
+
+        connection_type (Optional[HttpProxyConnectionType): Type of proxy connection to make.
+            Default is :const:`HttpProxyConnectionType.Legacy`.
+
+
+    Attributes: proxy_environment_variable_type (HttpProxyEnvironmentVariableType): Enable/Disable reading of proxy
+    configuration from environment.
+
+        tls_connection_options (Optional[TlsConnectionOptions]): Optional
+            `TlsConnectionOptions` for the Local to Proxy connection.
+            Must be distinct from the `TlsConnectionOptions`
+            provided to the HTTP connection.
+
+        connection_type (HttpProxyConnectionType): Type of proxy connection to make.
+
+    """
+
+    def __init__(self,
+                 proxy_environment_variable_type=HttpProxyEnvironmentVariableType.Enabled,
+                 tls_connection_options=None,
+                 connection_type=HttpProxyConnectionType.Legacy):
+        self.proxy_environment_variable_type = proxy_environment_variable_type
+        self.tls_connection_options = tls_connection_options
+        self.connection_type = connection_type
+
+
+class HttpMonitoringOptions:
+    """
+    Monitoring options for HTTP clients.
+
+    Args: min_throughput_bytes_per_second (long): minimum amount of throughput, in bytes per second, for a connection to
+    be considered healthy.
+
+        allowable_throughput_failure_interval_seconds (int): How long, in seconds,
+        a connection is allowed to be unhealthy before getting shut down.  Must be at least two.
+
+    Attributes: min_throughput_bytes_per_second (long)
+
+        allowable_throughput_failure_interval_seconds (int)
+
+    """
+
+    def __init__(self,
+                 min_throughput_bytes_per_second=0,
+                 allowable_throughput_failure_interval_seconds=0):
+        self.min_throughput_bytes_per_second = min_throughput_bytes_per_second
+        self.allowable_throughput_failure_interval_seconds = allowable_throughput_failure_interval_seconds

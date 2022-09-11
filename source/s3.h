@@ -6,6 +6,9 @@
  */
 
 #include "module.h"
+struct aws_s3_tcp_keep_alive_options;
+
+bool aws_s3_tcp_keep_alive_options_init(struct aws_s3_tcp_keep_alive_options *tcp_keep_alive_options, PyObject *py_tcp_keep_alive_options);
 
 PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args);
 PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args);

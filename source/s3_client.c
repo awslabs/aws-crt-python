@@ -6,7 +6,10 @@
 
 #include "auth.h"
 #include "io.h"
+#include "http.h"
 #include <aws/s3/s3_client.h>
+#include <aws/http/proxy.h>
+#include <aws/http/connection.h>
 
 static const char *s_capsule_name_s3_client = "aws_s3_client";
 
@@ -81,9 +84,14 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
     uint64_t part_size = 0;
     double throughput_target_gbps = 0;
     int tls_mode;
+    PyObject *proxy_options_py = NULL;
+    PyObject *proxy_environment_variable_setting_py = NULL;
+    uint64_t connect_timeout_ms = 0;
+    PyObject *tcp_keep_alive_options_py = NULL;
+    PyObject *monitoring_options_py = NULL;
     if (!PyArg_ParseTuple(
             args,
-            "OOOOs#iKdO",
+            "OOOOs#iKdOOiOOO",
             &bootstrap_py,
             &credential_provider_py,
             &tls_options_py,
@@ -93,6 +101,11 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
             &tls_mode,
             &part_size,
             &throughput_target_gbps,
+            &proxy_options_py,
+            &proxy_environment_variable_setting_py,
+            &connect_timeout_ms,
+            &tcp_keep_alive_options_py,
+            &monitoring_options_py,
             &py_core)) {
         return NULL;
     }
@@ -127,6 +140,35 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
         }
     }
 
+    struct aws_http_proxy_options *proxy_options = NULL;
+    if(proxy_options_py != Py_None){
+        if(!aws_py_http_proxy_options_init(proxy_options, proxy_options_py)){
+            return NULL;
+        }
+    }
+
+    struct proxy_env_var_settings *proxy_environment_variable_setting = NULL;
+    if(proxy_environment_variable_setting_py != Py_None){
+        if(!aws_py_http_proxy_environment_variable_setting_init(proxy_environment_variable_setting, proxy_environment_variable_setting_py)){
+            return NULL;
+        }
+    }
+
+    struct aws_http_connection_monitoring_options *monitoring_options = NULL;
+    if(monitoring_options_py != Py_None){
+        if(!aws_http_connection_monitoring_options_init(monitoring_options, monitoring_options_py)){
+            return NULL;
+        }
+    }
+
+    struct aws_s3_tcp_keep_alive_options *tcp_keep_alive_options = NULL;
+    if(tcp_keep_alive_options_py != Py_None){
+        if(!aws_s3_tcp_keep_alive_options_init(tcp_keep_alive_options, tcp_keep_alive_options_py)){
+            return NULL;
+        }
+    }
+
+
     struct s3_client_binding *s3_client = aws_mem_calloc(allocator, 1, sizeof(struct s3_client_binding));
     if (!s3_client) {
         return PyErr_AwsLastError();
@@ -156,6 +198,11 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
         .throughput_target_gbps = throughput_target_gbps,
         .shutdown_callback = s_s3_client_shutdown,
         .shutdown_callback_user_data = s3_client,
+        .proxy_options = proxy_options,
+        .proxy_ev_settings = proxy_environment_variable_setting,
+        .connect_timeout_ms = connect_timeout_ms,
+        .tcp_keep_alive_options = tcp_keep_alive_options,
+        .monitoring_options = monitoring_options,
     };
 
     s3_client->native = aws_s3_client_new(allocator, &s3_config);

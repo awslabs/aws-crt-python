@@ -33,6 +33,7 @@ PyObject *PyUnicode_FromAwsString(const struct aws_string *aws_str);
 
 /* Return the named attribute, converted to the specified type.
  * If conversion cannot occur a python exception is set (check PyExc_Occurred()) */
+uint64_t PyObject_GetAttrAsUint64(PyObject *o, const char *class_name, const char *attr_name);
 uint32_t PyObject_GetAttrAsUint32(PyObject *o, const char *class_name, const char *attr_name);
 uint16_t PyObject_GetAttrAsUint16(PyObject *o, const char *class_name, const char *attr_name);
 bool PyObject_GetAttrAsBool(PyObject *o, const char *class_name, const char *attr_name);
