@@ -5,10 +5,12 @@
 
 #include "auth.h"
 
+#include "http.h"
 #include "io.h"
 
 #include <aws/auth/credentials.h>
 #include <aws/common/string.h>
+#include <aws/http/proxy.h>
 
 static const char *s_capsule_name_credentials = "aws_credentials";
 static const char *s_capsule_name_credentials_provider = "aws_credentials_provider";
@@ -679,10 +681,11 @@ PyObject *aws_py_credentials_provider_new_cognito(PyObject *self, PyObject *args
     AWS_ZERO_STRUCT(custom_role_arn_cursor);
     PyObject *tls_context_py = NULL;
     PyObject *client_bootstrap_py = NULL;
+    PyObject *http_proxy_options_py = NULL;
 
     if (!PyArg_ParseTuple(
             args,
-            "s#s#OOOz#",
+            "s#s#OOOz#O",
             &endpoint_cursor.ptr,
             &endpoint_cursor.len,
             &identity_cursor.ptr,
@@ -691,7 +694,8 @@ PyObject *aws_py_credentials_provider_new_cognito(PyObject *self, PyObject *args
             &client_bootstrap_py,
             &logins_list_py,
             &custom_role_arn_cursor.ptr,
-            &custom_role_arn_cursor.len)) {
+            &custom_role_arn_cursor.len,
+            &http_proxy_options_py)) {
         return NULL;
     }
 
@@ -747,6 +751,15 @@ PyObject *aws_py_credentials_provider_new_cognito(PyObject *self, PyObject *args
         }
     }
 
+    struct aws_http_proxy_options http_proxy_options_storage;
+    struct aws_http_proxy_options *http_proxy_options = NULL;
+    if (http_proxy_options_py != Py_None) {
+        http_proxy_options = &http_proxy_options_storage;
+        if (!aws_py_http_proxy_options_init(http_proxy_options, http_proxy_options_py)) {
+            goto done;
+        }
+    }
+
     struct credentials_provider_binding *binding = NULL;
     capsule = s_new_credentials_provider_binding_and_capsule(&binding);
     if (!capsule) {
@@ -763,6 +776,7 @@ PyObject *aws_py_credentials_provider_new_cognito(PyObject *self, PyObject *args
             },
         .tls_ctx = tls_context,
         .bootstrap = bootstrap,
+        .http_proxy_options = http_proxy_options,
     };
 
     if (logins_count > 0) {

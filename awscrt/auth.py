@@ -314,7 +314,8 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
             tls_ctx,
             logins=None,
             custom_role_arn=None,
-            client_bootstrap=None):
+            client_bootstrap=None,
+            http_proxy_options=None):
         """
         Creates a provider that sources credentials from the AWS Cognito Identity service.
 
@@ -334,6 +335,9 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
             client_bootstrap (Optional[ClientBootstrap]): Client bootstrap to use when initiating socket connection.
                 If not set, uses the static default ClientBootstrap instead.
 
+            http_proxy_options (Optional[HttpProxyOptions]): Optional HTTP proxy options.
+                If None is provided then an HTTP proxy is not used.
+
         Returns:
             AwsCredentialsProvider:
         """
@@ -343,6 +347,7 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
         assert isinstance(tls_ctx, ClientTlsContext)
         assert isinstance(logins, list) or logins is None
         assert isinstance(custom_role_arn, str) or custom_role_arn is None
+        assert isinstance(http_proxy_options, awscrt.http.HttpProxyOptions) or http_proxy_options is None
 
         if client_bootstrap is None:
             client_bootstrap = ClientBootstrap.get_or_create_static_default()
@@ -354,7 +359,8 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
             tls_ctx,
             client_bootstrap,
             logins,
-            custom_role_arn)
+            custom_role_arn,
+            http_proxy_options)
         return cls(binding)
 
     def get_credentials(self):
