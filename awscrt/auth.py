@@ -9,11 +9,10 @@ import _awscrt
 from awscrt import NativeResource
 import awscrt.exceptions
 from awscrt.http import HttpRequest
-from awscrt.io import ClientBootstrap
+from awscrt.io import ClientBootstrap, ClientTlsContext
 from concurrent.futures import Future
 import datetime
 from enum import IntEnum
-
 
 class AwsCredentials(NativeResource):
     """
@@ -304,6 +303,58 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
         assert callable(get_credentials)
 
         binding = _awscrt.credentials_provider_new_delegate(get_credentials)
+        return cls(binding)
+
+    @classmethod
+    def new_cognito(
+            cls,
+            endpoint,
+            identity,
+            tls_ctx,
+            logins=None,
+            custom_role_arn=None,
+            client_bootstrap=None):
+        """
+        Creates a provider that sources credentials from key-value profiles
+        loaded from the aws credentials file.
+
+        Args:
+            endpoint (str): Cognito Identity service regional endpoint to source credentials from.
+
+            identity (str): Cognito identity to fetch credentials relative to.
+
+            tls_ctx (ClientTlsContext): Client TLS context to use when querying cognito credentials by HTTP.
+
+            logins (Optional[List[Tuple[str, str]]]): List of tuples specifying pairs of identity provider name and
+            token values, representing established login contexts for identity authentication purposes
+
+            custom_role_arn (Optional[str]): ARN of the role to be assumed when multiple roles were received in the
+            token from the identity provider.
+
+            client_bootstrap (Optional[ClientBootstrap]): Client bootstrap to use when initiating socket connection.
+                If not set, uses the static default ClientBootstrap instead.
+
+        Returns:
+            AwsCredentialsProvider:
+        """
+
+        assert isinstance(endpoint, str)
+        assert isinstance(identity, str)
+        assert isinstance(tls_ctx, ClientTlsContext)
+        assert isinstance(logins, list) or logins is None
+        assert isinstance(custom_role_arn, str) or custom_role_arn is None
+
+        if client_bootstrap is None:
+            client_bootstrap = ClientBootstrap.get_or_create_static_default()
+        assert isinstance(client_bootstrap, ClientBootstrap)
+
+        binding = _awscrt.credentials_provider_new_cognito(
+            endpoint,
+            identity,
+            tls_ctx,
+            client_bootstrap,
+            logins,
+            custom_role_arn)
         return cls(binding)
 
     def get_credentials(self):

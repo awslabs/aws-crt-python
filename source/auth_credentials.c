@@ -665,3 +665,128 @@ error:
     Py_DECREF(capsule);
     return NULL;
 }
+
+PyObject *aws_py_credentials_provider_new_cognito(PyObject *self, PyObject *args) {
+    (void)self;
+    struct aws_allocator *allocator = aws_py_get_allocator();
+
+    struct aws_byte_cursor endpoint_cursor;
+    AWS_ZERO_STRUCT(endpoint_cursor);
+    struct aws_byte_cursor identity_cursor;
+    AWS_ZERO_STRUCT(identity_cursor);
+    PyObject *logins_list_py = NULL;
+    struct aws_byte_cursor custom_role_arn_cursor;
+    AWS_ZERO_STRUCT(custom_role_arn_cursor);
+    PyObject *tls_context_py = NULL;
+    PyObject *client_bootstrap_py = NULL;
+
+    if (!PyArg_ParseTuple(
+            args,
+            "s#s#OOOz#",
+            &endpoint_cursor.ptr,
+            &endpoint_cursor.len,
+            &identity_cursor.ptr,
+            &identity_cursor.len,
+            &tls_context_py,
+            &client_bootstrap_py,
+            &logins_list_py,
+            &custom_role_arn_cursor.ptr,
+            &custom_role_arn_cursor.len)) {
+        return NULL;
+    }
+
+    struct aws_client_bootstrap *bootstrap = aws_py_get_client_bootstrap(client_bootstrap_py);
+    if (!bootstrap) {
+        return NULL;
+    }
+
+    struct aws_tls_ctx *tls_context = aws_py_get_tls_ctx(tls_context_py);
+    if (!tls_context) {
+        return NULL;
+    }
+
+    /* From hereon, we need to clean up if errors occur.
+     * Fortunately, the capsule destructor will clean up anything stored inside the binding */
+    bool success = false;
+    PyObject *logins_pyseq = NULL;
+    struct aws_cognito_identity_provider_token_pair *logins_carray = NULL;
+    PyObject *capsule = NULL;
+
+    logins_pyseq = PySequence_Fast(logins_list_py, "Expected sequence of login token tuples");
+    if (!logins_pyseq) {
+        goto done;
+    }
+
+    size_t logins_count = (size_t)PySequence_Fast_GET_SIZE(logins_pyseq);
+    if (logins_count > 0) {
+
+        logins_carray =
+            aws_mem_calloc(allocator, logins_count, sizeof(struct aws_cognito_identity_provider_token_pair));
+        if (!logins_carray) {
+            PyErr_SetAwsLastError();
+            goto done;
+        }
+
+        for (size_t i = 0; i < logins_count; ++i) {
+            PyObject *login_tuple_py = PySequence_Fast_GET_ITEM(logins_pyseq, i);
+            struct aws_cognito_identity_provider_token_pair *login_entry = &logins_carray[i];
+            AWS_ZERO_STRUCT(*login_entry);
+
+            if (!PyArg_ParseTuple(
+                    login_tuple_py,
+                    "s#s#",
+                    &login_entry->identity_provider_name.ptr,
+                    &login_entry->identity_provider_name.len,
+                    &login_entry->identity_provider_token.ptr,
+                    &login_entry->identity_provider_token.len)) {
+                goto done;
+            }
+        }
+    }
+
+    struct credentials_provider_binding *binding = NULL;
+    capsule = s_new_credentials_provider_binding_and_capsule(&binding);
+    if (!capsule) {
+        goto done;
+    }
+
+    struct aws_credentials_provider_cognito_options options = {
+        .endpoint = endpoint_cursor,
+        .identity = identity_cursor,
+        .shutdown_options =
+            {
+                .shutdown_callback = s_credentials_provider_shutdown_complete,
+                .shutdown_user_data = binding,
+            },
+        .tls_ctx = tls_context,
+        .bootstrap = bootstrap,
+    };
+
+    if (logins_count > 0) {
+        options.login_count = logins_count;
+        options.logins = logins_carray;
+    }
+
+    if (custom_role_arn_cursor.ptr != NULL) {
+        options.custom_role_arn = &custom_role_arn_cursor;
+    }
+
+    binding->native = aws_credentials_provider_new_cognito(allocator, &options);
+    if (!binding->native) {
+        PyErr_SetAwsLastError();
+        goto done;
+    }
+
+    success = true;
+
+done:
+    Py_XDECREF(logins_pyseq);
+    aws_mem_release(allocator, logins_carray);
+
+    if (success) {
+        return capsule;
+    }
+
+    Py_XDECREF(capsule);
+    return NULL;
+}
