@@ -220,7 +220,9 @@ class TestProvider(NativeResourceTest):
             credentials_future = provider.get_credentials()
             credentials = credentials_future.result(TIMEOUT)
 
-@unittest.skipUnless(os.environ.get('AWS_TESTING_COGNITO_IDENTITY'), 'set env var to run test: AWS_TESTING_COGNITO_IDENTITY')
+
+@unittest.skipUnless(os.environ.get('AWS_TESTING_COGNITO_IDENTITY'),
+                     'set env var to run test: AWS_TESTING_COGNITO_IDENTITY')
 class CognitoCredentialsProviderTest(NativeResourceTest):
 
     def test_unauthenticated(self):
@@ -237,7 +239,6 @@ class CognitoCredentialsProviderTest(NativeResourceTest):
         self.assertIsNotNone(provider)
         credentials = provider.get_credentials().result(TIMEOUT)
         self.assertIsNotNone(credentials)
-
 
 
 class TestSigningConfig(NativeResourceTest):

@@ -14,6 +14,7 @@ from concurrent.futures import Future
 import datetime
 from enum import IntEnum
 
+
 class AwsCredentials(NativeResource):
     """
     AwsCredentials are the public/private data needed to sign an authenticated AWS request.
