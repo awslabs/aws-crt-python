@@ -315,8 +315,7 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
             custom_role_arn=None,
             client_bootstrap=None):
         """
-        Creates a provider that sources credentials from key-value profiles
-        loaded from the aws credentials file.
+        Creates a provider that sources credentials from the AWS Cognito Identity service.
 
         Args:
             endpoint (str): Cognito Identity service regional endpoint to source credentials from.
@@ -326,10 +325,10 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
             tls_ctx (ClientTlsContext): Client TLS context to use when querying cognito credentials by HTTP.
 
             logins (Optional[List[Tuple[str, str]]]): List of tuples specifying pairs of identity provider name and
-            token values, representing established login contexts for identity authentication purposes
+                token values, representing established login contexts for identity authentication purposes
 
             custom_role_arn (Optional[str]): ARN of the role to be assumed when multiple roles were received in the
-            token from the identity provider.
+                token from the identity provider.
 
             client_bootstrap (Optional[ClientBootstrap]): Client bootstrap to use when initiating socket connection.
                 If not set, uses the static default ClientBootstrap instead.

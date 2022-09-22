@@ -711,35 +711,38 @@ PyObject *aws_py_credentials_provider_new_cognito(PyObject *self, PyObject *args
     PyObject *logins_pyseq = NULL;
     struct aws_cognito_identity_provider_token_pair *logins_carray = NULL;
     PyObject *capsule = NULL;
+    size_t logins_count = 0;
 
-    logins_pyseq = PySequence_Fast(logins_list_py, "Expected sequence of login token tuples");
-    if (!logins_pyseq) {
-        goto done;
-    }
-
-    size_t logins_count = (size_t)PySequence_Fast_GET_SIZE(logins_pyseq);
-    if (logins_count > 0) {
-
-        logins_carray =
-            aws_mem_calloc(allocator, logins_count, sizeof(struct aws_cognito_identity_provider_token_pair));
-        if (!logins_carray) {
-            PyErr_SetAwsLastError();
+    if (logins_list_py != Py_None) {
+        logins_pyseq = PySequence_Fast(logins_list_py, "Expected sequence of login token tuples");
+        if (!logins_pyseq) {
             goto done;
         }
 
-        for (size_t i = 0; i < logins_count; ++i) {
-            PyObject *login_tuple_py = PySequence_Fast_GET_ITEM(logins_pyseq, i);
-            struct aws_cognito_identity_provider_token_pair *login_entry = &logins_carray[i];
-            AWS_ZERO_STRUCT(*login_entry);
+        logins_count = (size_t)PySequence_Fast_GET_SIZE(logins_pyseq);
+        if (logins_count > 0) {
 
-            if (!PyArg_ParseTuple(
-                    login_tuple_py,
-                    "s#s#",
-                    &login_entry->identity_provider_name.ptr,
-                    &login_entry->identity_provider_name.len,
-                    &login_entry->identity_provider_token.ptr,
-                    &login_entry->identity_provider_token.len)) {
+            logins_carray =
+                aws_mem_calloc(allocator, logins_count, sizeof(struct aws_cognito_identity_provider_token_pair));
+            if (!logins_carray) {
+                PyErr_SetAwsLastError();
                 goto done;
+            }
+
+            for (size_t i = 0; i < logins_count; ++i) {
+                PyObject *login_tuple_py = PySequence_Fast_GET_ITEM(logins_pyseq, i);
+                struct aws_cognito_identity_provider_token_pair *login_entry = &logins_carray[i];
+                AWS_ZERO_STRUCT(*login_entry);
+
+                if (!PyArg_ParseTuple(
+                        login_tuple_py,
+                        "s#s#",
+                        &login_entry->identity_provider_name.ptr,
+                        &login_entry->identity_provider_name.len,
+                        &login_entry->identity_provider_token.ptr,
+                        &login_entry->identity_provider_token.len)) {
+                    goto done;
+                }
             }
         }
     }
