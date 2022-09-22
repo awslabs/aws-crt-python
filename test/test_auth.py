@@ -240,9 +240,24 @@ class CognitoCredentialsProviderTest(NativeResourceTest):
         credentials = provider.get_credentials().result(TIMEOUT)
         self.assertIsNotNone(credentials)
 
+    def test_maximal_create(self):
+        identity = os.environ.get('AWS_TESTING_COGNITO_IDENTITY')
+        tls_opts = awscrt.io.TlsContextOptions()
+        tls_context = awscrt.io.ClientTlsContext(tls_opts)
 
-@unittest.skipUnless(os.environ.get('AWS_TESTING_COGNITO_IDENTITY') and os.environ.get('AWS_TEST_HTTP_PROXY_HOST') and os.environ.get('AWS_TEST_HTTP_PROXY_PORT'),
-                     'set env var to run test: AWS_TESTING_COGNITO_IDENTITY')
+        provider = awscrt.auth.AwsCredentialsProvider.new_cognito(
+            endpoint="cognito-identity.us-east-1.amazonaws.com",
+            identity=identity,
+            tls_ctx=tls_context,
+            logins=[('provider1', 'token1'), ('provide2', 'token2')],
+            custom_role_arn='not-a-real-arn'
+        )
+
+        self.assertIsNotNone(provider)
+
+
+@unittest.skipUnless(os.environ.get('AWS_TESTING_COGNITO_IDENTITY') and os.environ.get('AWS_TEST_HTTP_PROXY_HOST')
+                     and os.environ.get('AWS_TEST_HTTP_PROXY_PORT'), 'set env var to run test: AWS_TESTING_COGNITO_IDENTITY')
 class CognitoCredentialsProviderProxyTest(NativeResourceTest):
 
     def test_unauthenticated(self):
