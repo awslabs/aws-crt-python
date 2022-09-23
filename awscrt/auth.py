@@ -316,8 +316,8 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
             tls_ctx: awscrt.io.ClientTlsContext,
             logins: Optional[Sequence[Tuple[str, str]]] = None,
             custom_role_arn: Optional[str] = None,
-            client_bootstrap: Optional[awscrt.io.ClientBootstrap] = None,
-            http_proxy_options: Optional[awscrt.http.HttpProxyOptions] = None):
+            client_bootstrap: Optional[ClientBootstrap] = None,
+            http_proxy_options: Optional[HttpProxyOptions] = None):
         """
         Creates a provider that sources credentials from the AWS Cognito Identity service.
 
