@@ -745,6 +745,10 @@ PyObject *aws_py_credentials_provider_new_cognito(PyObject *self, PyObject *args
                         &login_entry->identity_provider_name.len,
                         &login_entry->identity_provider_token.ptr,
                         &login_entry->identity_provider_token.len)) {
+                    PyErr_Format(
+                        PyExc_TypeError,
+                        "cognito credentials provider: logins[%zu] is invalid, should be type (str, str)",
+                        i);
                     goto done;
                 }
             }

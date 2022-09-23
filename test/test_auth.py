@@ -240,6 +240,21 @@ class CognitoCredentialsProviderTest(NativeResourceTest):
         credentials = provider.get_credentials().result(TIMEOUT)
         self.assertIsNotNone(credentials)
 
+    def test_cognito_provider_create_exception_bad_login(self):
+        identity = os.environ.get('AWS_TESTING_COGNITO_IDENTITY')
+        tls_opts = awscrt.io.TlsContextOptions()
+        tls_context = awscrt.io.ClientTlsContext(tls_opts)
+
+        with self.assertRaises(Exception):
+            provider = awscrt.auth.AwsCredentialsProvider.new_cognito(
+                endpoint="cognito-identity.us-east-1.amazonaws.com",
+                identity=identity,
+                tls_ctx=tls_context,
+                logins=[('provider1', 5), ('provider2', ['List not string'])]
+            )
+
+            self.assertIsNone(provider)
+
     def test_maximal_create(self):
         identity = os.environ.get('AWS_TESTING_COGNITO_IDENTITY')
         tls_opts = awscrt.io.TlsContextOptions()
