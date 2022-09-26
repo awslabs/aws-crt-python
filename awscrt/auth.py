@@ -8,11 +8,12 @@ AWS client-side authentication: standard credentials providers and signing.
 import _awscrt
 from awscrt import NativeResource
 import awscrt.exceptions
-from awscrt.http import HttpRequest
-from awscrt.io import ClientBootstrap
+from awscrt.http import HttpRequest, HttpProxyOptions
+from awscrt.io import ClientBootstrap, ClientTlsContext
 from concurrent.futures import Future
 import datetime
 from enum import IntEnum
+from typing import Optional, Sequence, Tuple
 
 
 class AwsCredentials(NativeResource):
@@ -304,6 +305,63 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
         assert callable(get_credentials)
 
         binding = _awscrt.credentials_provider_new_delegate(get_credentials)
+        return cls(binding)
+
+    @classmethod
+    def new_cognito(
+            cls,
+            *,
+            endpoint: str,
+            identity: str,
+            tls_ctx: awscrt.io.ClientTlsContext,
+            logins: Optional[Sequence[Tuple[str, str]]] = None,
+            custom_role_arn: Optional[str] = None,
+            client_bootstrap: Optional[ClientBootstrap] = None,
+            http_proxy_options: Optional[HttpProxyOptions] = None):
+        """
+        Creates a provider that sources credentials from the AWS Cognito Identity service.
+
+        Args:
+            endpoint (str): Cognito Identity service regional endpoint to source credentials from.
+
+            identity (str): Cognito identity to fetch credentials relative to.
+
+            tls_ctx (ClientTlsContext): Client TLS context to use when querying cognito credentials by HTTP.
+
+            logins (Optional[Sequence[tuple[str, str]]]): Sequence of tuples specifying pairs of identity provider name
+                and token values, representing established login contexts for identity authentication purposes.
+
+            custom_role_arn (Optional[str]): ARN of the role to be assumed when multiple roles were received in the
+                token from the identity provider.
+
+            client_bootstrap (Optional[ClientBootstrap]): Client bootstrap to use when initiating a socket connection.
+                If not set, uses the static default ClientBootstrap instead.
+
+            http_proxy_options (Optional[HttpProxyOptions]): Optional HTTP proxy options.
+                If None is provided then an HTTP proxy is not used.
+
+        Returns:
+            AwsCredentialsProvider:
+        """
+
+        assert isinstance(endpoint, str)
+        assert isinstance(identity, str)
+        assert isinstance(tls_ctx, ClientTlsContext)
+        assert isinstance(custom_role_arn, str) or custom_role_arn is None
+        assert isinstance(http_proxy_options, HttpProxyOptions) or http_proxy_options is None
+
+        if client_bootstrap is None:
+            client_bootstrap = ClientBootstrap.get_or_create_static_default()
+        assert isinstance(client_bootstrap, ClientBootstrap)
+
+        binding = _awscrt.credentials_provider_new_cognito(
+            endpoint,
+            identity,
+            tls_ctx,
+            client_bootstrap,
+            logins,
+            custom_role_arn,
+            http_proxy_options)
         return cls(binding)
 
     def get_credentials(self):
