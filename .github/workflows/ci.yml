@@ -50,7 +50,7 @@ jobs:
       fail-fast: false
       matrix:
         image:
-          - rasbian-armv6
+          - raspbian-armv6
         python:
           - cp36-cp36m
           - cp37-cp37m
