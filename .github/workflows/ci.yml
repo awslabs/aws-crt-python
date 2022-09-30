@@ -60,8 +60,8 @@ jobs:
     steps:
     # Only aarch64 needs this, but it doesn't hurt anything
     - name: Install qemu/docker
-      run: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-
+      run: docker run --rm --privileged multiarch/qemu-user-static:register --reset
+      
     - name: Build ${{ env.PACKAGE_NAME }}
       run: |
         aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
