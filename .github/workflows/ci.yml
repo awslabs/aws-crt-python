@@ -50,13 +50,8 @@ jobs:
       fail-fast: false
       matrix:
         image:
-          - raspbian-armv6
-        python:
-          - cp36-cp36m
-          - cp37-cp37m
-          - cp38-cp38
-          - cp39-cp39
-          - cp310-cp310
+          - raspbian-stretch
+          - raspbian-buster
     steps:
     # Only aarch64 needs this, but it doesn't hurt anything
     - name: Install qemu/docker
@@ -67,7 +62,7 @@ jobs:
       run: |
         aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
         ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }}
-
+ 
   # linux-compat:
   #   runs-on: ubuntu-20.04 # latest
   #   strategy:
