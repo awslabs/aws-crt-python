@@ -9,6 +9,13 @@ import re
 import sys
 import tempfile
 
+g_runOnRaspberryPi = False
+try:
+    import RPi.GPIO as gpio
+    g_runOnRaspberryPi = True
+except (ImportError, RuntimeError):
+    g_runOnRaspberryPi = False
+
 
 class InstallPythonReqs(Builder.Action):
     def __init__(self, trust_hosts=False, deps=[], python=sys.executable):
@@ -89,8 +96,11 @@ class SetupForTests(Builder.Action):
 
         print(f"test on platform: '{sys.platform}'")
         # currently, we only support PKCS#11 on unix
-        if sys.platform == 'darwin' or sys.platform == 'win32':
-            print(f"PKCS#11 on '{sys.platform}' is not currently supported. PKCS#11 tests are disabled")
+        if sys.platform == 'darwin' or sys.platform == 'win32' or g_runOnRaspberryPi:
+            if(g_runOnRaspberryPi): 
+                print(f"PKCS#11 on 'Raspberry Pi' is not currently supported. PKCS#11 tests are disabled")
+            else:
+                print(f"PKCS#11 on '{sys.platform}' is not currently supported. PKCS#11 tests are disabled")
             return
 
         # try to install SoftHSM2, so we can run PKCS#11 tests
