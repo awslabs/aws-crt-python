@@ -89,12 +89,12 @@ class SetupForTests(Builder.Action):
         """Attempt to setup for PKCS#11 tests, but bail out if we can't get SoftHSM2 installed"""
 
         # currently, we only support PKCS#11 on unix
-        if sys.platform == 'darwin' or sys.platform == 'win32' or os.uname()[4][:3] == 'arm':
-            # run on arm for Raspberry Pi
-            if os.uname()[4][:3] == 'arm':
-                print(f"PKCS#11 on 'ARM' is not currently supported. PKCS#11 tests are disabled")
-            else:
-                print(f"PKCS#11 on '{sys.platform}' is not currently supported. PKCS#11 tests are disabled")
+        if sys.platform == 'darwin' or sys.platform == 'win32':
+            print(f"PKCS#11 on '{sys.platform}' is not currently supported. PKCS#11 tests are disabled")
+            return
+        # run on arm for Raspberry Pi
+        elif 'linux' in sys.platform and os.uname()[4][:3] == 'arm':
+            print(f"PKCS#11 on 'ARM' is not currently supported. PKCS#11 tests are disabled")
             return
 
         # try to install SoftHSM2, so we can run PKCS#11 tests
