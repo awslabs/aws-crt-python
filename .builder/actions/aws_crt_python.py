@@ -9,14 +9,6 @@ import re
 import sys
 import tempfile
 
-g_runOnRaspberryPi = False
-try:
-    import RPi.GPIO as gpio
-    g_runOnRaspberryPi = True
-except (ImportError, RuntimeError):
-    g_runOnRaspberryPi = False
-    print("Failed to import RPi, currently not running on Raspberry Pi")
-
 
 class InstallPythonReqs(Builder.Action):
     def __init__(self, trust_hosts=False, deps=[], python=sys.executable):
@@ -43,7 +35,7 @@ class InstallPythonReqs(Builder.Action):
 
 class SetupForTests(Builder.Action):
 
-    def run(self, env):
+    def run(self, env, skipPKCS11 = False):
         self.env = env
 
         self._setenv_from_secret('AWS_TEST_IOT_MQTT_ENDPOINT', 'unit-test/endpoint')
@@ -55,7 +47,8 @@ class SetupForTests(Builder.Action):
         # enable S3 tests
         env.shell.setenv('AWS_TEST_S3', '1')
 
-        self._try_setup_pkcs11()
+        if skipPKCS11:
+            self._try_setup_pkcs11()
 
     def _get_secret(self, secret_id):
         """get string from secretsmanager"""
@@ -95,13 +88,9 @@ class SetupForTests(Builder.Action):
     def _try_setup_pkcs11(self):
         """Attempt to setup for PKCS#11 tests, but bail out if we can't get SoftHSM2 installed"""
 
-        print(f"test on platform: '{sys.platform}'")
         # currently, we only support PKCS#11 on unix
-        if sys.platform == 'darwin' or sys.platform == 'win32' or g_runOnRaspberryPi == True:
-            if(g_runOnRaspberryPi == True): 
-                print(f"PKCS#11 on 'Raspberry Pi' is not currently supported. PKCS#11 tests are disabled")
-            else:
-                print(f"PKCS#11 on '{sys.platform}' is not currently supported. PKCS#11 tests are disabled")
+        if sys.platform == 'darwin' or sys.platform == 'win32':
+            print(f"PKCS#11 on '{sys.platform}' is not currently supported. PKCS#11 tests are disabled")
             return
 
         # try to install SoftHSM2, so we can run PKCS#11 tests
@@ -246,10 +235,11 @@ class AWSCrtPython(Builder.Action):
         parser.add_argument('--python')
         args = parser.parse_known_args(env.args.args)[0]
         python = args.python if args.python else sys.executable
+        parser.add_argument('--skipPKCS11')
 
         actions = [
             InstallPythonReqs(deps=[], python=python),
-            SetupForTests(),
+            SetupForTests(skipPKCS11 = args.skipPKCS11 is not None),
             [python, '-m', 'pip', 'install', '--verbose', '.'],
             # "--failfast" because, given how our leak-detection in tests currently works,
             # once one test fails all the rest usually fail too.
