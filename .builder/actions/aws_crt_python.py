@@ -89,10 +89,10 @@ class SetupForTests(Builder.Action):
         """Attempt to setup for PKCS#11 tests, but bail out if we can't get SoftHSM2 installed"""
 
         # currently, we only support PKCS#11 on unix
-        if sys.platform == 'darwin' or sys.platform == 'win32' or os.uname()[4][:3]=='arm':
-            if os.uname()[4][:3] == 'arm':  
+        if sys.platform == 'darwin' or sys.platform == 'win32' or os.uname()[4][:3] == 'arm':
+            if os.uname()[4][:3] == 'arm':
                 print(f"PKCS#11 on 'ARM' is not currently supported. PKCS#11 tests are disabled")
-            else:              
+            else:
                 print(f"PKCS#11 on '{sys.platform}' is not currently supported. PKCS#11 tests are disabled")
             return
 
@@ -236,7 +236,7 @@ class AWSCrtPython(Builder.Action):
         # allow custom python to be used
         parser = argparse.ArgumentParser()
         parser.add_argument('--python')
-        args = parser.parse_known_args(env.args.args)
+        args = parser.parse_known_args(env.args.args)[0]
         python = args.python if args.python else sys.executable
 
         actions = [
