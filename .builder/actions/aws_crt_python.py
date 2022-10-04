@@ -15,6 +15,7 @@ try:
     g_runOnRaspberryPi = True
 except (ImportError, RuntimeError):
     g_runOnRaspberryPi = False
+    print("Failed to import RPi, currently not running on Raspberry Pi")
 
 
 class InstallPythonReqs(Builder.Action):
@@ -96,8 +97,8 @@ class SetupForTests(Builder.Action):
 
         print(f"test on platform: '{sys.platform}'")
         # currently, we only support PKCS#11 on unix
-        if sys.platform == 'darwin' or sys.platform == 'win32' or g_runOnRaspberryPi:
-            if(g_runOnRaspberryPi): 
+        if sys.platform == 'darwin' or sys.platform == 'win32' or g_runOnRaspberryPi == True:
+            if(g_runOnRaspberryPi == True): 
                 print(f"PKCS#11 on 'Raspberry Pi' is not currently supported. PKCS#11 tests are disabled")
             else:
                 print(f"PKCS#11 on '{sys.platform}' is not currently supported. PKCS#11 tests are disabled")
