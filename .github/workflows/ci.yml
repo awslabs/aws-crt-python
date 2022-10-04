@@ -19,30 +19,30 @@ env:
   AWS_REGION: us-east-1
 
 jobs:
-  # manylinux2014:
-  #   runs-on: ubuntu-20.04 # latest
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       image:
-  #         - x64
-  #         - x86
-  #         - aarch64
-  #       python:
-  #         - cp36-cp36m
-  #         - cp37-cp37m
-  #         - cp38-cp38
-  #         - cp39-cp39
-  #         - cp310-cp310
-  #   steps:
-  #   # Only aarch64 needs this, but it doesn't hurt anything
-  #   - name: Install qemu/docker
-  #     run: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+  manylinux2014:
+    runs-on: ubuntu-20.04 # latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - x64
+          - x86
+          - aarch64
+        python:
+          - cp36-cp36m
+          - cp37-cp37m
+          - cp38-cp38
+          - cp39-cp39
+          - cp310-cp310
+    steps:
+    # Only aarch64 needs this, but it doesn't hurt anything
+    - name: Install qemu/docker
+      run: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 
-  #   - name: Build ${{ env.PACKAGE_NAME }}
-  #     run: |
-  #       aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
-  #       ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-manylinux2014-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }} --python /opt/python/${{ matrix.python }}/bin/python
+    - name: Build ${{ env.PACKAGE_NAME }}
+      run: |
+        aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
+        ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-manylinux2014-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }} --python /opt/python/${{ matrix.python }}/bin/python
 
   raspberry:
     runs-on: ubuntu-20.04 # latest
@@ -50,130 +50,128 @@ jobs:
       fail-fast: false
       matrix:
         image:
-          - raspbian-stretch
           - raspbian-buster
           - raspbian-bullseye
     steps:
-    # Only aarch64 needs this, but it doesn't hurt anything
+    # set arm arch
     - name: Install qemu/docker
       run: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-           #docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-           
+
     - name: Build ${{ env.PACKAGE_NAME }}
       run: |
         aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
-        ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }} --skipPKCS11
+        ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }}
  
-  # linux-compat:
-  #   runs-on: ubuntu-20.04 # latest
-  #   strategy:
-  #     matrix:
-  #       image:
-  #         - al2-x64
-  #         - fedora-34-x64
-  #         - opensuse-leap
-  #         - rhel8-x64
-  #   steps:
-  #       # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
-  #   - name: Build ${{ env.PACKAGE_NAME }}
-  #     run: |
-  #       aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
-  #       ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }}
+  linux-compat:
+    runs-on: ubuntu-20.04 # latest
+    strategy:
+      matrix:
+        image:
+          - al2-x64
+          - fedora-34-x64
+          - opensuse-leap
+          - rhel8-x64
+    steps:
+        # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
+    - name: Build ${{ env.PACKAGE_NAME }}
+      run: |
+        aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
+        ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }}
 
-  # linux-compiler-compat:
-  #   runs-on: ubuntu-20.04 # latest
-  #   strategy:
-  #     matrix:
-  #       compiler:
-  #         - clang-3
-  #         - clang-6
-  #         - clang-8
-  #         - clang-9
-  #         - clang-10
-  #         - clang-11
-  #         - gcc-5
-  #         - gcc-6
-  #         - gcc-7
-  #         - gcc-8
-  #   steps:
-  #     # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
-  #     - name: Build ${{ env.PACKAGE_NAME }}
-  #       run: |
-  #         aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
-  #         ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-${{ env.LINUX_BASE_IMAGE }} build -p ${{ env.PACKAGE_NAME }} --compiler=${{ matrix.compiler }}
+  linux-compiler-compat:
+    runs-on: ubuntu-20.04 # latest
+    strategy:
+      matrix:
+        compiler:
+          - clang-3
+          - clang-6
+          - clang-8
+          - clang-9
+          - clang-10
+          - clang-11
+          - gcc-5
+          - gcc-6
+          - gcc-7
+          - gcc-8
+    steps:
+      # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
+      - name: Build ${{ env.PACKAGE_NAME }}
+        run: |
+          aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
+          ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-${{ env.LINUX_BASE_IMAGE }} build -p ${{ env.PACKAGE_NAME }} --compiler=${{ matrix.compiler }}
 
-  # windows:
-  #   runs-on: windows-2022 # latest
-  #   strategy:
-  #     matrix:
-  #       arch: [x86, x64]
-  #   steps:
-  #   - name: Build ${{ env.PACKAGE_NAME }} + consumers
-  #     run: |
-  #       python -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder.pyz')"
-  #       python builder.pyz build -p ${{ env.PACKAGE_NAME }} --python "C:\\hostedtoolcache\\windows\\Python\\3.7.9\\${{ matrix.arch }}\\python.exe"
+  windows:
+    runs-on: windows-2022 # latest
+    strategy:
+      matrix:
+        arch: [x86, x64]
+    steps:
+    - name: Build ${{ env.PACKAGE_NAME }} + consumers
+      run: |
+        python -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder.pyz')"
+        python builder.pyz build -p ${{ env.PACKAGE_NAME }} --python "C:\\hostedtoolcache\\windows\\Python\\3.7.9\\${{ matrix.arch }}\\python.exe"
 
-  # osx:
-  #   runs-on: macos-11 # latest
-  #   steps:
-  #   - name: Build ${{ env.PACKAGE_NAME }} + consumers
-  #     run: |
-  #       python3 -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder')"
-  #       chmod a+x builder
-  #       ./builder build -p ${{ env.PACKAGE_NAME }}
+  osx:
+    runs-on: macos-11 # latest
+    steps:
+    - name: Build ${{ env.PACKAGE_NAME }} + consumers
+      run: |
+        python3 -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder')"
+        chmod a+x builder
+        ./builder build -p ${{ env.PACKAGE_NAME }}
 
-  # # check that tests requiring custom env-vars or AWS credentials are simply skipped
-  # tests-ok-without-env-vars:
-  #   runs-on: ubuntu-20.04 # latest
-  #   steps:
-  #     - uses: actions/checkout@v2
-  #       with:
-  #         submodules: true
-  #     - name: Run tests without env-vars or AWS creds
-  #       env:
-  #         # unset env-vars that provide AWS credentials
-  #         AWS_ACCESS_KEY_ID:
-  #         AWS_SECRET_ACCESS_KEY:
-  #         AWS_DEFAULT_REGION:
-  #       run: |
-  #         python3 -m pip install . --verbose
-  #         python3 -m unittest discover --failfast --verbose
+  # check that tests requiring custom env-vars or AWS credentials are simply skipped
+  tests-ok-without-env-vars:
+    runs-on: ubuntu-20.04 # latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+      - name: Run tests without env-vars or AWS creds
+        env:
+          # unset env-vars that provide AWS credentials
+          AWS_ACCESS_KEY_ID:
+          AWS_SECRET_ACCESS_KEY:
+          AWS_DEFAULT_REGION:
+        run: |
+          python3 -m pip install . --verbose
+          python3 -m unittest discover --failfast --verbose
 
-  # package-source:
-  #   runs-on: ubuntu-20.04 # latest
-  #   steps:
-  #     - uses: actions/checkout@v2
-  #       with:
-  #         submodules: true
-  #     - name: Package source + install
-  #       run: |
-  #         python3 setup.py sdist
-  #         cd dist
-  #         python3 -m pip install -v awscrt-1.0.0.dev0.tar.gz
-  #         python3 -c "import awscrt.io"
+  package-source:
+    runs-on: ubuntu-20.04 # latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+      - name: Package source + install
+        run: |
+          python3 setup.py sdist
+          cd dist
+          python3 -m pip install -v awscrt-1.0.0.dev0.tar.gz
+          python3 -c "import awscrt.io"
 
-  # # check that docs can still build
-  # check-docs:
-  #   runs-on: ubuntu-20.04 # latest
-  #   steps:
-  #     - uses: actions/checkout@v2
-  #       with:
-  #         submodules: true
-  #     - name: Check docs
-  #       run: |
-  #         python3 -m pip install sphinx
-  #         python3 -m pip install --verbose .
-  #         ./scripts/make-docs.sh
+  # check that docs can still build
+  check-docs:
+    runs-on: ubuntu-20.04 # latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+      - name: Check docs
+        run: |
+          python3 -m pip install sphinx
+          python3 -m pip install --verbose .
+          ./scripts/make-docs.sh
 
-  # check-submodules:
-  #   runs-on: ubuntu-20.04 # latest
-  #   steps:
-  #   - name: Checkout Source
-  #     uses: actions/checkout@v2
-  #     with:
-  #       submodules: true
-  #       fetch-depth: 0
-  #   - name: Check Submodules
-  #     # note: using "@main" because "@${{env.BUILDER_VERSION}}" doesn't work
-  #     # https://github.com/actions/runner/issues/480
-  #     uses: awslabs/aws-crt-builder/.github/actions/check-submodules@main
+  check-submodules:
+    runs-on: ubuntu-20.04 # latest
+    steps:
+    - name: Checkout Source
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+        fetch-depth: 0
+    - name: Check Submodules
+      # note: using "@main" because "@${{env.BUILDER_VERSION}}" doesn't work
+      # https://github.com/actions/runner/issues/480
+      uses: awslabs/aws-crt-builder/.github/actions/check-submodules@main
