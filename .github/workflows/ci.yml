@@ -52,6 +52,7 @@ jobs:
         image:
           - raspbian-stretch
           - raspbian-buster
+          - raspbian-bullseye
     steps:
     # Only aarch64 needs this, but it doesn't hurt anything
     - name: Install qemu/docker
