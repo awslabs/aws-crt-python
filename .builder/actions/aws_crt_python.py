@@ -87,6 +87,7 @@ class SetupForTests(Builder.Action):
     def _try_setup_pkcs11(self):
         """Attempt to setup for PKCS#11 tests, but bail out if we can't get SoftHSM2 installed"""
 
+        print(f"test on platform: '{sys.platform}'")
         # currently, we only support PKCS#11 on unix
         if sys.platform == 'darwin' or sys.platform == 'win32':
             print(f"PKCS#11 on '{sys.platform}' is not currently supported. PKCS#11 tests are disabled")
