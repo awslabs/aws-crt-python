@@ -234,7 +234,7 @@ class AWSCrtPython(Builder.Action):
         parser = argparse.ArgumentParser()
         parser.add_argument('--python')
         parser.add_argument('--skipPKCS11')
-        args = parser.parse_known_args(env.args.args)[0]
+        args = parser.parse_known_args(env.args.args)
         python = args.python if args.python else sys.executable
 
         actions = [
