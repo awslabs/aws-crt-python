@@ -3,6 +3,7 @@ import Builder
 import argparse
 import json
 import os.path
+import os
 import pathlib
 import subprocess
 import re
@@ -35,7 +36,7 @@ class InstallPythonReqs(Builder.Action):
 
 class SetupForTests(Builder.Action):
 
-    def run(self, env, skipPKCS11 = False):
+    def run(self, env):
         self.env = env
 
         self._setenv_from_secret('AWS_TEST_IOT_MQTT_ENDPOINT', 'unit-test/endpoint')
@@ -47,8 +48,7 @@ class SetupForTests(Builder.Action):
         # enable S3 tests
         env.shell.setenv('AWS_TEST_S3', '1')
 
-        if skipPKCS11:
-            self._try_setup_pkcs11()
+        self._try_setup_pkcs11()
 
     def _get_secret(self, secret_id):
         """get string from secretsmanager"""
@@ -89,8 +89,11 @@ class SetupForTests(Builder.Action):
         """Attempt to setup for PKCS#11 tests, but bail out if we can't get SoftHSM2 installed"""
 
         # currently, we only support PKCS#11 on unix
-        if sys.platform == 'darwin' or sys.platform == 'win32':
-            print(f"PKCS#11 on '{sys.platform}' is not currently supported. PKCS#11 tests are disabled")
+        if sys.platform == 'darwin' or sys.platform == 'win32' or os.uname()[4][:3]=='arm':
+            if os.uname()[4][:3] == 'arm':  
+                print(f"PKCS#11 on 'ARM' is not currently supported. PKCS#11 tests are disabled")
+            else:              
+                print(f"PKCS#11 on '{sys.platform}' is not currently supported. PKCS#11 tests are disabled")
             return
 
         # try to install SoftHSM2, so we can run PKCS#11 tests
@@ -233,13 +236,12 @@ class AWSCrtPython(Builder.Action):
         # allow custom python to be used
         parser = argparse.ArgumentParser()
         parser.add_argument('--python')
-        parser.add_argument('--skipPKCS11')
         args = parser.parse_known_args(env.args.args)
         python = args.python if args.python else sys.executable
 
         actions = [
             InstallPythonReqs(deps=[], python=python),
-            SetupForTests(skipPKCS11 = args.skipPKCS11 is not None),
+            SetupForTests(),
             [python, '-m', 'pip', 'install', '--verbose', '.'],
             # "--failfast" because, given how our leak-detection in tests currently works,
             # once one test fails all the rest usually fail too.
