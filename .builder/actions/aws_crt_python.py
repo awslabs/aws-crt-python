@@ -90,6 +90,7 @@ class SetupForTests(Builder.Action):
 
         # currently, we only support PKCS#11 on unix
         if sys.platform == 'darwin' or sys.platform == 'win32' or os.uname()[4][:3] == 'arm':
+            # run on arm for Raspberry Pi
             if os.uname()[4][:3] == 'arm':
                 print(f"PKCS#11 on 'ARM' is not currently supported. PKCS#11 tests are disabled")
             else:
