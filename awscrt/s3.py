@@ -8,7 +8,7 @@ S3 client
 import _awscrt
 from concurrent.futures import Future
 from awscrt import NativeResource
-from awscrt.http import HttpRequest
+from awscrt.http import HttpRequest, HttpProxyEnvironmentVariableSetting, HttpProxyOptions, HttpMonitoringOptions
 from awscrt.io import ClientBootstrap, TlsConnectionOptions
 from awscrt.auth import AwsCredentialsProvider
 import awscrt.exceptions
@@ -94,7 +94,13 @@ class S3Client(NativeResource):
             credential_provider=None,
             tls_connection_options=None,
             part_size=None,
-            throughput_target_gbps=None):
+            throughput_target_gbps=None,
+            proxy_options=None,
+            proxy_environment_variable_setting=None,
+            connect_timeout_ms=0,
+            tcp_keep_alive_options=None,
+            monitoring_options=None
+    ):
         assert isinstance(bootstrap, ClientBootstrap) or bootstrap is None
         assert isinstance(region, str)
         assert isinstance(credential_provider, AwsCredentialsProvider) or credential_provider is None
@@ -105,6 +111,12 @@ class S3Client(NativeResource):
             int) or isinstance(
             throughput_target_gbps,
             float) or throughput_target_gbps is None
+        assert isinstance(proxy_options, HttpProxyOptions) or proxy_options is None
+        assert isinstance(proxy_environment_variable_setting,
+                          HttpProxyEnvironmentVariableSetting) or proxy_environment_variable_setting is None
+        assert isinstance(connect_timeout_ms, int) or connect_timeout_ms is None
+        assert isinstance(tcp_keep_alive_options, S3TcpKeepAliveOptions) or tcp_keep_alive_options is None
+        assert isinstance(monitoring_options, HttpMonitoringOptions) or monitoring_options is None
 
         super().__init__()
 
@@ -136,6 +148,11 @@ class S3Client(NativeResource):
             tls_mode,
             part_size,
             throughput_target_gbps,
+            proxy_options,
+            proxy_environment_variable_setting,
+            connect_timeout_ms,
+            tcp_keep_alive_options,
+            monitoring_options,
             s3_client_core)
 
     def make_request(
@@ -237,6 +254,32 @@ class S3Client(NativeResource):
             on_done=on_done,
             on_progress=on_progress,
             region=self._region)
+
+
+class S3TcpKeepAliveOptions:
+    """S3TcpKeepAliveOptions options.
+
+    Attributes:
+        keep_alive_timeout_sec (int): Duration, in seconds, between keepalive
+            transmissions in idle condition. If 0, then a default value is used.
+        keep_alive_interval_sec (int): Duration, in seconds, between keepalive
+            retransmissions, if acknowledgement of previous keepalive transmission
+            is not received. If 0, then a default value is used.
+        keep_alive_max_failed_probes (int): If set, sets the number of keepalive probes
+            allowed to fail before a connection is considered lost.
+    """
+
+    __slots__ = (
+        'keep_alive_timeout_sec', 'keep_alive_interval_sec', 'keep_alive_max_failed_probes'
+    )
+
+    def __init__(self, keep_alive_interval_sec=0, keep_alive_timeout_sec=0, keep_alive_max_failed_probes=0):
+        for slot in self.__slots__:
+            setattr(self, slot, None)
+
+        self.keep_alive_interval_sec = keep_alive_interval_sec
+        self.keep_alive_timeout_sec = keep_alive_timeout_sec
+        self.keep_alive_max_failed_probes = keep_alive_max_failed_probes
 
 
 class S3Request(NativeResource):
