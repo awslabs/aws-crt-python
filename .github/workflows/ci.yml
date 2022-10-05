@@ -50,7 +50,6 @@ jobs:
       fail-fast: false
       matrix:
         image:
-          - raspbian-buster
           - raspbian-bullseye
     steps:
     # set arm arch
