@@ -15,8 +15,4 @@ python3.8 setup.py sdist bdist_wheel
 
 python3.10 setup.py sdist bdist_wheel
 
-
-rm dist/*.whl
-cp -rv wheelhouse/* dist/
-
 #now you just need to run twine (that's in a different script)
