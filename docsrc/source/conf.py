@@ -48,6 +48,10 @@ autodoc_member_order = 'bysource'
 # without this, we ge a lot of empty "Returns:" lines because we only commented the type.
 napoleon_use_rtype = False
 
+# A string that determines how domain objects (e.g. functions, classes, 
+# attributes, etc.) are displayed in their table of contents entry.
+toc_object_entries_show_parents = 'hide'
+
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
@@ -55,10 +59,16 @@ napoleon_use_rtype = False
 #
 html_theme = 'bizstyle'
 
+html_theme_options = {
+    'sidebarwidth': 300
+}
+
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+html_style = 'css/custom.css'
 
 # For cross-linking to types from other libraries
 intersphinx_mapping = {
