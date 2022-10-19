@@ -2,7 +2,7 @@
 #run build-wheels script in manylinux2014 docker image
 set -ex
 
-DOCKER_IMAGE=123124136734.dkr.ecr.us-east-1.amazonaws.com/raspbian-bullseye-arm7l:latest
+DOCKER_IMAGE=123124136734.dkr.ecr.us-east-1.amazonaws.com/raspbian-bullseye-armv7l:latest
 
 $(aws --region us-east-1 ecr get-login --no-include-email)
 
