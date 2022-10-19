@@ -320,7 +320,7 @@ def awscrt_ext():
 
     if distutils.ccompiler.get_default_compiler() != 'msvc':
         extra_compile_args += ['-Wextra', '-Werror', '-Wno-strict-aliasing', '-std=gnu99']
-        extra_link_args += ['-Wl,-fatal_warnings']
+        extra_link_args += ['-Wl,-fatal-warnings']
 
     return setuptools.Extension(
         '_awscrt',
