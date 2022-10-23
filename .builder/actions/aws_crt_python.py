@@ -40,6 +40,7 @@ class SetupForTests(Builder.Action):
         self.env = env
 
         self._setenv_from_secret('AWS_TEST_IOT_MQTT_ENDPOINT', 'unit-test/endpoint')
+        self._setenv_from_secret('AWS_TESTING_COGNITO_IDENTITY', 'aws-c-auth-testing/cognito-identity')
 
         self._setenv_tmpfile_from_secret('AWS_TEST_TLS_CERT_PATH', 'unit-test/certificate', 'certificate.pem')
         self._setenv_tmpfile_from_secret('AWS_TEST_TLS_KEY_PATH', 'unit-test/privatekey', 'privatekey.pem')
