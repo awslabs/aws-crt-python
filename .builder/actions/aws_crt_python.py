@@ -233,7 +233,7 @@ class AWSCrtPython(Builder.Action):
         parser = argparse.ArgumentParser()
         parser.add_argument('--python')
         args = parser.parse_known_args(env.args.args)[0]
-        python = args.python if args.python else sys.executable
+        python = args.python if args.python else "{python}"
 
         actions = [
             InstallPythonReqs(deps=[], python=python),
