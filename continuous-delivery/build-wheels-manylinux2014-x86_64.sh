@@ -4,9 +4,6 @@ set -ex
 
 /opt/python/cp39-cp39/bin/python ./continuous-delivery/update-version.py
 
-/opt/python/cp36-cp36m/bin/python setup.py sdist bdist_wheel
-auditwheel repair --plat manylinux2014_x86_64 dist/awscrt-*cp36*.whl
-
 /opt/python/cp37-cp37m/bin/python setup.py sdist bdist_wheel
 auditwheel repair --plat manylinux2014_x86_64 dist/awscrt-*cp37*.whl
 
@@ -18,6 +15,9 @@ auditwheel repair --plat manylinux2014_x86_64 dist/awscrt-*cp39*.whl
 
 /opt/python/cp310-cp310/bin/python setup.py sdist bdist_wheel
 auditwheel repair --plat manylinux2014_x86_64 dist/awscrt-*cp310*.whl
+
+/opt/python/cp311-cp311/bin/python setup.py sdist bdist_wheel
+auditwheel repair --plat manylinux2014_x86_64 dist/awscrt-*cp311*.whl
 
 rm dist/*.whl
 cp -rv wheelhouse/* dist/

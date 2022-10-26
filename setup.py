@@ -362,7 +362,7 @@ setuptools.setup(
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: OS Independent",
     ],
-    python_requires='>=3.6',
+    python_requires='>=3.7',
     ext_modules=[awscrt_ext()],
     cmdclass={'build_ext': awscrt_build_ext},
     test_suite='test',

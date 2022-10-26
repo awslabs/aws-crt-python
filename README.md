@@ -12,7 +12,7 @@ Python 3 bindings for the AWS Common Runtime.
 This library is licensed under the Apache 2.0 License.
 
 ## Minimum Requirements:
-*   Python 3.6+
+*   Python 3.7+
 
 ## Installation
 

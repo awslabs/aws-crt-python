@@ -10,9 +10,12 @@ import re
 import sys
 import tempfile
 
+# Fall back on using the "{python}" builder variable
+PYTHON_DEFAULT = '{python}'
+
 
 class InstallPythonReqs(Builder.Action):
-    def __init__(self, trust_hosts=False, deps=[], python=sys.executable):
+    def __init__(self, trust_hosts=False, deps=[], python=PYTHON_DEFAULT):
         self.trust_hosts = trust_hosts
         self.core = ('pip', 'setuptools', 'wheel')
         self.deps = deps
@@ -238,7 +241,7 @@ class AWSCrtPython(Builder.Action):
         parser = argparse.ArgumentParser()
         parser.add_argument('--python')
         args = parser.parse_known_args(env.args.args)[0]
-        python = args.python if args.python else sys.executable
+        python = args.python if args.python else PYTHON_DEFAULT
 
         actions = [
             InstallPythonReqs(deps=[], python=python),
