@@ -13,6 +13,7 @@ import tempfile
 # (I.e. run builder with --python=/opt/python/cp310-cp310/bin/python)
 PYTHON_EXECUTABLE = '{python}'
 
+
 class InstallPythonReqs(Builder.Action):
     def __init__(self, trust_hosts=False, deps=[]):
         self.trust_hosts = trust_hosts
