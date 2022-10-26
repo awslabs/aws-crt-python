@@ -10,16 +10,16 @@ import re
 import sys
 import tempfile
 
-# Use the "{python}" builder variable, so that it can be customized.
-# (I.e. run builder with --python=/opt/python/cp310-cp310/bin/python)
-PYTHON_EXECUTABLE = '{python}'
+# Fall back on using the "{python}" builder variable
+PYTHON_DEFAULT = '{python}'
 
 
 class InstallPythonReqs(Builder.Action):
-    def __init__(self, trust_hosts=False, deps=[]):
+    def __init__(self, trust_hosts=False, deps=[], python=PYTHON_DEFAULT):
         self.trust_hosts = trust_hosts
         self.core = ('pip', 'setuptools', 'wheel')
         self.deps = deps
+        self.python = python
 
     def run(self, env):
         trusted_hosts = []
@@ -32,7 +32,7 @@ class InstallPythonReqs(Builder.Action):
         steps = []
         for deps in (self.core, self.deps):
             if deps:
-                steps.append([PYTHON_EXECUTABLE, '-m', 'pip', 'install', '--upgrade', *trusted_hosts, *deps])
+                steps.append([self.python, '-m', 'pip', 'install', '--upgrade', *trusted_hosts, *deps])
 
         return Builder.Script(steps, name='install-python-reqs')
 
@@ -237,16 +237,22 @@ class SetupForTests(Builder.Action):
 class AWSCrtPython(Builder.Action):
 
     def run(self, env):
+        # allow custom python to be used
+        parser = argparse.ArgumentParser()
+        parser.add_argument('--python')
+        args = parser.parse_known_args(env.args.args)[0]
+        python = args.python if args.python else PYTHON_DEFAULT
+
         actions = [
-            InstallPythonReqs(deps=[]),
+            InstallPythonReqs(deps=[], python=python),
             SetupForTests(),
-            [PYTHON_EXECUTABLE, '-m', 'pip', 'install', '--verbose', '.'],
+            [python, '-m', 'pip', 'install', '--verbose', '.'],
             # "--failfast" because, given how our leak-detection in tests currently works,
             # once one test fails all the rest usually fail too.
-            [PYTHON_EXECUTABLE, '-m', 'unittest', 'discover', '--verbose', '--failfast'],
+            [python, '-m', 'unittest', 'discover', '--verbose', '--failfast'],
             # http_client_test.py launches external processes using the extra args
-            [PYTHON_EXECUTABLE, 'crt/aws-c-http/integration-testing/http_client_test.py',
-                PYTHON_EXECUTABLE, 'elasticurl.py'],
+            [python, 'crt/aws-c-http/integration-testing/http_client_test.py',
+                python, 'elasticurl.py'],
         ]
 
         return Builder.Script(actions, name='aws-crt-python')
