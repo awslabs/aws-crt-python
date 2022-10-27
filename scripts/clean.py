@@ -17,7 +17,7 @@ NONRECURSIVE_PATTERNS = [
 # recurse through subfolders and apply these patterns
 RECURSIVE_PATTERNS = [
     '*.pyc',
-    '__pycache__/'
+    '__pycache__'
 ]
 
 # approved list of folders

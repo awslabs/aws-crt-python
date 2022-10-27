@@ -8,8 +8,11 @@ $(aws --region us-east-1 ecr get-login --no-include-email)
 
 docker pull $DOCKER_IMAGE
 
+# NOTE: run as current user to avoid git "dubious ownership" error,
+# and so that output artifacts don't belong to "root"
 docker run --rm \
     --mount type=bind,source=`pwd`,target=/aws-crt-python \
+    --user "$(id -u):$(id -g)" \
     --workdir /aws-crt-python \
     --entrypoint /bin/bash \
     $DOCKER_IMAGE \

@@ -1,7 +1,7 @@
 #!/bin/bash
 #before running this, you'll need cmake3 and a compiler. These python versions are just
 #using the default python installers from python.org. Each version needs updated pip, wheel, and setuptools
-set -e
+set -ex
 
 /Library/Frameworks/Python.framework/Versions/3.9/bin/python3 ./continuous-delivery/update-version.py
 
