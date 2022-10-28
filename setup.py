@@ -24,6 +24,10 @@ def is_32bit():
     return is_64bit() == False
 
 
+def is_dev_build():
+    return 'develop' in sys.argv
+
+
 def run_cmd(args):
     print('>', subprocess.list2cmdline(args))
     subprocess.check_call(args)
@@ -37,8 +41,8 @@ def copy_tree(src, dst):
         shutil.copytree(src, dst)
 
 
-def is_building_macos_universal2():
-    """Return whether extension will be built as an Apple universal binary (works on both x86_64 and arm64)"""
+def is_macos_universal2():
+    """Return whether extension should build as an Apple universal binary (works on both x86_64 and arm64)"""
     if not sys.platform == 'darwin':
         return False
 
@@ -218,7 +222,7 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
         run_cmd(build_cmd)
 
     def _build_dependency(self, aws_lib, build_dir, install_path):
-        if is_building_macos_universal2():
+        if is_macos_universal2() and not is_dev_build():
             # create macOS universal binary by compiling for x86_64 and arm64,
             # each in its own subfolder, and then creating a universal binary
             # by gluing the two together using `lipo`.
@@ -226,6 +230,9 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
             # The AWS C libs don't support building for multiple architectures
             # simultaneously (too much confusion at cmake configure time).
             # So we build each architecture one at a time.
+            #
+            # BUT skip this for dev builds. Building everything twice takes
+            # too long and dev builds only ever run on the host machine.
 
             # x86_64
             self._build_dependency_impl(
@@ -319,8 +326,18 @@ def awscrt_ext():
         extra_link_args += ['-pthread']
 
     if distutils.ccompiler.get_default_compiler() != 'msvc':
-        extra_compile_args += ['-Wextra', '-Werror', '-Wno-strict-aliasing', '-std=gnu99']
-        extra_link_args += ['-Wl,-fatal_warnings']
+        extra_compile_args += ['-Wno-strict-aliasing', '-std=gnu99']
+
+        # treat warnings as errors during dev builds
+        if is_dev_build():
+            extra_compile_args += ['-Wextra', '-Werror']
+
+            # But don't make linker warnings fatal IF we're doing dev builds
+            # on MacOS and skip building dependencies twice (arm64 & x86_64)
+            # because it takes too long, and the linker warns us about that,
+            # but whatever these builds will only ever run on my machine.
+            if not is_macos_universal2():
+                extra_link_args += ['-Wl,-fatal_warnings']
 
     return setuptools.Extension(
         '_awscrt',
