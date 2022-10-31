@@ -17,6 +17,7 @@ env:
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
   AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
   AWS_REGION: us-east-1
+  AWS_MQTT5_TESTS_ENVIRONMENT: ${{ secrets.AWS_MQTT5_TESTS_ENVIRONMENT }}
 
 jobs:
   manylinux2014:
@@ -44,6 +45,12 @@ jobs:
         aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
         ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-manylinux2014-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }} --python /opt/python/${{ matrix.python }}/bin/python
 
+    - name: MQTT5 tests
+      run: |
+        source scripts/mqtt5_test_setup.sh ${{ env.AWS_MQTT5_TESTS_ENVIRONMENT }}
+        python3 -m unittest --failfast --verbose test.test_mqtt5
+        source scripts/mqtt5_test_setup.sh ${{ env.AWS_MQTT5_TESTS_ENVIRONMENT }} cleanup
+
   raspberry:
     runs-on: ubuntu-20.04 # latest
     strategy:
@@ -61,6 +68,12 @@ jobs:
         aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
         ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }}
 
+    - name: MQTT5 tests
+      run: |
+        source scripts/mqtt5_test_setup.sh ${{ env.AWS_MQTT5_TESTS_ENVIRONMENT }}
+        python3 -m unittest --failfast --verbose test.test_mqtt5
+        source scripts/mqtt5_test_setup.sh ${{ env.AWS_MQTT5_TESTS_ENVIRONMENT }} cleanup
+
   linux-compat:
     runs-on: ubuntu-20.04 # latest
     strategy:
@@ -76,6 +89,12 @@ jobs:
       run: |
         aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
         ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }}
+
+    - name: MQTT5 tests
+      run: |
+        source scripts/mqtt5_test_setup.sh ${{ env.AWS_MQTT5_TESTS_ENVIRONMENT }}
+        python3 -m unittest --failfast --verbose test.test_mqtt5
+        source scripts/mqtt5_test_setup.sh ${{ env.AWS_MQTT5_TESTS_ENVIRONMENT }} cleanup
 
   linux-compiler-compat:
     runs-on: ubuntu-20.04 # latest
@@ -99,6 +118,12 @@ jobs:
           aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
           ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-${{ env.LINUX_BASE_IMAGE }} build -p ${{ env.PACKAGE_NAME }} --compiler=${{ matrix.compiler }}
 
+      - name: MQTT5 tests
+        run: |
+          source scripts/mqtt5_test_setup.sh ${{ env.AWS_MQTT5_TESTS_ENVIRONMENT }}
+          python3 -m unittest --failfast --verbose test.test_mqtt5
+          source scripts/mqtt5_test_setup.sh ${{ env.AWS_MQTT5_TESTS_ENVIRONMENT }} cleanup
+
   windows:
     runs-on: windows-2022 # latest
     strategy:
@@ -110,6 +135,12 @@ jobs:
         python -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder.pyz')"
         python builder.pyz build -p ${{ env.PACKAGE_NAME }} --python "C:\\hostedtoolcache\\windows\\Python\\3.7.9\\${{ matrix.arch }}\\python.exe"
 
+    - name: MQTT5 tests
+      run: |
+        source scripts/mqtt5_test_setup.sh ${{ env.AWS_MQTT5_TESTS_ENVIRONMENT }}
+        python3 -m unittest --failfast --verbose test.test_mqtt5
+        source scripts/mqtt5_test_setup.sh ${{ env.AWS_MQTT5_TESTS_ENVIRONMENT }} cleanup
+
   osx:
     runs-on: macos-11 # latest
     steps:
@@ -118,6 +149,12 @@ jobs:
         python3 -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder')"
         chmod a+x builder
         ./builder build -p ${{ env.PACKAGE_NAME }}
+
+    - name: MQTT5 tests
+      run: |
+        source scripts/mqtt5_test_setup.sh ${{ env.AWS_MQTT5_TESTS_ENVIRONMENT }}
+        python3 -m unittest --failfast --verbose test.test_mqtt5
+        source scripts/mqtt5_test_setup.sh ${{ env.AWS_MQTT5_TESTS_ENVIRONMENT }} cleanup
 
   # check that tests requiring custom env-vars or AWS credentials are simply skipped
   tests-ok-without-env-vars:
