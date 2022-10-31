@@ -1,6 +1,12 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 cmake_minimum_required(VERSION 3.1)
+
+# This CMakeLists.txt exists so we can build all the C libraries we depend on
+# simultanously. This is much faster than building dependencies one at a time.
+#
+# This CMakeLists.txt does NOT build the Python extension itself.
+# We let setuptools handle that.
 project(aws-crt-dependencies)
 
 # This magic lets us build everything all at once
@@ -8,7 +14,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/aws-c-common/cmake)
 include(AwsFindPackage)
 set(IN_SOURCE_BUILD ON)
 
-# Always build static libs
+# Build dependencies as static libs
 set(BUILD_SHARED_LIBS=OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE=ON)
 
@@ -16,9 +22,11 @@ set(CMAKE_POSITION_INDEPENDENT_CODE=ON)
 include(CTest)
 set(BUILD_TESTING OFF)
 
+# On Unix we use S2N for TLS and AWS-LC crypto.
+# (On Windows and Apple we use the default OS libraries)
 if(UNIX AND NOT APPLE)
-    set(DISABLE_GO ON) # Build without using go, we don't want the extra dependency
-    set(DISABLE_PERL ON) # Build without using perl, we don't want the extra dependency
+    set(DISABLE_GO ON) # Build without using Go, we don't want the extra dependency
+    set(DISABLE_PERL ON) # Build without using Perl, we don't want the extra dependency
     set(BUILD_LIBSSL OFF) # Don't need libssl, only need libcrypto
     add_subdirectory(aws-lc)
 

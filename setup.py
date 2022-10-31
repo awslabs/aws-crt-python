@@ -24,7 +24,11 @@ def is_32bit():
     return is_64bit() == False
 
 
-def is_dev_build():
+def is_development_mode():
+    """Return whether we're building in development mode.
+    https://setuptools.pypa.io/en/latest/userguide/development_mode.html
+    These builds can take shortcuts to encourage faster iteration,
+    and turn on more warnings as errors to encourage correct code."""
     return 'develop' in sys.argv
 
 
@@ -200,7 +204,7 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
         run_cmd(build_cmd)
 
     def _build_dependencies(self, build_dir, install_path):
-        if is_macos_universal2() and not is_dev_build():
+        if is_macos_universal2() and not is_development_mode():
             # create macOS universal binary by compiling for x86_64 and arm64,
             # each in its own subfolder, and then creating a universal binary
             # by gluing the two together using `lipo`.
@@ -209,8 +213,8 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
             # simultaneously (too much confusion at cmake configure time).
             # So we build each architecture one at a time.
             #
-            # BUT skip this for dev builds. Building everything twice takes
-            # too long and dev builds only ever run on the host machine.
+            # BUT skip this in development mode. Building everything twice takes
+            # too long and development builds only ever run on the host machine.
 
             # x86_64
             self._build_dependencies_impl(
@@ -224,7 +228,7 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
                 install_path=os.path.join(build_dir, 'arm64', 'install'),
                 osx_arch='arm64')
 
-            # create universal binaries at expected install_path
+            # Create a universal binary for each lib at expected install_path
             lib_dir = os.path.join(install_path, 'lib')
             os.makedirs(lib_dir, exist_ok=True)
             for aws_lib in AWS_LIBS:
@@ -308,14 +312,13 @@ def awscrt_ext():
     if distutils.ccompiler.get_default_compiler() != 'msvc':
         extra_compile_args += ['-Wno-strict-aliasing', '-std=gnu99']
 
-        # treat warnings as errors during dev builds
-        if is_dev_build():
+        # treat warnings as errors in development mode
+        if is_development_mode():
             extra_compile_args += ['-Wextra', '-Werror']
 
-            # But don't make linker warnings fatal IF we're doing dev builds
-            # on MacOS and skip building dependencies twice (arm64 & x86_64)
-            # because it takes too long, and the linker warns us about that,
-            # but whatever these builds will only ever run on my machine.
+            # ...except when we shortcuts in development mode and don't make a
+            # proper MacOS Universal2 binary. The linker warns us about this,
+            # but WHATEVER. Building everything twice (x86_64 and arm64) takes too long.
             if not is_macos_universal2():
                 extra_link_args += ['-Wl,-fatal_warnings']
 
