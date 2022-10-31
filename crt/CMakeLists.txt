@@ -3,7 +3,7 @@
 cmake_minimum_required(VERSION 3.1)
 
 # This CMakeLists.txt exists so we can build all the C libraries we depend on
-# simultanously. This is much faster than building dependencies one at a time.
+# simultaneously. This is much faster than building dependencies one at a time.
 #
 # This CMakeLists.txt does NOT build the Python extension itself.
 # We let setuptools handle that.
