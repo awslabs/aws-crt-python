@@ -316,8 +316,8 @@ def awscrt_ext():
         if is_development_mode():
             extra_compile_args += ['-Wextra', '-Werror']
 
-            # ...except when we shortcuts in development mode and don't make a
-            # proper MacOS Universal2 binary. The linker warns us about this,
+            # ...except when we take shortcuts in development mode and don't make
+            # a proper MacOS Universal2 binary. The linker warns us about this,
             # but WHATEVER. Building everything twice (x86_64 and arm64) takes too long.
             if not is_macos_universal2():
                 extra_link_args += ['-Wl,-fatal_warnings']
