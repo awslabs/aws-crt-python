@@ -135,7 +135,7 @@ class S3RequestTest(NativeResourceTest):
         self.put_test_object_path = "/put_object_test_py_10MB.txt"
         self.region = "us-west-2"
         self.bucket_name = "aws-crt-canary-bucket"
-        self.default_file_path = "test/resources/s3_put_object.txt"
+        self.default_file_path = "resources/s3_put_object.txt"
         self.timeout = 100  # seconds
         self.num_threads = 0
         self.non_ascii_file_name = "ÉxÅmple.txt".encode("utf-8")
@@ -249,11 +249,11 @@ class S3RequestTest(NativeResourceTest):
         except Exception as e:
             # failed
             self.assertTrue(False)
-
+        self.put_body_stream.close()
+        
         client_shutdown_event = s3_client.shutdown_event
         del s3_client
         self.assertTrue(client_shutdown_event.wait(self.timeout))
-        self.put_body_stream.close()
 
     def test_get_object_file_object(self):
         request = self._get_object_request(self.get_test_object_path)
