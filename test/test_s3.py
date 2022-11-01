@@ -242,6 +242,7 @@ class S3RequestTest(NativeResourceTest):
                 on_headers=self._on_request_headers,
                 on_body=self._on_request_body)
             finished_futures.append(s3_request.finished_future)
+            os.remove(tempfile)
         try:
             for future in finished_futures:
                 future.result(self.timeout)
