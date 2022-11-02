@@ -246,10 +246,10 @@ class S3RequestTest(NativeResourceTest):
         try:
             for future in finished_futures:
                 future.result(self.timeout)
-
         except Exception as e:
             # failed
             self.assertTrue(False)
+
         client_shutdown_event = s3_client.shutdown_event
         del s3_client
         self.assertTrue(client_shutdown_event.wait(self.timeout))
