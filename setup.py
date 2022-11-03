@@ -24,7 +24,11 @@ def is_32bit():
     return is_64bit() == False
 
 
-def is_dev_build():
+def is_development_mode():
+    """Return whether we're building in development mode.
+    https://setuptools.pypa.io/en/latest/userguide/development_mode.html
+    These builds can take shortcuts to encourage faster iteration,
+    and turn on more warnings as errors to encourage correct code."""
     return 'develop' in sys.argv
 
 
@@ -125,19 +129,12 @@ class AwsLib:
 
 
 # The extension depends on these libs.
-# They're built along with the extension, in the order listed.
+# They're built along with the extension.
 AWS_LIBS = []
 if sys.platform != 'darwin' and sys.platform != 'win32':
-    AWS_LIBS.append(AwsLib(name='aws-lc',
-                           libname='crypto',  # We link against libcrypto.a
-                           extra_cmake_args=[
-                               # We don't need libssl.a
-                               '-DBUILD_LIBSSL=OFF',
-                               # Disable running codegen on user's machine.
-                               # Up-to-date generated code is already in repo.
-                               '-DDISABLE_PERL=ON', '-DDISABLE_GO=ON',
-                           ]))
-    AWS_LIBS.append(AwsLib(name='s2n', extra_cmake_args=['-DUNSAFE_TREAT_WARNINGS_AS_ERRORS=OFF']))
+    # aws-lc produces libcrypto.a
+    AWS_LIBS.append(AwsLib('aws-lc', libname='crypto'))
+    AWS_LIBS.append(AwsLib('s2n'))
 AWS_LIBS.append(AwsLib('aws-c-common'))
 AWS_LIBS.append(AwsLib('aws-c-sdkutils'))
 AWS_LIBS.append(AwsLib('aws-c-cal'))
@@ -157,7 +154,7 @@ VERSION_RE = re.compile(r""".*__version__ = ["'](.*?)['"]""", re.S)
 
 
 class awscrt_build_ext(setuptools.command.build_ext.build_ext):
-    def _build_dependency_impl(self, aws_lib, build_dir, install_path, osx_arch=None):
+    def _build_dependencies_impl(self, build_dir, install_path, osx_arch=None):
         cmake = get_cmake_path()
 
         # enable parallel builds for cmake 3.12+
@@ -167,38 +164,23 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
         if 'CMAKE_BUILD_PARALLEL_LEVEL' not in os.environ:
             os.environ['CMAKE_BUILD_PARALLEL_LEVEL'] = f'{os.cpu_count()}'
 
-        lib_source_dir = os.path.join(PROJECT_DIR, 'crt', aws_lib.name)
+        source_dir = os.path.join(PROJECT_DIR, 'crt')
 
         build_type = 'Debug' if self.debug else 'RelWithDebInfo'
 
-        if not os.path.exists(os.path.join(lib_source_dir, 'CMakeLists.txt')):
-            print("--- Skipping dependency: '{}' source not found ---".format(aws_lib.name))
-            return
-
         if osx_arch:
-            print(f"--- Building dependency: {aws_lib.name} ({osx_arch}) ---")
-        else:
-            print(f"--- Building dependency: {aws_lib.name} ---")
-
-        lib_build_dir = os.path.join(build_dir, aws_lib.name)
-        os.makedirs(lib_build_dir, exist_ok=True)
+            print(f"--- Building arch: {osx_arch} ---")
 
         # cmake configure
         cmake_args = [cmake]
-        cmake_args.append(f'-H{lib_source_dir}')
-        cmake_args.append(f'-B{lib_build_dir}')
+        cmake_args.append(f'-H{source_dir}')
+        cmake_args.append(f'-B{build_dir}')
         cmake_args.extend(determine_generator_args())
         cmake_args.extend(determine_cross_compile_args())
         cmake_args.extend([
-            f'-DCMAKE_PREFIX_PATH={os.path.abspath(install_path)}',
             f'-DCMAKE_INSTALL_PREFIX={install_path}',
-            '-DBUILD_SHARED_LIBS=OFF',
             f'-DCMAKE_BUILD_TYPE={build_type}',
-            '-DBUILD_TESTING=OFF',
-            '-DCMAKE_POSITION_INDEPENDENT_CODE=ON'
         ])
-
-        cmake_args.extend(aws_lib.extra_cmake_args)
 
         if sys.platform == 'darwin':
             # build lib with same MACOSX_DEPLOYMENT_TARGET that python will ultimately
@@ -215,14 +197,14 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
         # cmake build/install
         build_cmd = [
             cmake,
-            '--build', lib_build_dir,
+            '--build', build_dir,
             '--config', build_type,
             '--target', 'install',
         ]
         run_cmd(build_cmd)
 
-    def _build_dependency(self, aws_lib, build_dir, install_path):
-        if is_macos_universal2() and not is_dev_build():
+    def _build_dependencies(self, build_dir, install_path):
+        if is_macos_universal2() and not is_development_mode():
             # create macOS universal binary by compiling for x86_64 and arm64,
             # each in its own subfolder, and then creating a universal binary
             # by gluing the two together using `lipo`.
@@ -231,31 +213,30 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
             # simultaneously (too much confusion at cmake configure time).
             # So we build each architecture one at a time.
             #
-            # BUT skip this for dev builds. Building everything twice takes
-            # too long and dev builds only ever run on the host machine.
+            # BUT skip this in development mode. Building everything twice takes
+            # too long and development builds only ever run on the host machine.
 
             # x86_64
-            self._build_dependency_impl(
-                aws_lib=aws_lib,
+            self._build_dependencies_impl(
                 build_dir=os.path.join(build_dir, 'x86_64'),
                 install_path=os.path.join(build_dir, 'x86_64', 'install'),
                 osx_arch='x86_64')
 
             # arm64
-            self._build_dependency_impl(
-                aws_lib=aws_lib,
+            self._build_dependencies_impl(
                 build_dir=os.path.join(build_dir, 'arm64'),
                 install_path=os.path.join(build_dir, 'arm64', 'install'),
                 osx_arch='arm64')
 
-            # create universal binary at expected install_path
+            # Create a universal binary for each lib at expected install_path
             lib_dir = os.path.join(install_path, 'lib')
             os.makedirs(lib_dir, exist_ok=True)
-            lib_file = f'lib{aws_lib.libname}.a'
-            run_cmd(['lipo', '-create',
-                     '-output', os.path.join(lib_dir, lib_file),
-                     os.path.join(build_dir, 'x86_64', 'install', 'lib', lib_file),
-                     os.path.join(build_dir, 'arm64', 'install', 'lib', lib_file)])
+            for aws_lib in AWS_LIBS:
+                lib_file = f'lib{aws_lib.libname}.a'
+                run_cmd(['lipo', '-create',
+                         '-output', os.path.join(lib_dir, lib_file),
+                         os.path.join(build_dir, 'x86_64', 'install', 'lib', lib_file),
+                         os.path.join(build_dir, 'arm64', 'install', 'lib', lib_file)])
 
             # copy headers to expected install_path
             copy_tree(os.path.join(build_dir, 'arm64', 'install', 'include'),
@@ -263,14 +244,17 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
 
         else:
             # normal build for a single architecture
-            self._build_dependency_impl(aws_lib, build_dir, install_path)
+            self._build_dependencies_impl(build_dir, install_path)
 
     def run(self):
         # build dependencies
         dep_build_dir = os.path.join(self.build_temp, 'deps')
         dep_install_path = os.path.join(self.build_temp, 'deps', 'install')
-        for lib in AWS_LIBS:
-            self._build_dependency(lib, dep_build_dir, dep_install_path)
+
+        if os.path.exists(os.path.join(PROJECT_DIR, 'crt', 'aws-c-common', 'CMakeLists.txt')):
+            self._build_dependencies(dep_build_dir, dep_install_path)
+        else:
+            print("Skip building dependencies, source not found.")
 
         # update paths so awscrt_ext can access dependencies
         self.include_dirs.append(os.path.join(dep_install_path, 'include'))
@@ -328,14 +312,13 @@ def awscrt_ext():
     if distutils.ccompiler.get_default_compiler() != 'msvc':
         extra_compile_args += ['-Wno-strict-aliasing', '-std=gnu99']
 
-        # treat warnings as errors during dev builds
-        if is_dev_build():
+        # treat warnings as errors in development mode
+        if is_development_mode():
             extra_compile_args += ['-Wextra', '-Werror']
 
-            # But don't make linker warnings fatal IF we're doing dev builds
-            # on MacOS and skip building dependencies twice (arm64 & x86_64)
-            # because it takes too long, and the linker warns us about that,
-            # but whatever these builds will only ever run on my machine.
+            # ...except when we take shortcuts in development mode and don't make
+            # a proper MacOS Universal2 binary. The linker warns us about this,
+            # but WHATEVER. Building everything twice (x86_64 and arm64) takes too long.
             if not is_macos_universal2():
                 extra_link_args += ['-Wl,-fatal_warnings']
 
