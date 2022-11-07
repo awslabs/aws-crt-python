@@ -57,7 +57,7 @@ class SetupForTests(Builder.Action):
 
         self._try_setup_pkcs11()
 
-    def _get_secret(self, secret_id, binary = False):
+    def _get_secret(self, secret_id, binary=False):
         """get string from secretsmanager"""
 
         # NOTE: using AWS CLI instead of boto3 because we know CLI is already
@@ -75,7 +75,7 @@ class SetupForTests(Builder.Action):
             return base64.b64decode(secret_value['SecretBinary'])
         return secret_value['SecretString']
 
-    def _tmpfile_from_secret(self, secret_name, file_name, binary = False):
+    def _tmpfile_from_secret(self, secret_name, file_name, binary=False):
         """get file contents from secretsmanager, store as file under /tmp, return file path"""
         file_contents = self._get_secret(secret_name, binary)
         file_path = os.path.join(tempfile.gettempdir(), file_name)
@@ -83,13 +83,13 @@ class SetupForTests(Builder.Action):
         pathlib.Path(file_path).write_text(file_contents)
         return file_path
 
-    def _setenv_from_secret(self, env_var_name, secret_name, binary = False):
+    def _setenv_from_secret(self, env_var_name, secret_name, binary=False):
         """get string from secretsmanager and store in environment variable"""
 
         secret_value = self._get_secret(secret_name, binary)
         self.env.shell.setenv(env_var_name, secret_value)
 
-    def _setenv_tmpfile_from_secret(self, env_var_name, secret_name, file_name, binary = False):
+    def _setenv_tmpfile_from_secret(self, env_var_name, secret_name, file_name, binary=False):
         """get file contents from secretsmanager, store as file under /tmp, and store path in environment variable"""
         file_path = self._tmpfile_from_secret(secret_name, file_name, binary)
         self.env.shell.setenv(env_var_name, file_path)
