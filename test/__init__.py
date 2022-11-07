@@ -35,13 +35,22 @@ class NativeResourceTest(unittest.TestCase):
             return
 
         # Determine whether the current test just failed.
-        # We check private members in unittest.TestCase to do this,
-        # so the technique may stop working in some future python version.
-        for outcome_err in self._outcome.errors:
-            if outcome_err[1] is not None:
-                NativeResourceTest._previous_test_failed = True
-                return
+        # This isn't possible with the public API,
+        # and the technique to pull it off can vary by Python version.
+        if hasattr(self._outcome, 'errors'):
+            # Works in Python 3.10 and earlier
+            result = self.defaultTestResult()
+            self._feedErrorsToResult(result, self._outcome.errors)
+        else:
+            # Works in Python 3.11 and later
+            result = self._outcome.result
 
+        current_test_failed = any(failed_test == self for failed_test, _ in result.errors + result.failures)
+        if current_test_failed:
+            NativeResourceTest._previous_test_failed = True
+            return
+
+        # All tests have passed so far, check for leaks
         try:
             check_for_leaks(timeout_sec=TIMEOUT)
         except Exception:

@@ -13,10 +13,7 @@ contents = None
 with open(init_path, 'r+') as init_py:
     contents = init_py.read()
 
-contents = re.sub(r"__version__ = '1\.0\.0-dev'", r"__version__ = '{}'".format(version), contents)
+contents = re.sub(r"__version__ = '[^']+'", f"__version__ = '{version}'", contents)
 
 with open(init_path, 'w') as init_py:
     init_py.write(contents)
-
-# setup = contents[contents.rfind('setuptools.setup'):]
-# print(setup)
