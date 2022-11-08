@@ -10,11 +10,11 @@ import _awscrt
 from awscrt import NativeResource
 import awscrt.exceptions
 from awscrt.http import HttpProxyOptions, HttpRequest
-from awscrt.io import ClientBootstrap, TlsConnectionOptions, InputStream, SocketOptions
+from awscrt.io import ClientBootstrap, TlsConnectionOptions, SocketOptions
 from dataclasses import dataclass
 from enum import IntEnum
 from concurrent.futures import Future
-from io import BytesIO, IOBase, SEEK_END
+from io import IOBase
 from typing import Callable, Sequence, Tuple
 
 
