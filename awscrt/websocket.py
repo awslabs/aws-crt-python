@@ -100,7 +100,7 @@ class WebSocket(NativeResource):
 
         if enable_read_backpressure:
             if initial_read_window is None:
-                ValueError("'initial_read_window' must be set if 'enable_read_backpressure' is enabled")
+                raise ValueError("'initial_read_window' must be set if 'enable_read_backpressure' is enabled")
         else:
             initial_read_window = 0xFFFFFFFF  # TODO: fix how this works in C
 
