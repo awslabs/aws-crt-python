@@ -9,7 +9,6 @@ import subprocess
 import re
 import sys
 import tempfile
-import base64
 
 # Fall back on using the "{python}" builder variable
 PYTHON_DEFAULT = '{python}'
@@ -57,7 +56,7 @@ class SetupForTests(Builder.Action):
 
         self._try_setup_pkcs11()
 
-    def _get_secret(self, secret_id, binary=False):
+    def _get_secret(self, secret_id):
         """get string from secretsmanager"""
 
         # NOTE: using AWS CLI instead of boto3 because we know CLI is already
@@ -71,27 +70,25 @@ class SetupForTests(Builder.Action):
         print('>', subprocess.list2cmdline(cmd))
         result = self.env.shell.exec(*cmd, check=True, quiet=True)
         secret_value = json.loads(result.output)
-        if binary:
-            return base64.b64decode(secret_value['SecretBinary'])
         return secret_value['SecretString']
 
-    def _tmpfile_from_secret(self, secret_name, file_name, binary=False):
+    def _tmpfile_from_secret(self, secret_name, file_name):
         """get file contents from secretsmanager, store as file under /tmp, return file path"""
-        file_contents = self._get_secret(secret_name, binary)
+        file_contents = self._get_secret(secret_name)
         file_path = os.path.join(tempfile.gettempdir(), file_name)
         print(f"Writing to: {file_path}")
         pathlib.Path(file_path).write_text(file_contents)
         return file_path
 
-    def _setenv_from_secret(self, env_var_name, secret_name, binary=False):
+    def _setenv_from_secret(self, env_var_name, secret_name):
         """get string from secretsmanager and store in environment variable"""
 
-        secret_value = self._get_secret(secret_name, binary)
+        secret_value = self._get_secret(secret_name)
         self.env.shell.setenv(env_var_name, secret_value)
 
-    def _setenv_tmpfile_from_secret(self, env_var_name, secret_name, file_name, binary=False):
+    def _setenv_tmpfile_from_secret(self, env_var_name, secret_name, file_name):
         """get file contents from secretsmanager, store as file under /tmp, and store path in environment variable"""
-        file_path = self._tmpfile_from_secret(secret_name, file_name, binary)
+        file_path = self._tmpfile_from_secret(secret_name, file_name)
         self.env.shell.setenv(env_var_name, file_path)
 
     def _try_setup_pkcs11(self):
