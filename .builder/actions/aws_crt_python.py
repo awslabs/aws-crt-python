@@ -13,6 +13,7 @@ import tempfile
 # Fall back on using the "{python}" builder variable
 PYTHON_DEFAULT = '{python}'
 
+
 class SetupForTests(Builder.Action):
 
     def run(self, env):
