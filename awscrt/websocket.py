@@ -160,7 +160,7 @@ def create_handshake_request(host: str, path: str) -> HttpRequest:
     raise NotImplementedError()
 
 
-class _WebSocketCore:
+class _WebSocketCore(NativeResource):
     def __init__(self,
                  on_connection_setup,
                  on_connection_shutdown,
