@@ -272,72 +272,119 @@ static void s_websocket_on_connection_shutdown(struct aws_websocket *websocket, 
     Py_DECREF(websocket_core_py);
 
     PyGILState_Release(state);
-    /*************** GIL RELEASE ***************/}
+    /*************** GIL RELEASE ***************/
+}
 
-    static bool s_websocket_on_incoming_frame_begin(
-        struct aws_websocket *websocket,
-        const struct aws_websocket_incoming_frame *frame,
-        void *user_data) {
+static bool s_websocket_on_incoming_frame_begin(
+    struct aws_websocket *websocket,
+    const struct aws_websocket_incoming_frame *frame,
+    void *user_data) {
 
-        /* TODO implement */
-        (void)websocket;
-        (void)frame;
-        (void)user_data;
-        return false;
-    }
+    /* TODO implement */
+    (void)websocket;
+    (void)frame;
+    (void)user_data;
+    return false;
+}
 
-    static bool s_websocket_on_incoming_frame_payload(
-        struct aws_websocket *websocket,
-        const struct aws_websocket_incoming_frame *frame,
-        struct aws_byte_cursor data,
-        void *user_data) {
+static bool s_websocket_on_incoming_frame_payload(
+    struct aws_websocket *websocket,
+    const struct aws_websocket_incoming_frame *frame,
+    struct aws_byte_cursor data,
+    void *user_data) {
 
-        /* TODO implement */
-        (void)websocket;
-        (void)frame;
-        (void)data;
-        (void)user_data;
-        return false;
-    }
+    /* TODO implement */
+    (void)websocket;
+    (void)frame;
+    (void)data;
+    (void)user_data;
+    return false;
+}
 
-    static bool s_websocket_on_incoming_frame_complete(
-        struct aws_websocket *websocket,
-        const struct aws_websocket_incoming_frame *frame,
-        int error_code,
-        void *user_data) {
+static bool s_websocket_on_incoming_frame_complete(
+    struct aws_websocket *websocket,
+    const struct aws_websocket_incoming_frame *frame,
+    int error_code,
+    void *user_data) {
 
-        /* TODO implement */
-        (void)websocket;
-        (void)frame;
-        (void)error_code;
-        (void)user_data;
-        return false;
-    }
+    /* TODO implement */
+    (void)websocket;
+    (void)frame;
+    (void)error_code;
+    (void)user_data;
+    return false;
+}
 
-    PyObject *aws_py_websocket_close(PyObject *self, PyObject *args) {
-        /* TODO implement */
-        (void)self;
-        (void)args;
+PyObject *aws_py_websocket_close(PyObject *self, PyObject *args) {
+    /* TODO implement */
+    (void)self;
+    (void)args;
+    return NULL;
+}
+
+PyObject *aws_py_websocket_send_frame(PyObject *self, PyObject *args) {
+    /* TODO implement */
+    (void)self;
+    (void)args;
+    return NULL;
+}
+
+PyObject *aws_py_websocket_increment_read_window(PyObject *self, PyObject *args) {
+    /* TODO implement */
+    (void)self;
+    (void)args;
+    return NULL;
+}
+
+PyObject *aws_py_websocket_create_handshake_request(PyObject *self, PyObject *args) {
+    (void)self;
+
+    struct aws_byte_cursor host; /* s# */
+    struct aws_byte_cursor path; /* s# */
+
+    if (!PyArg_ParseTuple(args, "s#s#", &host.ptr, &host.len, &path.ptr, &path.len)) {
         return NULL;
     }
 
-    PyObject *aws_py_websocket_send_frame(PyObject *self, PyObject *args) {
-        /* TODO implement */
-        (void)self;
-        (void)args;
-        return NULL;
+    /* This function will return a tuple containing:
+     * 1) the binding for an HttpRequest
+     * 2) the binding for an HttpHeaders */
+    bool success = false;
+    struct aws_http_message *request = NULL;
+    PyObject *tuple_py = NULL;
+
+    request = aws_http_message_new_websocket_handshake_request(aws_py_get_allocator(), path, host);
+    if (!request) {
+        PyErr_SetAwsLastError();
+        goto cleanup;
     }
 
-    PyObject *aws_py_websocket_increment_read_window(PyObject *self, PyObject *args) {
-        /* TODO implement */
-        (void)self;
-        (void)args;
-        return NULL;
+    tuple_py = PyTuple_New(2);
+    if (!tuple_py) {
+        goto cleanup;
     }
 
-    PyObject *aws_py_websocket_create_handshake_request(PyObject *self, PyObject *args) {
-        /* TODO implement */
-        (void)self;
-        (void)args;
+    PyObject *request_binding_py = aws_py_http_message_new_request_from_native(request);
+    if (!request_binding_py) {
+        goto cleanup;
+    }
+    PyTuple_SET_ITEM(tuple_py, 0, request_binding_py); /* steals reference to request_binding_py */
+
+    PyObject *headers_binding_py = aws_py_http_headers_new_from_native(aws_http_message_get_headers(request));
+    if (!headers_binding_py) {
+        goto cleanup;
+    }
+    PyTuple_SET_ITEM(tuple_py, 1, headers_binding_py); /* steals reference to headers_binding_py */
+
+    /* Success! */
+    success = true;
+
+cleanup:
+    aws_http_message_release(request);
+    if (success) {
+        return tuple_py;
+    } else {
+        Py_XDECREF(tuple_py);
         return NULL;
     }
+}

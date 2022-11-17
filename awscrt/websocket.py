@@ -96,7 +96,7 @@ class WebSocket(NativeResource):
         on_incoming_frame_complete: Callable[[OnIncomingFrameCompleteData], None] = None,
         enable_read_backpressure: bool = False,
         initial_read_window: int = None,
-    ):
+    ):  # TODO: return future?
 
         if enable_read_backpressure:
             if initial_read_window is None:
@@ -156,8 +156,9 @@ class WebSocket(NativeResource):
         raise NotImplementedError()
 
 
-def create_handshake_request(host: str, path: str) -> HttpRequest:
-    raise NotImplementedError()
+def create_handshake_request(*, host: str, path: str = '/') -> HttpRequest:
+    http_request_binding, http_headers_binding = _awscrt.websocket_create_handshake_request(host, path)
+    return HttpRequest._from_bindings(http_request_binding, http_headers_binding)
 
 
 class _WebSocketCore(NativeResource):
