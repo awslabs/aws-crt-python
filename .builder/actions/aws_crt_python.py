@@ -25,6 +25,9 @@ class SetupForTests(Builder.Action):
         self._setenv_tmpfile_from_secret('AWS_TEST_TLS_CERT_PATH', 'unit-test/certificate', 'certificate.pem')
         self._setenv_tmpfile_from_secret('AWS_TEST_TLS_KEY_PATH', 'unit-test/privatekey', 'privatekey.pem')
 
+        self._setenv_tmpfile_from_secret('AWS_TEST_ECC_CERT_PATH', 'ecc-test/certificate', 'ECCcertificate.pem')
+        self._setenv_tmpfile_from_secret('AWS_TEST_ECC_KEY_PATH', 'ecc-test/privatekey', 'ECCprivatekey.pem')
+
         # enable S3 tests
         env.shell.setenv('AWS_TEST_S3', '1')
 

@@ -108,6 +108,7 @@ class S3ClientTest(NativeResourceTest):
     def setUp(self):
         self.region = "us-west-2"
         self.timeout = 10  # seconds
+        super().setUp()
 
     def test_sanity(self):
         s3_client = s3_client_new(False, self.region)
@@ -149,6 +150,7 @@ class S3RequestTest(NativeResourceTest):
         self.put_body_stream = None
 
         self.files = FileCreator()
+        super().setUp()
 
     def tearDown(self):
         self.files.remove_all()
@@ -240,6 +242,8 @@ class S3RequestTest(NativeResourceTest):
                 on_headers=self._on_request_headers,
                 on_body=self._on_request_body)
             finished_futures.append(s3_request.finished_future)
+            # request keeps connection alive. delete pointer so connection can shut down
+            del s3_request
         try:
             for future in finished_futures:
                 future.result(self.timeout)
