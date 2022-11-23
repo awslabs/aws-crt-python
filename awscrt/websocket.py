@@ -352,10 +352,10 @@ class OnIncomingFrameCompleteData:
     """TODO: document me"""
 
     frame: IncomingFrame
-    """TODO: document me"""
+    """TODO document me"""
 
     exception: BaseException = None
-    """TODO: document me"""
+    """TODO document me"""
 
 
 @dataclass
