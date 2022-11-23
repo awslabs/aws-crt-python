@@ -49,7 +49,6 @@ class WebSocketServer:
         self._host = host
         self._port = port
         self._started_event = threading.Event()
-        self._stop_event = asyncio.Event()
         self._thread = threading.Thread(target=self._thread_main)
 
     def __enter__(self):
@@ -71,6 +70,8 @@ class WebSocketServer:
         asyncio.run(self._asyncio_main())
 
     async def _asyncio_main(self):
+        self._stop_event = asyncio.Event()
+
         # this coroutine runs the server until the _stop_event fires
         async with websockets_server_3rdparty.serve(self._run_connection, self._host, self._port) as server:
             # signal that server has started up
