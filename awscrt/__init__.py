@@ -9,7 +9,8 @@ __all__ = [
     'http',
     'io',
     'mqtt',
-    's3'
+    's3',
+    'websockets',
 ]
 
 __version__ = '1.0.0.dev0'
