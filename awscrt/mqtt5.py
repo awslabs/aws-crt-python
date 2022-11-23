@@ -14,7 +14,7 @@ from awscrt.http import HttpProxyOptions, HttpRequest
 from awscrt.io import ClientBootstrap, SocketOptions, ClientTlsContext
 from dataclasses import dataclass
 from collections.abc import Sequence
-from inspect import getmembers, signature
+from inspect import signature
 
 
 class QoS(IntEnum):
