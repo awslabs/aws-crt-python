@@ -874,9 +874,6 @@ class UserProperty:
     name: str = None
     value: str = None
 
-    def __getitem__(self, item):
-        return getattr(self,item)
-
 
 def _init_user_properties(user_properties_tuples):
     if user_properties_tuples is None:
@@ -957,7 +954,7 @@ class ConnackPacket:
     maximum_packet_size: int = None
     assigned_client_identifier: str = None
     reason_string: str = None
-    user_properties: Sequence[UserProperty] = None
+    user_properties: 'Sequence[UserProperty]' = None
     wildcard_subscriptions_available: bool = None
     subscription_identifiers_available: bool = None
     shared_subscription_available: bool = None
@@ -981,7 +978,7 @@ class DisconnectPacket:
     reason_code: DisconnectReasonCode = DisconnectReasonCode.NORMAL_DISCONNECTION
     session_expiry_interval_sec: int = None
     reason_string: str = None
-    user_properties: Sequence[UserProperty] = None
+    user_properties: 'Sequence[UserProperty]' = None
     server_reference: str = None
 
 
@@ -1012,9 +1009,9 @@ class SubscribePacket:
         subscription_identifier (int): The positive int to associate with all topic filters in this request.  Publish packets that match a subscription in this request should include this identifier in the resulting message.
         user_properties (Sequence[UserProperty]): The list of MQTT5 user properties included with the packet.
     """
-    subscriptions: Sequence[Subscription]
+    subscriptions: 'Sequence[Subscription]'
     subscription_identifier: int = None
-    user_properties: Sequence[UserProperty] = None
+    user_properties: 'Sequence[UserProperty]' = None
 
 
 @dataclass
@@ -1027,8 +1024,8 @@ class SubackPacket:
         reason_codes (Sequence[SubackReasonCode]): List of reason codes indicating the result of each individual subscription entry in the associated SUBSCRIBE packet.
     """
     reason_string: str = None
-    user_properties: Sequence[UserProperty] = None
-    reason_codes: Sequence[SubackReasonCode] = None
+    user_properties: 'Sequence[UserProperty]' = None
+    reason_codes: 'Sequence[SubackReasonCode]' = None
 
 
 @dataclass
@@ -1039,8 +1036,8 @@ class UnsubscribePacket:
         topic_filters (Sequence[str]): List of topic filters that the client wishes to unsubscribe from.
         user_properties (Sequence[UserProperty]): List of MQTT5 user properties included with the packet.
     """
-    topic_filters: Sequence[str]
-    user_properties: Sequence[UserProperty] = None
+    topic_filters: 'Sequence[str]'
+    user_properties: 'Sequence[UserProperty]' = None
 
 
 @dataclass
@@ -1054,8 +1051,8 @@ class UnsubackPacket:
 
     """
     reason_string: str = None
-    user_properties: Sequence[UserProperty] = None
-    reason_codes: Sequence[DisconnectReasonCode] = None
+    user_properties: 'Sequence[UserProperty]' = None
+    reason_codes: 'Sequence[DisconnectReasonCode]' = None
 
 
 @dataclass
@@ -1085,9 +1082,9 @@ class PublishPacket:
     topic_alias: int = None
     response_topic: str = None
     correlation_data: Any = None   # Unicode objects are converted to C strings using 'utf-8' encoding
-    subscription_identifiers: Sequence[int] = None  # ignore attempts to set but provide in received packets
+    subscription_identifiers: 'Sequence[int]' = None  # ignore attempts to set but provide in received packets
     content_type: str = None
-    user_properties: Sequence[UserProperty] = None
+    user_properties: 'Sequence[UserProperty]' = None
 
 
 @dataclass
@@ -1101,7 +1098,7 @@ class PubackPacket:
     """
     reason_code: PubackReasonCode = None
     reason_string: str = None
-    user_properties: Sequence[UserProperty] = None
+    user_properties: 'Sequence[UserProperty]' = None
 
 
 @dataclass
@@ -1133,7 +1130,7 @@ class ConnectPacket:
     maximum_packet_size: int = None
     will_delay_interval_sec: int = None
     will: PublishPacket = None
-    user_properties: Sequence[UserProperty] = None
+    user_properties: 'Sequence[UserProperty]' = None
 
 
 class WebsocketHandshakeTransformArgs:
