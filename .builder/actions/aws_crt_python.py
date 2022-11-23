@@ -224,7 +224,7 @@ class AWSCrtPython(Builder.Action):
         python = args.python if args.python else PYTHON_DEFAULT
 
         actions = [
-            [python, '-m', 'pip', 'install', '--upgrade', '-r', 'requirements-dev.txt'],
+            [python, '-m', 'pip', 'install', '--upgrade', '--requirement', 'requirements-dev.txt'],
             SetupForTests(),
             [python, '-m', 'pip', 'install', '--verbose', '.'],
             # "--failfast" because, given how our leak-detection in tests currently works,

@@ -133,6 +133,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY:
           AWS_DEFAULT_REGION:
         run: |
+          python3 -m pip install --upgrade --requirement requirements-dev.txt
           python3 -m pip install . --verbose
           python3 -m unittest discover --failfast --verbose
 
