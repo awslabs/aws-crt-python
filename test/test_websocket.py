@@ -122,7 +122,7 @@ class TestClient(NativeResourceTest):
             http_handshake_request = create_handshake_request(host=self.host, path='/')
 
             client_handler = ClientHandler()
-            WebSocket.connect_client(
+            connect_client(
                 host=self.host,
                 port=self.port,
                 handshake_request=http_handshake_request,
