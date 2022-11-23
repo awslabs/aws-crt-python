@@ -13,8 +13,6 @@ from awscrt.http import HttpProxyOptions, HttpRequest
 from awscrt.io import ClientBootstrap, TlsConnectionOptions, SocketOptions
 from dataclasses import dataclass
 from enum import IntEnum
-from concurrent.futures import Future
-from io import IOBase
 import sys
 from typing import Callable, Sequence, Tuple
 
@@ -208,8 +206,11 @@ class WebSocket(NativeResource):
 
 
 class _WebSocketCore(NativeResource):
-    # Private class to wrangle callback data from C -> Python.
+    # Private class that handles wrangling callback data from C -> Python.
     # This class is kept alive by C until the final callback occurs.
+    #
+    # The only reason this class inherits from NativeResource,
+    # is so our tests will tell us if the memory leaks.
 
     def __init__(self,
                  on_connection_setup,
@@ -217,6 +218,7 @@ class _WebSocketCore(NativeResource):
                  on_incoming_frame_begin,
                  on_incoming_frame_payload,
                  on_incoming_frame_complete):
+        super().__init__()
         self._on_connection_setup_cb = on_connection_setup
         self._on_connection_shutdown_cb = on_connection_shutdown
         self._on_incoming_frame_begin_cb = on_incoming_frame_begin
