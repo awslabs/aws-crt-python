@@ -47,9 +47,10 @@ jobs:
 
     - name: MQTT5 tests
       run: |
-        source scripts/mqtt5_test_setup.sh ${{ env.AWS_MQTT5_TESTS_ENVIRONMENT }}
+        ./codebuild/mqtt5_test_setup.sh s3://aws-crt-test-stuff/TestIotProdMQTT5EnvironmentVariables.txt us-east-1
+        # source scripts/mqtt5_test_setup.sh ${{ env.AWS_MQTT5_TESTS_ENVIRONMENT }}
         python3 -m unittest --failfast --verbose test.test_mqtt5
-        source scripts/mqtt5_test_setup.sh ${{ env.AWS_MQTT5_TESTS_ENVIRONMENT }} cleanup
+        # source scripts/mqtt5_test_setup.sh ${{ env.AWS_MQTT5_TESTS_ENVIRONMENT }} cleanup
 
   raspberry:
     runs-on: ubuntu-20.04 # latest
@@ -70,9 +71,10 @@ jobs:
 
     - name: MQTT5 tests
       run: |
-        source scripts/mqtt5_test_setup.sh ${{ env.AWS_MQTT5_TESTS_ENVIRONMENT }}
+        ./codebuild/mqtt5_test_setup.sh s3://aws-crt-test-stuff/TestIotProdMQTT5EnvironmentVariables.txt us-east-1
+        # source scripts/mqtt5_test_setup.sh ${{ env.AWS_MQTT5_TESTS_ENVIRONMENT }}
         python3 -m unittest --failfast --verbose test.test_mqtt5
-        source scripts/mqtt5_test_setup.sh ${{ env.AWS_MQTT5_TESTS_ENVIRONMENT }} cleanup
+        # source scripts/mqtt5_test_setup.sh ${{ env.AWS_MQTT5_TESTS_ENVIRONMENT }} cleanup
 
   linux-compat:
     runs-on: ubuntu-20.04 # latest
@@ -92,9 +94,10 @@ jobs:
 
     - name: MQTT5 tests
       run: |
-        source scripts/mqtt5_test_setup.sh ${{ env.AWS_MQTT5_TESTS_ENVIRONMENT }}
+        ./codebuild/mqtt5_test_setup.sh s3://aws-crt-test-stuff/TestIotProdMQTT5EnvironmentVariables.txt us-east-1
+        # source scripts/mqtt5_test_setup.sh ${{ env.AWS_MQTT5_TESTS_ENVIRONMENT }}
         python3 -m unittest --failfast --verbose test.test_mqtt5
-        source scripts/mqtt5_test_setup.sh ${{ env.AWS_MQTT5_TESTS_ENVIRONMENT }} cleanup
+        # source scripts/mqtt5_test_setup.sh ${{ env.AWS_MQTT5_TESTS_ENVIRONMENT }} cleanup
 
   linux-compiler-compat:
     runs-on: ubuntu-20.04 # latest
@@ -120,9 +123,10 @@ jobs:
 
       - name: MQTT5 tests
         run: |
-          source scripts/mqtt5_test_setup.sh ${{ env.AWS_MQTT5_TESTS_ENVIRONMENT }}
+          ./codebuild/mqtt5_test_setup.sh s3://aws-crt-test-stuff/TestIotProdMQTT5EnvironmentVariables.txt us-east-1
+          # source scripts/mqtt5_test_setup.sh ${{ env.AWS_MQTT5_TESTS_ENVIRONMENT }}
           python3 -m unittest --failfast --verbose test.test_mqtt5
-          source scripts/mqtt5_test_setup.sh ${{ env.AWS_MQTT5_TESTS_ENVIRONMENT }} cleanup
+          # source scripts/mqtt5_test_setup.sh ${{ env.AWS_MQTT5_TESTS_ENVIRONMENT }} cleanup
 
   windows:
     runs-on: windows-2022 # latest
@@ -137,9 +141,10 @@ jobs:
 
     - name: MQTT5 tests
       run: |
-        source scripts/mqtt5_test_setup.sh ${{ env.AWS_MQTT5_TESTS_ENVIRONMENT }}
+        ./codebuild/mqtt5_test_setup.sh s3://aws-crt-test-stuff/TestIotProdMQTT5EnvironmentVariables.txt us-east-1
+        # source scripts/mqtt5_test_setup.sh ${{ env.AWS_MQTT5_TESTS_ENVIRONMENT }}
         python3 -m unittest --failfast --verbose test.test_mqtt5
-        source scripts/mqtt5_test_setup.sh ${{ env.AWS_MQTT5_TESTS_ENVIRONMENT }} cleanup
+        # source scripts/mqtt5_test_setup.sh ${{ env.AWS_MQTT5_TESTS_ENVIRONMENT }} cleanup
 
   osx:
     runs-on: macos-11 # latest
@@ -152,9 +157,10 @@ jobs:
 
     - name: MQTT5 tests
       run: |
-        source scripts/mqtt5_test_setup.sh ${{ env.AWS_MQTT5_TESTS_ENVIRONMENT }}
+        ./codebuild/mqtt5_test_setup.sh s3://aws-crt-test-stuff/TestIotProdMQTT5EnvironmentVariables.txt us-east-1
+        # source scripts/mqtt5_test_setup.sh ${{ env.AWS_MQTT5_TESTS_ENVIRONMENT }}
         python3 -m unittest --failfast --verbose test.test_mqtt5
-        source scripts/mqtt5_test_setup.sh ${{ env.AWS_MQTT5_TESTS_ENVIRONMENT }} cleanup
+        # source scripts/mqtt5_test_setup.sh ${{ env.AWS_MQTT5_TESTS_ENVIRONMENT }} cleanup
 
   # check that tests requiring custom env-vars or AWS credentials are simply skipped
   tests-ok-without-env-vars:
