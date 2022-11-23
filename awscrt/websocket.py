@@ -317,11 +317,13 @@ class OnConnectionSetupData:
 
 @dataclass
 class OnConnectionShutdownData:
+    # TODO: document me
     exception: BaseException = None
 
 
 @dataclass
 class IncomingFrame:
+    # TODO: document me
     opcode: Opcode
     fin: bool
     rsv1: bool
@@ -332,24 +334,26 @@ class IncomingFrame:
 
 @dataclass
 class OnIncomingFrameBeginData:
+    # TODO: document me
     frame: IncomingFrame
 
 
 @dataclass
 class OnIncomingFramePayloadData:
+    # TODO: document me
     frame: IncomingFrame
     data: bytes
 
 
 @dataclass
 class OnIncomingFrameCompleteData:
-    """asdf"""
+    """TODO: document me"""
 
     frame: IncomingFrame
-    """asdf"""
+    """TODO: document me"""
 
     exception: BaseException = None
-    """asdf"""
+    """TODO: document me"""
 
 
 @dataclass
