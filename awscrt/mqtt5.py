@@ -19,7 +19,7 @@ from inspect import getmembers, signature
 
 class QoS(IntEnum):
     """MQTT message delivery quality of service.
-  
+
     Enum values match `MQTT5 spec <https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901234>`__ encoding values.
     """
 
@@ -51,7 +51,7 @@ def _try_qos(value):
 
 class ConnectReasonCode(IntEnum):
     """Server return code for connect attempts.
-     
+
     Enum values match `MQTT5 spec <https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901079>`__ encoding values.
     """
 
@@ -182,7 +182,7 @@ def _try_connect_reason_code(value):
 
 class DisconnectReasonCode(IntEnum):
     """Reason code inside DISCONNECT packets.  Helps determine why a connection was terminated.
-    
+
     Enum values match `MQTT5 spec <https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901208>`__ encoding values.
     """
 
@@ -190,7 +190,7 @@ class DisconnectReasonCode(IntEnum):
     """
     Returned when the remote endpoint wishes to disconnect normally. Will not trigger the publish of a Will message if a
     Will message was configured on the connection.
-    
+
     May be sent by the client or server.
     """
 
@@ -198,7 +198,7 @@ class DisconnectReasonCode(IntEnum):
     """
     Returns when the client wants to disconnect but requires that the server publish the Will message configured
     on the connection.
-    
+
     May only be sent by the client.
     """
 
@@ -206,28 +206,28 @@ class DisconnectReasonCode(IntEnum):
     """
     Returned when the connection was closed but the sender does not want to specify a reason or none
     of the other reason codes apply.
-    
+
     May be sent by the client or the server.
     """
 
     MALFORMED_PACKET = 129
     """
     Indicates the remote endpoint received a packet that does not conform to the MQTT specification.
-    
+
     May be sent by the client or the server.
     """
 
     PROTOCOL_ERROR = 130
     """
     Returned when an unexpected or out-of-order packet was received by the remote endpoint.
-    
+
     May be sent by the client or the server.
     """
 
     IMPLEMENTATION_SPECIFIC_ERROR = 131
     """
     Returned when a valid packet was received by the remote endpoint, but could not be processed by the current implementation.
-    
+
      May be sent by the client or the server.
     """
 
@@ -235,7 +235,7 @@ class DisconnectReasonCode(IntEnum):
     """
     Returned when the remote endpoint received a packet that represented an operation that was not authorized within
     the current connection.
-    
+
     May only be sent by the server.
     """
 
@@ -249,7 +249,7 @@ class DisconnectReasonCode(IntEnum):
     SERVER_SHUTTING_DOWN = 139
     """
     Returned when the server is shutting down.
-    
+
     May only be sent by the server.
     """
 
@@ -257,7 +257,7 @@ class DisconnectReasonCode(IntEnum):
     """
     Returned when the server closes the connection because no packet from the client has been received in
     1.5 times the KeepAlive time set when the connection was established.
-    
+
     May only be sent by the server.
     """
 
@@ -265,21 +265,21 @@ class DisconnectReasonCode(IntEnum):
     """
     Returned when the server has established another connection with the same client ID as a client's current
     connection, causing the current client to become disconnected.
-    
+
     May only be sent by the server.
     """
 
     TOPIC_FILTER_INVALID = 143
     """
     Returned when the topic filter name is correctly formed but not accepted by the server.
-    
+
     May only be sent by the server.
     """
 
     TOPIC_NAME_INVALID = 144
     """
     Returned when topic name is correctly formed, but is not accepted.
-    
+
     May be sent by the client or the server.
     """
 
@@ -287,7 +287,7 @@ class DisconnectReasonCode(IntEnum):
     """
     Returned when the remote endpoint reached a state where there were more in-progress QoS1+ publishes then the
     limit it established for itself when the connection was opened.
-    
+
     May be sent by the client or the server.
     """
 
@@ -295,7 +295,7 @@ class DisconnectReasonCode(IntEnum):
     """
     Returned when the remote endpoint receives a PUBLISH packet that contained a topic alias greater than the
     maximum topic alias limit that it established for itself when the connection was opened.
-    
+
     May be sent by the client or the server.
     """
 
@@ -303,28 +303,28 @@ class DisconnectReasonCode(IntEnum):
     """
     Returned when the remote endpoint received a packet whose size was greater than the maximum packet size limit
     it established for itself when the connection was opened.
-    
+
     May be sent by the client or the server.
     """
 
     MESSAGE_RATE_TOO_HIGH = 150
     """
     Returned when the remote endpoint's incoming data rate was too high.
-    
+
     May be sent by the client or the server.
     """
 
     QUOTA_EXCEEDED = 151
     """
     Returned when an internal quota of the remote endpoint was exceeded.
-    
+
     May be sent by the client or the server.
     """
 
     ADMINISTRATIVE_ACTION = 152
     """
     Returned when the connection was closed due to an administrative action.
-    
+
     May be sent by the client or the server.
     """
 
@@ -332,14 +332,14 @@ class DisconnectReasonCode(IntEnum):
     """
     Returned when the remote endpoint received a packet where payload format did not match the format specified
     by the payload format indicator.
-    
+
     May be sent by the client or the server.
     """
 
     RETAIN_NOT_SUPPORTED = 154
     """
     Returned when the server does not support retained messages.
-    
+
     May only be sent by the server.
     """
 
@@ -347,42 +347,42 @@ class DisconnectReasonCode(IntEnum):
     """
     Returned when the client sends a QoS that is greater than the maximum QoS established when the connection was
     opened.
-    
+
     May only be sent by the server.
     """
 
     USE_ANOTHER_SERVER = 156
     """
     Returned by the server to tell the client to temporarily use a different server.
-    
+
     May only be sent by the server.
     """
 
     SERVER_MOVED = 157
     """
     Returned by the server to tell the client to permanently use a different server.
-    
+
     May only be sent by the server.
     """
 
     SHARED_SUBSCRIPTIONS_NOT_SUPPORTED = 158
     """
     Returned by the server to tell the client that shared subscriptions are not supported on the server.
-    
+
     May only be sent by the server.
     """
 
     CONNECTION_RATE_EXCEEDED = 159
     """
     Returned when the server disconnects the client due to the connection rate being too high.
-    
+
     May only be sent by the server.
     """
 
     MAXIMUM_CONNECT_TIME = 160
     """
     Returned by the server when the maximum connection time authorized for the connection was exceeded.
-    
+
     May only be sent by the server.
     """
 
@@ -390,7 +390,7 @@ class DisconnectReasonCode(IntEnum):
     """
     Returned by the server when it received a SUBSCRIBE packet with a subscription identifier, but the server does
     not support subscription identifiers.
-    
+
     May only be sent by the server.
     """
 
@@ -398,7 +398,7 @@ class DisconnectReasonCode(IntEnum):
     """
     Returned by the server when it received a SUBSCRIBE packet with a wildcard topic filter, but the server does
     not support wildcard topic filters.
-    
+
     May only be sent by the server.
     """
 
@@ -412,21 +412,21 @@ def _try_disconnect_reason_code(value):
 
 class PubackReasonCode(IntEnum):
     """Reason code inside PUBACK packets that indicates the result of the associated PUBLISH request.
-    
+
     Enum values match `MQTT5 spec <https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901124>`__ encoding values.
     """
 
     SUCCESS = 0
     """
     Returned when the (QoS 1) publish was accepted by the recipient.
-    
+
     May be sent by the client or the server.
     """
 
     NO_MATCHING_SUBSCRIBERS = 16
     """
     Returned when the (QoS 1) publish was accepted but there were no matching subscribers.
-    
+
     May only be sent by the server.
     """
 
@@ -434,28 +434,28 @@ class PubackReasonCode(IntEnum):
     """
     Returned when the (QoS 1) publish was not accepted and the receiver does not want to specify a reason or none
     of the other reason codes apply.
-    
+
     May be sent by the client or the server.
     """
 
     IMPLEMENTATION_SPECIFIC_ERROR = 131
     """
     Returned when the (QoS 1) publish was valid but the receiver was not willing to accept it.
-    
+
     May be sent by the client or the server.
     """
 
     NOT_AUTHORIZED = 135
     """
     Returned when the (QoS 1) publish was not authorized by the receiver.
-    
+
     May be sent by the client or the server.
     """
 
     TOPIC_NAME_INVALID = 144
     """
     Returned when the topic name was valid but the receiver was not willing to accept it.
-    
+
     May be sent by the client or the server.
     """
 
@@ -463,21 +463,21 @@ class PubackReasonCode(IntEnum):
     """
     Returned when the packet identifier used in the associated PUBLISH was already in use.
     This can indicate a mismatch in the session state between client and server.
-    
+
     May be sent by the client or the server.
     """
 
     QUOTA_EXCEEDED = 151
     """
     Returned when the associated PUBLISH failed because an internal quota on the recipient was exceeded.
-    
+
     May be sent by the client or the server.
     """
 
     PAYLOAD_FORMAT_INVALID = 153
     """
     Returned when the PUBLISH packet's payload format did not match its payload format indicator property.
-    
+
     May be sent by the client or the server.
     """
 
@@ -491,9 +491,9 @@ def _try_puback_reason_code(value):
 
 class SubackReasonCode(IntEnum):
     """Reason code inside SUBACK packet payloads.
-     
+
     Enum values match `MQTT5 spec <https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901178>`__ encoding values.
-    
+
     This will only be sent by the server and not the client.
     """
 
@@ -572,7 +572,7 @@ def _try_suback_reason_code(value):
 class UnsubackReasonCode(IntEnum):
     """Reason codes inside UNSUBACK packet payloads that specify the results for each topic filter in the associated
     UNSUBSCRIBE packet.
-    
+
     Enum values match `MQTT5 spec <https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901194>`__ encoding values.
     """
 
@@ -637,7 +637,7 @@ class ClientSessionBehaviorType(IntEnum):
     REJOIN_POST_SUCCESS = 2
     """
     Always attempt to rejoin an existing session after an initial connection success.
-    
+
     Session rejoin requires an appropriate non-zero session expiry interval in the client's CONNECT options.
     """
 
@@ -733,7 +733,7 @@ class PacketType(IntEnum):
 
 class PayloadFormatIndicator(IntEnum):
     """Optional property describing a PUBLISH payload's format.
-    
+
     Enum values match `MQTT5 spec <https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901111>`__ encoding values.
     """
 
@@ -741,7 +741,7 @@ class PayloadFormatIndicator(IntEnum):
     """
     The payload is arbitrary binary data
     """
-    
+
     AWS_MQTT5_PFI_UTF8 = 1
     """
     The payload is a well-formed utf-8 string value.
@@ -751,7 +751,7 @@ class PayloadFormatIndicator(IntEnum):
 class RetainAndHandlingType(IntEnum):
     """Configures how retained messages should be handled when subscribing with a topic filter that matches topics with
     associated retained messages.
-    
+
     Enum values match `MQTT5 spec <https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169>`_ encoding values.
     """
 
@@ -759,13 +759,13 @@ class RetainAndHandlingType(IntEnum):
     """
     The server should always send all retained messages on topics that match a subscription's filter.
     """
-    
+
     SEND_ON_SUBSCRIBE_IF_NEW = 1
     """
     The server should send retained messages on topics that match the subscription's filter, but only for the
     first matching subscription, per session.
     """
-    
+
     DONT_SEND = 2
     """
     Subscriptions must not trigger any retained message publishes from the server.
@@ -776,29 +776,29 @@ class ExtendedValidationAndFlowControlOptions(IntEnum):
     """Additional controls for client behavior with respect to operation validation and flow control; these checks
     go beyond the MQTT5 spec to respect limits of specific MQTT brokers.
     """
-    
+
     NONE = 0
     """
     Do not do any additional validation or flow control
     """
-    
+
     AWS_IOT_CORE_DEFAULTS = 1
     """
     Apply additional client-side validation and operational flow control that respects the
     default AWS IoT Core limits.
-    
+
     Currently applies the following additional validation:
-    
+
     * No more than 8 subscriptions per SUBSCRIBE packet
     * Topics and topic filters have a maximum of 7 slashes (8 segments), not counting any AWS rules prefix
     * Topics must be 256 bytes or less in length
     * Client id must be 128 or less bytes in length
-    
+
     Also applies the following flow control:
-    
+
     * Outbound throughput throttled to 512KB/s
     * Outbound publish TPS throttled to 100
-    
+
     """
 
 
@@ -812,13 +812,13 @@ class ClientOperationQueueBehaviorType(IntEnum):
     """
     Default client operation queue behavior. Maps to FAIL_QOS0_PUBLISH_ON_DISCONNECT.
     """
-    
+
     FAIL_NON_QOS1_PUBLISH_ON_DISCONNECT = 1
     """
     Re-queues QoS 1+ publishes on disconnect; un-acked publishes go to the front while unprocessed publishes stay
     in place.  All other operations (QoS 0 publishes, subscribe, unsubscribe) are failed.
     """
-    
+
     FAIL_QOS0_PUBLISH_ON_DISCONNECT = 2
     """
     QoS 0 publishes that are not complete at the time of disconnection are failed.  Un-acked QoS 1+ publishes are
@@ -836,7 +836,7 @@ class ClientOperationQueueBehaviorType(IntEnum):
 class ExponentialBackoffJitterMode(IntEnum):
     """Controls how the reconnect delay is modified in order to smooth out the distribution of reconnection attempt
     timepoints for a large set of reconnecting clients.
-    
+
     See `Exponential Backoff and Jitter <https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/>`_
     """
 
@@ -886,14 +886,14 @@ def _init_user_properties(user_properties_tuples):
 class NegotiatedSettings:
     """
     Mqtt behavior settings that are dynamically negotiated as part of the CONNECT/CONNACK exchange.
- 
+
     While you can infer all of these values from a combination of:
     - defaults as specified in the mqtt5 spec
     - your CONNECT settings
     - the CONNACK from the broker
- 
+
     the client instead does the combining for you and emits a NegotiatedSettings object with final, authoritative values.
- 
+
     Negotiated settings are communicated with every successful connection establishment.
 
     Args:
@@ -985,7 +985,7 @@ class DisconnectPacket:
 @dataclass
 class Subscription:
     """Configures a single subscription within a Subscribe operation
-    
+
     Args:
         topic_filter (str): The topic filter to subscribe to
         qos (QoS): The maximum QoS on which the subscriber will accept publish messages
@@ -1043,7 +1043,7 @@ class UnsubscribePacket:
 @dataclass
 class UnsubackPacket:
     """Data model of an `MQTT5 UNSUBACK <https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc471483687>`_ packet.
-    
+
     Args:
         reason_string (str): Additional diagnostic information about the result of the UNSUBSCRIBE attempt.
         user_properties (Sequence[UserProperty]): List of MQTT5 user properties included with the packet.
@@ -1225,7 +1225,7 @@ class LifecycleConnectSuccessData:
 @dataclass
 class LifecycleConnectFailureData:
     """Dataclass containing results of a Connect Failure Lifecycle Event
-    
+
     Args:
         connack_packet (ConnackPacket):  Data model of an `MQTT5 CONNACK <https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901074>`_ packet.
         error_code (int): (:class:`awscrt.exceptions.AwsCrtError`): Exception which caused connection failure.
@@ -1237,7 +1237,7 @@ class LifecycleConnectFailureData:
 @dataclass
 class LifecycleDisconnectData:
     """Dataclass containing results of a Disconnect Lifecycle Event
-    
+
     Args:
         disconnect_packet (DisconnectPacket): Data model of an `MQTT5 DISCONNECT <https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901205>`_ packet.
         error_code (int): (:class:`awscrt.exceptions.AwsCrtError`): Exception which caused disconnection.
@@ -1248,7 +1248,7 @@ class LifecycleDisconnectData:
 @dataclass
 class PublishCompletionData:
     """Dataclass containing results of a Publish
-    
+
     Args:
         puback (PubackPacket): On a successful completion of a QoS1 publish a PubackPacket will be included.
     """
@@ -1258,7 +1258,7 @@ class PublishCompletionData:
 @dataclass
 class ClientOptions:
     """Configuration for the creation of MQTT5 clients
-    
+
     Args:
         host_name (str): Host name of the MQTT server to connect to.
         port (int): Network port of the MQTT server to connect to.
@@ -1277,7 +1277,7 @@ class ClientOptions:
         min_connected_time_to_reset_reconnect_delay_ms (int): The amount of time that must elapse with an established connection before the reconnect delay is reset to the minimum. This helps alleviate bandwidth-waste in fast reconnect cycles due to permission failures on operations.
         ping_timeout_ms (int): The time interval to wait after sending a PINGREQ for a PINGRESP to arrive. If one does not arrive, the client will close the current connection.
         connack_timeout_ms (int): The time interval to wait after sending a CONNECT request for a CONNACK to arrive.  If one does not arrive, the connection will be shut down.
-        operation_timeout_sec (int): The time interval to wait for an ack after sending a QoS 1+ PUBLISH, SUBSCRIBE, or UNSUBSCRIBE before failing the operation.
+        ack_timeout_sec (int): The time interval to wait for an ack after sending a QoS 1+ PUBLISH, SUBSCRIBE, or UNSUBSCRIBE before failing the operation.
         on_publish_callback_fn (Callable[[PublishPacket],]): Callback for all publish packets received by client.
         on_lifecycle_event_stopped_fn (Callable[[LifecycleStoppedData],]): Callback for Lifecycle Event Stopped.
         on_lifecycle_event_attempting_connect_fn (Callable[[LifecycleAttemptingConnectData],]): Callback for Lifecycle Event Attempting Connect.
@@ -1302,7 +1302,7 @@ class ClientOptions:
     min_connected_time_to_reset_reconnect_delay_ms: int = None
     ping_timeout_ms: int = None
     connack_timeout_ms: int = None
-    operation_timeout_sec: int = None
+    ack_timeout_sec: int = None
     on_publish_callback_fn: Callable[[PublishPacket], None] = None
     on_lifecycle_event_stopped_fn: Callable[[LifecycleStoppedData], None] = None
     on_lifecycle_event_attempting_connect_fn: Callable[[LifecycleAttemptingConnectData], None] = None
@@ -1578,7 +1578,7 @@ class _ClientCore:
         if self._on_lifecycle_disconnection_cb is None:
             return
 
-        
+
         if disconnect_packet_exists:
             disconnect_packet = DisconnectPacket()
             disconnect_packet.reason_code = _try_disconnect_reason_code(reason_code)
@@ -1597,7 +1597,7 @@ class _ClientCore:
 
 class Client(NativeResource):
     """This class wraps the aws-c-mqtt MQTT5 client to provide the basic MQTT5 pub/sub functionalities via the AWS Common Runtime
-    
+
     One Client class creates one connection.
 
     Args:
@@ -1671,20 +1671,20 @@ class Client(NativeResource):
                                                  client_options.max_reconnect_delay_ms,
                                                  client_options.min_connected_time_to_reset_reconnect_delay_ms,
                                                  client_options.ping_timeout_ms,
-                                                 client_options.operation_timeout_sec,
+                                                 client_options.ack_timeout_sec,
                                                  websocket_is_none,
                                                  core)
 
     def start(self):
         """Notifies the MQTT5 client that you want it maintain connectivity to the configured endpoint.
         The client will attempt to stay connected using the properties of the reconnect-related parameters in the mqtt5 client configuration.
-        
+
         This is an asynchronous operation."""
         _awscrt.mqtt5_client_start(self._binding)
 
     def stop(self, disconnect_packet: DisconnectPacket = None):
         """Notifies the MQTT5 client that you want it to end connectivity to the configured endpoint, disconnecting any existing connection and halting any reconnect attempts.
-        
+
         This is an asynchronous operation.
 
         Args:
@@ -1695,23 +1695,23 @@ class Client(NativeResource):
         if is_disconnect_packet_none:
             disconnect_packet = DisconnectPacket()
 
-        _awscrt.mqtt5_client_stop(self._binding, 
-                                  is_disconnect_packet_none, 
-                                  disconnect_packet.reason_code, 
-                                  disconnect_packet.session_expiry_interval_sec, 
-                                  disconnect_packet.reason_string, 
-                                  disconnect_packet.user_properties, 
+        _awscrt.mqtt5_client_stop(self._binding,
+                                  is_disconnect_packet_none,
+                                  disconnect_packet.reason_code,
+                                  disconnect_packet.session_expiry_interval_sec,
+                                  disconnect_packet.reason_string,
+                                  disconnect_packet.user_properties,
                                   disconnect_packet.server_reference)
 
     def publish(self, publish_packet: PublishPacket):
         """Tells the client to attempt to send a PUBLISH packet.
-        
+
         Will return a future containing a PubAckResult if the publish is successful. The data in the PubAckResult varies depending on the QoS of the Publish. For QoS 0, the PubAckResult will not contain data. For QoS 1, the PubAckResult will contain a PubAckPacket. See PubAckResult class documentation for more info.
 
         Args:
             publish_packet (PublishPacket): PUBLISH packet to send to the server
 
-        Returns: 
+        Returns:
             A future with a (:class:`PublishCompletionData`)
         """
 
@@ -1730,7 +1730,7 @@ class Client(NativeResource):
                     puback_packet.reason_code = _try_puback_reason_code(reason_code)
                     puback_packet.reason_string = reason_string
                     puback_packet.user_properties = _init_user_properties(user_properties_tuples)
-            
+
                 future.set_result(publish_completion_data)
 
         _awscrt.mqtt5_client_publish(self._binding,
@@ -1746,7 +1746,7 @@ class Client(NativeResource):
                                      publish_packet.content_type,
                                      publish_packet.user_properties,
                                      puback)
-        
+
         return future
 
     def subscribe(self, subscribe_packet: SubscribePacket):
@@ -1771,7 +1771,7 @@ class Client(NativeResource):
                 suback_packet.user_properties = _init_user_properties(user_properties_tuples)
                 future.set_result(suback_packet)
 
-        
+
         _awscrt.mqtt5_client_subscribe(self._binding,
                                        subscribe_packet.subscriptions,
                                        subscribe_packet.subscription_identifier,

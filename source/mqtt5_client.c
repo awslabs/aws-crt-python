@@ -55,7 +55,7 @@ static const char *AWS_PYOBJECT_KEY_MAX_RECONNECT_DELAY_MS = "max_reconnect_dela
 static const char *AWS_PYOBJECT_KEY_MIN_CONNECTED_TIME_TO_RESET_RECONNECT_DELAY_MS =
     "min_connected_time_to_reset_reconnect_delay_ms";
 static const char *AWS_PYOBJECT_KEY_PING_TIMEOUT_MS = "ping_timeout_ms";
-static const char *AWS_PYOBJECT_KEY_OPERATION_TIMEOUT_SECONDS = "operation_timeout_seconds";
+static const char *AWS_PYOBJECT_KEY_ACK_TIMEOUT_SECONDS = "ack_timeout_seconds";
 
 #define KEEP_ALIVE_INTERVAL_SECONDS 1200
 
@@ -754,7 +754,7 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
     PyObject *max_reconnect_delay_ms_py;                         /* optional uint64_t */
     PyObject *min_connected_time_to_reset_reconnect_delay_ms_py; /* optional uint64_t */
     PyObject *ping_timeout_ms_py;                                /* optional uint32_t */
-    PyObject *operation_timeout_seconds_py;                      /* optional uint32_t */
+    PyObject *ack_timeout_seconds_py;                            /* optional uint32_t */
     /* Callbacks */
     PyObject *is_websocket_none_py;
     PyObject *client_core_py;
@@ -811,7 +811,7 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
             &max_reconnect_delay_ms_py,
             &min_connected_time_to_reset_reconnect_delay_ms_py,
             &ping_timeout_ms_py,
-            &operation_timeout_seconds_py,
+            &ack_timeout_seconds_py,
 
             &is_websocket_none_py,
             &client_core_py)) {
@@ -982,13 +982,13 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
         goto done;
     }
 
-    uint32_t operation_timeout_seconds_tmp = 0;
+    uint32_t ack_timeout_seconds_tmp = 0;
     if (PyObject_GetAsOptionalUint32(
-            operation_timeout_seconds_py,
+            ack_timeout_seconds_py,
             AWS_PYOBJECT_KEY_CLIENT_OPTIONS,
-            AWS_PYOBJECT_KEY_OPERATION_TIMEOUT_SECONDS,
-            &operation_timeout_seconds_tmp)) {
-        client_options.operation_timeout_seconds = operation_timeout_seconds_tmp;
+            AWS_PYOBJECT_KEY_ACK_TIMEOUT_SECONDS,
+            &ack_timeout_seconds_tmp)) {
+        client_options.ack_timeout_seconds = ack_timeout_seconds_tmp;
     }
     if (PyErr_Occurred()) {
         goto done;
