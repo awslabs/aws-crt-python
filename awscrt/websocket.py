@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from enum import IntEnum
 from concurrent.futures import Future
 from io import IOBase
+import sys
 from typing import Callable, Sequence, Tuple
 
 
@@ -96,7 +97,7 @@ class WebSocket(NativeResource):
         on_incoming_frame_complete: Callable[[OnIncomingFrameCompleteData], None] = None,
         enable_read_backpressure: bool = False,
         initial_read_window: int = None,
-    ):  # TODO: return future?
+    ):
 
         if enable_read_backpressure:
             if initial_read_window is None:
@@ -131,29 +132,6 @@ class WebSocket(NativeResource):
     def __init__(self, binding):
         super().__init__()
         self._binding = binding
-
-    def close(self, graceful_shutdown=True):
-        raise NotImplementedError()
-
-    def send_frame(
-        self, *,
-        opcode: Opcode,
-        fin: bool = True,
-        rsv1: bool = False,
-        rsv2: bool = False,
-        rsv3: bool = False,
-        # TODO: decide 3 different args for payload types? or single arg and try to detect type?
-        payload_bytes: bytes = None,
-        payload_str: str = None,
-        payload_stream: IOBase = None,
-        payload_length: int = None,
-        # TODO: decide completion callback? future? both?
-        on_complete: Callable[[OnSendFrameCompleteData], None] = None,
-    ) -> Future:
-        raise NotImplementedError()
-
-    def increment_read_window(self, more_bytes):
-        raise NotImplementedError()
 
 
 def create_handshake_request(*, host: str, path: str = '/') -> HttpRequest:
@@ -195,4 +173,14 @@ class _WebSocketCore(NativeResource):
 
         # TODO: get C to pass handshake_response_body
 
-        self._on_connection_setup_cb(cbdata)
+        # Do not let exceptions from the user's callback bubble up any further.
+        try:
+            self._on_connection_setup_cb(cbdata)
+        except Exception:
+            print("Exception in WebSocket on_connection_setup callback", file=sys.stderr)
+            sys.excepthook(*sys.exc_info())
+            if cbdata.websocket:
+                pass  # TODO: close websocket
+
+    def _on_connection_shutdown(self, error_code):
+        pass  # TODO

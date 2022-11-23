@@ -143,5 +143,5 @@ class TestClient(NativeResourceTest):
 
             # drop all references to WebSocket,
             # which should cause it to shut down and clean up
-            client_handler.setup_future = None
-            setup_data = None
+            del client_handler.setup_future
+            del setup_data

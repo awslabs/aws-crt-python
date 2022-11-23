@@ -238,7 +238,11 @@ static void s_websocket_on_connection_setup(
     if (result) {
         Py_DECREF(result);
     } else {
-        PyErr_WriteUnraisable(PyErr_Occurred());
+        /* _WebSocketCore._on_connection_setup() runs the user's callback in a try/catch.
+         * So any exception that leaks out is an unexpected bug in our code.
+         * Make it fatal, we have no graceful way to deal with this. */
+        PyErr_WriteUnraisable(websocket_core_py);
+        AWS_FATAL_ASSERT(0 && "Failed to invoke WebSocket on_connection_setup callback");
     }
 
     Py_XDECREF(websocket_binding_py);
@@ -265,7 +269,8 @@ static void s_websocket_on_connection_shutdown(struct aws_websocket *websocket, 
     PyObject *result = PyObject_CallMethod(websocket_core_py, "_on_connection_shutdown", "(i)", error_code);
     if (result) {
         Py_DECREF(result);
-        PyErr_WriteUnraisable(PyErr_Occurred());
+    } else {
+        PyErr_WriteUnraisable(websocket_core_py);
     }
 
     /* Release _WebSocketCore, there will be no further callbacks */
