@@ -874,6 +874,9 @@ class UserProperty:
     name: str = None
     value: str = None
 
+    def __getitem__(self, item):
+        return getattr(self,item)
+
 
 def _init_user_properties(user_properties_tuples):
     if user_properties_tuples is None:
