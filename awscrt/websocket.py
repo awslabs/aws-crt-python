@@ -137,7 +137,7 @@ def connect_client(
         if initial_read_window is None:
             raise ValueError("'initial_read_window' must be set if 'enable_read_backpressure' is enabled")
     else:
-        initial_read_window = 0xFFFFFFFF  # TODO: fix how this works in C
+        initial_read_window = 0x7FFFFFFF  # TODO: fix how this works in C
 
     if port is None:
         port = 0  # C layer uses zero to indicate "defaults please"
