@@ -48,36 +48,42 @@ class WebSocketServer:
     def __init__(self, host, port):
         self._host = host
         self._port = port
-        self._started_event = threading.Event()
-        self._thread = threading.Thread(target=self._thread_main)
+        # We use an old-fashioned thread-safe Event to signal the main thread
+        # that the asyncio server thread has finished startup.
+        self._server_started_event = threading.Event()
+        self._server_thread = threading.Thread(target=self._run_server_thread)
 
     def __enter__(self):
-        # we're entering the `with` block: start the server...
-        self._thread.start()
+        # main thread is entering the `with` block: start the server...
+        self._server_thread.start()
 
         # don't return until the server signals that it's started up and is listening for connections
-        self._started_event.wait()
+        self._server_started_event.wait()
 
     def __exit__(self, exc_type, exc_value, exc_tb):
-        # we're exiting the `with` block: tell the server to stop...
-        self._stop_event.set()
+        # main thread is exiting the `with` block: tell the server to stop...
+
+        # asyncio events aren't actually thread-safe, so we can't simply call set() from here.
+        # we need to call it from the loop.
+        self._server_loop.call_soon_threadsafe(self._server_stop_event.set)
 
         # don't return until the server thread exits
-        self._thread.join(TIMEOUT)
+        self._server_thread.join(TIMEOUT)
 
-    def _thread_main(self):
-        # run the main asyncio coroutine
-        asyncio.run(self._asyncio_main())
+    def _run_server_thread(self):
+        asyncio.run(self._run_asyncio_server())
 
-    async def _asyncio_main(self):
-        self._stop_event = asyncio.Event()
+    async def _run_asyncio_server(self):
+        # store things the main thread will need later, so it can signal us to stop...
+        self._server_loop = asyncio.get_running_loop()
+        self._server_stop_event = asyncio.Event()
 
         # this coroutine runs the server until the _stop_event fires
         async with websockets_server_3rdparty.serve(self._run_connection, self._host, self._port) as server:
             # signal that server has started up
-            self._started_event.set()
+            self._server_started_event.set()
             # wait for the signal that we should stop
-            await self._stop_event.wait()
+            await self._server_stop_event.wait()
 
     async def _run_connection(self, server_connection: websockets_server_3rdparty.WebSocketServerProtocol):
         # this coroutine runs once for each connection to the server
