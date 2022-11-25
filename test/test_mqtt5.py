@@ -192,7 +192,6 @@ class Mqtt5ClientTest(NativeResourceTest):
             auth_type=AuthType.DIRECT,
             client_options: mqtt5.ClientOptions = None,
             callbacks: Mqtt5TestCallbacks = None):
-        print()
         config = Config(auth_type)
 
         if client_options is None:
