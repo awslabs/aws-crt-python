@@ -276,12 +276,12 @@ class Mqtt5ClientTest(NativeResourceTest):
         callbacks.future_connection_success.result(TIMEOUT)
         return client, callbacks
 
-    def _test_connect_fail(self, auth_type=AuthType.DIRECT, client_options: mqtt5.ClientOptions = None, expected_error_code :int = None, test_specific_error_code : bool = True):
+    def _test_connect_fail(self, auth_type=AuthType.DIRECT, client_options: mqtt5.ClientOptions = None, expected_error_code :int = None):
         callbacks = Mqtt5TestCallbacks()
         client = self._create_client(auth_type=auth_type, callbacks=callbacks, client_options=client_options)
         client.start()
         callbacks.future_connection_failure.result(TIMEOUT)
-        if(test_specific_error_code):
+        if(expected_error_code is not None):
             self.assertEqual(str(callbacks.last_exception), str(exceptions.from_code(expected_error_code)))
         return client, callbacks
 
@@ -502,7 +502,7 @@ class Mqtt5ClientTest(NativeResourceTest):
 
     def test_connect_with_invalid_host_name(self):
         client_options = mqtt5.ClientOptions("badhost", 1883)
-        client, callbacks = self._test_connect_fail(auth_type=AuthType.NO_APPLICATION, client_options=client_options, expected_error_code=1059, test_specific_error_code = False)
+        client, callbacks = self._test_connect_fail(auth_type=AuthType.NO_APPLICATION, client_options=client_options)
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
