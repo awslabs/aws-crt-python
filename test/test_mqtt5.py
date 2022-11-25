@@ -55,16 +55,6 @@ AuthType = enum.Enum('AuthType', ['DIRECT',
 
 class Config:
     def __init__(self, auth_type: AuthType):
-        self.endpoint = None
-        self.port = None
-        self.username = None
-        self.password = None
-        self.key_path = None
-        self.key = None
-        self.cert_path = None
-        self.cert = None
-        self.proxy_endpoint = None
-        self.proxy_port = None
 
         if auth_type == AuthType.DIRECT or auth_type == AuthType.DOUBLE_CLIENT_ID_FAILURE or auth_type == AuthType.DIRECT_HOST_AND_PORT_ONLY:
             self.endpoint = self._get_env("AWS_TEST_MQTT5_DIRECT_MQTT_HOST")
