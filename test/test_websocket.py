@@ -58,7 +58,7 @@ class WebSocketServer:
         self._server_thread.start()
 
         # don't return until the server signals that it's started up and is listening for connections
-        assert(self._server_started_event.wait(TIMEOUT) == True)
+        assert self._server_started_event.wait(TIMEOUT)
 
     def __exit__(self, exc_type, exc_value, exc_tb):
         # main thread is exiting the `with` block: tell the server to stop...
@@ -70,7 +70,7 @@ class WebSocketServer:
         # don't return until the server thread exits
         self._server_thread.join(TIMEOUT)
         # check whether thread really exited, or we just timed out
-        assert(self._server_thread.is_alive() == False)
+        assert (self._server_thread.is_alive() == False)
 
     def _run_server_thread(self):
         asyncio.run(self._run_asyncio_server())
