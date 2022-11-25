@@ -24,8 +24,10 @@ AuthType = enum.Enum('AuthType', ['DIRECT',
                                   'WS_TLS',
                                   'WS_PROXY'])
 
+
 def create_client_id():
     return f"aws-crt-python-canary-test-{uuid.uuid4()}"
+
 
 class Config:
     def __init__(self, auth_type: AuthType):
@@ -91,6 +93,7 @@ class Config:
             raise unittest.SkipTest(f"test requires env var: {name}")
         return val
 
+
 class CanaryCore():
     def __init__(self):
         # Stats
@@ -138,14 +141,16 @@ class CanaryCore():
 
     def on_lifecycle_disconnection(self, lifecycle_disconnect_data: mqtt5.LifecycleDisconnectData):
         print("on_lifecycle_disconnection")
-        print(f"error_code:{lifecycle_disconnect_data.error_code} '{exceptions.from_code(lifecycle_disconnect_data.error_code)}'")
+        print(
+            f"error_code:{lifecycle_disconnect_data.error_code} '{exceptions.from_code(lifecycle_disconnect_data.error_code)}'")
+
 
 class CanaryClient():
     user_properties = []
     user_properties.append(mqtt5.UserProperty(name="name1", value="value1"))
     user_properties.append(mqtt5.UserProperty(name="name2", value="value2"))
 
-    def __init__(self, auth_type = AuthType.DIRECT):
+    def __init__(self, auth_type=AuthType.DIRECT):
         self.client_id = create_client_id()
         self.canary_core = CanaryCore()
         self.client = self._create_client(auth_type=auth_type, canary_core=self.canary_core)
@@ -196,7 +201,7 @@ class CanaryClient():
 
     def random_operation(self):
         time.sleep(0.05)
-        operation = random.randint(0,100)
+        operation = random.randint(0, 100)
 
         if self.stopped:
             self.start()
@@ -209,7 +214,6 @@ class CanaryClient():
         else:
             if not self.stopped:
                 self.stop()
-
 
     def start(self):
         if not self.stopped:
@@ -242,8 +246,8 @@ class CanaryClient():
 
         publish_packet = mqtt5.PublishPacket(
             topic=topic_filter,
-            qos=random.randint(0,1),
-            payload=bytearray(os.urandom(random.randint(0,10000)))
+            qos=random.randint(0, 1),
+            payload=bytearray(os.urandom(random.randint(0, 10000)))
         )
 
         print(f"publish qos:{publish_packet.qos}")
@@ -253,7 +257,7 @@ class CanaryClient():
         try:
             self.client.publish(publish_packet=publish_packet)
             self.canary_core.stat_publishes_succeeded += 1
-        except:
+        except BaseException:
             self.canary_core.stat_publishes_failed += 1
 
     def subscribe(self, topic_filter: str = None, qos: int = 1):
@@ -269,7 +273,7 @@ class CanaryClient():
         try:
             self.client.subscribe(subscribe_packet=subscribe_packet)
             self.canary_core.stat_subscribes_succeeded += 1
-        except:
+        except BaseException:
             self.canary_core.stat_subscribes_failed += 1
 
     def unsubscribe(self):
@@ -284,9 +288,8 @@ class CanaryClient():
 
             self.client.unsubscribe(unsubscribe_packet=unsubscribe_packet)
             self.canary_core.stat_unsubscribes_succeeded += 1
-        except:
+        except BaseException:
             self.canary_core.stat_unsubscribes_failed += 1
-
 
     def print_stats(self):
         print(f"""\n
@@ -304,7 +307,6 @@ Client Stats:
     publishes_attempted:    {self.canary_core.stat_publishes_attempted}
     publishes_succeeded:    {self.canary_core.stat_publishes_succeeded}
     publishes_failed:       {self.canary_core.stat_publishes_failed}""")
-
 
 
 class Mqtt5CanaryTestClient(NativeResourceTest):
@@ -325,6 +327,7 @@ class Mqtt5CanaryTestClient(NativeResourceTest):
         time.sleep(0.1)
         client.stop()
         client.print_stats()
+
 
 if __name__ == 'main':
     unittest.main()
