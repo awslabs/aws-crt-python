@@ -153,7 +153,7 @@ class Mqtt5TestCallbacks():
     def on_publish_received(self, publish_packet: mqtt5.PublishPacket):
         print(f"{self.client_name} on_publish_received")
         self.on_publish_received_counter += 1
-        if self.future_publish_received and not self.future_publish_received.done() :
+        if self.future_publish_received and not self.future_publish_received.done():
             self.future_publish_received.set_result(publish_packet)
 
     def on_lifecycle_stopped(self, lifecycle_stopped: mqtt5.LifecycleStoppedData):
@@ -206,31 +206,31 @@ class Mqtt5ClientTest(NativeResourceTest):
             client_options.connect_options.client_id = create_client_id()
 
         if (auth_type == AuthType.DIRECT or
-                    auth_type == AuthType.DIRECT_BASIC_AUTH or
-                    auth_type == AuthType.DIRECT_TLS or
-                    auth_type == AuthType.DIRECT_PROXY or
-                    auth_type == AuthType.WS or
-                    auth_type == AuthType.WS_BASIC_AUTH or
-                    auth_type == AuthType.WS_TLS or
-                    auth_type == AuthType.WS_PROXY or
-                    auth_type == AuthType.DIRECT_BASIC_AUTH_BAD or
-                    auth_type == AuthType.DOUBLE_CLIENT_ID_FAILURE or
-                    auth_type == AuthType.DIRECT_HOST_ONLY or
-                    auth_type == AuthType.WS_BAD_PORT or
-                    auth_type == AuthType.DIRECT_HOST_AND_PORT_ONLY):
+            auth_type == AuthType.DIRECT_BASIC_AUTH or
+            auth_type == AuthType.DIRECT_TLS or
+            auth_type == AuthType.DIRECT_PROXY or
+            auth_type == AuthType.WS or
+            auth_type == AuthType.WS_BASIC_AUTH or
+            auth_type == AuthType.WS_TLS or
+            auth_type == AuthType.WS_PROXY or
+            auth_type == AuthType.DIRECT_BASIC_AUTH_BAD or
+            auth_type == AuthType.DOUBLE_CLIENT_ID_FAILURE or
+            auth_type == AuthType.DIRECT_HOST_ONLY or
+            auth_type == AuthType.WS_BAD_PORT or
+                auth_type == AuthType.DIRECT_HOST_AND_PORT_ONLY):
             client_options.host_name = config.endpoint
 
         if(auth_type == AuthType.DIRECT or
-                    auth_type == AuthType.DIRECT_BASIC_AUTH or
-                    auth_type == AuthType.DIRECT_TLS or
-                    auth_type == AuthType.DIRECT_PROXY or
-                    auth_type == AuthType.WS or
-                    auth_type == AuthType.WS_BASIC_AUTH or
-                    auth_type == AuthType.WS_TLS or
-                    auth_type == AuthType.WS_PROXY or
-                    auth_type == AuthType.DIRECT_BASIC_AUTH_BAD or
-                    auth_type == AuthType.DOUBLE_CLIENT_ID_FAILURE or
-                    auth_type == AuthType.DIRECT_HOST_AND_PORT_ONLY):
+           auth_type == AuthType.DIRECT_BASIC_AUTH or
+           auth_type == AuthType.DIRECT_TLS or
+           auth_type == AuthType.DIRECT_PROXY or
+           auth_type == AuthType.WS or
+           auth_type == AuthType.WS_BASIC_AUTH or
+           auth_type == AuthType.WS_TLS or
+           auth_type == AuthType.WS_PROXY or
+           auth_type == AuthType.DIRECT_BASIC_AUTH_BAD or
+           auth_type == AuthType.DOUBLE_CLIENT_ID_FAILURE or
+           auth_type == AuthType.DIRECT_HOST_AND_PORT_ONLY):
             client_options.port = int(config.port)
 
         if auth_type == AuthType.DIRECT_BASIC_AUTH or auth_type == AuthType.WS_BASIC_AUTH:
@@ -276,7 +276,11 @@ class Mqtt5ClientTest(NativeResourceTest):
         callbacks.future_connection_success.result(TIMEOUT)
         return client, callbacks
 
-    def _test_connect_fail(self, auth_type=AuthType.DIRECT, client_options: mqtt5.ClientOptions = None, expected_error_code :int = None):
+    def _test_connect_fail(
+            self,
+            auth_type=AuthType.DIRECT,
+            client_options: mqtt5.ClientOptions = None,
+            expected_error_code: int = None):
         callbacks = Mqtt5TestCallbacks()
         client = self._create_client(auth_type=auth_type, callbacks=callbacks, client_options=client_options)
         client.start()
@@ -508,27 +512,31 @@ class Mqtt5ClientTest(NativeResourceTest):
 
     def test_connect_with_invalid_port(self):
         client_options = mqtt5.ClientOptions("badhost", 444)
-        client, callbacks = self._test_connect_fail(auth_type=AuthType.DIRECT_HOST_ONLY, client_options=client_options, expected_error_code=1047)
+        client, callbacks = self._test_connect_fail(
+            auth_type=AuthType.DIRECT_HOST_ONLY, client_options=client_options, expected_error_code=1047)
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
     def test_connect_with_invalid_port_for_websocket_connection(self):
         client_options = mqtt5.ClientOptions("badhost", 1883)
-        client, callbacks = self._test_connect_fail(auth_type=AuthType.WS_BAD_PORT, client_options=client_options, expected_error_code=46)
+        client, callbacks = self._test_connect_fail(
+            auth_type=AuthType.WS_BAD_PORT, client_options=client_options, expected_error_code=46)
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
     def test_connect_with_socket_timeout(self):
         client_options = mqtt5.ClientOptions("www.example.com", 81)
         client_options.connack_timeout_ms = 200
-        client, callbacks = self._test_connect_fail(auth_type=AuthType.NO_APPLICATION, client_options=client_options, expected_error_code=1048)
+        client, callbacks = self._test_connect_fail(
+            auth_type=AuthType.NO_APPLICATION, client_options=client_options, expected_error_code=1048)
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
     def test_connect_with_incorrect_basic_authentication_credentials(self):
         client_options = mqtt5.ClientOptions("will be replaced", 0)
         client_options.connect_options = mqtt5.ConnectPacket(username="bad username", password="bad password")
-        client, callbacks = self._test_connect_fail(auth_type=AuthType.DIRECT_BASIC_AUTH_BAD, client_options=client_options, expected_error_code=5150)
+        client, callbacks = self._test_connect_fail(
+            auth_type=AuthType.DIRECT_BASIC_AUTH_BAD, client_options=client_options, expected_error_code=5150)
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
@@ -541,13 +549,19 @@ class Mqtt5ClientTest(NativeResourceTest):
         callbacks.client_name = "client1"
         client_options = mqtt5.ClientOptions("will be replaced", 0)
         client_options.connect_options = mqtt5.ConnectPacket(client_id=shared_client_id)
-        client1 = self._create_client(AuthType.DOUBLE_CLIENT_ID_FAILURE, client_options=client_options, callbacks=callbacks)
+        client1 = self._create_client(
+            AuthType.DOUBLE_CLIENT_ID_FAILURE,
+            client_options=client_options,
+            callbacks=callbacks)
 
         callbacks2 = Mqtt5TestCallbacks()
         callbacks2.client_name = "client2"
         client_options2 = mqtt5.ClientOptions("will be replaced", 0)
         client_options2.connect_options = mqtt5.ConnectPacket(client_id=shared_client_id)
-        client2 = Mqtt5ClientTest._create_client(AuthType.DOUBLE_CLIENT_ID_FAILURE, client_options=client_options2, callbacks=callbacks2)
+        client2 = Mqtt5ClientTest._create_client(
+            AuthType.DOUBLE_CLIENT_ID_FAILURE,
+            client_options=client_options2,
+            callbacks=callbacks2)
 
         client1.start()
         callbacks.future_connection_success.result(TIMEOUT)
@@ -579,7 +593,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             host_name="",
             port=0,
             connect_options=connect_options,
-            )
+        )
 
         with self.assertRaises(OverflowError) as cm:
             client = self._create_client(AuthType.DIRECT_HOST_AND_PORT_ONLY, client_options=client_options)
@@ -593,7 +607,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             host_name="",
             port=0,
             connect_options=connect_options,
-            )
+        )
 
         with self.assertRaises(OverflowError) as cm:
             client = self._create_client(AuthType.DIRECT_HOST_AND_PORT_ONLY, client_options=client_options)
@@ -607,7 +621,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             host_name="",
             port=0,
             connect_options=connect_options,
-            )
+        )
 
         with self.assertRaises(OverflowError) as cm:
             client = self._create_client(AuthType.DIRECT_HOST_AND_PORT_ONLY, client_options=client_options)
@@ -621,7 +635,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             host_name="",
             port=0,
             connect_options=connect_options,
-            )
+        )
 
         with self.assertRaises(OverflowError) as cm:
             client = self._create_client(AuthType.DIRECT_HOST_AND_PORT_ONLY, client_options=client_options)
@@ -635,7 +649,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             host_name="",
             port=0,
             connect_options=connect_options,
-            )
+        )
 
         with self.assertRaises(OverflowError) as cm:
             client = self._create_client(AuthType.DIRECT_HOST_AND_PORT_ONLY, client_options=client_options)
@@ -651,7 +665,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             host_name="",
             port=0,
             connect_options=connect_options,
-            )
+        )
 
         with self.assertRaises(OverflowError) as cm:
             client = self._create_client(AuthType.DIRECT_HOST_AND_PORT_ONLY, client_options=client_options)
@@ -665,7 +679,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             host_name="",
             port=0,
             connect_options=connect_options,
-            )
+        )
 
         with self.assertRaises(OverflowError) as cm:
             client = self._create_client(AuthType.DIRECT_HOST_AND_PORT_ONLY, client_options=client_options)
@@ -679,7 +693,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             host_name="",
             port=0,
             connect_options=connect_options,
-            )
+        )
 
         with self.assertRaises(OverflowError) as cm:
             client = self._create_client(AuthType.DIRECT_HOST_AND_PORT_ONLY, client_options=client_options)
@@ -693,7 +707,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             host_name="",
             port=0,
             connect_options=connect_options,
-            )
+        )
 
         with self.assertRaises(OverflowError) as cm:
             client = self._create_client(AuthType.DIRECT_HOST_AND_PORT_ONLY, client_options=client_options)
@@ -707,7 +721,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             host_name="",
             port=0,
             connect_options=connect_options,
-            )
+        )
 
         with self.assertRaises(OverflowError) as cm:
             client = self._create_client(AuthType.DIRECT_HOST_AND_PORT_ONLY, client_options=client_options)
@@ -764,7 +778,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         )
         client_options = mqtt5.ClientOptions(
             host_name="to be set",
-            port = 0,
+            port=0,
             connect_options=connect_options)
 
         client, callbacks = self._test_connect(auth_type=AuthType.DIRECT, client_options=client_options)
@@ -786,7 +800,7 @@ class Mqtt5ClientTest(NativeResourceTest):
 
         client_options = mqtt5.ClientOptions(
             host_name="to be set",
-            port = 0,
+            port=0,
             connect_options=connect_options)
 
         client, callbacks = self._test_connect(auth_type=AuthType.DIRECT, client_options=client_options)
@@ -824,7 +838,7 @@ class Mqtt5ClientTest(NativeResourceTest):
 
         client_options = mqtt5.ClientOptions(
             host_name="to be set",
-            port = 0,
+            port=0,
             connect_options=connect_options)
 
         client, callbacks = self._test_connect(auth_type=AuthType.DIRECT, client_options=client_options)
@@ -853,15 +867,15 @@ class Mqtt5ClientTest(NativeResourceTest):
         subscriptions = []
         subscriptions.append(mqtt5.Subscription(topic_filter=topic_filter, qos=mqtt5.QoS.AT_LEAST_ONCE))
         subscribe_packet = mqtt5.SubscribePacket(
-        subscriptions=subscriptions)
+            subscriptions=subscriptions)
         subscribe_future = client.subscribe(subscribe_packet=subscribe_packet)
         suback_packet = subscribe_future.result(TIMEOUT)
         self.assertIsInstance(suback_packet, mqtt5.SubackPacket)
 
         publish_packet = mqtt5.PublishPacket(
-        payload=payload,
-        topic=topic_filter,
-        qos=mqtt5.QoS.AT_LEAST_ONCE)
+            payload=payload,
+            topic=topic_filter,
+            qos=mqtt5.QoS.AT_LEAST_ONCE)
 
         publish_future = client.publish(publish_packet=publish_packet)
         publish_completion_data = publish_future.result()
@@ -898,8 +912,8 @@ class Mqtt5ClientTest(NativeResourceTest):
         )
         client_options = mqtt5.ClientOptions("will be replaced", 0)
         client_options.connect_options = mqtt5.ConnectPacket(client_id=client_id_publisher,
-                                                            will_delay_interval_sec=0,
-                                                            will=will_packet)
+                                                             will_delay_interval_sec=0,
+                                                             will=will_packet)
         client1 = self._create_client(AuthType.DIRECT, client_options=client_options, callbacks=callbacks)
         client1.start()
         callbacks.future_connection_success.result(TIMEOUT)
@@ -916,7 +930,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         subscriptions = []
         subscriptions.append(mqtt5.Subscription(topic_filter=topic_filter, qos=mqtt5.QoS.AT_LEAST_ONCE))
         subscribe_packet = mqtt5.SubscribePacket(
-        subscriptions=subscriptions)
+            subscriptions=subscriptions)
         subscribe_future = client2.subscribe(subscribe_packet=subscribe_packet)
         suback_packet = subscribe_future.result(TIMEOUT)
         self.assertIsInstance(suback_packet, mqtt5.SubackPacket)
@@ -941,15 +955,15 @@ class Mqtt5ClientTest(NativeResourceTest):
         subscriptions = []
         subscriptions.append(mqtt5.Subscription(topic_filter=topic_filter, qos=mqtt5.QoS.AT_LEAST_ONCE))
         subscribe_packet = mqtt5.SubscribePacket(
-        subscriptions=subscriptions)
+            subscriptions=subscriptions)
         subscribe_future = client.subscribe(subscribe_packet=subscribe_packet)
         suback_packet = subscribe_future.result(TIMEOUT)
         self.assertIsInstance(suback_packet, mqtt5.SubackPacket)
 
         publish_packet = mqtt5.PublishPacket(
-        payload=payload,
-        topic=topic_filter,
-        qos=mqtt5.QoS.AT_LEAST_ONCE)
+            payload=payload,
+            topic=topic_filter,
+            qos=mqtt5.QoS.AT_LEAST_ONCE)
 
         publish_future = client.publish(publish_packet=publish_packet)
         publish_completion_data = publish_future.result()
@@ -971,7 +985,6 @@ class Mqtt5ClientTest(NativeResourceTest):
         publish_completion_data = publish_future.result()
         puback_packet = publish_completion_data.puback
         self.assertIsInstance(puback_packet, mqtt5.PubackPacket)
-
 
         self.assertEqual(callbacks.on_publish_received_counter, 1)
 
@@ -1015,7 +1028,6 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-
     # ==============================================================
     #             QOS1 TEST CASES
     # ==============================================================
@@ -1043,7 +1055,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         subscriptions = []
         subscriptions.append(mqtt5.Subscription(topic_filter=topic_filter, qos=mqtt5.QoS.AT_LEAST_ONCE))
         subscribe_packet = mqtt5.SubscribePacket(
-        subscriptions=subscriptions)
+            subscriptions=subscriptions)
         subscribe_future = client2.subscribe(subscribe_packet=subscribe_packet)
         suback_packet = subscribe_future.result(TIMEOUT)
         self.assertIsInstance(suback_packet, mqtt5.SubackPacket)
@@ -1051,9 +1063,9 @@ class Mqtt5ClientTest(NativeResourceTest):
         publishes = 10
 
         publish_packet = mqtt5.PublishPacket(
-                    payload=payload,
-                    topic=topic_filter,
-                    qos=mqtt5.QoS.AT_LEAST_ONCE)
+            payload=payload,
+            topic=topic_filter,
+            qos=mqtt5.QoS.AT_LEAST_ONCE)
 
         for x in range(publishes):
             publish_future = client1.publish(publish_packet)
@@ -1066,7 +1078,6 @@ class Mqtt5ClientTest(NativeResourceTest):
 
         client2.stop()
         callbacks2.future_stopped.result(TIMEOUT)
-
 
     # ==============================================================
     #             RETAIN TEST CASES
@@ -1085,10 +1096,10 @@ class Mqtt5ClientTest(NativeResourceTest):
         callbacks.future_connection_success.result(TIMEOUT)
 
         publish_packet = mqtt5.PublishPacket(
-                    payload=payload,
-                    topic=topic_filter,
-                    retain=True,
-                    qos=mqtt5.QoS.AT_LEAST_ONCE)
+            payload=payload,
+            topic=topic_filter,
+            retain=True,
+            qos=mqtt5.QoS.AT_LEAST_ONCE)
         puback_future1 = client1.publish(publish_packet)
         puback_future1.result(TIMEOUT)
 
@@ -1104,12 +1115,12 @@ class Mqtt5ClientTest(NativeResourceTest):
         subscriptions = []
         subscriptions.append(mqtt5.Subscription(topic_filter=topic_filter, qos=mqtt5.QoS.AT_LEAST_ONCE))
         subscribe_packet = mqtt5.SubscribePacket(
-        subscriptions=subscriptions)
+            subscriptions=subscriptions)
         subscribe_future1 = client2.subscribe(subscribe_packet=subscribe_packet)
         suback_packet1 = subscribe_future1.result(TIMEOUT)
         self.assertIsInstance(suback_packet1, mqtt5.SubackPacket)
 
-        received_retained_publish1 =callbacks2.future_publish_received.result(TIMEOUT)
+        received_retained_publish1 = callbacks2.future_publish_received.result(TIMEOUT)
         self.assertIsInstance(received_retained_publish1, mqtt5.PublishPacket)
         client2.stop()
         callbacks2.future_stopped.result(TIMEOUT)
@@ -1139,8 +1150,6 @@ class Mqtt5ClientTest(NativeResourceTest):
 
         client3.stop()
         callbacks3.future_stopped.result(TIMEOUT)
-
-
 
 
 if __name__ == 'main':

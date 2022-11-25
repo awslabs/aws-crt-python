@@ -1181,6 +1181,7 @@ class WebsocketHandshakeTransformArgs:
         else:
             self._done_future.set_exception(exception)
 
+
 @dataclass
 class OperationStatisticsData:
     """Dataclass containing some simple statistics about the current state of the client's queue of operations
@@ -1195,6 +1196,7 @@ class OperationStatisticsData:
     incomplete_operation_size: int = 0
     unacked_operation_count: int = 0
     unacked_operation_size: int = 0
+
 
 @dataclass
 class LifecycleStoppedData:
@@ -1245,6 +1247,7 @@ class LifecycleDisconnectData:
     disconnect_packet: DisconnectPacket = None
     exception: Exception = None
 
+
 @dataclass
 class PublishCompletionData:
     """Dataclass containing results of a Publish
@@ -1252,7 +1255,7 @@ class PublishCompletionData:
     Args:
         puback (PubackPacket): On a successful completion of a QoS1 publish a PubackPacket will be included.
     """
-    puback: PubackPacket = None # This will be None on a QoS0
+    puback: PubackPacket = None  # This will be None on a QoS0
 
 
 @dataclass
@@ -1317,7 +1320,7 @@ def _check_callback(callback):
             callback_sig = signature(callback)
             callback_sig.bind(None)
             return callback
-        except:
+        except BaseException:
             raise TypeError(
                 "Callable should take one argument")
 
@@ -1330,9 +1333,12 @@ class _ClientCore:
         self._ws_handshake_transform_cb = _check_callback(client_options.websocket_handshake_transform)
         self._on_publish_cb = _check_callback(client_options.on_publish_callback_fn)
         self._on_lifecycle_stopped_cb = _check_callback(client_options.on_lifecycle_event_stopped_fn)
-        self._on_lifecycle_attempting_connect_cb = _check_callback(client_options.on_lifecycle_event_attempting_connect_fn)
-        self._on_lifecycle_connection_success_cb = _check_callback(client_options.on_lifecycle_event_connection_success_fn)
-        self._on_lifecycle_connection_failure_cb = _check_callback(client_options.on_lifecycle_event_connection_failure_fn)
+        self._on_lifecycle_attempting_connect_cb = _check_callback(
+            client_options.on_lifecycle_event_attempting_connect_fn)
+        self._on_lifecycle_connection_success_cb = _check_callback(
+            client_options.on_lifecycle_event_connection_success_fn)
+        self._on_lifecycle_connection_failure_cb = _check_callback(
+            client_options.on_lifecycle_event_connection_failure_fn)
         self._on_lifecycle_disconnection_cb = _check_callback(client_options.on_lifecycle_event_disconnection_fn)
 
     def _ws_handshake_transform(self, http_request_binding, http_headers_binding, native_userdata):
@@ -1392,7 +1398,7 @@ class _ClientCore:
         publish_packet.correlation_data = correlation_data
         if publish_packet.subscription_identifiers is not None:
             publish_packet.subscription_identifiers = [subscription_identifier
-                                                   for (subscription_identifier) in subscription_identifiers_tuples]
+                                                       for (subscription_identifier) in subscription_identifiers_tuples]
         publish_packet.content_type = content_type
         publish_packet.user_properties = _init_user_properties(user_properties_tuples)
 
@@ -1578,7 +1584,6 @@ class _ClientCore:
         if self._on_lifecycle_disconnection_cb is None:
             return
 
-
         if disconnect_packet_exists:
             disconnect_packet = DisconnectPacket()
             disconnect_packet.reason_code = _try_disconnect_reason_code(reason_code)
@@ -1592,7 +1597,10 @@ class _ClientCore:
                     disconnect_packet=disconnect_packet,
                     exception=exceptions.from_code(error_code)))
         else:
-            self._on_lifecycle_disconnection_cb(LifecycleDisconnectData(disconnect_packet=None, exception=exceptions.from_code(error_code)))
+            self._on_lifecycle_disconnection_cb(
+                LifecycleDisconnectData(
+                    disconnect_packet=None,
+                    exception=exceptions.from_code(error_code)))
 
 
 class Client(NativeResource):
@@ -1771,7 +1779,6 @@ class Client(NativeResource):
                 suback_packet.user_properties = _init_user_properties(user_properties_tuples)
                 future.set_result(suback_packet)
 
-
         _awscrt.mqtt5_client_subscribe(self._binding,
                                        subscribe_packet.subscriptions,
                                        subscribe_packet.subscription_identifier,
@@ -1819,9 +1826,17 @@ class Client(NativeResource):
 
         future = Future()
 
-        def get_stats_result(incomplete_operation_count, incomplete_operation_size, unacked_operation_count, unacked_operation_size):
-                operation_statistics_data = OperationStatisticsData(incomplete_operation_count, incomplete_operation_size, unacked_operation_count, unacked_operation_size)
-                future.set_result(operation_statistics_data)
+        def get_stats_result(
+                incomplete_operation_count,
+                incomplete_operation_size,
+                unacked_operation_count,
+                unacked_operation_size):
+            operation_statistics_data = OperationStatisticsData(
+                incomplete_operation_count,
+                incomplete_operation_size,
+                unacked_operation_count,
+                unacked_operation_size)
+            future.set_result(operation_statistics_data)
 
         _awscrt.mqtt5_client_get_stats(self._binding, get_stats_result)
 
