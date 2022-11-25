@@ -179,8 +179,8 @@ error:
  *
  * I'm making a judgement call to just make these theoretical failures fatal.
  * If there's a bug, it will be glaringly obvious, and simple to fix.
- * This seems better than significantly complicating things with a ton of code
- * we can't actually check and may not actually work.
+ * This seems better than complicating things with tons of error-handling code
+ * that we can't actually check (and so may not actually work).
  */
 static void s_websocket_on_connection_setup(
     struct aws_websocket *websocket,
