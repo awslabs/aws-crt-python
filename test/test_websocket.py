@@ -58,7 +58,7 @@ class WebSocketServer:
         self._server_thread.start()
 
         # don't return until the server signals that it's started up and is listening for connections
-        self._server_started_event.wait()
+        assert(self._server_started_event.wait(TIMEOUT) == True)
 
     def __exit__(self, exc_type, exc_value, exc_tb):
         # main thread is exiting the `with` block: tell the server to stop...
@@ -69,6 +69,8 @@ class WebSocketServer:
 
         # don't return until the server thread exits
         self._server_thread.join(TIMEOUT)
+        # check whether thread really exited, or we just timed out
+        assert(self._server_thread.is_alive() == False)
 
     def _run_server_thread(self):
         asyncio.run(self._run_asyncio_server())
@@ -103,7 +105,9 @@ class WebSocketServer:
 class TestClient(NativeResourceTest):
     def setUp(self):
         super().setUp()
-        self.host = 'localhost'
+        # Note: specifying IPV4 "127.0.0.1", instead of "localhost".
+        # "localhost" leads to some machines hitting errors attempting to bind IPV6 addresses.
+        self.host = '127.0.0.1'
         self.port = self._find_free_port()
 
     def _find_free_port(self):
