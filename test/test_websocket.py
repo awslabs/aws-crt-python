@@ -133,7 +133,7 @@ class TestClient(NativeResourceTest):
             http_handshake_request = create_handshake_request(host=self.host, path='/')
 
             client_handler = ClientHandler()
-            connect_client(
+            connect(
                 host=self.host,
                 port=self.port,
                 handshake_request=http_handshake_request,

@@ -17,7 +17,7 @@ import sys
 from typing import Callable, Sequence, Tuple
 
 
-def connect_client(
+def connect(
     *,
     host: str,
     port: int = None,
@@ -192,11 +192,11 @@ def create_handshake_request(*, host: str, path: str = '/') -> HttpRequest:
 class WebSocket(NativeResource):
     """A WebSocket connection.
 
-    Use :meth:`connect_client()` to establish a new connection.
+    Use :meth:`connect()` to establish a new client connection.
     """
 
     def __init__(self, binding):
-        # Do not init a WebSocket directly, use connect_client()
+        # Do not init a WebSocket directly, use websocket.connect()
         super().__init__()
         self._binding = binding
 
