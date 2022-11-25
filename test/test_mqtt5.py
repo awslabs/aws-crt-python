@@ -217,7 +217,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             auth_type == AuthType.DOUBLE_CLIENT_ID_FAILURE or
             auth_type == AuthType.DIRECT_HOST_ONLY or
             auth_type == AuthType.WS_BAD_PORT or
-            auth_type == AuthType.DIRECT_HOST_AND_PORT_ONLY):
+                auth_type == AuthType.DIRECT_HOST_AND_PORT_ONLY):
             client_options.host_name = config.endpoint
 
         if (auth_type == AuthType.DIRECT or
