@@ -217,10 +217,10 @@ class Mqtt5ClientTest(NativeResourceTest):
             auth_type == AuthType.DOUBLE_CLIENT_ID_FAILURE or
             auth_type == AuthType.DIRECT_HOST_ONLY or
             auth_type == AuthType.WS_BAD_PORT or
-                auth_type == AuthType.DIRECT_HOST_AND_PORT_ONLY):
+            auth_type == AuthType.DIRECT_HOST_AND_PORT_ONLY):
             client_options.host_name = config.endpoint
 
-        if(auth_type == AuthType.DIRECT or
+        if (auth_type == AuthType.DIRECT or
            auth_type == AuthType.DIRECT_BASIC_AUTH or
            auth_type == AuthType.DIRECT_TLS or
            auth_type == AuthType.DIRECT_PROXY or
@@ -285,7 +285,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         client = self._create_client(auth_type=auth_type, callbacks=callbacks, client_options=client_options)
         client.start()
         callbacks.future_connection_failure.result(TIMEOUT)
-        if(expected_error_code is not None):
+        if (expected_error_code is not None):
             self.assertEqual(str(callbacks.last_exception), str(exceptions.from_code(expected_error_code)))
         return client, callbacks
 
