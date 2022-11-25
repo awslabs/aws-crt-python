@@ -15,13 +15,13 @@ import random
 
 TIMEOUT = 100.0
 
-AuthType = enum.Enum('AuthType', ['DIRECT', 
-                                  'DIRECT_BASIC_AUTH', 
-                                  'DIRECT_TLS', 
+AuthType = enum.Enum('AuthType', ['DIRECT',
+                                  'DIRECT_BASIC_AUTH',
+                                  'DIRECT_TLS',
                                   'DIRECT_PROXY',
-                                  'WS', 
-                                  'WS_BASIC_AUTH', 
-                                  'WS_TLS', 
+                                  'WS',
+                                  'WS_BASIC_AUTH',
+                                  'WS_TLS',
                                   'WS_PROXY'])
 
 def create_client_id():
@@ -109,7 +109,7 @@ class CanaryCore():
         self.future_stopped = None
 
         self.subscriptions = []
-    
+
     def ws_handshake_transform(self, transform_args):
         print("ws_handshake_transform")
         transform_args.set_done()
@@ -117,7 +117,7 @@ class CanaryCore():
     def on_publish_received(self, publish_packet: mqtt5.PublishPacket):
         print("on_publish_received")
         self.stat_publishes_received += 1
-    
+
     def on_lifecycle_stopped(self, lifecycle_stopped: mqtt5.LifecycleStoppedData):
         print("on_lifecycle_stopped")
         if self.future_stopped:
@@ -139,18 +139,18 @@ class CanaryCore():
     def on_lifecycle_disconnection(self, lifecycle_disconnect_data: mqtt5.LifecycleDisconnectData):
         print("on_lifecycle_disconnection")
         print(f"error_code:{lifecycle_disconnect_data.error_code} '{exceptions.from_code(lifecycle_disconnect_data.error_code)}'")
-            
+
 class CanaryClient():
     user_properties = []
     user_properties.append(mqtt5.UserProperty(name="name1", value="value1"))
     user_properties.append(mqtt5.UserProperty(name="name2", value="value2"))
-    
+
     def __init__(self, auth_type = AuthType.DIRECT):
         self.client_id = create_client_id()
         self.canary_core = CanaryCore()
         self.client = self._create_client(auth_type=auth_type, canary_core=self.canary_core)
         self.stopped = True
-    
+
     def _create_client(self,
                        auth_type=AuthType.DIRECT,
                        client_options: mqtt5.ClientOptions = None,
@@ -159,11 +159,11 @@ class CanaryClient():
 
         if client_options is None:
             client_options = mqtt5.ClientOptions(config.endpoint, config.port)
-            
+
         if client_options.connect_options is None:
             client_options.connect_options = mqtt5.ConnectPacket()
             client_options.connect_options.client_id = create_client_id()
-        
+
         client_options.host_name = config.endpoint
         client_options.port = int(config.port)
 
@@ -171,9 +171,9 @@ class CanaryClient():
             client_options.connect_options.username = config.username
             client_options.connect_options.password = config.password
 
-        if (auth_type == AuthType.WS or 
-                auth_type == AuthType.WS_BASIC_AUTH or 
-                auth_type == AuthType.WS_TLS or 
+        if (auth_type == AuthType.WS or
+                auth_type == AuthType.WS_BASIC_AUTH or
+                auth_type == AuthType.WS_TLS or
                 auth_type == AuthType.WS_PROXY):
             client_options.websocket_handshake_transform = canary_core.ws_handshake_transform
 
@@ -182,7 +182,7 @@ class CanaryClient():
             http_proxy_options.connection_type = http.HttpProxyConnectionType.Tunneling
             http_proxy_options.auth_type = http.HttpProxyAuthenticationType.Nothing
             client_options.http_proxy_options = http_proxy_options
-        
+
         if canary_core is not None:
             client_options.on_publish_callback_fn = canary_core.on_publish_received
             client_options.on_lifecycle_event_stopped_fn = canary_core.on_lifecycle_stopped
@@ -197,7 +197,7 @@ class CanaryClient():
     def random_operation(self):
         time.sleep(0.05)
         operation = random.randint(0,100)
-        
+
         if self.stopped:
             self.start()
         elif operation < 10:
@@ -210,7 +210,7 @@ class CanaryClient():
             if not self.stopped:
                 self.stop()
 
-    
+
     def start(self):
         if not self.stopped:
             return
@@ -221,7 +221,7 @@ class CanaryClient():
         self.client.start()
         future_connection_success.result(TIMEOUT)
         self.stopped = False
-    
+
     def stop(self):
         if self.stopped:
             return
@@ -249,7 +249,7 @@ class CanaryClient():
         print(f"publish qos:{publish_packet.qos}")
         if random.getrandbits(1):
             publish_packet.user_properties = self.user_properties
-            
+
         try:
             self.client.publish(publish_packet=publish_packet)
             self.canary_core.stat_publishes_succeeded += 1
@@ -271,7 +271,7 @@ class CanaryClient():
             self.canary_core.stat_subscribes_succeeded += 1
         except:
             self.canary_core.stat_subscribes_failed += 1
-    
+
     def unsubscribe(self):
         print("unsubscribe")
         if len(self.canary_core.subscriptions) < 1:
@@ -281,12 +281,12 @@ class CanaryClient():
         unsubscribe_packet = mqtt5.UnsubscribePacket(topic_filters=[self.canary_core.subscriptions.pop()])
 
         try:
-            
+
             self.client.unsubscribe(unsubscribe_packet=unsubscribe_packet)
             self.canary_core.stat_unsubscribes_succeeded += 1
         except:
             self.canary_core.stat_unsubscribes_failed += 1
-        
+
 
     def print_stats(self):
         print(f"""\n
@@ -304,7 +304,7 @@ Client Stats:
     publishes_attempted:    {self.canary_core.stat_publishes_attempted}
     publishes_succeeded:    {self.canary_core.stat_publishes_succeeded}
     publishes_failed:       {self.canary_core.stat_publishes_failed}""")
-    
+
 
 
 class Mqtt5CanaryTestClient(NativeResourceTest):
