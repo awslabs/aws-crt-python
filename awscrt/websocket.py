@@ -11,10 +11,10 @@ from awscrt import NativeResource
 import awscrt.exceptions
 from awscrt.http import HttpProxyOptions, HttpRequest
 from awscrt.io import ClientBootstrap, TlsConnectionOptions, SocketOptions
-from concurrent.futures import Future
 from dataclasses import dataclass
 from enum import IntEnum
 import sys
+from threading import Event
 from typing import Callable, Sequence, Tuple
 
 
@@ -199,13 +199,13 @@ class WebSocket(NativeResource):
     Use :meth:`connect()` to establish a new client connection.
     """
 
-    def __init__(self, binding, shutdown_future):
+    def __init__(self, binding, shutdown_event):
         # Do not init a WebSocket directly, use websocket.connect()
         super().__init__()
         self._binding = binding
-        self._shutdown_future = shutdown_future
+        self._shutdown_event = shutdown_event
 
-    def close(self) -> Future:
+    def close(self) -> Event:
         """Close the WebSocket asynchronously.
 
         You should call this when you are done with a healthy WebSocket,
@@ -216,15 +216,13 @@ class WebSocket(NativeResource):
 
         To determine when shutdown has completed, you can use the
         `on_shutdown_complete` callback (passed into :meth:`connect()`),
-        or consult the Future returned by this function.
+        or consult the Event returned by this function.
 
         Returns:
-            A Future that will complete when shutdown is complete.
-            If the shutdown is clean (both sides send a CLOSE frame),
-            then the future's result will be None. Otherwise, the future
-            will contain an exception."""
+            An Event that will be set when shutdown is complete.
+        """
         _awscrt.websocket_close(self._binding)
-        return self._shutdown_future
+        return self._shutdown_event
 
 
 class _WebSocketCore(NativeResource):
@@ -246,7 +244,7 @@ class _WebSocketCore(NativeResource):
         self._on_incoming_frame_begin_cb = on_incoming_frame_begin
         self._on_incoming_frame_payload_cb = on_incoming_frame_payload
         self._on_incoming_frame_complete_cb = on_incoming_frame_complete
-        self._shutdown_future = Future()
+        self._shutdown_event = Event()
 
     def _on_connection_setup(
             self,
@@ -259,7 +257,7 @@ class _WebSocketCore(NativeResource):
         if error_code:
             cbdata.exception = awscrt.exceptions.from_code(error_code)
         else:
-            cbdata.websocket = WebSocket(websocket_binding, self._shutdown_future)
+            cbdata.websocket = WebSocket(websocket_binding, self._shutdown_event)
 
         if handshake_response_status != -1:
             cbdata.handshake_response_status = handshake_response_status
@@ -290,10 +288,7 @@ class _WebSocketCore(NativeResource):
             print("Exception in WebSocket on_connection_shutdown callback", file=sys.stderr)
             sys.excepthook(*sys.exc_info())
 
-        if cbdata.exception:
-            self._shutdown_future.set_exception(cbdata.exception)
-        else:
-            self._shutdown_future.set_result(None)
+        self._shutdown_event.set()
 
 
 class Opcode(IntEnum):
