@@ -11,6 +11,7 @@ from awscrt import NativeResource
 import awscrt.exceptions
 from awscrt.http import HttpProxyOptions, HttpRequest
 from awscrt.io import ClientBootstrap, TlsConnectionOptions, SocketOptions
+from concurrent.futures import Future
 from dataclasses import dataclass
 from enum import IntEnum
 import sys
@@ -52,7 +53,7 @@ def connect(
         * All references to the :class:`WebSocket` are dropped,
           causing it to be garbage collected. However, you should NOT
           rely on this behavior. You should call :meth:`~WebSocket.close()` when you are
-          done with a healthy WebSocket, to ensure that shuts down and cleans up.
+          done with a healthy WebSocket, to ensure that it shuts down and cleans up.
           It is very easy to accidentally keep a reference around without realizing it.
 
     Args:
@@ -198,14 +199,32 @@ class WebSocket(NativeResource):
     Use :meth:`connect()` to establish a new client connection.
     """
 
-    def __init__(self, binding):
+    def __init__(self, binding, shutdown_future):
         # Do not init a WebSocket directly, use websocket.connect()
         super().__init__()
         self._binding = binding
+        self._shutdown_future = shutdown_future
 
-    def close(self):
-        """TODO: implement me"""
-        raise NotImplementedError()
+    def close(self) -> Future:
+        """Close the WebSocket asynchronously.
+
+        You should call this when you are done with a healthy WebSocket,
+        to ensure that it shuts down and cleans up.
+        You don't need to call this on a WebSocket that has already shut
+        down, or is in the middle of shutting down, but it is safe to do so.
+        This function is idempotent.
+
+        To determine when shutdown has completed, you can use the
+        `on_shutdown_complete` callback (passed into :meth:`connect()`),
+        or consult the Future returned by this function.
+
+        Returns:
+            A Future that will complete when shutdown is complete.
+            If the shutdown is clean (both sides send a CLOSE frame),
+            then the future's result will be None. Otherwise, the future
+            will contain an exception."""
+        _awscrt.websocket_close(self._binding)
+        return self._shutdown_future
 
 
 class _WebSocketCore(NativeResource):
@@ -227,6 +246,7 @@ class _WebSocketCore(NativeResource):
         self._on_incoming_frame_begin_cb = on_incoming_frame_begin
         self._on_incoming_frame_payload_cb = on_incoming_frame_payload
         self._on_incoming_frame_complete_cb = on_incoming_frame_complete
+        self._shutdown_future = Future()
 
     def _on_connection_setup(
             self,
@@ -239,7 +259,7 @@ class _WebSocketCore(NativeResource):
         if error_code:
             cbdata.exception = awscrt.exceptions.from_code(error_code)
         else:
-            cbdata.websocket = WebSocket(websocket_binding)
+            cbdata.websocket = WebSocket(websocket_binding, self._shutdown_future)
 
         if handshake_response_status != -1:
             cbdata.handshake_response_status = handshake_response_status
@@ -259,7 +279,21 @@ class _WebSocketCore(NativeResource):
                 cbdata.websocket.close()
 
     def _on_connection_shutdown(self, error_code):
-        pass  # TODO
+        cbdata = OnConnectionShutdownData()
+        if error_code:
+            cbdata.exception = awscrt.exceptions.from_code(error_code)
+
+        # Do not let exceptions from the user's callback bubble up any further.
+        try:
+            self._on_connection_shutdown_cb(cbdata)
+        except Exception:
+            print("Exception in WebSocket on_connection_shutdown callback", file=sys.stderr)
+            sys.excepthook(*sys.exc_info())
+
+        if cbdata.exception:
+            self._shutdown_future.set_exception(cbdata.exception)
+        else:
+            self._shutdown_future.set_result(None)
 
 
 class Opcode(IntEnum):
@@ -311,19 +345,25 @@ class OnConnectionSetupData:
     This is None if the connection failed before receiving an HTTP response.
     """
 
-    handshake_response_body: bytes = None
-    """The HTTP response body, if you're interested.
+    # TODO: hook this up in C
+    # handshake_response_body: bytes = None
+    # """The HTTP response body, if you're interested.
 
-    This is only present if the server sent a full HTTP response rejecting the handshake.
-    It is not present if the connection succeeded,
-    or the connection failed for other reasons.
-    """
+    # This is only present if the server sent a full HTTP response rejecting the handshake.
+    # It is not present if the connection succeeded,
+    # or the connection failed for other reasons.
+    # """
 
 
 @dataclass
 class OnConnectionShutdownData:
-    # TODO: document me
+    """Data passed to the `on_connection_shutdown` callback"""
+
     exception: BaseException = None
+    """If the connection shut down cleanly, this is None.
+
+    If the connection shut down due to error, or an error occurs while
+    shutting down, this exception explains why."""
 
 
 @dataclass
