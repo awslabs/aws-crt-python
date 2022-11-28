@@ -169,8 +169,9 @@ class Mqtt5TestCallbacks():
 
     def on_lifecycle_connection_failure(self, lifecycle_connection_failure: mqtt5.LifecycleConnectFailureData):
         self.last_exception = lifecycle_connection_failure.exception
-        if self.future_connection_failure:
+        if self.future_connection_failure and not self.future_connection_failure.done():
             self.future_connection_failure.set_result(lifecycle_connection_failure)
+
 
     def on_lifecycle_disconnection(self, lifecycle_disconnect_data: mqtt5.LifecycleDisconnectData):
         if self.future_disconnection:
