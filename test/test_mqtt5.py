@@ -147,40 +147,32 @@ class Mqtt5TestCallbacks():
         self.future_publish_received = Future()
 
     def ws_handshake_transform(self, transform_args):
-        print(f"{self.client_name} ws_handshake_transform")
         transform_args.set_done()
 
     def on_publish_received(self, publish_packet: mqtt5.PublishPacket):
-        print(f"{self.client_name} on_publish_received")
         self.on_publish_received_counter += 1
         if self.future_publish_received and not self.future_publish_received.done():
             self.future_publish_received.set_result(publish_packet)
 
     def on_lifecycle_stopped(self, lifecycle_stopped: mqtt5.LifecycleStoppedData):
-        print(f"{self.client_name} on_lifecycle_stopped")
         if self.future_stopped:
             self.future_stopped.set_result(None)
 
     def on_lifecycle_attempting_connect(self, lifecycle_attempting_connect: mqtt5.LifecycleAttemptingConnectData):
-        print(f"{self.client_name} on_lifecycle_attempting_connect")
+        pass
 
     def on_lifecycle_connection_success(self, lifecycle_connection_success: mqtt5.LifecycleConnectSuccessData):
-        print(f"{self.client_name} on_lifecycle_connection_success")
         self.negotiated_settings = lifecycle_connection_success.negotiated_settings
         self.connack_packet = lifecycle_connection_success.connack_packet
         if self.future_connection_success:
             self.future_connection_success.set_result(lifecycle_connection_success)
 
     def on_lifecycle_connection_failure(self, lifecycle_connection_failure: mqtt5.LifecycleConnectFailureData):
-        print(f"{self.client_name} on_lifecycle_connection_failure")
-        print(f"exception:{lifecycle_connection_failure.exception}")
         self.last_exception = lifecycle_connection_failure.exception
         if self.future_connection_failure:
             self.future_connection_failure.set_result(lifecycle_connection_failure)
 
     def on_lifecycle_disconnection(self, lifecycle_disconnect_data: mqtt5.LifecycleDisconnectData):
-        print(f"{self.client_name} on_lifecycle_disconnection")
-        print(f"exception:{lifecycle_disconnect_data.exception}")
         if self.future_disconnection:
             self.future_disconnection.set_result(lifecycle_disconnect_data)
 
@@ -567,11 +559,7 @@ class Mqtt5ClientTest(NativeResourceTest):
 
         client2.start()
 
-        disconResult = callbacks.future_disconnection.result(TIMEOUT)
-        disconpacket = disconResult.disconnect_packet
-
-        print(disconResult)
-        print(disconpacket)
+        callbacks.future_disconnection.result(TIMEOUT)
 
         client1.stop()
         callbacks.future_stopped.result(TIMEOUT)
@@ -595,8 +583,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         )
 
         with self.assertRaises(OverflowError) as cm:
-            client = self._create_client(AuthType.DIRECT_HOST_AND_PORT_ONLY, client_options=client_options)
-        print(cm.exception)
+            self._create_client(AuthType.DIRECT_HOST_AND_PORT_ONLY, client_options=client_options)
 
         connect_options = mqtt5.ConnectPacket(
             session_expiry_interval_sec=-100,
@@ -609,8 +596,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         )
 
         with self.assertRaises(OverflowError) as cm:
-            client = self._create_client(AuthType.DIRECT_HOST_AND_PORT_ONLY, client_options=client_options)
-        print(cm.exception)
+            self._create_client(AuthType.DIRECT_HOST_AND_PORT_ONLY, client_options=client_options)
 
         connect_options = mqtt5.ConnectPacket(
             receive_maximum=-1000,
@@ -623,8 +609,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         )
 
         with self.assertRaises(OverflowError) as cm:
-            client = self._create_client(AuthType.DIRECT_HOST_AND_PORT_ONLY, client_options=client_options)
-        print(cm.exception)
+            self._create_client(AuthType.DIRECT_HOST_AND_PORT_ONLY, client_options=client_options)
 
         connect_options = mqtt5.ConnectPacket(
             maximum_packet_size=-10000,
@@ -637,8 +622,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         )
 
         with self.assertRaises(OverflowError) as cm:
-            client = self._create_client(AuthType.DIRECT_HOST_AND_PORT_ONLY, client_options=client_options)
-        print(cm.exception)
+            self._create_client(AuthType.DIRECT_HOST_AND_PORT_ONLY, client_options=client_options)
 
         connect_options = mqtt5.ConnectPacket(
             will_delay_interval_sec=-1000,
@@ -651,8 +635,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         )
 
         with self.assertRaises(OverflowError) as cm:
-            client = self._create_client(AuthType.DIRECT_HOST_AND_PORT_ONLY, client_options=client_options)
-        print(cm.exception)
+            self._create_client(AuthType.DIRECT_HOST_AND_PORT_ONLY, client_options=client_options)
 
     def test_overflow_connect_packet_properties(self):
 
@@ -667,8 +650,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         )
 
         with self.assertRaises(OverflowError) as cm:
-            client = self._create_client(AuthType.DIRECT_HOST_AND_PORT_ONLY, client_options=client_options)
-        print(cm.exception)
+            self._create_client(AuthType.DIRECT_HOST_AND_PORT_ONLY, client_options=client_options)
 
         connect_options = mqtt5.ConnectPacket(
             session_expiry_interval_sec=4294967296
@@ -681,8 +663,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         )
 
         with self.assertRaises(OverflowError) as cm:
-            client = self._create_client(AuthType.DIRECT_HOST_AND_PORT_ONLY, client_options=client_options)
-        print(cm.exception)
+            self._create_client(AuthType.DIRECT_HOST_AND_PORT_ONLY, client_options=client_options)
 
         connect_options = mqtt5.ConnectPacket(
             receive_maximum=65536
@@ -695,8 +676,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         )
 
         with self.assertRaises(OverflowError) as cm:
-            client = self._create_client(AuthType.DIRECT_HOST_AND_PORT_ONLY, client_options=client_options)
-        print(cm.exception)
+            self._create_client(AuthType.DIRECT_HOST_AND_PORT_ONLY, client_options=client_options)
 
         connect_options = mqtt5.ConnectPacket(
             maximum_packet_size=4294967296
@@ -709,8 +689,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         )
 
         with self.assertRaises(OverflowError) as cm:
-            client = self._create_client(AuthType.DIRECT_HOST_AND_PORT_ONLY, client_options=client_options)
-        print(cm.exception)
+            self._create_client(AuthType.DIRECT_HOST_AND_PORT_ONLY, client_options=client_options)
 
         connect_options = mqtt5.ConnectPacket(
             will_delay_interval_sec=4294967296
@@ -723,8 +702,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         )
 
         with self.assertRaises(OverflowError) as cm:
-            client = self._create_client(AuthType.DIRECT_HOST_AND_PORT_ONLY, client_options=client_options)
-        print(cm.exception)
+            self._create_client(AuthType.DIRECT_HOST_AND_PORT_ONLY, client_options=client_options)
 
     def test_negative_disconnect_packet_properties(self):
 
@@ -734,7 +712,6 @@ class Mqtt5ClientTest(NativeResourceTest):
 
         with self.assertRaises(OverflowError) as cm:
             client.stop(disconnect_packet=disconnect_packet)
-        print(cm.exception)
 
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
@@ -746,7 +723,6 @@ class Mqtt5ClientTest(NativeResourceTest):
         publish_packet = mqtt5.PublishPacket(message_expiry_interval_sec=-1)
         with self.assertRaises(OverflowError) as cm:
             client.publish(publish_packet=publish_packet)
-        print(cm.exception)
 
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
@@ -761,7 +737,6 @@ class Mqtt5ClientTest(NativeResourceTest):
 
         with self.assertRaises(OverflowError) as cm:
             client.subscribe(subscribe_packet=subscribe_packet)
-        print(cm.exception)
 
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
@@ -1000,7 +975,6 @@ class Mqtt5ClientTest(NativeResourceTest):
 
         with self.assertRaises(Exception) as cm:
             client.publish(None)
-        print(cm.exception)
 
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
@@ -1011,7 +985,6 @@ class Mqtt5ClientTest(NativeResourceTest):
 
         with self.assertRaises(Exception) as cm:
             client.subscribe(None)
-        print(cm.exception)
 
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
@@ -1022,7 +995,6 @@ class Mqtt5ClientTest(NativeResourceTest):
 
         with self.assertRaises(Exception) as cm:
             client.unsubscribe(None)
-        print(cm.exception)
 
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
