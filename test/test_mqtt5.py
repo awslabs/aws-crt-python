@@ -430,10 +430,10 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    def test_websocket_connect_tls(self):
-        client, callbacks = self._test_connect(auth_type=AuthType.WS_TLS)
-        client.stop()
-        callbacks.future_stopped.result(TIMEOUT)
+    # def test_websocket_connect_tls(self):
+    #     client, callbacks = self._test_connect(auth_type=AuthType.WS_TLS)
+    #     client.stop()
+    #     callbacks.future_stopped.result(TIMEOUT)
 
     # TODO test_websocket_connect_sigv4 against IoT Core
 
