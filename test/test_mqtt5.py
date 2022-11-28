@@ -287,7 +287,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         if (expected_error_code is not None):
             self.assertEqual(str(callbacks.last_exception), str(exceptions.from_code(expected_error_code)))
-        return client, callbacks
+        callbacks.future_stopped.result(TIMEOUT)
 
     # ==============================================================
     #             CREATION TEST CASES
@@ -506,39 +506,29 @@ class Mqtt5ClientTest(NativeResourceTest):
 
     def test_connect_with_invalid_host_name(self):
         client_options = mqtt5.ClientOptions("badhost", 1883)
-        client, callbacks = self._test_connect_fail(auth_type=AuthType.NO_APPLICATION, client_options=client_options)
-        # client.stop()
-        callbacks.future_stopped.result(TIMEOUT)
+        self._test_connect_fail(auth_type=AuthType.NO_APPLICATION, client_options=client_options)
 
     def test_connect_with_invalid_port(self):
         client_options = mqtt5.ClientOptions("badhost", 444)
-        client, callbacks = self._test_connect_fail(
+        self._test_connect_fail(
             auth_type=AuthType.DIRECT_HOST_ONLY, client_options=client_options, expected_error_code=1047)
-        # client.stop()
-        callbacks.future_stopped.result(TIMEOUT)
 
     def test_connect_with_invalid_port_for_websocket_connection(self):
         client_options = mqtt5.ClientOptions("badhost", 1883)
-        client, callbacks = self._test_connect_fail(
+        self._test_connect_fail(
             auth_type=AuthType.WS_BAD_PORT, client_options=client_options, expected_error_code=46)
-        # client.stop()
-        callbacks.future_stopped.result(TIMEOUT)
 
     def test_connect_with_socket_timeout(self):
         client_options = mqtt5.ClientOptions("www.example.com", 81)
         client_options.connack_timeout_ms = 200
-        client, callbacks = self._test_connect_fail(
+        self._test_connect_fail(
             auth_type=AuthType.NO_APPLICATION, client_options=client_options, expected_error_code=1048)
-        # client.stop()
-        callbacks.future_stopped.result(TIMEOUT)
 
     def test_connect_with_incorrect_basic_authentication_credentials(self):
         client_options = mqtt5.ClientOptions("will be replaced", 0)
         client_options.connect_options = mqtt5.ConnectPacket(username="bad username", password="bad password")
-        client, callbacks = self._test_connect_fail(
+        self._test_connect_fail(
             auth_type=AuthType.DIRECT_BASIC_AUTH_BAD, client_options=client_options, expected_error_code=5150)
-        # client.stop()
-        callbacks.future_stopped.result(TIMEOUT)
 
     # TODO test_websocket_handshake_failure
 
