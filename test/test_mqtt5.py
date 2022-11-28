@@ -10,6 +10,7 @@ import unittest
 import pathlib
 import uuid
 import time
+import sys
 
 """
 # Environmental variables used by mqtt5 bindings tests
@@ -504,8 +505,11 @@ class Mqtt5ClientTest(NativeResourceTest):
     # ==============================================================
 
     def test_connect_with_invalid_host_name(self):
+        print("\n\n setup client_options \n\n", file=sys.stderr)
         client_options = mqtt5.ClientOptions("badhost", 1883)
+        print("\n\n _test_connect_fail \n\n", file=sys.stderr)
         client, callbacks = self._test_connect_fail(auth_type=AuthType.NO_APPLICATION, client_options=client_options)
+        print("\n\n stop() \n\n", file=sys.stderr)
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
