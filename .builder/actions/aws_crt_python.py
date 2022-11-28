@@ -252,7 +252,8 @@ class AWSCrtPython(Builder.Action):
             [python, '-m', 'pip', 'install', '--verbose', '.'],
             # "--failfast" because, given how our leak-detection in tests currently works,
             # once one test fails all the rest usually fail too.
-            [python, '-m', 'unittest', 'discover', '--verbose', '--failfast'],
+            # [python, '-m', 'unittest', 'discover', '--verbose', '--failfast'],
+            [python, '-m', 'unittest', '--verbose', '--failfast', 'test.test_mqtt5.Mqtt5ClientTest'],
             # http_client_test.py launches external processes using the extra args
             [python, 'crt/aws-c-http/integration-testing/http_client_test.py',
                 python, 'elasticurl.py'],
