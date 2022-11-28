@@ -114,35 +114,27 @@ class CanaryCore():
         self.subscriptions = []
 
     def ws_handshake_transform(self, transform_args):
-        print("ws_handshake_transform")
         transform_args.set_done()
 
     def on_publish_received(self, publish_packet: mqtt5.PublishPacket):
-        print("on_publish_received")
         self.stat_publishes_received += 1
 
     def on_lifecycle_stopped(self, lifecycle_stopped: mqtt5.LifecycleStoppedData):
-        print("on_lifecycle_stopped")
         if self.future_stopped:
             self.future_stopped.set_result(None)
 
     def on_lifecycle_attempting_connect(self, lifecycle_attempting_connect: mqtt5.LifecycleAttemptingConnectData):
-        print("on_lifecycle_attempting_connect")
+        pass
 
     def on_lifecycle_connection_success(self, lifecycle_connection_success: mqtt5.LifecycleConnectSuccessData):
-        print("on_lifecycle_connection_success")
         if self.future_connection_success:
             self.future_connection_success.set_result(lifecycle_connection_success)
 
     def on_lifecycle_connection_failure(self, lifecycle_connection_failure: mqtt5.LifecycleConnectFailureData):
-        print("on_lifecycle_connection_failure")
-        print(
-            f"error_code:{lifecycle_connection_failure.error_code} '{exceptions.from_code(lifecycle_connection_failure.error_code)}'")
+        pass
 
     def on_lifecycle_disconnection(self, lifecycle_disconnect_data: mqtt5.LifecycleDisconnectData):
-        print("on_lifecycle_disconnection")
-        print(
-            f"error_code:{lifecycle_disconnect_data.error_code} '{exceptions.from_code(lifecycle_disconnect_data.error_code)}'")
+        pass
 
 
 class CanaryClient():
@@ -219,7 +211,6 @@ class CanaryClient():
         if not self.stopped:
             return
 
-        print("starting client")
         future_connection_success = Future()
         self.canary_core.future_connection_success = future_connection_success
         self.client.start()
@@ -230,7 +221,6 @@ class CanaryClient():
         if self.stopped:
             return
         self.stopped = True
-        print("stopping client")
         future_stopped = Future()
         self.canary_core.future_stopped = future_stopped
         self.client.stop()
@@ -250,7 +240,6 @@ class CanaryClient():
             payload=bytearray(os.urandom(random.randint(0, 10000)))
         )
 
-        print(f"publish qos:{publish_packet.qos}")
         if random.getrandbits(1):
             publish_packet.user_properties = self.user_properties
 
@@ -261,7 +250,6 @@ class CanaryClient():
             self.canary_core.stat_publishes_failed += 1
 
     def subscribe(self, topic_filter: str = None, qos: int = 1):
-        print("subscribe")
         self.canary_core.stat_subscribes_attempted += 1
         if topic_filter is None:
             topic_filter = str(time.time()) + self.client_id
@@ -277,7 +265,6 @@ class CanaryClient():
             self.canary_core.stat_subscribes_failed += 1
 
     def unsubscribe(self):
-        print("unsubscribe")
         if len(self.canary_core.subscriptions) < 1:
             return
 
@@ -313,7 +300,7 @@ class Mqtt5CanaryTestClient(NativeResourceTest):
 
     def test_mqtt5_bindings_canary(self):
         # Add in seconds how long the test should run
-        time_end = time.time() + 60 * 60 * 7
+        time_end = time.time() + 30
 
         client = CanaryClient()
         client.start()
