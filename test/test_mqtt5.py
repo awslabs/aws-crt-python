@@ -172,7 +172,7 @@ class Mqtt5TestCallbacks():
             self.future_connection_success.set_result(lifecycle_connection_success)
 
     def on_lifecycle_connection_failure(self, lifecycle_connection_failure: mqtt5.LifecycleConnectFailureData):
-        print("{self.client_name} on_lifecycle_connection_failure")
+        print(f"{self.client_name} on_lifecycle_connection_failure")
         print(f"exception:{lifecycle_connection_failure.exception}")
         self.last_exception = lifecycle_connection_failure.exception
         if self.future_connection_failure:
