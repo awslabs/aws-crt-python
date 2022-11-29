@@ -217,6 +217,40 @@ class WebSocket(NativeResource):
         """
         _awscrt.websocket_close(self._binding)
 
+    def send_frame(
+        self,
+        opcode: 'Opcode',
+        payload: str | bytes | bytearray | memoryview = None,
+        *,
+        fin: bool = True,
+        rsv1: bool = False,
+        rsv2: bool = False,
+        rsv3: bool = False,
+        on_complete: Callable[['OnSendFrameCompleteData'], None] = None,
+    ):
+        def _on_complete(error_code):
+            cbdata = OnSendFrameCompleteData()
+            if error_code:
+                cbdata.exception = awscrt.exceptions.from_code(error_code)
+
+            # Do not let exceptions from the user's callback bubble up any further.
+            try:
+                on_complete(cbdata)
+            except BaseException as e:
+                print("Exception in WebSocket.send_frame on_complete callback", file=sys.stderr)
+                sys.excepthook(*sys.exc_info())
+                self.close()
+
+        _awscrt.websocket_send_frame(
+            self._binding,
+            Opcode(opcode),  # needless cast to ensure opcode is valid
+            payload,
+            fin,
+            rsv1,
+            rsv2,
+            rsv3,
+            _on_complete)
+
 
 class _WebSocketCore(NativeResource):
     # Private class that handles wrangling callback data from C -> Python.
@@ -237,6 +271,7 @@ class _WebSocketCore(NativeResource):
         self._on_incoming_frame_begin_cb = on_incoming_frame_begin
         self._on_incoming_frame_payload_cb = on_incoming_frame_payload
         self._on_incoming_frame_complete_cb = on_incoming_frame_complete
+        self._current_incoming_frame: 'IncomingFrame' = None
 
     def _on_connection_setup(
             self,
@@ -262,7 +297,7 @@ class _WebSocketCore(NativeResource):
         # Do not let exceptions from the user's callback bubble up any further.
         try:
             self._on_connection_setup_cb(cbdata)
-        except Exception:
+        except BaseException:
             print("Exception in WebSocket on_connection_setup callback", file=sys.stderr)
             sys.excepthook(*sys.exc_info())
             if cbdata.websocket:
@@ -276,9 +311,60 @@ class _WebSocketCore(NativeResource):
         # Do not let exceptions from the user's callback bubble up any further.
         try:
             self._on_connection_shutdown_cb(cbdata)
-        except Exception:
+        except BaseException:
             print("Exception in WebSocket on_connection_shutdown callback", file=sys.stderr)
             sys.excepthook(*sys.exc_info())
+
+    def _on_incoming_frame_begin(self, opcode_int, payload_length, fin_int, rsv1_int, rsv2_int, rsv3_int):
+        self._current_incoming_frame = IncomingFrame(
+            Opcode(opcode_int),
+            payload_length,
+            bool(fin_int),
+            bool(rsv1_int),
+            bool(rsv2_int),
+            bool(rsv3_int))
+
+        cbdata = OnIncomingFrameBeginData(self._current_incoming_frame)
+
+        # Do not let exceptions from the user's callback bubble up any further:
+        try:
+            self._on_incoming_frame_begin_cb(cbdata)
+        except BaseException:
+            print("Exception in WebSocket on_incoming_frame_begin callback", file=sys.stderr)
+            sys.excepthook(*sys.exc_info())
+            return False  # close websocket
+
+        return True
+
+    def _on_incoming_frame_payload(self, data):
+        cbdata = OnIncomingFramePayloadData(self._current_incoming_frame, data)
+
+        # Do not let exceptions from the user's callback bubble up any further:
+        try:
+            self._on_incoming_frame_payload_cb(cbdata)
+        except BaseException:
+            print("Exception in WebSocket on_incoming_frame_payload callback", file=sys.stderr)
+            sys.excepthook(*sys.exc_info())
+            return False  # close websocket
+
+        return True
+
+    def _on_incoming_frame_complete(self, error_code):
+        cbdata = OnIncomingFrameCompleteData(self._current_incoming_frame)
+        if error_code:
+            cbdata.exception = awscrt.exceptions.from_code(error_code)
+
+        self._current_incoming_frame = None
+
+        # Do not let exceptions from the user's callback bubble up any further:
+        try:
+            self._on_incoming_frame_complete_cb(cbdata)
+        except BaseException:
+            print("Exception in WebSocket on_incoming_frame_complete callback", file=sys.stderr)
+            sys.excepthook(*sys.exc_info())
+            return False  # close websocket
+
+        return True
 
 
 class Opcode(IntEnum):
@@ -355,11 +441,11 @@ class OnConnectionShutdownData:
 class IncomingFrame:
     # TODO: document me
     opcode: Opcode
+    payload_length: int
     fin: bool
     rsv1: bool
     rsv2: bool
     rsv3: bool
-    payload_length: int
 
 
 @dataclass
