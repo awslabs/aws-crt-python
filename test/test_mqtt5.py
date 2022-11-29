@@ -246,7 +246,7 @@ class Mqtt5ClientTest(NativeResourceTest):
                 auth_type == AuthType.DIRECT_PROXY or
                 auth_type == AuthType.WS_PROXY):
             tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(config.cert_path, config.key_path)
-            tls_ctx_options.verify_peer = False
+            # tls_ctx_options.verify_peer = False
             client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
 
         if auth_type == AuthType.DIRECT_MUTUAL_TLS:
@@ -367,12 +367,11 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    # def test_direct_connect_tls(self):
-    #     client, callbacks = self._test_connect(auth_type=AuthType.DIRECT_TLS)
-    #     client.stop()
-    #     callbacks.future_stopped.result(TIMEOUT)
+    def test_direct_connect_tls(self):
+        client, callbacks = self._test_connect(auth_type=AuthType.DIRECT_TLS)
+        client.stop()
+        callbacks.future_stopped.result(TIMEOUT)
 
-    # TODO test_direct_connect_mutual_tls against IoT Core
     def test_direct_connect_mutual_tls(self):
         client, callbacks = self._test_connect(auth_type=AuthType.DIRECT_MUTUAL_TLS)
         client.stop()
