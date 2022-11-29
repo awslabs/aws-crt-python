@@ -384,15 +384,15 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    # def test_direct_connect_http_proxy_tls(self):
-    #     client_options = mqtt5.ClientOptions(
-    #         host_name="",
-    #         port=0,
-    #         min_reconnect_delay_ms=100,
-    #         max_reconnect_delay_ms=1000)
-    #     client, callbacks = self._test_connect(auth_type=AuthType.DIRECT_PROXY, client_options=client_options)
-    #     client.stop()
-    #     callbacks.future_stopped.result(TIMEOUT)
+    def test_direct_connect_http_proxy_tls(self):
+        client_options = mqtt5.ClientOptions(
+            host_name="",
+            port=0,
+            min_reconnect_delay_ms=100,
+            max_reconnect_delay_ms=1000)
+        client, callbacks = self._test_connect(auth_type=AuthType.DIRECT_PROXY, client_options=client_options)
+        client.stop()
+        callbacks.future_stopped.result(TIMEOUT)
 
     def test_direct_connect_maximum(self):
         user_properties = []
@@ -457,17 +457,17 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    # def test_websocket_connect_tls(self):
-    #     client, callbacks = self._test_connect(auth_type=AuthType.WS_TLS)
-    #     client.stop()
-    #     callbacks.future_stopped.result(TIMEOUT)
+    def test_websocket_connect_tls(self):
+        client, callbacks = self._test_connect(auth_type=AuthType.WS_TLS)
+        client.stop()
+        callbacks.future_stopped.result(TIMEOUT)
 
     # TODO test_websocket_connect_sigv4 against IoT Core
 
-    # def test_websocket_connect_http_proxy_tls(self):
-    #     client, callbacks = self._test_connect(auth_type=AuthType.WS_PROXY)
-    #     client.stop()
-    #     callbacks.future_stopped.result(TIMEOUT)
+    def test_websocket_connect_http_proxy_tls(self):
+        client, callbacks = self._test_connect(auth_type=AuthType.WS_PROXY)
+        client.stop()
+        callbacks.future_stopped.result(TIMEOUT)
 
     def test_websocket_connect_maximum(self):
         user_properties = []
