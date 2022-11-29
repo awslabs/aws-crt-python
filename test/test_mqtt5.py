@@ -124,8 +124,8 @@ class Config:
             self.cert = pathlib.Path(self.cert_path).read_text().encode('utf-8')
 
         elif auth_type == AuthType.WS_PROXY:
-            self.endpoint = self._get_env("AWS_TEST_MQTT5_WS_MQTT_TLS_HOST")
-            self.port = self._get_env("AWS_TEST_MQTT5_WS_MQTT_TLS_PORT")
+            self.endpoint = self._get_env("AWS_TEST_MQTT5_WS_MQTT_HOST")
+            self.port = self._get_env("AWS_TEST_MQTT5_WS_MQTT_PORT")
             self.proxy_endpoint = self._get_env("AWS_TEST_MQTT5_PROXY_HOST")
             self.proxy_port = self._get_env("AWS_TEST_MQTT5_PROXY_PORT")
             self.key_path = self._get_env('AWS_TEST_MQTT5_KEY_FILE')
@@ -251,7 +251,6 @@ class Mqtt5ClientTest(NativeResourceTest):
                 auth_type == AuthType.WS_TLS or
                 auth_type == AuthType.DIRECT_PROXY or
                 auth_type == AuthType.WS_PROXY):
-            # tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(config.cert_path, config.key_path)
             tls_ctx_options = io.TlsContextOptions()
             tls_ctx_options.verify_peer = False
             client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
@@ -464,10 +463,10 @@ class Mqtt5ClientTest(NativeResourceTest):
 
     # TODO test_websocket_connect_sigv4 against IoT Core
 
-    # def test_websocket_connect_http_proxy_tls(self):
-    #     client, callbacks = self._test_connect(auth_type=AuthType.WS_PROXY)
-    #     client.stop()
-    #     callbacks.future_stopped.result(TIMEOUT)
+    def test_websocket_connect_http_proxy_tls(self):
+        client, callbacks = self._test_connect(auth_type=AuthType.WS_PROXY)
+        client.stop()
+        callbacks.future_stopped.result(TIMEOUT)
 
     def test_websocket_connect_maximum(self):
         user_properties = []
