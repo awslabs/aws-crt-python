@@ -23,10 +23,10 @@ RECURSIVE_PATTERNS = [
 # approved list of folders
 # because we don't want to clean the virtual environment folder
 APPROVED_RECURSIVE_FOLDERS = [
-    'awscrt'
-    'scripts'
-    'test'
-    '.builder'
+    'awscrt',
+    'scripts',
+    'test',
+    '.builder',
 ]
 
 utils.chdir_project_root()

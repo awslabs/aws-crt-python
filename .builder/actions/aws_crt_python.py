@@ -14,29 +14,6 @@ import tempfile
 PYTHON_DEFAULT = '{python}'
 
 
-class InstallPythonReqs(Builder.Action):
-    def __init__(self, trust_hosts=False, deps=[], python=PYTHON_DEFAULT):
-        self.trust_hosts = trust_hosts
-        self.core = ('pip', 'setuptools', 'wheel')
-        self.deps = deps
-        self.python = python
-
-    def run(self, env):
-        trusted_hosts = []
-        # These are necessary for older hosts with out of date certs or pip
-        if self.trust_hosts:
-            trusted_hosts = ['--trusted-host', 'pypi.org', '--trusted-host', 'files.pythonhosted.org']
-
-        # setuptools must be installed before packages that need it, or else it won't be in the
-        # package database in time for the subsequent install and pip fails
-        steps = []
-        for deps in (self.core, self.deps):
-            if deps:
-                steps.append([self.python, '-m', 'pip', 'install', '--upgrade', *trusted_hosts, *deps])
-
-        return Builder.Script(steps, name='install-python-reqs')
-
-
 class SetupForTests(Builder.Action):
 
     def run(self, env):
@@ -247,7 +224,7 @@ class AWSCrtPython(Builder.Action):
         python = args.python if args.python else PYTHON_DEFAULT
 
         actions = [
-            InstallPythonReqs(deps=[], python=python),
+            [python, '-m', 'pip', 'install', '--upgrade', '--requirement', 'requirements-dev.txt'],
             SetupForTests(),
             [python, '-m', 'pip', 'install', '--verbose', '.'],
             # "--failfast" because, given how our leak-detection in tests currently works,

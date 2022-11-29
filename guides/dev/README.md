@@ -89,14 +89,9 @@ To stop using the virtual environment, run `deactivate`.
 
 ## Install
 
-Ensure your tools are up to date:
-```sh
-(.venv) $ python3 -m pip install --upgrade pip setuptools
-```
-
 Install dev dependencies:
 ```sh
-(.venv) $ python3 -m pip install --requirement requirements-dev.txt
+(.venv) $ python3 -m pip install --upgrade --requirement requirements-dev.txt
 ```
 
 Install aws-crt-python (helper script `python3 scripts/install-dev.py` does this):

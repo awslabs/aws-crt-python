@@ -14,6 +14,7 @@
 #include "mqtt_client.h"
 #include "mqtt_client_connection.h"
 #include "s3.h"
+#include "websocket.h"
 
 #include <aws/auth/auth.h>
 #include <aws/common/byte_buf.h>
@@ -655,6 +656,13 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(s3_client_new, METH_VARARGS),
     AWS_PY_METHOD_DEF(s3_client_make_meta_request, METH_VARARGS),
     AWS_PY_METHOD_DEF(s3_meta_request_cancel, METH_VARARGS),
+
+    /* WebSocket */
+    AWS_PY_METHOD_DEF(websocket_client_connect, METH_VARARGS),
+    AWS_PY_METHOD_DEF(websocket_close, METH_VARARGS),
+    AWS_PY_METHOD_DEF(websocket_send_frame, METH_VARARGS),
+    AWS_PY_METHOD_DEF(websocket_increment_read_window, METH_VARARGS),
+    AWS_PY_METHOD_DEF(websocket_create_handshake_request, METH_VARARGS),
 
     {NULL, NULL, 0, NULL},
 };
