@@ -372,10 +372,10 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    def test_direct_connect_tls(self):
-        client, callbacks = self._test_connect(auth_type=AuthType.DIRECT_TLS)
-        client.stop()
-        callbacks.future_stopped.result(TIMEOUT)
+    # def test_direct_connect_tls(self):
+    #     client, callbacks = self._test_connect(auth_type=AuthType.DIRECT_TLS)
+    #     client.stop()
+    #     callbacks.future_stopped.result(TIMEOUT)
 
     def test_direct_connect_mutual_tls(self):
         client, callbacks = self._test_connect(auth_type=AuthType.DIRECT_MUTUAL_TLS)
