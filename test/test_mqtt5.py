@@ -91,6 +91,10 @@ class Config:
             self.endpoint = self._get_env("AWS_TEST_MQTT5_WS_MQTT_HOST")
             self.port = self._get_env("AWS_TEST_MQTT5_WS_MQTT_PORT")
 
+        elif auth_type == AuthType.BAD_HOST:
+            self.endpoint = "badhost"
+            self.port = 1883
+
         elif auth_type == AuthType.WS_BAD_PORT:
             self.endpoint = self._get_env("AWS_TEST_MQTT5_WS_MQTT_HOST")
             self.port = 444
@@ -128,10 +132,6 @@ class Config:
             self.key = pathlib.Path(self.key_path).read_text().encode('utf-8')
             self.cert_path = self._get_env('AWS_TEST_MQTT5_CERTIFICATE_FILE')
             self.cert = pathlib.Path(self.cert_path).read_text().encode('utf-8')
-
-        elif auth_type == AuthType.BAD_HOST:
-            self.endpoint = "badhost"
-            self.port = 1883
 
     def _get_env(self, name):
         val = os.environ.get(name)
@@ -251,7 +251,7 @@ class Mqtt5ClientTest(NativeResourceTest):
                 auth_type == AuthType.WS_TLS or
                 auth_type == AuthType.DIRECT_PROXY or
                 auth_type == AuthType.WS_PROXY):
-            tls_ctx_options = io.TlsContextOptions()
+            tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(config.cert_path, config.key_path)
             client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
 
         if auth_type == AuthType.DIRECT_MUTUAL_TLS:
@@ -372,10 +372,10 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    # def test_direct_connect_tls(self):
-    #     client, callbacks = self._test_connect(auth_type=AuthType.DIRECT_TLS)
-    #     client.stop()
-    #     callbacks.future_stopped.result(TIMEOUT)
+    def test_direct_connect_tls(self):
+        client, callbacks = self._test_connect(auth_type=AuthType.DIRECT_TLS)
+        client.stop()
+        callbacks.future_stopped.result(TIMEOUT)
 
     def test_direct_connect_mutual_tls(self):
         client, callbacks = self._test_connect(auth_type=AuthType.DIRECT_MUTUAL_TLS)
@@ -520,11 +520,11 @@ class Mqtt5ClientTest(NativeResourceTest):
     #             NEGATIVE CONNECT TEST CASES
     # ==============================================================
 
-    def test_connect_with_invalid_host_name(self):
-        client_options = mqtt5.ClientOptions("badhost", 1883)
-        client, callbacks = self._test_connect_fail(auth_type=AuthType.BAD_HOST, client_options=client_options)
-        client.stop()
-        callbacks.future_stopped.result(TIMEOUT)
+    # def test_connect_with_invalid_host_name(self):
+    #     client_options = mqtt5.ClientOptions("badhost", 1883)
+    #     client, callbacks = self._test_connect_fail(auth_type=AuthType.BAD_HOST, client_options=client_options)
+    #     client.stop()
+    #     callbacks.future_stopped.result(TIMEOUT)
 
     def test_connect_with_invalid_port(self):
         client_options = mqtt5.ClientOptions("badhost", 444)
