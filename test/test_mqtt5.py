@@ -40,6 +40,7 @@ TIMEOUT = 100.0
 AuthType = enum.Enum('AuthType', ['DIRECT',
                                   'DIRECT_BASIC_AUTH',
                                   'DIRECT_TLS',
+                                  'DIRECT_MUTUAL_TLS',
                                   'DIRECT_PROXY',
                                   'WS',
                                   'WS_BASIC_AUTH',
@@ -75,6 +76,14 @@ class Config:
             self.key_path = self._get_env('AWS_TEST_MQTT5_KEY_FILE')
             self.key = pathlib.Path(self.key_path).read_text().encode('utf-8')
             self.cert_path = self._get_env('AWS_TEST_MQTT5_CERTIFICATE_FILE')
+            self.cert = pathlib.Path(self.cert_path).read_text().encode('utf-8')
+
+        elif auth_type == AuthType.DIRECT_MUTUAL_TLS:
+            self.endpoint = self._get_env("AWS_TEST_MQTT5_IOT_CORE_HOST")
+            self.port = 443
+            self.key_path = self._get_env('AWS_TEST_MQTT5_IOT_KEY_PATH')
+            self.key = pathlib.Path(self.key_path).read_text().encode('utf-8')
+            self.cert_path = self._get_env('AWS_TEST_MQTT5_IOT_CERTIFICATE_PATH')
             self.cert = pathlib.Path(self.cert_path).read_text().encode('utf-8')
 
         elif auth_type == AuthType.WS:
@@ -240,6 +249,10 @@ class Mqtt5ClientTest(NativeResourceTest):
             tls_ctx_options.verify_peer = False
             client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
 
+        if auth_type == AuthType.DIRECT_MUTUAL_TLS:
+            tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(config.cert_path, config.key_path)
+            client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
+
         if (auth_type == AuthType.WS or
                 auth_type == AuthType.WS_BASIC_AUTH or
                 auth_type == AuthType.WS_TLS or
@@ -360,6 +373,10 @@ class Mqtt5ClientTest(NativeResourceTest):
     #     callbacks.future_stopped.result(TIMEOUT)
 
     # TODO test_direct_connect_mutual_tls against IoT Core
+    def test_direct_connect_mutual_tls(self):
+        client, callbacks = self._test_connect(auth_type=AuthType.DIRECT_MUTUAL_TLS)
+        client.stop()
+        callbacks.future_stopped.result(TIMEOUT)
 
     # def test_direct_connect_http_proxy_tls(self):
     #     client_options = mqtt5.ClientOptions(
