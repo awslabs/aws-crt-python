@@ -251,8 +251,9 @@ class Mqtt5ClientTest(NativeResourceTest):
                 auth_type == AuthType.WS_TLS or
                 auth_type == AuthType.DIRECT_PROXY or
                 auth_type == AuthType.WS_PROXY):
-            tls_ctx_options = io.TlsContextOptions() #.create_client_with_mtls_from_path(config.cert_path, config.key_path)
-            client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
+            tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(config.cert_path, config.key_path)
+            tls_ctx = io.ClientTlsContext(tls_ctx_options)
+            client_options.tls_ctx = tls_ctx.new_connection_options()
 
         if auth_type == AuthType.DIRECT_MUTUAL_TLS:
             tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(config.cert_path, config.key_path)
