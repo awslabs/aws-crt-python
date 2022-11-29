@@ -80,7 +80,7 @@ class Config:
 
         elif auth_type == AuthType.DIRECT_MUTUAL_TLS:
             self.endpoint = self._get_env("AWS_TEST_MQTT5_IOT_CORE_HOST")
-            self.port = 443
+            self.port = 8883
             self.key_path = self._get_env('AWS_TEST_MQTT5_IOT_KEY_PATH')
             self.key = pathlib.Path(self.key_path).read_text().encode('utf-8')
             self.cert_path = self._get_env('AWS_TEST_MQTT5_IOT_CERTIFICATE_PATH')
