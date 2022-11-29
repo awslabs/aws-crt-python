@@ -1104,61 +1104,61 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
     uint32_t will_message_expiry_interval_seconds_tmp = 0;
     uint16_t will_topic_alias_tmp = 0;
     struct aws_byte_cursor will_correlation_data_tmp;
-    // if (!PyObject_IsTrue(is_will_none_py)) {
-    //     will.qos = will_qos_val;
-    //     will.payload = aws_byte_cursor_from_array(will_payload_stack.buf, will_payload_stack.len);
-    //     will.retain = PyObject_IsTrue(will_retain_py);
-    //     will.topic = will_topic;
-    //     if (PyObject_GetAsOptionalIntEnum(
-    //             will_payload_format_py,
-    //             AWS_PYOBJECT_KEY_WILL_PACKET,
-    //             AWS_PYOBJECT_KEY_PAYLOAD_FORMAT_INDICATOR,
-    //             &will_payload_format_tmp)) {
-    //         will_payload_format_enum_tmp = (enum aws_mqtt5_payload_format_indicator)will_payload_format_tmp;
-    //         will.payload_format = &will_payload_format_enum_tmp;
-    //     }
-    //     if (PyErr_Occurred()) {
-    //         goto done;
-    //     }
+    if (!PyObject_IsTrue(is_will_none_py)) {
+        will.qos = will_qos_val;
+        will.payload = aws_byte_cursor_from_array(will_payload_stack.buf, will_payload_stack.len);
+        will.retain = PyObject_IsTrue(will_retain_py);
+        will.topic = will_topic;
+        if (PyObject_GetAsOptionalIntEnum(
+                will_payload_format_py,
+                AWS_PYOBJECT_KEY_WILL_PACKET,
+                AWS_PYOBJECT_KEY_PAYLOAD_FORMAT_INDICATOR,
+                &will_payload_format_tmp)) {
+            will_payload_format_enum_tmp = (enum aws_mqtt5_payload_format_indicator)will_payload_format_tmp;
+            will.payload_format = &will_payload_format_enum_tmp;
+        }
+        if (PyErr_Occurred()) {
+            goto done;
+        }
 
-    //     will.message_expiry_interval_seconds = PyObject_GetAsOptionalUint32(
-    //         will_message_expiry_interval_seconds_py,
-    //         AWS_PYOBJECT_KEY_WILL_PACKET,
-    //         AWS_PYOBJECT_KEY_MESSAGE_EXPIRY_INTERVAL_SEC,
-    //         &will_message_expiry_interval_seconds_tmp);
-    //     if (PyErr_Occurred()) {
-    //         goto done;
-    //     }
+        will.message_expiry_interval_seconds = PyObject_GetAsOptionalUint32(
+            will_message_expiry_interval_seconds_py,
+            AWS_PYOBJECT_KEY_WILL_PACKET,
+            AWS_PYOBJECT_KEY_MESSAGE_EXPIRY_INTERVAL_SEC,
+            &will_message_expiry_interval_seconds_tmp);
+        if (PyErr_Occurred()) {
+            goto done;
+        }
 
-    //     will.topic_alias = PyObject_GetAsOptionalUint16(
-    //         will_topic_alias_py, AWS_PYOBJECT_KEY_WILL_PACKET, AWS_PYOBJECT_KEY_TOPIC_ALIAS, &will_topic_alias_tmp);
-    //     if (PyErr_Occurred()) {
-    //         goto done;
-    //     }
+        will.topic_alias = PyObject_GetAsOptionalUint16(
+            will_topic_alias_py, AWS_PYOBJECT_KEY_WILL_PACKET, AWS_PYOBJECT_KEY_TOPIC_ALIAS, &will_topic_alias_tmp);
+        if (PyErr_Occurred()) {
+            goto done;
+        }
 
-    //     if (will_response_topic.ptr) {
-    //         will.response_topic = &will_response_topic;
-    //     }
+        if (will_response_topic.ptr) {
+            will.response_topic = &will_response_topic;
+        }
 
-    //     if (will_correlation_data_stack.buf) {
-    //         will_correlation_data_tmp =
-    //             aws_byte_cursor_from_array(will_correlation_data_stack.buf, will_correlation_data_stack.len);
-    //         will.correlation_data = &will_correlation_data_tmp;
-    //     }
+        if (will_correlation_data_stack.buf) {
+            will_correlation_data_tmp =
+                aws_byte_cursor_from_array(will_correlation_data_stack.buf, will_correlation_data_stack.len);
+            will.correlation_data = &will_correlation_data_tmp;
+        }
 
-    //     if (will_content_type.ptr) {
-    //         will.content_type = &will_content_type;
-    //     }
+        if (will_content_type.ptr) {
+            will.content_type = &will_content_type;
+        }
 
-    //     will_user_properties_tmp =
-    //         aws_get_optional_user_properties_from_PyObject(will_user_properties_py, &will.user_property_count);
-    //     if (PyErr_Occurred()) {
-    //         goto done;
-    //     }
-    //     will.user_properties = will_user_properties_tmp;
+        will_user_properties_tmp =
+            aws_get_optional_user_properties_from_PyObject(will_user_properties_py, &will.user_property_count);
+        if (PyErr_Occurred()) {
+            goto done;
+        }
+        will.user_properties = will_user_properties_tmp;
 
-    //     connect_options.will = &will;
-    // }
+        connect_options.will = &will;
+    }
 
     /* CALLBACKS */
 
