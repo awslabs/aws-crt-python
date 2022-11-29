@@ -139,6 +139,9 @@ def connect(
     else:
         initial_read_window = 0x7FFFFFFF  # TODO: fix how this works in C
 
+    if initial_read_window < 0:
+        raise ValueError("'initial_read_window' cannot be negative")
+
     if port is None:
         port = 0  # C layer uses zero to indicate "defaults please"
 

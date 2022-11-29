@@ -121,12 +121,6 @@ PyObject *aws_py_websocket_client_connect(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    /* required window size */
-    if (initial_read_window < 0) {
-        PyErr_Format(PyExc_ValueError, "'initial_read_window' cannot be negative");
-        return NULL;
-    }
-
     /* From hereon, we need to clean up if errors occur... */
 
     /* keep _WebSocketCore alive for lifetime of aws_websocket */
@@ -141,7 +135,7 @@ PyObject *aws_py_websocket_client_connect(PyObject *self, PyObject *args) {
         .host = host,
         .port = port,
         .handshake_request = handshake_request,
-        .initial_window_size = (size_t)initial_read_window,
+        .initial_window_size = (size_t)initial_read_window, /* already checked it was non-negative out in python */
         .user_data = websocket_core_py,
         .on_connection_setup = s_websocket_on_connection_setup,
         .on_connection_shutdown = s_websocket_on_connection_shutdown,
