@@ -1104,7 +1104,7 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
     uint32_t will_message_expiry_interval_seconds_tmp = 0;
     uint16_t will_topic_alias_tmp = 0;
     struct aws_byte_cursor will_correlation_data_tmp;
-    if (!PyObject_IsTrue(is_will_none_py)) {
+    if (is_will_none_py != NULL && !PyObject_IsTrue(is_will_none_py)) {
         will.qos = will_qos_val;
         will.payload = aws_byte_cursor_from_array(will_payload_stack.buf, will_payload_stack.len);
         will.retain = PyObject_IsTrue(will_retain_py);

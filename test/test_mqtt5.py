@@ -207,10 +207,6 @@ class Mqtt5ClientTest(NativeResourceTest):
         if client_options.connect_options is None:
             client_options.connect_options = mqtt5.ConnectPacket()
             client_options.connect_options.client_id = create_client_id()
-            client_options.connect_options.will = mqtt5.PublishPacket(
-                payload="TEST WILL",
-                qos=mqtt5.QoS.AT_LEAST_ONCE,
-                topic="topic_filter")
 
         if (auth_type == AuthType.DIRECT or
             auth_type == AuthType.DIRECT_BASIC_AUTH or
