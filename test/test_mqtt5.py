@@ -521,7 +521,8 @@ class Mqtt5ClientTest(NativeResourceTest):
     # ==============================================================
 
     def test_connect_with_invalid_host_name(self):
-        client, callbacks = self._test_connect_fail(auth_type=AuthType.BAD_HOST)
+        client_options = mqtt5.ClientOptions("badhost", 1883)
+        client, callbacks = self._test_connect_fail(auth_type=AuthType.BAD_HOST, client_options=client_options)
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
