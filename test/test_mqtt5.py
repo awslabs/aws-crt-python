@@ -124,8 +124,8 @@ class Config:
             self.cert = pathlib.Path(self.cert_path).read_text().encode('utf-8')
 
         elif auth_type == AuthType.WS_PROXY:
-            self.endpoint = self._get_env("AWS_TEST_MQTT5_WS_MQTT_HOST")
-            self.port = self._get_env("AWS_TEST_MQTT5_WS_MQTT_PORT")
+            self.endpoint = self._get_env("AWS_TEST_MQTT5_WS_MQTT_TLS_HOST")
+            self.port = self._get_env("AWS_TEST_MQTT5_WS_MQTT_TLS_PORT")
             self.proxy_endpoint = self._get_env("AWS_TEST_MQTT5_PROXY_HOST")
             self.proxy_port = self._get_env("AWS_TEST_MQTT5_PROXY_PORT")
             self.key_path = self._get_env('AWS_TEST_MQTT5_KEY_FILE')
