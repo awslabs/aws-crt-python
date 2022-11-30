@@ -761,7 +761,7 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
 
     if (!PyArg_ParseTuple(
             args,
-            "Os#HOOOOz#Oz#z#OOOOOOOOlz*Oz#OOOz#z*z#OOOOOOOOOOOO",
+            "Os#HOOOOz#Oz#z#OOOOOOOOiz*Oz#OOOz#z*z#OOOOOOOOOOOO",
             &self_py,
             &host_name.ptr,
             &host_name.len,
@@ -1264,7 +1264,7 @@ PyObject *aws_py_mqtt5_client_stop(PyObject *self, PyObject *args) {
 
     if (!PyArg_ParseTuple(
             args,
-            "OOlOz#Oz#",
+            "OOiOz#Oz#",
             &impl_capsule,
             &is_disconnect_packet_none_py,
             &reason_code,
@@ -1430,7 +1430,7 @@ PyObject *aws_py_mqtt5_client_publish(PyObject *self, PyObject *args) {
 
     if (!PyArg_ParseTuple(
             args,
-            "Olz*Oz#OOOz#z*z#OO",
+            "Oiz*Oz#OOOz#z*z#OO",
             &impl_capsule,
             &qos_val,
             &payload_stack,

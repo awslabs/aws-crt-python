@@ -123,7 +123,7 @@ class CanaryCore():
         if self.future_stopped:
             if self.future_stopped.done():
                 pass
-            else
+            else:
                 self.future_stopped.set_result(None)
 
     def on_lifecycle_attempting_connect(self, lifecycle_attempting_connect: mqtt5.LifecycleAttemptingConnectData):
