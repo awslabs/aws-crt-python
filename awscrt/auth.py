@@ -5,7 +5,7 @@ AWS client-side authentication: standard credentials providers and signing.
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 
-import _awscrt
+from awscrt._c_lib_importer import _awscrt
 from awscrt import NativeResource
 import awscrt.exceptions
 from awscrt.http import HttpRequest, HttpProxyOptions

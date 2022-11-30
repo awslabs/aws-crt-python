@@ -1,7 +1,11 @@
 """
 Cross-platform library for `awscrt`.
 """
-import _awscrt
+
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0.
+
+from awscrt._c_lib_importer import _awscrt
 
 
 def get_cpu_group_count() -> int:

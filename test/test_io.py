@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0.
 
 from awscrt.io import *
+from awscrt.exceptions import AwsCrtError
 from test import NativeResourceTest, TIMEOUT
 import io
 import os
@@ -216,14 +217,16 @@ class Pkcs11LibTest(NativeResourceTest):
         lib_path = self._lib_path()
         lib1 = Pkcs11Lib(file=lib_path, behavior=Pkcs11Lib.InitializeFinalizeBehavior.STRICT)
         # InitializeFinalizeBehavior.STRICT behavior should fail if the PKCS#11 lib is already loaded
-        with self.assertRaises(Exception):
+        with self.assertRaises(AwsCrtError) as raises:
             lib2 = Pkcs11Lib(file=lib_path, behavior=Pkcs11Lib.InitializeFinalizeBehavior.STRICT)
+        self.assertEqual(raises.exception.name, "AWS_ERROR_PKCS11_CKR_CRYPTOKI_ALREADY_INITIALIZED")
 
     def test_omit_behavior(self):
         lib_path = self._lib_path()
         # InitializeFinalizeBehavior.OMIT should fail unless another instance of the PKCS#11 lib is already loaded
-        with self.assertRaises(Exception):
+        with self.assertRaises(AwsCrtError) as raises:
             lib = Pkcs11Lib(file=lib_path, behavior=Pkcs11Lib.InitializeFinalizeBehavior.OMIT)
+        self.assertEqual(raises.exception.name, "AWS_ERROR_PKCS11_CKR_CRYPTOKI_NOT_INITIALIZED")
 
         # InitializeFinalizeBehavior.OMIT behavior should be fine when another
         # instance of the PKCS#11 lib is already loaded

@@ -29,6 +29,32 @@
 
 #include <memoryobject.h>
 
+static PyObject *s_get_corresponding_builtin_exception(int error_code);
+
+static PyObject *s_AwsCrtError_type = NULL;
+
+/* Pass stuff from our Python code, that our C library needs to use.
+ *
+ * For example: the `awscrt.exceptions.AwsCrtError` class is written in Python,
+ * but our C code needs to raise that exception type, so pass in a function
+ * to let us do that.
+ */
+PyObject *aws_py_init_c_library_with_python_stuff(PyObject *self, PyObject *args) {
+    (void)self;
+
+    if (s_AwsCrtError_type != NULL) {
+        PyErr_SetString(PyExc_RuntimeError, "_awscrt library initialized multiple times");
+        return NULL;
+    }
+
+    if (!PyArg_ParseTuple(args, "O", &s_AwsCrtError_type)) {
+        return NULL;
+    }
+
+    Py_INCREF(s_AwsCrtError_type);
+    Py_RETURN_NONE;
+}
+
 static struct aws_logger s_logger;
 static bool s_logger_init = false;
 
@@ -225,10 +251,29 @@ void PyErr_SetAwsLastError(void) {
 }
 
 PyObject *PyErr_AwsLastError(void) {
-    int err = aws_last_error();
-    const char *name = aws_error_name(err);
-    const char *msg = aws_error_str(err);
-    return PyErr_Format(PyExc_RuntimeError, "%d (%s): %s", err, name, msg);
+    AWS_FATAL_ASSERT(s_AwsCrtError_type && "_awscrt was not properly initialized");
+
+    /* Avoid confusion if a C function forgets to actually call aws_raise_error() */
+    int error_code = aws_last_error();
+    if (error_code == AWS_ERROR_SUCCESS) {
+        error_code = AWS_ERROR_UNKNOWN;
+    }
+
+    /* If error_code corresponds to a Python built-in exception, raise that */
+    PyObject *builtin_exception_type = s_get_corresponding_builtin_exception(error_code);
+    if (builtin_exception_type != Py_None) {
+        PyErr_SetObject(builtin_exception_type, Py_None);
+    } else {
+        /* Otherwise, raise an AwsCrtError */
+        PyObject *error_code_py = PyLong_FromLong(error_code);
+        AWS_FATAL_ASSERT(error_code_py && "failed to create error code");
+
+        PyErr_SetObject(s_AwsCrtError_type, error_code_py);
+        Py_DECREF(error_code_py);
+    }
+    Py_DECREF(builtin_exception_type);
+
+    return NULL;
 }
 
 #define AWS_DEFINE_ERROR_INFO_CRT(CODE, STR)                                                                           \
@@ -338,6 +383,10 @@ PyObject *aws_py_get_corresponding_builtin_exception(PyObject *self, PyObject *a
         return NULL;
     }
 
+    return s_get_corresponding_builtin_exception(error_code);
+}
+
+static PyObject *s_get_corresponding_builtin_exception(int error_code) {
     struct aws_hash_element *found;
     aws_hash_table_find(&s_aws_to_py_error_map, (void *)(size_t)error_code, &found);
     if (!found) {
@@ -536,6 +585,9 @@ static void s_install_crash_handler(void) {
     { #NAME, aws_py_##NAME, (FLAGS), NULL }
 
 static PyMethodDef s_module_methods[] = {
+    /* Internal */
+    AWS_PY_METHOD_DEF(init_c_library_with_python_stuff, METH_VARARGS),
+
     /* Common */
     AWS_PY_METHOD_DEF(get_error_name, METH_VARARGS),
     AWS_PY_METHOD_DEF(get_error_message, METH_VARARGS),
