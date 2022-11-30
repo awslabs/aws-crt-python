@@ -462,10 +462,11 @@ class Mqtt5ClientTest(NativeResourceTest):
 
     # TODO test_websocket_connect_sigv4 against IoT Core
 
-    def test_websocket_connect_http_proxy_tls(self):
-        client, callbacks = self._test_connect(auth_type=AuthType.WS_PROXY)
-        client.stop()
-        callbacks.future_stopped.result(TIMEOUT)
+    # TODO can implement this later
+    # def test_websocket_connect_http_proxy_tls(self):
+    #     client, callbacks = self._test_connect(auth_type=AuthType.WS_PROXY)
+    #     client.stop()
+    #     callbacks.future_stopped.result(TIMEOUT)
 
     def test_websocket_connect_maximum(self):
         user_properties = []
