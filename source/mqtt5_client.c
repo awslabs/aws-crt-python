@@ -15,6 +15,7 @@
 #include <stdio.h>
 
 static const char *s_capsule_name_mqtt5_client = "aws_mqtt5_client";
+static const char *s_capsule_name_ws_handshake_transform_data = "aws_ws_handshake_transform_data";
 
 static const char *AWS_PYOBJECT_KEY_CLIENT_OPTIONS = "ClientOptions";
 static const char *AWS_PYOBJECT_KEY_UNSUBSCRIBE_PACKET = "UnsubscribePacket";
@@ -589,8 +590,6 @@ struct ws_handshake_transform_data {
     PyObject *request_binding_py;
     PyObject *headers_binding_py;
 };
-
-static const char *s_capsule_name_ws_handshake_transform_data = "aws_ws_handshake_transform_data";
 
 void s_mqtt5_ws_handshake_transform_data_destructor(PyObject *capsule) {
     struct ws_handshake_transform_data *ws_data =
@@ -1415,7 +1414,7 @@ static void s_on_publish_complete_fn(
         metadata->callback,
         "(Hiis#O)",
         error_code,                                /* H */
-        metadata->qos,                             /*  */
+        metadata->qos,                             /* i */
         reason_code,                               /* i */
         reason_string ? reason_string->ptr : NULL, /* s# */
         reason_string ? reason_string->len : 0,
