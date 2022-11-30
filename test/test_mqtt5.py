@@ -158,10 +158,10 @@ class Mqtt5TestCallbacks():
     def ws_handshake_transform(self, transform_args):
         transform_args.set_done()
 
-    def on_publish_received(self, publish_packet: mqtt5.PublishPacket):
+    def on_publish_received(self, publish_received_data: mqtt5.PublishReceivedData):
         self.on_publish_received_counter += 1
         if self.future_publish_received and not self.future_publish_received.done():
-            self.future_publish_received.set_result(publish_packet)
+            self.future_publish_received.set_result(publish_received_data)
 
     def on_lifecycle_stopped(self, lifecycle_stopped: mqtt5.LifecycleStoppedData):
         if self.future_stopped:

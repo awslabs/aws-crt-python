@@ -1183,6 +1183,15 @@ class WebsocketHandshakeTransformArgs:
 
 
 @dataclass
+class PublishReceivedData:
+    """Dataclass containing data related to a Publish Received Callback
+
+    Args:
+        publish_packet (PublishPacket): Data model of an `MQTT5 PUBLISH <https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901100>`_ packet.
+    """
+    publish_packet: PublishPacket = None
+
+@dataclass
 class OperationStatisticsData:
     """Dataclass containing some simple statistics about the current state of the client's queue of operations
 
@@ -1281,7 +1290,7 @@ class ClientOptions:
         ping_timeout_ms (int): The time interval to wait after sending a PINGREQ for a PINGRESP to arrive. If one does not arrive, the client will close the current connection.
         connack_timeout_ms (int): The time interval to wait after sending a CONNECT request for a CONNACK to arrive.  If one does not arrive, the connection will be shut down.
         ack_timeout_sec (int): The time interval to wait for an ack after sending a QoS 1+ PUBLISH, SUBSCRIBE, or UNSUBSCRIBE before failing the operation.
-        on_publish_callback_fn (Callable[[PublishPacket],]): Callback for all publish packets received by client.
+        on_publish_callback_fn (Callable[[PublishReceivedData],]): Callback for all publish packets received by client.
         on_lifecycle_event_stopped_fn (Callable[[LifecycleStoppedData],]): Callback for Lifecycle Event Stopped.
         on_lifecycle_event_attempting_connect_fn (Callable[[LifecycleAttemptingConnectData],]): Callback for Lifecycle Event Attempting Connect.
         on_lifecycle_event_connection_success_fn (Callable[[LifecycleConnectSuccessData],]): Callback for Lifecycle Event Connection Success.
@@ -1306,7 +1315,7 @@ class ClientOptions:
     ping_timeout_ms: int = None
     connack_timeout_ms: int = None
     ack_timeout_sec: int = None
-    on_publish_callback_fn: Callable[[PublishPacket], None] = None
+    on_publish_callback_fn: Callable[[PublishReceivedData], None] = None
     on_lifecycle_event_stopped_fn: Callable[[LifecycleStoppedData], None] = None
     on_lifecycle_event_attempting_connect_fn: Callable[[LifecycleAttemptingConnectData], None] = None
     on_lifecycle_event_connection_success_fn: Callable[[LifecycleConnectSuccessData], None] = None
@@ -1402,7 +1411,7 @@ class _ClientCore:
         publish_packet.content_type = content_type
         publish_packet.user_properties = _init_user_properties(user_properties_tuples)
 
-        self._on_publish_cb(publish_packet)
+        self._on_publish_cb(PublishReceivedData(publish_packet=publish_packet))
 
         return
 

@@ -116,7 +116,7 @@ class CanaryCore():
     def ws_handshake_transform(self, transform_args):
         transform_args.set_done()
 
-    def on_publish_received(self, publish_packet: mqtt5.PublishPacket):
+    def on_publish_received(self, publish_received_data: mqtt5.PublishReceivedData):
         self.stat_publishes_received += 1
 
     def on_lifecycle_stopped(self, lifecycle_stopped: mqtt5.LifecycleStoppedData):
