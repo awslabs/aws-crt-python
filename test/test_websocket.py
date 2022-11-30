@@ -20,7 +20,7 @@ import websockets.server as websockets_server_3rdparty
 TIMEOUT = 10.0  # seconds
 
 # uncomment this for logging from the 3rdparty websockets server
-logging.basicConfig(format="%(message)s", level=logging.DEBUG)
+# logging.basicConfig(format="%(message)s", level=logging.DEBUG)
 
 # uncomment this for logging from our websockets client
 # init_logging(LogLevel.Trace, 'stderr')
@@ -374,8 +374,8 @@ class TestClient(NativeResourceTest):
         self.assertIsNone(handler.exception)
 
     def test_send_receive_data(self):
-        # test sending TEXT and BINARY frames
-        # the server will echo them back
+        # test sending and receiving TEXT and BINARY frames
+        # (the server echos these types of messages back)
         with WebSocketServer(self.host, self.port) as server:
             handler = ClientHandler()
             handler.connect_sync(self.host, self.port)
@@ -411,4 +411,9 @@ class TestClient(NativeResourceTest):
             # TODO you are here self.assertRaises(
 
             handler.close_sync()
+
+            # shouldn't be able to send frame after websocket closes
+            with self.assertRaises(awscrt.exceptions.AwsCrtError):
+                handler.websocket.send_frame(Opcode.TEXT, "asdf")
+
             self.assertIsNone(handler.exception)
