@@ -6,10 +6,12 @@ from awscrt.io import *
 from awscrt.websocket import *
 from concurrent.futures import Future
 from contextlib import closing
+import gc
 import logging
 import socket
 from test import NativeResourceTest
 import threading
+from time import sleep
 
 # using a 3rdparty websocket library for the server
 import websockets.server as websockets_server_3rdparty
@@ -21,15 +23,6 @@ TIMEOUT = 10.0  # seconds
 
 # uncomment this for logging from our websockets client
 # init_logging(LogLevel.Trace, 'stderr')
-
-
-class ClientHandler:
-    def __init__(self):
-        self.setup_future = Future()
-
-    def on_connection_setup(self, data: OnConnectionSetupData):
-        # print(f"SETUP: ${data}")
-        self.setup_future.set_result(data)
 
 
 class WebSocketServer:
@@ -129,18 +122,18 @@ class TestClient(NativeResourceTest):
     def test_connect(self):
         # test a simple successful connection
         with WebSocketServer(self.host, self.port) as server:
+            setup_future = Future()
+            shutdown_future = Future()
 
-            http_handshake_request = create_handshake_request(host=self.host, path='/')
-
-            client_handler = ClientHandler()
             connect(
                 host=self.host,
                 port=self.port,
-                handshake_request=http_handshake_request,
-                on_connection_setup=client_handler.on_connection_setup)
+                handshake_request=create_handshake_request(host=self.host),
+                on_connection_setup=lambda x: setup_future.set_result(x),
+                on_connection_shutdown=lambda x: shutdown_future.set_result(x))
 
-            # wait for on_connection_setup() to fire, which stores the results in a Future
-            setup_data = client_handler.setup_future.result(timeout=TIMEOUT)
+            # wait for on_connection_setup() to fire
+            setup_data: OnConnectionSetupData = setup_future.result(TIMEOUT)
 
             # check that we had a successful connection
             self.assertIsNone(setup_data.exception)
@@ -149,10 +142,127 @@ class TestClient(NativeResourceTest):
             self.assertEqual(101, setup_data.handshake_response_status)
             # check for response header we know should be there
             self.assertIn(("Upgrade", "websocket"), setup_data.handshake_response_headers)
-            # successful response should have no body
-            self.assertIsNone(setup_data.handshake_response_body)
 
-            # drop all references to WebSocket,
-            # which should cause it to shut down and clean up
-            del client_handler.setup_future
-            del setup_data
+            # now close the WebSocket
+            setup_data.websocket.close()
+
+            # wait for on_connection_shutdown() to fire
+            shutdown_data: OnConnectionShutdownData = shutdown_future.result(TIMEOUT)
+            self.assertIsNone(shutdown_data.exception, "Should have shut down cleanly")
+
+    def test_closes_on_zero_refcount(self):
+        # test that a WebSocket shuts down if it's garbage-collected while the connection is still open
+        with WebSocketServer(self.host, self.port) as server:
+            setup_future = Future()
+            shutdown_future = Future()
+
+            connect(
+                host=self.host,
+                port=self.port,
+                handshake_request=create_handshake_request(host=self.host),
+                on_connection_setup=lambda x: setup_future.set_result(x),
+                on_connection_shutdown=lambda x: shutdown_future.set_result(x))
+
+            # wait for on_connection_setup to fire
+            websocket = setup_future.result(TIMEOUT).websocket
+
+            # ensure the connection stays alive while we hold a reference
+            gc.collect()
+            sleep(0.5)
+            self.assertFalse(shutdown_future.done())
+
+            # drop any references to the WebSocket, and ensure the connection shuts down
+            del setup_future
+            del websocket
+            gc.collect()
+            shutdown_data: OnConnectionShutdownData = shutdown_future.result(TIMEOUT)
+            self.assertIsNone(shutdown_data.exception, "Should have shut down cleanly")
+
+    def test_connect_failure_without_response(self):
+        # test a connection that fails before an HTTP response is received
+
+        # the connection will fail because we're not running a server for this test
+        setup_future = Future()
+        shutdown_future = Future()
+
+        connect(
+            host=self.host,
+            port=self.port,
+            handshake_request=create_handshake_request(host=self.host),
+            on_connection_setup=lambda x: setup_future.set_result(x),
+            on_connection_shutdown=lambda x: shutdown_future.set_result(x))
+
+        # wait for on_connection_setup to fire
+        setup_data: OnConnectionSetupData = setup_future.result(TIMEOUT)
+        self.assertIsNone(setup_data.websocket)
+        self.assertIsNotNone(setup_data.exception)
+
+        # nothing responded, so there should be no "handshake response"
+        self.assertIsNone(setup_data.handshake_response_status)
+        self.assertIsNone(setup_data.handshake_response_headers)
+
+        # ensure that on_connection_shutdown does NOT fire
+        sleep(0.5)
+        self.assertFalse(shutdown_future.done(), "on_connection_shutdown should not have fired")
+
+    def test_connect_failure_with_response(self):
+        # test a connection that fails due an HTTP response rejecting the connection
+        with WebSocketServer(self.host, self.port) as server:
+            setup_future = Future()
+
+            # remove necessary headers, so the server will reject this request
+            bad_request = create_handshake_request(host=self.host)
+            bad_request.headers.remove('Upgrade')  # "Upgrade: websocket"
+            bad_request.headers.remove('Connection')  # "Connection: Upgrade"
+
+            connect(
+                host=self.host,
+                port=self.port,
+                handshake_request=bad_request,
+                on_connection_setup=lambda x: setup_future.set_result(x))
+
+            # wait for on_connection_setup to fire
+            setup_data: OnConnectionSetupData = setup_future.result(TIMEOUT)
+            self.assertIsNone(setup_data.websocket)
+            self.assertIsNotNone(setup_data.exception)
+            self.assertEqual("AWS_ERROR_HTTP_WEBSOCKET_UPGRADE_FAILURE", setup_data.exception.name)
+
+            # check the HTTP response data
+            self.assertGreaterEqual(setup_data.handshake_response_status, 400)
+            self.assertIsNotNone(setup_data.handshake_response_headers)
+
+    def test_close_is_idempotent(self):
+        # test that it's always safe to call WebSocket.close()
+        with WebSocketServer(self.host, self.port) as server:
+            setup_future = Future()
+            shutdown_future = Future()
+
+            connect(
+                host=self.host,
+                port=self.port,
+                handshake_request=create_handshake_request(host=self.host),
+                on_connection_setup=lambda x: setup_future.set_result(x),
+                on_connection_shutdown=lambda x: shutdown_future.set_result(x))
+
+            # wait for on_connection_setup to fire
+            websocket = setup_future.result(TIMEOUT).websocket
+
+            # now call close() A BUNCH of times...
+            self.assertFalse(shutdown_future.done())
+
+            # ...before shutdown has started!
+            websocket.close()
+            websocket.close()
+
+            # ...while shutdown is happening!
+            sleep(0.0000001)
+            websocket.close()
+            websocket.close()
+
+            # wait for shutdown.
+            shutdown_data: OnConnectionShutdownData = shutdown_future.result(TIMEOUT)
+            self.assertIsNone(shutdown_data.exception, "Shutdown should have been clean")
+
+            # ...and after shutdown has already occurred!
+            websocket.close()
+            websocket.close()

@@ -264,7 +264,11 @@ static void s_websocket_on_connection_shutdown(struct aws_websocket *websocket, 
     if (result) {
         Py_DECREF(result);
     } else {
+        /* _WebSocketCore._on_connection_shutdown() runs the user's callback in a try/catch.
+         * So any exception that leaks out is an unexpected bug in our code.
+         * Make it fatal, we have no graceful way to deal with this. */
         PyErr_WriteUnraisable(websocket_core_py);
+        AWS_FATAL_ASSERT(0 && "Failed to invoke WebSocket on_connection_shutdown callback");
     }
 
     /* Release _WebSocketCore, there will be no further callbacks */
@@ -315,10 +319,21 @@ static bool s_websocket_on_incoming_frame_complete(
 }
 
 PyObject *aws_py_websocket_close(PyObject *self, PyObject *args) {
-    /* TODO implement */
     (void)self;
-    (void)args;
-    return NULL;
+
+    PyObject *binding_py;
+    if (!PyArg_ParseTuple(args, "O", &binding_py)) {
+        return NULL;
+    }
+
+    struct aws_websocket *websocket = PyCapsule_GetPointer(binding_py, s_websocket_capsule_name);
+    if (!websocket) {
+        return NULL;
+    }
+
+    aws_websocket_close(websocket, false /*free_scarce_resources_immediately*/);
+
+    Py_RETURN_NONE;
 }
 
 PyObject *aws_py_websocket_send_frame(PyObject *self, PyObject *args) {
