@@ -47,7 +47,6 @@ AuthType = enum.Enum('AuthType', ['DIRECT',
                                   'WS_TLS',
                                   'WS_PROXY',
                                   'NO_APPLICATION',
-                                  'BAD_HOST',
                                   'DIRECT_HOST_ONLY',
                                   'DIRECT_HOST_AND_PORT_ONLY',
                                   'WS_BAD_PORT',
@@ -90,10 +89,6 @@ class Config:
         elif auth_type == AuthType.WS:
             self.endpoint = self._get_env("AWS_TEST_MQTT5_WS_MQTT_HOST")
             self.port = self._get_env("AWS_TEST_MQTT5_WS_MQTT_PORT")
-
-        elif auth_type == AuthType.BAD_HOST:
-            self.endpoint = "badhost"
-            self.port = 1883
 
         elif auth_type == AuthType.WS_BAD_PORT:
             self.endpoint = self._get_env("AWS_TEST_MQTT5_WS_MQTT_HOST")
@@ -225,7 +220,6 @@ class Mqtt5ClientTest(NativeResourceTest):
             auth_type == AuthType.DOUBLE_CLIENT_ID_FAILURE or
             auth_type == AuthType.DIRECT_HOST_ONLY or
             auth_type == AuthType.WS_BAD_PORT or
-            auth_type == AuthType.BAD_HOST or
                 auth_type == AuthType.DIRECT_HOST_AND_PORT_ONLY):
             client_options.host_name = config.endpoint
 
@@ -239,7 +233,6 @@ class Mqtt5ClientTest(NativeResourceTest):
            auth_type == AuthType.WS_PROXY or
            auth_type == AuthType.DIRECT_BASIC_AUTH_BAD or
            auth_type == AuthType.DOUBLE_CLIENT_ID_FAILURE or
-           auth_type == AuthType.BAD_HOST or
            auth_type == AuthType.DIRECT_HOST_AND_PORT_ONLY):
             client_options.port = int(config.port)
 
@@ -523,7 +516,7 @@ class Mqtt5ClientTest(NativeResourceTest):
 
     def test_connect_with_invalid_host_name(self):
         client_options = mqtt5.ClientOptions("badhost", 1883)
-        client, callbacks = self._test_connect_fail(auth_type=AuthType.BAD_HOST, client_options=client_options)
+        client, callbacks = self._test_connect_fail(auth_type=AuthType.NO_APPLICATION, client_options=client_options)
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
