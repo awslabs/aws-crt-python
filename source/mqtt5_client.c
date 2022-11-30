@@ -61,9 +61,6 @@ static const char *AWS_PYOBJECT_KEY_ACK_TIMEOUT_SECONDS = "ack_timeout_seconds";
 #define KEEP_ALIVE_INTERVAL_SECONDS 1200
 
 int PyObject_GetIntEnum(PyObject *o, const char *attr_name) {
-    if (o == Py_None) {
-        goto done;
-    }
 
     if (!PyLong_Check(o)) {
         PyErr_Format(PyExc_TypeError, "%s is not a valid enum", attr_name);
