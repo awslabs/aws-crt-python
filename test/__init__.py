@@ -25,7 +25,7 @@ class NativeResourceTest(unittest.TestCase):
 
     def setUp(self):
         NativeResource._track_lifetime = True
-        # init_logging(LogLevel.Trace, 'stderr')
+        init_logging(LogLevel.Trace, 'stderr')
 
     def tearDown(self):
         # Stop checking for leaks if any test has failed.
