@@ -14,7 +14,6 @@ from awscrt.io import ClientBootstrap, TlsConnectionOptions, SocketOptions
 from dataclasses import dataclass
 from enum import IntEnum
 import sys
-from threading import Event
 from typing import Callable, Sequence, Tuple
 
 
@@ -199,13 +198,12 @@ class WebSocket(NativeResource):
     Use :meth:`connect()` to establish a new client connection.
     """
 
-    def __init__(self, binding, shutdown_event):
+    def __init__(self, binding):
         # Do not init a WebSocket directly, use websocket.connect()
         super().__init__()
         self._binding = binding
-        self._shutdown_event = shutdown_event
 
-    def close(self) -> Event:
+    def close(self):
         """Close the WebSocket asynchronously.
 
         You should call this when you are done with a healthy WebSocket,
@@ -215,14 +213,9 @@ class WebSocket(NativeResource):
         This function is idempotent.
 
         To determine when shutdown has completed, you can use the
-        `on_shutdown_complete` callback (passed into :meth:`connect()`),
-        or consult the Event returned by this function.
-
-        Returns:
-            An Event that will be set when shutdown is complete.
+        `on_shutdown_complete` callback (passed into :meth:`connect()`).
         """
         _awscrt.websocket_close(self._binding)
-        return self._shutdown_event
 
 
 class _WebSocketCore(NativeResource):
@@ -244,7 +237,6 @@ class _WebSocketCore(NativeResource):
         self._on_incoming_frame_begin_cb = on_incoming_frame_begin
         self._on_incoming_frame_payload_cb = on_incoming_frame_payload
         self._on_incoming_frame_complete_cb = on_incoming_frame_complete
-        self._shutdown_event = Event()
 
     def _on_connection_setup(
             self,
@@ -257,7 +249,7 @@ class _WebSocketCore(NativeResource):
         if error_code:
             cbdata.exception = awscrt.exceptions.from_code(error_code)
         else:
-            cbdata.websocket = WebSocket(websocket_binding, self._shutdown_event)
+            cbdata.websocket = WebSocket(websocket_binding)
 
         if handshake_response_status != -1:
             cbdata.handshake_response_status = handshake_response_status
@@ -287,8 +279,6 @@ class _WebSocketCore(NativeResource):
         except Exception:
             print("Exception in WebSocket on_connection_shutdown callback", file=sys.stderr)
             sys.excepthook(*sys.exc_info())
-
-        self._shutdown_event.set()
 
 
 class Opcode(IntEnum):

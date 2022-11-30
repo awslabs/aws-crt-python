@@ -248,25 +248,21 @@ class TestClient(NativeResourceTest):
             websocket = setup_future.result(TIMEOUT).websocket
 
             # now call close() A BUNCH of times...
-            close_events = []
+            self.assertFalse(shutdown_future.done())
 
             # ...before shutdown has started!
-            close_events.append(websocket.close())
-            close_events.append(websocket.close())
+            websocket.close()
+            websocket.close()
 
             # ...while shutdown is happening!
             sleep(0.0000001)
-            close_events.append(websocket.close())
-            close_events.append(websocket.close())
+            websocket.close()
+            websocket.close()
 
             # wait for shutdown.
             shutdown_data: OnConnectionShutdownData = shutdown_future.result(TIMEOUT)
             self.assertIsNone(shutdown_data.exception, "Shutdown should have been clean")
 
             # ...and after shutdown has already occurred!
-            close_events.append(websocket.close())
-            close_events.append(websocket.close())
-
-            # now make sure the Events returned by close() are all complete
-            for close_event in close_events:
-                self.assertTrue(close_event.is_set())
+            websocket.close()
+            websocket.close()
