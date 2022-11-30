@@ -18,6 +18,7 @@ API Reference
    api/http
    api/io
    api/mqtt
+   api/mqtt5
    api/s3
 
 Indices and tables
