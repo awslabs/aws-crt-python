@@ -319,7 +319,11 @@ class Mqtt5CanaryTestClient(NativeResourceTest):
 
         time.sleep(0.1)
         client.stop()
+        time.sleep(0.1)
         client.print_stats()
+        time.sleep(0.1)
+        del client
+        time.sleep(0.1)
 
 
 if __name__ == 'main':
