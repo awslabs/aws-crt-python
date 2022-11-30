@@ -1553,7 +1553,7 @@ PyObject *aws_py_mqtt5_client_publish(PyObject *self, PyObject *args) {
     metadata = aws_mem_calloc(aws_py_get_allocator(), 1, sizeof(struct publish_complete_userdata));
 
     metadata->callback = puback_callback_fn_py;
-    metadata->qos = qos_val;
+    metadata->qos = PyObject_GetIntEnum(qos_val_py, AWS_PYOBJECT_KEY_PUBLISH_QOS);
     Py_INCREF(metadata->callback);
 
     struct aws_mqtt5_publish_completion_options publish_completion_options = {
