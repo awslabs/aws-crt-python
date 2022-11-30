@@ -24,8 +24,10 @@ static const char *AWS_PYOBJECT_KEY_SUBSCRIBE_PACKET = "SubscribePacket";
 static const char *AWS_PYOBJECT_KEY_CONNECT_PACKET = "ConnectPacket";
 static const char *AWS_PYOBJECT_KEY_WILL_PACKET = "WillPacket";
 static const char *AWS_PYOBJECT_KEY_WILL_QOS = "will_qos_val";
+static const char *AWS_PYOBJECT_KEY_PUBLISH_QOS = "publish_qos_val";
 static const char *AWS_PYOBJECT_KEY_SUBSCRIPTION = "Subscription";
 static const char *AWS_PYOBJECT_KEY_USER_PROPERTIES = "user_properties";
+static const char *AWS_PYOBJECT_KEY_REASON_CODE = "reason_code";
 static const char *AWS_PYOBJECT_KEY_NAME = "name";
 static const char *AWS_PYOBJECT_KEY_VALUE = "value";
 static const char *AWS_PYOBJECT_KEY_SESSION_EXPIRY_INTERVAL_SEC = "session_expiry_interval_sec";
@@ -1275,7 +1277,7 @@ PyObject *aws_py_mqtt5_client_stop(PyObject *self, PyObject *args) {
     PyObject *impl_capsule;
 
     PyObject *is_disconnect_packet_none_py;
-    int reason_code;
+    PyObject *reason_code_py;
     PyObject *session_expiry_interval_sec_py; /* optional uint32_t */
     struct aws_byte_cursor reason_string;     /* optional */
     PyObject *user_properties_py;             /* optional */
@@ -1283,10 +1285,10 @@ PyObject *aws_py_mqtt5_client_stop(PyObject *self, PyObject *args) {
 
     if (!PyArg_ParseTuple(
             args,
-            "OOiOz#Oz#",
+            "OOOOz#Oz#",
             &impl_capsule,                   /* O */
             &is_disconnect_packet_none_py,   /* O */
-            &reason_code,                    /* i */
+            &reason_code_py,                 /* O */
             &session_expiry_interval_sec_py, /* O */
             &reason_string.ptr,              /* z# */
             &reason_string.len,
@@ -1316,7 +1318,10 @@ PyObject *aws_py_mqtt5_client_stop(PyObject *self, PyObject *args) {
     AWS_ZERO_STRUCT(disconnect_view);
 
     /* Fill out disconnect_view */
-    disconnect_view.reason_code = reason_code;
+    disconnect_view.reason_code = PyObject_GetIntEnum(reason_code_py, AWS_PYOBJECT_KEY_REASON_CODE);
+    if (PyErr_Occurred()) {
+        goto done;
+    }
 
     uint32_t session_expiry_interval_sec_tmp = 0;
     disconnect_view.session_expiry_interval_seconds = PyObject_GetAsOptionalUint32(
@@ -1410,7 +1415,7 @@ static void s_on_publish_complete_fn(
         metadata->callback,
         "(Hiis#O)",
         error_code,                                /* H */
-        metadata->qos,                             /* i */
+        metadata->qos,                             /*  */
         reason_code,                               /* i */
         reason_string ? reason_string->ptr : NULL, /* s# */
         reason_string ? reason_string->len : 0,
@@ -1434,7 +1439,7 @@ PyObject *aws_py_mqtt5_client_publish(PyObject *self, PyObject *args) {
 
     PyObject *impl_capsule;
 
-    int qos_val;
+    PyObject *qos_val_py;
     Py_buffer payload_stack; /* Py_buffers must be released after successful PyArg_ParseTuple() calls */
     PyObject *retain_py;
     struct aws_byte_cursor topic;
@@ -1449,9 +1454,9 @@ PyObject *aws_py_mqtt5_client_publish(PyObject *self, PyObject *args) {
 
     if (!PyArg_ParseTuple(
             args,
-            "Oiz*Oz#OOOz#z*z#OO",
+            "OOz*Oz#OOOz#z*z#OO",
             &impl_capsule,  /* O */
-            &qos_val,       /* i */
+            &qos_val_py,    /* O */
             &payload_stack, /* z* */
             &retain_py,     /* O */
             &topic.ptr,     /* z# */
@@ -1480,7 +1485,10 @@ PyObject *aws_py_mqtt5_client_publish(PyObject *self, PyObject *args) {
     struct aws_mqtt5_packet_publish_view publish_view;
     AWS_ZERO_STRUCT(publish_view);
 
-    publish_view.qos = qos_val;
+    publish_view.qos = PyObject_GetIntEnum(qos_val_py, AWS_PYOBJECT_KEY_PUBLISH_QOS);
+    if (PyErr_Occurred()) {
+        goto done;
+    }
 
     publish_view.payload = aws_byte_cursor_from_array(payload_stack.buf, payload_stack.len);
 
