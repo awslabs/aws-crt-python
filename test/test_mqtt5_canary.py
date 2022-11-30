@@ -121,14 +121,20 @@ class CanaryCore():
 
     def on_lifecycle_stopped(self, lifecycle_stopped: mqtt5.LifecycleStoppedData):
         if self.future_stopped:
-            self.future_stopped.set_result(None)
+            if self.future_stopped.done():
+                pass
+            else
+                self.future_stopped.set_result(None)
 
     def on_lifecycle_attempting_connect(self, lifecycle_attempting_connect: mqtt5.LifecycleAttemptingConnectData):
         pass
 
     def on_lifecycle_connection_success(self, lifecycle_connection_success: mqtt5.LifecycleConnectSuccessData):
         if self.future_connection_success:
-            self.future_connection_success.set_result(lifecycle_connection_success)
+            if self.future_connection_success.done():
+                pass
+            else:
+                self.future_connection_success.set_result(lifecycle_connection_success)
 
     def on_lifecycle_connection_failure(self, lifecycle_connection_failure: mqtt5.LifecycleConnectFailureData):
         pass
