@@ -161,7 +161,7 @@ class Mqtt5TestCallbacks():
     def on_publish_received(self, publish_received_data: mqtt5.PublishReceivedData):
         self.on_publish_received_counter += 1
         if self.future_publish_received and not self.future_publish_received.done():
-            self.future_publish_received.set_result(publish_received_data)
+            self.future_publish_received.set_result(publish_received_data.publish_packet)
 
     def on_lifecycle_stopped(self, lifecycle_stopped: mqtt5.LifecycleStoppedData):
         if self.future_stopped:
