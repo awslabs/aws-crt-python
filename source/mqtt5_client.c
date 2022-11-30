@@ -1125,7 +1125,7 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
     struct aws_byte_cursor will_correlation_data_tmp;
     if (!PyObject_IsTrue(is_will_none_py)) {
         will.qos = PyObject_GetIntEnum(will_qos_val_py, AWS_PYOBJECT_KEY_QOS);
-        if (PyErr_Occurred) {
+        if (PyErr_Occurred()) {
             goto done;
         }
         will.payload = aws_byte_cursor_from_array(will_payload_stack.buf, will_payload_stack.len);
