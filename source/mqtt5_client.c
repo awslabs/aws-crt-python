@@ -23,6 +23,7 @@ static const char *AWS_PYOBJECT_KEY_PUBLISH_PACKET = "PublishPacket";
 static const char *AWS_PYOBJECT_KEY_SUBSCRIBE_PACKET = "SubscribePacket";
 static const char *AWS_PYOBJECT_KEY_CONNECT_PACKET = "ConnectPacket";
 static const char *AWS_PYOBJECT_KEY_WILL_PACKET = "WillPacket";
+static const char *AWS_PYOBJECT_KEY_WILL_QOS = "will_qos_val";
 static const char *AWS_PYOBJECT_KEY_SUBSCRIPTION = "Subscription";
 static const char *AWS_PYOBJECT_KEY_USER_PROPERTIES = "user_properties";
 static const char *AWS_PYOBJECT_KEY_NAME = "name";
@@ -59,6 +60,18 @@ static const char *AWS_PYOBJECT_KEY_ACK_TIMEOUT_SECONDS = "ack_timeout_seconds";
 
 #define KEEP_ALIVE_INTERVAL_SECONDS 1200
 
+int PyObject_GetIntEnum(PyObject *o, const char *attr_name) {
+    if (o == Py_None) {
+        goto done;
+    }
+
+    if (!PyLong_Check(o)) {
+        PyErr_Format(PyExc_TypeError, "%s is not a valid enum", attr_name);
+        return -1;
+    }
+
+    return PyLong_AsLong(o);
+}
 struct mqtt5_client_binding {
     struct aws_mqtt5_client *native;
     PyObject *client_core;
@@ -240,26 +253,27 @@ static void s_on_publish_received(const struct aws_mqtt5_packet_publish_view *pu
         client->client_core,
         "_on_publish",
         "(y#iOs#OiOkOIs#z#Os#O)",
-        publish_packet->payload.ptr,
+        publish_packet->payload.ptr, /* y# */
         publish_packet->payload.len,
-        publish_packet->qos,
-        publish_packet->retain ? Py_True : Py_False,
-        publish_packet->topic.ptr,
+        publish_packet->qos,                         /* i  */
+        publish_packet->retain ? Py_True : Py_False, /* O  */
+        publish_packet->topic.ptr,                   /* s# */
         publish_packet->topic.len,
-        publish_packet->payload_format ? Py_True : Py_False,
-        publish_packet->payload_format ? *publish_packet->payload_format : -1,
-        publish_packet->message_expiry_interval_seconds ? Py_True : Py_False,
-        publish_packet->message_expiry_interval_seconds ? *publish_packet->message_expiry_interval_seconds : -1,
-        publish_packet->topic_alias ? Py_True : Py_False,
-        publish_packet->topic_alias ? *publish_packet->topic_alias : -1,
-        publish_packet->response_topic ? publish_packet->response_topic->ptr : NULL,
+        publish_packet->payload_format ? Py_True : Py_False,                                               /* O  */
+        publish_packet->payload_format ? *publish_packet->payload_format : -1,                             /* i  */
+        publish_packet->message_expiry_interval_seconds ? Py_True : Py_False,                              /* O  */
+        publish_packet->message_expiry_interval_seconds ? *publish_packet->message_expiry_interval_seconds /* k  */
+                                                        : -1,
+        publish_packet->topic_alias ? Py_True : Py_False,                            /* O  */
+        publish_packet->topic_alias ? *publish_packet->topic_alias : -1,             /* I  */
+        publish_packet->response_topic ? publish_packet->response_topic->ptr : NULL, /* s# */
         publish_packet->response_topic ? publish_packet->response_topic->len : 0,
-        publish_packet->correlation_data ? publish_packet->correlation_data->ptr : NULL,
+        publish_packet->correlation_data ? publish_packet->correlation_data->ptr : NULL, /* z# */
         publish_packet->correlation_data ? publish_packet->correlation_data->len : 0,
-        subscription_identifier_count > 0 ? subscription_identifier_list : Py_None,
-        publish_packet->content_type ? publish_packet->content_type->ptr : NULL,
+        subscription_identifier_count > 0 ? subscription_identifier_list : Py_None, /* O  */
+        publish_packet->content_type ? publish_packet->content_type->ptr : NULL,    /* s# */
         publish_packet->content_type ? publish_packet->content_type->len : 0,
-        user_property_count > 0 ? user_properties_list : Py_None);
+        user_property_count > 0 ? user_properties_list : Py_None); /* O  */
     if (!result) {
         PyErr_WriteUnraisable(PyErr_Occurred());
     }
@@ -343,49 +357,51 @@ static void s_lifecycle_event_connection_success(
         "_on_lifecycle_connection_success",
         "(OiOkOIOiOOOks#s#OOOOOOOOIs#s#ikIkIIIOOOOO)",
         /* connack packet  */
-        connack->session_present ? Py_True : Py_False,
-        connack->reason_code,
-        connack->session_expiry_interval ? Py_True : Py_False,
-        connack->session_expiry_interval ? *connack->session_expiry_interval : 0,
-        connack->receive_maximum ? Py_True : Py_False,
-        connack->receive_maximum ? *connack->receive_maximum : 0,
-        connack->maximum_qos ? Py_True : Py_False,
-        connack->maximum_qos ? *connack->maximum_qos : 0,
-        connack->retain_available ? Py_True : Py_False,
-        (connack->retain_available && *connack->retain_available) ? Py_True : Py_False,
-        connack->maximum_packet_size ? Py_True : Py_False,
-        connack->maximum_packet_size ? *connack->maximum_packet_size : 0,
-        connack->assigned_client_identifier ? connack->assigned_client_identifier->ptr : NULL,
+        connack->session_present ? Py_True : Py_False,                                         /* O */
+        connack->reason_code,                                                                  /* i */
+        connack->session_expiry_interval ? Py_True : Py_False,                                 /* O */
+        connack->session_expiry_interval ? *connack->session_expiry_interval : 0,              /* k */
+        connack->receive_maximum ? Py_True : Py_False,                                         /* O */
+        connack->receive_maximum ? *connack->receive_maximum : 0,                              /* I */
+        connack->maximum_qos ? Py_True : Py_False,                                             /* O */
+        connack->maximum_qos ? *connack->maximum_qos : 0,                                      /* i */
+        connack->retain_available ? Py_True : Py_False,                                        /* O */
+        (connack->retain_available && *connack->retain_available) ? Py_True : Py_False,        /* O */
+        connack->maximum_packet_size ? Py_True : Py_False,                                     /* O */
+        connack->maximum_packet_size ? *connack->maximum_packet_size : 0,                      /* k */
+        connack->assigned_client_identifier ? connack->assigned_client_identifier->ptr : NULL, /* s# */
         connack->assigned_client_identifier ? connack->assigned_client_identifier->len : 0,
-        connack->reason_string ? connack->reason_string->ptr : NULL,
+        connack->reason_string ? connack->reason_string->ptr : NULL, /* s# */
         connack->reason_string ? connack->reason_string->len : 0,
-        user_property_count > 0 ? user_properties_list : Py_None,
-        connack->wildcard_subscriptions_available ? Py_True : Py_False,
-        (connack->wildcard_subscriptions_available && *connack->wildcard_subscriptions_available) ? Py_True : Py_False,
-        connack->subscription_identifiers_available ? Py_True : Py_False,
-        (connack->subscription_identifiers_available && *connack->subscription_identifiers_available) ? Py_True
+        user_property_count > 0 ? user_properties_list : Py_None,       /* O */
+        connack->wildcard_subscriptions_available ? Py_True : Py_False, /* O */
+        (connack->wildcard_subscriptions_available && *connack->wildcard_subscriptions_available) ? Py_True
+                                                                                                  : Py_False,   /* O */
+        connack->subscription_identifiers_available ? Py_True : Py_False,                                       /* O */
+        (connack->subscription_identifiers_available && *connack->subscription_identifiers_available) ? Py_True /* O */
                                                                                                       : Py_False,
-        connack->shared_subscriptions_available ? Py_True : Py_False,
-        (connack->shared_subscriptions_available && *connack->shared_subscriptions_available) ? Py_True : Py_False,
-        connack->server_keep_alive ? Py_True : Py_False,
-        connack->server_keep_alive ? *connack->server_keep_alive : 0,
-        connack->response_information ? connack->response_information->ptr : NULL,
+        connack->shared_subscriptions_available ? Py_True : Py_False,                                   /* O */
+        (connack->shared_subscriptions_available && *connack->shared_subscriptions_available) ? Py_True /* O */
+                                                                                              : Py_False,
+        connack->server_keep_alive ? Py_True : Py_False,                           /* O */
+        connack->server_keep_alive ? *connack->server_keep_alive : 0,              /* I */
+        connack->response_information ? connack->response_information->ptr : NULL, /* s# */
         connack->response_information ? connack->response_information->len : 0,
-        connack->server_reference ? connack->server_reference->ptr : NULL,
+        connack->server_reference ? connack->server_reference->ptr : NULL, /* s# */
         connack->server_reference ? connack->server_reference->len : 0,
         /* negotiated settings */
-        settings->maximum_qos,
-        settings->session_expiry_interval,
-        settings->receive_maximum_from_server,
-        settings->maximum_packet_size_to_server,
-        settings->topic_alias_maximum_to_server,
-        settings->topic_alias_maximum_to_client,
-        settings->server_keep_alive,
-        settings->retain_available ? Py_True : Py_False,
-        settings->wildcard_subscriptions_available ? Py_True : Py_False,
-        settings->subscription_identifiers_available ? Py_True : Py_False,
-        settings->shared_subscriptions_available ? Py_True : Py_False,
-        settings->rejoined_session ? Py_True : Py_False);
+        settings->maximum_qos,                                             /* i */
+        settings->session_expiry_interval,                                 /* k */
+        settings->receive_maximum_from_server,                             /* I */
+        settings->maximum_packet_size_to_server,                           /* k */
+        settings->topic_alias_maximum_to_server,                           /* I */
+        settings->topic_alias_maximum_to_client,                           /* I */
+        settings->server_keep_alive,                                       /* I */
+        settings->retain_available ? Py_True : Py_False,                   /* O */
+        settings->wildcard_subscriptions_available ? Py_True : Py_False,   /* O */
+        settings->subscription_identifiers_available ? Py_True : Py_False, /* O */
+        settings->shared_subscriptions_available ? Py_True : Py_False,     /* O */
+        settings->rejoined_session ? Py_True : Py_False);                  /* O */
     if (!result) {
         PyErr_WriteUnraisable(PyErr_Occurred());
     }
@@ -429,40 +445,42 @@ static void s_lifecycle_event_connection_failure(
         client->client_core,
         "_on_lifecycle_connection_failure",
         "(HOOiOkOIOiOOOks#s#OOOOOOOOIs#s#)",
-        error_code,
-        connack ? Py_True : Py_False,
-        (connack && connack->session_present) ? Py_True : Py_False,
-        connack ? connack->reason_code : 0,
-        (connack && connack->session_expiry_interval) ? Py_True : Py_False,
-        (connack && connack->session_expiry_interval) ? *connack->session_expiry_interval : 0,
-        (connack && connack->receive_maximum) ? Py_True : Py_False,
-        (connack && connack->receive_maximum) ? *connack->receive_maximum : 0,
-        (connack && connack->maximum_qos) ? Py_True : Py_False,
-        (connack && connack->maximum_qos) ? *connack->maximum_qos : 0,
-        (connack && connack->retain_available) ? Py_True : Py_False,
-        (connack && connack->retain_available && *connack->retain_available) ? Py_True : Py_False,
-        (connack && connack->maximum_packet_size) ? Py_True : Py_False,
-        (connack && connack->maximum_packet_size) ? *connack->maximum_packet_size : 0,
-        (connack && connack->assigned_client_identifier) ? connack->assigned_client_identifier->ptr : NULL,
+        error_code,                                                                                         /* H */
+        connack ? Py_True : Py_False,                                                                       /* O */
+        (connack && connack->session_present) ? Py_True : Py_False,                                         /* O */
+        connack ? connack->reason_code : 0,                                                                 /* i */
+        (connack && connack->session_expiry_interval) ? Py_True : Py_False,                                 /* O */
+        (connack && connack->session_expiry_interval) ? *connack->session_expiry_interval : 0,              /* k */
+        (connack && connack->receive_maximum) ? Py_True : Py_False,                                         /* O */
+        (connack && connack->receive_maximum) ? *connack->receive_maximum : 0,                              /* I */
+        (connack && connack->maximum_qos) ? Py_True : Py_False,                                             /* O */
+        (connack && connack->maximum_qos) ? *connack->maximum_qos : 0,                                      /* i */
+        (connack && connack->retain_available) ? Py_True : Py_False,                                        /* O */
+        (connack && connack->retain_available && *connack->retain_available) ? Py_True : Py_False,          /* O */
+        (connack && connack->maximum_packet_size) ? Py_True : Py_False,                                     /* O */
+        (connack && connack->maximum_packet_size) ? *connack->maximum_packet_size : 0,                      /* k */
+        (connack && connack->assigned_client_identifier) ? connack->assigned_client_identifier->ptr : NULL, /* s# */
         (connack && connack->assigned_client_identifier) ? connack->assigned_client_identifier->len : 0,
-        (connack && connack->reason_string) ? connack->reason_string->ptr : NULL,
+        (connack && connack->reason_string) ? connack->reason_string->ptr : NULL, /* s# */
         (connack && connack->reason_string) ? connack->reason_string->len : 0,
-        user_property_count > 0 ? user_properties_list : Py_None,
-        (connack && connack->wildcard_subscriptions_available) ? Py_True : Py_False,
-        (connack && connack->wildcard_subscriptions_available && *connack->wildcard_subscriptions_available) ? Py_True
-                                                                                                             : Py_False,
-        (connack && connack->subscription_identifiers_available) ? Py_True : Py_False,
-        (connack && connack->subscription_identifiers_available && *connack->subscription_identifiers_available)
+        user_property_count > 0 ? user_properties_list : Py_None,                                            /* O */
+        (connack && connack->wildcard_subscriptions_available) ? Py_True : Py_False,                         /* O */
+        (connack && connack->wildcard_subscriptions_available && *connack->wildcard_subscriptions_available) /* O */
             ? Py_True
             : Py_False,
-        (connack && connack->shared_subscriptions_available) ? Py_True : Py_False,
-        (connack && connack->shared_subscriptions_available && *connack->shared_subscriptions_available) ? Py_True
-                                                                                                         : Py_False,
-        (connack && connack->server_keep_alive) ? Py_True : Py_False,
-        (connack && connack->server_keep_alive) ? *connack->server_keep_alive : 0,
-        (connack && connack->response_information) ? connack->response_information->ptr : NULL,
+        (connack && connack->subscription_identifiers_available) ? Py_True : Py_False,                           /* O */
+        (connack && connack->subscription_identifiers_available && *connack->subscription_identifiers_available) /* O */
+            ? Py_True
+            : Py_False,
+        (connack && connack->shared_subscriptions_available) ? Py_True : Py_False, /* O */
+        (connack && connack->shared_subscriptions_available && *connack->shared_subscriptions_available)
+            ? Py_True /* O */
+            : Py_False,
+        (connack && connack->server_keep_alive) ? Py_True : Py_False,                           /* O */
+        (connack && connack->server_keep_alive) ? *connack->server_keep_alive : 0,              /* I */
+        (connack && connack->response_information) ? connack->response_information->ptr : NULL, /* s# */
         (connack && connack->response_information) ? connack->response_information->len : 0,
-        (connack && connack->server_reference) ? connack->server_reference->ptr : NULL,
+        (connack && connack->server_reference) ? connack->server_reference->ptr : NULL, /* s# */
         (connack && connack->server_reference) ? connack->server_reference->len : 0);
     if (!result) {
         PyErr_WriteUnraisable(PyErr_Occurred());
@@ -506,15 +524,16 @@ static void s_lifecycle_event_disconnection(
         client->client_core,
         "_on_lifecycle_disconnection",
         "(HOiOks#Os#)",
-        error_code,
-        disconnect ? Py_True : Py_False,
-        disconnect ? disconnect->reason_code : 0,
-        (disconnect && disconnect->session_expiry_interval_seconds) ? Py_True : Py_False,
-        (disconnect && disconnect->session_expiry_interval_seconds) ? *disconnect->session_expiry_interval_seconds : 0,
-        (disconnect && disconnect->reason_string) ? disconnect->reason_string->ptr : NULL,
+        error_code,                                                                       /* H */
+        disconnect ? Py_True : Py_False,                                                  /* O */
+        disconnect ? disconnect->reason_code : 0,                                         /* i */
+        (disconnect && disconnect->session_expiry_interval_seconds) ? Py_True : Py_False, /* O */
+        (disconnect && disconnect->session_expiry_interval_seconds) ? *disconnect->session_expiry_interval_seconds
+                                                                    : 0,                   /* k */
+        (disconnect && disconnect->reason_string) ? disconnect->reason_string->ptr : NULL, /* s# */
         (disconnect && disconnect->reason_string) ? disconnect->reason_string->len : 0,
-        user_property_count > 0 ? user_properties_list : Py_None,
-        (disconnect && disconnect->server_reference) ? disconnect->server_reference->ptr : NULL,
+        user_property_count > 0 ? user_properties_list : Py_None,                                /* O */
+        (disconnect && disconnect->server_reference) ? disconnect->server_reference->ptr : NULL, /* s# */
         (disconnect && disconnect->server_reference) ? disconnect->server_reference->len : 0);
     if (!result) {
         PyErr_WriteUnraisable(PyErr_Occurred());
@@ -643,9 +662,9 @@ static void s_ws_handshake_transform(
         client->client_core,
         "_ws_handshake_transform",
         "(OOO)",
-        ws_transform_data->request_binding_py,
-        ws_transform_data->headers_binding_py,
-        ws_transform_capsule);
+        ws_transform_data->request_binding_py, /* O */
+        ws_transform_data->headers_binding_py, /* O */
+        ws_transform_capsule);                 /* O */
 
     if (result) {
         Py_DECREF(result);
@@ -734,7 +753,7 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
 
     /* Will */
     PyObject *is_will_none_py; /* optional PublishPacket */
-    int will_qos_val;
+    PyObject *will_qos_val_py;
     Py_buffer will_payload_stack; /* Py_buffers must be released after successful PyArg_ParseTuple() calls */
     PyObject *will_retain_py;
     struct aws_byte_cursor will_topic;
@@ -761,60 +780,60 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
 
     if (!PyArg_ParseTuple(
             args,
-            "Os#HOOOOz#Oz#z#OOOOOOOOiz*Oz#OOOz#z*z#OOOOOOOOOOOO",
-            &self_py,
-            &host_name.ptr,
+            "Os#HOOOOz#Oz#z#OOOOOOOOOz*Oz#OOOz#z*z#OOOOOOOOOOOO",
+            &self_py,       /* O */
+            &host_name.ptr, /* s# */
             &host_name.len,
-            &port,
-            &bootstrap_py,
-            &socket_options_py,
-            &tls_ctx_py,
-            &proxy_options_py,
+            &port,              /* H */
+            &bootstrap_py,      /* O */
+            &socket_options_py, /* O */
+            &tls_ctx_py,        /* O */
+            &proxy_options_py,  /* O */
 
             /* Connect Options */
-            &client_id.ptr,
+            &client_id.ptr, /* z# */
             &client_id.len,
-            &keep_alive_interval_sec_py,
-            &username.ptr,
+            &keep_alive_interval_sec_py, /* O */
+            &username.ptr,               /* z# */
             &username.len,
-            &password.ptr,
+            &password.ptr, /* z# */
             &password.len,
-            &session_expiry_interval_sec_py,
-            &request_response_information_py,
-            &request_problem_information_py,
-            &receive_maximum_py,
-            &maximum_packet_size_py,
-            &will_delay_interval_sec_py,
-            &user_properties_py,
+            &session_expiry_interval_sec_py,  /* O */
+            &request_response_information_py, /* O */
+            &request_problem_information_py,  /* O */
+            &receive_maximum_py,              /* O */
+            &maximum_packet_size_py,          /* O */
+            &will_delay_interval_sec_py,      /* O */
+            &user_properties_py,              /* O */
 
-            &is_will_none_py,
-            &will_qos_val,
-            &will_payload_stack,
-            &will_retain_py,
-            &will_topic.ptr,
+            &is_will_none_py,    /* O */
+            &will_qos_val_py,    /* O */
+            &will_payload_stack, /* z* */
+            &will_retain_py,     /* O */
+            &will_topic.ptr,     /* z# */
             &will_topic.len,
-            &will_payload_format_py,
-            &will_message_expiry_interval_seconds_py,
-            &will_topic_alias_py,
-            &will_response_topic.ptr,
+            &will_payload_format_py,                  /* O */
+            &will_message_expiry_interval_seconds_py, /* O */
+            &will_topic_alias_py,                     /* O */
+            &will_response_topic.ptr,                 /* z# */
             &will_response_topic.len,
-            &will_correlation_data_stack,
-            &will_content_type.ptr,
+            &will_correlation_data_stack, /* z* */
+            &will_content_type.ptr,       /* z# */
             &will_content_type.len,
-            &will_user_properties_py,
+            &will_user_properties_py, /* O */
 
-            &session_behavior_py,
-            &extended_validation_and_flow_control_options_py,
-            &offline_queue_behavior_py,
-            &retry_jitter_mode_py,
-            &min_reconnect_delay_ms_py,
-            &max_reconnect_delay_ms_py,
-            &min_connected_time_to_reset_reconnect_delay_ms_py,
-            &ping_timeout_ms_py,
-            &ack_timeout_seconds_py,
+            &session_behavior_py,                               /* O */
+            &extended_validation_and_flow_control_options_py,   /* O */
+            &offline_queue_behavior_py,                         /* O */
+            &retry_jitter_mode_py,                              /* O */
+            &min_reconnect_delay_ms_py,                         /* O */
+            &max_reconnect_delay_ms_py,                         /* O */
+            &min_connected_time_to_reset_reconnect_delay_ms_py, /* O */
+            &ping_timeout_ms_py,                                /* O */
+            &ack_timeout_seconds_py,                            /* O */
 
-            &is_websocket_none_py,
-            &client_core_py)) {
+            &is_websocket_none_py, /* O */
+            &client_core_py)) {    /* O */
         return NULL;
     }
 
@@ -1105,7 +1124,10 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
     uint16_t will_topic_alias_tmp = 0;
     struct aws_byte_cursor will_correlation_data_tmp;
     if (!PyObject_IsTrue(is_will_none_py)) {
-        will.qos = will_qos_val;
+        will.qos = PyObject_GetIntEnum(will_qos_val_py, AWS_PYOBJECT_KEY_QOS);
+        if (PyErr_Occurred) {
+            goto done;
+        }
         will.payload = aws_byte_cursor_from_array(will_payload_stack.buf, will_payload_stack.len);
         will.retain = PyObject_IsTrue(will_retain_py);
         will.topic = will_topic;
@@ -1265,14 +1287,14 @@ PyObject *aws_py_mqtt5_client_stop(PyObject *self, PyObject *args) {
     if (!PyArg_ParseTuple(
             args,
             "OOiOz#Oz#",
-            &impl_capsule,
-            &is_disconnect_packet_none_py,
-            &reason_code,
-            &session_expiry_interval_sec_py,
-            &reason_string.ptr,
+            &impl_capsule,                   /* O */
+            &is_disconnect_packet_none_py,   /* O */
+            &reason_code,                    /* i */
+            &session_expiry_interval_sec_py, /* O */
+            &reason_string.ptr,              /* z# */
             &reason_string.len,
-            &user_properties_py,
-            &server_reference.ptr,
+            &user_properties_py,   /* O */
+            &server_reference.ptr, /* z# */
             &server_reference.len)) {
         return NULL;
     }
@@ -1390,12 +1412,12 @@ static void s_on_publish_complete_fn(
     result = PyObject_CallFunction(
         metadata->callback,
         "(Hiis#O)",
-        error_code,
-        metadata->qos,
-        reason_code,
-        reason_string ? reason_string->ptr : NULL,
+        error_code,                                /* H */
+        metadata->qos,                             /* i */
+        reason_code,                               /* i */
+        reason_string ? reason_string->ptr : NULL, /* s# */
         reason_string ? reason_string->len : 0,
-        (user_property_count > 0 && !error_code) ? user_properties_list : Py_None);
+        (user_property_count > 0 && !error_code) ? user_properties_list : Py_None); /* O */
     if (!result) {
         PyErr_WriteUnraisable(PyErr_Occurred());
     }
@@ -1431,22 +1453,22 @@ PyObject *aws_py_mqtt5_client_publish(PyObject *self, PyObject *args) {
     if (!PyArg_ParseTuple(
             args,
             "Oiz*Oz#OOOz#z*z#OO",
-            &impl_capsule,
-            &qos_val,
-            &payload_stack,
-            &retain_py,
-            &topic.ptr,
+            &impl_capsule,  /* O */
+            &qos_val,       /* i */
+            &payload_stack, /* z* */
+            &retain_py,     /* O */
+            &topic.ptr,     /* z# */
             &topic.len,
-            &payload_format_py,
-            &message_expiry_interval_seconds_py,
-            &topic_alias_py,
-            &response_topic.ptr,
+            &payload_format_py,                  /* O */
+            &message_expiry_interval_seconds_py, /* O */
+            &topic_alias_py,                     /* O */
+            &response_topic.ptr,                 /* z# */
             &response_topic.len,
-            &correlation_data_stack,
-            &content_type.ptr,
+            &correlation_data_stack, /* z* */
+            &content_type.ptr,       /* z# */
             &content_type.len,
-            &user_properties_py,
-            &puback_callback_fn_py)) {
+            &user_properties_py,       /* O */
+            &puback_callback_fn_py)) { /* O */
         return NULL;
     }
 
@@ -1604,11 +1626,11 @@ static void s_on_subscribe_complete_fn(
     result = PyObject_CallFunction(
         metadata->callback,
         "(HOs#O)",
-        error_code,
-        (reason_codes_count > 0 && !error_code) ? reason_codes_list : Py_None,
-        suback->reason_string ? suback->reason_string->ptr : NULL,
+        error_code,                                                            /* H */
+        (reason_codes_count > 0 && !error_code) ? reason_codes_list : Py_None, /* O */
+        suback->reason_string ? suback->reason_string->ptr : NULL,             /* s# */
         suback->reason_string ? suback->reason_string->len : 0,
-        (user_property_count > 0 && !error_code) ? user_properties_list : Py_None);
+        (user_property_count > 0 && !error_code) ? user_properties_list : Py_None); /* O */
     if (!result) {
         PyErr_WriteUnraisable(PyErr_Occurred());
     }
@@ -1679,11 +1701,11 @@ PyObject *aws_py_mqtt5_client_subscribe(PyObject *self, PyObject *args) {
     if (!PyArg_ParseTuple(
             args,
             "OOOOO",
-            &impl_capsule,
-            &subscriptions_py,
-            &subscription_identifier_py,
-            &user_properties_py,
-            &suback_callback_fn_py)) {
+            &impl_capsule,               /* O */
+            &subscriptions_py,           /* O */
+            &subscription_identifier_py, /* O */
+            &user_properties_py,         /* O */
+            &suback_callback_fn_py)) {   /* O */
         return NULL;
     }
 
@@ -1859,7 +1881,12 @@ PyObject *aws_py_mqtt5_client_unsubscribe(PyObject *self, PyObject *args) {
     PyObject *unsuback_callback_fn_py;
 
     if (!PyArg_ParseTuple(
-            args, "OOOO", &impl_capsule, &topic_filters_py, &user_properties_py, &unsuback_callback_fn_py)) {
+            args,
+            "OOOO",
+            &impl_capsule,               /* O */
+            &topic_filters_py,           /* O */
+            &user_properties_py,         /* O */
+            &unsuback_callback_fn_py)) { /* O */
         return NULL;
     }
 
@@ -1987,10 +2014,10 @@ PyObject *aws_py_mqtt5_client_get_stats(PyObject *self, PyObject *args) {
     result = PyObject_CallFunction(
         get_stats_callback_fn_py,
         "(KKKK)",
-        stats.incomplete_operation_count,
-        stats.incomplete_operation_size,
-        stats.unacked_operation_count,
-        stats.unacked_operation_size);
+        stats.incomplete_operation_count, /* K */
+        stats.incomplete_operation_size,  /* K */
+        stats.unacked_operation_count,    /* K */
+        stats.unacked_operation_size);    /* K */
     if (!result) {
         PyErr_WriteUnraisable(PyErr_Occurred());
         goto done;
