@@ -9,6 +9,7 @@ from contextlib import closing
 import gc
 from io import StringIO
 import logging
+from os import urandom
 from queue import Queue
 import socket
 from test import NativeResourceTest
@@ -148,7 +149,7 @@ class WebSocketServer:
         self._server_stop_event = asyncio.Event()
 
         # this coroutine runs the server until the _stop_event fires
-        async with websockets_server_3rdparty.serve(self._run_connection, self._host, self._port) as server:
+        async with websockets_server_3rdparty.serve(self._run_connection, self._host, self._port, max_size=None) as server:
             # signal that server has started up
             self._server_started_event.set()
             # wait for the signal that we should stop
@@ -447,6 +448,9 @@ class TestClient(NativeResourceTest):
             self._send_and_receive(handler, Opcode.BINARY, memoryview(b"...memoryview slice sent binary...")[3: -3])
             self._send_and_receive(handler, Opcode.BINARY, bytes())  # empty
             self._send_and_receive(handler, Opcode.BINARY, None)
+
+            # send something very big
+            self._send_and_receive(handler, Opcode.BINARY, urandom(1024 * 1024 * 4))
 
             handler.close_sync()
             self.assertIsNone(handler.exception)
