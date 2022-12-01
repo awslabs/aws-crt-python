@@ -7,6 +7,7 @@ from awscrt.websocket import *
 from concurrent.futures import Future
 from contextlib import closing
 import gc
+from io import StringIO
 import logging
 from queue import Queue
 import socket
@@ -305,6 +306,53 @@ class TestClient(NativeResourceTest):
             self.assertGreaterEqual(setup_data.handshake_response_status, 400)
             self.assertIsNotNone(setup_data.handshake_response_headers)
 
+    def test_exception_in_setup_callback_closes_websocket(self):
+        with WebSocketServer(self.host, self.port) as server:
+            setup_future = Future()
+            shutdown_future = Future()
+
+            def bad_setup_callback(data: OnConnectionSetupData):
+                setup_future.set_result(data)
+                raise RuntimeError("Purposefully raising exception")
+
+            connect(
+                host=self.host,
+                port=self.port,
+                handshake_request=create_handshake_request(host=self.host),
+                on_connection_setup=bad_setup_callback,
+                on_connection_shutdown=lambda x: shutdown_future.set_result(x))
+
+            # wait for on_connection_setup to fire (and raise exception)
+            setup_data = setup_future.result(TIMEOUT)
+            self.assertIsNotNone(setup_data.websocket)
+
+            # wait for websocket to close due to exception
+            shutdown_future.result(TIMEOUT)
+
+    def test_exception_in_shutdown_callback_has_no_effect(self):
+        with WebSocketServer(self.host, self.port) as server:
+            setup_future = Future()
+            shutdown_future = Future()
+
+            def bad_shutdown_callback(data: OnConnectionShutdownData):
+                shutdown_future.set_result(data)
+                raise RuntimeError("Purposefully raising exception")
+
+            connect(
+                host=self.host,
+                port=self.port,
+                handshake_request=create_handshake_request(host=self.host),
+                on_connection_setup=lambda x: setup_future.set_result(x),
+                on_connection_shutdown=bad_shutdown_callback)
+
+            # wait for on_connection_setup to fire
+            websocket = setup_future.result(TIMEOUT).websocket
+
+            # close websocket, on_connection_shutdown will fire and raise exception,
+            # which should have no effect
+            websocket.close()
+            shutdown_future.result(TIMEOUT)
+
     def test_close_is_idempotent(self):
         # test that it's always safe to call WebSocket.close()
         with WebSocketServer(self.host, self.port) as server:
@@ -408,12 +456,53 @@ class TestClient(NativeResourceTest):
             handler = ClientHandler()
             handler.connect_sync(self.host, self.port)
 
-            # TODO you are here self.assertRaises(
+            # we don't currently support sending streams
+            with self.assertRaises(TypeError):
+                handler.websocket.send_frame(Opcode.TEXT, StringIO("text stream"))
 
-            handler.close_sync()
+            # raising an exception from the completion-callback should result in websocket closing
+            def bad_completion_callback(data):
+                raise RuntimeError("Purposefully raising exception")
+
+            handler.websocket.send_frame(Opcode.TEXT, "asdf", on_complete=bad_completion_callback)
+
+            # wait for shutdown...
+            handler.shutdown_future.result(TIMEOUT)
 
             # shouldn't be able to send frame after websocket closes
-            with self.assertRaises(awscrt.exceptions.AwsCrtError):
+            with self.assertRaises(Exception) as raises:
                 handler.websocket.send_frame(Opcode.TEXT, "asdf")
+            self.assertIn("AWS_ERROR_HTTP_WEBSOCKET_CLOSE_FRAME_SENT", str(raises.exception))
 
             self.assertIsNone(handler.exception)
+
+    def test_exception_from_incoming_frame_callback_closes_websocket(self):
+        # loop 3 times, once for each type of on_incoming_frame_X callback
+        for i in ('begin', 'payload', 'complete'):
+            with WebSocketServer(self.host, self.port) as server:
+                setup_future = Future()
+                shutdown_future = Future()
+
+                def bad_incoming_frame_callback(data):
+                    raise RuntimeError("Purposefully raising exception")
+
+                connect(
+                    host=self.host,
+                    port=self.port,
+                    handshake_request=create_handshake_request(host=self.host),
+                    on_connection_setup=lambda x: setup_future.set_result(x),
+                    on_connection_shutdown=lambda x: shutdown_future.set_result(x),
+                    on_incoming_frame_begin=bad_incoming_frame_callback if i == 'begin' else None,
+                    on_incoming_frame_payload=bad_incoming_frame_callback if i == 'payload' else None,
+                    on_incoming_frame_complete=bad_incoming_frame_callback if i == 'complete' else None,
+                )
+
+                # wait for on_connection_setup to fire
+                websocket = setup_future.result(TIMEOUT).websocket
+
+                # send a frame that the server will echo back
+                websocket.send_frame(Opcode.TEXT, "echo")
+
+                # wait for the frame to echo back, firing the bad callback,
+                # which raises an exception, which should result in the WebSocket closing
+                shutdown_future.result(TIMEOUT)
