@@ -202,13 +202,12 @@ Use helper scripts to automatically format your code (or configure your IDE to d
 
 2)  Open the `aws-crt-python/` folder.
 
-3)  Edit workspace settings: `cmd+shift+P -> Preferences: Open Workspace Settings`
-    *   `Python: Default Interpreter Path` - ("python.defaultInterpreterPath" in json view)
-        *   Set the absolute path to Python in your virtual environment.
-        For example: `/Users/janedoe/dev/aws-crt-python/.venv/bin/python`
-        *   Note that the VSCode terminal ignores this setting and will not use your virtual environment by default.
-            You must manually run `source .venv/bin/activate` each time you start using the terminal.
-            Or use the command `cmd+shift+P -> Python: Create Terminal`.
+3)  Use your virtual environment: `cmd+shift+p -> Python: Select Interpreter`
+
+4)  Edit workspace settings: `cmd+shift+P -> Preferences: Open Workspace Settings`
+    *   `Python > Terminal: Activate Env In Current Terminal` - ("python.terminal.activateEnvInCurrentTerminal" in json view)
+        *   Set to true, so the VSCode terminal will always use your virtual environment.
+        *   But your current terminal isn't using it. Kill the current terminal or reload the window to resolve this.
     *   `C_Cpp > Default: Include Path` - ("C_Cpp.default.includePath" in json view)
         *   Add item - set path to Python's C headers.
             For example: `/Library/Frameworks/Python.framework/Versions/3.10/include/python3.10`
@@ -218,7 +217,7 @@ Use helper scripts to automatically format your code (or configure your IDE to d
     *   `Files: Trim Trailing Whitespace` - ("files.trimTrailingWhitespace" in json view)
         *   Set to true. It's just good practice.
 
-4)  Add helpful tasks you can run via `cmd+shift+P -> Tasks: Run Task`
+5)  Add helpful tasks you can run via `cmd+shift+P -> Tasks: Run Task`
     *   Copy [this file](vscode/tasks.json) to `aws-crt-python/.vscode/tasks.json` for the following tasks:
         * `install` - `pip install` in develop mode. `cmd+shift+B` is a special shortcut for this task
         * `format` - format all code files
