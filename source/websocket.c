@@ -294,13 +294,10 @@ static bool s_websocket_on_incoming_frame_begin(
     PyObject *result = PyObject_CallMethod(
         websocket_core_py,
         "_on_incoming_frame_begin",
-        "(inBBBB)",
+        "(inB)",
         frame->opcode,
         frame->payload_length,
-        frame->fin,
-        frame->rsv[0],
-        frame->rsv[1],
-        frame->rsv[2]);
+        frame->fin);
 
     /* If the user's callback raises an exception, we catch it and return False to C... */
     if (result == NULL) {
@@ -477,13 +474,10 @@ PyObject *aws_py_websocket_send_frame(PyObject *self, PyObject *args) {
     uint8_t opcode;           /* b */
     Py_buffer payload_buffer; /* z* */
     int fin;                  /* p - boolean predicate */
-    int rsv1;                 /* p - boolean predicate */
-    int rsv2;                 /* p - boolean predicate */
-    int rsv3;                 /* p - boolean predicate */
     PyObject *on_complete_py; /* O */
 
     if (!PyArg_ParseTuple(
-            args, "Obz*ppppO", &binding_py, &opcode, &payload_buffer, &fin, &rsv1, &rsv2, &rsv3, &on_complete_py)) {
+            args, "Obz*pO", &binding_py, &opcode, &payload_buffer, &fin, &on_complete_py)) {
         return NULL;
     }
 
@@ -507,7 +501,6 @@ PyObject *aws_py_websocket_send_frame(PyObject *self, PyObject *args) {
         .on_complete = s_websocket_on_send_frame_complete,
         .opcode = opcode,
         .fin = fin,
-        .rsv = {rsv1 != 0, rsv2 != 0, rsv3 != 0},
     };
 
     if (aws_websocket_send_frame(websocket, &options)) {

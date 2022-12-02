@@ -1,7 +1,23 @@
 """
-WebSocket
+WebSocket - `RFC 6455 <https://www.rfc-editor.org/rfc/rfc6455>`_
 
 All network operations in `awscrt.websocket` are asynchronous.
+Callbacks are always invoked on the WebSocket's networking thread.
+You MUST NOT perform blocking operations from any callback, or you will cause a deadlock.
+For example: do not send a frame, and then wait for that frame to complete,
+within a callback. The WebSocket cannot do work until your callback returns,
+so the thread will be stuck. You can send the frame from within the callback,
+just don't wait for it to complete within the callback.
+
+If you want to do blocking waits, do it from a thread you control, like the main thread.
+It's fine for the main thread to send a frame, and wait until it completes.
+
+All functions and methods in `awscrt.websocket` are thread-safe.
+They can be called from any mix of threads.
+
+Note from the developer: This is a very low-level API, which forces the
+user to deal with things like data fragmentation.
+A higher-level API could easily be built on top of this.
 """
 
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
@@ -54,6 +70,8 @@ def connect(
           rely on this behavior. You should call :meth:`~WebSocket.close()` when you are
           done with a healthy WebSocket, to ensure that it shuts down and cleans up.
           It is very easy to accidentally keep a reference around without realizing it.
+
+    Read the :mod:`notes above<awscrt.websocket>` before authoring your callbacks.
 
     Args:
         host: Hostname to connect to.
@@ -223,11 +241,28 @@ class WebSocket(NativeResource):
         payload: str | bytes | bytearray | memoryview = None,
         *,
         fin: bool = True,
-        rsv1: bool = False,
-        rsv2: bool = False,
-        rsv3: bool = False,
         on_complete: Callable[['OnSendFrameCompleteData'], None] = None,
     ):
+        """Send a WebSocket frame asynchronously.
+
+        See `RFC 6455 section 5 - Data Framing <https://www.rfc-editor.org/rfc/rfc6455#section-5>`_
+        for details on all frame types.
+
+        This is a low-level API, which requires you to send the appropriate payload for each type of opcode.
+        If you are not an expert, stick to sending :attr:`Opcode.TEXT` or :attr:`Opcode.BINARY` frames,
+        and don't touch the FIN bit.
+
+        Args:
+            opcode: :class:`Opcode` for this frame.
+
+            payload: Any `bytes-like object <https://docs.python.org/3/glossary.html#term-bytes-like-object>`_.
+                `str` will always be encoded as UTF-8. It is fine to pass a `str` for a BINARY frame.
+                None will result in an empty payload, the same as passing empty `bytes()`
+
+            fin: The FIN bit indicates that this is the final fragment in a message.
+                Do not set this False unless you understand
+                `WebSocket fragmentation <https://www.rfc-editor.org/rfc/rfc6455#section-5.4>`_
+        """
         def _on_complete(error_code):
             cbdata = OnSendFrameCompleteData()
             if error_code:
@@ -247,9 +282,6 @@ class WebSocket(NativeResource):
             Opcode(opcode),  # needless cast to ensure opcode is valid
             payload,
             fin,
-            rsv1,
-            rsv2,
-            rsv3,
             _on_complete)
 
 
@@ -318,14 +350,11 @@ class _WebSocketCore(NativeResource):
             print("Exception in WebSocket on_connection_shutdown callback", file=sys.stderr)
             sys.excepthook(*sys.exc_info())
 
-    def _on_incoming_frame_begin(self, opcode_int, payload_length, fin_int, rsv1_int, rsv2_int, rsv3_int):
+    def _on_incoming_frame_begin(self, opcode_int, payload_length, fin_int):
         self._current_incoming_frame = IncomingFrame(
             Opcode(opcode_int),
             payload_length,
-            bool(fin_int),
-            bool(rsv1_int),
-            bool(rsv2_int),
-            bool(rsv3_int))
+            bool(fin_int))
 
         cbdata = OnIncomingFrameBeginData(self._current_incoming_frame)
 
@@ -374,15 +403,57 @@ class _WebSocketCore(NativeResource):
 
 
 class Opcode(IntEnum):
+    """An opcode defiens a frame's type.
+
+    RFC 6455 classifies TEXT and BINARY as `data frames <https://www.rfc-editor.org/rfc/rfc6455#section-5.6>`_.
+    A CONTINUATION frame "continues" the most recent data frame.
+    All other opcodes are for `control frames <https://www.rfc-editor.org/rfc/rfc6455#section-5.5>`_.
+    """
+
     CONTINUATION = 0x0,
+    """Continues the most recent TEXT or BINARY data frame.
+
+    See `RFC 6455 section 5.4 - Fragmentation <https://www.rfc-editor.org/rfc/rfc6455#section-5.4>`_.
+    """
+
     TEXT = 0x1
+    """The data frame for sending text.
+
+    The payload must contain UTF-8."""
+
     BINARY = 0x2
+    """The data frame for sending binary."""
+
     CLOSE = 0x8
+    """The control frame which is the final frame sent by an endpoint.
+
+    The CLOSE frame may include a payload, but its format is very particular.
+    See `RFC 6455 section 5.5.1 <https://www.rfc-editor.org/rfc/rfc6455#section-5.5.1>`_.
+    """
+
     PING = 0x9
+    """A control frame that may serve as either a keepalive or as a means to verify
+    that the remote endpoint is still responsive.
+
+    DO NOT manually send a PONG frame in response to a PING,
+    the implementation does this automatically.
+
+    A PING frame may include a payload.
+    See `RFC 6455 section 5.5.2 <https://www.rfc-editor.org/rfc/rfc6455#section-5.5.2>`_.
+    """
+
     PONG = 0xA
+    """The control frame that is the response to a PING frame.
+
+    DO NOT manually send a PONG frame in response to a PING,
+    the implementation does this automatically.
+
+    See `RFC 6455 section 5.5.3 <https://www.rfc-editor.org/rfc/rfc6455#section-5.5.3>`_.
+"""
 
 
 MAX_PAYLOAD_LENGTH = 0x7FFFFFFFFFFFFFFF
+"""The maximum payload length for a single frame."""
 
 
 @dataclass
@@ -449,9 +520,6 @@ class IncomingFrame:
     opcode: Opcode
     payload_length: int
     fin: bool
-    rsv1: bool
-    rsv2: bool
-    rsv3: bool
 
 
 @dataclass

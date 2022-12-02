@@ -408,9 +408,6 @@ class TestClient(NativeResourceTest):
         self.assertIsInstance(recv.frame.opcode, Opcode)
         self.assertEqual(recv.frame.opcode, opcode)
         self.assertTrue(recv.frame.fin is True)
-        self.assertTrue(recv.frame.rsv1 is False)
-        self.assertTrue(recv.frame.rsv2 is False)
-        self.assertTrue(recv.frame.rsv3 is False)
 
         # check that the received payload matches what we sent in
         if isinstance(payload, str):
