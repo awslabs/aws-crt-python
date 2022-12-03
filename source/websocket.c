@@ -292,7 +292,12 @@ static bool s_websocket_on_incoming_frame_begin(
     PyGILState_STATE state = PyGILState_Ensure();
 
     PyObject *result = PyObject_CallMethod(
-        websocket_core_py, "_on_incoming_frame_begin", "(inB)", frame->opcode, frame->payload_length, frame->fin);
+        websocket_core_py,
+        "_on_incoming_frame_begin",
+        "(inO)",
+        frame->opcode,
+        frame->payload_length,
+        frame->fin ? Py_True : Py_False);
 
     /* If the user's callback raises an exception, we catch it and return False to C... */
     if (result == NULL) {

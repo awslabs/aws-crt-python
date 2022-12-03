@@ -358,11 +358,8 @@ class _WebSocketCore(NativeResource):
             print("Exception in WebSocket on_connection_shutdown callback", file=sys.stderr)
             sys.excepthook(*sys.exc_info())
 
-    def _on_incoming_frame_begin(self, opcode_int, payload_length, fin_int):
-        self._current_incoming_frame = IncomingFrame(
-            Opcode(opcode_int),
-            payload_length,
-            bool(fin_int))
+    def _on_incoming_frame_begin(self, opcode_int, payload_length, fin):
+        self._current_incoming_frame = IncomingFrame(Opcode(opcode_int), payload_length, fin)
 
         cbdata = OnIncomingFrameBeginData(self._current_incoming_frame)
 
