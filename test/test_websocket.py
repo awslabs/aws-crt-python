@@ -393,9 +393,6 @@ class TestClient(NativeResourceTest):
     def _send_and_receive(self, handler, opcode, payload):
         send_complete_future = Future()
 
-        def send_complete_callback(data):
-            send_complete_future.set_result(data)
-
         handler.websocket.send_frame(opcode, payload, on_complete=lambda x: send_complete_future.set_result(x))
 
         # wait for send_frame operation to complete
@@ -407,7 +404,7 @@ class TestClient(NativeResourceTest):
         # assert that expected types are received (`is True` vs checking that it evaluates to True)
         self.assertIsInstance(recv.frame.opcode, Opcode)
         self.assertEqual(recv.frame.opcode, opcode)
-        self.assertTrue(recv.frame.fin is True)
+        self.assertIs(recv.frame.fin, True)
 
         # check that the received payload matches what we sent in
         if isinstance(payload, str):
