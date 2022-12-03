@@ -292,12 +292,7 @@ static bool s_websocket_on_incoming_frame_begin(
     PyGILState_STATE state = PyGILState_Ensure();
 
     PyObject *result = PyObject_CallMethod(
-        websocket_core_py,
-        "_on_incoming_frame_begin",
-        "(inB)",
-        frame->opcode,
-        frame->payload_length,
-        frame->fin);
+        websocket_core_py, "_on_incoming_frame_begin", "(inB)", frame->opcode, frame->payload_length, frame->fin);
 
     /* If the user's callback raises an exception, we catch it and return False to C... */
     if (result == NULL) {
@@ -476,8 +471,7 @@ PyObject *aws_py_websocket_send_frame(PyObject *self, PyObject *args) {
     int fin;                  /* p - boolean predicate */
     PyObject *on_complete_py; /* O */
 
-    if (!PyArg_ParseTuple(
-            args, "Obz*pO", &binding_py, &opcode, &payload_buffer, &fin, &on_complete_py)) {
+    if (!PyArg_ParseTuple(args, "Obz*pO", &binding_py, &opcode, &payload_buffer, &fin, &on_complete_py)) {
         return NULL;
     }
 

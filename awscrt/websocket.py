@@ -30,26 +30,25 @@ from awscrt.io import ClientBootstrap, TlsConnectionOptions, SocketOptions
 from dataclasses import dataclass
 from enum import IntEnum
 import sys
-from typing import Callable, Sequence, Tuple
+from typing import Callable, Optional, Sequence, Tuple, Union
 
 
 def connect(
     *,
     host: str,
-    port: int = None,
+    port: Optional[int] = None,
     handshake_request: HttpRequest,
-    bootstrap: ClientBootstrap = None,
-    socket_options: SocketOptions = None,
-    tls_connection_options: TlsConnectionOptions = None,
-    proxy_options: HttpProxyOptions = None,
-    # TODO: decide take a bunch of individual callbacks, or a handler class?
+    bootstrap: Optional[ClientBootstrap] = None,
+    socket_options: Optional[SocketOptions] = None,
+    tls_connection_options: Optional[TlsConnectionOptions] = None,
+    proxy_options: Optional[HttpProxyOptions] = None,
     on_connection_setup: Callable[['OnConnectionSetupData'], None],
-    on_connection_shutdown: Callable[['OnConnectionShutdownData'], None] = None,
-    on_incoming_frame_begin: Callable[['OnIncomingFrameBeginData'], None] = None,
-    on_incoming_frame_payload: Callable[['OnIncomingFramePayloadData'], None] = None,
-    on_incoming_frame_complete: Callable[['OnIncomingFrameCompleteData'], None] = None,
+    on_connection_shutdown: Optional[Callable[['OnConnectionShutdownData'], None]] = None,
+    on_incoming_frame_begin: Optional[Callable[['OnIncomingFrameBeginData'], None]] = None,
+    on_incoming_frame_payload: Optional[Callable[['OnIncomingFramePayloadData'], None]] = None,
+    on_incoming_frame_complete: Optional[Callable[['OnIncomingFrameCompleteData'], None]] = None,
     enable_read_backpressure: bool = False,
-    initial_read_window: int = None,
+    initial_read_window: Optional[int] = None,
 ):
     """Asynchronously establish a client WebSocket connection.
 
@@ -117,12 +116,12 @@ def connect(
 
             If this callback raises an exception, the connection will shut down.
 
-        on_connection_shutdown: Callback invoked when a connection shuts down.
+        on_connection_shutdown: Optional callback, invoked when a connection shuts down.
             Takes a single :class:`OnConnectionShutdownData` argument.
 
             This callback is never invoked if `on_connection_setup` reported an exception.
 
-        on_incoming_frame_begin: Callback invoked once at the start of each incoming frame.
+        on_incoming_frame_begin: Optional callback, invoked once at the start of each incoming frame.
             Takes a single :class:`OnIncomingFrameBeginData` argument.
 
             Each `on_incoming_frame_begin` call will be followed by 0+
@@ -135,12 +134,12 @@ def connect(
 
             If this callback raises an exception, the connection will shut down.
 
-        on_incoming_frame_payload: Callback invoked 0+ times as payload data arrives.
+        on_incoming_frame_payload: Optional callback, invoked 0+ times as payload data arrives.
             Takes a single :class:`OnIncomingFramePayloadData` argument.
 
             If this callback raises an exception, the connection will shut down.
 
-        on_incoming_frame_complete: Callback invoked when the WebSocket
+        on_incoming_frame_complete: Optional callback, invoked when the WebSocket
             is done processing an incoming frame.
             Takes a single :class:`OnIncomingFrameCompleteData` argument.
 
@@ -238,10 +237,10 @@ class WebSocket(NativeResource):
     def send_frame(
         self,
         opcode: 'Opcode',
-        payload: str | bytes | bytearray | memoryview = None,
+        payload: Optional[Union[str, bytes, bytearray, memoryview]] = None,
         *,
         fin: bool = True,
-        on_complete: Callable[['OnSendFrameCompleteData'], None] = None,
+        on_complete: Optional[Callable[['OnSendFrameCompleteData'], None]] = None,
     ):
         """Send a WebSocket frame asynchronously.
 
@@ -262,6 +261,16 @@ class WebSocket(NativeResource):
             fin: The FIN bit indicates that this is the final fragment in a message.
                 Do not set this False unless you understand
                 `WebSocket fragmentation <https://www.rfc-editor.org/rfc/rfc6455#section-5.4>`_
+
+            on_complete: Optional callback, invoked when the frame has finished sending.
+                Takes a single :class:`OnSendFrameCompleteData` argument.
+
+                If :attr:`OnSendFrameCompleteData.exception` is set, the connection
+                was lost before this frame could be completely sent.
+
+                But if `exception` is None, the frame was successfully written to the OS socket.
+                Note that this data may still be buffered in the OS, it has
+                not necessarily left this machine or reached the other endpoint yet.
         """
         def _on_complete(error_code):
             cbdata = OnSendFrameCompleteData()
@@ -304,7 +313,6 @@ class _WebSocketCore(NativeResource):
         self._on_incoming_frame_begin_cb = on_incoming_frame_begin
         self._on_incoming_frame_payload_cb = on_incoming_frame_payload
         self._on_incoming_frame_complete_cb = on_incoming_frame_complete
-        self._current_incoming_frame: 'IncomingFrame' = None
 
     def _on_connection_setup(
             self,
@@ -388,7 +396,7 @@ class _WebSocketCore(NativeResource):
         if error_code:
             cbdata.exception = awscrt.exceptions.from_code(error_code)
 
-        self._current_incoming_frame = None
+        del self._current_incoming_frame
 
         # Do not let exceptions from the user's callback bubble up any further:
         try:
@@ -453,19 +461,19 @@ class Opcode(IntEnum):
 
 
 MAX_PAYLOAD_LENGTH = 0x7FFFFFFFFFFFFFFF
-"""The maximum payload length for a single frame."""
+""""The maximum frame payload length allowed by RFC 6455"""
 
 
 @dataclass
 class OnConnectionSetupData:
     """Data passed to the `on_connection_setup` callback"""
 
-    exception: BaseException = None
+    exception: Optional[BaseException] = None
     """If the connection failed, this exception explains why.
 
     This is None if the connection succeeded."""
 
-    websocket: 'WebSocket' = None
+    websocket: Optional[WebSocket] = None
     """If the connection succeeded, here's the WebSocket.
 
     You should store this WebSocket somewhere
@@ -474,7 +482,7 @@ class OnConnectionSetupData:
     This is None if the connection failed.
     """
 
-    handshake_response_status: int = None
+    handshake_response_status: Optional[int] = None
     """The HTTP response status-code, if you're interested.
 
     This is present if an HTTP response was received, regardless of whether
@@ -484,7 +492,7 @@ class OnConnectionSetupData:
     This is None if the connection failed before receiving an HTTP response.
     """
 
-    handshake_response_headers: Sequence[Tuple[str, str]] = None
+    handshake_response_headers: Optional[Sequence[Tuple[str, str]]] = None
     """The HTTP response headers, if you're interested.
 
     These are present if an HTTP response was received, regardless of whether
@@ -507,7 +515,7 @@ class OnConnectionSetupData:
 class OnConnectionShutdownData:
     """Data passed to the `on_connection_shutdown` callback"""
 
-    exception: BaseException = None
+    exception: Optional[BaseException] = None
     """If the connection shut down cleanly, this is None.
 
     If the connection shut down due to error, or an error occurs while
@@ -516,36 +524,71 @@ class OnConnectionShutdownData:
 
 @dataclass
 class IncomingFrame:
-    # TODO: document me
+    """Describes the frame you are receiving.
+
+    Used in `on_incoming_frame` callbacks """
+
     opcode: Opcode
+    """This frame's opcode."""
+
     payload_length: int
+    """This frame's payload length (in bytes)."""
+
     fin: bool
+    """The FIN bit indicates whether this is the final fragment in a message.
+
+    See `RFC 6455 section 5.4 - Fragmentation <https://www.rfc-editor.org/rfc/rfc6455#section-5.4>`_"""
 
 
 @dataclass
 class OnIncomingFrameBeginData:
-    # TODO: document me
+    """Data passed to the `on_incoming_frame_begin` callback.
+
+    Each `on_incoming_frame_begin` call will be followed by
+    0+ `on_incoming_frame_payload` calls,
+    followed by one `on_incoming_frame_complete` call."""
+
     frame: IncomingFrame
+    """Describes the frame you are starting to receive."""
 
 
 @dataclass
 class OnIncomingFramePayloadData:
-    # TODO: document me
+    """Data passed to the `on_incoming_frame_payload` callback.
+
+    This callback will be invoked 0+ times.
+    Each time, `data` will contain a bit more of the payload.
+    Once all `frame.payload_length` bytes have been received
+    (or the network connection is lost), the `on_incoming_frame_complete`
+    callback will be invoked.
+    """
+
     frame: IncomingFrame
+    """Describes the frame whose payload you are receiving."""
+
     data: bytes
+    """The next chunk of this frame's payload."""
 
 
 @dataclass
 class OnIncomingFrameCompleteData:
-    """TODO: document me"""
+    """Data passed to the `on_incoming_frame_complete` callback."""
 
     frame: IncomingFrame
-    """TODO document me"""
+    """Describes the frame you are done receiving."""
 
-    exception: BaseException = None
-    """TODO document me"""
+    exception: Optional[BaseException] = None
+    """If `exception` is set, then something went wrong processing the frame
+    or the connection was lost before the frame was fully received."""
 
 
 @dataclass
 class OnSendFrameCompleteData:
-    exception: BaseException = None
+    """Data passed to the :meth:`WebSocket.send_frame()` `on_complete` callback."""
+
+    exception: Optional[BaseException] = None
+    """If `exception` is set, the connection was lost before this frame could be completely sent.
+
+    If `exception` is None, the frame was successfully written to the OS socket.
+    Note that this data may still be buffered in the OS, it has
+    not necessarily left this machine or reached the other endpoint yet."""

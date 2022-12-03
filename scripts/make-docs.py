@@ -27,7 +27,11 @@ utils.run('make html SPHINXOPTS="-W --keep-going"')
 utils.chdir_project_root()
 
 # copy
-shutil.copytree('docsrc/build/html', 'docs', dirs_exist_ok=True)
+docs = Path('docs')
+if docs.exists():
+    shutil.rmtree(docs)
+shutil.copytree('docsrc/build/html', docs)
+
 
 # The existence of this file tells GitHub Pages to just host the HTML as-is
 # https://github.blog/2009-12-29-bypassing-jekyll-on-github-pages/

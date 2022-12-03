@@ -15,6 +15,7 @@ import socket
 from test import NativeResourceTest
 import threading
 from time import sleep
+from typing import Optional
 
 # using a 3rdparty websocket library for the server
 import websockets.server as websockets_server_3rdparty
@@ -31,8 +32,8 @@ TIMEOUT = 10.0  # seconds
 @dataclass
 class RecvFrame:
     frame: IncomingFrame
-    payload: bytes = bytes()
-    exception: BaseException = None
+    payload: bytes
+    exception: Optional[BaseException]
 
 
 class ClientHandler:
@@ -42,7 +43,7 @@ class ClientHandler:
         self.shutdown_future = Future()
         self.complete_frames = Queue()
         self.incoming_frame = None
-        self.incoming_frame_payload = None
+        self.incoming_frame_payload = bytearray()
         self.exception = None
 
     def connect_sync(self, host, port):
@@ -69,7 +70,7 @@ class ClientHandler:
 
     def _assert(self, condition, msg=None):
         if not condition:
-            self.raise_exception(msg)
+            self._raise_exception(msg)
 
     def _on_connection_setup(self, data: OnConnectionSetupData):
         self._assert(not self.setup_future.done(), "setup must only fire once")
@@ -86,7 +87,6 @@ class ClientHandler:
         self._assert(self.incoming_frame is None,
                      "incoming_frame_begin cannot fire again until incoming_frame_complete")
         self.incoming_frame = data.frame
-        self.incoming_frame_payload = bytes()
 
     def _on_incoming_frame_payload(self, data: OnIncomingFramePayloadData):
         self._assert(self.incoming_frame == data.frame, "frame from payload callback must match begin callback")
@@ -95,9 +95,9 @@ class ClientHandler:
     def _on_incoming_frame_complete(self, data: OnIncomingFrameCompleteData):
         self._assert(self.incoming_frame == data.frame,
                      "frame from complete callback must match begin callback")
-        self.complete_frames.put(RecvFrame(self.incoming_frame, self.incoming_frame_payload, data.exception))
+        self.complete_frames.put(RecvFrame(self.incoming_frame, bytes(self.incoming_frame_payload), data.exception))
         self.incoming_frame = None
-        self.incoming_frame_payload = None
+        self.incoming_frame_payload.clear()
 
 
 class WebSocketServer:
