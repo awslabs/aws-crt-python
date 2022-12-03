@@ -22,7 +22,7 @@ jobs:
         run: |
           python3 -m pip install sphinx
           python3 -m pip install --verbose .
-          ./scripts/make-docs.sh
+          ./scripts/make-docs.py
 
       - name: Commit
         run: |

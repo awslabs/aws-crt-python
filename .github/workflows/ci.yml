@@ -161,7 +161,7 @@ jobs:
         run: |
           python3 -m pip install sphinx
           python3 -m pip install --verbose .
-          ./scripts/make-docs.sh
+          ./scripts/make-docs.py
 
   check-submodules:
     runs-on: ubuntu-20.04 # latest
