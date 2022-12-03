@@ -294,7 +294,7 @@ static bool s_websocket_on_incoming_frame_begin(
     PyObject *result = PyObject_CallMethod(
         websocket_core_py,
         "_on_incoming_frame_begin",
-        "(inO)",
+        "(iKO)",
         frame->opcode,
         frame->payload_length,
         frame->fin ? Py_True : Py_False);
