@@ -3,7 +3,7 @@
 
 import awscrt.exceptions
 from awscrt.http import HttpClientConnection, HttpClientStream, HttpHeaders, HttpProxyOptions, HttpRequest, HttpVersion
-from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions
+from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions, TlsCipherPref
 from concurrent.futures import Future
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from io import BytesIO
@@ -77,6 +77,8 @@ class TestClient(NativeResourceTest):
     def _new_client_connection(self, secure, proxy_options=None):
         if secure:
             tls_ctx_opt = TlsContextOptions()
+            if (TlsCipherPref.PQ_TLSv1_0_2021_05.isSupported):
+                tls_ctx_opt.cipher_pref = TlsCipherPref.PQ_TLSv1_0_2021_05
             tls_ctx_opt.verify_peer = False
             tls_ctx = ClientTlsContext(tls_ctx_opt)
             tls_conn_opt = tls_ctx.new_connection_options()

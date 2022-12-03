@@ -680,6 +680,7 @@ static PyMethodDef s_module_methods[] = {
 
     /* IO */
     AWS_PY_METHOD_DEF(is_alpn_available, METH_NOARGS),
+    AWS_PY_METHOD_DEF(is_tls_cipher_supported, METH_VARARGS),
     AWS_PY_METHOD_DEF(event_loop_group_new, METH_VARARGS),
     AWS_PY_METHOD_DEF(host_resolver_new_default, METH_VARARGS),
     AWS_PY_METHOD_DEF(client_bootstrap_new, METH_VARARGS),

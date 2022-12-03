@@ -10,7 +10,7 @@ Long-running event-loop threads are used for concurrency.
 
 import _awscrt
 from awscrt import NativeResource
-from enum import IntEnum
+from enum import Enum, IntEnum
 import threading
 
 
@@ -250,6 +250,14 @@ class TlsVersion(IntEnum):
     DEFAULT = 128  #:
 
 
+class TlsCipherPref(Enum):
+    DEFAULT = (0)
+    PQ_TLSv1_0_2021_05 = (6)
+
+    def __init__(self, tlsCipherEnumVal):
+        self.isSupported = _awscrt.is_tls_cipher_supported(tlsCipherEnumVal)
+
+
 class TlsContextOptions:
     """Options to create a TLS context.
 
@@ -269,6 +277,7 @@ class TlsContextOptions:
         'min_tls_ver',
         'ca_dirpath',
         'ca_buffer',
+        'cipher_pref',
         'alpn_list',
         'certificate_buffer',
         'private_key_buffer',
@@ -291,6 +300,7 @@ class TlsContextOptions:
             setattr(self, slot, None)
 
         self.min_tls_ver = TlsVersion.DEFAULT
+        self.cipher_pref = TlsCipherPref.DEFAULT
         self.verify_peer = True
 
     @staticmethod
@@ -563,6 +573,7 @@ class ClientTlsContext(NativeResource):
         super().__init__()
         self._binding = _awscrt.client_tls_ctx_new(
             options.min_tls_ver.value,
+            options.cipher_pref.value,
             options.ca_dirpath,
             options.ca_buffer,
             _alpn_list_to_str(options.alpn_list),
