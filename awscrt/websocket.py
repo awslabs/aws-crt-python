@@ -337,8 +337,7 @@ class _WebSocketCore(NativeResource):
 
         # Do not let exceptions from the user's callback bubble up any further.
         try:
-            if self._on_connection_setup_cb is not None:
-                self._on_connection_setup_cb(cbdata)
+            self._on_connection_setup_cb(cbdata)
         except Exception:
             print("Exception in WebSocket on_connection_setup callback", file=sys.stderr)
             sys.excepthook(*sys.exc_info())
