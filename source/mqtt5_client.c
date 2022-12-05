@@ -24,8 +24,6 @@ static const char *AWS_PYOBJECT_KEY_PUBLISH_PACKET = "PublishPacket";
 static const char *AWS_PYOBJECT_KEY_SUBSCRIBE_PACKET = "SubscribePacket";
 static const char *AWS_PYOBJECT_KEY_CONNECT_PACKET = "ConnectPacket";
 static const char *AWS_PYOBJECT_KEY_WILL_PACKET = "WillPacket";
-static const char *AWS_PYOBJECT_KEY_WILL_QOS = "will_qos_val";
-static const char *AWS_PYOBJECT_KEY_PUBLISH_QOS = "publish_qos_val";
 static const char *AWS_PYOBJECT_KEY_SUBSCRIPTION = "Subscription";
 static const char *AWS_PYOBJECT_KEY_USER_PROPERTIES = "user_properties";
 static const char *AWS_PYOBJECT_KEY_REASON_CODE = "reason_code";
@@ -1484,7 +1482,7 @@ PyObject *aws_py_mqtt5_client_publish(PyObject *self, PyObject *args) {
     struct aws_mqtt5_packet_publish_view publish_view;
     AWS_ZERO_STRUCT(publish_view);
 
-    publish_view.qos = PyObject_GetIntEnum(qos_val_py, AWS_PYOBJECT_KEY_PUBLISH_QOS);
+    publish_view.qos = PyObject_GetIntEnum(qos_val_py, AWS_PYOBJECT_KEY_QOS);
     if (PyErr_Occurred()) {
         goto done;
     }
@@ -1552,7 +1550,7 @@ PyObject *aws_py_mqtt5_client_publish(PyObject *self, PyObject *args) {
     metadata = aws_mem_calloc(aws_py_get_allocator(), 1, sizeof(struct publish_complete_userdata));
 
     metadata->callback = puback_callback_fn_py;
-    metadata->qos = PyObject_GetIntEnum(qos_val_py, AWS_PYOBJECT_KEY_PUBLISH_QOS);
+    metadata->qos = PyObject_GetIntEnum(qos_val_py, AWS_PYOBJECT_KEY_QOS);
     Py_INCREF(metadata->callback);
 
     struct aws_mqtt5_publish_completion_options publish_completion_options = {
