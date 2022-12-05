@@ -1,0 +1,25 @@
+version: 0.2
+#this build spec assumes the manylinux1 image for pypi
+#additional packages we installed: cmake 3.5, libcrypto 1.1.0j, gcc 4.8.4
+env:
+  shell: bash
+phases:
+  install:
+    commands:
+      - add-apt-repository ppa:ubuntu-toolchain-r/test
+      - apt-get update -y
+      - apt-get install gcc-7 cmake ninja-build python3 -y
+  pre_build:
+    commands:
+      - export CC=gcc-7
+  build:
+    commands:
+      - echo Build started on `date`
+      - chmod a+xr ./codebuild/mqtt5_test_setup.sh
+      - source ./codebuild/mqtt5_test_setup.sh s3://aws-crt-test-stuff/TestIotProdMQTT5EnvironmentVariables.txt us-east-1
+      - aws s3 cp s3://aws-crt-test-stuff/setup_proxy_test_env.sh /tmp/setup_proxy_test_env.sh
+      - chmod a+xr /tmp/setup_proxy_test_env.sh
+      - $CODEBUILD_SRC_DIR/codebuild/linux-integration-tests.sh
+  post_build:
+    commands:
+      - echo Build completed on `date`
