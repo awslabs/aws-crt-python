@@ -302,33 +302,27 @@ Client Stats:
     publishes_failed:       {self.canary_core.stat_publishes_failed}""")
 
 
-class Mqtt5CanaryTestClient(NativeResourceTest):
-
-    def test_mqtt5_bindings_canary(self):
-        isSkipTest = True
-        if isSkipTest:
-            raise unittest.SkipTest(f"skip canary test till implemented later")
-
-        # Add in seconds how long the test should run
-        time_end = time.time() + 30
-
-        client = CanaryClient()
-        client.start()
-        time.sleep(0.1)
-        client.subscribe()
-
-        # Run random operations till time expires
-        while time.time() < time_end:
-            client.random_operation()
-
-        time.sleep(0.1)
-        client.stop()
-        time.sleep(0.1)
-        client.print_stats()
-        time.sleep(0.1)
-        del client
-        time.sleep(0.1)
+def mqtt5_canary(self):
+    isSkipTest = False
+    if isSkipTest:
+        raise unittest.SkipTest(f"skip canary test till implemented later")
+    # Add in seconds how long the test should run
+    time_end = time.time() + 30
+    client = CanaryClient()
+    client.start()
+    time.sleep(0.1)
+    client.subscribe()
+    # Run random operations till time expires
+    while time.time() < time_end:
+        client.random_operation()
+    time.sleep(0.1)
+    client.stop()
+    time.sleep(0.1)
+    client.print_stats()
+    time.sleep(0.1)
+    del client
+    time.sleep(0.1)
 
 
 if __name__ == 'main':
-    unittest.main()
+    mqtt5_canary()
