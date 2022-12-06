@@ -3,6 +3,19 @@ version: 0.2
 #additional packages we installed: cmake 3.5, libcrypto 1.1.0j, gcc 4.8.4
 env:
   shell: bash
+  variables:
+    CANARY_DURATION: 900
+    CANARY_THREADS: 3
+    CANARY_TPS: 50
+    CANARY_CLIENT_COUNT: 10
+    CANARY_LOG_FILE: 'canary_log.txt'
+    CANARY_LOG_LEVEL: 'ERROR'
+    BUILDER_VERSION: v0.9.21
+    BUILDER_SOURCE: releases
+    BUILDER_HOST: https://d19elf31gohf1l.cloudfront.net
+    PACKAGE_NAME: aws-crt-cpp
+    CANARY_TEST_EXE_PATH: 'python'
+    CANARY_SERVER_ARN: Mqtt5MosquittoSever
 phases:
   install:
     commands:
