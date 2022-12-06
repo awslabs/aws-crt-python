@@ -29,6 +29,8 @@ phases:
     commands:
       - echo Build started on `date`
       - source ./codebuild/mqtt5_test_setup.sh s3://aws-crt-test-stuff/TestIotProdMQTT5EnvironmentVariables.txt us-east-1
+      - export ENDPOINT=$(aws secretsmanager get-secret-value --secret-id "$CANARY_SERVER_ARN" --query "SecretString" | cut -f2 -d":" | sed -e 's/[\\\"\}]//g')
+      - export GIT_HASH=$(git rev-parse HEAD)
       - $CODEBUILD_SRC_DIR/codebuild/mqtt5-python-canary-test.sh
   post_build:
     commands:
