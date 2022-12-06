@@ -15,6 +15,7 @@
 #include "mqtt_client.h"
 #include "mqtt_client_connection.h"
 #include "s3.h"
+#include "websocket.h"
 
 #include <aws/auth/auth.h>
 #include <aws/common/byte_buf.h>
@@ -30,17 +31,6 @@
 
 #include <memoryobject.h>
 
-/* Sanity check that the fixed-size types AWS C code tends to use
- * align with the the vanilla C types Python tends to use.
- * This is important when passing arguments between C and Python
- * via things like PyArg_ParseTuple() and PyObject_CallFunction()
- * https://docs.python.org/3/c-api/arg.html */
-AWS_STATIC_ASSERT(sizeof(uint8_t) == sizeof(unsigned char));       /* we pass uint8_t as "B" (unsigned char) */
-AWS_STATIC_ASSERT(sizeof(uint16_t) == sizeof(unsigned short));     /* we pass uint16_t as "H" (unsigned short) */
-AWS_STATIC_ASSERT(sizeof(uint32_t) == sizeof(unsigned int));       /* we pass uint32_t as "I" (unsigned int) */
-AWS_STATIC_ASSERT(sizeof(uint64_t) == sizeof(unsigned long long)); /* we pass uint64_t as "K" (unsigned long long) */
-AWS_STATIC_ASSERT(sizeof(enum aws_log_level) == sizeof(int));      /* we pass enums as "i" (int) */
-
 static struct aws_logger s_logger;
 static bool s_logger_init = false;
 
@@ -54,7 +44,7 @@ PyObject *aws_py_init_logging(PyObject *self, PyObject *args) {
 
     s_logger_init = true;
 
-    /* NOTE: We are NOT using aws_py_default_allocator() for logging.
+    /* NOTE: We are NOT using aws_py_get_allocator() for logging.
      * This avoid deadlock during aws_mem_tracer_dump() */
     struct aws_allocator *allocator = aws_default_allocator();
 
@@ -808,6 +798,13 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(s3_client_make_meta_request, METH_VARARGS),
     AWS_PY_METHOD_DEF(s3_meta_request_cancel, METH_VARARGS),
 
+    /* WebSocket */
+    AWS_PY_METHOD_DEF(websocket_client_connect, METH_VARARGS),
+    AWS_PY_METHOD_DEF(websocket_close, METH_VARARGS),
+    AWS_PY_METHOD_DEF(websocket_send_frame, METH_VARARGS),
+    AWS_PY_METHOD_DEF(websocket_increment_read_window, METH_VARARGS),
+    AWS_PY_METHOD_DEF(websocket_create_handshake_request, METH_VARARGS),
+
     {NULL, NULL, 0, NULL},
 };
 
@@ -859,3 +856,15 @@ PyMODINIT_FUNC PyInit__awscrt(void) {
 
     return m;
 }
+
+/**
+ * align with the the vanilla C types Python tends to use.
+ * This is important when passing arguments between C and Python
+ * via things like PyArg_ParseTuple() and PyObject_CallFunction()
+ * https://docs.python.org/3/c-api/arg.html
+ */
+AWS_STATIC_ASSERT(sizeof(uint8_t) == sizeof(unsigned char));       /* we pass uint8_t as "B" (unsigned char) */
+AWS_STATIC_ASSERT(sizeof(uint16_t) == sizeof(unsigned short));     /* we pass uint16_t as "H" (unsigned short) */
+AWS_STATIC_ASSERT(sizeof(uint32_t) == sizeof(unsigned int));       /* we pass uint32_t as "I" (unsigned int) */
+AWS_STATIC_ASSERT(sizeof(uint64_t) == sizeof(unsigned long long)); /* we pass uint64_t as "K" (unsigned long long) */
+AWS_STATIC_ASSERT(sizeof(enum aws_log_level) == sizeof(int));      /* we pass enums as "i" (int) */

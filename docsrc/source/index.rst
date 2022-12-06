@@ -20,6 +20,7 @@ API Reference
    api/mqtt
    api/mqtt5
    api/s3
+   api/websocket
 
 Indices and tables
 ==================
