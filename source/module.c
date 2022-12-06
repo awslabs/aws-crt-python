@@ -55,7 +55,7 @@ PyObject *aws_py_init_logging(PyObject *self, PyObject *args) {
 
     s_logger_init = true;
 
-    /* NOTE: We are NOT using aws_py_default_allocator() for logging.
+    /* NOTE: We are NOT using aws_py_get_allocator() for logging.
      * This avoid deadlock during aws_mem_tracer_dump() */
     struct aws_allocator *allocator = aws_default_allocator();
 

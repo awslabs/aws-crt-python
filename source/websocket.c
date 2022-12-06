@@ -232,7 +232,7 @@ static void s_websocket_on_connection_setup(
     if (result) {
         Py_DECREF(result);
     } else {
-        /* _WebSocketCore._on_connection_setup() runs the user's callback in a try/catch.
+        /* _WebSocketCore._on_connection_setup() runs the user's callback in a try/except
          * So any exception that leaks out is an unexpected bug in our code.
          * Make it fatal, we have no graceful way to deal with this. */
         PyErr_WriteUnraisable(websocket_core_py);
@@ -264,7 +264,7 @@ static void s_websocket_on_connection_shutdown(struct aws_websocket *websocket, 
     if (result) {
         Py_DECREF(result);
     } else {
-        /* _WebSocketCore._on_connection_shutdown() runs the user's callback in a try/catch.
+        /* _WebSocketCore._on_connection_shutdown() runs the user's callback in a try/except.
          * So any exception that leaks out is an unexpected bug in our code.
          * Make it fatal, we have no graceful way to deal with this. */
         PyErr_WriteUnraisable(websocket_core_py);
@@ -283,11 +283,37 @@ static bool s_websocket_on_incoming_frame_begin(
     const struct aws_websocket_incoming_frame *frame,
     void *user_data) {
 
-    /* TODO implement */
     (void)websocket;
-    (void)frame;
-    (void)user_data;
-    return false;
+
+    /* userdata is _WebSocketCore */
+    PyObject *websocket_core_py = user_data;
+
+    /*************** GIL ACQUIRE ***************/
+    PyGILState_STATE state = PyGILState_Ensure();
+
+    PyObject *result = PyObject_CallMethod(
+        websocket_core_py,
+        "_on_incoming_frame_begin",
+        "(iKO)",
+        frame->opcode,
+        frame->payload_length,
+        frame->fin ? Py_True : Py_False);
+
+    /* If the user's callback raises an exception, we catch it and return False to C... */
+    if (result == NULL) {
+        /* ... so any exception that leaks out is an unexpected bug in our code.
+         * Make it fatal, we have no graceful way to deal with this. */
+        PyErr_WriteUnraisable(websocket_core_py);
+        AWS_FATAL_ASSERT(0 && "Failed to invoke WebSocket on_incoming_frame_begin callback");
+    }
+
+    bool success = PyObject_IsTrue(result);
+    Py_DECREF(result);
+
+    PyGILState_Release(state);
+    /*************** GIL RELEASE ***************/
+
+    return success;
 }
 
 static bool s_websocket_on_incoming_frame_payload(
@@ -296,12 +322,32 @@ static bool s_websocket_on_incoming_frame_payload(
     struct aws_byte_cursor data,
     void *user_data) {
 
-    /* TODO implement */
     (void)websocket;
     (void)frame;
-    (void)data;
-    (void)user_data;
-    return false;
+
+    /* userdata is _WebSocketCore */
+    PyObject *websocket_core_py = user_data;
+
+    /*************** GIL ACQUIRE ***************/
+    PyGILState_STATE state = PyGILState_Ensure();
+
+    PyObject *result = PyObject_CallMethod(websocket_core_py, "_on_incoming_frame_payload", "(y#)", data.ptr, data.len);
+
+    /* If the user's callback raises an exception, we catch it and return False to C... */
+    if (result == NULL) {
+        /* ... so any exception that leaks out is an unexpected bug in our code.
+         * Make it fatal, we have no graceful way to deal with this. */
+        PyErr_WriteUnraisable(websocket_core_py);
+        AWS_FATAL_ASSERT(0 && "Failed to invoke WebSocket on_incoming_frame_payload callback");
+    }
+
+    bool success = PyObject_IsTrue(result);
+    Py_DECREF(result);
+
+    PyGILState_Release(state);
+    /*************** GIL RELEASE ***************/
+
+    return success;
 }
 
 static bool s_websocket_on_incoming_frame_complete(
@@ -310,18 +356,38 @@ static bool s_websocket_on_incoming_frame_complete(
     int error_code,
     void *user_data) {
 
-    /* TODO implement */
     (void)websocket;
     (void)frame;
-    (void)error_code;
-    (void)user_data;
-    return false;
+
+    /* userdata is _WebSocketCore */
+    PyObject *websocket_core_py = user_data;
+
+    /*************** GIL ACQUIRE ***************/
+    PyGILState_STATE state = PyGILState_Ensure();
+
+    PyObject *result = PyObject_CallMethod(websocket_core_py, "_on_incoming_frame_complete", "(i)", error_code);
+
+    /* If the user's callback raises an exception, we catch it and return False to C... */
+    if (result == NULL) {
+        /* ... so any exception that leaks out is an unexpected bug in our code.
+         * Make it fatal, we have no graceful way to deal with this. */
+        PyErr_WriteUnraisable(websocket_core_py);
+        AWS_FATAL_ASSERT(0 && "Failed to invoke WebSocket on_incoming_frame_complete callback");
+    }
+
+    bool success = PyObject_IsTrue(result);
+    Py_DECREF(result);
+
+    PyGILState_Release(state);
+    /*************** GIL RELEASE ***************/
+
+    return success;
 }
 
 PyObject *aws_py_websocket_close(PyObject *self, PyObject *args) {
     (void)self;
 
-    PyObject *binding_py;
+    PyObject *binding_py; /* O */
     if (!PyArg_ParseTuple(args, "O", &binding_py)) {
         return NULL;
     }
@@ -336,10 +402,116 @@ PyObject *aws_py_websocket_close(PyObject *self, PyObject *args) {
     Py_RETURN_NONE;
 }
 
+/**
+ * This stays alive for the duration of a send_frame operation.
+ * It streams the payload data, and fires the completion callback.
+ */
+struct websocket_send_op {
+    /* Py_buffer lets us hold onto Python data and read it without holding the GIL */
+    Py_buffer payload_buffer;
+
+    /* this cursor tracks our progress streaming the payload */
+    struct aws_byte_cursor payload_cursor;
+
+    PyObject *on_complete_py;
+};
+
+static void s_websocket_send_op_destroy(struct websocket_send_op *send_op) {
+    if (send_op == NULL) {
+        return;
+    }
+
+    if (send_op->payload_buffer.buf != NULL) {
+        PyBuffer_Release(&send_op->payload_buffer);
+    }
+
+    Py_XDECREF(send_op->on_complete_py);
+
+    aws_mem_release(aws_py_get_allocator(), send_op);
+}
+
+static bool s_websocket_stream_outgoing_payload(
+    struct aws_websocket *websocket,
+    struct aws_byte_buf *out_buf,
+    void *user_data) {
+
+    (void)websocket;
+    struct websocket_send_op *send_op = user_data;
+
+    aws_byte_buf_write_to_capacity(out_buf, &send_op->payload_cursor);
+    return true;
+}
+
+static void s_websocket_on_send_frame_complete(struct aws_websocket *websocket, int error_code, void *user_data) {
+    (void)websocket;
+
+    struct websocket_send_op *send_op = user_data;
+
+    /*************** GIL ACQUIRE ***************/
+    PyGILState_STATE state = PyGILState_Ensure();
+
+    PyObject *result = PyObject_CallFunction(send_op->on_complete_py, "(i)", error_code);
+    if (result) {
+        Py_DECREF(result);
+    } else {
+        /* WebSocket.send_frame.on_complete() runs the user's callback in a try/except.
+         * So any exception that leaks out is an unexpected bug in our code.
+         * Make it fatal, we have no graceful way to deal with this. */
+        PyErr_WriteUnraisable(send_op->on_complete_py);
+        AWS_FATAL_ASSERT(0 && "Failed to invoke WebSocket.send_frame()'s on_complete callback");
+    }
+
+    s_websocket_send_op_destroy(send_op);
+
+    PyGILState_Release(state);
+    /*************** GIL RELEASE ***************/
+}
+
 PyObject *aws_py_websocket_send_frame(PyObject *self, PyObject *args) {
-    /* TODO implement */
     (void)self;
-    (void)args;
+
+    PyObject *binding_py;     /* O */
+    uint8_t opcode;           /* b */
+    Py_buffer payload_buffer; /* z* */
+    int fin;                  /* p - boolean predicate */
+    PyObject *on_complete_py; /* O */
+
+    if (!PyArg_ParseTuple(args, "Obz*pO", &binding_py, &opcode, &payload_buffer, &fin, &on_complete_py)) {
+        return NULL;
+    }
+
+    /* From hereon, we need to clean up if errors occur (Py_buffers must always be released) ... */
+
+    struct websocket_send_op *send_op = aws_mem_calloc(aws_py_get_allocator(), 1, sizeof(struct websocket_send_op));
+    send_op->payload_buffer = payload_buffer;
+    send_op->payload_cursor = aws_byte_cursor_from_array(payload_buffer.buf, payload_buffer.len);
+    Py_INCREF(on_complete_py);
+    send_op->on_complete_py = on_complete_py;
+
+    struct aws_websocket *websocket = PyCapsule_GetPointer(binding_py, s_websocket_capsule_name);
+    if (!websocket) {
+        goto error;
+    }
+
+    struct aws_websocket_send_frame_options options = {
+        .payload_length = (uint64_t)payload_buffer.len,
+        .user_data = send_op,
+        .stream_outgoing_payload = s_websocket_stream_outgoing_payload,
+        .on_complete = s_websocket_on_send_frame_complete,
+        .opcode = opcode,
+        .fin = fin,
+    };
+
+    if (aws_websocket_send_frame(websocket, &options)) {
+        PyErr_SetAwsLastError();
+        goto error;
+    }
+
+    /* Success! */
+    Py_RETURN_NONE;
+
+error:
+    s_websocket_send_op_destroy(send_op);
     return NULL;
 }
 

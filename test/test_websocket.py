@@ -7,11 +7,15 @@ from awscrt.websocket import *
 from concurrent.futures import Future
 from contextlib import closing
 import gc
+from io import StringIO
 import logging
+from os import urandom
+from queue import Queue
 import socket
 from test import NativeResourceTest
 import threading
 from time import sleep
+from typing import Optional
 
 # using a 3rdparty websocket library for the server
 import websockets.server as websockets_server_3rdparty
@@ -23,6 +27,77 @@ TIMEOUT = 10.0  # seconds
 
 # uncomment this for logging from our websockets client
 # init_logging(LogLevel.Trace, 'stderr')
+
+
+@dataclass
+class RecvFrame:
+    frame: IncomingFrame
+    payload: bytes
+    exception: Optional[BaseException]
+
+
+class ClientHandler:
+    def __init__(self):
+        self.websocket = None
+        self.setup_future = Future()
+        self.shutdown_future = Future()
+        self.complete_frames = Queue()
+        self.incoming_frame = None
+        self.incoming_frame_payload = bytearray()
+        self.exception = None
+
+    def connect_sync(self, host, port):
+        connect(host=host,
+                port=port,
+                handshake_request=create_handshake_request(host=host),
+                on_connection_setup=self._on_connection_setup,
+                on_connection_shutdown=self._on_connection_shutdown,
+                on_incoming_frame_begin=self._on_incoming_frame_begin,
+                on_incoming_frame_payload=self._on_incoming_frame_payload,
+                on_incoming_frame_complete=self._on_incoming_frame_complete)
+        # wait for on_connection_setup to fire
+        setup_data = self.setup_future.result(TIMEOUT)
+        assert setup_data.exception is None
+
+    def close_sync(self):
+        self.websocket.close()
+        # wait for on_connection_shutdown to fire
+        self.shutdown_future.result(TIMEOUT)
+
+    def _raise_exception(self, msg=None):
+        self.exception = RuntimeError(msg) if msg else RuntimeError()
+        raise self.exception
+
+    def _assert(self, condition, msg=None):
+        if not condition:
+            self._raise_exception(msg)
+
+    def _on_connection_setup(self, data: OnConnectionSetupData):
+        self._assert(not self.setup_future.done(), "setup must only fire once")
+        self.websocket = data.websocket
+        self.setup_future.set_result(data)
+
+    def _on_connection_shutdown(self, data: OnConnectionShutdownData):
+        self._assert(self.setup_future.done(), "setup must precede shutdown")
+        self._assert(not self.shutdown_future.done(), "shutdown must only fire once")
+        self._assert(self.incoming_frame is None, "incoming_frame_complete should fire before shutdown")
+        self.shutdown_future.set_result(data)
+
+    def _on_incoming_frame_begin(self, data: OnIncomingFrameBeginData):
+        self._assert(self.incoming_frame is None,
+                     "incoming_frame_begin cannot fire again until incoming_frame_complete")
+        self.incoming_frame = data.frame
+
+    def _on_incoming_frame_payload(self, data: OnIncomingFramePayloadData):
+        self._assert(self.incoming_frame == data.frame, "frame from payload callback must match begin callback")
+        self.incoming_frame_payload += data.data
+
+    def _on_incoming_frame_complete(self, data: OnIncomingFrameCompleteData):
+        self._assert(self.incoming_frame == data.frame,
+                     "frame from complete callback must match begin callback")
+        self.complete_frames.put(RecvFrame(self.incoming_frame, bytes(self.incoming_frame_payload), data.exception))
+        self.incoming_frame = None
+        self.incoming_frame_payload.clear()
 
 
 class WebSocketServer:
@@ -74,7 +149,7 @@ class WebSocketServer:
         self._server_stop_event = asyncio.Event()
 
         # this coroutine runs the server until the _stop_event fires
-        async with websockets_server_3rdparty.serve(self._run_connection, self._host, self._port) as server:
+        async with websockets_server_3rdparty.serve(self._run_connection, self._host, self._port, max_size=None) as server:
             # signal that server has started up
             self._server_started_event.set()
             # wait for the signal that we should stop
@@ -86,8 +161,9 @@ class WebSocketServer:
         try:
             # await each message...
             async for msg in server_connection:
+                # echo message back
                 # print(f"server msg: {msg}")
-                pass
+                await server_connection.send(msg)
 
         except Exception:
             # an exception is raised when the connection ends,
@@ -231,6 +307,53 @@ class TestClient(NativeResourceTest):
             self.assertGreaterEqual(setup_data.handshake_response_status, 400)
             self.assertIsNotNone(setup_data.handshake_response_headers)
 
+    def test_exception_in_setup_callback_closes_websocket(self):
+        with WebSocketServer(self.host, self.port) as server:
+            setup_future = Future()
+            shutdown_future = Future()
+
+            def bad_setup_callback(data: OnConnectionSetupData):
+                setup_future.set_result(data)
+                raise RuntimeError("Purposefully raising exception")
+
+            connect(
+                host=self.host,
+                port=self.port,
+                handshake_request=create_handshake_request(host=self.host),
+                on_connection_setup=bad_setup_callback,
+                on_connection_shutdown=lambda x: shutdown_future.set_result(x))
+
+            # wait for on_connection_setup to fire (and raise exception)
+            setup_data = setup_future.result(TIMEOUT)
+            self.assertIsNotNone(setup_data.websocket)
+
+            # wait for websocket to close due to exception
+            shutdown_future.result(TIMEOUT)
+
+    def test_exception_in_shutdown_callback_has_no_effect(self):
+        with WebSocketServer(self.host, self.port) as server:
+            setup_future = Future()
+            shutdown_future = Future()
+
+            def bad_shutdown_callback(data: OnConnectionShutdownData):
+                shutdown_future.set_result(data)
+                raise RuntimeError("Purposefully raising exception")
+
+            connect(
+                host=self.host,
+                port=self.port,
+                handshake_request=create_handshake_request(host=self.host),
+                on_connection_setup=lambda x: setup_future.set_result(x),
+                on_connection_shutdown=bad_shutdown_callback)
+
+            # wait for on_connection_setup to fire
+            websocket = setup_future.result(TIMEOUT).websocket
+
+            # close websocket, on_connection_shutdown will fire and raise exception,
+            # which should have no effect
+            websocket.close()
+            shutdown_future.result(TIMEOUT)
+
     def test_close_is_idempotent(self):
         # test that it's always safe to call WebSocket.close()
         with WebSocketServer(self.host, self.port) as server:
@@ -266,3 +389,118 @@ class TestClient(NativeResourceTest):
             # ...and after shutdown has already occurred!
             websocket.close()
             websocket.close()
+
+    def _send_and_receive(self, handler, opcode, payload):
+        send_complete_future = Future()
+
+        handler.websocket.send_frame(opcode, payload, on_complete=lambda x: send_complete_future.set_result(x))
+
+        # wait for send_frame operation to complete
+        send_complete_data: OnSendFrameCompleteData = send_complete_future.result(TIMEOUT)
+        self.assertIsNone(send_complete_data.exception)
+
+        # wait to receive echo message back
+        recv: RecvFrame = handler.complete_frames.get(timeout=TIMEOUT)
+        # assert that expected types are received (`is True` vs checking that it evaluates to True)
+        self.assertIsInstance(recv.frame.opcode, Opcode)
+        self.assertEqual(recv.frame.opcode, opcode)
+        self.assertIs(recv.frame.fin, True)
+
+        # check that the received payload matches what we sent in
+        if isinstance(payload, str):
+            self.assertEqual(recv.payload, payload.encode('utf-8'))
+        elif payload is None:
+            self.assertEqual(recv.payload, b'')
+        else:
+            self.assertEqual(recv.payload, payload)
+
+        self.assertIsNone(handler.exception)
+
+    def test_send_receive_data(self):
+        # test sending and receiving TEXT and BINARY frames
+        # (the server echos these types of messages back)
+        with WebSocketServer(self.host, self.port) as server:
+            handler = ClientHandler()
+            handler.connect_sync(self.host, self.port)
+
+            # try sending all kinds of "buffer protocol" types
+            self._send_and_receive(handler, Opcode.TEXT, "str with ascii")
+            self._send_and_receive(handler, Opcode.TEXT, "str with unicode --> 👁👄👁 <--")
+            self._send_and_receive(handler, Opcode.TEXT, "str with embedded null byte --> \0 <--")
+            self._send_and_receive(handler, Opcode.TEXT, b"bytes of text")
+            self._send_and_receive(handler, Opcode.TEXT, bytearray(b"bytearray of text"))
+            self._send_and_receive(handler, Opcode.TEXT, memoryview(b"memoryview of text"))
+            self._send_and_receive(handler, Opcode.TEXT, memoryview(b"...memoryview slice...")[3: -3])
+            self._send_and_receive(handler, Opcode.TEXT, "")  # empty
+            self._send_and_receive(handler, Opcode.TEXT, None)
+
+            # try sending all kinds of "buffer protocol" types
+            self._send_and_receive(handler, Opcode.BINARY, "str sent binary")
+            self._send_and_receive(handler, Opcode.BINARY, b"bytes sent binary")
+            self._send_and_receive(handler, Opcode.BINARY, bytearray(b"bytearray sent binary"))
+            self._send_and_receive(handler, Opcode.BINARY, memoryview(b"memoryview sent binary"))
+            self._send_and_receive(handler, Opcode.BINARY, memoryview(b"...memoryview slice sent binary...")[3: -3])
+            self._send_and_receive(handler, Opcode.BINARY, bytes())  # empty
+            self._send_and_receive(handler, Opcode.BINARY, None)
+
+            # send something very big
+            self._send_and_receive(handler, Opcode.BINARY, urandom(1024 * 1024 * 4))
+
+            handler.close_sync()
+            self.assertIsNone(handler.exception)
+
+    def test_send_frame_exceptions(self):
+        with WebSocketServer(self.host, self.port) as server:
+            handler = ClientHandler()
+            handler.connect_sync(self.host, self.port)
+
+            # we don't currently support sending streams
+            with self.assertRaises(TypeError):
+                handler.websocket.send_frame(Opcode.TEXT, StringIO("text stream"))
+
+            # raising an exception from the completion-callback should result in websocket closing
+            def bad_completion_callback(data):
+                raise RuntimeError("Purposefully raising exception")
+
+            handler.websocket.send_frame(Opcode.TEXT, "asdf", on_complete=bad_completion_callback)
+
+            # wait for shutdown...
+            handler.shutdown_future.result(TIMEOUT)
+
+            # shouldn't be able to send frame after websocket closes
+            with self.assertRaises(Exception) as raises:
+                handler.websocket.send_frame(Opcode.TEXT, "asdf")
+            self.assertIn("AWS_ERROR_HTTP_WEBSOCKET_CLOSE_FRAME_SENT", str(raises.exception))
+
+            self.assertIsNone(handler.exception)
+
+    def test_exception_from_incoming_frame_callback_closes_websocket(self):
+        # loop 3 times, once for each type of on_incoming_frame_X callback
+        for i in ('begin', 'payload', 'complete'):
+            with WebSocketServer(self.host, self.port) as server:
+                setup_future = Future()
+                shutdown_future = Future()
+
+                def bad_incoming_frame_callback(data):
+                    raise RuntimeError("Purposefully raising exception")
+
+                connect(
+                    host=self.host,
+                    port=self.port,
+                    handshake_request=create_handshake_request(host=self.host),
+                    on_connection_setup=lambda x: setup_future.set_result(x),
+                    on_connection_shutdown=lambda x: shutdown_future.set_result(x),
+                    on_incoming_frame_begin=bad_incoming_frame_callback if i == 'begin' else None,
+                    on_incoming_frame_payload=bad_incoming_frame_callback if i == 'payload' else None,
+                    on_incoming_frame_complete=bad_incoming_frame_callback if i == 'complete' else None,
+                )
+
+                # wait for on_connection_setup to fire
+                websocket = setup_future.result(TIMEOUT).websocket
+
+                # send a frame that the server will echo back
+                websocket.send_frame(Opcode.TEXT, "echo")
+
+                # wait for the frame to echo back, firing the bad callback,
+                # which raises an exception, which should result in the WebSocket closing
+                shutdown_future.result(TIMEOUT)
