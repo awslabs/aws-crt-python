@@ -33,7 +33,7 @@ TIMEOUT = 10.0  # seconds
 class RecvFrame:
     frame: IncomingFrame
     payload: bytes
-    exception: Optional[BaseException]
+    exception: Optional[Exception]
 
 
 class ClientHandler:
