@@ -1399,7 +1399,7 @@ class _ClientCore:
         publish_packet.retain = retain
 
         if payload_format_indicator_exists:
-            publish_packet.payload_format_indicator = payload_format_indicator
+            publish_packet.payload_format_indicator = PayloadFormatIndicator(payload_format_indicator)
         if message_expiry_interval_sec_exists:
             publish_packet.message_expiry_interval_sec = message_expiry_interval_sec
         if topic_alias_exists:
