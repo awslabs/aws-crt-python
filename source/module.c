@@ -30,6 +30,17 @@
 
 #include <memoryobject.h>
 
+/* Sanity check that the fixed-size types AWS C code tends to use
+ * align with the the vanilla C types Python tends to use.
+ * This is important when passing arguments between C and Python
+ * via things like PyArg_ParseTuple() and PyObject_CallFunction()
+ * https://docs.python.org/3/c-api/arg.html */
+AWS_STATIC_ASSERT(sizeof(uint8_t) == sizeof(unsigned char));       /* we pass uint8_t as "B" (unsigned char) */
+AWS_STATIC_ASSERT(sizeof(uint16_t) == sizeof(unsigned short));     /* we pass uint16_t as "H" (unsigned short) */
+AWS_STATIC_ASSERT(sizeof(uint32_t) == sizeof(unsigned int));       /* we pass uint32_t as "I" (unsigned int) */
+AWS_STATIC_ASSERT(sizeof(uint64_t) == sizeof(unsigned long long)); /* we pass uint64_t as "K" (unsigned long long) */
+AWS_STATIC_ASSERT(sizeof(enum aws_log_level) == sizeof(int));      /* we pass enums as "i" (int) */
+
 static struct aws_logger s_logger;
 static bool s_logger_init = false;
 
