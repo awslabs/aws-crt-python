@@ -1398,9 +1398,7 @@ static void s_on_publish_complete_fn(
     size_t user_property_count = 0;
 
     if (packet_type == AWS_MQTT5_PT_PUBACK && puback != NULL) {
-        if (error_code == AWS_ERROR_SUCCESS) {
-            error_code = AWS_ERROR_UNKNOWN;
-        }
+        AWS_FATAL_ASSERT(error_code != AWS_ERROR_SUCCESS);
 
         puback = packet;
         reason_code = puback->reason_code;
@@ -1614,9 +1612,7 @@ static void s_on_subscribe_complete_fn(
     size_t reason_codes_count = 0;
 
     if (suback != NULL) {
-        if (error_code == AWS_ERROR_SUCCESS) {
-            error_code = AWS_ERROR_UNKNOWN;
-        }
+        AWS_FATAL_ASSERT(error_code != AWS_ERROR_SUCCESS);
 
         user_property_count = suback->user_property_count;
         reason_codes_count = suback->reason_code_count;
@@ -1849,9 +1845,7 @@ static void s_on_unsubscribe_complete_fn(
     size_t reason_codes_count = 0;
 
     if (unsuback != NULL) {
-        if (error_code == AWS_ERROR_SUCCESS) {
-            error_code = AWS_ERROR_UNKNOWN;
-        }
+        AWS_FATAL_ASSERT(error_code != AWS_ERROR_SUCCESS);
 
         user_property_count = unsuback->user_property_count;
         reason_codes_count = unsuback->reason_code_count;
