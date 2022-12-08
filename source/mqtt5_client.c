@@ -1867,7 +1867,7 @@ static void s_on_unsubscribe_complete_fn(
         "(iOs#O)",
         /* i */ (int)error_code,
         /* O */ (reason_codes_count > 0 && !error_code) ? reason_codes_list : Py_None,
-        /* s */ unsuback ? (unsuback->reason_string ? unsuback->reason_string->ptr : NULL): NULL,
+        /* s */ unsuback ? (unsuback->reason_string ? unsuback->reason_string->ptr : NULL) : NULL,
         /* # */ unsuback ? (unsuback->reason_string ? unsuback->reason_string->len : 0) : 0,
         /* O */ (user_property_count > 0 && !error_code) ? user_properties_list : Py_None);
     if (!result) {
