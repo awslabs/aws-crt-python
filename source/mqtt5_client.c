@@ -1398,6 +1398,10 @@ static void s_on_publish_complete_fn(
     size_t user_property_count = 0;
 
     if (packet_type == AWS_MQTT5_PT_PUBACK && puback != NULL) {
+        if(error_code == AWS_ERROR_SUCCESS){
+            error_code = AWS_ERROR_UNKNOWN;
+        }
+
         puback = packet;
         reason_code = puback->reason_code;
         reason_string = puback->reason_string;
@@ -1610,6 +1614,10 @@ static void s_on_subscribe_complete_fn(
     size_t reason_codes_count = 0;
 
     if (suback != NULL) {
+        if(error_code == AWS_ERROR_SUCCESS){
+            error_code = AWS_ERROR_UNKNOWN;
+        }
+
         user_property_count = suback->user_property_count;
         reason_codes_count = suback->reason_code_count;
 
@@ -1636,8 +1644,8 @@ static void s_on_subscribe_complete_fn(
         "(iOs#O)",
         /* i */ (int)error_code,
         /* O */ (reason_codes_count > 0 && !error_code) ? reason_codes_list : Py_None,
-        /* s */ suback ? (suback->reason_string ? suback->reason_string->ptr : NULL) : NULL,
-        /* # */ suback ? (suback->reason_string ? suback->reason_string->len : 0) : 0,
+        /* s */ (suback && suback->reason_string) ? suback->reason_string->ptr : NULL,
+        /* # */ (suback && suback->reason_string) ? suback->reason_string->len : 0,
         /* O */ (user_property_count > 0 && !error_code) ? user_properties_list : Py_None);
     if (!result) {
         PyErr_WriteUnraisable(PyErr_Occurred());
@@ -1841,6 +1849,10 @@ static void s_on_unsubscribe_complete_fn(
     size_t reason_codes_count = 0;
 
     if (unsuback != NULL) {
+        if(error_code == AWS_ERROR_SUCCESS){
+            error_code = AWS_ERROR_UNKNOWN;
+        }
+
         user_property_count = unsuback->user_property_count;
         reason_codes_count = unsuback->reason_code_count;
 
@@ -1867,8 +1879,8 @@ static void s_on_unsubscribe_complete_fn(
         "(iOs#O)",
         /* i */ (int)error_code,
         /* O */ (reason_codes_count > 0 && !error_code) ? reason_codes_list : Py_None,
-        /* s */ unsuback ? (unsuback->reason_string ? unsuback->reason_string->ptr : NULL) : NULL,
-        /* # */ unsuback ? (unsuback->reason_string ? unsuback->reason_string->len : 0) : 0,
+        /* s */ (unsuback && unsuback->reason_string) ? unsuback->reason_string->ptr : NULL,
+        /* # */ (unsuback && unsuback->reason_string) ? unsuback->reason_string->len : 0,
         /* O */ (user_property_count > 0 && !error_code) ? user_properties_list : Py_None);
     if (!result) {
         PyErr_WriteUnraisable(PyErr_Occurred());
