@@ -1409,642 +1409,640 @@ static void s_on_publish_complete_fn(
                 PyErr_WriteUnraisable(PyErr_Occurred());
                 goto cleanup;
             }
+        }
     }
 
-    result = PyObject_CallFunction(
-        metadata->callback,
-        "(iiis#O)",
-        /* i */ (int)error_code,
-        /* i */ (int)metadata->qos,
-        /* i */ (int)reason_code,
-        /* s */ reason_string ? reason_string->ptr : NULL,
-        /* # */ reason_string ? reason_string->len : 0,
-        /* O */ (user_property_count > 0 && !error_code) ? user_properties_list : Py_None);
-    if (!result) {
-        PyErr_WriteUnraisable(PyErr_Occurred());
-    }
-cleanup:
-    Py_XDECREF(metadata->callback);
-    Py_XDECREF(user_properties_list);
-    Py_XDECREF(result);
+        result = PyObject_CallFunction(
+            metadata->callback,
+            "(iiis#O)",
+            /* i */ (int)error_code,
+            /* i */ (int)metadata->qos,
+            /* i */ (int)reason_code,
+            /* s */ reason_string ? reason_string->ptr : NULL,
+            /* # */ reason_string ? reason_string->len : 0,
+            /* O */ (user_property_count > 0 && !error_code) ? user_properties_list : Py_None);
+        if (!result) {
+            PyErr_WriteUnraisable(PyErr_Occurred());
+        }
+    cleanup:
+        Py_XDECREF(metadata->callback);
+        Py_XDECREF(user_properties_list);
+        Py_XDECREF(result);
 
-    PyGILState_Release(state);
+        PyGILState_Release(state);
 
-    aws_mem_release(aws_py_get_allocator(), metadata);
-}
-
-PyObject *aws_py_mqtt5_client_publish(PyObject *self, PyObject *args) {
-    (void)self;
-    bool success = false;
-
-    PyObject *impl_capsule;
-
-    PyObject *qos_val_py;
-    Py_buffer payload_stack; /* Py_buffers must be released after successful PyArg_ParseTuple() calls */
-    PyObject *retain_py;
-    struct aws_byte_cursor topic;
-    PyObject *payload_format_py;                  /* optional enum */
-    PyObject *message_expiry_interval_seconds_py; /* optional uint32_t */
-    PyObject *topic_alias_py;                     /* optional uint16_t */
-    struct aws_byte_cursor response_topic;        /* optional */
-    Py_buffer correlation_data_stack;             /* optional */
-    struct aws_byte_cursor content_type;          /* optional */
-    PyObject *user_properties_py;                 /* optional */
-    PyObject *puback_callback_fn_py;
-
-    if (!PyArg_ParseTuple(
-            args,
-            "OOz*Oz#OOOz#z*z#OO",
-            /* O */ &impl_capsule,
-            /* O */ &qos_val_py,
-            /* z* */ &payload_stack,
-            /* O */ &retain_py,
-            /* z */ &topic.ptr,
-            /* # */ &topic.len,
-            /* O */ &payload_format_py,
-            /* O */ &message_expiry_interval_seconds_py,
-            /* O */ &topic_alias_py,
-            /* z */ &response_topic.ptr,
-            /* # */ &response_topic.len,
-            /* z* */ &correlation_data_stack,
-            /* z */ &content_type.ptr,
-            /* # */ &content_type.len,
-            /* O */ &user_properties_py,
-            /* O */ &puback_callback_fn_py)) {
-        return NULL;
+        aws_mem_release(aws_py_get_allocator(), metadata);
     }
 
-    /* from hereon, we need to clean up if errors occur */
-    struct aws_mqtt5_user_property *user_properties_tmp = NULL;
+    PyObject *aws_py_mqtt5_client_publish(PyObject * self, PyObject * args) {
+        (void)self;
+        bool success = false;
 
-    struct mqtt5_client_binding *client = PyCapsule_GetPointer(impl_capsule, s_capsule_name_mqtt5_client);
-    if (!client) {
-        goto done;
-    }
+        PyObject *impl_capsule;
 
-    struct aws_mqtt5_packet_publish_view publish_view;
-    AWS_ZERO_STRUCT(publish_view);
+        PyObject *qos_val_py;
+        Py_buffer payload_stack; /* Py_buffers must be released after successful PyArg_ParseTuple() calls */
+        PyObject *retain_py;
+        struct aws_byte_cursor topic;
+        PyObject *payload_format_py;                  /* optional enum */
+        PyObject *message_expiry_interval_seconds_py; /* optional uint32_t */
+        PyObject *topic_alias_py;                     /* optional uint16_t */
+        struct aws_byte_cursor response_topic;        /* optional */
+        Py_buffer correlation_data_stack;             /* optional */
+        struct aws_byte_cursor content_type;          /* optional */
+        PyObject *user_properties_py;                 /* optional */
+        PyObject *puback_callback_fn_py;
 
-    publish_view.qos = PyObject_GetIntEnum(qos_val_py, AWS_PYOBJECT_KEY_QOS);
-    if (PyErr_Occurred()) {
-        goto done;
-    }
+        if (!PyArg_ParseTuple(
+                args,
+                "OOz*Oz#OOOz#z*z#OO",
+                /* O */ &impl_capsule,
+                /* O */ &qos_val_py,
+                /* z* */ &payload_stack,
+                /* O */ &retain_py,
+                /* z */ &topic.ptr,
+                /* # */ &topic.len,
+                /* O */ &payload_format_py,
+                /* O */ &message_expiry_interval_seconds_py,
+                /* O */ &topic_alias_py,
+                /* z */ &response_topic.ptr,
+                /* # */ &response_topic.len,
+                /* z* */ &correlation_data_stack,
+                /* z */ &content_type.ptr,
+                /* # */ &content_type.len,
+                /* O */ &user_properties_py,
+                /* O */ &puback_callback_fn_py)) {
+            return NULL;
+        }
 
-    publish_view.payload = aws_byte_cursor_from_array(payload_stack.buf, payload_stack.len);
+        /* from hereon, we need to clean up if errors occur */
+        struct aws_mqtt5_user_property *user_properties_tmp = NULL;
 
-    publish_view.retain = PyObject_IsTrue(retain_py);
+        struct mqtt5_client_binding *client = PyCapsule_GetPointer(impl_capsule, s_capsule_name_mqtt5_client);
+        if (!client) {
+            goto done;
+        }
 
-    publish_view.topic = topic;
+        struct aws_mqtt5_packet_publish_view publish_view;
+        AWS_ZERO_STRUCT(publish_view);
 
-    int payload_format_tmp = 0;
-    enum aws_mqtt5_payload_format_indicator payload_format_enum_tmp;
-    if (PyObject_GetAsOptionalIntEnum(
-            payload_format_py,
+        publish_view.qos = PyObject_GetIntEnum(qos_val_py, AWS_PYOBJECT_KEY_QOS);
+        if (PyErr_Occurred()) {
+            goto done;
+        }
+
+        publish_view.payload = aws_byte_cursor_from_array(payload_stack.buf, payload_stack.len);
+
+        publish_view.retain = PyObject_IsTrue(retain_py);
+
+        publish_view.topic = topic;
+
+        int payload_format_tmp = 0;
+        enum aws_mqtt5_payload_format_indicator payload_format_enum_tmp;
+        if (PyObject_GetAsOptionalIntEnum(
+                payload_format_py,
+                AWS_PYOBJECT_KEY_PUBLISH_PACKET,
+                AWS_PYOBJECT_KEY_PAYLOAD_FORMAT_INDICATOR,
+                &payload_format_tmp)) {
+            payload_format_enum_tmp = (enum aws_mqtt5_payload_format_indicator)payload_format_tmp;
+            publish_view.payload_format = &payload_format_enum_tmp;
+        }
+        if (PyErr_Occurred()) {
+            goto done;
+        }
+
+        uint32_t message_expiry_interval_seconds_tmp = 0;
+        publish_view.message_expiry_interval_seconds = PyObject_GetAsOptionalUint32(
+            message_expiry_interval_seconds_py,
             AWS_PYOBJECT_KEY_PUBLISH_PACKET,
-            AWS_PYOBJECT_KEY_PAYLOAD_FORMAT_INDICATOR,
-            &payload_format_tmp)) {
-        payload_format_enum_tmp = (enum aws_mqtt5_payload_format_indicator)payload_format_tmp;
-        publish_view.payload_format = &payload_format_enum_tmp;
-    }
-    if (PyErr_Occurred()) {
-        goto done;
-    }
-
-    uint32_t message_expiry_interval_seconds_tmp = 0;
-    publish_view.message_expiry_interval_seconds = PyObject_GetAsOptionalUint32(
-        message_expiry_interval_seconds_py,
-        AWS_PYOBJECT_KEY_PUBLISH_PACKET,
-        AWS_PYOBJECT_KEY_MESSAGE_EXPIRY_INTERVAL_SEC,
-        &message_expiry_interval_seconds_tmp);
-    if (PyErr_Occurred()) {
-        goto done;
-    }
-
-    uint16_t topic_alias_tmp = 0;
-    publish_view.topic_alias = PyObject_GetAsOptionalUint16(
-        topic_alias_py, AWS_PYOBJECT_KEY_PUBLISH_PACKET, AWS_PYOBJECT_KEY_TOPIC_ALIAS, &topic_alias_tmp);
-    if (PyErr_Occurred()) {
-        goto done;
-    }
-
-    if (response_topic.ptr) {
-        publish_view.response_topic = &response_topic;
-    }
-
-    struct aws_byte_cursor correlation_data_tmp;
-    if (correlation_data_stack.buf) {
-        correlation_data_tmp = aws_byte_cursor_from_array(correlation_data_stack.buf, correlation_data_stack.len);
-        publish_view.correlation_data = &correlation_data_tmp;
-    }
-
-    if (content_type.ptr) {
-        publish_view.content_type = &content_type;
-    }
-
-    user_properties_tmp =
-        aws_get_optional_user_properties_from_PyObject(user_properties_py, &publish_view.user_property_count);
-    if (PyErr_Occurred()) {
-        goto done;
-    }
-    publish_view.user_properties = user_properties_tmp;
-
-    struct publish_complete_userdata *metadata = NULL;
-    /* callback related must be cleaned up after this point */
-    metadata = aws_mem_calloc(aws_py_get_allocator(), 1, sizeof(struct publish_complete_userdata));
-
-    metadata->callback = puback_callback_fn_py;
-    metadata->qos = PyObject_GetIntEnum(qos_val_py, AWS_PYOBJECT_KEY_QOS);
-    Py_INCREF(metadata->callback);
-
-    struct aws_mqtt5_publish_completion_options publish_completion_options = {
-        .completion_callback = &s_on_publish_complete_fn, .completion_user_data = metadata};
-
-    if (aws_mqtt5_client_publish(client->native, &publish_view, &publish_completion_options)) {
-        PyErr_SetAwsLastError();
-        goto publish_failed;
-    }
-
-    success = true;
-    goto done;
-
-publish_failed:
-    Py_XDECREF(puback_callback_fn_py);
-    aws_mem_release(aws_py_get_allocator(), metadata);
-
-done:
-    if (user_properties_tmp) {
-        aws_mem_release(aws_py_get_allocator(), user_properties_tmp);
-    }
-    PyBuffer_Release(&payload_stack);
-    PyBuffer_Release(&correlation_data_stack);
-    if (success) {
-        Py_RETURN_NONE;
-    }
-    return NULL;
-}
-
-/*******************************************************************************
- * Subscribe
- ******************************************************************************/
-
-struct subscribe_complete_userdata {
-    PyObject *callback;
-};
-
-static void s_on_subscribe_complete_fn(
-    const struct aws_mqtt5_packet_suback_view *suback,
-    int error_code,
-    void *complete_ctx) {
-    struct subscribe_complete_userdata *metadata = complete_ctx;
-    assert(metadata);
-
-    PyGILState_STATE state;
-    if (aws_py_gilstate_ensure(&state)) {
-        return; /* Python has shut down. Nothing matters anymore, but don't crash */
-    }
-
-    /* These must be DECREF'd when function ends */
-    PyObject *result = NULL;
-    PyObject *reason_codes_list = NULL;
-    PyObject *user_properties_list = NULL;
-    size_t user_property_count = 0;
-    size_t reason_codes_count = 0;
-
-    if (suback != NULL) {
-        user_property_count = suback->user_property_count;
-        reason_codes_count = suback->reason_code_count;
-
-        user_properties_list = s_aws_set_user_properties_to_PyObject(suback->user_properties, user_property_count);
+            AWS_PYOBJECT_KEY_MESSAGE_EXPIRY_INTERVAL_SEC,
+            &message_expiry_interval_seconds_tmp);
         if (PyErr_Occurred()) {
-            PyErr_WriteUnraisable(PyErr_Occurred());
-            goto cleanup;
-        }
-
-        /* Create list of (reason_code) tuples */
-        reason_codes_list = PyList_New(reason_codes_count);
-        if (!reason_codes_list) {
-            PyErr_WriteUnraisable(PyErr_Occurred());
-            goto cleanup;
-        }
-
-        for (size_t i = 0; i < reason_codes_count; ++i) {
-            PyList_SET_ITEM(reason_codes_list, i, PyLong_FromLong(suback->reason_codes[i]));
-        }
-    }
-
-    result = PyObject_CallFunction(
-        metadata->callback,
-        "(iOs#O)",
-        /* i */ (int)error_code,
-        /* O */ (reason_codes_count > 0 && !error_code) ? reason_codes_list : Py_None,
-        /* s */ (suback && suback->reason_string) ? suback->reason_string->ptr : NULL,
-        /* # */ (suback && suback->reason_string) ? suback->reason_string->len : 0,
-        /* O */ (user_property_count > 0 && !error_code) ? user_properties_list : Py_None);
-    if (!result) {
-        PyErr_WriteUnraisable(PyErr_Occurred());
-    }
-cleanup:
-    Py_XDECREF(metadata->callback);
-    Py_XDECREF(user_properties_list);
-    Py_XDECREF(reason_codes_list);
-    Py_XDECREF(result);
-
-    PyGILState_Release(state);
-
-    aws_mem_release(aws_py_get_allocator(), metadata);
-}
-
-/* Populates subscription_view_out from a PyObject user property.
- * PyErr_Occurred() must be called to check if anything went wrong after using this function. */
-void aws_init_subscription_from_PyObject(PyObject *o, struct aws_mqtt5_subscription_view *subscription_view_out) {
-
-    PyObject *attr_topic_filter = PyObject_GetAttrString(o, AWS_PYOBJECT_KEY_TOPIC_FILTER);
-    if (!attr_topic_filter) {
-        PyErr_Format(
-            PyExc_AttributeError,
-            "'%s.%s' attribute not found",
-            AWS_PYOBJECT_KEY_SUBSCRIPTION,
-            AWS_PYOBJECT_KEY_TOPIC_FILTER);
-        return;
-    }
-    subscription_view_out->topic_filter = aws_byte_cursor_from_pyunicode(attr_topic_filter);
-    Py_XDECREF(attr_topic_filter);
-    if (PyErr_Occurred()) {
-        return;
-    }
-
-    subscription_view_out->qos = PyObject_GetAttrAsIntEnum(o, AWS_PYOBJECT_KEY_SUBSCRIPTION, AWS_PYOBJECT_KEY_QOS);
-    if (PyErr_Occurred()) {
-        return;
-    }
-
-    subscription_view_out->no_local =
-        PyObject_GetAttrAsBool(o, AWS_PYOBJECT_KEY_SUBSCRIPTION, AWS_PYOBJECT_KEY_NO_LOCAL);
-    if (PyErr_Occurred()) {
-        return;
-    }
-
-    subscription_view_out->retain_as_published =
-        PyObject_GetAttrAsBool(o, AWS_PYOBJECT_KEY_SUBSCRIPTION, AWS_PYOBJECT_KEY_RETAIN_AS_PUBLISHED);
-    if (PyErr_Occurred()) {
-        return;
-    }
-
-    subscription_view_out->retain_handling_type =
-        PyObject_GetAttrAsIntEnum(o, AWS_PYOBJECT_KEY_SUBSCRIPTION, AWS_PYOBJECT_KEY_RETAIN_HANDLING_TYPE);
-    if (PyErr_Occurred()) {
-        return;
-    }
-}
-
-PyObject *aws_py_mqtt5_client_subscribe(PyObject *self, PyObject *args) {
-    (void)self;
-    bool success = false;
-
-    PyObject *impl_capsule;
-    PyObject *subscriptions_py;
-    PyObject *subscription_identifier_py; /* optional uint32_t */
-    PyObject *user_properties_py;         /* optional */
-    PyObject *suback_callback_fn_py;
-
-    if (!PyArg_ParseTuple(
-            args,
-            "OOOOO",
-            /* O */ &impl_capsule,
-            /* O */ &subscriptions_py,
-            /* O */ &subscription_identifier_py,
-            /* O */ &user_properties_py,
-            /* O */ &suback_callback_fn_py)) {
-        return NULL;
-    }
-
-    struct mqtt5_client_binding *client = PyCapsule_GetPointer(impl_capsule, s_capsule_name_mqtt5_client);
-    if (!client) {
-        return NULL;
-    }
-
-    struct aws_mqtt5_packet_subscribe_view subscribe_view;
-    AWS_ZERO_STRUCT(subscribe_view);
-    struct aws_mqtt5_user_property *user_properties_tmp = NULL;
-
-    struct aws_array_list subscriptions_list;
-    AWS_ZERO_STRUCT(subscriptions_list);
-
-    if (!PySequence_Check(subscriptions_py)) {
-        PyErr_Format(PyExc_TypeError, "'%s' argument must be of list or tuple", AWS_PYOBJECT_KEY_SUBSCRIPTIONS);
-        goto done;
-    }
-
-    Py_ssize_t subscription_count = PySequence_Size(subscriptions_py);
-
-    if (aws_array_list_init_dynamic(
-            &subscriptions_list,
-            aws_py_get_allocator(),
-            subscription_count,
-            sizeof(struct aws_mqtt5_subscription_view))) {
-        PyErr_AwsLastError();
-        goto done;
-    }
-
-    PyObject *subscription_py;
-    for (Py_ssize_t i = 0; i < subscription_count; ++i) {
-        struct aws_mqtt5_subscription_view subscription_out;
-        AWS_ZERO_STRUCT(subscription_out);
-        subscription_py = PySequence_GetItem(subscriptions_py, i);
-        aws_init_subscription_from_PyObject(subscription_py, &subscription_out);
-        if (PyErr_Occurred()) {
-            Py_XDECREF(subscription_py);
             goto done;
         }
-        aws_array_list_push_back(&subscriptions_list, &subscription_out);
-        Py_XDECREF(subscription_py);
-    }
 
-    subscribe_view.subscription_count = (size_t)subscription_count;
-    subscribe_view.subscriptions = subscriptions_list.data;
-
-    uint32_t subscription_identifier_tmp = 0;
-    subscribe_view.subscription_identifier = PyObject_GetAsOptionalUint32(
-        subscription_identifier_py,
-        AWS_PYOBJECT_KEY_SUBSCRIBE_PACKET,
-        AWS_PYOBJECT_KEY_SUBSCRIPTION_IDENTIFIER,
-        &subscription_identifier_tmp);
-    if (PyErr_Occurred()) {
-        goto done;
-    }
-
-    user_properties_tmp =
-        aws_get_optional_user_properties_from_PyObject(user_properties_py, &subscribe_view.user_property_count);
-    if (PyErr_Occurred()) {
-        goto done;
-    }
-    subscribe_view.user_properties = user_properties_tmp;
-
-    struct subscribe_complete_userdata *metadata = NULL;
-    /* callback related must be cleaned up after this point */
-    metadata = aws_mem_calloc(aws_py_get_allocator(), 1, sizeof(struct subscribe_complete_userdata));
-
-    metadata->callback = suback_callback_fn_py;
-    Py_INCREF(metadata->callback);
-
-    struct aws_mqtt5_subscribe_completion_options subscribe_completion_options = {
-        .completion_callback = &s_on_subscribe_complete_fn, .completion_user_data = metadata};
-
-    if (aws_mqtt5_client_subscribe(client->native, &subscribe_view, &subscribe_completion_options)) {
-        PyErr_SetAwsLastError();
-        goto subscribe_failed;
-    }
-
-    success = true;
-    goto done;
-
-subscribe_failed:
-    Py_XDECREF(suback_callback_fn_py);
-    aws_mem_release(aws_py_get_allocator(), metadata);
-
-done:
-    if (user_properties_tmp) {
-        aws_mem_release(aws_py_get_allocator(), user_properties_tmp);
-    }
-    aws_array_list_clean_up(&subscriptions_list);
-    if (success) {
-        Py_RETURN_NONE;
-    }
-    return NULL;
-}
-
-/*******************************************************************************
- * Unsubscribe
- ******************************************************************************/
-
-struct unsubscribe_complete_userdata {
-    PyObject *callback;
-};
-
-static void s_on_unsubscribe_complete_fn(
-    const struct aws_mqtt5_packet_unsuback_view *unsuback,
-    int error_code,
-    void *complete_ctx) {
-    struct unsubscribe_complete_userdata *metadata = complete_ctx;
-    assert(metadata);
-
-    /* These must be DECREF'd when function ends */
-    PyObject *result = NULL;
-    PyObject *reason_codes_list = NULL;
-    PyObject *user_properties_list = NULL;
-
-    PyGILState_STATE state;
-    if (aws_py_gilstate_ensure(&state)) {
-        return; /* Python has shut down. Nothing matters anymore, but don't crash */
-    }
-
-    size_t user_property_count = 0;
-    size_t reason_codes_count = 0;
-
-    if (unsuback != NULL) {
-        user_property_count = unsuback->user_property_count;
-        reason_codes_count = unsuback->reason_code_count;
-
-        user_properties_list = s_aws_set_user_properties_to_PyObject(unsuback->user_properties, user_property_count);
+        uint16_t topic_alias_tmp = 0;
+        publish_view.topic_alias = PyObject_GetAsOptionalUint16(
+            topic_alias_py, AWS_PYOBJECT_KEY_PUBLISH_PACKET, AWS_PYOBJECT_KEY_TOPIC_ALIAS, &topic_alias_tmp);
         if (PyErr_Occurred()) {
+            goto done;
+        }
+
+        if (response_topic.ptr) {
+            publish_view.response_topic = &response_topic;
+        }
+
+        struct aws_byte_cursor correlation_data_tmp;
+        if (correlation_data_stack.buf) {
+            correlation_data_tmp = aws_byte_cursor_from_array(correlation_data_stack.buf, correlation_data_stack.len);
+            publish_view.correlation_data = &correlation_data_tmp;
+        }
+
+        if (content_type.ptr) {
+            publish_view.content_type = &content_type;
+        }
+
+        user_properties_tmp =
+            aws_get_optional_user_properties_from_PyObject(user_properties_py, &publish_view.user_property_count);
+        if (PyErr_Occurred()) {
+            goto done;
+        }
+        publish_view.user_properties = user_properties_tmp;
+
+        struct publish_complete_userdata *metadata = NULL;
+        /* callback related must be cleaned up after this point */
+        metadata = aws_mem_calloc(aws_py_get_allocator(), 1, sizeof(struct publish_complete_userdata));
+
+        metadata->callback = puback_callback_fn_py;
+        metadata->qos = PyObject_GetIntEnum(qos_val_py, AWS_PYOBJECT_KEY_QOS);
+        Py_INCREF(metadata->callback);
+
+        struct aws_mqtt5_publish_completion_options publish_completion_options = {
+            .completion_callback = &s_on_publish_complete_fn, .completion_user_data = metadata};
+
+        if (aws_mqtt5_client_publish(client->native, &publish_view, &publish_completion_options)) {
+            PyErr_SetAwsLastError();
+            goto publish_failed;
+        }
+
+        success = true;
+        goto done;
+
+    publish_failed:
+        Py_XDECREF(puback_callback_fn_py);
+        aws_mem_release(aws_py_get_allocator(), metadata);
+
+    done:
+        if (user_properties_tmp) {
+            aws_mem_release(aws_py_get_allocator(), user_properties_tmp);
+        }
+        PyBuffer_Release(&payload_stack);
+        PyBuffer_Release(&correlation_data_stack);
+        if (success) {
+            Py_RETURN_NONE;
+        }
+        return NULL;
+    }
+
+    /*******************************************************************************
+     * Subscribe
+     ******************************************************************************/
+
+    struct subscribe_complete_userdata {
+        PyObject *callback;
+    };
+
+    static void s_on_subscribe_complete_fn(
+        const struct aws_mqtt5_packet_suback_view *suback, int error_code, void *complete_ctx) {
+        struct subscribe_complete_userdata *metadata = complete_ctx;
+        assert(metadata);
+
+        PyGILState_STATE state;
+        if (aws_py_gilstate_ensure(&state)) {
+            return; /* Python has shut down. Nothing matters anymore, but don't crash */
+        }
+
+        /* These must be DECREF'd when function ends */
+        PyObject *result = NULL;
+        PyObject *reason_codes_list = NULL;
+        PyObject *user_properties_list = NULL;
+        size_t user_property_count = 0;
+        size_t reason_codes_count = 0;
+
+        if (suback != NULL) {
+            user_property_count = suback->user_property_count;
+            reason_codes_count = suback->reason_code_count;
+
+            user_properties_list = s_aws_set_user_properties_to_PyObject(suback->user_properties, user_property_count);
+            if (PyErr_Occurred()) {
+                PyErr_WriteUnraisable(PyErr_Occurred());
+                goto cleanup;
+            }
+
+            /* Create list of (reason_code) tuples */
+            reason_codes_list = PyList_New(reason_codes_count);
+            if (!reason_codes_list) {
+                PyErr_WriteUnraisable(PyErr_Occurred());
+                goto cleanup;
+            }
+
+            for (size_t i = 0; i < reason_codes_count; ++i) {
+                PyList_SET_ITEM(reason_codes_list, i, PyLong_FromLong(suback->reason_codes[i]));
+            }
+        }
+
+        result = PyObject_CallFunction(
+            metadata->callback,
+            "(iOs#O)",
+            /* i */ (int)error_code,
+            /* O */ (reason_codes_count > 0 && !error_code) ? reason_codes_list : Py_None,
+            /* s */ (suback && suback->reason_string) ? suback->reason_string->ptr : NULL,
+            /* # */ (suback && suback->reason_string) ? suback->reason_string->len : 0,
+            /* O */ (user_property_count > 0 && !error_code) ? user_properties_list : Py_None);
+        if (!result) {
             PyErr_WriteUnraisable(PyErr_Occurred());
-            goto cleanup;
         }
+    cleanup:
+        Py_XDECREF(metadata->callback);
+        Py_XDECREF(user_properties_list);
+        Py_XDECREF(reason_codes_list);
+        Py_XDECREF(result);
 
-        /* Create list of (reason_code) tuples */
-        reason_codes_list = PyList_New(reason_codes_count);
-        if (!reason_codes_list) {
-            error_code = aws_py_translate_py_error();
-            goto cleanup;
-        }
+        PyGILState_Release(state);
 
-        for (size_t i = 0; i < reason_codes_count; ++i) {
-            PyList_SET_ITEM(reason_codes_list, i, PyLong_FromLong(unsuback->reason_codes[i]));
-        }
+        aws_mem_release(aws_py_get_allocator(), metadata);
     }
 
-    result = PyObject_CallFunction(
-        metadata->callback,
-        "(iOs#O)",
-        /* i */ (int)error_code,
-        /* O */ (reason_codes_count > 0 && !error_code) ? reason_codes_list : Py_None,
-        /* s */ (unsuback && unsuback->reason_string) ? unsuback->reason_string->ptr : NULL,
-        /* # */ (unsuback && unsuback->reason_string) ? unsuback->reason_string->len : 0,
-        /* O */ (user_property_count > 0 && !error_code) ? user_properties_list : Py_None);
-    if (!result) {
-        PyErr_WriteUnraisable(PyErr_Occurred());
-    }
-cleanup:
-    Py_XDECREF(metadata->callback);
-    Py_XDECREF(user_properties_list);
-    Py_XDECREF(reason_codes_list);
-    Py_XDECREF(result);
+    /* Populates subscription_view_out from a PyObject user property.
+     * PyErr_Occurred() must be called to check if anything went wrong after using this function. */
+    void aws_init_subscription_from_PyObject(PyObject * o, struct aws_mqtt5_subscription_view * subscription_view_out) {
 
-    PyGILState_Release(state);
-
-    aws_mem_release(aws_py_get_allocator(), metadata);
-}
-
-PyObject *aws_py_mqtt5_client_unsubscribe(PyObject *self, PyObject *args) {
-    (void)self;
-    bool success = false;
-
-    PyObject *impl_capsule;
-    PyObject *topic_filters_py;
-    PyObject *user_properties_py; /* optional */
-    PyObject *unsuback_callback_fn_py;
-
-    if (!PyArg_ParseTuple(
-            args,
-            "OOOO",
-            /* O */ &impl_capsule,
-            /* O */ &topic_filters_py,
-            /* O */ &user_properties_py,
-            /* O */ &unsuback_callback_fn_py)) {
-        return NULL;
-    }
-
-    struct mqtt5_client_binding *client = PyCapsule_GetPointer(impl_capsule, s_capsule_name_mqtt5_client);
-    if (!client) {
-        return NULL;
-    }
-
-    struct aws_mqtt5_packet_unsubscribe_view unsubscribe_view;
-    AWS_ZERO_STRUCT(unsubscribe_view);
-    struct aws_mqtt5_user_property *user_properties_tmp = NULL;
-
-    struct aws_array_list topic_filters_list;
-    AWS_ZERO_STRUCT(topic_filters_list);
-
-    if (!PySequence_Check(topic_filters_py)) {
-        PyErr_Format(PyExc_TypeError, "'%s' argument must be of list or tuple", AWS_PYOBJECT_KEY_TOPIC_FILTERS);
-        goto done;
-    }
-
-    Py_ssize_t topic_filters_count = PySequence_Size(topic_filters_py);
-
-    if (aws_array_list_init_dynamic(
-            &topic_filters_list, aws_py_get_allocator(), topic_filters_count, sizeof(struct aws_byte_cursor))) {
-        PyErr_AwsLastError();
-        goto done;
-    }
-
-    PyObject *topic_filter_py;
-    for (Py_ssize_t i = 0; i < topic_filters_count; ++i) {
-        struct aws_byte_cursor topic_filter_to_add;
-        AWS_ZERO_STRUCT(topic_filter_to_add);
-        topic_filter_py = PySequence_GetItem(topic_filters_py, i);
-        topic_filter_to_add = aws_byte_cursor_from_pyunicode(topic_filter_py);
-        if (!topic_filter_to_add.ptr) {
+        PyObject *attr_topic_filter = PyObject_GetAttrString(o, AWS_PYOBJECT_KEY_TOPIC_FILTER);
+        if (!attr_topic_filter) {
             PyErr_Format(
-                PyExc_TypeError,
-                "'%s.%s' at index %zu is not a valid string",
-                AWS_PYOBJECT_KEY_UNSUBSCRIBE_PACKET,
-                AWS_PYOBJECT_KEY_TOPIC_FILTERS,
-                i);
-            Py_XDECREF(topic_filter_py);
+                PyExc_AttributeError,
+                "'%s.%s' attribute not found",
+                AWS_PYOBJECT_KEY_SUBSCRIPTION,
+                AWS_PYOBJECT_KEY_TOPIC_FILTER);
+            return;
+        }
+        subscription_view_out->topic_filter = aws_byte_cursor_from_pyunicode(attr_topic_filter);
+        Py_XDECREF(attr_topic_filter);
+        if (PyErr_Occurred()) {
+            return;
+        }
+
+        subscription_view_out->qos = PyObject_GetAttrAsIntEnum(o, AWS_PYOBJECT_KEY_SUBSCRIPTION, AWS_PYOBJECT_KEY_QOS);
+        if (PyErr_Occurred()) {
+            return;
+        }
+
+        subscription_view_out->no_local =
+            PyObject_GetAttrAsBool(o, AWS_PYOBJECT_KEY_SUBSCRIPTION, AWS_PYOBJECT_KEY_NO_LOCAL);
+        if (PyErr_Occurred()) {
+            return;
+        }
+
+        subscription_view_out->retain_as_published =
+            PyObject_GetAttrAsBool(o, AWS_PYOBJECT_KEY_SUBSCRIPTION, AWS_PYOBJECT_KEY_RETAIN_AS_PUBLISHED);
+        if (PyErr_Occurred()) {
+            return;
+        }
+
+        subscription_view_out->retain_handling_type =
+            PyObject_GetAttrAsIntEnum(o, AWS_PYOBJECT_KEY_SUBSCRIPTION, AWS_PYOBJECT_KEY_RETAIN_HANDLING_TYPE);
+        if (PyErr_Occurred()) {
+            return;
+        }
+    }
+
+    PyObject *aws_py_mqtt5_client_subscribe(PyObject * self, PyObject * args) {
+        (void)self;
+        bool success = false;
+
+        PyObject *impl_capsule;
+        PyObject *subscriptions_py;
+        PyObject *subscription_identifier_py; /* optional uint32_t */
+        PyObject *user_properties_py;         /* optional */
+        PyObject *suback_callback_fn_py;
+
+        if (!PyArg_ParseTuple(
+                args,
+                "OOOOO",
+                /* O */ &impl_capsule,
+                /* O */ &subscriptions_py,
+                /* O */ &subscription_identifier_py,
+                /* O */ &user_properties_py,
+                /* O */ &suback_callback_fn_py)) {
+            return NULL;
+        }
+
+        struct mqtt5_client_binding *client = PyCapsule_GetPointer(impl_capsule, s_capsule_name_mqtt5_client);
+        if (!client) {
+            return NULL;
+        }
+
+        struct aws_mqtt5_packet_subscribe_view subscribe_view;
+        AWS_ZERO_STRUCT(subscribe_view);
+        struct aws_mqtt5_user_property *user_properties_tmp = NULL;
+
+        struct aws_array_list subscriptions_list;
+        AWS_ZERO_STRUCT(subscriptions_list);
+
+        if (!PySequence_Check(subscriptions_py)) {
+            PyErr_Format(PyExc_TypeError, "'%s' argument must be of list or tuple", AWS_PYOBJECT_KEY_SUBSCRIPTIONS);
             goto done;
         }
-        aws_array_list_push_back(&topic_filters_list, &topic_filter_to_add);
-        Py_XDECREF(topic_filter_py);
-    }
 
-    unsubscribe_view.topic_filter_count = (size_t)topic_filters_count;
-    unsubscribe_view.topic_filters = topic_filters_list.data;
+        Py_ssize_t subscription_count = PySequence_Size(subscriptions_py);
 
-    user_properties_tmp =
-        aws_get_optional_user_properties_from_PyObject(user_properties_py, &unsubscribe_view.user_property_count);
-    if (PyErr_Occurred()) {
+        if (aws_array_list_init_dynamic(
+                &subscriptions_list,
+                aws_py_get_allocator(),
+                subscription_count,
+                sizeof(struct aws_mqtt5_subscription_view))) {
+            PyErr_AwsLastError();
+            goto done;
+        }
+
+        PyObject *subscription_py;
+        for (Py_ssize_t i = 0; i < subscription_count; ++i) {
+            struct aws_mqtt5_subscription_view subscription_out;
+            AWS_ZERO_STRUCT(subscription_out);
+            subscription_py = PySequence_GetItem(subscriptions_py, i);
+            aws_init_subscription_from_PyObject(subscription_py, &subscription_out);
+            if (PyErr_Occurred()) {
+                Py_XDECREF(subscription_py);
+                goto done;
+            }
+            aws_array_list_push_back(&subscriptions_list, &subscription_out);
+            Py_XDECREF(subscription_py);
+        }
+
+        subscribe_view.subscription_count = (size_t)subscription_count;
+        subscribe_view.subscriptions = subscriptions_list.data;
+
+        uint32_t subscription_identifier_tmp = 0;
+        subscribe_view.subscription_identifier = PyObject_GetAsOptionalUint32(
+            subscription_identifier_py,
+            AWS_PYOBJECT_KEY_SUBSCRIBE_PACKET,
+            AWS_PYOBJECT_KEY_SUBSCRIPTION_IDENTIFIER,
+            &subscription_identifier_tmp);
+        if (PyErr_Occurred()) {
+            goto done;
+        }
+
+        user_properties_tmp =
+            aws_get_optional_user_properties_from_PyObject(user_properties_py, &subscribe_view.user_property_count);
+        if (PyErr_Occurred()) {
+            goto done;
+        }
+        subscribe_view.user_properties = user_properties_tmp;
+
+        struct subscribe_complete_userdata *metadata = NULL;
+        /* callback related must be cleaned up after this point */
+        metadata = aws_mem_calloc(aws_py_get_allocator(), 1, sizeof(struct subscribe_complete_userdata));
+
+        metadata->callback = suback_callback_fn_py;
+        Py_INCREF(metadata->callback);
+
+        struct aws_mqtt5_subscribe_completion_options subscribe_completion_options = {
+            .completion_callback = &s_on_subscribe_complete_fn, .completion_user_data = metadata};
+
+        if (aws_mqtt5_client_subscribe(client->native, &subscribe_view, &subscribe_completion_options)) {
+            PyErr_SetAwsLastError();
+            goto subscribe_failed;
+        }
+
+        success = true;
         goto done;
-    }
-    unsubscribe_view.user_properties = user_properties_tmp;
 
-    struct unsubscribe_complete_userdata *metadata = NULL;
-    /* callback related must be cleaned up after this point */
-    metadata = aws_mem_calloc(aws_py_get_allocator(), 1, sizeof(struct unsubscribe_complete_userdata));
+    subscribe_failed:
+        Py_XDECREF(suback_callback_fn_py);
+        aws_mem_release(aws_py_get_allocator(), metadata);
 
-    metadata->callback = unsuback_callback_fn_py;
-    Py_INCREF(metadata->callback);
-
-    struct aws_mqtt5_unsubscribe_completion_options unsubscribe_completion_options = {
-        .completion_callback = &s_on_unsubscribe_complete_fn, .completion_user_data = metadata};
-
-    if (aws_mqtt5_client_unsubscribe(client->native, &unsubscribe_view, &unsubscribe_completion_options)) {
-        PyErr_SetAwsLastError();
-        goto unsubscribe_failed;
-    }
-
-    success = true;
-    goto done;
-
-unsubscribe_failed:
-    Py_XDECREF(unsuback_callback_fn_py);
-    aws_mem_release(aws_py_get_allocator(), metadata);
-
-done:
-    if (user_properties_tmp) {
-        aws_mem_release(aws_py_get_allocator(), user_properties_tmp);
-    }
-    aws_array_list_clean_up(&topic_filters_list);
-
-    if (success) {
-        Py_RETURN_NONE;
-    }
-    return NULL;
-}
-
-/*******************************************************************************
- * Get Stats
- ******************************************************************************/
-
-struct get_stats_complete_userdata {
-    PyObject *callback;
-};
-
-PyObject *aws_py_mqtt5_client_get_stats(PyObject *self, PyObject *args) {
-    (void)self;
-    bool success = false;
-
-    PyObject *impl_capsule;
-    PyObject *get_stats_callback_fn_py;
-
-    if (!PyArg_ParseTuple(args, "OO", &impl_capsule, &get_stats_callback_fn_py)) {
+    done:
+        if (user_properties_tmp) {
+            aws_mem_release(aws_py_get_allocator(), user_properties_tmp);
+        }
+        aws_array_list_clean_up(&subscriptions_list);
+        if (success) {
+            Py_RETURN_NONE;
+        }
         return NULL;
     }
 
-    struct mqtt5_client_binding *client = PyCapsule_GetPointer(impl_capsule, s_capsule_name_mqtt5_client);
-    if (!client) {
+    /*******************************************************************************
+     * Unsubscribe
+     ******************************************************************************/
+
+    struct unsubscribe_complete_userdata {
+        PyObject *callback;
+    };
+
+    static void s_on_unsubscribe_complete_fn(
+        const struct aws_mqtt5_packet_unsuback_view *unsuback, int error_code, void *complete_ctx) {
+        struct unsubscribe_complete_userdata *metadata = complete_ctx;
+        assert(metadata);
+
+        /* These must be DECREF'd when function ends */
+        PyObject *result = NULL;
+        PyObject *reason_codes_list = NULL;
+        PyObject *user_properties_list = NULL;
+
+        PyGILState_STATE state;
+        if (aws_py_gilstate_ensure(&state)) {
+            return; /* Python has shut down. Nothing matters anymore, but don't crash */
+        }
+
+        size_t user_property_count = 0;
+        size_t reason_codes_count = 0;
+
+        if (unsuback != NULL) {
+            user_property_count = unsuback->user_property_count;
+            reason_codes_count = unsuback->reason_code_count;
+
+            user_properties_list =
+                s_aws_set_user_properties_to_PyObject(unsuback->user_properties, user_property_count);
+            if (PyErr_Occurred()) {
+                PyErr_WriteUnraisable(PyErr_Occurred());
+                goto cleanup;
+            }
+
+            /* Create list of (reason_code) tuples */
+            reason_codes_list = PyList_New(reason_codes_count);
+            if (!reason_codes_list) {
+                error_code = aws_py_translate_py_error();
+                goto cleanup;
+            }
+
+            for (size_t i = 0; i < reason_codes_count; ++i) {
+                PyList_SET_ITEM(reason_codes_list, i, PyLong_FromLong(unsuback->reason_codes[i]));
+            }
+        }
+
+        result = PyObject_CallFunction(
+            metadata->callback,
+            "(iOs#O)",
+            /* i */ (int)error_code,
+            /* O */ (reason_codes_count > 0 && !error_code) ? reason_codes_list : Py_None,
+            /* s */ (unsuback && unsuback->reason_string) ? unsuback->reason_string->ptr : NULL,
+            /* # */ (unsuback && unsuback->reason_string) ? unsuback->reason_string->len : 0,
+            /* O */ (user_property_count > 0 && !error_code) ? user_properties_list : Py_None);
+        if (!result) {
+            PyErr_WriteUnraisable(PyErr_Occurred());
+        }
+    cleanup:
+        Py_XDECREF(metadata->callback);
+        Py_XDECREF(user_properties_list);
+        Py_XDECREF(reason_codes_list);
+        Py_XDECREF(result);
+
+        PyGILState_Release(state);
+
+        aws_mem_release(aws_py_get_allocator(), metadata);
+    }
+
+    PyObject *aws_py_mqtt5_client_unsubscribe(PyObject * self, PyObject * args) {
+        (void)self;
+        bool success = false;
+
+        PyObject *impl_capsule;
+        PyObject *topic_filters_py;
+        PyObject *user_properties_py; /* optional */
+        PyObject *unsuback_callback_fn_py;
+
+        if (!PyArg_ParseTuple(
+                args,
+                "OOOO",
+                /* O */ &impl_capsule,
+                /* O */ &topic_filters_py,
+                /* O */ &user_properties_py,
+                /* O */ &unsuback_callback_fn_py)) {
+            return NULL;
+        }
+
+        struct mqtt5_client_binding *client = PyCapsule_GetPointer(impl_capsule, s_capsule_name_mqtt5_client);
+        if (!client) {
+            return NULL;
+        }
+
+        struct aws_mqtt5_packet_unsubscribe_view unsubscribe_view;
+        AWS_ZERO_STRUCT(unsubscribe_view);
+        struct aws_mqtt5_user_property *user_properties_tmp = NULL;
+
+        struct aws_array_list topic_filters_list;
+        AWS_ZERO_STRUCT(topic_filters_list);
+
+        if (!PySequence_Check(topic_filters_py)) {
+            PyErr_Format(PyExc_TypeError, "'%s' argument must be of list or tuple", AWS_PYOBJECT_KEY_TOPIC_FILTERS);
+            goto done;
+        }
+
+        Py_ssize_t topic_filters_count = PySequence_Size(topic_filters_py);
+
+        if (aws_array_list_init_dynamic(
+                &topic_filters_list, aws_py_get_allocator(), topic_filters_count, sizeof(struct aws_byte_cursor))) {
+            PyErr_AwsLastError();
+            goto done;
+        }
+
+        PyObject *topic_filter_py;
+        for (Py_ssize_t i = 0; i < topic_filters_count; ++i) {
+            struct aws_byte_cursor topic_filter_to_add;
+            AWS_ZERO_STRUCT(topic_filter_to_add);
+            topic_filter_py = PySequence_GetItem(topic_filters_py, i);
+            topic_filter_to_add = aws_byte_cursor_from_pyunicode(topic_filter_py);
+            if (!topic_filter_to_add.ptr) {
+                PyErr_Format(
+                    PyExc_TypeError,
+                    "'%s.%s' at index %zu is not a valid string",
+                    AWS_PYOBJECT_KEY_UNSUBSCRIBE_PACKET,
+                    AWS_PYOBJECT_KEY_TOPIC_FILTERS,
+                    i);
+                Py_XDECREF(topic_filter_py);
+                goto done;
+            }
+            aws_array_list_push_back(&topic_filters_list, &topic_filter_to_add);
+            Py_XDECREF(topic_filter_py);
+        }
+
+        unsubscribe_view.topic_filter_count = (size_t)topic_filters_count;
+        unsubscribe_view.topic_filters = topic_filters_list.data;
+
+        user_properties_tmp =
+            aws_get_optional_user_properties_from_PyObject(user_properties_py, &unsubscribe_view.user_property_count);
+        if (PyErr_Occurred()) {
+            goto done;
+        }
+        unsubscribe_view.user_properties = user_properties_tmp;
+
+        struct unsubscribe_complete_userdata *metadata = NULL;
+        /* callback related must be cleaned up after this point */
+        metadata = aws_mem_calloc(aws_py_get_allocator(), 1, sizeof(struct unsubscribe_complete_userdata));
+
+        metadata->callback = unsuback_callback_fn_py;
+        Py_INCREF(metadata->callback);
+
+        struct aws_mqtt5_unsubscribe_completion_options unsubscribe_completion_options = {
+            .completion_callback = &s_on_unsubscribe_complete_fn, .completion_user_data = metadata};
+
+        if (aws_mqtt5_client_unsubscribe(client->native, &unsubscribe_view, &unsubscribe_completion_options)) {
+            PyErr_SetAwsLastError();
+            goto unsubscribe_failed;
+        }
+
+        success = true;
+        goto done;
+
+    unsubscribe_failed:
+        Py_XDECREF(unsuback_callback_fn_py);
+        aws_mem_release(aws_py_get_allocator(), metadata);
+
+    done:
+        if (user_properties_tmp) {
+            aws_mem_release(aws_py_get_allocator(), user_properties_tmp);
+        }
+        aws_array_list_clean_up(&topic_filters_list);
+
+        if (success) {
+            Py_RETURN_NONE;
+        }
         return NULL;
     }
 
-    /* These must be DECREF'd when function ends */
-    PyObject *result = NULL;
+    /*******************************************************************************
+     * Get Stats
+     ******************************************************************************/
 
-    struct aws_mqtt5_client_operation_statistics stats;
-    AWS_ZERO_STRUCT(stats);
+    struct get_stats_complete_userdata {
+        PyObject *callback;
+    };
 
-    aws_mqtt5_client_get_stats(client->native, &stats);
+    PyObject *aws_py_mqtt5_client_get_stats(PyObject * self, PyObject * args) {
+        (void)self;
+        bool success = false;
 
-    result = PyObject_CallFunction(
-        get_stats_callback_fn_py,
-        "(KKKK)",
-        /* K */ (unsigned long long)stats.incomplete_operation_count,
-        /* K */ (unsigned long long)stats.incomplete_operation_size,
-        /* K */ (unsigned long long)stats.unacked_operation_count,
-        /* K */ (unsigned long long)stats.unacked_operation_size);
-    if (!result) {
-        PyErr_WriteUnraisable(PyErr_Occurred());
-        goto done;
+        PyObject *impl_capsule;
+        PyObject *get_stats_callback_fn_py;
+
+        if (!PyArg_ParseTuple(args, "OO", &impl_capsule, &get_stats_callback_fn_py)) {
+            return NULL;
+        }
+
+        struct mqtt5_client_binding *client = PyCapsule_GetPointer(impl_capsule, s_capsule_name_mqtt5_client);
+        if (!client) {
+            return NULL;
+        }
+
+        /* These must be DECREF'd when function ends */
+        PyObject *result = NULL;
+
+        struct aws_mqtt5_client_operation_statistics stats;
+        AWS_ZERO_STRUCT(stats);
+
+        aws_mqtt5_client_get_stats(client->native, &stats);
+
+        result = PyObject_CallFunction(
+            get_stats_callback_fn_py,
+            "(KKKK)",
+            /* K */ (unsigned long long)stats.incomplete_operation_count,
+            /* K */ (unsigned long long)stats.incomplete_operation_size,
+            /* K */ (unsigned long long)stats.unacked_operation_count,
+            /* K */ (unsigned long long)stats.unacked_operation_size);
+        if (!result) {
+            PyErr_WriteUnraisable(PyErr_Occurred());
+            goto done;
+        }
+
+        success = true;
+
+    done:
+
+        Py_XDECREF(result);
+
+        if (success) {
+            Py_RETURN_NONE;
+        }
+        return NULL;
     }
-
-    success = true;
-
-done:
-
-    Py_XDECREF(result);
-
-    if (success) {
-        Py_RETURN_NONE;
-    }
-    return NULL;
-}
