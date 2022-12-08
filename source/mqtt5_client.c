@@ -1397,7 +1397,7 @@ static void s_on_publish_complete_fn(
     const struct aws_byte_cursor *reason_string = NULL;
     size_t user_property_count = 0;
 
-    if (packet_type == AWS_MQTT5_PT_PUBACK) {
+    if (packet_type == AWS_MQTT5_PT_PUBACK && puback != NULL) {
         puback = packet;
         reason_code = puback->reason_code;
         reason_string = puback->reason_string;
@@ -1606,25 +1606,29 @@ static void s_on_subscribe_complete_fn(
     PyObject *result = NULL;
     PyObject *reason_codes_list = NULL;
     PyObject *user_properties_list = NULL;
+    size_t user_property_count = 0;
+    size_t reason_codes_count = 0;
 
-    size_t user_property_count = suback->user_property_count;
-    size_t reason_codes_count = suback->reason_code_count;
+    if (suback != NULL) {
+        user_property_count = suback->user_property_count;
+        reason_codes_count = suback->reason_code_count;
 
-    user_properties_list = s_aws_set_user_properties_to_PyObject(suback->user_properties, user_property_count);
-    if (PyErr_Occurred()) {
-        PyErr_WriteUnraisable(PyErr_Occurred());
-        goto cleanup;
-    }
+        user_properties_list = s_aws_set_user_properties_to_PyObject(suback->user_properties, user_property_count);
+        if (PyErr_Occurred()) {
+            PyErr_WriteUnraisable(PyErr_Occurred());
+            goto cleanup;
+        }
 
-    /* Create list of (reason_code) tuples */
-    reason_codes_list = PyList_New(reason_codes_count);
-    if (!reason_codes_list) {
-        PyErr_WriteUnraisable(PyErr_Occurred());
-        goto cleanup;
-    }
+        /* Create list of (reason_code) tuples */
+        reason_codes_list = PyList_New(reason_codes_count);
+        if (!reason_codes_list) {
+            PyErr_WriteUnraisable(PyErr_Occurred());
+            goto cleanup;
+        }
 
-    for (size_t i = 0; i < reason_codes_count; ++i) {
-        PyList_SET_ITEM(reason_codes_list, i, PyLong_FromLong(suback->reason_codes[i]));
+        for (size_t i = 0; i < reason_codes_count; ++i) {
+            PyList_SET_ITEM(reason_codes_list, i, PyLong_FromLong(suback->reason_codes[i]));
+        }
     }
 
     result = PyObject_CallFunction(
@@ -1632,8 +1636,8 @@ static void s_on_subscribe_complete_fn(
         "(iOs#O)",
         /* i */ (int)error_code,
         /* O */ (reason_codes_count > 0 && !error_code) ? reason_codes_list : Py_None,
-        /* s */ suback->reason_string ? suback->reason_string->ptr : NULL,
-        /* # */ suback->reason_string ? suback->reason_string->len : 0,
+        /* s */ suback ? (suback->reason_string ? suback->reason_string->ptr : NULL) : NULL,
+        /* # */ suback ? (suback->reason_string ? suback->reason_string->len : 0) : 0,
         /* O */ (user_property_count > 0 && !error_code) ? user_properties_list : Py_None);
     if (!result) {
         PyErr_WriteUnraisable(PyErr_Occurred());
@@ -1833,24 +1837,29 @@ static void s_on_unsubscribe_complete_fn(
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
-    size_t user_property_count = unsuback->user_property_count;
-    size_t reason_codes_count = unsuback->reason_code_count;
+    size_t user_property_count = 0;
+    size_t reason_codes_count = 0;
 
-    user_properties_list = s_aws_set_user_properties_to_PyObject(unsuback->user_properties, user_property_count);
-    if (PyErr_Occurred()) {
-        PyErr_WriteUnraisable(PyErr_Occurred());
-        goto cleanup;
-    }
+    if (unsuback != NULL) {
+        user_property_count = unsuback->user_property_count;
+        reason_codes_count = unsuback->reason_code_count;
 
-    /* Create list of (reason_code) tuples */
-    reason_codes_list = PyList_New(reason_codes_count);
-    if (!reason_codes_list) {
-        error_code = aws_py_translate_py_error();
-        goto cleanup;
-    }
+        user_properties_list = s_aws_set_user_properties_to_PyObject(unsuback->user_properties, user_property_count);
+        if (PyErr_Occurred()) {
+            PyErr_WriteUnraisable(PyErr_Occurred());
+            goto cleanup;
+        }
 
-    for (size_t i = 0; i < reason_codes_count; ++i) {
-        PyList_SET_ITEM(reason_codes_list, i, PyLong_FromLong(unsuback->reason_codes[i]));
+        /* Create list of (reason_code) tuples */
+        reason_codes_list = PyList_New(reason_codes_count);
+        if (!reason_codes_list) {
+            error_code = aws_py_translate_py_error();
+            goto cleanup;
+        }
+
+        for (size_t i = 0; i < reason_codes_count; ++i) {
+            PyList_SET_ITEM(reason_codes_list, i, PyLong_FromLong(unsuback->reason_codes[i]));
+        }
     }
 
     result = PyObject_CallFunction(
@@ -1858,8 +1867,8 @@ static void s_on_unsubscribe_complete_fn(
         "(iOs#O)",
         /* i */ (int)error_code,
         /* O */ (reason_codes_count > 0 && !error_code) ? reason_codes_list : Py_None,
-        /* s */ unsuback->reason_string ? unsuback->reason_string->ptr : NULL,
-        /* # */ unsuback->reason_string ? unsuback->reason_string->len : 0,
+        /* s */ unsuback ? (unsuback->reason_string ? unsuback->reason_string->ptr : NULL): NULL,
+        /* # */ unsuback ? (unsuback->reason_string ? unsuback->reason_string->len : 0) : 0,
         /* O */ (user_property_count > 0 && !error_code) ? user_properties_list : Py_None);
     if (!result) {
         PyErr_WriteUnraisable(PyErr_Occurred());
