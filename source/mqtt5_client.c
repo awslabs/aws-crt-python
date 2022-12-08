@@ -1409,9 +1409,6 @@ static void s_on_publish_complete_fn(
                 PyErr_WriteUnraisable(PyErr_Occurred());
                 goto cleanup;
             }
-        } else {
-            AWS_FATAL_ASSERT(error_code != AWS_ERROR_SUCCESS);
-        }
     }
 
     result = PyObject_CallFunction(
@@ -1633,8 +1630,6 @@ static void s_on_subscribe_complete_fn(
         for (size_t i = 0; i < reason_codes_count; ++i) {
             PyList_SET_ITEM(reason_codes_list, i, PyLong_FromLong(suback->reason_codes[i]));
         }
-    } else {
-        AWS_FATAL_ASSERT(error_code != AWS_ERROR_SUCCESS);
     }
 
     result = PyObject_CallFunction(
@@ -1866,8 +1861,6 @@ static void s_on_unsubscribe_complete_fn(
         for (size_t i = 0; i < reason_codes_count; ++i) {
             PyList_SET_ITEM(reason_codes_list, i, PyLong_FromLong(unsuback->reason_codes[i]));
         }
-    } else {
-        AWS_FATAL_ASSERT(error_code != AWS_ERROR_SUCCESS);
     }
 
     result = PyObject_CallFunction(
