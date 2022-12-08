@@ -1397,18 +1397,20 @@ static void s_on_publish_complete_fn(
     const struct aws_byte_cursor *reason_string = NULL;
     size_t user_property_count = 0;
 
-    if (packet_type == AWS_MQTT5_PT_PUBACK && puback != NULL) {
-        AWS_FATAL_ASSERT(error_code != AWS_ERROR_SUCCESS);
+    if (packet_type == AWS_MQTT5_PT_PUBACK) {
+        if (puback != NULL) {
+            puback = packet;
+            reason_code = puback->reason_code;
+            reason_string = puback->reason_string;
+            user_property_count = puback->user_property_count;
 
-        puback = packet;
-        reason_code = puback->reason_code;
-        reason_string = puback->reason_string;
-        user_property_count = puback->user_property_count;
-
-        user_properties_list = s_aws_set_user_properties_to_PyObject(puback->user_properties, user_property_count);
-        if (PyErr_Occurred()) {
-            PyErr_WriteUnraisable(PyErr_Occurred());
-            goto cleanup;
+            user_properties_list = s_aws_set_user_properties_to_PyObject(puback->user_properties, user_property_count);
+            if (PyErr_Occurred()) {
+                PyErr_WriteUnraisable(PyErr_Occurred());
+                goto cleanup;
+            }
+        } else {
+            AWS_FATAL_ASSERT(error_code != AWS_ERROR_SUCCESS);
         }
     }
 
@@ -1612,8 +1614,6 @@ static void s_on_subscribe_complete_fn(
     size_t reason_codes_count = 0;
 
     if (suback != NULL) {
-        AWS_FATAL_ASSERT(error_code != AWS_ERROR_SUCCESS);
-
         user_property_count = suback->user_property_count;
         reason_codes_count = suback->reason_code_count;
 
@@ -1633,6 +1633,8 @@ static void s_on_subscribe_complete_fn(
         for (size_t i = 0; i < reason_codes_count; ++i) {
             PyList_SET_ITEM(reason_codes_list, i, PyLong_FromLong(suback->reason_codes[i]));
         }
+    } else {
+        AWS_FATAL_ASSERT(error_code != AWS_ERROR_SUCCESS);
     }
 
     result = PyObject_CallFunction(
@@ -1845,8 +1847,6 @@ static void s_on_unsubscribe_complete_fn(
     size_t reason_codes_count = 0;
 
     if (unsuback != NULL) {
-        AWS_FATAL_ASSERT(error_code != AWS_ERROR_SUCCESS);
-
         user_property_count = unsuback->user_property_count;
         reason_codes_count = unsuback->reason_code_count;
 
@@ -1866,6 +1866,8 @@ static void s_on_unsubscribe_complete_fn(
         for (size_t i = 0; i < reason_codes_count; ++i) {
             PyList_SET_ITEM(reason_codes_list, i, PyLong_FromLong(unsuback->reason_codes[i]));
         }
+    } else {
+        AWS_FATAL_ASSERT(error_code != AWS_ERROR_SUCCESS);
     }
 
     result = PyObject_CallFunction(
