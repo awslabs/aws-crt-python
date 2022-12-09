@@ -26,12 +26,15 @@ import time
 # AWS_TEST_MQTT5_WS_MQTT_BASIC_AUTH_PORT - port to connect to in websocket basic authentication tests
 # AWS_TEST_MQTT5_WS_MQTT_TLS_HOST - host to connect to in websocket tls tests
 # AWS_TEST_MQTT5_WS_MQTT_TLS_PORT - port to connect to in websocket tls tests
+# AWS_TEST_MQTT5_IOT_CORE_HOST - host to connect to in MTLS tests
 # AWS_TEST_MQTT5_BASIC_AUTH_USERNAME - username to use in basic authentication tests
 # AWS_TEST_MQTT5_BASIC_AUTH_PASSWORD - password to use in basic authentication tests
 # AWS_TEST_MQTT5_PROXY_HOST - name of http proxy host to use in proxy-based tests
 # AWS_TEST_MQTT5_PROXY_PORT - port of http proxy host to use in proxy-based tests
 # AWS_TEST_MQTT5_CERTIFICATE_FILE - certificate file path
 # AWS_TEST_MQTT5_KEY_FILE - private key file path
+# AWS_TEST_MQTT5_IOT_KEY_PATH - private key file path for MTLS tests
+# AWS_TEST_MQTT5_IOT_CERTIFICATE_PATH - certificate file path for MTLS tests
 
 """
 
@@ -1141,6 +1144,71 @@ class Mqtt5ClientTest(NativeResourceTest):
         client3.stop()
         callbacks3.future_stopped.result(TIMEOUT)
 
+    # ==============================================================
+    #             INTERRUPTION TEST CASES
+    # ==============================================================
+
+    def test_interruption_sub(self):
+
+        client_id = create_client_id()
+        topic_filter = "test/MQTT5_Binding_Python_" + client_id
+        callbacks = Mqtt5TestCallbacks()
+        client = self._create_client(auth_type=AuthType.DIRECT_MUTUAL_TLS, callbacks=callbacks)
+        client.start()
+        callbacks.future_connection_success.result(TIMEOUT)
+
+        subscriptions = []
+        subscriptions.append(mqtt5.Subscription(topic_filter=topic_filter, qos=mqtt5.QoS.AT_LEAST_ONCE))
+        subscribe_packet = mqtt5.SubscribePacket(
+            subscriptions=subscriptions)
+        subscribe_future = client.subscribe(subscribe_packet=subscribe_packet)
+        client.stop()
+
+        with self.assertRaises(Exception):
+            subscribe_future.result(TIMEOUT)
+
+        callbacks.future_stopped.result(TIMEOUT)
+
+    def test_interruption_unsub(self):
+        client_id = create_client_id()
+        topic_filter = "test/MQTT5_Binding_Python_" + client_id
+        callbacks = Mqtt5TestCallbacks()
+        client = self._create_client(auth_type=AuthType.DIRECT_MUTUAL_TLS, callbacks=callbacks)
+        client.start()
+        callbacks.future_connection_success.result(TIMEOUT)
+
+        topic_filters = []
+        topic_filters.append(topic_filter)
+        unsubscribe_packet = mqtt5.UnsubscribePacket(topic_filters=topic_filters)
+        unsubscribe_future = client.unsubscribe(unsubscribe_packet)
+        client.stop()
+
+        with self.assertRaises(Exception):
+            unsubscribe_future.result(TIMEOUT)
+
+        callbacks.future_stopped.result(TIMEOUT)
+
+    def test_interruption_qos1_publish(self):
+        client_id = create_client_id()
+        topic_filter = "test/MQTT5_Binding_Python_" + client_id
+        payload = "test payload"
+        callbacks = Mqtt5TestCallbacks()
+        client = self._create_client(auth_type=AuthType.DIRECT_MUTUAL_TLS, callbacks=callbacks)
+        client.start()
+        callbacks.future_connection_success.result(TIMEOUT)
+
+        publish_packet = mqtt5.PublishPacket(
+            payload=payload,
+            topic=topic_filter,
+            qos=mqtt5.QoS.AT_LEAST_ONCE)
+
+        publish_future = client.publish(publish_packet=publish_packet)
+        client.stop()
+
+        with self.assertRaises(Exception):
+            publish_future.result(TIMEOUT)
+
+        callbacks.future_stopped.result(TIMEOUT)
 
 if __name__ == 'main':
     unittest.main()
