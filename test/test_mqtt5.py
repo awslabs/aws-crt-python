@@ -1210,5 +1210,6 @@ class Mqtt5ClientTest(NativeResourceTest):
 
         callbacks.future_stopped.result(TIMEOUT)
 
+
 if __name__ == 'main':
     unittest.main()
