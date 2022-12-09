@@ -219,6 +219,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             auth_type == AuthType.WS_BASIC_AUTH or
             auth_type == AuthType.WS_TLS or
             auth_type == AuthType.WS_PROXY or
+            auth_type == AuthType.DIRECT_MUTUAL_TLS or
             auth_type == AuthType.DIRECT_BASIC_AUTH_BAD or
             auth_type == AuthType.DOUBLE_CLIENT_ID_FAILURE or
             auth_type == AuthType.DIRECT_HOST_ONLY or
@@ -234,6 +235,7 @@ class Mqtt5ClientTest(NativeResourceTest):
            auth_type == AuthType.WS_BASIC_AUTH or
            auth_type == AuthType.WS_TLS or
            auth_type == AuthType.WS_PROXY or
+           auth_type == AuthType.DIRECT_MUTUAL_TLS or
            auth_type == AuthType.DIRECT_BASIC_AUTH_BAD or
            auth_type == AuthType.DOUBLE_CLIENT_ID_FAILURE or
            auth_type == AuthType.DIRECT_HOST_AND_PORT_ONLY):
@@ -898,31 +900,25 @@ class Mqtt5ClientTest(NativeResourceTest):
     def test_operation_will(self):
         client_id_publisher = create_client_id()
         topic_filter = "test/MQTT5_Binding_Python_" + client_id_publisher
-        callbacks = Mqtt5TestCallbacks()
-        callbacks.client_name = "publisher"
 
         will_packet = mqtt5.PublishPacket(
             payload="TEST WILL",
             qos=mqtt5.QoS.AT_LEAST_ONCE,
             topic=topic_filter
         )
-        client_options = mqtt5.ClientOptions("will be replaced", 0)
-        client_options.connect_options = mqtt5.ConnectPacket(client_id=client_id_publisher,
-                                                             will_delay_interval_sec=0,
-                                                             will=will_packet)
-        client1 = self._create_client(AuthType.DIRECT_MUTUAL_TLS, client_options=client_options, callbacks=callbacks)
-        client1.start()
-        callbacks.future_connection_success.result(TIMEOUT)
+        client_options1 = mqtt5.ClientOptions("will be replaced", 0)
+        client_options1.connect_options = mqtt5.ConnectPacket(client_id=client_id_publisher,
+                                                              will_delay_interval_sec=0,
+                                                              will=will_packet)
+        client1, callbacks1 = self._test_connect(auth_type=AuthType.DIRECT, client_options=client_options1)
+        callbacks1.client_name = "publisher"
 
         client_id_subscriber = create_client_id()
-        callbacks2 = Mqtt5TestCallbacks()
-        callbacks2.client_name = "subscriber"
         client_options2 = mqtt5.ClientOptions("will be replaced", 0)
         client_options2.connect_options = mqtt5.ConnectPacket(client_id=client_id_subscriber)
-        client2 = Mqtt5ClientTest._create_client(AuthType.DIRECT_MUTUAL_TLS, client_options=client_options2, callbacks=callbacks2)
+        client2, callbacks2 = self._test_connect(auth_type=AuthType.DIRECT, client_options=client_options2)
+        callbacks2.client_name = "subscriber"
 
-        client2.start()
-        callbacks2.future_connection_success.result(TIMEOUT)
         subscriptions = []
         subscriptions.append(mqtt5.Subscription(topic_filter=topic_filter, qos=mqtt5.QoS.AT_LEAST_ONCE))
         subscribe_packet = mqtt5.SubscribePacket(
@@ -933,7 +929,7 @@ class Mqtt5ClientTest(NativeResourceTest):
 
         disconnect_packet = mqtt5.DisconnectPacket(reason_code=mqtt5.DisconnectReasonCode.DISCONNECT_WITH_WILL_MESSAGE)
         client1.stop(disconnect_packet=disconnect_packet)
-        callbacks.future_stopped.result(TIMEOUT)
+        callbacks1.future_stopped.result(TIMEOUT)
 
         received_will = callbacks2.future_publish_received.result(TIMEOUT)
         self.assertIsInstance(received_will, mqtt5.PublishPacket)
@@ -1042,7 +1038,10 @@ class Mqtt5ClientTest(NativeResourceTest):
         callbacks2.client_name = "subscriber"
         client_options2 = mqtt5.ClientOptions("will be replaced", 0)
         client_options2.connect_options = mqtt5.ConnectPacket(client_id=client_id_subscriber)
-        client2 = Mqtt5ClientTest._create_client(AuthType.DIRECT_MUTUAL_TLS, client_options=client_options2, callbacks=callbacks2)
+        client2 = Mqtt5ClientTest._create_client(
+            AuthType.DIRECT_MUTUAL_TLS,
+            client_options=client_options2,
+            callbacks=callbacks2)
         client2.start()
         callbacks2.future_connection_success.result(TIMEOUT)
         subscriptions = []
