@@ -1057,7 +1057,6 @@ class Mqtt5ClientTest(NativeResourceTest):
         client1.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-
         publishes_received = callbacks2.future_10_publishes_received.result(TIMEOUT)
         self.assertEqual(callbacks2.on_publish_received_counter, publishes)
 
