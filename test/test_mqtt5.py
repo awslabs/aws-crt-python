@@ -524,21 +524,20 @@ class Mqtt5ClientTest(NativeResourceTest):
     # ==============================================================
 
     def test_connect_with_invalid_host_name(self):
-        io.init_logging(io.LogLevel.Trace, 'stderr')
         client_options = mqtt5.ClientOptions("badhost", 1883)
         client, callbacks = self._test_connect_fail(auth_type=AuthType.NO_APPLICATION, client_options=client_options)
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
     def test_connect_with_invalid_port(self):
-        client_options = mqtt5.ClientOptions("badhost", 444)
+        client_options = mqtt5.ClientOptions("will be set by _create_client", 444)
         client, callbacks = self._test_connect_fail(
             auth_type=AuthType.DIRECT_HOST_ONLY, client_options=client_options)
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
     def test_connect_with_invalid_port_for_websocket_connection(self):
-        client_options = mqtt5.ClientOptions("badhost", 1883)
+        client_options = mqtt5.ClientOptions("will be set by _create_client", 1883)
         client, callbacks = self._test_connect_fail(
             auth_type=AuthType.WS_BAD_PORT, client_options=client_options, expected_error_code=46)
         client.stop()
@@ -553,7 +552,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         callbacks.future_stopped.result(TIMEOUT)
 
     def test_connect_with_incorrect_basic_authentication_credentials(self):
-        client_options = mqtt5.ClientOptions("will be replaced", 0)
+        client_options = mqtt5.ClientOptions("will be set by _create_client", 0)
         client_options.connect_options = mqtt5.ConnectPacket(username="bad username", password="bad password")
         client, callbacks = self._test_connect_fail(
             auth_type=AuthType.DIRECT_BASIC_AUTH_BAD, client_options=client_options, expected_error_code=5150)
@@ -566,7 +565,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         shared_client_id = create_client_id()
 
         callbacks = Mqtt5TestCallbacks()
-        client_options = mqtt5.ClientOptions("will be replaced", 0)
+        client_options = mqtt5.ClientOptions("will be set by _create_client", 0)
         client_options.connect_options = mqtt5.ConnectPacket(client_id=shared_client_id)
         client1 = self._create_client(
             AuthType.DOUBLE_CLIENT_ID_FAILURE,
@@ -574,7 +573,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             callbacks=callbacks)
 
         callbacks2 = Mqtt5TestCallbacks()
-        client_options2 = mqtt5.ClientOptions("will be replaced", 0)
+        client_options2 = mqtt5.ClientOptions("will be set by _create_client", 0)
         client_options2.connect_options = mqtt5.ConnectPacket(client_id=shared_client_id)
         client2 = Mqtt5ClientTest._create_client(
             AuthType.DOUBLE_CLIENT_ID_FAILURE,
