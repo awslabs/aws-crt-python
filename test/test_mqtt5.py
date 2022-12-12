@@ -167,7 +167,7 @@ class Mqtt5TestCallbacks():
         if self.future_publish_received and not self.future_publish_received.done():
             self.future_publish_received.set_result(publish_received_data.publish_packet)
 
-        if self.on_publish_received_counter >= self.on_publish_receive_expected and self.future_expected_publishes_received and not self.future_expected_publishes_received.done():
+        if self.on_publish_receive_expected > 0 and self.on_publish_received_counter == self.on_publish_receive_expected and not self.future_expected_publishes_received.done():
             self.future_expected_publishes_received.set_result(True)
 
     def on_lifecycle_stopped(self, lifecycle_stopped: mqtt5.LifecycleStoppedData):
