@@ -102,12 +102,12 @@ static int s_on_incoming_header_block_done(
 
     for (Py_ssize_t i = 0; i < num_headers; ++i) {
         const char *name_str = (const char *)string_cursor.ptr;
-        size_t name_len = strlen((const char *)string_cursor.ptr);
+        size_t name_len = strnlen((const char *)string_cursor.ptr, string_cursor.len);
 
         aws_byte_cursor_advance(&string_cursor, name_len + 1);
 
         const char *value_str = (const char *)string_cursor.ptr;
-        size_t value_len = strlen((const char *)string_cursor.ptr);
+        size_t value_len = strnlen((const char *)string_cursor.ptr, string_cursor.len);
 
         aws_byte_cursor_advance(&string_cursor, value_len + 1);
 
