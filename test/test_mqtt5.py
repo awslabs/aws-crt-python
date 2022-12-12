@@ -144,6 +144,7 @@ def create_client_id():
 
 class Mqtt5TestCallbacks():
     def __init__(self):
+        self.on_publish_receive_expected = 0
         self.on_publish_received_counter = 0
         self.last_exception = None
 
@@ -156,7 +157,7 @@ class Mqtt5TestCallbacks():
         self.future_connection_failure = Future()
         self.future_disconnection = Future()
         self.future_publish_received = Future()
-        self.future_10_publishes_received = Future()
+        self.future_expected_publishes_received = Future()
 
     def ws_handshake_transform(self, transform_args):
         transform_args.set_done()
@@ -166,8 +167,8 @@ class Mqtt5TestCallbacks():
         if self.future_publish_received and not self.future_publish_received.done():
             self.future_publish_received.set_result(publish_received_data.publish_packet)
 
-        if self.on_publish_received_counter >= 10 and self.future_10_publishes_received and not self.future_10_publishes_received.done():
-            self.future_10_publishes_received.set_result(True)
+        if self.on_publish_received_counter >= self.on_publish_receive_expected and self.future_expected_publishes_received and not self.future_expected_publishes_received.done():
+            self.future_expected_publishes_received.set_result(True)
 
     def on_lifecycle_stopped(self, lifecycle_stopped: mqtt5.LifecycleStoppedData):
         if self.future_stopped:
@@ -863,6 +864,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         payload = "Hello World"
 
         client, callbacks = self._test_connect(auth_type=AuthType.DIRECT_MUTUAL_TLS)
+        callbacks.on_publish_receive_expected = 1
 
         subscriptions = []
         subscriptions.append(mqtt5.Subscription(topic_filter=topic_filter, qos=mqtt5.QoS.AT_LEAST_ONCE))
@@ -878,19 +880,21 @@ class Mqtt5ClientTest(NativeResourceTest):
             qos=mqtt5.QoS.AT_LEAST_ONCE)
 
         publish_future = client.publish(publish_packet=publish_packet)
-        publish_completion_data = publish_future.result()
+        publish_completion_data = publish_future.result(TIMEOUT)
         puback_packet = publish_completion_data.puback
         self.assertIsInstance(puback_packet, mqtt5.PubackPacket)
+
+        callbacks.future_expected_publishes_received.result(TIMEOUT)
 
         topic_filters = []
         topic_filters.append(topic_filter)
         unsubscribe_packet = mqtt5.UnsubscribePacket(topic_filters=topic_filters)
         unsubscribe_future = client.unsubscribe(unsubscribe_packet)
-        unsuback_packet = unsubscribe_future.result()
+        unsuback_packet = unsubscribe_future.result(TIMEOUT)
         self.assertIsInstance(unsuback_packet, mqtt5.UnsubackPacket)
 
         publish_future = client.publish(publish_packet=publish_packet)
-        publish_completion_data = publish_future.result()
+        publish_completion_data = publish_future.result(TIMEOUT)
         puback_packet = publish_completion_data.puback
         self.assertIsInstance(puback_packet, mqtt5.PubackPacket)
 
@@ -958,7 +962,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             qos=mqtt5.QoS.AT_LEAST_ONCE)
 
         publish_future = client.publish(publish_packet=publish_packet)
-        publish_completion_data = publish_future.result()
+        publish_completion_data = publish_future.result(TIMEOUT)
         puback_packet = publish_completion_data.puback
         self.assertIsInstance(puback_packet, mqtt5.PubackPacket)
 
@@ -970,11 +974,11 @@ class Mqtt5ClientTest(NativeResourceTest):
         topic_filters.append(topic_filter)
         unsubscribe_packet = mqtt5.UnsubscribePacket(topic_filters=topic_filters)
         unsubscribe_future = client.unsubscribe(unsubscribe_packet)
-        unsuback_packet = unsubscribe_future.result()
+        unsuback_packet = unsubscribe_future.result(TIMEOUT)
         self.assertIsInstance(unsuback_packet, mqtt5.UnsubackPacket)
 
         publish_future = client.publish(publish_packet=publish_packet)
-        publish_completion_data = publish_future.result()
+        publish_completion_data = publish_future.result(TIMEOUT)
         puback_packet = publish_completion_data.puback
         self.assertIsInstance(puback_packet, mqtt5.PubackPacket)
 
@@ -1034,6 +1038,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         client_options2 = mqtt5.ClientOptions("will be replaced", 0)
         client_options2.connect_options = mqtt5.ConnectPacket(client_id=client_id_subscriber)
         client2, callbacks2 = self._test_connect(auth_type=AuthType.DIRECT_MUTUAL_TLS, client_options=client_options2)
+        callbacks2.on_publish_receive_expected = 10
 
         subscriptions = []
         subscriptions.append(mqtt5.Subscription(topic_filter=topic_filter, qos=mqtt5.QoS.AT_LEAST_ONCE))
@@ -1057,7 +1062,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         client1.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-        publishes_received = callbacks2.future_10_publishes_received.result(TIMEOUT)
+        callbacks2.future_expected_publishes_received.result(TIMEOUT)
         self.assertEqual(callbacks2.on_publish_received_counter, publishes)
 
         client2.stop()
