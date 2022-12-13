@@ -288,7 +288,7 @@ cleanup:
  ******************************************************************************/
 
 static void s_lifecycle_event_stopped(struct mqtt5_client_binding *client) {
-    if (!client) {
+    if (!client || !client->client_core) {
         return;
     }
 
