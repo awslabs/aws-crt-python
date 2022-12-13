@@ -28,7 +28,7 @@ class SetupForTests(Builder.Action):
         self._setenv_tmpfile_from_secret('AWS_TEST_ECC_CERT_PATH', 'ecc-test/certificate', 'ECCcertificate.pem')
         self._setenv_tmpfile_from_secret('AWS_TEST_ECC_KEY_PATH', 'ecc-test/privatekey', 'ECCprivatekey.pem')
 
-        self._setenv_from_secret('AWS_TEST_MQTT5_IOT_CORE_HOST', 'ci/mqtt5/endpoint')
+        self._setenv_from_secret('AWS_TEST_MQTT5_IOT_CORE_HOST', 'unit-test/endpoint')
         self._setenv_tmpfile_from_secret(
             'AWS_TEST_MQTT5_IOT_KEY_PATH',
             'ci/mqtt5/us/Mqtt5Prod/key',
