@@ -413,7 +413,7 @@ PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args) {
     Py_ssize_t private_key_buffer_len;
     const char *pkcs12_filepath;
     const char *pkcs12_password;
-    uint8_t verify_peer;
+    int verify_peer; /* p - boolean predicate */
     PyObject *py_pkcs11_lib;
     const char *pkcs11_user_pin;
     Py_ssize_t pkcs11_user_pin_len;
@@ -430,32 +430,32 @@ PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args) {
 
     if (!PyArg_ParseTuple(
             args,
-            "bzz#zz#z#zzbOz#Oz#z#z#z#z",
-            &min_tls_version,
-            &ca_dirpath,
-            &ca_buffer,
-            &ca_buffer_len,
-            &alpn_list,
-            &certificate_buffer,
-            &certificate_buffer_len,
-            &private_key_buffer,
-            &private_key_buffer_len,
-            &pkcs12_filepath,
-            &pkcs12_password,
-            &verify_peer,
-            &py_pkcs11_lib,
-            &pkcs11_user_pin,
-            &pkcs11_user_pin_len,
-            &py_pkcs11_slot_id,
-            &pkcs11_token_label,
-            &pkcs11_token_label_len,
-            &pkcs11_priv_key_label,
-            &pkcs11_priv_key_label_len,
-            &pkcs11_cert_file_path,
-            &pkcs11_cert_file_path_len,
-            &pkcs11_cert_file_contents,
-            &pkcs11_cert_file_contents_len,
-            &windows_cert_store_path)) {
+            "izz#zz#z#zzpOz#Oz#z#z#z#z",
+            /* i */ &min_tls_version,
+            /* z */ &ca_dirpath,
+            /* z */ &ca_buffer,
+            /* # */ &ca_buffer_len,
+            /* z */ &alpn_list,
+            /* z */ &certificate_buffer,
+            /* # */ &certificate_buffer_len,
+            /* z */ &private_key_buffer,
+            /* # */ &private_key_buffer_len,
+            /* z */ &pkcs12_filepath,
+            /* z */ &pkcs12_password,
+            /* p */ &verify_peer,
+            /* O */ &py_pkcs11_lib,
+            /* z */ &pkcs11_user_pin,
+            /* # */ &pkcs11_user_pin_len,
+            /* O */ &py_pkcs11_slot_id,
+            /* z */ &pkcs11_token_label,
+            /* # */ &pkcs11_token_label_len,
+            /* z */ &pkcs11_priv_key_label,
+            /* # */ &pkcs11_priv_key_label_len,
+            /* z */ &pkcs11_cert_file_path,
+            /* # */ &pkcs11_cert_file_path_len,
+            /* z */ &pkcs11_cert_file_contents,
+            /* # */ &pkcs11_cert_file_contents_len,
+            /* z */ &windows_cert_store_path)) {
         return NULL;
     }
 
