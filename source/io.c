@@ -90,7 +90,7 @@ PyObject *aws_py_is_tls_cipher_supported(PyObject *self, PyObject *args) {
     int cipher_pref = 0;
 
     if (!PyArg_ParseTuple(args, "i", &cipher_pref)) {
-        return PyErr_AwsLastError();
+        return NULL;
     }
 
     return PyBool_FromLong(aws_tls_is_cipher_pref_supported(cipher_pref));

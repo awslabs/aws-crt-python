@@ -74,11 +74,10 @@ class TestClient(NativeResourceTest):
         self.server.server_close()
         self.server_thread.join()
 
-    def _new_client_connection(self, secure, proxy_options=None):
+    def _new_client_connection(self, secure, proxy_options=None, cipher_pref=TlsCipherPref.DEFAULT):
         if secure:
             tls_ctx_opt = TlsContextOptions()
-            if (TlsCipherPref.PQ_TLSv1_0_2021_05.isSupported):
-                tls_ctx_opt.cipher_pref = TlsCipherPref.PQ_TLSv1_0_2021_05
+            tls_ctx_opt.cipher_pref = cipher_pref
             tls_ctx_opt.verify_peer = False
             tls_ctx = ClientTlsContext(tls_ctx_opt)
             tls_conn_opt = tls_ctx.new_connection_options()
@@ -96,10 +95,10 @@ class TestClient(NativeResourceTest):
                                                      proxy_options=proxy_options)
         return connection_future.result(self.timeout)
 
-    def _test_connect(self, secure):
+    def _test_connect(self, secure, cipher_pref=TlsCipherPref.DEFAULT):
         self._start_server(secure)
         try:
-            connection = self._new_client_connection(secure)
+            connection = self._new_client_connection(secure, cipher_pref=cipher_pref)
 
             # close connection
             shutdown_error_from_close_future = connection.close().exception(self.timeout)
@@ -369,6 +368,10 @@ class TestClient(NativeResourceTest):
         self.assertEqual(14428801, len(response.body))
 
         self.assertEqual(None, connection.close().exception(self.timeout))
+
+    @unittest.skipIf(not TlsCipherPref.PQ_TLSv1_0_2021_05.is_supported(), "Cipher pref not supported")
+    def test_connect_pq_tlsv1_0_2021_05(self):
+        self._test_connect(secure=True, cipher_pref=TlsCipherPref.PQ_TLSv1_0_2021_05)
 
 
 if __name__ == '__main__':

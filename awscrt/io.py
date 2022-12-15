@@ -10,7 +10,7 @@ Long-running event-loop threads are used for concurrency.
 
 import _awscrt
 from awscrt import NativeResource
-from enum import Enum, IntEnum
+from enum import IntEnum
 import threading
 
 
@@ -250,12 +250,32 @@ class TlsVersion(IntEnum):
     DEFAULT = 128  #:
 
 
-class TlsCipherPref(Enum):
-    DEFAULT = (0)
-    PQ_TLSv1_0_2021_05 = (6)
+class TlsCipherPref(IntEnum):
+    """TLS Cipher Preference.
 
-    def __init__(self, tlsCipherEnumVal):
-        self.isSupported = _awscrt.is_tls_cipher_supported(tlsCipherEnumVal)
+       Each TlsCipherPref represents an ordered list of TLS Ciphers to use when negotiating a TLS Connection. At
+       present, the ability to configure arbitrary orderings of TLS Ciphers is not allowed, and only a curated list of
+       vetted TlsCipherPref's are exposed."""
+
+    DEFAULT = 0
+    """The underlying platform's default TLS Cipher Preference ordering. This is usually the best option, as it will be
+       automatically updated as the underlying OS or platform changes, and will always be supported on all platforms."""
+
+    PQ_TLSv1_0_2021_05 = 6  #:
+    """A TLS Cipher Preference ordering that supports TLS 1.0 through TLS 1.3, and has Kyber Round 3 as its highest
+       priority post-quantum key exchange algorithm. PQ algorithms in this preference list will always be used in hybrid
+       mode, and will be combined with a classical ECDHE key exchange that is performed in addition to the PQ key
+       exchange. This preference makes a best-effort to negotiate a PQ algorithm, but if the peer does not support any
+       PQ algorithms the TLS connection will fall back to a single classical algorithm for key exchange (such as ECDHE
+       or RSA).
+
+       NIST has announced that they plan to eventually standardize Kyber. However, the NIST standardization process might
+       introduce minor changes that could cause the final Kyber standard to differ from the Kyber Round 3 implementation
+       available in this preference list."""
+
+    def is_supported(self):
+        """Return whether this Cipher Preference is available in the underlying platform's TLS implementation"""
+        return _awscrt.is_tls_cipher_supported(self.value)
 
 
 class TlsContextOptions:
@@ -267,6 +287,7 @@ class TlsContextOptions:
     Attributes:
         min_tls_ver (TlsVersion): Minimum TLS version to use.
             System defaults are used by default.
+        cipher_pref (TlsCipherPref): The TLS Cipher Preference to use. System defaults are used by default.
         verify_peer (bool): Whether to validate the peer's x.509 certificate.
         alpn_list (Optional[List[str]]): If set, names to use in Application Layer
             Protocol Negotiation (ALPN). ALPN is not supported on all systems,

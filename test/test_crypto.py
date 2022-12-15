@@ -76,9 +76,6 @@ class TestCredentials(NativeResourceTest):
         expected = b'\x90\x01\x50\x98\x3c\xd2\x4f\xb0\xd6\x96\x3f\x7d\x28\xe1\x7f\x72'
         self.assertEqual(expected, digest)
 
-    def test_is_tls_cipher_supported(self):
-        self.assertEqual(True, TlsCipherPref.DEFAULT.isSupported)
-
 
 if __name__ == '__main__':
     unittest.main()
