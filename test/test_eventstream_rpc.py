@@ -296,7 +296,7 @@ class TestClient(NativeResourceTest):
             Header.from_byte_buf('echo-byte-buf', b'\x00\xff\x0f\xf0'),
             Header.from_string('echo-string', 'noodles'),
             # utf-8 breaks echo test. don't get response.
-            #Header.from_string('echo-string-utf8', '--\u1234--'),
+            # Header.from_string('echo-string-utf8', '--\u1234--'),
             Header.from_timestamp('echo-timestamp', time.time()),
             Header.from_uuid('echo-uuid', UUID('01234567-89ab-cdef-0123-456789abcdef')),
         ]
