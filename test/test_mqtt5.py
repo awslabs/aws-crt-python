@@ -1020,6 +1020,29 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
+    def test_operation_rejoin_always(self):
+        client_id = create_client_id()
+
+        client_options = mqtt5.ClientOptions(
+            "will be replaced", 0, session_behavior=mqtt5.ClientSessionBehaviorType.REJOIN_ALWAYS)
+        client_options.connect_options = mqtt5.ConnectPacket(client_id=client_id)
+
+        client1, callbacks1 = self._test_connect(auth_type=AuthType.DIRECT_MUTUAL_TLS, client_options=client_options)
+        client1.stop()
+        callbacks1.future_stopped(TIMEOUT)
+
+        callbacks2 = Mqtt5TestCallbacks()
+        client2 = self._create_client(
+            auth_type=AuthType.DIRECT_MUTUAL_TLS,
+            client_options=client_options,
+            callbacks=callbacks2)
+        client2.start()
+        connection_success_data = callbacks2.future_connection_success.result(TIMEOUT)
+        connack_packet = connection_success_data.connack_packet
+        self.assertTrue(connack_packet.session_present)
+        client2.stop()
+        callbacks2.future_stopped(TIMEOUT)
+
     # ==============================================================
     #             QOS1 TEST CASES
     # ==============================================================
