@@ -19,7 +19,7 @@ import weakref
 # TODO: setup permanent online echo server we can hit from tests
 RUN_LOCALHOST_TESTS = os.getenv('EVENTSTREAM_ECHO_TEST')
 
-#init_logging(LogLevel.Trace, 'stderr')
+# init_logging(LogLevel.Trace, 'stderr')
 
 
 class ConnectionRecord:
