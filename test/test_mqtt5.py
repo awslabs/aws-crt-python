@@ -1025,7 +1025,8 @@ class Mqtt5ClientTest(NativeResourceTest):
 
         client_options = mqtt5.ClientOptions(
             "will be replaced", 0, session_behavior=mqtt5.ClientSessionBehaviorType.REJOIN_ALWAYS)
-        client_options.connect_options = mqtt5.ConnectPacket(client_id=client_id)
+        client_options.connect_options = mqtt5.ConnectPacket(
+            client_id=client_id, session_expiry_interval_sec=3600, keep_alive_interval_sec=360)
 
         client1, callbacks1 = self._test_connect(auth_type=AuthType.DIRECT_MUTUAL_TLS, client_options=client_options)
         client1.stop()
