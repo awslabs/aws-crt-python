@@ -1030,7 +1030,7 @@ class Mqtt5ClientTest(NativeResourceTest):
 
         client1, callbacks1 = self._test_connect(auth_type=AuthType.DIRECT_MUTUAL_TLS, client_options=client_options)
         client1.stop()
-        callbacks1.future_stopped(TIMEOUT)
+        callbacks1.future_stopped.result(TIMEOUT)
 
         callbacks2 = Mqtt5TestCallbacks()
         client2 = self._create_client(
@@ -1042,7 +1042,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         connack_packet = connection_success_data.connack_packet
         self.assertTrue(connack_packet.session_present)
         client2.stop()
-        callbacks2.future_stopped(TIMEOUT)
+        callbacks2.future_stopped.result(TIMEOUT)
 
     # ==============================================================
     #             QOS1 TEST CASES
