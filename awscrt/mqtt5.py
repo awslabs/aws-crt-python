@@ -740,6 +740,7 @@ class PacketType(IntEnum):
     Authentication exchange
     """
 
+
 class PayloadFormatIndicator(IntEnum):
     """Optional property describing a PUBLISH payload's format.
 
@@ -818,7 +819,6 @@ class ExtendedValidationAndFlowControlOptions(IntEnum):
     """
 
 
-
 class ClientOperationQueueBehaviorType(IntEnum):
     """Controls how disconnects affect the queued and in-progress operations tracked by the client.  Also controls
     how operations are handled while the client is not connected.  In particular, if the client is not connected,
@@ -850,7 +850,6 @@ class ClientOperationQueueBehaviorType(IntEnum):
     """
 
 
-
 class ExponentialBackoffJitterMode(IntEnum):
     """Controls how the reconnect delay is modified in order to smooth out the distribution of reconnection attempt
     timepoints for a large set of reconnecting clients.
@@ -878,7 +877,6 @@ class ExponentialBackoffJitterMode(IntEnum):
     Backoff is taken randomly from the interval between the base backoff
     interval and a scaling (greater than 1) of the current backoff value
     """
-
 
 
 @dataclass
