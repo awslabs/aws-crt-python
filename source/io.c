@@ -83,6 +83,18 @@ PyObject *aws_py_is_alpn_available(PyObject *self, PyObject *args) {
     return PyBool_FromLong(aws_tls_is_alpn_available());
 }
 
+PyObject *aws_py_is_tls_cipher_supported(PyObject *self, PyObject *args) {
+    (void)self;
+    (void)args;
+
+    int cipher_pref = 0;
+
+    if (!PyArg_ParseTuple(args, "i", &cipher_pref)) {
+        return NULL;
+    }
+
+    return PyBool_FromLong(aws_tls_is_cipher_pref_supported(cipher_pref));
+}
 /*******************************************************************************
  * AWS_EVENT_LOOP_GROUP
  ******************************************************************************/
@@ -402,7 +414,8 @@ PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args) {
 
     struct aws_allocator *allocator = aws_py_get_allocator();
 
-    int min_tls_version;
+    int min_tls_version = 0;
+    int cipher_pref = 0;
     const char *ca_dirpath;
     const char *ca_buffer;
     Py_ssize_t ca_buffer_len;
@@ -430,8 +443,9 @@ PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args) {
 
     if (!PyArg_ParseTuple(
             args,
-            "izz#zz#z#zzpOz#Oz#z#z#z#z",
+            "iizz#zz#z#zzpOz#Oz#z#z#z#z",
             /* i */ &min_tls_version,
+            /* i */ &cipher_pref,
             /* z */ &ca_dirpath,
             /* z */ &ca_buffer,
             /* # */ &ca_buffer_len,
@@ -520,6 +534,7 @@ PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args) {
     /* From hereon, we need to clean up if errors occur */
 
     ctx_options.minimum_tls_version = min_tls_version;
+    ctx_options.cipher_pref = cipher_pref;
 
     if (ca_dirpath != NULL) {
         if (aws_tls_ctx_options_override_default_trust_store_from_path(&ctx_options, ca_dirpath, NULL)) {
