@@ -641,6 +641,16 @@ class ClientSessionBehaviorType(IntEnum):
     Session rejoin requires an appropriate non-zero session expiry interval in the client's CONNECT options.
     """
 
+    REJOIN_ALWAYS = 3
+    """
+    Always attempt to rejoin an existing session.  Since the client does not support durable session persistence,
+    this option is not guaranteed to be spec compliant because any unacknowledged qos1 publishes (which are
+    part of the client session state) will not be present on the initial connection.  Until we support
+    durable session resumption, this option is technically spec-breaking, but useful.
+
+    Always rejoin requires an appropriate non-zero session expiry interval in the client's CONNECT options.
+    """
+
 
 class PacketType(IntEnum):
     """MQTT5 Packet Type enumeration
@@ -746,6 +756,13 @@ class PayloadFormatIndicator(IntEnum):
     """
     The payload is a well-formed utf-8 string value.
     """
+
+
+def _try_payload_format_indicator(value):
+    try:
+        return PayloadFormatIndicator(value)
+    except Exception:
+        return None
 
 
 class RetainAndHandlingType(IntEnum):
@@ -1399,7 +1416,7 @@ class _ClientCore:
         publish_packet.retain = retain
 
         if payload_format_indicator_exists:
-            publish_packet.payload_format_indicator = PayloadFormatIndicator(payload_format_indicator)
+            publish_packet.payload_format_indicator = _try_payload_format_indicator(payload_format_indicator)
         if message_expiry_interval_sec_exists:
             publish_packet.message_expiry_interval_sec = message_expiry_interval_sec
         if topic_alias_exists:
