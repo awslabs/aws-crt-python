@@ -516,10 +516,23 @@ error:
 }
 
 PyObject *aws_py_websocket_increment_read_window(PyObject *self, PyObject *args) {
-    /* TODO implement */
     (void)self;
-    (void)args;
-    return NULL;
+
+    PyObject *binding_py; /* O */
+    Py_ssize_t size;      /* n */
+
+    if (!PyArg_ParseTuple(args, "On", &binding_py, &size)) {
+        return NULL;
+    }
+
+    struct aws_websocket *websocket = PyCapsule_GetPointer(binding_py, s_websocket_capsule_name);
+    if (!websocket) {
+        return NULL;
+    }
+
+    /* already checked that size was non-negative out in python */
+    aws_websocket_increment_read_window(websocket, (size_t)size);
+    Py_RETURN_NONE;
 }
 
 PyObject *aws_py_websocket_create_handshake_request(PyObject *self, PyObject *args) {
