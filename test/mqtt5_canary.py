@@ -177,7 +177,7 @@ class CanaryClient():
             client_options.connect_options.client_id = create_client_id()
 
         client_options.host_name = config.endpoint
-        client_options.port = int(config.port)
+        client_options.port = 0
 
         if auth_type == AuthType.DIRECT_BASIC_AUTH or auth_type == AuthType.WS_BASIC_AUTH:
             client_options.connect_options.username = config.username
