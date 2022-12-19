@@ -22,7 +22,8 @@ AuthType = enum.Enum('AuthType', ['DIRECT',
                                   'WS',
                                   'WS_BASIC_AUTH',
                                   'WS_TLS',
-                                  'WS_PROXY'])
+                                  'WS_PROXY',
+                                  'CANARY'])
 
 
 def create_client_id():
@@ -87,6 +88,14 @@ class Config:
             self.cert_path = self._get_env('AWS_TEST_MQTT5_CERTIFICATE_FILE')
             self.cert = pathlib.Path(self.cert_path).read_text().encode('utf-8')
 
+        elif auth_type == AuthType.CANARY:
+            self.endpoint = self._get_env("ENDPOINT")
+            self.seconds = self._get_env("CANARY_DURATION")
+            self.threads = self._get_env("CANARY_THREADS")
+            self.tps = self._get_env("CANARY_TPS")
+            self.client_count = self._get_env("CANARY_CLIENT_COUNT")
+            self.log_level = self._get_env("CANARY_LOG_LEVEL")
+
     def _get_env(self, name):
         val = os.environ.get(name)
         if not val:
@@ -148,14 +157,14 @@ class CanaryClient():
     user_properties.append(mqtt5.UserProperty(name="name1", value="value1"))
     user_properties.append(mqtt5.UserProperty(name="name2", value="value2"))
 
-    def __init__(self, auth_type=AuthType.DIRECT):
+    def __init__(self, auth_type=AuthType.CANARY):
         self.client_id = create_client_id()
         self.canary_core = CanaryCore()
         self.client = self._create_client(auth_type=auth_type, canary_core=self.canary_core)
         self.stopped = True
 
     def _create_client(self,
-                       auth_type=AuthType.DIRECT,
+                       auth_type=AuthType.CANARY,
                        client_options: mqtt5.ClientOptions = None,
                        canary_core: CanaryCore = None):
         config = Config(auth_type)
@@ -195,7 +204,7 @@ class CanaryClient():
             client_options.on_lifecycle_event_disconnection_fn = canary_core.on_lifecycle_disconnection
 
         client = mqtt5.Client(client_options)
-        return client
+        return client, config
 
     def random_operation(self):
         time.sleep(0.05)
@@ -303,12 +312,11 @@ Client Stats:
 
 
 def mqtt5_canary(self):
-    isSkipTest = False
-    if isSkipTest:
-        raise unittest.SkipTest(f"skip canary test till implemented later")
+
     # Add in seconds how long the test should run
-    time_end = time.time() + 30
-    client = CanaryClient()
+    client, config = CanaryClient()
+    time_end = time.time() + config.seconds
+
     client.start()
     time.sleep(0.1)
     client.subscribe()
