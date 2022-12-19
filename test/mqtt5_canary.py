@@ -310,8 +310,7 @@ Client Stats:
     publishes_failed:       {self.canary_core.stat_publishes_failed}""")
 
 
-def mqtt5_canary(self):
-
+if __name__ == 'main':
     print("\nCANARY STARTED\n")
     # Add in seconds how long the test should run
     client, config = CanaryClient()
@@ -330,7 +329,3 @@ def mqtt5_canary(self):
     time.sleep(0.1)
     del client
     time.sleep(0.1)
-
-
-if __name__ == 'main':
-    mqtt5_canary()
