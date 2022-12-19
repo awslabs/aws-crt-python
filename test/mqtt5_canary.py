@@ -1,7 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 
-from test import NativeResourceTest
 from concurrent.futures import Future
 from awscrt import mqtt5, exceptions, http
 import unittest
