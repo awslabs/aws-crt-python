@@ -312,6 +312,7 @@ Client Stats:
 
 def mqtt5_canary(self):
 
+    print("\nCANARY STARTED\n")
     # Add in seconds how long the test should run
     client, config = CanaryClient()
     time_end = time.time() + config.seconds
