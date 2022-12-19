@@ -11,6 +11,6 @@ cd $CODEBUILD_SRC_DIR
 
 export AWS_TEST_S3=YES
 python -m pip install --verbose .
-python codebuild/CanaryWrapper.py --canary_executable 'python test/mqtt5_canary.py' --git_hash ${GIT_HASH} --git_repo_name $PACKAGE_NAME --codebuild_log_path $CODEBUILD_LOG_PATH
+python codebuild/CanaryWrapper.py --canary_executable 'python3 test/mqtt5_canary.py' --git_hash ${GIT_HASH} --git_repo_name $PACKAGE_NAME --codebuild_log_path $CODEBUILD_LOG_PATH
 # --canary_arguments "-s ${CANARY_DURATION} -t ${CANARY_THREADS} -T ${CANARY_TPS} -C ${CANARY_CLIENT_COUNT} -v ${CANARY_LOG_LEVEL} endpoint ${ENDPOINT}"
 # python -m unittest --failfast --verbose 2>&1 | tee /tmp/tests.log test.test_mqtt5_canary
