@@ -230,6 +230,9 @@ class Pkcs11LibTest(NativeResourceTest):
         strict_lib = Pkcs11Lib(file=lib_path, behavior=Pkcs11Lib.InitializeFinalizeBehavior.STRICT)
         omit_lib = Pkcs11Lib(file=lib_path, behavior=Pkcs11Lib.InitializeFinalizeBehavior.OMIT)
 
+    def test_is_tls_cipher_supported(self):
+        self.assertEqual(True, TlsCipherPref.DEFAULT.is_supported())
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -4,6 +4,7 @@
 
 from test import NativeResourceTest
 from awscrt.crypto import Hash
+from awscrt.io import TlsCipherPref
 import unittest
 
 
