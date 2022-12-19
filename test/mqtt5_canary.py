@@ -170,7 +170,7 @@ class CanaryClient():
         config = Config(auth_type)
 
         if client_options is None:
-            client_options = mqtt5.ClientOptions(config.endpoint, config.port)
+            client_options = mqtt5.ClientOptions(config.endpoint, 0)
 
         if client_options.connect_options is None:
             client_options.connect_options = mqtt5.ConnectPacket()
