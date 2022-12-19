@@ -311,7 +311,7 @@ Client Stats:
     publishes_failed:       {self.canary_core.stat_publishes_failed}""", file=sys.stdout)
 
 
-if __name__ == 'main':
+if __name__ == '__main__':
     print("\nCANARY STARTED\n", file=sys.stdout)
     # Add in seconds how long the test should run
     client, config = CanaryClient()
