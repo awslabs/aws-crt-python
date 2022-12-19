@@ -10,6 +10,7 @@ import enum
 import uuid
 import time
 import random
+import sys
 
 
 TIMEOUT = 100.0
@@ -307,11 +308,11 @@ Client Stats:
 
     publishes_attempted:    {self.canary_core.stat_publishes_attempted}
     publishes_succeeded:    {self.canary_core.stat_publishes_succeeded}
-    publishes_failed:       {self.canary_core.stat_publishes_failed}""")
+    publishes_failed:       {self.canary_core.stat_publishes_failed}""", file=sys.stdout)
 
 
 if __name__ == 'main':
-    print("\nCANARY STARTED\n")
+    print("\nCANARY STARTED\n", file=sys.stdout)
     # Add in seconds how long the test should run
     client, config = CanaryClient()
     time_end = time.time() + config.seconds
