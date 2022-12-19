@@ -90,6 +90,7 @@ class Config:
 
         elif auth_type == AuthType.CANARY:
             self.endpoint = self._get_env("ENDPOINT")
+            self.port = self._get_env("AWS_TEST_MQTT5_DIRECT_MQTT_PORT")
             self.seconds = self._get_env("CANARY_DURATION")
             self.threads = self._get_env("CANARY_THREADS")
             self.tps = self._get_env("CANARY_TPS")
@@ -169,15 +170,17 @@ class CanaryClient():
                        canary_core: CanaryCore = None):
         config = Config(auth_type)
 
+        self.seconds = config.seconds
+
         if client_options is None:
-            client_options = mqtt5.ClientOptions(config.endpoint, 0)
+            client_options = mqtt5.ClientOptions(config.endpoint, config.port)
 
         if client_options.connect_options is None:
             client_options.connect_options = mqtt5.ConnectPacket()
             client_options.connect_options.client_id = create_client_id()
 
         client_options.host_name = config.endpoint
-        client_options.port = 0
+        client_options.port = int(config.port)
 
         if auth_type == AuthType.DIRECT_BASIC_AUTH or auth_type == AuthType.WS_BASIC_AUTH:
             client_options.connect_options.username = config.username
@@ -204,7 +207,7 @@ class CanaryClient():
             client_options.on_lifecycle_event_disconnection_fn = canary_core.on_lifecycle_disconnection
 
         client = mqtt5.Client(client_options)
-        return client, config
+        return client
 
     def random_operation(self):
         time.sleep(0.05)
@@ -314,8 +317,8 @@ Client Stats:
 if __name__ == '__main__':
     print("\nCANARY STARTED\n", file=sys.stdout)
     # Add in seconds how long the test should run
-    client, config = CanaryClient()
-    time_end = time.time() + config.seconds
+    client = CanaryClient()
+    time_end = time.time() + client.seconds
 
     client.start()
     time.sleep(0.1)
