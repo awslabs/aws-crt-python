@@ -46,6 +46,7 @@ elg = EventLoopGroup(num_threads=int(threads))
 resolver = DefaultHostResolver(elg)
 bootstrap = ClientBootstrap(elg, resolver)
 
+
 class CanaryCore():
     def __init__(self):
         # Stats
@@ -132,7 +133,7 @@ class CanaryClient():
         return client
 
     def random_operation(self):
-        self.canary_core.stat_total_operations +=1
+        self.canary_core.stat_total_operations += 1
         operation = random.randint(0, 100)
 
         if self.stopped:
@@ -260,8 +261,9 @@ if __name__ == '__main__':
 
     print(f"""\n
     Canary running for {seconds} seconds
-    TPS: {tps} : {tpsdelay}
+    TPS: {tps}
     Clients: {client_count}
+    Threads: {threads}
     """, file=sys.stdout)
 
     clients = []
