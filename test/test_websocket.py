@@ -520,34 +520,50 @@ class TestClient(NativeResourceTest):
         # test that we can use read backpressure to control how much data is read
         with WebSocketServer(self.host, self.port) as server:
             handler = ClientHandler()
-            handler.connect_sync(self.host, self.port, enable_read_backpressure=True, initial_read_window=0)
-            # handler.connect_sync(self.host, self.port, enable_read_backpressure=True, initial_read_window=1000)
+            handler.connect_sync(self.host, self.port, enable_read_backpressure=True, initial_read_window=1000)
 
-            # # window is 1000-bytes
-            # # send 10 100-byte messages
-            # # they should all get through
-            # for i in range(10):
-            #     msg = secrets.token_bytes(100)
-            #     server.send_async(msg)
-            #     recv: RecvFrame = handler.complete_frames.get(timeout=TIMEOUT)
-            #     self.assertEqual(recv.payload, msg, "did not receive expected payload")
+            # client's read window is 1000-bytes
+            # have the server send 10 messages with 100-byte payloads
+            # they should all get through
 
-            # now window is 0
-            # send a 1000 byte message, NONE of its payload should arrive
-            msg = secrets.token_bytes(1000)
+            for i in range(10):
+                msg = secrets.token_bytes(100)  # random msg for server to send
+                server.send_async(msg)
+                recv: RecvFrame = handler.complete_frames.get(timeout=TIMEOUT)
+                self.assertEqual(recv.payload, msg, "did not receive expected payload")
+
+            # client window is now 0
+            # have server send a 1000 byte message, NONE of its payload should arrive
+
+            msg = secrets.token_bytes(1000)  # random msg for server to send
             server.send_async(msg)
             with self.assertRaises(Empty):
                 handler.complete_frames.get(timeout=1.0)
             self.assertEqual(len(handler.incoming_frame_payload), 0, "No payload should arrive while window is 0")
 
-            # now increment the window and let half the (500/1000) bytes in
+            # now increment client's window to 500
+            # half (500/1000) the bytes should flow in
+
             handler.websocket.increment_read_window(500)
             max_wait_until = time() + TIMEOUT
             while len(handler.incoming_frame_payload) < 500:
                 sleep(0.001)
                 self.assertLess(time(), max_wait_until, "timed out waiting for all bytes")
-            sleep(1.0) # sleep a moment to be sure we don't receive MORE than 500 bytes
+            sleep(1.0)  # sleep a moment to be sure we don't receive MORE than 500 bytes
             self.assertEqual(len(handler.incoming_frame_payload), 500, "received more bytes than expected")
 
+            # client's window is 0 again, 500 bytes are still waiting to flow in
+            # increment the window to let the rest in
+            # let's do it by calling increment a bunch of times in a row, just to be different
 
+            handler.websocket.increment_read_window(100)
+            handler.websocket.increment_read_window(100)
+            handler.websocket.increment_read_window(100)
+            handler.websocket.increment_read_window(100)
+            handler.websocket.increment_read_window(100)
+
+            recv: RecvFrame = handler.complete_frames.get(timeout=TIMEOUT)
+            self.assertEqual(recv.payload, msg, "did not receive expected payload")
+
+            # done!
             handler.close_sync()
