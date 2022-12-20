@@ -239,6 +239,7 @@ Client Stats:
 if __name__ == '__main__':
     print("\nCANARY STARTED\n", file=sys.stdout)
     # Add in seconds how long the test should run
+    print("\n" + endpoint + "\n", file=sys.stdout)
     client = CanaryClient()
     time_end = time.time() + float(client.seconds)
 
