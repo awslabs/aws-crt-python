@@ -252,7 +252,6 @@ if __name__ == '__main__':
     for client in clients:
         client.start()
 
-    time.sleep(0.1)
     for client in clients:
         client.subscribe()
 
@@ -262,15 +261,11 @@ if __name__ == '__main__':
             for client in clients:
                 client.random_operation()
 
-    time.sleep(0.1)
     for client in clients:
         client.stop()
 
-    time.sleep(0.1)
     for client in clients:
         client.print_stats()
-
-    time.sleep(0.1)
 
     for client in clients:
         del client
