@@ -57,6 +57,7 @@ class CanaryCore():
         self.stat_publishes_attempted = 0
         self.stat_publishes_succeeded = 0
         self.stat_publishes_failed = 0
+        self.stat_total_operations = 0
 
         self.future_connection_success = None
         self.future_stopped = None
@@ -130,7 +131,7 @@ class CanaryClient():
         return client
 
     def random_operation(self):
-        time.sleep(0.05)
+        self.canary_core.stat_total_operations +=1
         operation = random.randint(0, 100)
 
         if self.stopped:
@@ -139,7 +140,7 @@ class CanaryClient():
             self.subscribe()
         elif operation < 20:
             self.unsubscribe()
-        elif operation < 98:
+        elif operation < 101:
             self.publish()
         else:
             if not self.stopped:
@@ -230,7 +231,9 @@ Client Stats:
 
     publishes_attempted:    {self.canary_core.stat_publishes_attempted}
     publishes_succeeded:    {self.canary_core.stat_publishes_succeeded}
-    publishes_failed:       {self.canary_core.stat_publishes_failed}""", file=sys.stdout)
+    publishes_failed:       {self.canary_core.stat_publishes_failed}
+
+    total operations:       {self.canary_core.total_operations}""", file=sys.stdout)
 
 
 if __name__ == '__main__':
