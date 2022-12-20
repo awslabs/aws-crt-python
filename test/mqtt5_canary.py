@@ -12,8 +12,6 @@ import random
 import sys
 
 
-TIMEOUT = 100.0
-
 AuthType = enum.Enum('AuthType', ['DIRECT',
                                   'DIRECT_BASIC_AUTH',
                                   'DIRECT_TLS',
@@ -29,79 +27,21 @@ def create_client_id():
     return f"aws-crt-python-canary-test-{uuid.uuid4()}"
 
 
-class Config:
-    def __init__(self, auth_type: AuthType):
-        if auth_type == AuthType.DIRECT:
-            self.endpoint = self._get_env("AWS_TEST_MQTT5_DIRECT_MQTT_HOST")
-            self.port = self._get_env("AWS_TEST_MQTT5_DIRECT_MQTT_PORT")
-
-        elif auth_type == AuthType.DIRECT_BASIC_AUTH:
-            self.endpoint = self._get_env("AWS_TEST_MQTT5_DIRECT_MQTT_BASIC_AUTH_HOST")
-            self.port = self._get_env("AWS_TEST_MQTT5_DIRECT_MQTT_BASIC_AUTH_PORT")
-            self.username = self._get_env('AWS_TEST_MQTT5_BASIC_AUTH_USERNAME')
-            self.password = self._get_env('AWS_TEST_MQTT5_BASIC_AUTH_PASSWORD')
-
-        elif auth_type == AuthType.DIRECT_TLS:
-            self.endpoint = self._get_env("AWS_TEST_MQTT5_DIRECT_MQTT_TLS_HOST")
-            self.port = self._get_env("AWS_TEST_MQTT5_DIRECT_MQTT_TLS_PORT")
-            self.key_path = self._get_env('AWS_TEST_MQTT5_KEY_FILE')
-            self.key = pathlib.Path(self.key_path).read_text().encode('utf-8')
-            self.cert_path = self._get_env('AWS_TEST_MQTT5_CERTIFICATE_FILE')
-            self.cert = pathlib.Path(self.cert_path).read_text().encode('utf-8')
-
-        elif auth_type == AuthType.WS:
-            self.endpoint = self._get_env("AWS_TEST_MQTT5_WS_MQTT_HOST")
-            self.port = self._get_env("AWS_TEST_MQTT5_WS_MQTT_PORT")
-
-        elif auth_type == AuthType.WS_BASIC_AUTH:
-            self.endpoint = self._get_env("AWS_TEST_MQTT5_WS_MQTT_BASIC_AUTH_HOST")
-            self.port = self._get_env("AWS_TEST_MQTT5_WS_MQTT_BASIC_AUTH_PORT")
-            self.username = self._get_env('AWS_TEST_MQTT5_BASIC_AUTH_USERNAME')
-            self.password = self._get_env('AWS_TEST_MQTT5_BASIC_AUTH_PASSWORD')
-
-        elif auth_type == AuthType.WS_TLS:
-            self.endpoint = self._get_env("AWS_TEST_MQTT5_WS_MQTT_TLS_HOST")
-            self.port = self._get_env("AWS_TEST_MQTT5_WS_MQTT_TLS_PORT")
-            self.key_path = self._get_env('AWS_TEST_MQTT5_KEY_FILE')
-            self.key = pathlib.Path(self.key_path).read_text().encode('utf-8')
-            self.cert_path = self._get_env('AWS_TEST_MQTT5_CERTIFICATE_FILE')
-            self.cert = pathlib.Path(self.cert_path).read_text().encode('utf-8')
-
-        elif auth_type == AuthType.DIRECT_PROXY:
-            self.endpoint = self._get_env("AWS_TEST_MQTT5_DIRECT_MQTT_TLS_HOST")
-            self.port = self._get_env("AWS_TEST_MQTT5_DIRECT_MQTT_TLS_PORT")
-            self.proxy_endpoint = self._get_env("AWS_TEST_MQTT5_PROXY_HOST")
-            self.proxy_port = self._get_env("AWS_TEST_MQTT5_PROXY_PORT")
-            self.key_path = self._get_env('AWS_TEST_MQTT5_KEY_FILE')
-            self.key = pathlib.Path(self.key_path).read_text().encode('utf-8')
-            self.cert_path = self._get_env('AWS_TEST_MQTT5_CERTIFICATE_FILE')
-            self.cert = pathlib.Path(self.cert_path).read_text().encode('utf-8')
-
-        elif auth_type == AuthType.WS_PROXY:
-            self.endpoint = self._get_env("AWS_TEST_MQTT5_WS_MQTT_TLS_HOST")
-            self.port = self._get_env("AWS_TEST_MQTT5_WS_MQTT_TLS_PORT")
-            self.proxy_endpoint = self._get_env("AWS_TEST_MQTT5_PROXY_HOST")
-            self.proxy_port = self._get_env("AWS_TEST_MQTT5_PROXY_PORT")
-            self.key_path = self._get_env('AWS_TEST_MQTT5_KEY_FILE')
-            self.key = pathlib.Path(self.key_path).read_text().encode('utf-8')
-            self.cert_path = self._get_env('AWS_TEST_MQTT5_CERTIFICATE_FILE')
-            self.cert = pathlib.Path(self.cert_path).read_text().encode('utf-8')
-
-        elif auth_type == AuthType.CANARY:
-            self.endpoint = self._get_env("ENDPOINT")
-            self.port = self._get_env("AWS_TEST_MQTT5_DIRECT_MQTT_PORT")
-            self.seconds = self._get_env("CANARY_DURATION")
-            self.threads = self._get_env("CANARY_THREADS")
-            self.tps = self._get_env("CANARY_TPS")
-            self.client_count = self._get_env("CANARY_CLIENT_COUNT")
-            self.log_level = self._get_env("CANARY_LOG_LEVEL")
-
-
-def _get_env(self, name):
+def _get_env(name):
     val = os.environ.get(name)
     if not val:
         raise Exception(name + "environment variable required for canary")
     return val
+
+
+TIMEOUT = 100.0
+endpoint = _get_env("ENDPOINT")
+port = _get_env("AWS_TEST_MQTT5_DIRECT_MQTT_PORT")
+seconds = _get_env("CANARY_DURATION")
+threads = _get_env("CANARY_THREADS")
+tps = _get_env("CANARY_TPS")
+client_count = _get_env("CANARY_CLIENT_COUNT")
+log_level = _get_env("CANARY_LOG_LEVEL")
 
 
 class CanaryCore():
@@ -161,42 +101,24 @@ class CanaryClient():
     def __init__(self, auth_type=AuthType.CANARY):
         self.client_id = create_client_id()
         self.canary_core = CanaryCore()
-        self.client = self._create_client(auth_type=auth_type, canary_core=self.canary_core)
+        self.client = self._create_client(canary_core=self.canary_core)
         self.stopped = True
 
     def _create_client(self,
-                       auth_type=AuthType.CANARY,
                        client_options: mqtt5.ClientOptions = None,
                        canary_core: CanaryCore = None):
-        config = Config(auth_type)
 
-        self.seconds = config.seconds
+        self.seconds = seconds
 
         if client_options is None:
-            client_options = mqtt5.ClientOptions(config.endpoint, config.port)
+            client_options = mqtt5.ClientOptions(endpoint, port)
 
         if client_options.connect_options is None:
             client_options.connect_options = mqtt5.ConnectPacket()
             client_options.connect_options.client_id = create_client_id()
 
-        client_options.host_name = config.endpoint
-        client_options.port = int(config.port)
-
-        if auth_type == AuthType.DIRECT_BASIC_AUTH or auth_type == AuthType.WS_BASIC_AUTH:
-            client_options.connect_options.username = config.username
-            client_options.connect_options.password = config.password
-
-        if (auth_type == AuthType.WS or
-                auth_type == AuthType.WS_BASIC_AUTH or
-                auth_type == AuthType.WS_TLS or
-                auth_type == AuthType.WS_PROXY):
-            client_options.websocket_handshake_transform = canary_core.ws_handshake_transform
-
-        if auth_type == AuthType.DIRECT_PROXY or auth_type == AuthType.WS_PROXY:
-            http_proxy_options = http.HttpProxyOptions(host_name=config.proxy_endpoint, port=int(config.proxy_port))
-            http_proxy_options.connection_type = http.HttpProxyConnectionType.Tunneling
-            http_proxy_options.auth_type = http.HttpProxyAuthenticationType.Nothing
-            client_options.http_proxy_options = http_proxy_options
+        client_options.host_name = endpoint
+        client_options.port = int(port)
 
         if canary_core is not None:
             client_options.on_publish_callback_fn = canary_core.on_publish_received
