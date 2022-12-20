@@ -3,7 +3,6 @@
 
 from concurrent.futures import Future
 from awscrt import mqtt5, exceptions, http
-import unittest
 import pathlib
 import os
 import enum
@@ -97,11 +96,12 @@ class Config:
             self.client_count = self._get_env("CANARY_CLIENT_COUNT")
             self.log_level = self._get_env("CANARY_LOG_LEVEL")
 
-    def _get_env(self, name):
-        val = os.environ.get(name)
-        if not val:
-            raise unittest.SkipTest(f"test requires env var: {name}")
-        return val
+
+def _get_env(self, name):
+    val = os.environ.get(name)
+    if not val:
+        raise Exception(name + "environment variable required for canary")
+    return val
 
 
 class CanaryCore():
