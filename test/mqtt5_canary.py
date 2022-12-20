@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0.
 
 from concurrent.futures import Future
-from awscrt import mqtt5, exceptions, http
-import pathlib
+from awscrt import mqtt5
+from awscrt.io import ClientBootstrap, EventLoopGroup, DefaultHostResolver
 import os
 import enum
 import uuid
@@ -42,7 +42,9 @@ threads = _get_env("CANARY_THREADS")
 tps = _get_env("CANARY_TPS")
 client_count = _get_env("CANARY_CLIENT_COUNT")
 log_level = _get_env("CANARY_LOG_LEVEL")
-
+elg = EventLoopGroup(num_threads=int(threads))
+resolver = DefaultHostResolver(elg)
+bootstrap = ClientBootstrap(elg, resolver)
 
 class CanaryCore():
     def __init__(self):
@@ -50,13 +52,10 @@ class CanaryCore():
         self.stat_publishes_received = 0
         self.stat_subscribes_attempted = 0
         self.stat_subscribes_succeeded = 0
-        self.stat_subscribes_failed = 0
         self.stat_unsubscribes_attempted = 0
         self.stat_unsubscribes_succeeded = 0
-        self.stat_unsubscribes_failed = 0
         self.stat_publishes_attempted = 0
         self.stat_publishes_succeeded = 0
-        self.stat_publishes_failed = 0
         self.stat_total_operations = 0
         self.stat_total_starts = 0
         self.stat_total_stops = 0
@@ -112,7 +111,7 @@ class CanaryClient():
                        canary_core: CanaryCore = None):
 
         if client_options is None:
-            client_options = mqtt5.ClientOptions(endpoint, port)
+            client_options = mqtt5.ClientOptions(endpoint, port, bootstrap=bootstrap)
 
         if client_options.connect_options is None:
             client_options.connect_options = mqtt5.ConnectPacket()
@@ -203,7 +202,7 @@ class CanaryClient():
             self.client.publish(publish_packet=publish_packet)
             self.canary_core.stat_publishes_succeeded += 1
         except BaseException:
-            self.canary_core.stat_publishes_failed += 1
+            pass
 
     def subscribe(self, topic_filter: str = None, qos: int = 1):
         self.canary_core.stat_subscribes_attempted += 1
@@ -218,7 +217,7 @@ class CanaryClient():
             self.client.subscribe(subscribe_packet=subscribe_packet)
             self.canary_core.stat_subscribes_succeeded += 1
         except BaseException:
-            self.canary_core.stat_subscribes_failed += 1
+            pass
 
     def unsubscribe(self):
         if len(self.canary_core.subscriptions) < 1:
@@ -231,7 +230,7 @@ class CanaryClient():
             self.client.unsubscribe(unsubscribe_packet=unsubscribe_packet)
             self.canary_core.stat_unsubscribes_succeeded += 1
         except BaseException:
-            self.canary_core.stat_unsubscribes_failed += 1
+            pass
 
     def print_stats(self):
         print(f"""\n
@@ -240,18 +239,15 @@ Client Stats:
 
     subscribes_attempted:   {self.canary_core.stat_subscribes_attempted}
     subscribes_succeeded:   {self.canary_core.stat_subscribes_succeeded}
-    subscribes_failed:      {self.canary_core.stat_subscribes_failed}
 
     unsubscribes_attempted: {self.canary_core.stat_unsubscribes_attempted}
     unsubscribes_succeeded: {self.canary_core.stat_unsubscribes_succeeded}
-    unsubscribes_failed:    {self.canary_core.stat_unsubscribes_failed}
 
     publishes_attempted:    {self.canary_core.stat_publishes_attempted}
     publishes_succeeded:    {self.canary_core.stat_publishes_succeeded}
-    publishes_failed:       {self.canary_core.stat_publishes_failed}
 
     total_starts:           {self.canary_core.stat_total_starts}
-    total_stops:           {self.canary_core.stat_total_stops}
+    total_stops:            {self.canary_core.stat_total_stops}
 
     total operations:       {self.canary_core.stat_total_operations}""", file=sys.stdout)
 
