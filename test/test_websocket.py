@@ -27,7 +27,7 @@ TIMEOUT = 10.0  # seconds
 # logging.basicConfig(format="%(message)s", level=logging.DEBUG)
 
 # uncomment this for logging from our websockets client
-init_logging(LogLevel.Trace, 'stderr')
+# init_logging(LogLevel.Trace, 'stderr')
 
 
 @dataclass
