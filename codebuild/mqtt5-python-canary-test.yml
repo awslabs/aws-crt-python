@@ -4,7 +4,7 @@ version: 0.2
 env:
   shell: bash
   variables:
-    CANARY_DURATION: 900
+    CANARY_DURATION: 120
     CANARY_THREADS: 3
     CANARY_TPS: 50
     CANARY_CLIENT_COUNT: 10
@@ -13,7 +13,7 @@ env:
     BUILDER_VERSION: v0.9.21
     BUILDER_SOURCE: releases
     BUILDER_HOST: https://d19elf31gohf1l.cloudfront.net
-    PACKAGE_NAME: aws-crt-cpp
+    PACKAGE_NAME: aws-crt-python
     CANARY_TEST_EXE: 'python -m unittest --failfast --verbose 2>&1 | tee /tmp/tests.log test.test_mqtt5_canary'
     CANARY_SERVER_ARN: Mqtt5MosquittoSever
 phases:
