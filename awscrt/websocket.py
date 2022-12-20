@@ -47,14 +47,15 @@ network operation from within the callback or you risk deadlock (see :ref:`autho
 The second, more complex, way requires you to manage the size of the read window.
 Do this if you are processing the data asynchronously
 (i.e. sending the data along on another network connection).
-Create the WebSocket with `enable_read_backpressure` set true,
-and `initial_read_window` set to the number of bytes you are ready to receive right away.
-As you receive data the read window shrinks, and whenever it reaches 0
-you stop receiving data altogether. :meth:`WebSocket.increment_read_window()`
-increases the window again and lets more data flow in.
-Only the payload of "data frames" (TEXT, BINARY, and CONTINUATION) shrinks the read window,
-The read window is not affected by the other parts of the frame (opcode, payload-length, etc),
-and it is not affected by the payload of "control frames" (CLOSE, PING, and PONG).
+Create the WebSocket with `manage_read_window` set true,
+and set `initial_read_window` to the number of bytes you are ready to receive right away.
+Whenever the read window reaches 0, you will stop receiving anything.
+The read window shrinks as you receive the payload from "data" frames (TEXT, BINARY, CONTINUATION).
+Call :meth:`WebSocket.increment_read_window()` to increase the window again keep frames flowing in.
+You only need to worry about the payload from "data" frames.
+The WebSocket automatically increments its window to account for any
+other incoming bytes, including other parts of a frame (opcode, payload-length, etc)
+and the payload of other frame types (PING, PONG, CLOSE).
 You'll probably want to do it like this:
 Pick the max amount of memory to buffer, and set this as the `initial_read_window`.
 When data arrives, the window has shrunk by that amount.
@@ -153,7 +154,7 @@ class Opcode(IntEnum):
 
         TEXT, BINARY, and CONTINUATION are "data frames". The rest are "control" frames.
 
-        If the WebSocket was created with `enable_read_backpressure`,
+        If the WebSocket was created with `manage_read_window`,
         then the read window shrinks as "data frames" are received.
         See :ref:`flow-control-reading` for a thorough explanation.
         """
@@ -244,7 +245,7 @@ class IncomingFrame:
 
         TEXT, BINARY, and CONTINUATION are "data frames". The rest are "control frames".
 
-        If the WebSocket was created with `enable_read_backpressure`,
+        If the WebSocket was created with `manage_read_window`,
         then the read window shrinks as "data frames" are received.
         See :ref:`flow-control-reading` for a thorough explanation.
         """
@@ -273,7 +274,7 @@ class OnIncomingFramePayloadData:
     (or the network connection is lost), the `on_incoming_frame_complete`
     callback will be invoked.
 
-    If the WebSocket was created with `enable_read_backpressure`,
+    If the WebSocket was created with `manage_read_window`,
     and this is a "data frame" (TEXT, BINARY, CONTINUATION),
     then the read window shrinks by `len(data)`.
     See :ref:`flow-control-reading` for a thorough explanation.
@@ -404,7 +405,7 @@ class WebSocket(NativeResource):
         """Manually increment the read window by this many bytes, to continue receiving frames.
 
         See :ref:`flow-control-reading` for a thorough explanation.
-        If the WebSocket was created without `enable_read_backpressure`, this function does nothing.
+        If the WebSocket was created without `manage_read_window`, this function does nothing.
         This function may be called from any thread.
 
         Args:
@@ -537,7 +538,7 @@ def connect(
     socket_options: Optional[SocketOptions] = None,
     tls_connection_options: Optional[TlsConnectionOptions] = None,
     proxy_options: Optional[HttpProxyOptions] = None,
-    enable_read_backpressure: bool = False,
+    manage_read_window: bool = False,
     initial_read_window: Optional[int] = None,
     on_connection_setup: Callable[[OnConnectionSetupData], None],
     on_connection_shutdown: Optional[Callable[[OnConnectionShutdownData], None]] = None,
@@ -597,12 +598,12 @@ def connect(
         proxy_options: HTTP Proxy options.
             If not specified, no proxy is used.
 
-        enable_read_backpressure: Set true to manually manage the flow-control read window.
+        manage_read_window: Set true to manually manage the flow-control read window.
             If false (the default), data arrives as fast as possible.
             See :ref:`flow-control-reading` for a thorough explanation.
 
         initial_read_window: The initial size of the read window, in bytes.
-            This must be set if `enable_read_backpressure` is true,
+            This must be set if `manage_read_window` is true,
             otherwise it is ignored.
             See :ref:`flow-control-reading` for a thorough explanation.
             An initial size of 0 will prevent any frames from arriving
@@ -643,7 +644,7 @@ def connect(
         on_incoming_frame_payload: Optional callback, invoked 0+ times as payload data arrives.
             Takes a single :class:`OnIncomingFramePayloadData` argument.
 
-            If `enable_read_backpressure` is on, and this is a "data frame",
+            If `manage_read_window` is on, and this is a "data frame",
             then the read window shrinks accordingly.
             See :ref:`flow-control-reading` for a thorough explanation.
 
@@ -659,9 +660,9 @@ def connect(
 
             If this callback raises an exception, the connection will shut down.
     """
-    if enable_read_backpressure:
+    if manage_read_window:
         if initial_read_window is None:
-            raise ValueError("'initial_read_window' must be set if 'enable_read_backpressure' is enabled")
+            raise ValueError("'initial_read_window' must be set if 'manage_read_window' is enabled")
     else:
         initial_read_window = 0  # value is ignored anyway
 
@@ -692,7 +693,7 @@ def connect(
         socket_options,
         tls_connection_options,
         proxy_options,
-        enable_read_backpressure,
+        manage_read_window,
         initial_read_window,
         core)
 

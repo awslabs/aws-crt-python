@@ -516,11 +516,11 @@ class TestClient(NativeResourceTest):
                 # which raises an exception, which should result in the WebSocket closing
                 shutdown_future.result(TIMEOUT)
 
-    def test_backpressure_enabled(self):
-        # test that we can use read backpressure to control how much data is read
+    def test_manage_read_window(self):
+        # test that users can manage how much data is read by managing the read window
         with WebSocketServer(self.host, self.port) as server:
             handler = ClientHandler()
-            handler.connect_sync(self.host, self.port, enable_read_backpressure=True, initial_read_window=1000)
+            handler.connect_sync(self.host, self.port, manage_read_window=True, initial_read_window=1000)
 
             # client's read window is 1000-bytes
             # have the server send 10 messages with 100-byte payloads
