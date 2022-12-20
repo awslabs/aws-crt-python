@@ -210,7 +210,6 @@ class CanaryClient():
         unsubscribe_packet = mqtt5.UnsubscribePacket(topic_filters=[self.canary_core.subscriptions.pop()])
 
         try:
-
             self.client.unsubscribe(unsubscribe_packet=unsubscribe_packet)
             self.canary_core.stat_unsubscribes_succeeded += 1
         except BaseException:
@@ -235,22 +234,35 @@ Client Stats:
 
 
 if __name__ == '__main__':
-    print("\nCANARY STARTED\n", file=sys.stdout)
-    # Add in seconds how long the test should run
-    print("\nEndpoint:" + endpoint + "\nPort:" + port, file=sys.stdout)
     client = CanaryClient()
     time_end = time.time() + float(seconds)
 
-    client.start()
+    clients = []
+    for i in range(client_count):
+        clients.append(CanaryClient())
+
+    for client in clients:
+        client.start()
+
     time.sleep(0.1)
-    client.subscribe()
-    # Run random operations till time expires
+    for client in clients:
+        client.subscribe()
+
     while time.time() < time_end:
-        client.random_operation()
+        for client in clients:
+            client.random_operation()
+
     time.sleep(0.1)
-    client.stop()
+    for client in clients:
+        client.stop()
+
     time.sleep(0.1)
-    client.print_stats()
+    for client in clients:
+        client.print_stats()
+
     time.sleep(0.1)
-    del client
+
+    for client in clients:
+        del client
+
     time.sleep(0.1)
