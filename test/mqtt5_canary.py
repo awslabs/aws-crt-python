@@ -58,6 +58,8 @@ class CanaryCore():
         self.stat_publishes_succeeded = 0
         self.stat_publishes_failed = 0
         self.stat_total_operations = 0
+        self.stat_total_starts = 0
+        self.stat_total_stops = 0
 
         self.future_connection_success = None
         self.future_stopped = None
@@ -71,7 +73,7 @@ class CanaryCore():
         self.stat_publishes_received += 1
 
     def on_lifecycle_stopped(self, lifecycle_stopped: mqtt5.LifecycleStoppedData):
-        if self.future_stopped:
+        if self.future_stopped is not None:
             if self.future_stopped.done():
                 pass
             else:
@@ -81,7 +83,7 @@ class CanaryCore():
         pass
 
     def on_lifecycle_connection_success(self, lifecycle_connection_success: mqtt5.LifecycleConnectSuccessData):
-        if self.future_connection_success:
+        if self.future_connection_success is not None:
             if self.future_connection_success.done():
                 pass
             else:
@@ -140,13 +142,21 @@ class CanaryClient():
             self.subscribe()
         elif operation < 20:
             self.unsubscribe()
-        elif operation < 101:
+        elif operation < 99:
             self.publish()
         else:
             if not self.stopped:
                 self.stop()
 
     def start(self):
+        if not self.stopped:
+            return
+
+        self.client.start()
+        self.canary_core.stat_total_starts += 1
+        self.stopped = False
+
+    def initial_start(self):
         if not self.stopped:
             return
 
@@ -157,6 +167,13 @@ class CanaryClient():
         self.stopped = False
 
     def stop(self):
+        if self.stopped:
+            return
+        self.stopped = True
+        self.client.stop()
+        self.canary_core.stat_total_stops += 1
+
+    def final_stop(self):
         if self.stopped:
             return
         self.stopped = True
@@ -233,6 +250,9 @@ Client Stats:
     publishes_succeeded:    {self.canary_core.stat_publishes_succeeded}
     publishes_failed:       {self.canary_core.stat_publishes_failed}
 
+    total_starts:           {self.canary_core.stat_total_starts}
+    total_stops:           {self.canary_core.stat_total_stops}
+
     total operations:       {self.canary_core.stat_total_operations}""", file=sys.stdout)
 
 
@@ -253,7 +273,7 @@ if __name__ == '__main__':
         clients.append(CanaryClient())
 
     for client in clients:
-        client.start()
+        client.initial_start()
 
     for client in clients:
         client.subscribe()
@@ -265,7 +285,7 @@ if __name__ == '__main__':
                 client.random_operation()
 
     for client in clients:
-        client.stop()
+        client.final_stop()
 
     for client in clients:
         client.print_stats()
