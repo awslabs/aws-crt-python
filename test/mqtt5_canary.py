@@ -236,6 +236,14 @@ Client Stats:
 if __name__ == '__main__':
     client = CanaryClient()
     time_end = time.time() + float(seconds)
+    tpsdelay = 1.0 / float(tps)
+    time_next_operation = time.time()
+
+    print(f"""\n
+    Canary running for {seconds} seconds
+    TPS: {tps} : {tpsdelay}
+    Clients: {client_count}
+    """, file=sys.stdout)
 
     clients = []
     for i in range(int(client_count)):
@@ -249,8 +257,10 @@ if __name__ == '__main__':
         client.subscribe()
 
     while time.time() < time_end:
-        for client in clients:
-            client.random_operation()
+        if time.time() >= time_next_operation:
+            time_next_operation += tpsdelay
+            for client in clients:
+                client.random_operation()
 
     time.sleep(0.1)
     for client in clients:
