@@ -108,8 +108,6 @@ class CanaryClient():
                        client_options: mqtt5.ClientOptions = None,
                        canary_core: CanaryCore = None):
 
-        self.seconds = seconds
-
         if client_options is None:
             client_options = mqtt5.ClientOptions(endpoint, port)
 
