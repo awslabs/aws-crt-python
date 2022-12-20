@@ -238,7 +238,7 @@ if __name__ == '__main__':
     time_end = time.time() + float(seconds)
 
     clients = []
-    for i in range(client_count):
+    for i in range(int(client_count)):
         clients.append(CanaryClient())
 
     for client in clients:
