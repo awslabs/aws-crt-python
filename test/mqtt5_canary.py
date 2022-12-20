@@ -233,7 +233,7 @@ Client Stats:
     publishes_succeeded:    {self.canary_core.stat_publishes_succeeded}
     publishes_failed:       {self.canary_core.stat_publishes_failed}
 
-    total operations:       {self.canary_core.total_operations}""", file=sys.stdout)
+    total operations:       {self.canary_core.stat_total_operations}""", file=sys.stdout)
 
 
 if __name__ == '__main__':
