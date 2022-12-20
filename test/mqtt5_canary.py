@@ -239,7 +239,7 @@ if __name__ == '__main__':
     # Add in seconds how long the test should run
     print("\nEndpoint:" + endpoint + "\nPort:" + port, file=sys.stdout)
     client = CanaryClient()
-    time_end = time.time() + float(client.seconds)
+    time_end = time.time() + float(seconds)
 
     client.start()
     time.sleep(0.1)
