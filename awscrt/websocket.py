@@ -3,9 +3,17 @@ WebSocket - `RFC 6455 <https://www.rfc-editor.org/rfc/rfc6455>`_
 
 Use the :func:`connect()` to establish a :class:`WebSocket` client connection.
 
+Note from the developer: This is a very low-level API, which forces the
+user to deal with things like data fragmentation.
+A higher-level API could easily be built on top of this.
+
+.. _authoring-callbacks:
+
+Authoring Callbacks
+-------------------
 All network operations in `awscrt.websocket` are asynchronous.
 Callbacks are always invoked on the WebSocket's networking thread.
-You MUST NOT perform blocking operations from any callback, or you will cause a deadlock.
+You MUST NOT perform blocking network operations from any callback, or you will cause a deadlock.
 For example: do not send a frame, and then wait for that frame to complete,
 within a callback. The WebSocket cannot do work until your callback returns,
 so the thread will be stuck. You can send the frame from within the callback,
@@ -17,9 +25,66 @@ It's fine for the main thread to send a frame, and wait until it completes.
 All functions and methods in `awscrt.websocket` are thread-safe.
 They can be called from any mix of threads.
 
-Note from the developer: This is a very low-level API, which forces the
-user to deal with things like data fragmentation.
-A higher-level API could easily be built on top of this.
+.. _flow-control-reading:
+
+Flow Control (reading)
+----------------------
+By default, the WebSocket will read from the network as fast as it can hand you the data.
+You must prevent the WebSocket from reading data faster than you can process it,
+or memory usage could balloon until your application explodes.
+
+There are two ways to manage this.
+
+First, and simplest, is to process incoming data synchronously within the
+`on_incoming_frame` callbacks. Since callbacks are invoked on the WebSocket's
+networking thread, the WebSocket cannot read more data until the callback returns.
+Therefore, processing the data in a synchronous manner
+(i.e. writing to disk, printing to screen, etc) will naturally
+affect `TCP flow control <https://en.wikipedia.org/wiki/Transmission_Control_Protocol#Flow_control>`_,
+and prevent data from arriving too fast. However, you MUST NOT perform a blocking
+network operation from within the callback or you risk deadlock (see :ref:`authoring-callbacks`).
+
+The second, more complex, way requires you to manage the size of the read window.
+Do this if you are processing the data asynchronously
+(i.e. sending the data along on another network connection).
+Create the WebSocket with `manage_read_window` set true,
+and set `initial_read_window` to the number of bytes you are ready to receive right away.
+Whenever the read window reaches 0, you will stop receiving anything.
+The read window shrinks as you receive the payload from "data" frames (TEXT, BINARY, CONTINUATION).
+Call :meth:`WebSocket.increment_read_window()` to increase the window again keep frames flowing in.
+You only need to worry about the payload from "data" frames.
+The WebSocket automatically increments its window to account for any
+other incoming bytes, including other parts of a frame (opcode, payload-length, etc)
+and the payload of other frame types (PING, PONG, CLOSE).
+You'll probably want to do it like this:
+Pick the max amount of memory to buffer, and set this as the `initial_read_window`.
+When data arrives, the window has shrunk by that amount.
+Send this data along on the other network connection.
+When that data is done sending, call `increment_read_window()`
+by the amount you just finished sending.
+If you don't want to receive any data at first, set the `initial_read_window` to 0,
+and `increment_read_window()` when you're ready.
+Maintaining a larger window is better for overall throughput.
+
+.. _flow-control-writing:
+
+Flow Control (writing)
+----------------------
+You must also ensure that you do not continually send frames faster than the other
+side can read them, or memory usage could balloon until your application explodes.
+
+The simplest approach is to only send 1 frame at a time.
+Use the :meth:`WebSocket.send_frame()` `on_complete` callback to know when the send is complete.
+Then you can try and send another.
+
+A more complex, but higher throughput, way is to let multiple frames be in flight
+but have a cap. If the number of frames in flight, or bytes in flight, reaches
+your cap then wait until some frames complete before trying to send more.
+
+.. _api:
+
+API
+---
 """
 
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
@@ -83,6 +148,17 @@ class Opcode(IntEnum):
 
     See `RFC 6455 section 5.5.3 <https://www.rfc-editor.org/rfc/rfc6455#section-5.5.3>`_.
     """
+
+    def is_data_frame(self):
+        """True if this is a "data frame" opcode.
+
+        TEXT, BINARY, and CONTINUATION are "data frames". The rest are "control" frames.
+
+        If the WebSocket was created with `manage_read_window`,
+        then the read window shrinks as "data frames" are received.
+        See :ref:`flow-control-reading` for a thorough explanation.
+        """
+        return self.value in (Opcode.TEXT, Opcode.BINARY, Opcode.CONTINUATION)
 
 
 MAX_PAYLOAD_LENGTH = 0x7FFFFFFFFFFFFFFF
@@ -164,6 +240,17 @@ class IncomingFrame:
 
     See `RFC 6455 section 5.4 - Fragmentation <https://www.rfc-editor.org/rfc/rfc6455#section-5.4>`_"""
 
+    def is_data_frame(self):
+        """True if this is a "data frame".
+
+        TEXT, BINARY, and CONTINUATION are "data frames". The rest are "control frames".
+
+        If the WebSocket was created with `manage_read_window`,
+        then the read window shrinks as "data frames" are received.
+        See :ref:`flow-control-reading` for a thorough explanation.
+        """
+        return self.opcode.is_data_frame()
+
 
 @dataclass
 class OnIncomingFrameBeginData:
@@ -186,6 +273,11 @@ class OnIncomingFramePayloadData:
     Once all `frame.payload_length` bytes have been received
     (or the network connection is lost), the `on_incoming_frame_complete`
     callback will be invoked.
+
+    If the WebSocket was created with `manage_read_window`,
+    and this is a "data frame" (TEXT, BINARY, CONTINUATION),
+    then the read window shrinks by `len(data)`.
+    See :ref:`flow-control-reading` for a thorough explanation.
     """
 
     frame: IncomingFrame
@@ -261,8 +353,8 @@ class WebSocket(NativeResource):
         If you are not an expert, stick to sending :attr:`Opcode.TEXT` or :attr:`Opcode.BINARY` frames,
         and don't touch the FIN bit.
 
-        If you want to limit the amount of unsent data buffered in memory,
-        wait until one frame completes before sending another.
+        See :ref:`flow-control-writing` to learn about limiting the amount of
+        unsent data buffered in memory.
 
         Args:
             opcode: :class:`Opcode` for this frame.
@@ -286,7 +378,7 @@ class WebSocket(NativeResource):
                 or even guarantee that the data has left the machine yet,
                 but it's on track to get there).
 
-                Read the :mod:`page notes<awscrt.websocket>` before authoring any callbacks.
+                Be sure to read about :ref:`authoring-callbacks`.
         """
         def _on_complete(error_code):
             cbdata = OnSendFrameCompleteData()
@@ -308,6 +400,21 @@ class WebSocket(NativeResource):
             payload,
             fin,
             _on_complete)
+
+    def increment_read_window(self, size: int):
+        """Manually increment the read window by this many bytes, to continue receiving frames.
+
+        See :ref:`flow-control-reading` for a thorough explanation.
+        If the WebSocket was created without `manage_read_window`, this function does nothing.
+        This function may be called from any thread.
+
+        Args:
+            size: in bytes
+        """
+        if size < 0:
+            raise ValueError("Increment size cannot be negative")
+
+        _awscrt.websocket_increment_read_window(self._binding, size)
 
 
 class _WebSocketCore(NativeResource):
@@ -431,13 +538,13 @@ def connect(
     socket_options: Optional[SocketOptions] = None,
     tls_connection_options: Optional[TlsConnectionOptions] = None,
     proxy_options: Optional[HttpProxyOptions] = None,
+    manage_read_window: bool = False,
+    initial_read_window: Optional[int] = None,
     on_connection_setup: Callable[[OnConnectionSetupData], None],
     on_connection_shutdown: Optional[Callable[[OnConnectionShutdownData], None]] = None,
     on_incoming_frame_begin: Optional[Callable[[OnIncomingFrameBeginData], None]] = None,
     on_incoming_frame_payload: Optional[Callable[[OnIncomingFramePayloadData], None]] = None,
     on_incoming_frame_complete: Optional[Callable[[OnIncomingFrameCompleteData], None]] = None,
-    enable_read_backpressure: bool = False,
-    initial_read_window: Optional[int] = None,
 ):
     """Asynchronously establish a client WebSocket connection.
 
@@ -459,7 +566,7 @@ def connect(
           done with a healthy WebSocket, to ensure that it shuts down and cleans up.
           It is very easy to accidentally keep a reference around without realizing it.
 
-    Read the :mod:`page notes<awscrt.websocket>` before authoring your callbacks.
+    Be sure to read about :ref:`authoring-callbacks`.
 
     Args:
         host: Hostname to connect to.
@@ -490,6 +597,17 @@ def connect(
 
         proxy_options: HTTP Proxy options.
             If not specified, no proxy is used.
+
+        manage_read_window: Set true to manually manage the flow-control read window.
+            If false (the default), data arrives as fast as possible.
+            See :ref:`flow-control-reading` for a thorough explanation.
+
+        initial_read_window: The initial size of the read window, in bytes.
+            This must be set if `manage_read_window` is true,
+            otherwise it is ignored.
+            See :ref:`flow-control-reading` for a thorough explanation.
+            An initial size of 0 will prevent any frames from arriving
+            until :meth:`WebSocket.increment_read_window()` is called.
 
         on_connection_setup: Callback invoked when the connect completes.
             Takes a single :class:`OnConnectionSetupData` argument.
@@ -526,6 +644,10 @@ def connect(
         on_incoming_frame_payload: Optional callback, invoked 0+ times as payload data arrives.
             Takes a single :class:`OnIncomingFramePayloadData` argument.
 
+            If `manage_read_window` is on, and this is a "data frame",
+            then the read window shrinks accordingly.
+            See :ref:`flow-control-reading` for a thorough explanation.
+
             If this callback raises an exception, the connection will shut down.
 
         on_incoming_frame_complete: Optional callback, invoked when the WebSocket
@@ -538,12 +660,11 @@ def connect(
 
             If this callback raises an exception, the connection will shut down.
     """
-    # TODO: document backpressure
-    if enable_read_backpressure:
+    if manage_read_window:
         if initial_read_window is None:
-            raise ValueError("'initial_read_window' must be set if 'enable_read_backpressure' is enabled")
+            raise ValueError("'initial_read_window' must be set if 'manage_read_window' is enabled")
     else:
-        initial_read_window = 0x7FFFFFFF  # TODO: fix how this works in C
+        initial_read_window = 0  # value is ignored anyway
 
     if initial_read_window < 0:
         raise ValueError("'initial_read_window' cannot be negative")
@@ -572,7 +693,7 @@ def connect(
         socket_options,
         tls_connection_options,
         proxy_options,
-        enable_read_backpressure,
+        manage_read_window,
         initial_read_window,
         core)
 

@@ -62,7 +62,7 @@ PyObject *aws_py_websocket_client_connect(PyObject *self, PyObject *args) {
     PyObject *socket_options_py;    /* O */
     PyObject *tls_options_py;       /* O */
     PyObject *proxy_options_py;     /* O */
-    int enable_read_backpressure;   /* p - boolean predicate */
+    int manage_read_window;         /* p - boolean predicate */
     Py_ssize_t initial_read_window; /* n */
     PyObject *websocket_core_py;    /* O */
 
@@ -77,7 +77,7 @@ PyObject *aws_py_websocket_client_connect(PyObject *self, PyObject *args) {
             &socket_options_py,
             &tls_options_py,
             &proxy_options_py,
-            &enable_read_backpressure,
+            &manage_read_window,
             &initial_read_window,
             &websocket_core_py)) {
         return NULL;
@@ -142,7 +142,7 @@ PyObject *aws_py_websocket_client_connect(PyObject *self, PyObject *args) {
         .on_incoming_frame_begin = s_websocket_on_incoming_frame_begin,
         .on_incoming_frame_payload = s_websocket_on_incoming_frame_payload,
         .on_incoming_frame_complete = s_websocket_on_incoming_frame_complete,
-        .manual_window_management = enable_read_backpressure != 0,
+        .manual_window_management = manage_read_window != 0,
     };
     if (aws_websocket_client_connect(&options) != AWS_OP_SUCCESS) {
         PyErr_SetAwsLastError();
@@ -516,10 +516,23 @@ error:
 }
 
 PyObject *aws_py_websocket_increment_read_window(PyObject *self, PyObject *args) {
-    /* TODO implement */
     (void)self;
-    (void)args;
-    return NULL;
+
+    PyObject *binding_py; /* O */
+    Py_ssize_t size;      /* n */
+
+    if (!PyArg_ParseTuple(args, "On", &binding_py, &size)) {
+        return NULL;
+    }
+
+    struct aws_websocket *websocket = PyCapsule_GetPointer(binding_py, s_websocket_capsule_name);
+    if (!websocket) {
+        return NULL;
+    }
+
+    /* already checked that size was non-negative out in python */
+    aws_websocket_increment_read_window(websocket, (size_t)size);
+    Py_RETURN_NONE;
 }
 
 PyObject *aws_py_websocket_create_handshake_request(PyObject *self, PyObject *args) {
