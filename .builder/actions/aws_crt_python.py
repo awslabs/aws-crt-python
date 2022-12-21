@@ -14,29 +14,6 @@ import tempfile
 PYTHON_DEFAULT = '{python}'
 
 
-class InstallPythonReqs(Builder.Action):
-    def __init__(self, trust_hosts=False, deps=[], python=PYTHON_DEFAULT):
-        self.trust_hosts = trust_hosts
-        self.core = ('pip', 'setuptools', 'wheel')
-        self.deps = deps
-        self.python = python
-
-    def run(self, env):
-        trusted_hosts = []
-        # These are necessary for older hosts with out of date certs or pip
-        if self.trust_hosts:
-            trusted_hosts = ['--trusted-host', 'pypi.org', '--trusted-host', 'files.pythonhosted.org']
-
-        # setuptools must be installed before packages that need it, or else it won't be in the
-        # package database in time for the subsequent install and pip fails
-        steps = []
-        for deps in (self.core, self.deps):
-            if deps:
-                steps.append([self.python, '-m', 'pip', 'install', '--upgrade', *trusted_hosts, *deps])
-
-        return Builder.Script(steps, name='install-python-reqs')
-
-
 class SetupForTests(Builder.Action):
 
     def run(self, env):
@@ -50,6 +27,16 @@ class SetupForTests(Builder.Action):
 
         self._setenv_tmpfile_from_secret('AWS_TEST_ECC_CERT_PATH', 'ecc-test/certificate', 'ECCcertificate.pem')
         self._setenv_tmpfile_from_secret('AWS_TEST_ECC_KEY_PATH', 'ecc-test/privatekey', 'ECCprivatekey.pem')
+
+        self._setenv_from_secret('AWS_TEST_MQTT5_IOT_CORE_HOST', 'unit-test/endpoint')
+        self._setenv_tmpfile_from_secret(
+            'AWS_TEST_MQTT5_IOT_KEY_PATH',
+            'ci/mqtt5/us/Mqtt5Prod/key',
+            'mqtt5certificate.pem')
+        self._setenv_tmpfile_from_secret(
+            'AWS_TEST_MQTT5_IOT_CERTIFICATE_PATH',
+            'ci/mqtt5/us/Mqtt5Prod/cert',
+            'mqtt5privatekey.pem')
 
         # enable S3 tests
         env.shell.setenv('AWS_TEST_S3', '1')
@@ -247,7 +234,7 @@ class AWSCrtPython(Builder.Action):
         python = args.python if args.python else PYTHON_DEFAULT
 
         actions = [
-            InstallPythonReqs(deps=[], python=python),
+            [python, '-m', 'pip', 'install', '--upgrade', '--requirement', 'requirements-dev.txt'],
             SetupForTests(),
             [python, '-m', 'pip', 'install', '--verbose', '.'],
             # "--failfast" because, given how our leak-detection in tests currently works,

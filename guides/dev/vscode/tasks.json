@@ -6,7 +6,7 @@
         {
             "label": "install",
             "type": "shell",
-            "command": "${config:python.defaultInterpreterPath} scripts/install-dev.py",
+            "command": "${command:python.interpreterPath} scripts/install-dev.py",
             "group": {
                 "kind": "build",
                 "isDefault": true
@@ -20,7 +20,7 @@
         {
             "label": "format",
             "type": "shell",
-            "command": "${config:python.defaultInterpreterPath} scripts/format-all.py",
+            "command": "${command:python.interpreterPath} scripts/format-all.py",
             "presentation": {
                 "panel": "shared",
                 "clear": true

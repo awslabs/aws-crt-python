@@ -83,6 +83,18 @@ PyObject *aws_py_is_alpn_available(PyObject *self, PyObject *args) {
     return PyBool_FromLong(aws_tls_is_alpn_available());
 }
 
+PyObject *aws_py_is_tls_cipher_supported(PyObject *self, PyObject *args) {
+    (void)self;
+    (void)args;
+
+    int cipher_pref = 0;
+
+    if (!PyArg_ParseTuple(args, "i", &cipher_pref)) {
+        return NULL;
+    }
+
+    return PyBool_FromLong(aws_tls_is_cipher_pref_supported(cipher_pref));
+}
 /*******************************************************************************
  * AWS_EVENT_LOOP_GROUP
  ******************************************************************************/
@@ -402,7 +414,8 @@ PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args) {
 
     struct aws_allocator *allocator = aws_py_get_allocator();
 
-    int min_tls_version;
+    int min_tls_version = 0;
+    int cipher_pref = 0;
     const char *ca_dirpath;
     const char *ca_buffer;
     Py_ssize_t ca_buffer_len;
@@ -413,7 +426,7 @@ PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args) {
     Py_ssize_t private_key_buffer_len;
     const char *pkcs12_filepath;
     const char *pkcs12_password;
-    uint8_t verify_peer;
+    int verify_peer; /* p - boolean predicate */
     PyObject *py_pkcs11_lib;
     const char *pkcs11_user_pin;
     Py_ssize_t pkcs11_user_pin_len;
@@ -430,32 +443,33 @@ PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args) {
 
     if (!PyArg_ParseTuple(
             args,
-            "bzz#zz#z#zzbOz#Oz#z#z#z#z",
-            &min_tls_version,
-            &ca_dirpath,
-            &ca_buffer,
-            &ca_buffer_len,
-            &alpn_list,
-            &certificate_buffer,
-            &certificate_buffer_len,
-            &private_key_buffer,
-            &private_key_buffer_len,
-            &pkcs12_filepath,
-            &pkcs12_password,
-            &verify_peer,
-            &py_pkcs11_lib,
-            &pkcs11_user_pin,
-            &pkcs11_user_pin_len,
-            &py_pkcs11_slot_id,
-            &pkcs11_token_label,
-            &pkcs11_token_label_len,
-            &pkcs11_priv_key_label,
-            &pkcs11_priv_key_label_len,
-            &pkcs11_cert_file_path,
-            &pkcs11_cert_file_path_len,
-            &pkcs11_cert_file_contents,
-            &pkcs11_cert_file_contents_len,
-            &windows_cert_store_path)) {
+            "iizz#zz#z#zzpOz#Oz#z#z#z#z",
+            /* i */ &min_tls_version,
+            /* i */ &cipher_pref,
+            /* z */ &ca_dirpath,
+            /* z */ &ca_buffer,
+            /* # */ &ca_buffer_len,
+            /* z */ &alpn_list,
+            /* z */ &certificate_buffer,
+            /* # */ &certificate_buffer_len,
+            /* z */ &private_key_buffer,
+            /* # */ &private_key_buffer_len,
+            /* z */ &pkcs12_filepath,
+            /* z */ &pkcs12_password,
+            /* p */ &verify_peer,
+            /* O */ &py_pkcs11_lib,
+            /* z */ &pkcs11_user_pin,
+            /* # */ &pkcs11_user_pin_len,
+            /* O */ &py_pkcs11_slot_id,
+            /* z */ &pkcs11_token_label,
+            /* # */ &pkcs11_token_label_len,
+            /* z */ &pkcs11_priv_key_label,
+            /* # */ &pkcs11_priv_key_label_len,
+            /* z */ &pkcs11_cert_file_path,
+            /* # */ &pkcs11_cert_file_path_len,
+            /* z */ &pkcs11_cert_file_contents,
+            /* # */ &pkcs11_cert_file_contents_len,
+            /* z */ &windows_cert_store_path)) {
         return NULL;
     }
 
@@ -520,6 +534,7 @@ PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args) {
     /* From hereon, we need to clean up if errors occur */
 
     ctx_options.minimum_tls_version = min_tls_version;
+    ctx_options.cipher_pref = cipher_pref;
 
     if (ca_dirpath != NULL) {
         if (aws_tls_ctx_options_override_default_trust_store_from_path(&ctx_options, ca_dirpath, NULL)) {

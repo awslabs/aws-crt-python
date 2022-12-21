@@ -11,9 +11,11 @@
 #include "event_stream.h"
 #include "http.h"
 #include "io.h"
+#include "mqtt5_client.h"
 #include "mqtt_client.h"
 #include "mqtt_client_connection.h"
 #include "s3.h"
+#include "websocket.h"
 
 #include <aws/auth/auth.h>
 #include <aws/common/byte_buf.h>
@@ -42,7 +44,7 @@ PyObject *aws_py_init_logging(PyObject *self, PyObject *args) {
 
     s_logger_init = true;
 
-    /* NOTE: We are NOT using aws_py_default_allocator() for logging.
+    /* NOTE: We are NOT using aws_py_get_allocator() for logging.
      * This avoid deadlock during aws_mem_tracer_dump() */
     struct aws_allocator *allocator = aws_default_allocator();
 
@@ -123,26 +125,8 @@ uint32_t PyObject_GetAttrAsUint32(PyObject *o, const char *class_name, const cha
         return result;
     }
 
-    /* Using PyLong_AsLongLong() because it will convert floating point numbers (PyLong_AsUnsignedLong() will not).
-     * By using "long long" (not just "long") we can be sure to fit the whole range of 32bit numbers. */
-    long long val = PyLong_AsLongLong(attr);
-    if (PyErr_Occurred()) {
-        PyErr_Format(PyErr_Occurred(), "Cannot convert %s.%s to a C uint32_t", class_name, attr_name);
-        goto done;
-    }
+    PyObject_GetAsOptionalUint32(attr, class_name, attr_name, &result);
 
-    if (val < 0) {
-        PyErr_Format(PyExc_OverflowError, "%s.%s cannot be negative", class_name, attr_name);
-        goto done;
-    }
-
-    if (val > UINT32_MAX) {
-        PyErr_Format(PyExc_OverflowError, "%s.%s too large to convert to C uint32_t", class_name, attr_name);
-        goto done;
-    }
-
-    result = (uint32_t)val;
-done:
     Py_DECREF(attr);
     return result;
 }
@@ -156,25 +140,23 @@ uint16_t PyObject_GetAttrAsUint16(PyObject *o, const char *class_name, const cha
         return result;
     }
 
-    /* Using PyLong_AsLong() because it will convert floating point numbers (PyLong_AsUnsignedLong() will not) */
-    long val = PyLong_AsLong(attr);
-    if (PyErr_Occurred()) {
-        PyErr_Format(PyErr_Occurred(), "Cannot convert %s.%s to C uint16_t", class_name, attr_name);
-        goto done;
+    PyObject_GetAsOptionalUint16(attr, class_name, attr_name, &result);
+
+    Py_DECREF(attr);
+    return result;
+}
+
+uint8_t PyObject_GetAttrAsUint8(PyObject *o, const char *class_name, const char *attr_name) {
+    uint8_t result = UINT8_MAX;
+
+    PyObject *attr = PyObject_GetAttrString(o, attr_name);
+    if (!attr) {
+        PyErr_Format(PyExc_AttributeError, "'%s.%s' attribute not found", class_name, attr_name);
+        return result;
     }
 
-    if (val < 0) {
-        PyErr_Format(PyExc_OverflowError, "%s.%s cannot be negative", class_name, attr_name);
-        goto done;
-    }
+    PyObject_GetAsOptionalUint8(attr, class_name, attr_name, &result);
 
-    if (val > UINT16_MAX) {
-        PyErr_Format(PyExc_OverflowError, "%s.%s too large to convert to C uint16_t", class_name, attr_name);
-        goto done;
-    }
-
-    result = (uint16_t)val;
-done:
     Py_DECREF(attr);
     return result;
 }
@@ -209,15 +191,165 @@ int PyObject_GetAttrAsIntEnum(PyObject *o, const char *class_name, const char *a
         return result;
     }
 
-    if (!PyLong_Check(attr)) {
+    PyObject_GetAsOptionalIntEnum(attr, class_name, attr_name, &result);
+
+    Py_DECREF(attr);
+    return result;
+}
+
+bool *PyObject_GetAsOptionalBool(PyObject *o, const char *class_name, const char *attr_name, bool *stored_bool) {
+    if (o == Py_None) {
+        goto done;
+    }
+
+    int val = PyObject_IsTrue(o);
+    if (val == -1) {
+        PyErr_Format(PyExc_TypeError, "Cannot convert %s.%s to bool", class_name, attr_name);
+        goto done;
+    }
+
+    *stored_bool = (bool)(val != 0);
+    return stored_bool;
+
+done:
+    return NULL;
+}
+
+uint64_t *PyObject_GetAsOptionalUint64(
+    PyObject *o,
+    const char *class_name,
+    const char *attr_name,
+    uint64_t *stored_int) {
+    if (o == Py_None) {
+        goto done;
+    }
+
+    unsigned long long val = PyLong_AsUnsignedLongLong(o);
+    if (PyErr_Occurred()) {
+        PyErr_Format(PyErr_Occurred(), "Cannot convert %s.%s to a C uint64_t", class_name, attr_name);
+        goto done;
+    }
+
+    *stored_int = (uint64_t)val;
+    return stored_int;
+
+done:
+    return NULL;
+}
+
+uint32_t *PyObject_GetAsOptionalUint32(
+    PyObject *o,
+    const char *class_name,
+    const char *attr_name,
+    uint32_t *stored_int) {
+
+    if (o == Py_None) {
+        goto done;
+    }
+
+    /* Using PyLong_AsLongLong() because it will convert floating point numbers (PyLong_AsUnsignedLong() will not).
+     * By using "long long" (not just "long") we can be sure to fit the whole range of 32bit numbers. */
+    long long val = PyLong_AsLongLong(o);
+    if (PyErr_Occurred()) {
+        PyErr_Format(PyErr_Occurred(), "Cannot convert %s.%s to a C uint32_t", class_name, attr_name);
+        goto done;
+    }
+
+    if (val < 0) {
+        PyErr_Format(PyExc_OverflowError, "%s.%s cannot be negative", class_name, attr_name);
+        goto done;
+    }
+
+    if (val > UINT32_MAX) {
+        PyErr_Format(PyExc_OverflowError, "%s.%s too large to convert to C uint32_t", class_name, attr_name);
+        goto done;
+    }
+
+    *stored_int = (uint32_t)val;
+    return stored_int;
+
+done:
+    return NULL;
+}
+
+uint16_t *PyObject_GetAsOptionalUint16(
+    PyObject *o,
+    const char *class_name,
+    const char *attr_name,
+    uint16_t *stored_int) {
+
+    if (o == Py_None) {
+        goto done;
+    }
+
+    long val = PyLong_AsLong(o);
+    if (PyErr_Occurred()) {
+        PyErr_Format(PyErr_Occurred(), "Cannot convert %s.%s to a C uint16_t", class_name, attr_name);
+        goto done;
+    }
+
+    if (val < 0) {
+        PyErr_Format(PyExc_OverflowError, "%s.%s cannot be negative", class_name, attr_name);
+        goto done;
+    }
+
+    if (val > UINT16_MAX) {
+        PyErr_Format(PyExc_OverflowError, "%s.%s too large to convert to C uint16_t", class_name, attr_name);
+        goto done;
+    }
+
+    *stored_int = (uint16_t)val;
+
+    return stored_int;
+
+done:
+    return NULL;
+}
+
+uint8_t *PyObject_GetAsOptionalUint8(PyObject *o, const char *class_name, const char *attr_name, uint8_t *stored_int) {
+
+    if (o == Py_None) {
+        goto done;
+    }
+
+    long val = PyLong_AsLong(o);
+    if (PyErr_Occurred()) {
+        PyErr_Format(PyErr_Occurred(), "Cannot convert %s.%s to a C uint8_t", class_name, attr_name);
+        goto done;
+    }
+
+    if (val < 0) {
+        PyErr_Format(PyExc_OverflowError, "%s.%s cannot be negative", class_name, attr_name);
+        goto done;
+    }
+
+    if (val > UINT8_MAX) {
+        PyErr_Format(PyExc_OverflowError, "%s.%s too large to convert to C uint8_t", class_name, attr_name);
+        goto done;
+    }
+
+    *stored_int = (uint8_t)val;
+
+    return stored_int;
+
+done:
+    return NULL;
+}
+
+int *PyObject_GetAsOptionalIntEnum(PyObject *o, const char *class_name, const char *attr_name, int *stored_enum) {
+    if (o == Py_None) {
+        goto done;
+    }
+
+    if (!PyLong_Check(o)) {
         PyErr_Format(PyExc_TypeError, "%s.%s is not a valid enum", class_name, attr_name);
         goto done;
     }
 
-    result = PyLong_AsLong(attr);
+    *stored_enum = PyLong_AsLong(o);
+    return stored_enum;
 done:
-    Py_DECREF(attr);
-    return result;
+    return NULL;
 }
 
 void PyErr_SetAwsLastError(void) {
@@ -548,6 +680,7 @@ static PyMethodDef s_module_methods[] = {
 
     /* IO */
     AWS_PY_METHOD_DEF(is_alpn_available, METH_NOARGS),
+    AWS_PY_METHOD_DEF(is_tls_cipher_supported, METH_VARARGS),
     AWS_PY_METHOD_DEF(event_loop_group_new, METH_VARARGS),
     AWS_PY_METHOD_DEF(host_resolver_new_default, METH_VARARGS),
     AWS_PY_METHOD_DEF(client_bootstrap_new, METH_VARARGS),
@@ -573,6 +706,16 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(mqtt_client_connection_unsubscribe, METH_VARARGS),
     AWS_PY_METHOD_DEF(mqtt_client_connection_disconnect, METH_VARARGS),
     AWS_PY_METHOD_DEF(mqtt_ws_handshake_transform_complete, METH_VARARGS),
+
+    /* MQTT5 Client */
+    AWS_PY_METHOD_DEF(mqtt5_client_new, METH_VARARGS),
+    AWS_PY_METHOD_DEF(mqtt5_client_start, METH_VARARGS),
+    AWS_PY_METHOD_DEF(mqtt5_client_stop, METH_VARARGS),
+    AWS_PY_METHOD_DEF(mqtt5_client_publish, METH_VARARGS),
+    AWS_PY_METHOD_DEF(mqtt5_client_subscribe, METH_VARARGS),
+    AWS_PY_METHOD_DEF(mqtt5_client_unsubscribe, METH_VARARGS),
+    AWS_PY_METHOD_DEF(mqtt5_client_get_stats, METH_VARARGS),
+    AWS_PY_METHOD_DEF(mqtt5_ws_handshake_transform_complete, METH_VARARGS),
 
     /* Cryptographic primitives */
     AWS_PY_METHOD_DEF(md5_new, METH_NOARGS),
@@ -656,6 +799,13 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(s3_client_make_meta_request, METH_VARARGS),
     AWS_PY_METHOD_DEF(s3_meta_request_cancel, METH_VARARGS),
 
+    /* WebSocket */
+    AWS_PY_METHOD_DEF(websocket_client_connect, METH_VARARGS),
+    AWS_PY_METHOD_DEF(websocket_close, METH_VARARGS),
+    AWS_PY_METHOD_DEF(websocket_send_frame, METH_VARARGS),
+    AWS_PY_METHOD_DEF(websocket_increment_read_window, METH_VARARGS),
+    AWS_PY_METHOD_DEF(websocket_create_handshake_request, METH_VARARGS),
+
     {NULL, NULL, 0, NULL},
 };
 
@@ -707,3 +857,15 @@ PyMODINIT_FUNC PyInit__awscrt(void) {
 
     return m;
 }
+
+/**
+ * align with the the vanilla C types Python tends to use.
+ * This is important when passing arguments between C and Python
+ * via things like PyArg_ParseTuple() and PyObject_CallFunction()
+ * https://docs.python.org/3/c-api/arg.html
+ */
+AWS_STATIC_ASSERT(sizeof(uint8_t) == sizeof(unsigned char));       /* we pass uint8_t as "B" (unsigned char) */
+AWS_STATIC_ASSERT(sizeof(uint16_t) == sizeof(unsigned short));     /* we pass uint16_t as "H" (unsigned short) */
+AWS_STATIC_ASSERT(sizeof(uint32_t) == sizeof(unsigned int));       /* we pass uint32_t as "I" (unsigned int) */
+AWS_STATIC_ASSERT(sizeof(uint64_t) == sizeof(unsigned long long)); /* we pass uint64_t as "K" (unsigned long long) */
+AWS_STATIC_ASSERT(sizeof(enum aws_log_level) == sizeof(int));      /* we pass enums as "i" (int) */
