@@ -229,6 +229,8 @@ class TestClient(NativeResourceTest):
             self.assertEqual(101, setup_data.handshake_response_status)
             # check for response header we know should be there
             self.assertIn(("Upgrade", "websocket"), setup_data.handshake_response_headers)
+            # a successful handshake response has no body
+            self.assertIsNone(setup_data.handshake_response_body)
 
             # now close the WebSocket
             setup_data.websocket.close()
@@ -287,6 +289,7 @@ class TestClient(NativeResourceTest):
         # nothing responded, so there should be no "handshake response"
         self.assertIsNone(setup_data.handshake_response_status)
         self.assertIsNone(setup_data.handshake_response_headers)
+        self.assertIsNone(setup_data.handshake_response_body)
 
         # ensure that on_connection_shutdown does NOT fire
         sleep(0.5)
@@ -317,6 +320,7 @@ class TestClient(NativeResourceTest):
             # check the HTTP response data
             self.assertGreaterEqual(setup_data.handshake_response_status, 400)
             self.assertIsNotNone(setup_data.handshake_response_headers)
+            self.assertIsNotNone(setup_data.handshake_response_body)
 
     def test_exception_in_setup_callback_closes_websocket(self):
         with WebSocketServer(self.host, self.port) as server:
