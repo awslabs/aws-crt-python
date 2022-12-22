@@ -321,6 +321,8 @@ class TestClient(NativeResourceTest):
             self.assertGreaterEqual(setup_data.handshake_response_status, 400)
             self.assertIsNotNone(setup_data.handshake_response_headers)
             self.assertIsNotNone(setup_data.handshake_response_body)
+            # check that body is a valid string
+            self.assertGreater(setup_data.handshake_response_body.decode(), 0)
 
     def test_exception_in_setup_callback_closes_websocket(self):
         with WebSocketServer(self.host, self.port) as server:
