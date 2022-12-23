@@ -16,11 +16,7 @@
 static const char *s_websocket_capsule_name = "aws_websocket";
 
 static void s_websocket_on_connection_setup(
-    struct aws_websocket *websocket,
-    int error_code,
-    int handshake_response_status,
-    const struct aws_http_header *handshake_response_header_array,
-    size_t num_handshake_response_headers,
+    const struct aws_websocket_on_connection_setup_data *setup,
     void *user_data);
 
 static void s_websocket_on_connection_shutdown(struct aws_websocket *websocket, int error_code, void *user_data);
@@ -177,15 +173,11 @@ error:
  * that we can't actually check (and so may not actually work).
  */
 static void s_websocket_on_connection_setup(
-    struct aws_websocket *websocket,
-    int error_code,
-    int handshake_response_status,
-    const struct aws_http_header *handshake_response_header_array,
-    size_t num_handshake_response_headers,
+    const struct aws_websocket_on_connection_setup_data *setup,
     void *user_data) {
 
     /* sanity check: websocket XOR error_code is set. both cannot be set. both cannot be unset */
-    AWS_FATAL_ASSERT((websocket != NULL) ^ (error_code != 0));
+    AWS_FATAL_ASSERT((setup->websocket != NULL) ^ (setup->error_code != 0));
 
     /* userdata is _WebSocketCore */
     PyObject *websocket_core_py = user_data;
@@ -194,17 +186,26 @@ static void s_websocket_on_connection_setup(
     PyGILState_STATE state = PyGILState_Ensure();
 
     PyObject *websocket_binding_py = NULL;
-    if (websocket) {
-        websocket_binding_py = PyCapsule_New(websocket, s_websocket_capsule_name, s_websocket_capsule_destructor);
+    if (setup->websocket) {
+        websocket_binding_py =
+            PyCapsule_New(setup->websocket, s_websocket_capsule_name, s_websocket_capsule_destructor);
         AWS_FATAL_ASSERT(websocket_binding_py && "capsule allocation failed");
     }
 
+    /* Any of the handshake_response variables could be NULL */
+
+    PyObject *status_code_py = NULL;
+    if (setup->handshake_response_status != NULL) {
+        status_code_py = PyLong_FromLong(*setup->handshake_response_status);
+        AWS_FATAL_ASSERT(status_code_py && "status code allocation failed");
+    }
+
     PyObject *headers_py = NULL;
-    if (num_handshake_response_headers > 0) {
-        headers_py = PyList_New((Py_ssize_t)num_handshake_response_headers);
+    if (setup->handshake_response_header_array != NULL) {
+        headers_py = PyList_New((Py_ssize_t)setup->num_handshake_response_headers);
         AWS_FATAL_ASSERT(headers_py && "header list allocation failed");
-        for (size_t i = 0; i < num_handshake_response_headers; ++i) {
-            const struct aws_http_header *header_i = &handshake_response_header_array[i];
+        for (size_t i = 0; i < setup->num_handshake_response_headers; ++i) {
+            const struct aws_http_header *header_i = &setup->handshake_response_header_array[i];
             PyObject *tuple_py = PyTuple_New(2);
             AWS_FATAL_ASSERT(tuple_py && "header tuple allocation failed");
 
@@ -220,14 +221,24 @@ static void s_websocket_on_connection_setup(
         }
     }
 
+    PyObject *body_py = NULL;
+    if (setup->handshake_response_body != NULL) {
+        /* AWS APIs are fine with NULL as the address of a 0-length array,
+         * but python APIs requires that it be non-NULL */
+        const char *ptr = setup->handshake_response_body->ptr ? (const char *)setup->handshake_response_body->ptr : "";
+        body_py = PyBytes_FromStringAndSize(ptr, (Py_ssize_t)setup->handshake_response_body->len);
+        AWS_FATAL_ASSERT(body_py && "response body allocation failed");
+    }
+
     PyObject *result = PyObject_CallMethod(
         websocket_core_py,
         "_on_connection_setup",
-        "(iOiO)",
-        error_code,
-        websocket_binding_py ? websocket_binding_py : Py_None,
-        handshake_response_status,
-        headers_py ? headers_py : Py_None);
+        "(iOOOO)",
+        /* i */ setup->error_code,
+        /* O */ websocket_binding_py ? websocket_binding_py : Py_None,
+        /* O */ status_code_py ? status_code_py : Py_None,
+        /* O */ headers_py ? headers_py : Py_None,
+        /* O */ body_py ? body_py : Py_None);
 
     if (result) {
         Py_DECREF(result);
@@ -240,10 +251,12 @@ static void s_websocket_on_connection_setup(
     }
 
     Py_XDECREF(websocket_binding_py);
+    Py_XDECREF(status_code_py);
     Py_XDECREF(headers_py);
+    Py_XDECREF(body_py);
 
     /* If setup failed, there will be no further callbacks, so release _WebSocketCore */
-    if (error_code != 0) {
+    if (setup->error_code != 0) {
         Py_DECREF(websocket_core_py);
     }
 
