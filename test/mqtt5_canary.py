@@ -267,8 +267,7 @@ if __name__ == '__main__':
     while time.time() < time_end:
         if time.time() >= time_next_operation:
             time_next_operation += tpsdelay
-            for client in clients:
-                client.random_operation()
+            random.choice(clients).random_operation()
 
     for client in clients:
         client.final_stop()
