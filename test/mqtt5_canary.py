@@ -89,7 +89,7 @@ class CanaryClient():
     user_properties.append(mqtt5.UserProperty(name="name1", value="value1"))
     user_properties.append(mqtt5.UserProperty(name="name2", value="value2"))
 
-    def __init__(self, auth_type=AuthType.CANARY):
+    def __init__(self):
         self.client_id = create_client_id()
         self.canary_core = CanaryCore()
         self.client = self._create_client(canary_core=self.canary_core)
