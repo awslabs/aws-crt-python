@@ -5,22 +5,10 @@ from concurrent.futures import Future
 from awscrt import mqtt5
 from awscrt.io import ClientBootstrap, EventLoopGroup, DefaultHostResolver
 import os
-import enum
 import uuid
 import time
 import random
 import sys
-
-
-AuthType = enum.Enum('AuthType', ['DIRECT',
-                                  'DIRECT_BASIC_AUTH',
-                                  'DIRECT_TLS',
-                                  'DIRECT_PROXY',
-                                  'WS',
-                                  'WS_BASIC_AUTH',
-                                  'WS_TLS',
-                                  'WS_PROXY',
-                                  'CANARY'])
 
 
 def create_client_id():
