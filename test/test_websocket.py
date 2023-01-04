@@ -10,11 +10,12 @@ import gc
 from io import StringIO
 import logging
 from os import urandom
-from queue import Queue
+from queue import Empty, Queue
+import secrets
 import socket
 from test import NativeResourceTest
 import threading
-from time import sleep
+from time import sleep, time
 from typing import Optional
 
 # using a 3rdparty websocket library for the server
@@ -46,7 +47,7 @@ class ClientHandler:
         self.incoming_frame_payload = bytearray()
         self.exception = None
 
-    def connect_sync(self, host, port):
+    def connect_sync(self, host, port, **connect_kwargs):
         connect(host=host,
                 port=port,
                 handshake_request=create_handshake_request(host=host),
@@ -54,7 +55,8 @@ class ClientHandler:
                 on_connection_shutdown=self._on_connection_shutdown,
                 on_incoming_frame_begin=self._on_incoming_frame_begin,
                 on_incoming_frame_payload=self._on_incoming_frame_payload,
-                on_incoming_frame_complete=self._on_incoming_frame_complete)
+                on_incoming_frame_complete=self._on_incoming_frame_complete,
+                **connect_kwargs)
         # wait for on_connection_setup to fire
         setup_data = self.setup_future.result(TIMEOUT)
         assert setup_data.exception is None
@@ -128,6 +130,8 @@ class WebSocketServer:
         # don't return until the server signals that it's started up and is listening for connections
         assert self._server_started_event.wait(TIMEOUT)
 
+        return self
+
     def __exit__(self, exc_type, exc_value, exc_tb):
         # main thread is exiting the `with` block: tell the server to stop...
 
@@ -158,6 +162,7 @@ class WebSocketServer:
     async def _run_connection(self, server_connection: websockets_server_3rdparty.WebSocketServerProtocol):
         # this coroutine runs once for each connection to the server
         # when this coroutine exits, the connection gets shut down
+        self._current_connection = server_connection
         try:
             # await each message...
             async for msg in server_connection:
@@ -169,6 +174,12 @@ class WebSocketServer:
             # an exception is raised when the connection ends,
             # even if the connection ends cleanly, so just swallow it
             pass
+
+        finally:
+            self._current_connection = None
+
+    def send_async(self, msg):
+        asyncio.run_coroutine_threadsafe(self._current_connection.send(msg), self._server_loop)
 
 
 class TestClient(NativeResourceTest):
@@ -218,6 +229,8 @@ class TestClient(NativeResourceTest):
             self.assertEqual(101, setup_data.handshake_response_status)
             # check for response header we know should be there
             self.assertIn(("Upgrade", "websocket"), setup_data.handshake_response_headers)
+            # a successful handshake response has no body
+            self.assertIsNone(setup_data.handshake_response_body)
 
             # now close the WebSocket
             setup_data.websocket.close()
@@ -276,6 +289,7 @@ class TestClient(NativeResourceTest):
         # nothing responded, so there should be no "handshake response"
         self.assertIsNone(setup_data.handshake_response_status)
         self.assertIsNone(setup_data.handshake_response_headers)
+        self.assertIsNone(setup_data.handshake_response_body)
 
         # ensure that on_connection_shutdown does NOT fire
         sleep(0.5)
@@ -306,6 +320,9 @@ class TestClient(NativeResourceTest):
             # check the HTTP response data
             self.assertGreaterEqual(setup_data.handshake_response_status, 400)
             self.assertIsNotNone(setup_data.handshake_response_headers)
+            self.assertIsNotNone(setup_data.handshake_response_body)
+            # check that body is a valid string
+            self.assertGreater(len(setup_data.handshake_response_body.decode()), 0)
 
     def test_exception_in_setup_callback_closes_websocket(self):
         with WebSocketServer(self.host, self.port) as server:
@@ -504,3 +521,55 @@ class TestClient(NativeResourceTest):
                 # wait for the frame to echo back, firing the bad callback,
                 # which raises an exception, which should result in the WebSocket closing
                 shutdown_future.result(TIMEOUT)
+
+    def test_manage_read_window(self):
+        # test that users can manage how much data is read by managing the read window
+        with WebSocketServer(self.host, self.port) as server:
+            handler = ClientHandler()
+            handler.connect_sync(self.host, self.port, manage_read_window=True, initial_read_window=1000)
+
+            # client's read window is 1000-bytes
+            # have the server send 10 messages with 100-byte payloads
+            # they should all get through
+
+            for i in range(10):
+                msg = secrets.token_bytes(100)  # random msg for server to send
+                server.send_async(msg)
+                recv: RecvFrame = handler.complete_frames.get(timeout=TIMEOUT)
+                self.assertEqual(recv.payload, msg, "did not receive expected payload")
+
+            # client window is now 0
+            # have server send a 1000 byte message, NONE of its payload should arrive
+
+            msg = secrets.token_bytes(1000)  # random msg for server to send
+            server.send_async(msg)
+            with self.assertRaises(Empty):
+                handler.complete_frames.get(timeout=1.0)
+            self.assertEqual(len(handler.incoming_frame_payload), 0, "No payload should arrive while window is 0")
+
+            # now increment client's window to 500
+            # half (500/1000) the bytes should flow in
+
+            handler.websocket.increment_read_window(500)
+            max_wait_until = time() + TIMEOUT
+            while len(handler.incoming_frame_payload) < 500:
+                sleep(0.001)
+                self.assertLess(time(), max_wait_until, "timed out waiting for all bytes")
+            sleep(1.0)  # sleep a moment to be sure we don't receive MORE than 500 bytes
+            self.assertEqual(len(handler.incoming_frame_payload), 500, "received more bytes than expected")
+
+            # client's window is 0 again, 500 bytes are still waiting to flow in
+            # increment the window to let the rest in
+            # let's do it by calling increment a bunch of times in a row, just to be different
+
+            handler.websocket.increment_read_window(100)
+            handler.websocket.increment_read_window(100)
+            handler.websocket.increment_read_window(100)
+            handler.websocket.increment_read_window(100)
+            handler.websocket.increment_read_window(100)
+
+            recv: RecvFrame = handler.complete_frames.get(timeout=TIMEOUT)
+            self.assertEqual(recv.payload, msg, "did not receive expected payload")
+
+            # done!
+            handler.close_sync()

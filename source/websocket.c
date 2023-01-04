@@ -16,11 +16,7 @@
 static const char *s_websocket_capsule_name = "aws_websocket";
 
 static void s_websocket_on_connection_setup(
-    struct aws_websocket *websocket,
-    int error_code,
-    int handshake_response_status,
-    const struct aws_http_header *handshake_response_header_array,
-    size_t num_handshake_response_headers,
+    const struct aws_websocket_on_connection_setup_data *setup,
     void *user_data);
 
 static void s_websocket_on_connection_shutdown(struct aws_websocket *websocket, int error_code, void *user_data);
@@ -62,7 +58,7 @@ PyObject *aws_py_websocket_client_connect(PyObject *self, PyObject *args) {
     PyObject *socket_options_py;    /* O */
     PyObject *tls_options_py;       /* O */
     PyObject *proxy_options_py;     /* O */
-    int enable_read_backpressure;   /* p - boolean predicate */
+    int manage_read_window;         /* p - boolean predicate */
     Py_ssize_t initial_read_window; /* n */
     PyObject *websocket_core_py;    /* O */
 
@@ -77,7 +73,7 @@ PyObject *aws_py_websocket_client_connect(PyObject *self, PyObject *args) {
             &socket_options_py,
             &tls_options_py,
             &proxy_options_py,
-            &enable_read_backpressure,
+            &manage_read_window,
             &initial_read_window,
             &websocket_core_py)) {
         return NULL;
@@ -142,7 +138,7 @@ PyObject *aws_py_websocket_client_connect(PyObject *self, PyObject *args) {
         .on_incoming_frame_begin = s_websocket_on_incoming_frame_begin,
         .on_incoming_frame_payload = s_websocket_on_incoming_frame_payload,
         .on_incoming_frame_complete = s_websocket_on_incoming_frame_complete,
-        .manual_window_management = enable_read_backpressure != 0,
+        .manual_window_management = manage_read_window != 0,
     };
     if (aws_websocket_client_connect(&options) != AWS_OP_SUCCESS) {
         PyErr_SetAwsLastError();
@@ -177,15 +173,11 @@ error:
  * that we can't actually check (and so may not actually work).
  */
 static void s_websocket_on_connection_setup(
-    struct aws_websocket *websocket,
-    int error_code,
-    int handshake_response_status,
-    const struct aws_http_header *handshake_response_header_array,
-    size_t num_handshake_response_headers,
+    const struct aws_websocket_on_connection_setup_data *setup,
     void *user_data) {
 
     /* sanity check: websocket XOR error_code is set. both cannot be set. both cannot be unset */
-    AWS_FATAL_ASSERT((websocket != NULL) ^ (error_code != 0));
+    AWS_FATAL_ASSERT((setup->websocket != NULL) ^ (setup->error_code != 0));
 
     /* userdata is _WebSocketCore */
     PyObject *websocket_core_py = user_data;
@@ -194,17 +186,26 @@ static void s_websocket_on_connection_setup(
     PyGILState_STATE state = PyGILState_Ensure();
 
     PyObject *websocket_binding_py = NULL;
-    if (websocket) {
-        websocket_binding_py = PyCapsule_New(websocket, s_websocket_capsule_name, s_websocket_capsule_destructor);
+    if (setup->websocket) {
+        websocket_binding_py =
+            PyCapsule_New(setup->websocket, s_websocket_capsule_name, s_websocket_capsule_destructor);
         AWS_FATAL_ASSERT(websocket_binding_py && "capsule allocation failed");
     }
 
+    /* Any of the handshake_response variables could be NULL */
+
+    PyObject *status_code_py = NULL;
+    if (setup->handshake_response_status != NULL) {
+        status_code_py = PyLong_FromLong(*setup->handshake_response_status);
+        AWS_FATAL_ASSERT(status_code_py && "status code allocation failed");
+    }
+
     PyObject *headers_py = NULL;
-    if (num_handshake_response_headers > 0) {
-        headers_py = PyList_New((Py_ssize_t)num_handshake_response_headers);
+    if (setup->handshake_response_header_array != NULL) {
+        headers_py = PyList_New((Py_ssize_t)setup->num_handshake_response_headers);
         AWS_FATAL_ASSERT(headers_py && "header list allocation failed");
-        for (size_t i = 0; i < num_handshake_response_headers; ++i) {
-            const struct aws_http_header *header_i = &handshake_response_header_array[i];
+        for (size_t i = 0; i < setup->num_handshake_response_headers; ++i) {
+            const struct aws_http_header *header_i = &setup->handshake_response_header_array[i];
             PyObject *tuple_py = PyTuple_New(2);
             AWS_FATAL_ASSERT(tuple_py && "header tuple allocation failed");
 
@@ -220,14 +221,24 @@ static void s_websocket_on_connection_setup(
         }
     }
 
+    PyObject *body_py = NULL;
+    if (setup->handshake_response_body != NULL) {
+        /* AWS APIs are fine with NULL as the address of a 0-length array,
+         * but python APIs requires that it be non-NULL */
+        const char *ptr = setup->handshake_response_body->ptr ? (const char *)setup->handshake_response_body->ptr : "";
+        body_py = PyBytes_FromStringAndSize(ptr, (Py_ssize_t)setup->handshake_response_body->len);
+        AWS_FATAL_ASSERT(body_py && "response body allocation failed");
+    }
+
     PyObject *result = PyObject_CallMethod(
         websocket_core_py,
         "_on_connection_setup",
-        "(iOiO)",
-        error_code,
-        websocket_binding_py ? websocket_binding_py : Py_None,
-        handshake_response_status,
-        headers_py ? headers_py : Py_None);
+        "(iOOOO)",
+        /* i */ setup->error_code,
+        /* O */ websocket_binding_py ? websocket_binding_py : Py_None,
+        /* O */ status_code_py ? status_code_py : Py_None,
+        /* O */ headers_py ? headers_py : Py_None,
+        /* O */ body_py ? body_py : Py_None);
 
     if (result) {
         Py_DECREF(result);
@@ -240,10 +251,12 @@ static void s_websocket_on_connection_setup(
     }
 
     Py_XDECREF(websocket_binding_py);
+    Py_XDECREF(status_code_py);
     Py_XDECREF(headers_py);
+    Py_XDECREF(body_py);
 
     /* If setup failed, there will be no further callbacks, so release _WebSocketCore */
-    if (error_code != 0) {
+    if (setup->error_code != 0) {
         Py_DECREF(websocket_core_py);
     }
 
@@ -516,10 +529,23 @@ error:
 }
 
 PyObject *aws_py_websocket_increment_read_window(PyObject *self, PyObject *args) {
-    /* TODO implement */
     (void)self;
-    (void)args;
-    return NULL;
+
+    PyObject *binding_py; /* O */
+    Py_ssize_t size;      /* n */
+
+    if (!PyArg_ParseTuple(args, "On", &binding_py, &size)) {
+        return NULL;
+    }
+
+    struct aws_websocket *websocket = PyCapsule_GetPointer(binding_py, s_websocket_capsule_name);
+    if (!websocket) {
+        return NULL;
+    }
+
+    /* already checked that size was non-negative out in python */
+    aws_websocket_increment_read_window(websocket, (size_t)size);
+    Py_RETURN_NONE;
 }
 
 PyObject *aws_py_websocket_create_handshake_request(PyObject *self, PyObject *args) {

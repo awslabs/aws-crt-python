@@ -539,7 +539,7 @@ class Mqtt5ClientTest(NativeResourceTest):
     def test_connect_with_invalid_port_for_websocket_connection(self):
         client_options = mqtt5.ClientOptions("will be set by _create_client", 1883)
         client, callbacks = self._test_connect_fail(
-            auth_type=AuthType.WS_BAD_PORT, client_options=client_options, expected_error_code=46)
+            auth_type=AuthType.WS_BAD_PORT, client_options=client_options)
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
