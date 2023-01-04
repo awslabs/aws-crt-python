@@ -388,7 +388,7 @@ class WebSocket(NativeResource):
             try:
                 if on_complete is not None:
                     on_complete(cbdata)
-            except Exception:
+            except BaseException:
                 print("Exception in WebSocket.send_frame on_complete callback", file=sys.stderr)
                 sys.excepthook(*sys.exc_info())
                 self.close()
@@ -457,7 +457,7 @@ class _WebSocketCore(NativeResource):
         # Do not let exceptions from the user's callback bubble up any further.
         try:
             self._on_connection_setup_cb(cbdata)
-        except Exception:
+        except BaseException:
             print("Exception in WebSocket on_connection_setup callback", file=sys.stderr)
             sys.excepthook(*sys.exc_info())
             if cbdata.websocket is not None:
@@ -472,7 +472,7 @@ class _WebSocketCore(NativeResource):
         try:
             if self._on_connection_shutdown_cb is not None:
                 self._on_connection_shutdown_cb(cbdata)
-        except Exception:
+        except BaseException:
             print("Exception in WebSocket on_connection_shutdown callback", file=sys.stderr)
             sys.excepthook(*sys.exc_info())
 
@@ -485,7 +485,7 @@ class _WebSocketCore(NativeResource):
         try:
             if self._on_incoming_frame_begin_cb is not None:
                 self._on_incoming_frame_begin_cb(cbdata)
-        except Exception:
+        except BaseException:
             print("Exception in WebSocket on_incoming_frame_begin callback", file=sys.stderr)
             sys.excepthook(*sys.exc_info())
             return False  # close websocket
@@ -499,7 +499,7 @@ class _WebSocketCore(NativeResource):
         try:
             if self._on_incoming_frame_payload_cb is not None:
                 self._on_incoming_frame_payload_cb(cbdata)
-        except Exception:
+        except BaseException:
             print("Exception in WebSocket on_incoming_frame_payload callback", file=sys.stderr)
             sys.excepthook(*sys.exc_info())
             return False  # close websocket
@@ -517,7 +517,7 @@ class _WebSocketCore(NativeResource):
         try:
             if self._on_incoming_frame_complete_cb is not None:
                 self._on_incoming_frame_complete_cb(cbdata)
-        except Exception:
+        except BaseException:
             print("Exception in WebSocket on_incoming_frame_complete callback", file=sys.stderr)
             sys.excepthook(*sys.exc_info())
             return False  # close websocket
