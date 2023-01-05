@@ -202,14 +202,13 @@ class OnConnectionSetupData:
     This is None if the connection failed before receiving an HTTP response.
     """
 
-    # TODO: hook this up in C
-    # handshake_response_body: bytes = None
-    # """The HTTP response body, if you're interested.
+    handshake_response_body: bytes = None
+    """The HTTP response body, if you're interested.
 
-    # This is only present if the server sent a full HTTP response rejecting the handshake.
-    # It is not present if the connection succeeded,
-    # or the connection failed for other reasons.
-    # """
+    This is only present if the server sent a full HTTP response rejecting the handshake.
+    It is not present if the connection succeeded,
+    or the connection failed for other reasons.
+    """
 
 
 @dataclass
@@ -389,7 +388,7 @@ class WebSocket(NativeResource):
             try:
                 if on_complete is not None:
                     on_complete(cbdata)
-            except Exception:
+            except BaseException:
                 print("Exception in WebSocket.send_frame on_complete callback", file=sys.stderr)
                 sys.excepthook(*sys.exc_info())
                 self.close()
@@ -442,7 +441,8 @@ class _WebSocketCore(NativeResource):
             error_code,
             websocket_binding,
             handshake_response_status,
-            handshake_response_headers):
+            handshake_response_headers,
+            handshake_response_body):
 
         cbdata = OnConnectionSetupData()
         if error_code:
@@ -450,18 +450,14 @@ class _WebSocketCore(NativeResource):
         else:
             cbdata.websocket = WebSocket(websocket_binding)
 
-        if handshake_response_status != -1:
-            cbdata.handshake_response_status = handshake_response_status
-
-        if handshake_response_headers is not None:
-            cbdata.handshake_response_headers = handshake_response_headers
-
-        # TODO: get C to pass handshake_response_body
+        cbdata.handshake_response_status = handshake_response_status
+        cbdata.handshake_response_headers = handshake_response_headers
+        cbdata.handshake_response_body = handshake_response_body
 
         # Do not let exceptions from the user's callback bubble up any further.
         try:
             self._on_connection_setup_cb(cbdata)
-        except Exception:
+        except BaseException:
             print("Exception in WebSocket on_connection_setup callback", file=sys.stderr)
             sys.excepthook(*sys.exc_info())
             if cbdata.websocket is not None:
@@ -476,7 +472,7 @@ class _WebSocketCore(NativeResource):
         try:
             if self._on_connection_shutdown_cb is not None:
                 self._on_connection_shutdown_cb(cbdata)
-        except Exception:
+        except BaseException:
             print("Exception in WebSocket on_connection_shutdown callback", file=sys.stderr)
             sys.excepthook(*sys.exc_info())
 
@@ -489,7 +485,7 @@ class _WebSocketCore(NativeResource):
         try:
             if self._on_incoming_frame_begin_cb is not None:
                 self._on_incoming_frame_begin_cb(cbdata)
-        except Exception:
+        except BaseException:
             print("Exception in WebSocket on_incoming_frame_begin callback", file=sys.stderr)
             sys.excepthook(*sys.exc_info())
             return False  # close websocket
@@ -503,7 +499,7 @@ class _WebSocketCore(NativeResource):
         try:
             if self._on_incoming_frame_payload_cb is not None:
                 self._on_incoming_frame_payload_cb(cbdata)
-        except Exception:
+        except BaseException:
             print("Exception in WebSocket on_incoming_frame_payload callback", file=sys.stderr)
             sys.excepthook(*sys.exc_info())
             return False  # close websocket
@@ -521,7 +517,7 @@ class _WebSocketCore(NativeResource):
         try:
             if self._on_incoming_frame_complete_cb is not None:
                 self._on_incoming_frame_complete_cb(cbdata)
-        except Exception:
+        except BaseException:
             print("Exception in WebSocket on_incoming_frame_complete callback", file=sys.stderr)
             sys.excepthook(*sys.exc_info())
             return False  # close websocket
