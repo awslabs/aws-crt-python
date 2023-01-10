@@ -71,7 +71,7 @@ class SetupForTests(Builder.Action):
         """get string from secretsmanager and store in environment variable"""
 
         secret_value = self._get_secret(secret_name)
-        self.env.shell.setenv(env_var_name, secret_value)
+        self.env.shell.setenv(env_var_name, secret_value, quiet=True)
 
     def _setenv_tmpfile_from_secret(self, env_var_name, secret_name, file_name):
         """get file contents from secretsmanager, store as file under /tmp, and store path in environment variable"""
