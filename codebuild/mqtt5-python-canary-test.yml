@@ -15,7 +15,6 @@ env:
     BUILDER_HOST: https://d19elf31gohf1l.cloudfront.net
     PACKAGE_NAME: aws-crt-python
     CANARY_TEST_EXE: 'python -m unittest --failfast --verbose 2>&1 | tee /tmp/tests.log test.test_mqtt5_canary'
-    CANARY_SERVER_ARN: Mqtt5MosquittoSever
 phases:
   install:
     commands:
@@ -30,9 +29,17 @@ phases:
   build:
     commands:
       - echo Build started on `date`
+
       - source ./codebuild/mqtt5_test_setup.sh s3://aws-crt-test-stuff/TestIotProdMQTT5EnvironmentVariables.txt us-east-1
-      - export ENDPOINT=$(aws secretsmanager get-secret-value --secret-id "$CANARY_SERVER_ARN" --query "SecretString" | cut -f2 -d":" | sed -e 's/[\\\"\}]//g')
       - export GIT_HASH=$(git rev-parse HEAD)
+
+      - # Install Mosquitto
+      - sudo chmod a+xr $CODEBUILD_SRC_DIR/codebuild/common-linux-setup-mosquitto.sh
+      - $CODEBUILD_SRC_DIR/codebuild/common-linux-setup-mosquitto.sh
+      - cd $CODEBUILD_SRC_DIR # just make sure we are in the correct directory
+      # Set the endpoint to the Mosquitto server
+      - export ENDPOINT=localhost
+
       - $CODEBUILD_SRC_DIR/codebuild/mqtt5-python-canary-test.sh
   post_build:
     commands:

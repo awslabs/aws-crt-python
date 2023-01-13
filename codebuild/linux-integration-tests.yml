@@ -15,10 +15,18 @@ phases:
   build:
     commands:
       - echo Build started on `date`
+
+      - # Install Mosquitto
+      - sudo chmod a+xr $CODEBUILD_SRC_DIR/codebuild/common-linux-setup-mosquitto.sh
+      - $CODEBUILD_SRC_DIR/codebuild/common-linux-setup-mosquitto.sh
+      - cd $CODEBUILD_SRC_DIR # just make sure we are in the correct directory
+
       - chmod a+xr ./codebuild/mqtt5_test_setup.sh
-      - source ./codebuild/mqtt5_test_setup.sh s3://aws-crt-test-stuff/TestIotProdMQTT5EnvironmentVariables.txt us-east-1
+      - source ./codebuild/mqtt5_test_setup.sh s3://aws-crt-test-stuff/CodebuildMosquittoIotProdMQTT5EnvironmentVariables.txt us-east-1
+
       - aws s3 cp s3://aws-crt-test-stuff/setup_proxy_test_env.sh /tmp/setup_proxy_test_env.sh
       - chmod a+xr /tmp/setup_proxy_test_env.sh
+
       - $CODEBUILD_SRC_DIR/codebuild/linux-integration-tests.sh
   post_build:
     commands:

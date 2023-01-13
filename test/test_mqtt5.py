@@ -31,6 +31,8 @@ import time
 # AWS_TEST_MQTT5_BASIC_AUTH_PASSWORD - password to use in basic authentication tests
 # AWS_TEST_MQTT5_PROXY_HOST - name of http proxy host to use in proxy-based tests
 # AWS_TEST_MQTT5_PROXY_PORT - port of http proxy host to use in proxy-based tests
+# AWS_TEST_MQTT5_PROXY_MQTT_HOST - host to connect to in HTTP proxy tests
+# AWS_TEST_MQTT5_PROXY_MQTT_PORT - port to connect to in HTTP proxy tests
 # AWS_TEST_MQTT5_CERTIFICATE_FILE - certificate file path
 # AWS_TEST_MQTT5_KEY_FILE - private key file path
 # AWS_TEST_MQTT5_IOT_KEY_PATH - private key file path for MTLS tests
@@ -112,8 +114,8 @@ class Config:
             self.cert = pathlib.Path(self.cert_path).read_text().encode('utf-8')
 
         elif auth_type == AuthType.DIRECT_PROXY:
-            self.endpoint = self._get_env("AWS_TEST_MQTT5_DIRECT_MQTT_TLS_HOST")
-            self.port = self._get_env("AWS_TEST_MQTT5_DIRECT_MQTT_TLS_PORT")
+            self.endpoint = self._get_env("AWS_TEST_MQTT5_PROXY_MQTT_HOST")
+            self.port = self._get_env("AWS_TEST_MQTT5_PROXY_MQTT_PORT")
             self.proxy_endpoint = self._get_env("AWS_TEST_MQTT5_PROXY_HOST")
             self.proxy_port = self._get_env("AWS_TEST_MQTT5_PROXY_PORT")
             self.key_path = self._get_env('AWS_TEST_MQTT5_KEY_FILE')
@@ -122,8 +124,8 @@ class Config:
             self.cert = pathlib.Path(self.cert_path).read_text().encode('utf-8')
 
         elif auth_type == AuthType.WS_PROXY:
-            self.endpoint = self._get_env("AWS_TEST_MQTT5_WS_MQTT_HOST")
-            self.port = self._get_env("AWS_TEST_MQTT5_WS_MQTT_PORT")
+            self.endpoint = self._get_env("AWS_TEST_MQTT5_PROXY_MQTT_HOST")
+            self.port = 443
             self.proxy_endpoint = self._get_env("AWS_TEST_MQTT5_PROXY_HOST")
             self.proxy_port = self._get_env("AWS_TEST_MQTT5_PROXY_PORT")
             self.key_path = self._get_env('AWS_TEST_MQTT5_KEY_FILE')
@@ -250,13 +252,13 @@ class Mqtt5ClientTest(NativeResourceTest):
             client_options.connect_options.password = config.password
 
         if (auth_type == AuthType.DIRECT_TLS or
-                auth_type == AuthType.WS_TLS or
-                auth_type == AuthType.DIRECT_PROXY):
+                auth_type == AuthType.WS_TLS):
             tls_ctx_options = io.TlsContextOptions()
             tls_ctx_options.verify_peer = False
             client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
 
-        if auth_type == AuthType.DIRECT_MUTUAL_TLS:
+        if (auth_type == AuthType.DIRECT_MUTUAL_TLS or
+                auth_type == AuthType.DIRECT_PROXY):
             tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(config.cert_path, config.key_path)
             client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
 
