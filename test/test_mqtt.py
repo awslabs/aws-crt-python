@@ -242,7 +242,7 @@ class MqttConnectionTest(NativeResourceTest):
         connection.connect().result(TIMEOUT)
 
         # check operation statistics
-        statistics = connection.get_stats()
+        statistics = connection.get_stats().result(TIMEOUT)
         self.assertEqual(statistics.incomplete_operation_count, 0)
         self.assertEqual(statistics.incomplete_operation_size, 0)
         self.assertEqual(statistics.unacked_operation_count, 0)
@@ -254,7 +254,7 @@ class MqttConnectionTest(NativeResourceTest):
         self.assertEqual(packet_id, puback['packet_id'])
 
         # check operation statistics
-        statistics = connection.get_stats()
+        statistics = connection.get_stats().result(TIMEOUT)
         self.assertEqual(statistics.incomplete_operation_count, 0)
         self.assertEqual(statistics.incomplete_operation_size, 0)
         self.assertEqual(statistics.unacked_operation_count, 0)
@@ -273,7 +273,7 @@ class MqttConnectionTest(NativeResourceTest):
         expected_size = len(self.TEST_TOPIC) + len(self.TEST_MSG) + 4
 
         # check operation statistics
-        statistics = connection.get_stats()
+        statistics = connection.get_stats().result(TIMEOUT)
         self.assertEqual(statistics.incomplete_operation_count, 1)
         self.assertEqual(statistics.incomplete_operation_size, expected_size)
         # NOTE: Unacked will be zero because we have not invoked the future yet
@@ -286,7 +286,7 @@ class MqttConnectionTest(NativeResourceTest):
         self.assertEqual(packet_id, puback['packet_id'])
 
         # check operation statistics
-        statistics = connection.get_stats()
+        statistics = connection.get_stats().result(TIMEOUT)
         self.assertEqual(statistics.incomplete_operation_count, 0)
         self.assertEqual(statistics.incomplete_operation_size, 0)
         self.assertEqual(statistics.unacked_operation_count, 0)

@@ -1240,7 +1240,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         client1, callbacks = self._test_connect(auth_type=AuthType.DIRECT_MUTUAL_TLS, client_options=client_options)
 
         # Make sure the operation statistics are empty
-        statistics = client1.get_stats()
+        statistics = client1.get_stats().result(TIMEOUT)
         self.assertEqual(statistics.incomplete_operation_count, 0)
         self.assertEqual(statistics.incomplete_operation_size, 0)
         self.assertEqual(statistics.unacked_operation_count, 0)
@@ -1257,7 +1257,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             publish_future.result(TIMEOUT)
 
         # Make sure the operation statistics are empty
-        statistics = client1.get_stats()
+        statistics = client1.get_stats().result(TIMEOUT)
         self.assertEqual(statistics.incomplete_operation_count, 0)
         self.assertEqual(statistics.incomplete_operation_size, 0)
         self.assertEqual(statistics.unacked_operation_count, 0)
