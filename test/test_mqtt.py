@@ -276,7 +276,8 @@ class MqttConnectionTest(NativeResourceTest):
         statistics = connection.get_stats()
         self.assertEqual(statistics.incomplete_operation_count, 1)
         self.assertEqual(statistics.incomplete_operation_size, expected_size)
-        # NOTE: Unacked will be zero because we have not invoked the future yet and so it has not had time to move to the socket
+        # NOTE: Unacked will be zero because we have not invoked the future yet
+        # and so it has not had time to move to the socket
         self.assertEqual(statistics.unacked_operation_count, 0)
         self.assertEqual(statistics.unacked_operation_size, 0)
 

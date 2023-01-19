@@ -14,6 +14,7 @@ from awscrt import NativeResource
 import awscrt.exceptions
 from awscrt.http import HttpProxyOptions, HttpRequest
 from awscrt.io import ClientBootstrap, ClientTlsContext, SocketOptions
+from dataclasses import dataclass
 
 
 class QoS(IntEnum):
@@ -164,6 +165,7 @@ class OperationStatisticsData:
     incomplete_operation_size: int = 0
     unacked_operation_count: int = 0
     unacked_operation_size: int = 0
+
 
 class Connection(NativeResource):
     """MQTT client connection.
