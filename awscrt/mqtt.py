@@ -150,6 +150,21 @@ class Client(NativeResource):
         self._binding = _awscrt.mqtt_client_new(bootstrap, tls_ctx)
 
 
+@dataclass
+class OperationStatisticsData:
+    """Dataclass containing some simple statistics about the current state of the connection's queue of operations
+
+    Args:
+        incomplete_operation_count (int): total number of operations submitted to the connection that have not yet been completed.  Unacked operations are a subset of this.
+        incomplete_operation_size (int): total packet size of operations submitted to the connection that have not yet been completed.  Unacked operations are a subset of this.
+        unacked_operation_count (int): total number of operations that have been sent to the server and are waiting for a corresponding ACK before they can be completed.
+        unacked_operation_size (int): total packet size of operations that have been sent to the server and are waiting for a corresponding ACK before they can be completed.
+    """
+    incomplete_operation_count: int = 0
+    incomplete_operation_size: int = 0
+    unacked_operation_count: int = 0
+    unacked_operation_size: int = 0
+
 class Connection(NativeResource):
     """MQTT client connection.
 
@@ -702,6 +717,30 @@ class Connection(NativeResource):
             future.set_exception(e)
 
         return future, packet_id
+
+    def get_stats(self):
+        """Queries the connection's internal statistics for incomplete operations.
+
+        Returns:
+            A future with a (:class:`OperationStatisticsData`)
+        """
+
+        future = Future()
+
+        def get_stats_result(
+                incomplete_operation_count,
+                incomplete_operation_size,
+                unacked_operation_count,
+                unacked_operation_size):
+            operation_statistics_data = OperationStatisticsData(
+                incomplete_operation_count,
+                incomplete_operation_size,
+                unacked_operation_count,
+                unacked_operation_size)
+            future.set_result(operation_statistics_data)
+
+        _awscrt.mqtt_client_connection_get_stats(self._binding, get_stats_result)
+        return future
 
 
 class WebsocketHandshakeTransformArgs:

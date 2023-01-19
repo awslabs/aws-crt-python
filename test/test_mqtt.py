@@ -237,6 +237,63 @@ class MqttConnectionTest(NativeResourceTest):
         EventLoopGroup.release_static_default()
         DefaultHostResolver.release_static_default()
 
+    def test_connect_publish_wait_statistics_disconnect(self):
+        connection = self._create_connection()
+        connection.connect().result(TIMEOUT)
+
+        # check operation statistics
+        statistics = connection.get_stats()
+        self.assertEqual(statistics.incomplete_operation_count, 0)
+        self.assertEqual(statistics.incomplete_operation_size, 0)
+        self.assertEqual(statistics.unacked_operation_count, 0)
+        self.assertEqual(statistics.unacked_operation_size, 0)
+
+        # publish
+        published, packet_id = connection.publish(self.TEST_TOPIC, self.TEST_MSG, QoS.AT_LEAST_ONCE)
+        puback = published.result(TIMEOUT)
+        self.assertEqual(packet_id, puback['packet_id'])
+
+        # check operation statistics
+        statistics = connection.get_stats()
+        self.assertEqual(statistics.incomplete_operation_count, 0)
+        self.assertEqual(statistics.incomplete_operation_size, 0)
+        self.assertEqual(statistics.unacked_operation_count, 0)
+        self.assertEqual(statistics.unacked_operation_size, 0)
+
+        # disconnect
+        connection.disconnect().result(TIMEOUT)
+
+    def test_connect_publish_statistics_wait_disconnect(self):
+        connection = self._create_connection()
+        connection.connect().result(TIMEOUT)
+
+        # publish
+        published, packet_id = connection.publish(self.TEST_TOPIC, self.TEST_MSG, QoS.AT_LEAST_ONCE)
+        # Per packet: (The size of the topic, the size of the payload, 2 for the header and 2 for the packet ID)
+        expected_size = len(self.TEST_TOPIC) + len(self.TEST_MSG) + 4
+
+        # check operation statistics
+        statistics = connection.get_stats()
+        self.assertEqual(statistics.incomplete_operation_count, 1)
+        self.assertEqual(statistics.incomplete_operation_size, expected_size)
+        # NOTE: Unacked will be zero because we have not invoked the future yet and so it has not had time to move to the socket
+        self.assertEqual(statistics.unacked_operation_count, 0)
+        self.assertEqual(statistics.unacked_operation_size, 0)
+
+        # wait for PubAck
+        puback = published.result(TIMEOUT)
+        self.assertEqual(packet_id, puback['packet_id'])
+
+        # check operation statistics
+        statistics = connection.get_stats()
+        self.assertEqual(statistics.incomplete_operation_count, 0)
+        self.assertEqual(statistics.incomplete_operation_size, 0)
+        self.assertEqual(statistics.unacked_operation_count, 0)
+        self.assertEqual(statistics.unacked_operation_size, 0)
+
+        # disconnect
+        connection.disconnect().result(TIMEOUT)
+
 
 if __name__ == 'main':
     unittest.main()

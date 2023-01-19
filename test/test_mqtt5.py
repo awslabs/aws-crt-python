@@ -1226,6 +1226,46 @@ class Mqtt5ClientTest(NativeResourceTest):
 
         callbacks.future_stopped.result(TIMEOUT)
 
+    # ==============================================================
+    #             MISC TEST CASES
+    # ==============================================================
+
+    def test_operation_statistics_uc1(self):
+        client_id_publisher = create_client_id()
+        payload = "HELLO WORLD"
+        topic_filter = "test/MQTT5_Binding_Python_" + client_id_publisher
+
+        client_options = mqtt5.ClientOptions("will be replaced", 0)
+        client_options.connect_options = mqtt5.ConnectPacket(client_id=client_id_publisher)
+        client1, callbacks = self._test_connect(auth_type=AuthType.DIRECT_MUTUAL_TLS, client_options=client_options)
+
+        # Make sure the operation statistics are empty
+        statistics = client1.get_stats()
+        self.assertEqual(statistics.incomplete_operation_count, 0)
+        self.assertEqual(statistics.incomplete_operation_size, 0)
+        self.assertEqual(statistics.unacked_operation_count, 0)
+        self.assertEqual(statistics.unacked_operation_size, 0)
+
+        publish_packet = mqtt5.PublishPacket(
+            payload=payload,
+            topic=topic_filter,
+            qos=mqtt5.QoS.AT_LEAST_ONCE)
+
+        publishes = 10
+        for x in range(publishes):
+            publish_future = client1.publish(publish_packet)
+            publish_future.result(TIMEOUT)
+
+        # Make sure the operation statistics are empty
+        statistics = client1.get_stats()
+        self.assertEqual(statistics.incomplete_operation_count, 0)
+        self.assertEqual(statistics.incomplete_operation_size, 0)
+        self.assertEqual(statistics.unacked_operation_count, 0)
+        self.assertEqual(statistics.unacked_operation_size, 0)
+
+        client1.stop()
+        callbacks.future_stopped.result(TIMEOUT)
+
 
 if __name__ == 'main':
     unittest.main()
