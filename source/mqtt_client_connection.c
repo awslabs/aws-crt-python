@@ -1172,3 +1172,52 @@ PyObject *aws_py_mqtt_client_connection_disconnect(PyObject *self, PyObject *arg
 
     Py_RETURN_NONE;
 }
+
+PyObject *aws_py_mqtt_client_connection_get_stats(PyObject *self, PyObject *args) {
+    (void)self;
+    bool success = false;
+
+    PyObject *impl_capsule;
+    PyObject *get_stats_callback_fn_py;
+
+    if (!PyArg_ParseTuple(args, "OO", &impl_capsule, &get_stats_callback_fn_py)) {
+        return NULL;
+    }
+
+    struct mqtt_connection_binding *connection =
+        PyCapsule_GetPointer(impl_capsule, s_capsule_name_mqtt_client_connection);
+    if (!connection) {
+        return NULL;
+    }
+
+    /* These must be DECREF'd when function ends */
+    PyObject *result = NULL;
+
+    struct aws_mqtt_connection_operation_statistics stats;
+    AWS_ZERO_STRUCT(stats);
+
+    aws_mqtt_client_connection_get_stats(connection->native, &stats);
+
+    result = PyObject_CallFunction(
+        get_stats_callback_fn_py,
+        "(KKKK)",
+        /* K */ (unsigned long long)stats.incomplete_operation_count,
+        /* K */ (unsigned long long)stats.incomplete_operation_size,
+        /* K */ (unsigned long long)stats.unacked_operation_count,
+        /* K */ (unsigned long long)stats.unacked_operation_size);
+    if (!result) {
+        PyErr_WriteUnraisable(PyErr_Occurred());
+        goto done;
+    }
+
+    success = true;
+
+done:
+
+    Py_XDECREF(result);
+
+    if (success) {
+        Py_RETURN_NONE;
+    }
+    return NULL;
+}
