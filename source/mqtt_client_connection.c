@@ -1178,9 +1178,8 @@ PyObject *aws_py_mqtt_client_connection_get_stats(PyObject *self, PyObject *args
     bool success = false;
 
     PyObject *impl_capsule;
-    PyObject *get_stats_callback_fn_py;
 
-    if (!PyArg_ParseTuple(args, "OO", &impl_capsule, &get_stats_callback_fn_py)) {
+    if (!PyArg_ParseTuple(args, "O", &impl_capsule)) {
         return NULL;
     }
 
@@ -1190,7 +1189,7 @@ PyObject *aws_py_mqtt_client_connection_get_stats(PyObject *self, PyObject *args
         return NULL;
     }
 
-    /* These must be DECREF'd when function ends */
+    /* These must be DECREF'd when function ends on error */
     PyObject *result = NULL;
 
     struct aws_mqtt_connection_operation_statistics stats;
@@ -1198,26 +1197,23 @@ PyObject *aws_py_mqtt_client_connection_get_stats(PyObject *self, PyObject *args
 
     aws_mqtt_client_connection_get_stats(connection->native, &stats);
 
-    result = PyObject_CallFunction(
-        get_stats_callback_fn_py,
-        "(KKKK)",
-        /* K */ (unsigned long long)stats.incomplete_operation_count,
-        /* K */ (unsigned long long)stats.incomplete_operation_size,
-        /* K */ (unsigned long long)stats.unacked_operation_count,
-        /* K */ (unsigned long long)stats.unacked_operation_size);
+    result = PyTuple_New(4);
     if (!result) {
-        PyErr_WriteUnraisable(PyErr_Occurred());
         goto done;
     }
-
+    PyTuple_SET_ITEM(result, 0, (unsigned long long)stats.incomplete_operation_count);
+    PyTuple_SET_ITEM(result, 1, (unsigned long long)stats.incomplete_operation_size);
+    PyTuple_SET_ITEM(result, 2, (unsigned long long)stats.unacked_operation_count);
+    PyTuple_SET_ITEM(result, 3, (unsigned long long)stats.unacked_operation_size);
     success = true;
 
 done:
-
-    Py_XDECREF(result);
-
     if (success) {
-        Py_RETURN_NONE;
+        return result;
+    }
+
+    if (result) {
+        Py_XDECREF(result);
     }
     return NULL;
 }
