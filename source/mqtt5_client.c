@@ -2019,6 +2019,10 @@ PyObject *aws_py_mqtt5_client_get_stats(PyObject *self, PyObject *args) {
 
     /* These must be DECREF'd when function ends on error */
     PyObject *result = NULL;
+    PyObject *incomplete_operation_count_obj = NULL;
+    PyObject *incomplete_operation_size_obj = NULL;
+    PyObject *unacked_operation_count_obj = NULL;
+    PyObject *unacked_operation_size_obj = NULL;
 
     struct aws_mqtt5_client_operation_statistics stats;
     AWS_ZERO_STRUCT(stats);
@@ -2026,10 +2030,31 @@ PyObject *aws_py_mqtt5_client_get_stats(PyObject *self, PyObject *args) {
     aws_mqtt5_client_get_stats(client->native, &stats);
 
     result = PyTuple_New(4);
-    PyTuple_SET_ITEM(result, 0, PyLong_FromUnsignedLongLong((unsigned long long)stats.incomplete_operation_count));
-    PyTuple_SET_ITEM(result, 1, PyLong_FromUnsignedLongLong((unsigned long long)stats.incomplete_operation_size));
-    PyTuple_SET_ITEM(result, 2, PyLong_FromUnsignedLongLong((unsigned long long)stats.unacked_operation_count));
-    PyTuple_SET_ITEM(result, 3, PyLong_FromUnsignedLongLong((unsigned long long)stats.unacked_operation_size));
+    if (!result) {
+        goto done;
+    }
+
+    incomplete_operation_count_obj = PyLong_FromUnsignedLongLong((unsigned long long)stats.incomplete_operation_count);
+    if (!incomplete_operation_count_obj) {
+        goto done;
+    }
+    incomplete_operation_size_obj = PyLong_FromUnsignedLongLong((unsigned long long)stats.incomplete_operation_size);
+    if (!incomplete_operation_size_obj) {
+        goto done;
+    }
+    unacked_operation_count_obj = PyLong_FromUnsignedLongLong((unsigned long long)stats.unacked_operation_count);
+    if (!unacked_operation_count_obj) {
+        goto done;
+    }
+    unacked_operation_size_obj = PyLong_FromUnsignedLongLong((unsigned long long)stats.unacked_operation_size);
+    if (!unacked_operation_size_obj) {
+        goto done;
+    }
+
+    PyTuple_SET_ITEM(result, 0, incomplete_operation_count_obj);
+    PyTuple_SET_ITEM(result, 1, incomplete_operation_size_obj);
+    PyTuple_SET_ITEM(result, 2, unacked_operation_count_obj);
+    PyTuple_SET_ITEM(result, 3, unacked_operation_size_obj);
     success = true;
 
 done:
@@ -2040,5 +2065,18 @@ done:
     if (result) {
         Py_XDECREF(result);
     }
+    if (incomplete_operation_count_obj) {
+        Py_XDECREF(incomplete_operation_count_obj);
+    }
+    if (incomplete_operation_size_obj) {
+        Py_XDECREF(incomplete_operation_size_obj);
+    }
+    if (unacked_operation_count_obj) {
+        Py_XDECREF(unacked_operation_count_obj);
+    }
+    if (unacked_operation_size_obj) {
+        Py_XDECREF(unacked_operation_size_obj);
+    }
+
     return NULL;
 }
