@@ -1201,10 +1201,10 @@ PyObject *aws_py_mqtt_client_connection_get_stats(PyObject *self, PyObject *args
     if (!result) {
         goto done;
     }
-    PyTuple_SET_ITEM(result, 0, (unsigned long long)stats.incomplete_operation_count);
-    PyTuple_SET_ITEM(result, 1, (unsigned long long)stats.incomplete_operation_size);
-    PyTuple_SET_ITEM(result, 2, (unsigned long long)stats.unacked_operation_count);
-    PyTuple_SET_ITEM(result, 3, (unsigned long long)stats.unacked_operation_size);
+    PyTuple_SET_ITEM(result, 0, PyLong_FromUnsignedLongLong((unsigned long long)stats.incomplete_operation_count));
+    PyTuple_SET_ITEM(result, 1, PyLong_FromUnsignedLongLong((unsigned long long)stats.incomplete_operation_size));
+    PyTuple_SET_ITEM(result, 2, PyLong_FromUnsignedLongLong((unsigned long long)stats.unacked_operation_count));
+    PyTuple_SET_ITEM(result, 3, PyLong_FromUnsignedLongLong((unsigned long long)stats.unacked_operation_size));
     success = true;
 
 done:

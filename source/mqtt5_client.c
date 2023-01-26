@@ -2026,10 +2026,10 @@ PyObject *aws_py_mqtt5_client_get_stats(PyObject *self, PyObject *args) {
     aws_mqtt5_client_get_stats(client->native, &stats);
 
     result = PyTuple_New(4);
-    PyTuple_SetItem(result, 0, (unsigned long long)stats.incomplete_operation_count);
-    PyTuple_SetItem(result, 1, (unsigned long long)stats.incomplete_operation_size);
-    PyTuple_SetItem(result, 2, (unsigned long long)stats.unacked_operation_count);
-    PyTuple_SetItem(result, 3, (unsigned long long)stats.unacked_operation_size);
+    PyTuple_SET_ITEM(result, 0, PyLong_FromUnsignedLongLong((unsigned long long)stats.incomplete_operation_count));
+    PyTuple_SET_ITEM(result, 1, PyLong_FromUnsignedLongLong((unsigned long long)stats.incomplete_operation_size));
+    PyTuple_SET_ITEM(result, 2, PyLong_FromUnsignedLongLong((unsigned long long)stats.unacked_operation_count));
+    PyTuple_SET_ITEM(result, 3, PyLong_FromUnsignedLongLong((unsigned long long)stats.unacked_operation_size));
     success = true;
 
 done:
