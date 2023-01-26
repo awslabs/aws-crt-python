@@ -2062,21 +2062,11 @@ done:
         return result;
     }
 
-    if (result) {
-        Py_XDECREF(result);
-    }
-    if (incomplete_operation_count_obj) {
-        Py_XDECREF(incomplete_operation_count_obj);
-    }
-    if (incomplete_operation_size_obj) {
-        Py_XDECREF(incomplete_operation_size_obj);
-    }
-    if (unacked_operation_count_obj) {
-        Py_XDECREF(unacked_operation_count_obj);
-    }
-    if (unacked_operation_size_obj) {
-        Py_XDECREF(unacked_operation_size_obj);
-    }
+    Py_XDECREF(result);
+    Py_XDECREF(incomplete_operation_count_obj);
+    Py_XDECREF(incomplete_operation_size_obj);
+    Py_XDECREF(unacked_operation_count_obj);
+    Py_XDECREF(unacked_operation_size_obj);
 
     return NULL;
 }
