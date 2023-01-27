@@ -2007,9 +2007,8 @@ PyObject *aws_py_mqtt5_client_get_stats(PyObject *self, PyObject *args) {
     bool success = false;
 
     PyObject *impl_capsule;
-    PyObject *get_stats_callback_fn_py;
 
-    if (!PyArg_ParseTuple(args, "OO", &impl_capsule, &get_stats_callback_fn_py)) {
+    if (!PyArg_ParseTuple(args, "O", &impl_capsule)) {
         return NULL;
     }
 
@@ -2018,7 +2017,7 @@ PyObject *aws_py_mqtt5_client_get_stats(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    /* These must be DECREF'd when function ends */
+    /* These must be DECREF'd when function ends on error */
     PyObject *result = NULL;
 
     struct aws_mqtt5_client_operation_statistics stats;
@@ -2026,26 +2025,37 @@ PyObject *aws_py_mqtt5_client_get_stats(PyObject *self, PyObject *args) {
 
     aws_mqtt5_client_get_stats(client->native, &stats);
 
-    result = PyObject_CallFunction(
-        get_stats_callback_fn_py,
-        "(KKKK)",
-        /* K */ (unsigned long long)stats.incomplete_operation_count,
-        /* K */ (unsigned long long)stats.incomplete_operation_size,
-        /* K */ (unsigned long long)stats.unacked_operation_count,
-        /* K */ (unsigned long long)stats.unacked_operation_size);
+    result = PyTuple_New(4);
     if (!result) {
-        PyErr_WriteUnraisable(PyErr_Occurred());
+        goto done;
+    }
+
+    PyTuple_SET_ITEM(result, 0, PyLong_FromUnsignedLongLong((unsigned long long)stats.incomplete_operation_count));
+    if (PyTuple_GET_ITEM(result, 0) == NULL) {
+        goto done;
+    }
+
+    PyTuple_SET_ITEM(result, 1, PyLong_FromUnsignedLongLong((unsigned long long)stats.incomplete_operation_size));
+    if (PyTuple_GET_ITEM(result, 1) == NULL) {
+        goto done;
+    }
+
+    PyTuple_SET_ITEM(result, 2, PyLong_FromUnsignedLongLong((unsigned long long)stats.unacked_operation_count));
+    if (PyTuple_GET_ITEM(result, 2) == NULL) {
+        goto done;
+    }
+
+    PyTuple_SET_ITEM(result, 3, PyLong_FromUnsignedLongLong((unsigned long long)stats.unacked_operation_size));
+    if (PyTuple_GET_ITEM(result, 3) == NULL) {
         goto done;
     }
 
     success = true;
 
 done:
-
-    Py_XDECREF(result);
-
     if (success) {
-        Py_RETURN_NONE;
+        return result;
     }
+    Py_XDECREF(result);
     return NULL;
 }

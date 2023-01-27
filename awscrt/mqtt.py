@@ -724,25 +724,11 @@ class Connection(NativeResource):
         """Queries the connection's internal statistics for incomplete operations.
 
         Returns:
-            A future with a (:class:`OperationStatisticsData`)
+            The (:class:`OperationStatisticsData`) containing the statistics
         """
 
-        future = Future()
-
-        def get_stats_result(
-                incomplete_operation_count,
-                incomplete_operation_size,
-                unacked_operation_count,
-                unacked_operation_size):
-            operation_statistics_data = OperationStatisticsData(
-                incomplete_operation_count,
-                incomplete_operation_size,
-                unacked_operation_count,
-                unacked_operation_size)
-            future.set_result(operation_statistics_data)
-
-        _awscrt.mqtt_client_connection_get_stats(self._binding, get_stats_result)
-        return future
+        result = _awscrt.mqtt_client_connection_get_stats(self._binding)
+        return OperationStatisticsData(result[0], result[1], result[2], result[3])
 
 
 class WebsocketHandshakeTransformArgs:
