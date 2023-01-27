@@ -276,10 +276,12 @@ class MqttConnectionTest(NativeResourceTest):
         statistics = connection.get_stats()
         self.assertEqual(statistics.incomplete_operation_count, 1)
         self.assertEqual(statistics.incomplete_operation_size, expected_size)
-        # NOTE: Unacked will be zero because we have not invoked the future yet
-        # and so it has not had time to move to the socket
-        self.assertEqual(statistics.unacked_operation_count, 0)
-        self.assertEqual(statistics.unacked_operation_size, 0)
+        # NOTE: Unacked MAY be zero because we have not invoked the future yet
+        # and so it has not had time to move to the socket. With Python especially, it seems to heavily depend on how fast
+        # the test is executed, which makes it sometimes rarely get into the unacked operation and then it is non-zero.
+        # To fix this, we just make sure it is within expected bounds (0 or within packet size).
+        self.assertTrue(statistics.unacked_operation_count <= 1)
+        self.assertTrue(statistics.unacked_operation_count <= expected_size)
 
         # wait for PubAck
         puback = published.result(TIMEOUT)
