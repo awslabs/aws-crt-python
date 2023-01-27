@@ -1191,10 +1191,6 @@ PyObject *aws_py_mqtt_client_connection_get_stats(PyObject *self, PyObject *args
 
     /* These must be DECREF'd when function ends on error */
     PyObject *result = NULL;
-    PyObject *incomplete_operation_count_obj = NULL;
-    PyObject *incomplete_operation_size_obj = NULL;
-    PyObject *unacked_operation_count_obj = NULL;
-    PyObject *unacked_operation_size_obj = NULL;
 
     struct aws_mqtt_connection_operation_statistics stats;
     AWS_ZERO_STRUCT(stats);
@@ -1206,39 +1202,32 @@ PyObject *aws_py_mqtt_client_connection_get_stats(PyObject *self, PyObject *args
         goto done;
     }
 
-    incomplete_operation_count_obj = PyLong_FromUnsignedLongLong((unsigned long long)stats.incomplete_operation_count);
-    if (!incomplete_operation_count_obj) {
-        goto done;
-    }
-    incomplete_operation_size_obj = PyLong_FromUnsignedLongLong((unsigned long long)stats.incomplete_operation_size);
-    if (!incomplete_operation_size_obj) {
-        goto done;
-    }
-    unacked_operation_count_obj = PyLong_FromUnsignedLongLong((unsigned long long)stats.unacked_operation_count);
-    if (!unacked_operation_count_obj) {
-        goto done;
-    }
-    unacked_operation_size_obj = PyLong_FromUnsignedLongLong((unsigned long long)stats.unacked_operation_size);
-    if (!unacked_operation_size_obj) {
+    PyTuple_SET_ITEM(result, 0, PyLong_FromUnsignedLongLong((unsigned long long)stats.incomplete_operation_count));
+    if (PyTuple_GET_ITEM(result, 0) == NULL) {
         goto done;
     }
 
-    PyTuple_SET_ITEM(result, 0, incomplete_operation_count_obj);
-    PyTuple_SET_ITEM(result, 1, incomplete_operation_size_obj);
-    PyTuple_SET_ITEM(result, 2, unacked_operation_count_obj);
-    PyTuple_SET_ITEM(result, 3, unacked_operation_size_obj);
+    PyTuple_SET_ITEM(result, 1, PyLong_FromUnsignedLongLong((unsigned long long)stats.incomplete_operation_size));
+    if (PyTuple_GET_ITEM(result, 1) == NULL) {
+        goto done;
+    }
+
+    PyTuple_SET_ITEM(result, 2, PyLong_FromUnsignedLongLong((unsigned long long)stats.unacked_operation_count));
+    if (PyTuple_GET_ITEM(result, 2) == NULL) {
+        goto done;
+    }
+
+    PyTuple_SET_ITEM(result, 3, PyLong_FromUnsignedLongLong((unsigned long long)stats.unacked_operation_size));
+    if (PyTuple_GET_ITEM(result, 3) == NULL) {
+        goto done;
+    }
+
     success = true;
 
 done:
     if (success) {
         return result;
     }
-
     Py_XDECREF(result);
-    Py_XDECREF(incomplete_operation_count_obj);
-    Py_XDECREF(incomplete_operation_size_obj);
-    Py_XDECREF(unacked_operation_count_obj);
-    Py_XDECREF(unacked_operation_size_obj);
-
     return NULL;
 }
