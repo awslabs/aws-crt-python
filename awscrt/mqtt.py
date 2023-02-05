@@ -567,7 +567,7 @@ class Connection(NativeResource):
 
         return future, packet_id
 
-    def on_message(self, callback):
+    def on_message(self, callback, **kwargs):
         """Set callback to be invoked when ANY message is received.
 
         callback: Callback to invoke when message received, or None to disable.
