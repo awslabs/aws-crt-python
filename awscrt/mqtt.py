@@ -476,7 +476,7 @@ class Connection(NativeResource):
 
         return future
 
-    def subscribe(self, topic, qos, callback=None):
+    def subscribe(self, topic, qos, callback=None, **kwargs):
         """Subscribe to a topic filter (async).
 
         The client sends a SUBSCRIBE packet and the server responds with a SUBACK.
@@ -538,7 +538,7 @@ class Connection(NativeResource):
                 if uses_old_signature:
                     callback(topic=topic, payload=payload)
                 else:
-                    callback(topic=topic, payload=payload, dup=dup, qos=QoS(qos), retain=retain)
+                    callback(topic=topic, payload=payload, dup=dup, qos=QoS(qos), retain=retain, **kwargs)
 
         else:
             callback_wrapper = None
@@ -595,9 +595,9 @@ class Connection(NativeResource):
 
             def callback_wrapper(topic, payload, dup, qos, retain):
                 if uses_old_signature:
-                    callback(topic=topic, payload=payload)
+                    callback(topic=topic, payload=payload, **kwargs)
                 else:
-                    callback(topic=topic, payload=payload, dup=dup, qos=QoS(qos), retain=retain)
+                    callback(topic=topic, payload=payload, dup=dup, qos=QoS(qos), retain=retain, **kwargs)
 
         else:
             callback_wrapper = None
