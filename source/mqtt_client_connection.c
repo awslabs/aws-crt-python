@@ -59,7 +59,6 @@ static void s_mqtt_python_connection_finish_destruction(struct mqtt_connection_b
     aws_mqtt_client_connection_release(py_connection->native);
 
     Py_DECREF(py_connection->self_proxy);
-    fprintf(stderr, "\n s_mqtt_python_connection_finish_destruction \n");
     Py_DECREF(py_connection->client);
     Py_XDECREF(py_connection->on_any_publish);
 
@@ -89,11 +88,7 @@ static void s_mqtt_python_connection_destructor(PyObject *connection_capsule) {
     assert(py_connection);
 
     /* Do not call the on_stopped callback on the last disconnect */
-    fprintf(stderr, "\n CLEAN UP CALLED \n");
-    if (aws_mqtt_client_connection_set_connection_closed_handler(py_connection->native, NULL, NULL) != AWS_OP_SUCCESS)
-    {
-        fprintf(stderr, "\n REMOVING CONNECTION CLOSED HANDLER FAILED \n");
-    }
+    aws_mqtt_client_connection_set_connection_closed_handler(py_connection->native, NULL, NULL);
 
     if (aws_mqtt_client_connection_disconnect(
             py_connection->native, s_mqtt_python_connection_destructor_on_disconnect, py_connection)) {
@@ -174,9 +169,7 @@ static void s_on_connection_closed(
     }
 
     /* Ensure that python class is still alive */
-    fprintf(stderr, "\n TEST 03 \n");
     PyObject *self = PyWeakref_GetObject(py_connection->self_proxy); /* borrowed reference */
-    fprintf(stderr, "\n TEST 04 \n");
     if (self != Py_None) {
         PyObject *result = PyObject_CallMethod(self, "_on_connection_closed", "()");
         if (result) {
@@ -185,6 +178,8 @@ static void s_on_connection_closed(
             PyErr_WriteUnraisable(PyErr_Occurred());
         }
     }
+    // Reduce the reference so the proxy can be deleted/destroyed
+    Py_DECREF(connection->self_proxy);
     PyGILState_Release(state);
 }
 
@@ -1231,10 +1226,12 @@ PyObject *aws_py_mqtt_client_connection_disconnect(PyObject *self, PyObject *arg
     }
 
     Py_INCREF(on_disconnect);
+    Py_INCREF(connection->self_proxy); // The proxy needs to stay alive for on_closed
 
     int err = aws_mqtt_client_connection_disconnect(connection->native, s_on_disconnect, on_disconnect);
     if (err) {
         Py_DECREF(on_disconnect);
+        Py_DECREF(connection->self_proxy);
         return PyErr_AwsLastError();
     }
 
