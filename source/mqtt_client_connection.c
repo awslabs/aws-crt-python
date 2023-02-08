@@ -56,13 +56,17 @@ struct mqtt_connection_binding {
 };
 
 static void s_mqtt_python_connection_finish_destruction(struct mqtt_connection_binding *py_connection) {
+    fprintf(stderr, "\n s_mqtt_python_connection_finish_destruction 01 \n");
     aws_mqtt_client_connection_release(py_connection->native);
 
     Py_DECREF(py_connection->self_proxy);
+    fprintf(stderr, "\n s_mqtt_python_connection_finish_destruction 02 \n");
     Py_DECREF(py_connection->client);
     Py_XDECREF(py_connection->on_any_publish);
 
+    fprintf(stderr, "\n s_mqtt_python_connection_finish_destruction 03 \n");
     aws_mem_release(aws_py_get_allocator(), py_connection);
+    fprintf(stderr, "\n s_mqtt_python_connection_finish_destruction 04 \n");
 }
 
 static void s_mqtt_python_connection_destructor_on_disconnect(
@@ -76,9 +80,6 @@ static void s_mqtt_python_connection_destructor_on_disconnect(
     if (aws_py_gilstate_ensure(&state)) {
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
-
-    /* Do not call the on_stopped callback on the last disconnect */
-    aws_mqtt_client_connection_set_connection_closed_handler(py_connection->native, NULL, NULL);
 
     s_mqtt_python_connection_finish_destruction(py_connection);
     PyGILState_Release(state);
@@ -166,31 +167,25 @@ static void s_on_connection_closed(
 
     struct mqtt_connection_binding *py_connection = userdata;
 
-    fprintf(stderr, "\n TEST 01 \n");
-
     PyGILState_STATE state;
     if (aws_py_gilstate_ensure(&state)) {
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
-    fprintf(stderr, "\n TEST 02 \n");
-
     /* Ensure that python class is still alive */
-    if (py_connection->self_proxy != NULL) {
-        fprintf(stderr, "\n TEST 03 \n");
-        PyObject *self = PyWeakref_GetObject(py_connection->self_proxy); /* borrowed reference */
-        fprintf(stderr, "\n TEST 04 \n");
-        if (self != Py_None) {
-            fprintf(stderr, "\n TEST 05 \n");
-            PyObject *result = PyObject_CallMethod(self, "_on_connection_closed", "()");
-            fprintf(stderr, "\n TEST 06 \n");
-            if (result) {
-                Py_DECREF(result);
-            } else {
-                PyErr_WriteUnraisable(PyErr_Occurred());
-            }
-            fprintf(stderr, "\n TEST 07 \n");
+    fprintf(stderr, "\n TEST 03 \n");
+    PyObject *self = PyWeakref_GetObject(py_connection->self_proxy); /* borrowed reference */
+    fprintf(stderr, "\n TEST 04 \n");
+    if (self != Py_None) {
+        fprintf(stderr, "\n TEST 05 \n");
+        PyObject *result = PyObject_CallMethod(self, "_on_connection_closed", "()");
+        fprintf(stderr, "\n TEST 06 \n");
+        if (result) {
+            Py_DECREF(result);
+        } else {
+            PyErr_WriteUnraisable(PyErr_Occurred());
         }
+        fprintf(stderr, "\n TEST 07 \n");
     }
     fprintf(stderr, "\n TEST 08 \n");
     PyGILState_Release(state);
