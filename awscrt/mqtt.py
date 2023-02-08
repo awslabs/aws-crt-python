@@ -265,7 +265,7 @@ class Connection(NativeResource):
 
                 * `connection` (:class:`Connection`): This MQTT Connection
 
-                * `callback_data` (:class:`OnConnectionCloseData`): The data returned from the connection close.
+                * `callback_data` (:class:`OnConnectionClosedData`): The data returned from the connection close.
 
         reconnect_min_timeout_secs (int): Minimum time to wait between reconnect attempts.
             Must be <= `reconnect_max_timeout_secs`.
