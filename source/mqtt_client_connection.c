@@ -56,17 +56,14 @@ struct mqtt_connection_binding {
 };
 
 static void s_mqtt_python_connection_finish_destruction(struct mqtt_connection_binding *py_connection) {
-    fprintf(stderr, "\n s_mqtt_python_connection_finish_destruction 01 \n");
     aws_mqtt_client_connection_release(py_connection->native);
 
     Py_DECREF(py_connection->self_proxy);
-    fprintf(stderr, "\n s_mqtt_python_connection_finish_destruction 02 \n");
+    fprintf(stderr, "\n s_mqtt_python_connection_finish_destruction \n");
     Py_DECREF(py_connection->client);
     Py_XDECREF(py_connection->on_any_publish);
 
-    fprintf(stderr, "\n s_mqtt_python_connection_finish_destruction 03 \n");
     aws_mem_release(aws_py_get_allocator(), py_connection);
-    fprintf(stderr, "\n s_mqtt_python_connection_finish_destruction 04 \n");
 }
 
 static void s_mqtt_python_connection_destructor_on_disconnect(
@@ -177,19 +174,14 @@ static void s_on_connection_closed(
     PyObject *self = PyWeakref_GetObject(py_connection->self_proxy); /* borrowed reference */
     fprintf(stderr, "\n TEST 04 \n");
     if (self != Py_None) {
-        fprintf(stderr, "\n TEST 05 \n");
         PyObject *result = PyObject_CallMethod(self, "_on_connection_closed", "()");
-        fprintf(stderr, "\n TEST 06 \n");
         if (result) {
             Py_DECREF(result);
         } else {
             PyErr_WriteUnraisable(PyErr_Occurred());
         }
-        fprintf(stderr, "\n TEST 07 \n");
     }
-    fprintf(stderr, "\n TEST 08 \n");
     PyGILState_Release(state);
-    fprintf(stderr, "\n TEST 09 \n");
 }
 
 PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
