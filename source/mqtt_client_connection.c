@@ -77,6 +77,9 @@ static void s_mqtt_python_connection_destructor_on_disconnect(
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
+    /* Do not call the on_stopped callback on the last disconnect */
+    aws_mqtt_client_connection_set_connection_closed_handler(py_connection->native, NULL, NULL);
+
     s_mqtt_python_connection_finish_destruction(py_connection);
     PyGILState_Release(state);
 }
