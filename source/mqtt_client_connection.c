@@ -89,7 +89,11 @@ static void s_mqtt_python_connection_destructor(PyObject *connection_capsule) {
     assert(py_connection);
 
     /* Do not call the on_stopped callback on the last disconnect */
-    aws_mqtt_client_connection_set_connection_closed_handler(py_connection->native, NULL, NULL);
+    fprintf(stderr, "\n CLEAN UP CALLED \n");
+    if (aws_mqtt_client_connection_set_connection_closed_handler(py_connection->native, NULL, NULL) != AWS_OP_SUCCESS)
+    {
+        fprintf(stderr, "\n REMOVING CONNECTION CLOSED HANDLER FAILED \n");
+    }
 
     if (aws_mqtt_client_connection_disconnect(
             py_connection->native, s_mqtt_python_connection_destructor_on_disconnect, py_connection)) {
