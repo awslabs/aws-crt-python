@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0.
 
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, Pkcs11Lib, TlsContextOptions, LogLevel, init_logging
-from awscrt.mqtt import Client, Connection, QoS
+from awscrt.mqtt import Client, Connection, QoS, ConnectReturnCode
 from test import NativeResourceTest
 from concurrent.futures import Future
 import enum
@@ -23,7 +23,7 @@ class MqttClientTest(NativeResourceTest):
         client = Client(bootstrap)
 
 
-AuthType = enum.Enum('AuthType', ['CERT_AND_KEY', 'PKCS11', 'ECC_CERT_AND_KEY'])
+AuthType = enum.Enum('AuthType', ['CERT_AND_KEY', 'PKCS11', 'ECC_CERT_AND_KEY', 'INVALID'])
 
 
 class Config:
@@ -62,8 +62,15 @@ def create_client_id():
 class MqttConnectionTest(NativeResourceTest):
     TEST_TOPIC = '/test/me/senpai'
     TEST_MSG = 'NOTICE ME!'.encode('utf8')
+    CONNECTION_PORT = 8883
 
-    def _create_connection(self, auth_type=AuthType.CERT_AND_KEY, use_static_singletons=False):
+    def _create_connection(
+            self,
+            auth_type=AuthType.CERT_AND_KEY,
+            use_static_singletons=False,
+            on_connection_success_callback=None,
+            on_connection_failure_callback=None,
+            on_connection_closed_callback=None):
         config = Config(auth_type)
 
         if auth_type == AuthType.CERT_AND_KEY or auth_type == AuthType.ECC_CERT_AND_KEY:
@@ -92,6 +99,11 @@ class MqttConnectionTest(NativeResourceTest):
                     # re-raise exception
                     raise
 
+        elif auth_type == AuthType.INVALID:
+            tls_opts = TlsContextOptions.create_client_with_mtls_from_path(config.cert_path, config.key_path)
+            tls = ClientTlsContext(tls_opts)
+            CONNECTION_PORT = 100  # use a invalid port
+
         if use_static_singletons:
             client = Client(tls_ctx=tls)
         else:
@@ -104,7 +116,11 @@ class MqttConnectionTest(NativeResourceTest):
             client=client,
             client_id=create_client_id(),
             host_name=config.endpoint,
-            port=8883)
+            port=CONNECTION_PORT,
+            clean_session=True,
+            on_connection_success=on_connection_success_callback,
+            on_connection_failure=on_connection_failure_callback,
+            on_connection_closed=on_connection_closed_callback)
         return connection
 
     def test_connect_disconnect(self):
@@ -296,6 +312,42 @@ class MqttConnectionTest(NativeResourceTest):
 
         # disconnect
         connection.disconnect().result(TIMEOUT)
+
+    def _on_connection_success_callback(connection, return_code, session_present):
+        self.assertTrue(connection is not None)
+        self.assertEqual(return_code, ConnectReturnCode.ACCEPTED)
+        self.assertEqual(session_present, False)
+
+    def _on_connection_failure_callback(connection, error_code):
+        self.assertTrue(connection is not None)
+        self.assertTrue(error_code is not None)
+
+    def _on_connection_closed_callback(connection):
+        self.assertTrue(connection is not None)
+
+    def test_connect_disconnect_with_callbacks_happy(self):
+        connection = self._create_connection(
+            on_connection_success_callback=self._on_connection_success_callback,
+            on_connection_failure_callback=self._on_connection_failure_callback,
+            on_connection_closed_callback=self._on_connection_closed_callback)
+        connection.connect().result(TIMEOUT)
+        connection.disconnect().result(TIMEOUT)
+
+    def test_connect_disconnect_with_callbacks_unhappy(self):
+        connection = self._create_connection(
+            auth_type=AuthType.INVALID,
+            on_connection_success_callback=self._on_connection_success_callback,
+            on_connection_failure_callback=self._on_connection_failure_callback,
+            on_connection_closed_callback=self._on_connection_closed_callback)
+
+        exception_occurred = False
+        try:
+            connection.connect().result(TIMEOUT)
+            connection.disconnect().result(TIMEOUT)
+        except Exception:
+            exception_occurred = True
+
+        self.assertTrue(exception_occurred, "Exception did not occur when connecting with invalid arguments!")
 
 
 if __name__ == 'main':

@@ -150,6 +150,34 @@ static void s_on_connection_resumed(
     PyGILState_Release(state);
 }
 
+static void s_on_connection_closed(
+    struct aws_mqtt_client_connection *connection,
+    struct on_connection_closed_data *data,
+    void *userdata) {
+
+    (void)connection;
+    (void)data;
+
+    struct mqtt_connection_binding *py_connection = userdata;
+
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
+
+    /* Ensure that python class is still alive */
+    PyObject *self = PyWeakref_GetObject(py_connection->self_proxy); /* borrowed reference */
+    if (self != Py_None) {
+        PyObject *result = PyObject_CallMethod(self, "_on_connection_closed", "()");
+        if (result) {
+            Py_DECREF(result);
+        } else {
+            PyErr_WriteUnraisable(PyErr_Occurred());
+        }
+    }
+    PyGILState_Release(state);
+}
+
 PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
     (void)self;
 
@@ -189,6 +217,12 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
             s_on_connection_resumed,
             py_connection)) {
 
+        PyErr_SetAwsLastError();
+        goto set_interruption_failed;
+    }
+
+    if (aws_mqtt_client_connection_set_connection_closed_handler(
+            py_connection->native, s_on_connection_closed, py_connection)) {
         PyErr_SetAwsLastError();
         goto set_interruption_failed;
     }
@@ -257,11 +291,12 @@ static void s_on_connect(
 
     struct mqtt_connection_binding *py_connection = user_data;
 
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
+
     if (py_connection->on_connect) {
-        PyGILState_STATE state;
-        if (aws_py_gilstate_ensure(&state)) {
-            return; /* Python has shut down. Nothing matters anymore, but don't crash */
-        }
 
         PyObject *callback = py_connection->on_connect;
         py_connection->on_connect = NULL;
@@ -275,9 +310,32 @@ static void s_on_connect(
         }
 
         Py_XDECREF(callback);
-
-        PyGILState_Release(state);
     }
+
+    /* Call on_connection_success or failure based on the result */
+    PyObject *self = PyWeakref_GetObject(py_connection->self_proxy); /* borrowed reference */
+    if (self != Py_None) {
+        /* Successful connection - call _on_connection_success */
+        if (error_code == AWS_ERROR_SUCCESS) {
+            PyObject *success_result = PyObject_CallMethod(
+                self, "_on_connection_success", "(iN)", return_code, PyBool_FromLong(session_present));
+            if (success_result) {
+                Py_DECREF(success_result);
+            } else {
+                PyErr_WriteUnraisable(PyErr_Occurred());
+            }
+            /* Unsuccessful connection - call _on_connection_failure */
+        } else {
+            PyObject *success_result = PyObject_CallMethod(self, "_on_connection_failure", "(i)", error_code);
+            if (success_result) {
+                Py_DECREF(success_result);
+            } else {
+                PyErr_WriteUnraisable(PyErr_Occurred());
+            }
+        }
+    }
+
+    PyGILState_Release(state);
 }
 
 /* If unsuccessful, false is returned and a Python error has been set */
