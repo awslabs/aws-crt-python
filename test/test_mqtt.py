@@ -23,7 +23,7 @@ class MqttClientTest(NativeResourceTest):
         client = Client(bootstrap)
 
 
-AuthType = enum.Enum('AuthType', ['CERT_AND_KEY', 'PKCS11', 'ECC_CERT_AND_KEY', 'INVALID'])
+AuthType = enum.Enum('AuthType', ['CERT_AND_KEY', 'PKCS11', 'ECC_CERT_AND_KEY', 'INVALID_PORT'])
 
 
 class Config:
@@ -38,7 +38,7 @@ class Config:
             self.cert_path = self._get_env('AWS_TEST_ECC_CERT_PATH')
             self.cert = pathlib.Path(self.cert_path).read_text().encode('utf-8')
 
-        if auth_type == AuthType.CERT_AND_KEY:
+        elif auth_type == AuthType.CERT_AND_KEY:
             self.key_path = self._get_env('AWS_TEST_TLS_KEY_PATH')
             self.key = pathlib.Path(self.key_path).read_text().encode('utf-8')
 
@@ -47,6 +47,10 @@ class Config:
             self.pkcs11_pin = self._get_env('AWS_TEST_PKCS11_PIN')
             self.pkcs11_token_label = self._get_env('AWS_TEST_PKCS11_TOKEN_LABEL')
             self.pkcs11_key_label = self._get_env('AWS_TEST_PKCS11_KEY_LABEL')
+
+        elif auth_type == AuthType.INVALID_PORT:
+            self.key_path = self._get_env('AWS_TEST_TLS_KEY_PATH')
+            self.key = pathlib.Path(self.key_path).read_text().encode('utf-8')
 
     def _get_env(self, name):
         val = os.environ.get(name)
@@ -62,7 +66,6 @@ def create_client_id():
 class MqttConnectionTest(NativeResourceTest):
     TEST_TOPIC = '/test/me/senpai'
     TEST_MSG = 'NOTICE ME!'.encode('utf8')
-    CONNECTION_PORT = 8883
 
     def _create_connection(
             self,
@@ -72,6 +75,7 @@ class MqttConnectionTest(NativeResourceTest):
             on_connection_failure_callback=None,
             on_connection_closed_callback=None):
         config = Config(auth_type)
+        CONNECTION_PORT = 8883
 
         if auth_type == AuthType.CERT_AND_KEY or auth_type == AuthType.ECC_CERT_AND_KEY:
             tls_opts = TlsContextOptions.create_client_with_mtls_from_path(config.cert_path, config.key_path)
@@ -99,7 +103,7 @@ class MqttConnectionTest(NativeResourceTest):
                     # re-raise exception
                     raise
 
-        elif auth_type == AuthType.INVALID:
+        elif auth_type == AuthType.INVALID_PORT:
             tls_opts = TlsContextOptions.create_client_with_mtls_from_path(config.cert_path, config.key_path)
             tls = ClientTlsContext(tls_opts)
             CONNECTION_PORT = 100  # use a invalid port
@@ -313,16 +317,16 @@ class MqttConnectionTest(NativeResourceTest):
         # disconnect
         connection.disconnect().result(TIMEOUT)
 
-    def _on_connection_success_callback(connection, return_code, session_present):
+    def _on_connection_success_callback(self, connection, return_code, session_present):
         self.assertTrue(connection is not None)
         self.assertEqual(return_code, ConnectReturnCode.ACCEPTED)
         self.assertEqual(session_present, False)
 
-    def _on_connection_failure_callback(connection, error_code):
+    def _on_connection_failure_callback(self, connection, error):
         self.assertTrue(connection is not None)
-        self.assertTrue(error_code is not None)
+        self.assertTrue(error is not None)
 
-    def _on_connection_closed_callback(connection):
+    def _on_connection_closed_callback(self, connection):
         self.assertTrue(connection is not None)
 
     def test_connect_disconnect_with_callbacks_happy(self):
@@ -335,7 +339,7 @@ class MqttConnectionTest(NativeResourceTest):
 
     def test_connect_disconnect_with_callbacks_unhappy(self):
         connection = self._create_connection(
-            auth_type=AuthType.INVALID,
+            auth_type=AuthType.INVALID_PORT,
             on_connection_success_callback=self._on_connection_success_callback,
             on_connection_failure_callback=self._on_connection_failure_callback,
             on_connection_closed_callback=self._on_connection_closed_callback)
