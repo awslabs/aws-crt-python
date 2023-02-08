@@ -169,17 +169,16 @@ static void s_on_connection_closed(
     }
 
     /* Ensure that python class is still alive */
-    if (PyWeakref_Check(py_connection->self_proxy) == true) {
-        PyObject *self = PyWeakref_GetObject(py_connection->self_proxy); /* borrowed reference */
-        if (self != Py_None) {
-            PyObject *result = PyObject_CallMethod(self, "_on_connection_closed", "()");
-            if (result) {
-                Py_DECREF(result);
-            } else {
-                PyErr_WriteUnraisable(PyErr_Occurred());
-            }
+    PyObject *self = PyWeakref_GetObject(py_connection->self_proxy); /* borrowed reference */
+    if (self != Py_None) {
+        PyObject *result = PyObject_CallMethod(self, "_on_connection_closed", "()");
+        if (result) {
+            Py_DECREF(result);
+        } else {
+            PyErr_WriteUnraisable(PyErr_Occurred());
         }
     }
+    Py_DECREF(py_connection->self_proxy);
     PyGILState_Release(state);
 }
 
@@ -1226,10 +1225,12 @@ PyObject *aws_py_mqtt_client_connection_disconnect(PyObject *self, PyObject *arg
     }
 
     Py_INCREF(on_disconnect);
+    Py_INCREF(connection->self_proxy); /* We need to keep self_proxy alive for on_closed, which will dec-ref this */
 
     int err = aws_mqtt_client_connection_disconnect(connection->native, s_on_disconnect, on_disconnect);
     if (err) {
         Py_DECREF(on_disconnect);
+        Py_DECREF(connection->self_proxy);
         return PyErr_AwsLastError();
     }
 
