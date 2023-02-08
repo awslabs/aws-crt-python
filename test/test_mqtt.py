@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0.
 
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, Pkcs11Lib, TlsContextOptions, LogLevel, init_logging
-from awscrt.mqtt import Client, Connection, QoS, ConnectReturnCode
+from awscrt.mqtt import Client, Connection, QoS, ConnectReturnCode, OnConnectionSuccessData, OnConnectionFailureData, OnConnectionClosedData
 from test import NativeResourceTest
 from concurrent.futures import Future
 import enum
@@ -317,16 +317,16 @@ class MqttConnectionTest(NativeResourceTest):
         # disconnect
         connection.disconnect().result(TIMEOUT)
 
-    def _on_connection_success_callback(self, connection, return_code, session_present):
+    def _on_connection_success_callback(self, connection, callback_data: OnConnectionSuccessData):
         self.assertTrue(connection is not None)
-        self.assertEqual(return_code, ConnectReturnCode.ACCEPTED)
-        self.assertEqual(session_present, False)
+        self.assertEqual(callback_data.return_code, ConnectReturnCode.ACCEPTED)
+        self.assertEqual(callback_data.session_present, False)
 
-    def _on_connection_failure_callback(self, connection, error):
+    def _on_connection_failure_callback(self, connection, callback_data: OnConnectionFailureData):
         self.assertTrue(connection is not None)
-        self.assertTrue(error is not None)
+        self.assertTrue(callback_data.error is not None)
 
-    def _on_connection_closed_callback(self, connection):
+    def _on_connection_closed_callback(self, connection, callback_data: OnConnectionClosedData):
         self.assertTrue(connection is not None)
 
     def test_connect_disconnect_with_callbacks_happy(self):

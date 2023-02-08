@@ -127,6 +127,39 @@ class Will:
         self.retain = retain
 
 
+@dataclass
+class OnConnectionSuccessData:
+    """Dataclass containing data related to a on_connection_success Callback
+
+    Args:
+        return_code (ConnectReturnCode): Connect return. code received from the server.
+        session_present (bool): True if the connection resumes an existing session.
+                                False if new session. Note that the server has forgotten all previous subscriptions
+                                if this is False.
+                                Subscriptions can be re-established via resubscribe_existing_topics() if the connection was a reconnection.
+    """
+    return_code: ConnectReturnCode = None
+    session_present: bool = False
+
+
+@dataclass
+class OnConnectionFailureData:
+    """Dataclass containing data related to a on_connection_failure Callback
+
+    Args:
+        error (ConnectReturnCode): Error code with reason for connection failure
+    """
+    error: awscrt.exceptions.AwsCrtError = None
+
+
+@dataclass
+class OnConnectionClosedData:
+    """Dataclass containing data related to a on_connection_closed Callback.
+    Currently unused.
+    """
+    pass
+
+
 class Client(NativeResource):
     """MQTT client.
 
@@ -218,23 +251,21 @@ class Connection(NativeResource):
 
                 * `connection` (:class:`Connection`): This MQTT Connection
 
-                * `return_code` (:class:`ConnectReturnCode`): Connect return. code received from the server.
-
-                * `session_present` (bool): True if the connection resumes an existing session.
-                   False if new session. Note that the server has forgotten all previous subscriptions
-                   if this is False. Subscriptions can be re-established via resubscribe_existing_topics().
+                * `callback_data` (:class:`OnConnectionSuccessData`): The data returned from the connection success.
 
         on_connection_failure: Optional callback invoked whenever the connection fails to connect.
             Function should take the following arguments and return nothing:
 
                 * `connection` (:class:`Connection`): This MQTT Connection
 
-                * `error` (:class:`awscrt.exceptions.AwsCrtError`): Error code with reason for connection failure
+                * `callback_data` (:class:`OnConnectionFailureData`): The data returned from the connection failure.
 
         on_connection_closed: Optional callback invoked whenever the connection has been disconnected successfully.
             Function should take the following arguments and return nothing:
 
-                *   `connection` (:class:`Connection`): This MQTT Connection
+                * `connection` (:class:`Connection`): This MQTT Connection
+
+                * `callback_data` (:class:`OnConnectionCloseData`): The data returned from the connection close.
 
         reconnect_min_timeout_secs (int): Minimum time to wait between reconnect attempts.
             Must be <= `reconnect_max_timeout_secs`.
@@ -419,18 +450,18 @@ class Connection(NativeResource):
 
     def _on_connection_closed(self):
         if (self._on_connection_closed_cb):
-            self._on_connection_closed_cb(connection=self)
+            data = OnConnectionClosedData()
+            self._on_connection_closed_cb(connection=self, callback_data=data)
 
     def _on_connection_success(self, return_code, session_present):
         if self._on_connection_success_cb:
-            self._on_connection_success_cb(
-                connection=self,
-                return_code=ConnectReturnCode(return_code),
-                session_present=session_present)
+            data = OnConnectionSuccessData(return_code=ConnectReturnCode(return_code), session_present=session_present)
+            self._on_connection_success_cb(connection=self, callback_data=data)
 
     def _on_connection_failure(self, error_code):
         if self._on_connection_failure_cb:
-            self._on_connection_failure_cb(connection=self, error=awscrt.exceptions.from_code(error_code))
+            data = OnConnectionFailureData(error=awscrt.exceptions.from_code(error_code))
+            self._on_connection_failure_cb(connection=self, callback_data=data)
 
     def connect(self):
         """Open the actual connection to the server (async).
