@@ -53,6 +53,9 @@ struct mqtt_connection_binding {
 
     /* Dependencies that must outlive this */
     PyObject *client;
+
+    /* Reference count */
+    struct aws_atomic_var ref_count;
 };
 
 static void s_mqtt_python_connection_finish_destruction(struct mqtt_connection_binding *py_connection) {
@@ -81,21 +84,38 @@ static void s_mqtt_python_connection_destructor_on_disconnect(
     PyGILState_Release(state);
 }
 
+static void s_mqtt_python_connection_destructor_ref_count(struct mqtt_connection_binding *connection) {
+    /* Do not call the on_stopped callback on the last disconnect */
+    aws_mqtt_client_connection_set_connection_closed_handler(connection->native, NULL, NULL);
+
+    if (aws_mqtt_client_connection_disconnect(
+            connection->native, s_mqtt_python_connection_destructor_on_disconnect, connection)) {
+        /* If this returns an error, we should immediately destroy the connection */
+        s_mqtt_python_connection_finish_destruction(connection);
+    }
+}
+
+void aws_mqtt_connection_binding_release(struct mqtt_connection_binding *connection) {
+    if (!connection) {
+        return;
+    }
+    size_t old_value = aws_atomic_fetch_sub(&connection->ref_count, 1);
+    if (old_value == 1) {
+        s_mqtt_python_connection_destructor_ref_count(connection);
+    }
+}
+
+void aws_mqtt_connection_binding_acquire(struct mqtt_connection_binding *connection) {
+    aws_atomic_fetch_add(&connection->ref_count, 1);
+}
+
 static void s_mqtt_python_connection_destructor(PyObject *connection_capsule) {
 
     struct mqtt_connection_binding *py_connection =
         PyCapsule_GetPointer(connection_capsule, s_capsule_name_mqtt_client_connection);
     assert(py_connection);
 
-    /* Do not call the on_stopped callback on the last disconnect */
-    aws_mqtt_client_connection_set_connection_closed_handler(py_connection->native, NULL, NULL);
-
-    if (aws_mqtt_client_connection_disconnect(
-            py_connection->native, s_mqtt_python_connection_destructor_on_disconnect, py_connection)) {
-
-        /* If this returns an error, we should immediately destroy the connection */
-        s_mqtt_python_connection_finish_destruction(py_connection);
-    }
+    aws_mqtt_connection_binding_release(py_connection);
 }
 
 static void s_on_connection_interrupted(struct aws_mqtt_client_connection *connection, int error_code, void *userdata) {
@@ -178,7 +198,8 @@ static void s_on_connection_closed(
             PyErr_WriteUnraisable(PyErr_Occurred());
         }
     }
-    Py_DECREF(py_connection->self_proxy);
+    aws_mqtt_connection_binding_release(py_connection);
+
     PyGILState_Release(state);
 }
 
@@ -261,6 +282,8 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
 
     py_connection->client = client_py;
     Py_INCREF(py_connection->client);
+
+    aws_atomic_store_int(&py_connection->ref_count, 1);
 
     return capsule;
 
@@ -1225,12 +1248,12 @@ PyObject *aws_py_mqtt_client_connection_disconnect(PyObject *self, PyObject *arg
     }
 
     Py_INCREF(on_disconnect);
-    Py_INCREF(connection->self_proxy); /* We need to keep self_proxy alive for on_closed, which will dec-ref this */
+    aws_mqtt_connection_binding_acquire(connection); /* Will be released by on_closed */
 
     int err = aws_mqtt_client_connection_disconnect(connection->native, s_on_disconnect, on_disconnect);
     if (err) {
         Py_DECREF(on_disconnect);
-        Py_DECREF(connection->self_proxy);
+        aws_mqtt_connection_binding_release(connection);
         return PyErr_AwsLastError();
     }
 
