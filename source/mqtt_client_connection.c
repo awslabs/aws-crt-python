@@ -168,6 +168,15 @@ static void s_on_connection_resumed(
         } else {
             PyErr_WriteUnraisable(PyErr_Occurred());
         }
+
+        /* call _on_connection_success */
+        PyObject *success_result = PyObject_CallMethod(
+            self, "_on_connection_success", "(iN)", return_code, PyBool_FromLong(session_present));
+        if (success_result) {
+            Py_DECREF(success_result);
+        } else {
+            PyErr_WriteUnraisable(PyErr_Occurred());
+        }
     }
 
     PyGILState_Release(state);
