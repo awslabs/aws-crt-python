@@ -54,7 +54,7 @@ struct mqtt_connection_binding {
     /* Dependencies that must outlive this */
     PyObject *client;
 
-    /* Reference count */
+    /* Reference count - needed to keep the connection alive even if the Python object is destroyed */
     struct aws_atomic_var ref_count;
 };
 
@@ -769,6 +769,7 @@ PyObject *aws_py_mqtt_client_connection_reconnect(PyObject *self, PyObject *args
 
     if (aws_mqtt_client_connection_reconnect(py_connection->native, s_on_connect, py_connection)) {
         Py_CLEAR(py_connection->on_connect);
+        aws_mqtt_connection_binding_release(py_connection);
         PyErr_SetAwsLastError();
         return NULL;
     }
@@ -782,7 +783,6 @@ PyObject *aws_py_mqtt_client_connection_reconnect(PyObject *self, PyObject *args
 
 struct publish_complete_userdata {
     PyObject *callback;
-    struct mqtt_connection_binding *py_connection;
 };
 
 static void s_publish_complete(
@@ -810,7 +810,6 @@ static void s_publish_complete(
     }
 
     Py_DECREF(metadata->callback);
-    aws_mqtt_connection_binding_release(metadata->py_connection);
 
     PyGILState_Release(state);
 
@@ -855,8 +854,6 @@ PyObject *aws_py_mqtt_client_connection_publish(PyObject *self, PyObject *args) 
 
     metadata->callback = puback_callback;
     Py_INCREF(metadata->callback);
-    metadata->py_connection = connection;
-    aws_mqtt_connection_binding_acquire(connection);
 
     struct aws_byte_cursor topic_cursor;
     topic_cursor = aws_byte_cursor_from_array(topic_stack.buf, topic_stack.len);
@@ -880,7 +877,6 @@ PyObject *aws_py_mqtt_client_connection_publish(PyObject *self, PyObject *args) 
 
 publish_failed:
     Py_DECREF(metadata->callback);
-    aws_mqtt_connection_binding_release(connection);
     aws_mem_release(aws_py_get_allocator(), metadata);
 metadata_alloc_failed:
 arg_error:
@@ -892,8 +888,6 @@ arg_error:
 /*******************************************************************************
  * Subscribe
  ******************************************************************************/
-
-/* TODO - add C reference counting! Keep the client alive as long as the callbacks at least (see publish for example) */
 
 static void s_subscribe_callback(
     struct aws_mqtt_client_connection *connection,
@@ -1061,8 +1055,6 @@ PyObject *aws_py_mqtt_client_connection_on_message(PyObject *self, PyObject *arg
  * Unsubscribe
  ******************************************************************************/
 
-/* TODO - add C reference counting! Keep the client alive as long as the callbacks at least (see publish for example) */
-
 static void s_unsuback_callback(
     struct aws_mqtt_client_connection *connection,
     uint16_t packet_id,
@@ -1085,7 +1077,6 @@ static void s_unsuback_callback(
     }
 
     Py_DECREF(callback);
-    aws_mqtt_connection_binding_release(connection);
 
     PyGILState_Release(state);
 }
@@ -1109,14 +1100,11 @@ PyObject *aws_py_mqtt_client_connection_unsubscribe(PyObject *self, PyObject *ar
 
     struct aws_byte_cursor filter = aws_byte_cursor_from_array(topic, topic_len);
     Py_INCREF(unsuback_callback);
-    aws_mqtt_connection_binding_acquire(connection); /* Will be released by s_unsuback_callback */
-
     uint16_t msg_id =
         aws_mqtt_client_connection_unsubscribe(connection->native, &filter, s_unsuback_callback, unsuback_callback);
 
     if (msg_id == 0) {
         Py_DECREF(unsuback_callback);
-        aws_mqtt_connection_binding_release(connection);
         return PyErr_AwsLastError();
     }
 
@@ -1126,8 +1114,6 @@ PyObject *aws_py_mqtt_client_connection_unsubscribe(PyObject *self, PyObject *ar
 /*******************************************************************************
  * Resubscribe
  ******************************************************************************/
-
-/* TODO - add C reference counting! Keep the client alive as long as the callbacks at least (see publish for example) */
 
 static void s_suback_multi_callback(
     struct aws_mqtt_client_connection *connection,
