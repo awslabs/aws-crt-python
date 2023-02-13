@@ -317,41 +317,58 @@ class MqttConnectionTest(NativeResourceTest):
         # disconnect
         connection.disconnect().result(TIMEOUT)
 
-    def _on_connection_success_callback(self, connection, callback_data: OnConnectionSuccessData):
-        self.assertTrue(connection is not None)
-        self.assertEqual(callback_data.return_code, ConnectReturnCode.ACCEPTED)
-        self.assertEqual(callback_data.session_present, False)
-
-    def _on_connection_failure_callback(self, connection, callback_data: OnConnectionFailureData):
-        self.assertTrue(connection is not None)
-        self.assertTrue(callback_data.error is not None)
-
-    def _on_connection_closed_callback(self, connection, callback_data: OnConnectionClosedData):
-        self.assertTrue(connection is not None)
-
     def test_connect_disconnect_with_callbacks_happy(self):
+
+        onConnectionSuccessFuture = Future()
+        onConnectionClosedFuture = Future()
+
+        def on_connection_success_callback(connection, callback_data: OnConnectionSuccessData):
+            onConnectionSuccessFuture.set_result({'return_code': callback_data.return_code, "session_present":callback_data.session_present})
+
+        def on_connection_failure_callback(connection, callback_data: OnConnectionFailureData):
+            pass
+
+        def on_connection_closed_callback(connection, callback_data: OnConnectionClosedData):
+            onConnectionClosedFuture.set_result({})
+
         connection = self._create_connection(
-            on_connection_success_callback=self._on_connection_success_callback,
-            on_connection_failure_callback=self._on_connection_failure_callback,
-            on_connection_closed_callback=self._on_connection_closed_callback)
+            on_connection_success_callback=on_connection_success_callback,
+            on_connection_failure_callback=on_connection_failure_callback,
+            on_connection_closed_callback=on_connection_closed_callback)
         connection.connect().result(TIMEOUT)
+        successData = onConnectionSuccessFuture.result(TIMEOUT)
+        self.assertEqual(successData['return_code'], ConnectReturnCode.ACCEPTED)
+        self.assertEqual(successData['session_present'], False)
         connection.disconnect().result(TIMEOUT)
+        onConnectionClosedFuture.result(TIMEOUT)
 
     def test_connect_disconnect_with_callbacks_unhappy(self):
+        onConnectionFailureFuture = Future()
+
+        def on_connection_success_callback(connection, callback_data: OnConnectionSuccessData):
+            pass
+
+        def on_connection_failure_callback(connection, callback_data: OnConnectionFailureData):
+            onConnectionFailureFuture.set_result({'error':callback_data.error})
+
+        def on_connection_closed_callback(connection, callback_data: OnConnectionClosedData):
+            pass
+
         connection = self._create_connection(
             auth_type=AuthType.INVALID_PORT,
-            on_connection_success_callback=self._on_connection_success_callback,
-            on_connection_failure_callback=self._on_connection_failure_callback,
-            on_connection_closed_callback=self._on_connection_closed_callback)
+            on_connection_success_callback=on_connection_success_callback,
+            on_connection_failure_callback=on_connection_failure_callback,
+            on_connection_closed_callback=on_connection_closed_callback)
 
         exception_occurred = False
         try:
             connection.connect().result(TIMEOUT)
-            connection.disconnect().result(TIMEOUT)
         except Exception:
             exception_occurred = True
-
         self.assertTrue(exception_occurred, "Exception did not occur when connecting with invalid arguments!")
+
+        failureData = onConnectionFailureFuture.result(TIMEOUT)
+        self.assertTrue(failureData['error'] != None)
 
 
 if __name__ == 'main':
