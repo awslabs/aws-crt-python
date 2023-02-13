@@ -323,7 +323,8 @@ class MqttConnectionTest(NativeResourceTest):
         onConnectionClosedFuture = Future()
 
         def on_connection_success_callback(connection, callback_data: OnConnectionSuccessData):
-            onConnectionSuccessFuture.set_result({'return_code': callback_data.return_code, "session_present":callback_data.session_present})
+            onConnectionSuccessFuture.set_result(
+                {'return_code': callback_data.return_code, "session_present": callback_data.session_present})
 
         def on_connection_failure_callback(connection, callback_data: OnConnectionFailureData):
             pass
@@ -349,7 +350,7 @@ class MqttConnectionTest(NativeResourceTest):
             pass
 
         def on_connection_failure_callback(connection, callback_data: OnConnectionFailureData):
-            onConnectionFailureFuture.set_result({'error':callback_data.error})
+            onConnectionFailureFuture.set_result({'error': callback_data.error})
 
         def on_connection_closed_callback(connection, callback_data: OnConnectionClosedData):
             pass
@@ -368,7 +369,7 @@ class MqttConnectionTest(NativeResourceTest):
         self.assertTrue(exception_occurred, "Exception did not occur when connecting with invalid arguments!")
 
         failureData = onConnectionFailureFuture.result(TIMEOUT)
-        self.assertTrue(failureData['error'] != None)
+        self.assertTrue(failureData['error'] is not None)
 
 
 if __name__ == 'main':
