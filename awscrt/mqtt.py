@@ -247,6 +247,8 @@ class Connection(NativeResource):
                 *   `**kwargs` (dict): Forward-compatibility kwargs.
 
         on_connection_success: Optional callback invoked whenever the connection successfully connects.
+            This callback is invoked for every successful connect and every successful reconnect.
+
             Function should take the following arguments and return nothing:
 
                 * `connection` (:class:`Connection`): This MQTT Connection
@@ -254,13 +256,15 @@ class Connection(NativeResource):
                 * `callback_data` (:class:`OnConnectionSuccessData`): The data returned from the connection success.
 
         on_connection_failure: Optional callback invoked whenever the connection fails to connect.
+            This callback is invoked for every failed connect and every failed reconnect.
+
             Function should take the following arguments and return nothing:
 
                 * `connection` (:class:`Connection`): This MQTT Connection
 
                 * `callback_data` (:class:`OnConnectionFailureData`): The data returned from the connection failure.
 
-        on_connection_closed: Optional callback invoked whenever the connection has been disconnected successfully.
+        on_connection_closed: Optional callback invoked whenever the connection has been disconnected and shutdown successfully.
             Function should take the following arguments and return nothing:
 
                 * `connection` (:class:`Connection`): This MQTT Connection
