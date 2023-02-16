@@ -12,6 +12,7 @@ import _awscrt
 from awscrt import NativeResource
 from enum import IntEnum
 import threading
+from typing import Union
 
 
 class LogLevel(IntEnum):
@@ -374,7 +375,7 @@ class TlsContextOptions:
     @staticmethod
     def create_client_with_mtls_pkcs11(*,
                                        pkcs11_lib: 'Pkcs11Lib',
-                                       user_pin: str = None,
+                                       user_pin: Union[str, None],
                                        slot_id: int = None,
                                        token_label: str = None,
                                        private_key_label: str = None,
@@ -390,7 +391,7 @@ class TlsContextOptions:
             pkcs11_lib (Pkcs11Lib): Use this PKCS#11 library
 
             user_pin (str): User PIN, for logging into the PKCS#11 token.
-                Pass `None` or do not specify to log into a token with a "protected authentication path".
+                Pass `None` to log into a token with a "protected authentication path".
 
             slot_id (Optional[int]): ID of slot containing PKCS#11 token.
                 If not specified, the token will be chosen based on other criteria (such as token label).
