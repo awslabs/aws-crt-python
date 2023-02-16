@@ -505,12 +505,12 @@ PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args) {
         if (pkcs11_user_pin != NULL) {
             user_pin_cursor = aws_byte_cursor_from_array(pkcs11_user_pin, pkcs11_user_pin_len);
         } else {
-            AWS_ZERO_STRUCT(pkcs11_user_pin);
+            AWS_ZERO_STRUCT(user_pin_cursor);
         }
 
         struct aws_tls_ctx_pkcs11_options pkcs11_options = {
             .pkcs11_lib = pkcs11_lib,
-            .user_pin = pkcs11_user_pin,
+            .user_pin = user_pin_cursor,
             .slot_id = has_slot_id ? &slot_id_value : NULL,
             .token_label = aws_byte_cursor_from_array(pkcs11_token_label, pkcs11_token_label_len),
             .private_key_object_label = aws_byte_cursor_from_array(pkcs11_priv_key_label, pkcs11_priv_key_label_len),
