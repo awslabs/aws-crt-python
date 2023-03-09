@@ -32,3 +32,5 @@ prune crt/aws-lc/tool
 prune crt/aws-lc/util
 include crt/aws-lc/util/fipstools/CMakeLists.txt
 include crt/aws-lc/util/fipstools/acvp/modulewrapper/CMakeLists.txt
+# by default only test/test*.py are included, include the entire test suite
+graft test
