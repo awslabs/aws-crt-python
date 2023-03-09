@@ -28,7 +28,11 @@ if(UNIX AND NOT APPLE)
     set(DISABLE_GO ON) # Build without using Go, we don't want the extra dependency
     set(DISABLE_PERL ON) # Build without using Perl, we don't want the extra dependency
     set(BUILD_LIBSSL OFF) # Don't need libssl, only need libcrypto
-    add_subdirectory(aws-lc)
+
+    option(USE_OPENSSL "Set this if you want to use your system's OpenSSL compatible libcrypto" OFF)
+    if (NOT USE_OPENSSL)
+        add_subdirectory(aws-lc)
+    endif()
 
     set(UNSAFE_TREAT_WARNINGS_AS_ERRORS OFF)
     add_subdirectory(s2n)
