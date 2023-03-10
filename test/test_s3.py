@@ -135,7 +135,7 @@ class S3RequestTest(NativeResourceTest):
         self.put_test_object_path = "/put_object_test_py_10MB.txt"
         self.region = "us-west-2"
         self.bucket_name = "aws-crt-canary-bucket"
-        self.default_file_path = "test/resources/s3_put_object.txt"
+        self.default_file_path = self.files.create_file_with_size("temp_put_obj_10mb", 10 * MB)
         self.timeout = 100  # seconds
         self.num_threads = 0
         self.non_ascii_file_name = "ÉxÅmple.txt".encode("utf-8")
