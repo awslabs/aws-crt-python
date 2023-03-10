@@ -135,7 +135,6 @@ class S3RequestTest(NativeResourceTest):
         self.put_test_object_path = "/put_object_test_py_10MB.txt"
         self.region = "us-west-2"
         self.bucket_name = "aws-crt-canary-bucket"
-        self.default_file_path = self.files.create_file_with_size("temp_put_obj_10mb", 10 * MB)
         self.timeout = 100  # seconds
         self.num_threads = 0
         self.non_ascii_file_name = "ÉxÅmple.txt".encode("utf-8")
@@ -150,6 +149,7 @@ class S3RequestTest(NativeResourceTest):
         self.put_body_stream = None
 
         self.files = FileCreator()
+        self.temp_put_obj_file_path = self.files.create_file_with_size("temp_put_obj_10mb", 10 * MB)
         super().setUp()
 
     def tearDown(self):
@@ -223,7 +223,7 @@ class S3RequestTest(NativeResourceTest):
         self._test_s3_put_get_object(request, S3RequestType.GET_OBJECT)
 
     def test_put_object(self):
-        request = self._put_object_request(self.default_file_path)
+        request = self._put_object_request(self.temp_put_obj_file_path)
         self._test_s3_put_get_object(request, S3RequestType.PUT_OBJECT)
         self.put_body_stream.close()
 
@@ -288,7 +288,7 @@ class S3RequestTest(NativeResourceTest):
             os.remove(file.name)
 
     def test_put_object_file_object(self):
-        request = self._put_object_request(self.default_file_path)
+        request = self._put_object_request(self.temp_put_obj_file_path)
         request_type = S3RequestType.PUT_OBJECT
         # close the stream, to test if the C FILE pointer as the input stream working well.
         self.put_body_stream.close()
@@ -296,7 +296,7 @@ class S3RequestTest(NativeResourceTest):
         s3_request = s3_client.make_request(
             request=request,
             type=request_type,
-            send_filepath=self.default_file_path,
+            send_filepath=self.temp_put_obj_file_path,
             on_headers=self._on_request_headers,
             on_progress=self._on_progress)
         finished_future = s3_request.finished_future
@@ -434,7 +434,7 @@ class S3RequestTest(NativeResourceTest):
         return self._put_object_cancel_helper(False)
 
     def test_multipart_upload_with_invalid_request(self):
-        request = self._put_object_request(self.default_file_path)
+        request = self._put_object_request(self.temp_put_obj_file_path)
         request.headers.set("Content-MD5", "something")
         self._test_s3_put_get_object(request, S3RequestType.PUT_OBJECT, "AWS_ERROR_S3_INVALID_RESPONSE_STATUS")
         self.put_body_stream.close()
