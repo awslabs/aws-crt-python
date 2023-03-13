@@ -256,8 +256,11 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
         else:
             print("Skip building dependencies, source not found.")
 
-        # update paths so awscrt_ext can access dependencies
-        self.include_dirs.append(os.path.join(dep_install_path, 'include'))
+        # update paths so awscrt_ext can access dependencies.
+        # add to the front of any list so that our dependencies are preferred
+        # over anything that might already be on the system (i.e. libcrypto.a)
+
+        self.include_dirs.insert(0, os.path.join(dep_install_path, 'include'))
 
         # some platforms (ex: fedora) use /lib64 instead of just /lib
         lib_dir = 'lib'
@@ -266,7 +269,7 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
         if is_32bit() and os.path.exists(os.path.join(dep_install_path, 'lib32')):
             lib_dir = 'lib32'
 
-        self.library_dirs.append(os.path.join(dep_install_path, lib_dir))
+        self.library_dirs.insert(0, os.path.join(dep_install_path, lib_dir))
 
         # continue with normal build_ext.run()
         super().run()
