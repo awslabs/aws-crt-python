@@ -12,6 +12,7 @@ import _awscrt
 from awscrt import NativeResource
 from enum import IntEnum
 import threading
+from typing import Union
 
 
 class LogLevel(IntEnum):
@@ -374,7 +375,7 @@ class TlsContextOptions:
     @staticmethod
     def create_client_with_mtls_pkcs11(*,
                                        pkcs11_lib: 'Pkcs11Lib',
-                                       user_pin: str,
+                                       user_pin: Union[str, None],
                                        slot_id: int = None,
                                        token_label: str = None,
                                        private_key_label: str = None,

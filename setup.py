@@ -298,7 +298,9 @@ def awscrt_ext():
         # linker will prefer shared libraries over static if it can find both.
         # force linker to choose static variant by using using "-l:libcrypto.a" syntax instead of just "-lcrypto".
         libraries = [':lib{}.a'.format(x) for x in libraries]
-        libraries += ['rt']
+        # OpenBSD doesn't have librt; functions are found in libc instead.
+        if not sys.platform.startswith('openbsd'):
+            libraries += ['rt']
 
         # hide the symbols from libcrypto.a
         # this prevents weird crashes if an application also ends up using
