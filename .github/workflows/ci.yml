@@ -126,7 +126,7 @@ jobs:
 
 
   openbsd:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest # macos would be faster. TODO: diagnose why some tests are failing
     steps:
       - uses: actions/checkout@v3
         with:
