@@ -121,7 +121,7 @@ def get_cmake_path():
     raise Exception("CMake must be installed to build from source.")
 
 
-use_openssl = os.environ.get('USE_OPENSSL', False)
+use_openssl = os.environ.get('AWS_CRT_BUILD_USE_SYSTEM_LIBCRYPTO', False)
 
 
 class AwsLib:
