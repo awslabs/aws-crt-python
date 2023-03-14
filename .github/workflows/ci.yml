@@ -35,6 +35,9 @@ jobs:
           - cp310-cp310
           - cp311-cp311
     steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
     # Only aarch64 needs this, but it doesn't hurt anything
     - name: Install qemu/docker
       run: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
@@ -53,6 +56,9 @@ jobs:
         image:
           - raspbian-bullseye
     steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
     # set arm arch
     - name: Install qemu/docker
       run: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
@@ -73,6 +79,9 @@ jobs:
           - opensuse-leap
           - rhel8-x64
     steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
         # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
     - name: Build ${{ env.PACKAGE_NAME }}
       run: |
@@ -96,6 +105,9 @@ jobs:
           - gcc-7
           - gcc-8
     steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
       # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
       - name: Build ${{ env.PACKAGE_NAME }}
         run: |
@@ -105,9 +117,12 @@ jobs:
   use-openssl:
     runs-on: ubuntu-20.04 # latest
     steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
       - name: Build ${{ env.PACKAGE_NAME }}
         env:
-          AWS_CRT_BUILD_USE_SYSTEM_LIBCRYPTO: 1
+          AWS_CRT_BUILD_USE_SYSTEM_LIBCRYPTO: '1'
         run: |
           python3 -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder')"
           chmod a+x builder
@@ -121,6 +136,9 @@ jobs:
       matrix:
         arch: [x86, x64]
     steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
     - name: Build ${{ env.PACKAGE_NAME }} + consumers
       run: |
         python -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder.pyz')"
@@ -130,6 +148,9 @@ jobs:
   osx:
     runs-on: macos-11 # latest
     steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
     - name: Build ${{ env.PACKAGE_NAME }} + consumers
       run: |
         python3 -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder')"
@@ -161,7 +182,7 @@ jobs:
   tests-ok-without-env-vars:
     runs-on: ubuntu-20.04 # latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: true
       - name: Run tests without env-vars or AWS creds
@@ -178,7 +199,7 @@ jobs:
   package-source:
     runs-on: ubuntu-20.04 # latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: true
       - name: Package source + install
@@ -192,7 +213,7 @@ jobs:
   check-docs:
     runs-on: ubuntu-20.04 # latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: true
       - name: Check docs
@@ -205,7 +226,7 @@ jobs:
     runs-on: ubuntu-20.04 # latest
     steps:
     - name: Checkout Source
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         submodules: true
         fetch-depth: 0
