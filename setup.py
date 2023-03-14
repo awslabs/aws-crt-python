@@ -122,7 +122,7 @@ def get_cmake_path():
 
 
 def using_system_libcrypto():
-    return 'AWS_CRT_BUILD_USE_SYSTEM_LIBCRYPTO' in os.environ
+    return os.getenv('AWS_CRT_BUILD_USE_SYSTEM_LIBCRYPTO') == '1'
 
 
 class AwsLib:
@@ -313,13 +313,12 @@ def awscrt_ext():
         if not sys.platform.startswith('openbsd'):
             libraries += ['rt']
 
+        # hide the symbols from libcrypto.a
+        # this prevents weird crashes if an application also ends up using
+        # libcrypto.so from the system's OpenSSL installation.
+        extra_link_args += ['-Wl,--exclude-libs,libcrypto.a']
         if using_system_libcrypto():
             extra_link_args += ['-lcrypto']
-        else:
-            # hide the symbols from libcrypto.a
-            # this prevents weird crashes if an application also ends up using
-            # libcrypto.so from the system's OpenSSL installation.
-            extra_link_args += ['-Wl,--exclude-libs,libcrypto.a']
 
         # python usually adds -pthread automatically, but we've observed
         # rare cases where that didn't happen, so let's be explicit.

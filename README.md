@@ -38,3 +38,21 @@ Please note that on Mac, once a private key is used with a certificate, that cer
 ```
 static: certificate has an existing certificate-key pair that was previously imported into the Keychain. Using key from Keychain instead of the one provided.
 ```
+
+## OpenSSL and LibCrypto (Unix when install from Github only)
+
+If your application uses OpenSSL, set environment variable 'AWS_CRT_BUILD_USE_SYSTEM_LIBCRYPTO' to 1 before install.
+
+aws-crt-python does not use OpenSSL for TLS.
+On Apple and Windows devices, the OS's default TLS library is used.
+On Unix devices, [s2n-tls](https://github.com/aws/s2n-tls) is used.
+But s2n-tls uses libcrypto, the cryptography math library bundled with OpenSSL.
+To simplify the build process, the source code for s2n-tls and libcrypto are
+included as git submodules and built along with aws-crt-python.
+But if your application is also loading the system installation of OpenSSL
+(i.e. your application uses libcurl which uses libssl which uses libcrypto)
+there may be crashes as the application tries to use two different versions of libcrypto at once.
+
+`export AWS_CRT_BUILD_USE_SYSTEM_LIBCRYPTO=1` will cause aws-crt-python to link against your system's existing `libcrypto`, instead of building its own copy.
+
+You can ignore all this on Windows and Apple platforms, where aws-crt-python uses the OS's default libraries for TLS and cryptography math.
