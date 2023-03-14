@@ -124,6 +124,7 @@ def get_cmake_path():
 def using_system_libcrypto():
     return 'AWS_CRT_BUILD_USE_SYSTEM_LIBCRYPTO' in os.environ
 
+
 class AwsLib:
     def __init__(self, name, extra_cmake_args=[], libname=None):
         self.name = name
