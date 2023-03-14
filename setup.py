@@ -121,8 +121,8 @@ def get_cmake_path():
     raise Exception("CMake must be installed to build from source.")
 
 
-use_openssl = os.environ.get('AWS_CRT_BUILD_USE_SYSTEM_LIBCRYPTO', False)
-
+def using_system_libcrypto():
+    return 'AWS_CRT_BUILD_USE_SYSTEM_LIBCRYPTO' in os.environ
 
 class AwsLib:
     def __init__(self, name, extra_cmake_args=[], libname=None):
@@ -135,7 +135,7 @@ class AwsLib:
 # They're built along with the extension.
 AWS_LIBS = []
 if sys.platform != 'darwin' and sys.platform != 'win32':
-    if not use_openssl:
+    if not using_system_libcrypto():
         # aws-lc produces libcrypto.a
         AWS_LIBS.append(AwsLib('aws-lc', libname='crypto'))
     AWS_LIBS.append(AwsLib('s2n'))
@@ -186,7 +186,7 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
             f'-DCMAKE_BUILD_TYPE={build_type}',
         ])
 
-        if use_openssl:
+        if using_system_libcrypto():
             cmake_args.append('-DUSE_OPENSSL=ON')
 
         if sys.platform == 'darwin':
@@ -312,7 +312,7 @@ def awscrt_ext():
         if not sys.platform.startswith('openbsd'):
             libraries += ['rt']
 
-        if use_openssl:
+        if using_system_libcrypto():
             extra_link_args += ['-lcrypto']
         else:
             # hide the symbols from libcrypto.a
