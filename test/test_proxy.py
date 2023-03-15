@@ -296,12 +296,10 @@ class ProxyHttpTest(NativeResourceTest):
     def test_tunneling_http_proxy_mqtt_double_tls(self):
         self._do_proxy_mqtt_test(ProxyTestType.TUNNELING_DOUBLE_TLS, HttpProxyAuthenticationType.Nothing)
 
-    def _create_x509_tls_context_opts(alpn_list=None):
+    def _create_x509_tls_context_opts():
         tls_ctx_opt = TlsContextOptions.create_client_with_mtls_from_path(
             ProxyTestConfiguration.HTTP_PROXY_TLS_CERT_PATH,
             ProxyTestConfiguration.HTTP_PROXY_TLS_KEY_PATH)
-        if (alpn_list is not None):
-            tls_conn_opt.alpn_list = alpn_list
         tls_ctx = ClientTlsContext(tls_ctx_opt)
         tls_conn_opt = tls_ctx.new_connection_options()
         return tls_conn_opt
