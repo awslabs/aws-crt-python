@@ -9,6 +9,10 @@ cmake_minimum_required(VERSION 3.1)
 # We let setuptools handle that.
 project(aws-crt-dependencies)
 
+# Note: set() calls must use CACHE, and must be called before the option() they're overriding,
+# or they won't work right on CMake 3.12 and below.
+# see: https://cmake.org/cmake/help/v3.13/policy/CMP0077.html
+
 # This magic lets us build everything all at once
 set(IN_SOURCE_BUILD ON CACHE BOOL "")
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/aws-c-common/cmake)
