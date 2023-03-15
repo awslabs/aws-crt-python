@@ -23,6 +23,7 @@ PyObject *aws_py_credentials_provider_new_environment(PyObject *self, PyObject *
 PyObject *aws_py_credentials_provider_new_chain(PyObject *self, PyObject *args);
 PyObject *aws_py_credentials_provider_new_delegate(PyObject *self, PyObject *args);
 PyObject *aws_py_credentials_provider_new_cognito(PyObject *self, PyObject *args);
+PyObject *aws_py_credentials_provider_new_x509(PyObject *self, PyObject *args);
 
 PyObject *aws_py_signing_config_new(PyObject *self, PyObject *args);
 PyObject *aws_py_signing_config_get_algorithm(PyObject *self, PyObject *args);
