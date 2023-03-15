@@ -831,7 +831,7 @@ PyObject *aws_py_credentials_provider_new_x509(PyObject *self, PyObject *args) {
 
     if (!PyArg_ParseTuple(
             args,
-            "s#s##sOOO",
+            "s#s#s#OOO",
             &endpoint_cursor.ptr,   /* s */
             &endpoint_cursor.len,   /* # */
             &thing_name_cursor.ptr, /* s */
@@ -894,16 +894,13 @@ PyObject *aws_py_credentials_provider_new_x509(PyObject *self, PyObject *args) {
         PyErr_SetAwsLastError();
         goto done;
     }
-
     success = true;
 
 done:
     aws_tls_connection_options_clean_up(&tls_connection_options);
-
     if (success) {
         return capsule;
     }
-
     Py_XDECREF(capsule);
     return NULL;
 }
