@@ -5,6 +5,7 @@ from test import NativeResourceTest, TIMEOUT
 from awscrt.http import HttpProxyOptions, HttpProxyAuthenticationType, HttpProxyConnectionType, HttpClientConnection, HttpClientStream, HttpRequest
 from awscrt.io import init_logging, LogLevel, ClientTlsContext, TlsContextOptions, ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup
 from awscrt.mqtt import Client, Connection
+from awscrt.auth import AwsCredentialsProvider
 import os
 import unittest
 from test.test_http_client import Response
@@ -29,6 +30,10 @@ from test.test_mqtt import create_client_id
 # AWS_TEST_TLS_CERT_PATH - file path to certificate used to initialize the tls context of the mqtt connection
 # AWS_TEST_TLS_KEY_PATH - file path to the key used to initialize the tls context of the mqtt connection
 # AWS_TEST_TLS_ROOT_CERT_PATH - file path to the root CA used to initialize the tls context of the mqtt connection
+
+# AWS_TEST_X509_ENDPOINT - AWS account-specific endpoint to source x509 credentials from
+# AWS_TEST_X509_THING_NAME - associated name of the x509 thing
+# AWS_TEST_X509_ROLE_ALIAS - associated role alias ...
 
 # AWS_TEST_IOT_MQTT_ENDPOINT - AWS account-specific endpoint to connect to IoT core by
 
@@ -59,6 +64,10 @@ class ProxyTestConfiguration():
     HTTP_PROXY_TLS_KEY_PATH = os.environ.get('AWS_TEST_TLS_KEY_PATH')
     HTTP_PROXY_TLS_ROOT_CA_PATH = os.environ.get('AWS_TEST_TLS_ROOT_CERT_PATH')
 
+    X509_CREDENTIALS_ENDPOINT = os.environ.get("AWS_TEST_X509_ENDPOINT")
+    X509_CREDENTIALS_THING_NAME = os.environ.get("AWS_TEST_X509_THING_NAME")
+    X509_CREDENTIALS_ROLE_ALIAS = os.environ.get("AWS_TEST_X509_ROLE_ALIAS")
+
     HTTP_PROXY_MQTT_ENDPOINT = os.environ.get('AWS_TEST_IOT_MQTT_ENDPOINT')
 
     @staticmethod
@@ -78,7 +87,15 @@ class ProxyTestConfiguration():
             ProxyTestConfiguration.HTTP_PROXY_MQTT_ENDPOINT is not None and \
             ProxyTestConfiguration.HTTP_PROXY_TLS_CERT_PATH is not None and \
             ProxyTestConfiguration.HTTP_PROXY_TLS_KEY_PATH is not None and \
-            ProxyTestConfiguration.HTTP_PROXY_TLS_KEY_PATH is not None
+            ProxyTestConfiguration.HTTP_PROXY_TLS_ROOT_CA_PATH is not None
+
+    @staticmethod
+    def is_x509_env_initialized():
+        return ProxyTestConfiguration.is_proxy_environment_initialized() and \
+            ProxyTestConfiguration.is_mqtt_env_initialized() and \
+            ProxyTestConfiguration.X509_CREDENTIALS_ENDPOINT is not None and \
+            ProxyTestConfiguration.X509_CREDENTIALS_THING_NAME is not None and \
+            ProxyTestConfiguration.X509_CREDENTIALS_ROLE_ALIAS is not None
 
     @staticmethod
     def get_proxy_host_for_test(test_type, auth_type):
@@ -278,6 +295,57 @@ class ProxyHttpTest(NativeResourceTest):
     @unittest.skipIf(not ProxyTestConfiguration.is_mqtt_env_initialized(), 'requires proxy and MQTT test env vars')
     def test_tunneling_http_proxy_mqtt_double_tls(self):
         self._do_proxy_mqtt_test(ProxyTestType.TUNNELING_DOUBLE_TLS, HttpProxyAuthenticationType.Nothing)
+
+    def _create_x509_client_tls_context(self):
+        tls_ctx_opt = TlsContextOptions.create_client_with_mtls_from_path(
+            ProxyTestConfiguration.HTTP_PROXY_TLS_CERT_PATH,
+            ProxyTestConfiguration.HTTP_PROXY_TLS_KEY_PATH)
+        return ClientTlsContext(tls_ctx_opt)
+
+    def _build_proxied_x509_credentials(self, test_type, auth_type):
+        event_loop_group = EventLoopGroup(num_threads=1)
+        resolver = DefaultHostResolver(event_loop_group=event_loop_group)
+        bootstrap = ClientBootstrap(event_loop_group=event_loop_group, host_resolver=resolver)
+        proxy_options = ProxyTestConfiguration.create_http_proxy_options_from_environment(test_type, auth_type)
+        client_tls_ctx = self._create_x509_client_tls_context()
+        credentials = AwsCredentialsProvider.new_x509(
+            endpoint=ProxyTestConfiguration.X509_CREDENTIALS_ENDPOINT,
+            thing_name=ProxyTestConfiguration.X509_CREDENTIALS_THING_NAME,
+            role_alias=ProxyTestConfiguration.X509_CREDENTIALS_ROLE_ALIAS,
+            tls_ctx=client_tls_ctx,
+            client_bootstrap=bootstrap,
+            http_proxy_options=proxy_options
+        )
+        return credentials
+
+    def _do_credentials_provider_test(self, provider: AwsCredentialsProvider):
+        try:
+            credentials = provider.get_credentials().result(300)  # wait 5 minutes
+            self.assertNotEqual(credentials, None, "Credentials returned was none")
+        except Exception as e:
+            raise RuntimeError(e)
+
+    @unittest.skipIf(not ProxyTestConfiguration.is_x509_env_initialized(),
+                     "Requires Proxy, MQTT, and X509 test env vars")
+    def test_x509_credentials_tunneling_proxy_no_auth(self):
+        provider = self._build_proxied_x509_credentials(
+            ProxyTestType.TUNNELING_HTTPS, HttpProxyAuthenticationType.Nothing)
+        self._do_credentials_provider_test(provider)
+
+    @unittest.skipIf(not ProxyTestConfiguration.is_x509_env_initialized(),
+                     "Requires Proxy, MQTT, and X509 test env vars")
+    def test_x509_credentials_tunneling_proxy_double_tls_no_auth(self):
+        provider = self._build_proxied_x509_credentials(
+            ProxyTestType.TUNNELING_DOUBLE_TLS,
+            HttpProxyAuthenticationType.Nothing)
+        self._do_credentials_provider_test(provider)
+
+    @unittest.skipIf(not ProxyTestConfiguration.is_x509_env_initialized(),
+                     "Requires Proxy, MQTT, and X509 test env vars")
+    def test_x509_credentials_tunneling_proxy_basic_auth(self):
+        provider = self._build_proxied_x509_credentials(
+            ProxyTestType.TUNNELING_HTTPS, HttpProxyAuthenticationType.Basic)
+        self._do_credentials_provider_test(provider)
 
 
 if __name__ == '__main__':
