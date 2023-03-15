@@ -9,28 +9,32 @@ cmake_minimum_required(VERSION 3.1)
 # We let setuptools handle that.
 project(aws-crt-dependencies)
 
+# Note: set() calls must use CACHE, and must be called before the option() they're overriding,
+# or they won't work right on CMake 3.12 and below.
+# see: https://cmake.org/cmake/help/v3.13/policy/CMP0077.html
+
 # This magic lets us build everything all at once
+set(IN_SOURCE_BUILD ON CACHE BOOL "")
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/aws-c-common/cmake)
 include(AwsFindPackage)
-set(IN_SOURCE_BUILD ON)
 
 # Build dependencies as static libs
-set(BUILD_SHARED_LIBS=OFF)
-set(CMAKE_POSITION_INDEPENDENT_CODE=ON)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "")
+set(CMAKE_POSITION_INDEPENDENT_CODE ON CACHE BOOL "")
 
 # Don't build the dependencies' tests
+set(BUILD_TESTING OFF CACHE BOOL "")
 include(CTest)
-set(BUILD_TESTING OFF)
 
 # On Unix we use S2N for TLS and AWS-LC crypto.
 # (On Windows and Apple we use the default OS libraries)
 if(UNIX AND NOT APPLE)
-    set(DISABLE_GO ON) # Build without using Go, we don't want the extra dependency
-    set(DISABLE_PERL ON) # Build without using Perl, we don't want the extra dependency
-    set(BUILD_LIBSSL OFF) # Don't need libssl, only need libcrypto
+    set(DISABLE_GO ON CACHE BOOL "Build without using Go, we don't want the extra dependency")
+    set(DISABLE_PERL ON CACHE BOOL "Build without using Perl, we don't want the extra dependency")
+    set(BUILD_LIBSSL OFF CACHE BOOL "Don't need libssl, only need libcrypto")
     add_subdirectory(aws-lc)
 
-    set(UNSAFE_TREAT_WARNINGS_AS_ERRORS OFF)
+    set(UNSAFE_TREAT_WARNINGS_AS_ERRORS OFF CACHE BOOL "")
     add_subdirectory(s2n)
 endif()
 
