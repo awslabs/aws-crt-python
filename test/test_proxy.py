@@ -296,24 +296,23 @@ class ProxyHttpTest(NativeResourceTest):
     def test_tunneling_http_proxy_mqtt_double_tls(self):
         self._do_proxy_mqtt_test(ProxyTestType.TUNNELING_DOUBLE_TLS, HttpProxyAuthenticationType.Nothing)
 
-    def _create_x509_tls_context_opts(self):
+    def _create_x509_client_tls_context(self):
         tls_ctx_opt = TlsContextOptions.create_client_with_mtls_from_path(
             ProxyTestConfiguration.HTTP_PROXY_TLS_CERT_PATH,
             ProxyTestConfiguration.HTTP_PROXY_TLS_KEY_PATH)
-        tls_ctx = ClientTlsContext(tls_ctx_opt)
-        tls_conn_opt = tls_ctx.new_connection_options()
-        return tls_conn_opt
+        return ClientTlsContext(tls_ctx_opt)
 
     def _build_proxied_x509_credentials(self, test_type, auth_type):
         event_loop_group = EventLoopGroup(num_threads=1)
         resolver = DefaultHostResolver(event_loop_group=event_loop_group)
         bootstrap = ClientBootstrap(event_loop_group=event_loop_group, host_resolver=resolver)
         proxy_options = ProxyTestConfiguration.create_http_proxy_options_from_environment(test_type, auth_type)
+        client_tls_ctx = self._create_x509_client_tls_context()
         credentials = AwsCredentialsProvider.new_x509(
             endpoint=ProxyTestConfiguration.X509_CREDENTIALS_ENDPOINT,
             thing_name=ProxyTestConfiguration.X509_CREDENTIALS_THING_NAME,
             role_alias=ProxyTestConfiguration.X509_CREDENTIALS_ROLE_ALIAS,
-            tls_ctx=ClientTlsContext(self._create_x509_tls_context_opts()),
+            tls_ctx=client_tls_ctx,
             client_bootstrap=bootstrap,
             http_proxy_options=proxy_options
         )
