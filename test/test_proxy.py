@@ -296,12 +296,11 @@ class ProxyHttpTest(NativeResourceTest):
     def test_tunneling_http_proxy_mqtt_double_tls(self):
         self._do_proxy_mqtt_test(ProxyTestType.TUNNELING_DOUBLE_TLS, HttpProxyAuthenticationType.Nothing)
 
-
     def _create_x509_tls_context_opts(alpn_list=None):
         tls_ctx_opt = TlsContextOptions.create_client_with_mtls_from_path(
             ProxyTestConfiguration.HTTP_PROXY_TLS_CERT_PATH,
             ProxyTestConfiguration.HTTP_PROXY_TLS_KEY_PATH)
-        if (alpn_list != None):
+        if (alpn_list is not None):
             tls_conn_opt.alpn_list = alpn_list
         tls_ctx = ClientTlsContext(tls_ctx_opt)
         tls_conn_opt = tls_ctx.new_connection_options()
@@ -322,26 +321,33 @@ class ProxyHttpTest(NativeResourceTest):
         )
         return credentials
 
-    def _do_credentials_provider_test(self, provider : AwsCredentialsProvider):
+    def _do_credentials_provider_test(self, provider: AwsCredentialsProvider):
         try:
-            credentials = provider.get_credentials().result(300) # wait 5 minutes
+            credentials = provider.get_credentials().result(300)  # wait 5 minutes
             self.assertNotEqual(credentials, None, "Credentials returned was none")
         except Exception as e:
             raise RuntimeError(e)
 
-    @unittest.skipIf(not ProxyTestConfiguration.is_x509_env_initialized(), "Requires Proxy, MQTT, and X509 test env vars")
+    @unittest.skipIf(not ProxyTestConfiguration.is_x509_env_initialized(),
+                     "Requires Proxy, MQTT, and X509 test env vars")
     def test_x509_credentials_tunneling_proxy_no_auth(self):
-        provider = self._build_proxied_x509_credentials(ProxyTestType.TUNNELING_HTTPS, HttpProxyAuthenticationType.Nothing)
+        provider = self._build_proxied_x509_credentials(
+            ProxyTestType.TUNNELING_HTTPS, HttpProxyAuthenticationType.Nothing)
         self._do_credentials_provider_test(provider)
 
-    @unittest.skipIf(not ProxyTestConfiguration.is_x509_env_initialized(), "Requires Proxy, MQTT, and X509 test env vars")
+    @unittest.skipIf(not ProxyTestConfiguration.is_x509_env_initialized(),
+                     "Requires Proxy, MQTT, and X509 test env vars")
     def test_x509_credentials_tunneling_proxy_double_tls_no_auth(self):
-        provider = self._build_proxied_x509_credentials(ProxyTestType.TUNNELING_DOUBLE_TLS, HttpProxyAuthenticationType.Nothing)
+        provider = self._build_proxied_x509_credentials(
+            ProxyTestType.TUNNELING_DOUBLE_TLS,
+            HttpProxyAuthenticationType.Nothing)
         self._do_credentials_provider_test(provider)
 
-    @unittest.skipIf(not ProxyTestConfiguration.is_x509_env_initialized(), "Requires Proxy, MQTT, and X509 test env vars")
+    @unittest.skipIf(not ProxyTestConfiguration.is_x509_env_initialized(),
+                     "Requires Proxy, MQTT, and X509 test env vars")
     def test_x509_credentials_tunneling_proxy_basic_auth(self):
-        provider = self._build_proxied_x509_credentials(ProxyTestType.TUNNELING_HTTPS, HttpProxyAuthenticationType.Basic)
+        provider = self._build_proxied_x509_credentials(
+            ProxyTestType.TUNNELING_HTTPS, HttpProxyAuthenticationType.Basic)
         self._do_credentials_provider_test(provider)
 
 
