@@ -364,6 +364,58 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
             http_proxy_options)
         return cls(binding)
 
+    @classmethod
+    def new_x509(
+            cls,
+            *,
+            endpoint: str,
+            thing_name: str,
+            role_alias: str,
+            tls_ctx: awscrt.io.ClientTlsContext,
+            client_bootstrap: Optional[ClientBootstrap] = None,
+            http_proxy_options: Optional[HttpProxyOptions] = None):
+        """
+        Creates a provider that sources credentials from IoT's X509 credentials service.
+
+        Args:
+            endpoint (str): Cognito Identity service regional endpoint to source credentials from.
+                            This is a per-account value that can be determined via the CLI:
+                            `aws iot describe-endpoint --endpoint-type iot:CredentialProvider`
+
+            thing_name (str): The name of the IoT thing to use to fetch credentials.
+
+            role_alias (str): The name of the role alias to fetch credentials through.
+
+            tls_ctx (ClientTlsContext): The client TLS context to use when establishing the http connection to IoT's X509 credentials service.
+
+            client_bootstrap (Optional[ClientBootstrap]): Client bootstrap to use when initiating a socket connection.
+                If not set, uses the static default ClientBootstrap instead.
+
+            http_proxy_options (Optional[HttpProxyOptions]): Optional HTTP proxy options.
+                If None is provided then an HTTP proxy is not used.
+
+        Returns:
+            AwsCredentialsProvider:
+        """
+
+        assert isinstance(endpoint, str)
+        assert isinstance(thing_name, str)
+        assert isinstance(role_alias, str)
+        assert isinstance(tls_ctx, ClientTlsContext)
+        assert isinstance(http_proxy_options, HttpProxyOptions) or http_proxy_options is None
+        if client_bootstrap is None:
+            client_bootstrap = ClientBootstrap.get_or_create_static_default()
+        assert isinstance(client_bootstrap, ClientBootstrap)
+
+        binding = _awscrt.credentials_provider_new_x509(
+            endpoint,
+            thing_name,
+            role_alias,
+            tls_ctx,
+            client_bootstrap,
+            http_proxy_options)
+        return cls(binding)
+
     def get_credentials(self):
         """
         Asynchronously fetch AwsCredentials.
