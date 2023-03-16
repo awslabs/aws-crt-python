@@ -35,9 +35,6 @@ jobs:
           - cp310-cp310
           - cp311-cp311
     steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: recursive
     # Only aarch64 needs this, but it doesn't hurt anything
     - name: Install qemu/docker
       run: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
@@ -56,9 +53,6 @@ jobs:
         image:
           - raspbian-bullseye
     steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: recursive
     # set arm arch
     - name: Install qemu/docker
       run: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
@@ -79,9 +73,6 @@ jobs:
           - opensuse-leap
           - rhel8-x64
     steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: recursive
         # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
     - name: Build ${{ env.PACKAGE_NAME }}
       run: |
@@ -105,9 +96,6 @@ jobs:
           - gcc-7
           - gcc-8
     steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
       # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
       - name: Build ${{ env.PACKAGE_NAME }}
         run: |
@@ -117,9 +105,6 @@ jobs:
   use-openssl:
     runs-on: ubuntu-20.04 # latest
     steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
       - name: Build ${{ env.PACKAGE_NAME }}
         env:
           AWS_CRT_BUILD_USE_SYSTEM_LIBCRYPTO: '1'
@@ -136,9 +121,6 @@ jobs:
       matrix:
         arch: [x86, x64]
     steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: recursive
     - name: Build ${{ env.PACKAGE_NAME }} + consumers
       run: |
         python -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder.pyz')"
@@ -148,9 +130,6 @@ jobs:
   osx:
     runs-on: macos-11 # latest
     steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: recursive
     - name: Build ${{ env.PACKAGE_NAME }} + consumers
       run: |
         python3 -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder')"
@@ -161,9 +140,6 @@ jobs:
   openbsd:
     runs-on: ubuntu-latest # macos would be faster. TODO: diagnose why some tests are failing
     steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: true
       - name: Build ${{ env.PACKAGE_NAME }} + consumers
         uses: cross-platform-actions/action@v0.10.0
         with:

@@ -378,7 +378,7 @@ class AwsCredentialsProvider(AwsCredentialsProviderBase):
         Creates a provider that sources credentials from IoT's X509 credentials service.
 
         Args:
-            endpoint (str): Cognito Identity service regional endpoint to source credentials from.
+            endpoint (str): X509 service regional endpoint to source credentials from.
                             This is a per-account value that can be determined via the CLI:
                             `aws iot describe-endpoint --endpoint-type iot:CredentialProvider`
 

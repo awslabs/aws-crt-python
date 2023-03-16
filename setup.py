@@ -312,13 +312,13 @@ def awscrt_ext():
         # OpenBSD doesn't have librt; functions are found in libc instead.
         if not sys.platform.startswith('openbsd'):
             libraries += ['rt']
+        if using_system_libcrypto():
+            libraries += ['crypto']
 
         # hide the symbols from libcrypto.a
         # this prevents weird crashes if an application also ends up using
         # libcrypto.so from the system's OpenSSL installation.
         extra_link_args += ['-Wl,--exclude-libs,libcrypto.a']
-        if using_system_libcrypto():
-            extra_link_args += ['-lcrypto']
 
         # python usually adds -pthread automatically, but we've observed
         # rare cases where that didn't happen, so let's be explicit.

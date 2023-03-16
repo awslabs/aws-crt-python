@@ -34,14 +34,6 @@ python3 -m pip install .
 
 To use from your Python application, declare `awscrt` as a dependency in your `setup.py` file.
 
-## Mac-Only TLS Behavior
-
-Please note that on Mac, once a private key is used with a certificate, that certificate-key pair is imported into the Mac Keychain. All subsequent uses of that certificate will use the stored private key and ignore anything passed in programmatically. Beginning in v0.6.2, when a stored private key from the Keychain is used, the following will be logged at the "info" log level:
-
-```
-static: certificate has an existing certificate-key pair that was previously imported into the Keychain. Using key from Keychain instead of the one provided.
-```
-
 ### OpenSSL and LibCrypto (Unix only)
 
 aws-crt-python does not use OpenSSL for TLS.
@@ -66,3 +58,11 @@ AWS_CRT_BUILD_USE_SYSTEM_LIBCRYPTO=1 python3 -m pip install --no-binary :all: --
 ( `--no-binary :all:` ensures you do not use the wheel from PyPI always uses AWS-LC)
 You can ignore all this on Windows and Apple platforms, where aws-crt-python
 uses the OS's default libraries for TLS and cryptography math.
+
+## Mac-Only TLS Behavior
+
+Please note that on Mac, once a private key is used with a certificate, that certificate-key pair is imported into the Mac Keychain. All subsequent uses of that certificate will use the stored private key and ignore anything passed in programmatically. Beginning in v0.6.2, when a stored private key from the Keychain is used, the following will be logged at the "info" log level:
+
+```
+static: certificate has an existing certificate-key pair that was previously imported into the Keychain. Using key from Keychain instead of the one provided.
+```
