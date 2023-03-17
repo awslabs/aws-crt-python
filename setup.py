@@ -312,6 +312,7 @@ def awscrt_ext():
         # OpenBSD doesn't have librt; functions are found in libc instead.
         if not sys.platform.startswith('openbsd'):
             libraries += ['rt']
+
         if using_system_libcrypto():
             libraries += ['crypto']
 
