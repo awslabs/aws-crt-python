@@ -54,7 +54,7 @@ set environment variable `AWS_CRT_BUILD_USE_SYSTEM_LIBCRYPTO=1` while building f
 ```sh
 AWS_CRT_BUILD_USE_SYSTEM_LIBCRYPTO=1 python3 -m pip install --no-binary :all: --verbose awscrt
 ```
-( `--no-binary :all:` ensures you do not use the wheel from PyPI always uses AWS-LC)
+( `--no-binary :all:` ensures you do not use the precompiled wheel from PyPI)
 
 You can ignore all this on Windows and Apple platforms, where aws-crt-python
 uses the OS's default libraries for TLS and cryptography math.
