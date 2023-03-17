@@ -102,7 +102,7 @@ jobs:
           aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
           ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-${{ env.LINUX_BASE_IMAGE }} build -p ${{ env.PACKAGE_NAME }} --compiler=${{ matrix.compiler }}
 
-  use-openssl:
+  use-system-libcrypto:
     runs-on: ubuntu-20.04 # latest
     steps:
       - name: Build ${{ env.PACKAGE_NAME }}
@@ -113,6 +113,15 @@ jobs:
           chmod a+x builder
           ./builder build -p ${{ env.PACKAGE_NAME }}
 
+          # assert it's linked against the system's libcrypto.so
+          AWSCRT_PATH=`python3 -c "import _awscrt; print(_awscrt.__file__)"`
+          printf "AWSCRT_PATH: $AWSCRT_PATH\n"
+
+          LINKED_AGAINST=`ldd $AWSCRT_PATH`
+          printf "LINKED AGAINST:\n$LINKED_AGAINST\n"
+
+          USES_LIBCRYPTO_SO=`echo "$LINKED_AGAINST" | grep 'libcrypto*.so' | head -1`
+          test -n "$USES_LIBCRYPTO_SO"
 
 
   windows:
@@ -140,6 +149,10 @@ jobs:
   openbsd:
     runs-on: ubuntu-latest # macos would be faster. TODO: diagnose why some tests are failing
     steps:
+      # Cannot use builder to checkout as OpenBSD doesn't ship git in the base install
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
       - name: Build ${{ env.PACKAGE_NAME }} + consumers
         uses: cross-platform-actions/action@v0.10.0
         with:
