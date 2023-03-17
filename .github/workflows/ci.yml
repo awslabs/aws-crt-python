@@ -102,6 +102,28 @@ jobs:
           aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
           ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-${{ env.LINUX_BASE_IMAGE }} build -p ${{ env.PACKAGE_NAME }} --compiler=${{ matrix.compiler }}
 
+  use-system-libcrypto:
+    runs-on: ubuntu-20.04 # latest
+    steps:
+      - name: Build ${{ env.PACKAGE_NAME }}
+        env:
+          AWS_CRT_BUILD_USE_SYSTEM_LIBCRYPTO: '1'
+        run: |
+          python3 -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder')"
+          chmod a+x builder
+          ./builder build -p ${{ env.PACKAGE_NAME }}
+      - name: Assert libcrypto.so used
+        run: |
+          # assert it's linked against the system's libcrypto.so
+          AWSCRT_PATH=`python3 -c "import _awscrt; print(_awscrt.__file__)"`
+          printf "AWSCRT_PATH: $AWSCRT_PATH\n"
+
+          LINKED_AGAINST=`ldd $AWSCRT_PATH`
+          printf "LINKED AGAINST:\n$LINKED_AGAINST\n"
+
+          USES_LIBCRYPTO_SO=`echo "$LINKED_AGAINST" | grep 'libcrypto*.so' | head -1`
+          test -n "$USES_LIBCRYPTO_SO"
+
 
   windows:
     runs-on: windows-2022 # latest
@@ -128,6 +150,7 @@ jobs:
   openbsd:
     runs-on: ubuntu-latest # macos would be faster. TODO: diagnose why some tests are failing
     steps:
+      # Cannot use builder to checkout as OpenBSD doesn't ship git in the base install
       - uses: actions/checkout@v3
         with:
           submodules: true
@@ -149,7 +172,7 @@ jobs:
   tests-ok-without-env-vars:
     runs-on: ubuntu-20.04 # latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: true
       - name: Run tests without env-vars or AWS creds
@@ -166,7 +189,7 @@ jobs:
   package-source:
     runs-on: ubuntu-20.04 # latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: true
       - name: Package source + install
@@ -180,7 +203,7 @@ jobs:
   check-docs:
     runs-on: ubuntu-20.04 # latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: true
       - name: Check docs
@@ -193,7 +216,7 @@ jobs:
     runs-on: ubuntu-20.04 # latest
     steps:
     - name: Checkout Source
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         submodules: true
         fetch-depth: 0

@@ -121,6 +121,10 @@ def get_cmake_path():
     raise Exception("CMake must be installed to build from source.")
 
 
+def using_system_libcrypto():
+    return os.getenv('AWS_CRT_BUILD_USE_SYSTEM_LIBCRYPTO') == '1'
+
+
 class AwsLib:
     def __init__(self, name, extra_cmake_args=[], libname=None):
         self.name = name
@@ -132,8 +136,9 @@ class AwsLib:
 # They're built along with the extension.
 AWS_LIBS = []
 if sys.platform != 'darwin' and sys.platform != 'win32':
-    # aws-lc produces libcrypto.a
-    AWS_LIBS.append(AwsLib('aws-lc', libname='crypto'))
+    if not using_system_libcrypto():
+        # aws-lc produces libcrypto.a
+        AWS_LIBS.append(AwsLib('aws-lc', libname='crypto'))
     AWS_LIBS.append(AwsLib('s2n'))
 AWS_LIBS.append(AwsLib('aws-c-common'))
 AWS_LIBS.append(AwsLib('aws-c-sdkutils'))
@@ -181,6 +186,9 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
             f'-DCMAKE_INSTALL_PREFIX={install_path}',
             f'-DCMAKE_BUILD_TYPE={build_type}',
         ])
+
+        if using_system_libcrypto():
+            cmake_args.append('-DUSE_OPENSSL=ON')
 
         if sys.platform == 'darwin':
             # build lib with same MACOSX_DEPLOYMENT_TARGET that python will ultimately
@@ -304,6 +312,9 @@ def awscrt_ext():
         # OpenBSD doesn't have librt; functions are found in libc instead.
         if not sys.platform.startswith('openbsd'):
             libraries += ['rt']
+
+        if using_system_libcrypto():
+            libraries += ['crypto']
 
         # hide the symbols from libcrypto.a
         # this prevents weird crashes if an application also ends up using
