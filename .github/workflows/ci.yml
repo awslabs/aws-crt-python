@@ -113,6 +113,9 @@ jobs:
           chmod a+x builder
           ./builder build -p ${{ env.PACKAGE_NAME }}
 
+    steps:
+      - name: Assert libcrypto.so used
+        run: |
           # assert it's linked against the system's libcrypto.so
           AWSCRT_PATH=`python3 -c "import _awscrt; print(_awscrt.__file__)"`
           printf "AWSCRT_PATH: $AWSCRT_PATH\n"
