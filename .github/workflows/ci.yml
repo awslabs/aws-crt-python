@@ -157,7 +157,6 @@ jobs:
       - name: Build ${{ env.PACKAGE_NAME }} + consumers
         uses: cross-platform-actions/action@v0.11.0
         with:
-          cpu_count: '4'
           operating_system: openbsd
           architecture: x86-64
           version: '7.2'
