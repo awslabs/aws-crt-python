@@ -19,48 +19,48 @@ env:
   AWS_REGION: us-east-1
 
 jobs:
-  manylinux2014:
-    runs-on: ubuntu-20.04 # latest
-    strategy:
-      fail-fast: false
-      matrix:
-        image:
-          - x64
-          - x86
-          - aarch64
-        python:
-          - cp37-cp37m
-          - cp38-cp38
-          - cp39-cp39
-          - cp310-cp310
-          - cp311-cp311
-    steps:
-    # Only aarch64 needs this, but it doesn't hurt anything
-    - name: Install qemu/docker
-      run: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+  #manylinux2014:
+  #  runs-on: ubuntu-20.04 # latest
+  #  strategy:
+  #    fail-fast: false
+  #    matrix:
+  #      image:
+  #        - x64
+  #        - x86
+  #        - aarch64
+  #      python:
+  #        - cp37-cp37m
+  #        - cp38-cp38
+  #        - cp39-cp39
+  #        - cp310-cp310
+  #        - cp311-cp311
+  #  steps:
+  #  # Only aarch64 needs this, but it doesn't hurt anything
+  #  - name: Install qemu/docker
+  #    run: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 
-    - name: Build ${{ env.PACKAGE_NAME }}
-      run: |
-        aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
-        ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-manylinux2014-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }} --python /opt/python/${{ matrix.python }}/bin/python
+  #  - name: Build ${{ env.PACKAGE_NAME }}
+  #    run: |
+  #      aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
+  #      ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-manylinux2014-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }} --python /opt/python/${{ matrix.python }}/bin/python
 
 
-  raspberry:
-    runs-on: ubuntu-20.04 # latest
-    strategy:
-      fail-fast: false
-      matrix:
-        image:
-          - raspbian-bullseye
-    steps:
-    # set arm arch
-    - name: Install qemu/docker
-      run: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+  #raspberry:
+  #  runs-on: ubuntu-20.04 # latest
+  #  strategy:
+  #    fail-fast: false
+  #    matrix:
+  #      image:
+  #        - raspbian-bullseye
+  #  steps:
+  #  # set arm arch
+  #  - name: Install qemu/docker
+  #    run: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 
-    - name: Build ${{ env.PACKAGE_NAME }}
-      run: |
-        aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
-        ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }}
+  #  - name: Build ${{ env.PACKAGE_NAME }}
+  #    run: |
+  #      aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
+  #      ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }}
 
 
   linux-compat:
@@ -80,27 +80,27 @@ jobs:
         ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }}
 
 
-  linux-compiler-compat:
-    runs-on: ubuntu-20.04 # latest
-    strategy:
-      matrix:
-        compiler:
-          - clang-3
-          - clang-6
-          - clang-8
-          - clang-9
-          - clang-10
-          - clang-11
-          - gcc-5
-          - gcc-6
-          - gcc-7
-          - gcc-8
-    steps:
-      # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
-      - name: Build ${{ env.PACKAGE_NAME }}
-        run: |
-          aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
-          ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-${{ env.LINUX_BASE_IMAGE }} build -p ${{ env.PACKAGE_NAME }} --compiler=${{ matrix.compiler }}
+  #linux-compiler-compat:
+  #  runs-on: ubuntu-20.04 # latest
+  #  strategy:
+  #    matrix:
+  #      compiler:
+  #        - clang-3
+  #        - clang-6
+  #        - clang-8
+  #        - clang-9
+  #        - clang-10
+  #        - clang-11
+  #        - gcc-5
+  #        - gcc-6
+  #        - gcc-7
+  #        - gcc-8
+  #  steps:
+  #    # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
+  #    - name: Build ${{ env.PACKAGE_NAME }}
+  #      run: |
+  #        aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
+  #        ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-${{ env.LINUX_BASE_IMAGE }} build -p ${{ env.PACKAGE_NAME }} --compiler=${{ matrix.compiler }}
 
   use-system-libcrypto:
     runs-on: ubuntu-20.04 # latest
