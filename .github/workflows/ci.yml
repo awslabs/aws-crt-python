@@ -148,7 +148,7 @@ jobs:
 
 
   openbsd:
-    runs-on: ubuntu-latest # macos would be faster. TODO: diagnose why some tests are failing
+    runs-on: macos-12
     steps:
       # Cannot use builder to checkout as OpenBSD doesn't ship git in the base install
       - uses: actions/checkout@v3
@@ -157,6 +157,7 @@ jobs:
       - name: Build ${{ env.PACKAGE_NAME }} + consumers
         uses: cross-platform-actions/action@v0.11.0
         with:
+          hypervisor: qemu
           operating_system: openbsd
           architecture: x86-64
           version: '7.2'
