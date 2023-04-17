@@ -35,6 +35,12 @@ if(UNIX AND NOT APPLE)
         set(DISABLE_GO ON CACHE BOOL "Build without using Go, we don't want the extra dependency")
         set(DISABLE_PERL ON CACHE BOOL "Build without using Perl, we don't want the extra dependency")
         set(BUILD_LIBSSL OFF CACHE BOOL "Don't need libssl, only need libcrypto")
+
+        if(CMAKE_C_COMPILER_ID MATCHES "GNU" AND CMAKE_C_COMPILER_VERSION VERSION_LESS "5.0")
+            set(DISABLE_PERL OFF CACHE BOOL "Build with Perl to avoid using pre-compiled binary with AVX512")
+            set(MY_ASSEMBLER_IS_TOO_OLD_FOR_512AVX ON CACHE BOOL "Disable AVX512 on old GCC that not supports it")
+        endif()
+
         add_subdirectory(aws-lc)
     endif()
 
