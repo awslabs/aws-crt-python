@@ -307,8 +307,15 @@ def awscrt_ext():
 
     else:  # unix
         # linker will prefer shared libraries over static if it can find both.
-        # force linker to choose static variant by using using "-l:libcrypto.a" syntax instead of just "-lcrypto".
+        # force linker to choose static variant by using using
+        # "-l:libaws-c-common.a" syntax instead of just "-laws-c-common".
+        #
+        # This helps AWS developers creating Lambda applications from Brazil.
+        # In Brazil, both shared and static libs are available.
+        # But Lambda requires all shared libs to be explicitly packaged up.
+        # So it's simpler to link them in statically and have less runtime dependencies.
         libraries = [':lib{}.a'.format(x) for x in libraries]
+
         # OpenBSD doesn't have librt; functions are found in libc instead.
         if not sys.platform.startswith('openbsd'):
             libraries += ['rt']
