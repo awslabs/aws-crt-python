@@ -11,14 +11,17 @@ import uuid
 
 TIMEOUT = 100.0
 
+
 def _get_env_variable(env_name):
     env_data = os.environ.get(env_name)
     if not env_data:
         raise unittest.SkipTest(f"test requires env var: {env_name}")
     return env_data
 
+
 def create_client_id():
     return 'aws-crt-python-unit-test-{0}'.format(uuid.uuid4())
+
 
 class MqttConnectionTest(NativeResourceTest):
     TEST_TOPIC = '/test/me/senpai/' + str(uuid.uuid4())

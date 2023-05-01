@@ -275,9 +275,9 @@ class CognitoCredentialsProviderTest(NativeResourceTest):
 
 
 @unittest.skipUnless(os.environ.get('AWS_TESTING_COGNITO_IDENTITY') and os.environ.get('AWS_TEST_MQTT311_COGNITO_ENDPOINT')
-                    and os.environ.get('AWS_TEST_HTTP_PROXY_HOST') and os.environ.get('AWS_TEST_HTTP_PROXY_PORT'),
-                    'set env var to run test: AWS_TESTING_COGNITO_IDENTITY, AWS_TEST_MQTT311_COGNITO_ENDPOINT, '
-                    'AWS_TEST_HTTP_PROXY_HOST, and AWS_TEST_HTTP_PROXY_PORT')
+                     and os.environ.get('AWS_TEST_HTTP_PROXY_HOST') and os.environ.get('AWS_TEST_HTTP_PROXY_PORT'),
+                     'set env var to run test: AWS_TESTING_COGNITO_IDENTITY, AWS_TEST_MQTT311_COGNITO_ENDPOINT, '
+                     'AWS_TEST_HTTP_PROXY_HOST, and AWS_TEST_HTTP_PROXY_PORT')
 class CognitoCredentialsProviderProxyTest(NativeResourceTest):
 
     def test_unauthenticated(self):
