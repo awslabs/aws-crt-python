@@ -1,129 +1,99 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 
-from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, Pkcs11Lib, TlsContextOptions, LogLevel, init_logging
+from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, Pkcs11Lib, TlsContextOptions
 from awscrt.mqtt import Client, Connection, QoS
 from test import NativeResourceTest
 from concurrent.futures import Future
-import enum
 import os
-import pathlib
-import sys
 import unittest
 import uuid
 
 TIMEOUT = 100.0
 
-
-class MqttClientTest(NativeResourceTest):
-    def test_lifetime(self):
-        elg = EventLoopGroup()
-        resolver = DefaultHostResolver(elg)
-        bootstrap = ClientBootstrap(elg, resolver)
-        client = Client(bootstrap)
-
-
-AuthType = enum.Enum('AuthType', ['CERT_AND_KEY', 'PKCS11', 'ECC_CERT_AND_KEY'])
-
-
-class Config:
-    def __init__(self, auth_type):
-        self.endpoint = self._get_env('AWS_TEST_IOT_MQTT_ENDPOINT')
-        self.cert_path = self._get_env('AWS_TEST_TLS_CERT_PATH')
-        self.cert = pathlib.Path(self.cert_path).read_text().encode('utf-8')
-
-        if auth_type == AuthType.ECC_CERT_AND_KEY:
-            self.key_path = self._get_env('AWS_TEST_ECC_KEY_PATH')
-            self.key = pathlib.Path(self.key_path).read_text().encode('utf-8')
-            self.cert_path = self._get_env('AWS_TEST_ECC_CERT_PATH')
-            self.cert = pathlib.Path(self.cert_path).read_text().encode('utf-8')
-
-        if auth_type == AuthType.CERT_AND_KEY:
-            self.key_path = self._get_env('AWS_TEST_TLS_KEY_PATH')
-            self.key = pathlib.Path(self.key_path).read_text().encode('utf-8')
-
-        elif auth_type == AuthType.PKCS11:
-            self.pkcs11_lib_path = self._get_env('AWS_TEST_PKCS11_LIB')
-            self.pkcs11_pin = self._get_env('AWS_TEST_PKCS11_PIN')
-            self.pkcs11_token_label = self._get_env('AWS_TEST_PKCS11_TOKEN_LABEL')
-            self.pkcs11_key_label = self._get_env('AWS_TEST_PKCS11_KEY_LABEL')
-
-    def _get_env(self, name):
-        val = os.environ.get(name)
-        if not val:
-            raise unittest.SkipTest(f"test requires env var: {name}")
-        return val
-
+def _get_env_variable(env_name):
+    env_data = os.environ.get(env_name)
+    if not env_data:
+        raise unittest.SkipTest(f"test requires env var: {env_name}")
+    return env_data
 
 def create_client_id():
     return 'aws-crt-python-unit-test-{0}'.format(uuid.uuid4())
 
-
 class MqttConnectionTest(NativeResourceTest):
-    TEST_TOPIC = '/test/me/senpai'
+    TEST_TOPIC = '/test/me/senpai/' + str(uuid.uuid4())
     TEST_MSG = 'NOTICE ME!'.encode('utf8')
 
-    def _create_connection(self, auth_type=AuthType.CERT_AND_KEY, use_static_singletons=False):
-        config = Config(auth_type)
-
-        if auth_type == AuthType.CERT_AND_KEY or auth_type == AuthType.ECC_CERT_AND_KEY:
-            tls_opts = TlsContextOptions.create_client_with_mtls_from_path(config.cert_path, config.key_path)
-            tls = ClientTlsContext(tls_opts)
-
-        elif auth_type == AuthType.PKCS11:
-            try:
-                pkcs11_lib = Pkcs11Lib(
-                    file=config.pkcs11_lib_path,
-                    behavior=Pkcs11Lib.InitializeFinalizeBehavior.STRICT)
-
-                tls_opts = TlsContextOptions.create_client_with_mtls_pkcs11(
-                    pkcs11_lib=pkcs11_lib,
-                    user_pin=config.pkcs11_pin,
-                    token_label=config.pkcs11_token_label,
-                    private_key_label=config.pkcs11_key_label,
-                    cert_file_path=config.cert_path)
-
-                tls = ClientTlsContext(tls_opts)
-
-            except Exception as e:
-                if 'AWS_ERROR_UNIMPLEMENTED' in str(e):
-                    raise unittest.SkipTest(f'TLS with PKCS#11 not supported on this platform ({sys.platform})')
-                else:
-                    # re-raise exception
-                    raise
-
+    def _create_connection(self, endpoint, tls_context, use_static_singletons=False):
         if use_static_singletons:
-            client = Client(tls_ctx=tls)
+            client = Client(tls_ctx=tls_context)
         else:
             elg = EventLoopGroup()
             resolver = DefaultHostResolver(elg)
             bootstrap = ClientBootstrap(elg, resolver)
-            client = Client(bootstrap, tls)
+            client = Client(bootstrap, tls_context)
 
         connection = Connection(
             client=client,
             client_id=create_client_id(),
-            host_name=config.endpoint,
+            host_name=endpoint,
             port=8883)
         return connection
 
     def test_connect_disconnect(self):
-        connection = self._create_connection()
+        test_input_endpoint = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
+        test_input_cert = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_CERT")
+        test_input_key = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_KEY")
+
+        test_tls_opts = TlsContextOptions.create_client_with_mtls_from_path(test_input_cert, test_input_key)
+        test_tls = ClientTlsContext(test_tls_opts)
+
+        connection = self._create_connection(test_input_endpoint, test_tls)
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
     def test_ecc_connect_disconnect(self):
-        connection = self._create_connection(AuthType.ECC_CERT_AND_KEY)
+        test_input_endpoint = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
+        test_input_cert = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_ECC_CERT")
+        test_input_key = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_ECC_KEY")
+
+        test_tls_opts = TlsContextOptions.create_client_with_mtls_from_path(test_input_cert, test_input_key)
+        test_tls = ClientTlsContext(test_tls_opts)
+
+        connection = self._create_connection(test_input_endpoint, test_tls)
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
     def test_pkcs11(self):
-        connection = self._create_connection(AuthType.PKCS11)
+        test_input_endpoint = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
+        test_input_pkcs11_lib = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_PKCS11_LIB")
+        test_input_pkcs11_pin = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_PKCS11_PIN")
+        test_input_pkcs11_token_label = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_PKCS11_TOKEN_LABEL")
+        test_input_pkcs11_private_key = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_PKCS11_PKEY_LABEL")
+        test_input_pkcs11_cert = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_PKCS11_CERT_FILE")
+
+        test_pkcs11_lib = Pkcs11Lib(file=test_input_pkcs11_lib, behavior=Pkcs11Lib.InitializeFinalizeBehavior.STRICT)
+        test_tls_opts = TlsContextOptions.create_client_with_mtls_pkcs11(
+            pkcs11_lib=test_pkcs11_lib,
+            user_pin=test_input_pkcs11_pin,
+            token_label=test_input_pkcs11_token_label,
+            private_key_label=test_input_pkcs11_private_key,
+            cert_file_path=test_input_pkcs11_cert
+        )
+        test_tls = ClientTlsContext(test_tls_opts)
+
+        connection = self._create_connection(test_input_endpoint, test_tls)
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
     def test_pub_sub(self):
-        connection = self._create_connection()
+        test_input_endpoint = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
+        test_input_cert = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_CERT")
+        test_input_key = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_KEY")
+        test_tls_opts = TlsContextOptions.create_client_with_mtls_from_path(test_input_cert, test_input_key)
+        test_tls = ClientTlsContext(test_tls_opts)
+        connection = self._create_connection(test_input_endpoint, test_tls)
+
         connection.connect().result(TIMEOUT)
         received = Future()
 
@@ -159,7 +129,13 @@ class MqttConnectionTest(NativeResourceTest):
         connection.disconnect().result(TIMEOUT)
 
     def test_on_message(self):
-        connection = self._create_connection()
+        test_input_endpoint = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
+        test_input_cert = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_CERT")
+        test_input_key = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_KEY")
+        test_tls_opts = TlsContextOptions.create_client_with_mtls_from_path(test_input_cert, test_input_key)
+        test_tls = ClientTlsContext(test_tls_opts)
+        connection = self._create_connection(test_input_endpoint, test_tls)
+
         received = Future()
 
         def on_message(**kwargs):
@@ -190,7 +166,13 @@ class MqttConnectionTest(NativeResourceTest):
 
     def test_on_message_old_fn_signature(self):
         # ensure that message-received callbacks with the old function signature still work
-        connection = self._create_connection()
+
+        test_input_endpoint = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
+        test_input_cert = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_CERT")
+        test_input_key = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_KEY")
+        test_tls_opts = TlsContextOptions.create_client_with_mtls_from_path(test_input_cert, test_input_key)
+        test_tls = ClientTlsContext(test_tls_opts)
+        connection = self._create_connection(test_input_endpoint, test_tls)
 
         any_received = Future()
         sub_received = Future()
@@ -228,7 +210,14 @@ class MqttConnectionTest(NativeResourceTest):
         connection.disconnect().result(TIMEOUT)
 
     def test_connect_disconnect_with_default_singletons(self):
-        connection = self._create_connection(use_static_singletons=True)
+        test_input_endpoint = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
+        test_input_cert = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_CERT")
+        test_input_key = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_KEY")
+
+        test_tls_opts = TlsContextOptions.create_client_with_mtls_from_path(test_input_cert, test_input_key)
+        test_tls = ClientTlsContext(test_tls_opts)
+
+        connection = self._create_connection(test_input_endpoint, test_tls, use_static_singletons=True)
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
@@ -238,7 +227,13 @@ class MqttConnectionTest(NativeResourceTest):
         DefaultHostResolver.release_static_default()
 
     def test_connect_publish_wait_statistics_disconnect(self):
-        connection = self._create_connection()
+        test_input_endpoint = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
+        test_input_cert = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_CERT")
+        test_input_key = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_KEY")
+        test_tls_opts = TlsContextOptions.create_client_with_mtls_from_path(test_input_cert, test_input_key)
+        test_tls = ClientTlsContext(test_tls_opts)
+        connection = self._create_connection(test_input_endpoint, test_tls)
+
         connection.connect().result(TIMEOUT)
 
         # check operation statistics
@@ -264,7 +259,13 @@ class MqttConnectionTest(NativeResourceTest):
         connection.disconnect().result(TIMEOUT)
 
     def test_connect_publish_statistics_wait_disconnect(self):
-        connection = self._create_connection()
+        test_input_endpoint = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
+        test_input_cert = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_CERT")
+        test_input_key = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_KEY")
+        test_tls_opts = TlsContextOptions.create_client_with_mtls_from_path(test_input_cert, test_input_key)
+        test_tls = ClientTlsContext(test_tls_opts)
+        connection = self._create_connection(test_input_endpoint, test_tls)
+
         connection.connect().result(TIMEOUT)
 
         # publish

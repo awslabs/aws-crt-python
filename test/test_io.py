@@ -191,10 +191,9 @@ class InputStreamTest(NativeResourceTest):
 
 class Pkcs11LibTest(NativeResourceTest):
     def _lib_path(self):
-        name = 'AWS_TEST_PKCS11_LIB'
-        val = os.environ.get(name)
+        val = os.environ.get("AWS_TEST_PKCS11_LIB")
         if not val:
-            raise unittest.SkipTest(f"test requires env var: {name}")
+            raise unittest.SkipTest(f"test requires env var: AWS_TEST_PKCS11_LIB")
         return val
 
     def test_init(self):

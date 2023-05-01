@@ -221,17 +221,18 @@ class TestProvider(NativeResourceTest):
             credentials = credentials_future.result(TIMEOUT)
 
 
-@unittest.skipUnless(os.environ.get('AWS_TESTING_COGNITO_IDENTITY'),
-                     'set env var to run test: AWS_TESTING_COGNITO_IDENTITY')
+@unittest.skipUnless(os.environ.get('AWS_TEST_MQTT311_COGNITO_IDENTITY') and os.environ.get('AWS_TEST_MQTT311_COGNITO_ENDPOINT'),
+                     'set env var to run test: AWS_TEST_MQTT311_COGNITO_IDENTITY and AWS_TEST_MQTT311_COGNITO_ENDPOINT')
 class CognitoCredentialsProviderTest(NativeResourceTest):
 
     def test_unauthenticated(self):
-        identity = os.environ.get('AWS_TESTING_COGNITO_IDENTITY')
+        identity = os.environ.get('AWS_TEST_MQTT311_COGNITO_IDENTITY')
+        identity_endpoint = os.environ.get('AWS_TEST_MQTT311_COGNITO_ENDPOINT')
         tls_opts = awscrt.io.TlsContextOptions()
         tls_context = awscrt.io.ClientTlsContext(tls_opts)
 
         provider = awscrt.auth.AwsCredentialsProvider.new_cognito(
-            endpoint="cognito-identity.us-east-1.amazonaws.com",
+            endpoint=identity_endpoint,
             identity=identity,
             tls_ctx=tls_context
         )
@@ -241,13 +242,14 @@ class CognitoCredentialsProviderTest(NativeResourceTest):
         self.assertIsNotNone(credentials)
 
     def test_cognito_provider_create_exception_bad_login(self):
-        identity = os.environ.get('AWS_TESTING_COGNITO_IDENTITY')
+        identity = os.environ.get('AWS_TEST_MQTT311_COGNITO_IDENTITY')
+        identity_endpoint = os.environ.get('AWS_TEST_MQTT311_COGNITO_ENDPOINT')
         tls_opts = awscrt.io.TlsContextOptions()
         tls_context = awscrt.io.ClientTlsContext(tls_opts)
 
         with self.assertRaises(Exception):
             provider = awscrt.auth.AwsCredentialsProvider.new_cognito(
-                endpoint="cognito-identity.us-east-1.amazonaws.com",
+                endpoint=identity_endpoint,
                 identity=identity,
                 tls_ctx=tls_context,
                 logins=[('provider1', 5), ('provider2', ['List not string'])]
@@ -256,12 +258,13 @@ class CognitoCredentialsProviderTest(NativeResourceTest):
             self.assertIsNone(provider)
 
     def test_maximal_create(self):
-        identity = os.environ.get('AWS_TESTING_COGNITO_IDENTITY')
+        identity = os.environ.get('AWS_TEST_MQTT311_COGNITO_IDENTITY')
+        identity_endpoint = os.environ.get('AWS_TEST_MQTT311_COGNITO_ENDPOINT')
         tls_opts = awscrt.io.TlsContextOptions()
         tls_context = awscrt.io.ClientTlsContext(tls_opts)
 
         provider = awscrt.auth.AwsCredentialsProvider.new_cognito(
-            endpoint="cognito-identity.us-east-1.amazonaws.com",
+            endpoint=identity_endpoint,
             identity=identity,
             tls_ctx=tls_context,
             logins=[('provider1', 'token1'), ('provide2', 'token2')],
@@ -271,12 +274,15 @@ class CognitoCredentialsProviderTest(NativeResourceTest):
         self.assertIsNotNone(provider)
 
 
-@unittest.skipUnless(os.environ.get('AWS_TESTING_COGNITO_IDENTITY') and os.environ.get('AWS_TEST_HTTP_PROXY_HOST')
-                     and os.environ.get('AWS_TEST_HTTP_PROXY_PORT'), 'set env var to run test: AWS_TESTING_COGNITO_IDENTITY')
+@unittest.skipUnless(os.environ.get('AWS_TESTING_COGNITO_IDENTITY') and os.environ.get('AWS_TEST_MQTT311_COGNITO_ENDPOINT')
+                    and os.environ.get('AWS_TEST_HTTP_PROXY_HOST') and os.environ.get('AWS_TEST_HTTP_PROXY_PORT'),
+                    'set env var to run test: AWS_TESTING_COGNITO_IDENTITY, AWS_TEST_MQTT311_COGNITO_ENDPOINT, '
+                    'AWS_TEST_HTTP_PROXY_HOST, and AWS_TEST_HTTP_PROXY_PORT')
 class CognitoCredentialsProviderProxyTest(NativeResourceTest):
 
     def test_unauthenticated(self):
         identity = os.environ.get('AWS_TESTING_COGNITO_IDENTITY')
+        identity_endpoint = os.environ.get('AWS_TEST_MQTT311_COGNITO_ENDPOINT')
         tls_opts = awscrt.io.TlsContextOptions()
         tls_context = awscrt.io.ClientTlsContext(tls_opts)
         http_proxy_options = awscrt.http.HttpProxyOptions(
@@ -284,7 +290,7 @@ class CognitoCredentialsProviderProxyTest(NativeResourceTest):
             int(os.environ.get('AWS_TEST_HTTP_PROXY_PORT', '0')))
 
         provider = awscrt.auth.AwsCredentialsProvider.new_cognito(
-            endpoint="cognito-identity.us-east-1.amazonaws.com",
+            endpoint=identity_endpoint,
             identity=identity,
             tls_ctx=tls_context,
             http_proxy_options=http_proxy_options
