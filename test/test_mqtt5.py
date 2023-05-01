@@ -459,6 +459,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             ping_timeout_ms=1000,
             connack_timeout_ms=1000,
             ack_timeout_sec=100)
+        callbacks = Mqtt5TestCallbacks()
         client = self._create_client(client_options=client_options, callbacks=callbacks)
         client.start()
         callbacks.future_connection_success.result(TIMEOUT)
@@ -1188,7 +1189,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             publish_future.result(TIMEOUT)
 
         client1.stop()
-        callbacks.future_stopped.result(TIMEOUT)
+        callbacks1.future_stopped.result(TIMEOUT)
 
         callbacks2.future_expected_publishes_received.result(TIMEOUT)
         self.assertEqual(callbacks2.on_publish_received_counter, publishes)
