@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0.
 
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, Pkcs11Lib, TlsContextOptions
+from awscrt import http
 from awscrt.mqtt import Client, Connection, QoS
 from test import NativeResourceTest
 from concurrent.futures import Future
@@ -26,6 +27,9 @@ def create_client_id():
 class MqttConnectionTest(NativeResourceTest):
     TEST_TOPIC = '/test/me/senpai/' + str(uuid.uuid4())
     TEST_MSG = 'NOTICE ME!'.encode('utf8')
+
+    def _websocket_default_sign(transform_args, **kwargs):
+        transform_args.set_done()
 
     def _create_connection(self, endpoint, tls_context, use_static_singletons=False):
         if use_static_singletons:
@@ -299,6 +303,169 @@ class MqttConnectionTest(NativeResourceTest):
         self.assertEqual(statistics.unacked_operation_size, 0)
 
         # disconnect
+        connection.disconnect().result(TIMEOUT)
+
+    # ==============================================================
+    #             MOSQUITTO CONNECTION TESTS
+    # ==============================================================
+
+    def test_mqtt311_direct_connect_minimum(self):
+        elg = EventLoopGroup()
+        resolver = DefaultHostResolver(elg)
+        bootstrap = ClientBootstrap(elg, resolver)
+        client = Client(bootstrap, None)
+        connection = Connection(
+            client=client,
+            client_id=create_client_id(),
+            host_name=_get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_HOST"),
+            port=int(_get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_PORT")))
+        connection.connect().result(TIMEOUT)
+        connection.disconnect().result(TIMEOUT)
+
+    def test_mqtt311_direct_connect_basic_auth(self):
+        elg = EventLoopGroup()
+        resolver = DefaultHostResolver(elg)
+        bootstrap = ClientBootstrap(elg, resolver)
+        client = Client(bootstrap, None)
+        connection = Connection(
+            client=client,
+            client_id=create_client_id(),
+            host_name=_get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_BASIC_AUTH_HOST"),
+            port=int(_get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_BASIC_AUTH_PORT")),
+            username=_get_env_variable("AWS_TEST_MQTT311_BASIC_AUTH_USERNAME"),
+            password=_get_env_variable("AWS_TEST_MQTT311_BASIC_AUTH_USERNAME"))
+        connection.connect().result(TIMEOUT)
+        connection.disconnect().result(TIMEOUT)
+
+    def test_mqtt311_direct_connect_tls(self):
+        tls_ctx_options = TlsContextOptions()
+        tls_ctx_options.verify_peer = False
+        elg = EventLoopGroup()
+        resolver = DefaultHostResolver(elg)
+        bootstrap = ClientBootstrap(elg, resolver)
+        client = Client(bootstrap, io.ClientTlsContext(tls_ctx_options))
+        connection = Connection(
+            client=client,
+            client_id=create_client_id(),
+            host_name=_get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_TLS_HOST"),
+            port=int(_get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_TLS_PORT")))
+        connection.connect().result(TIMEOUT)
+        connection.disconnect().result(TIMEOUT)
+
+    def test_mqtt311_direct_connect_mutual_tls(self):
+        tls_ctx_options = TlsContextOptions.create_client_with_mtls_from_path(
+            _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_CERT"),
+            _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_KEY")
+        )
+        elg = EventLoopGroup()
+        resolver = DefaultHostResolver(elg)
+        bootstrap = ClientBootstrap(elg, resolver)
+        client = Client(bootstrap, ClientTlsContext(tls_ctx_options))
+        connection = Connection(
+            client=client,
+            client_id=create_client_id(),
+            host_name=_get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST"),
+            port=8883)
+        connection.connect().result(TIMEOUT)
+        connection.disconnect().result(TIMEOUT)
+
+    def test_mqtt311_direct_connect_http_proxy_tls(self):
+        tls_ctx_options = TlsContextOptions()
+        tls_ctx_options.verify_peer = False
+        elg = EventLoopGroup()
+        resolver = DefaultHostResolver(elg)
+        bootstrap = ClientBootstrap(elg, resolver)
+        client = Client(bootstrap, io.ClientTlsContext(tls_ctx_options))
+
+        http_proxy_options = http.HttpProxyOptions(
+            host_name=_get_env_variable("AWS_TEST_MQTT311_PROXY_HOST"),
+            port=int(_get_env_variable("AWS_TEST_MQTT311_PROXY_PORT"))
+        )
+        http_proxy_options.connection_type = http.HttpProxyConnectionType.Tunneling
+        http_proxy_options.auth_type = http.HttpProxyAuthenticationType.Nothing
+
+        connection = Connection(
+            client=client,
+            client_id=create_client_id(),
+            host_name=_get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_TLS_HOST"),
+            port=int(_get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_TLS_PORT")),
+            http_proxy_options=http_proxy_options)
+        connection.connect().result(TIMEOUT)
+        connection.disconnect().result(TIMEOUT)
+
+    def test_mqtt311_websocket_connect_minimum(self):
+        elg = EventLoopGroup()
+        resolver = DefaultHostResolver(elg)
+        bootstrap = ClientBootstrap(elg, resolver)
+        client = Client(bootstrap, None)
+        connection = Connection(
+            client=client,
+            client_id=create_client_id(),
+            host_name=_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_HOST"),
+            port=int(_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_PORT")),
+            use_websockets=True,
+            websocket_handshake_transform=self._websocket_default_sign())
+        connection.connect().result(TIMEOUT)
+        connection.disconnect().result(TIMEOUT)
+
+    def test_mqtt311_websocket_connect_basic_auth(self):
+        elg = EventLoopGroup()
+        resolver = DefaultHostResolver(elg)
+        bootstrap = ClientBootstrap(elg, resolver)
+        client = Client(bootstrap, None)
+        connection = Connection(
+            client=client,
+            client_id=create_client_id(),
+            host_name=_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_BASIC_AUTH_HOST"),
+            port=int(_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_BASIC_AUTH_PORT")),
+            username=_get_env_variable("AWS_TEST_MQTT311_BASIC_AUTH_USERNAME"),
+            password=_get_env_variable("AWS_TEST_MQTT311_BASIC_AUTH_PASSWORD"),
+            use_websockets=True,
+            websocket_handshake_transform=self._websocket_default_sign())
+        connection.connect().result(TIMEOUT)
+        connection.disconnect().result(TIMEOUT)
+
+    def test_mqtt311_websocket_connect_tls(self):
+        tls_ctx_options = TlsContextOptions()
+        tls_ctx_options.verify_peer = False
+        elg = EventLoopGroup()
+        resolver = DefaultHostResolver(elg)
+        bootstrap = ClientBootstrap(elg, resolver)
+        client = Client(bootstrap, io.ClientTlsContext(tls_ctx_options))
+        connection = Connection(
+            client=client,
+            client_id=create_client_id(),
+            host_name=_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_TLS_HOST"),
+            port=int(_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_TLS_PORT")),
+            use_websockets=True,
+            websocket_handshake_transform=self._websocket_default_sign())
+        connection.connect().result(TIMEOUT)
+        connection.disconnect().result(TIMEOUT)
+
+    def test_mqtt311_websocket_connect_http_proxy_tls(self):
+        tls_ctx_options = TlsContextOptions()
+        tls_ctx_options.verify_peer = False
+        elg = EventLoopGroup()
+        resolver = DefaultHostResolver(elg)
+        bootstrap = ClientBootstrap(elg, resolver)
+        client = Client(bootstrap, ClientTlsContext(tls_ctx_options))
+
+        http_proxy_options = http.HttpProxyOptions(
+            host_name=_get_env_variable("AWS_TEST_MQTT311_PROXY_HOST"),
+            port=int(_get_env_variable("AWS_TEST_MQTT311_PROXY_PORT"))
+        )
+        http_proxy_options.connection_type = http.HttpProxyConnectionType.Tunneling
+        http_proxy_options.auth_type = http.HttpProxyAuthenticationType.Nothing
+
+        connection = Connection(
+            client=client,
+            client_id=create_client_id(),
+            host_name=_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_TLS_HOST"),
+            port=int(_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_TLS_PORT")),
+            use_websockets=True,
+            websocket_handshake_transform=self._websocket_default_sign(),
+            websocket_proxy_options=http_proxy_options)
+        connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
 
