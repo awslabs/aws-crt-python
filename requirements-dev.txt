@@ -1,5 +1,5 @@
 autopep8 # for code formatting
 setuptools # for installing from source
-sphinx==6.2.1 # for building docs
+sphinx==5.3.0 # for building docs (pinned to this version as it is the highest on our Windows containers)
 websockets # for tests
 wheel # for building wheels
