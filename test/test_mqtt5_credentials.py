@@ -377,9 +377,18 @@ class MqttConnectionTest(NativeResourceTest):
         callbacks.future_stopped.result(TIMEOUT)
 
         # Set it back to the cached result
-        os.environ["AWS_ACCESS_KEY_ID"] = cache_access_key
-        os.environ["AWS_SECRET_ACCESS_KEY"] = cache_secret_access_key
-        os.environ["AWS_SESSION_TOKEN"] = cache_token
+        if (cache_access_key != None):
+            os.environ["AWS_ACCESS_KEY_ID"] = cache_access_key
+        else:
+            del os.environ["AWS_ACCESS_KEY_ID"]
+        if (cache_secret_access_key != None):
+            os.environ["AWS_SECRET_ACCESS_KEY"] = cache_secret_access_key
+        else:
+            del os.environ["AWS_SECRET_ACCESS_KEY"]
+        if (cache_token != None):
+            os.environ["AWS_SESSION_TOKEN"] = cache_token
+        else:
+            del os.environ["AWS_SESSION_TOKEN"]
 
 
 if __name__ == 'main':
