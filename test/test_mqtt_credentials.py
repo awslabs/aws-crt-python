@@ -60,14 +60,14 @@ class MqttConnectionTest(NativeResourceTest):
 
     def test_mqtt311_cred_pkcs11(self):
         test_pkcs11_lib = Pkcs11Lib(
-            file=_get_env_variable("AWS_TEST_MQTT311_IOT_CORE_PKCS11_LIB"),
+            file=_get_env_variable("AWS_TEST_PKCS11_LIB"),
             behavior=Pkcs11Lib.InitializeFinalizeBehavior.STRICT)
         tls_ctx_options = TlsContextOptions.create_client_with_mtls_pkcs11(
             pkcs11_lib=test_pkcs11_lib,
-            user_pin=_get_env_variable("AWS_TEST_MQTT311_IOT_CORE_PKCS11_PIN"),
-            token_label=_get_env_variable("AWS_TEST_MQTT311_IOT_CORE_PKCS11_TOKEN_LABEL"),
-            private_key_label=_get_env_variable("AWS_TEST_MQTT311_IOT_CORE_PKCS11_PKEY_LABEL"),
-            cert_file_path=_get_env_variable("AWS_TEST_MQTT311_IOT_CORE_PKCS11_CERT_FILE")
+            user_pin=_get_env_variable("AWS_TEST_PKCS11_PIN"),
+            token_label=_get_env_variable("AWS_TEST_PKCS11_TOKEN_LABEL"),
+            private_key_label=_get_env_variable("AWS_TEST_PKCS11_PKEY_LABEL"),
+            cert_file_path=_get_env_variable("AWS_TEST_PKCS11_CERT_FILE")
         )
         elg = EventLoopGroup()
         resolver = DefaultHostResolver(elg)
@@ -105,12 +105,12 @@ class MqttConnectionTest(NativeResourceTest):
         elg = EventLoopGroup()
         resolver = DefaultHostResolver(elg)
         bootstrap = ClientBootstrap(elg, resolver)
-        client = Client(bootstrap, None)
+        client = Client(bootstrap, ClientTlsContext(TlsContextOptions()))
         connection = Connection(
             client=client,
             client_id=create_client_id(),
-            host_name=_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_HOST"),
-            port=int(_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_PORT")),
+            host_name=_get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST"),
+            port=int(443),
             use_websockets=True,
             websocket_handshake_transform=sign_function)
         connection.connect().result(TIMEOUT)
@@ -136,47 +136,49 @@ class MqttConnectionTest(NativeResourceTest):
         elg = EventLoopGroup()
         resolver = DefaultHostResolver(elg)
         bootstrap = ClientBootstrap(elg, resolver)
-        client = Client(bootstrap, None)
+        client = Client(bootstrap, ClientTlsContext(TlsContextOptions()))
         connection = Connection(
             client=client,
             client_id=create_client_id(),
-            host_name=_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_HOST"),
-            port=int(_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_PORT")),
+            host_name=_get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST"),
+            port=int(443),
             use_websockets=True,
             websocket_handshake_transform=sign_function)
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
     def test_mqtt311_ws_cred_cognito(self):
+        elg = EventLoopGroup()
+        resolver = DefaultHostResolver(elg)
+        bootstrap = ClientBootstrap(elg, resolver)
+
         credentials = auth.AwsCredentialsProvider.new_cognito(
             endpoint=_get_env_variable("AWS_TEST_MQTT311_COGNITO_ENDPOINT"),
             identity=_get_env_variable("AWS_TEST_MQTT311_COGNITO_IDENTITY"),
-            tls_ctx=ClientTlsContext(TlsContextOptions())
-        )
-        signing_config = auth.AwsSigningConfig(
-            algorithm=auth.AwsSigningAlgorithm.V4,
-            signature_type=auth.AwsSignatureType.HTTP_REQUEST_QUERY_PARAMS,
-            credentials_provider=credentials,
-            region=_get_env_variable("AWS_TEST_MQTT311_IOT_CORE_REGION"),
-            service="iotdevicegateway",
-            omit_session_token=True
+            tls_ctx=ClientTlsContext(TlsContextOptions()),
+            client_bootstrap=bootstrap
         )
 
         def sign_function(transform_args, **kwargs):
+            signing_config = auth.AwsSigningConfig(
+                algorithm=auth.AwsSigningAlgorithm.V4,
+                signature_type=auth.AwsSignatureType.HTTP_REQUEST_QUERY_PARAMS,
+                credentials_provider=credentials,
+                region=_get_env_variable("AWS_TEST_MQTT311_IOT_CORE_REGION"),
+                service="iotdevicegateway",
+                omit_session_token=True
+            )
             signing_future = auth.aws_sign_request(
                 http_request=transform_args.http_request,
                 signing_config=signing_config)
             signing_future.add_done_callback(lambda x: transform_args.set_done(x.exception()))
 
-        elg = EventLoopGroup()
-        resolver = DefaultHostResolver(elg)
-        bootstrap = ClientBootstrap(elg, resolver)
-        client = Client(bootstrap, None)
+        client = Client(bootstrap, ClientTlsContext(TlsContextOptions()))
         connection = Connection(
             client=client,
             client_id=create_client_id(),
-            host_name=_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_HOST"),
-            port=int(_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_PORT")),
+            host_name=_get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST"),
+            port=int(443),
             use_websockets=True,
             websocket_handshake_transform=sign_function)
         connection.connect().result(TIMEOUT)
@@ -191,7 +193,7 @@ class MqttConnectionTest(NativeResourceTest):
             endpoint=_get_env_variable("AWS_TEST_MQTT311_IOT_CORE_X509_ENDPOINT"),
             role_alias=_get_env_variable("AWS_TEST_MQTT311_IOT_CORE_X509_ROLE_ALIAS"),
             thing_name=_get_env_variable("AWS_TEST_MQTT311_IOT_CORE_X509_THING_NAME"),
-            tls_ctx=x509_tls
+            tls_ctx=ClientTlsContext(x509_tls)
         )
         signing_config = auth.AwsSigningConfig(
             algorithm=auth.AwsSigningAlgorithm.V4,
@@ -211,49 +213,50 @@ class MqttConnectionTest(NativeResourceTest):
         elg = EventLoopGroup()
         resolver = DefaultHostResolver(elg)
         bootstrap = ClientBootstrap(elg, resolver)
-        client = Client(bootstrap, None)
+        client = Client(bootstrap, ClientTlsContext(TlsContextOptions()))
         connection = Connection(
             client=client,
             client_id=create_client_id(),
-            host_name=_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_HOST"),
-            port=int(_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_PORT")),
+            host_name=_get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST"),
+            port=int(443),
             use_websockets=True,
             websocket_handshake_transform=sign_function)
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
-    # TODO - add support for this! Need to see how profile files are made/set
-    # def test_mqtt311_ws_cred_profile(self):
-    #     credentials = auth.AwsCredentialsProvider.new_profile(
-    #         profile_name="TODO",
-    #         config_filepath="TODO",
-    #         credentials_filepath="TODO"
-    #     )
-    #     signing_config = auth.AwsSigningConfig(
-    #         algorithm=auth.AwsSigningAlgorithm.V4,
-    #         signature_type=auth.AwsSignatureType.HTTP_REQUEST_QUERY_PARAMS,
-    #         credentials_provider=credentials,
-    #         #region=_get_env_variable("AWS_TEST_MQTT311_IOT_CORE_REGION"),
-    #         service="iotdevicegateway",
-    #         omit_session_token=True
-    #     )
-    #     def sign_function(transform_args, **kwargs):
-    #         signing_future = auth.aws_sign_request(http_request=transform_args.http_request, signing_config=signing_config)
-    #         signing_future.add_done_callback(lambda x: transform_args.set_done(x.exception()))
+    def test_mqtt311_ws_cred_profile(self):
+        credentials = auth.AwsCredentialsProvider.new_profile(
+            config_filepath=_get_env_variable("AWS_TEST_MQTT311_IOT_PROFILE_CONFIG"),
+            credentials_filepath=_get_env_variable("AWS_TEST_MQTT311_IOT_PROFILE_CREDENTIALS")
+        )
+        signing_config = auth.AwsSigningConfig(
+            algorithm=auth.AwsSigningAlgorithm.V4,
+            signature_type=auth.AwsSignatureType.HTTP_REQUEST_QUERY_PARAMS,
+            credentials_provider=credentials,
+            region=_get_env_variable("AWS_TEST_MQTT311_IOT_CORE_REGION"),
+            service="iotdevicegateway",
+            omit_session_token=True
+        )
 
-    #     elg = EventLoopGroup()
-    #     resolver = DefaultHostResolver(elg)
-    #     bootstrap = ClientBootstrap(elg, resolver)
-    #     client = Client(bootstrap, None)
-    #     connection = Connection(
-    #         client=client,
-    #         client_id=create_client_id(),
-    #         host_name=_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_HOST"),
-    #         port=int(_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_PORT")),
-    #         use_websockets=True,
-    #         websocket_handshake_transform=sign_function)
-    #     connection.connect().result(TIMEOUT)
-    #     connection.disconnect().result(TIMEOUT)
+        def sign_function(transform_args, **kwargs):
+            signing_future = auth.aws_sign_request(
+                http_request=transform_args.http_request,
+                signing_config=signing_config)
+            signing_future.add_done_callback(lambda x: transform_args.set_done(x.exception()))
+
+        elg = EventLoopGroup()
+        resolver = DefaultHostResolver(elg)
+        bootstrap = ClientBootstrap(elg, resolver)
+        client = Client(bootstrap, ClientTlsContext(TlsContextOptions()))
+        connection = Connection(
+            client=client,
+            client_id=create_client_id(),
+            host_name=_get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST"),
+            port=int(443),
+            use_websockets=True,
+            websocket_handshake_transform=sign_function)
+        connection.connect().result(TIMEOUT)
+        connection.disconnect().result(TIMEOUT)
 
     def test_mqtt311_ws_cred_environment(self):
         # Set the environment variables from the static credentials
@@ -280,12 +283,12 @@ class MqttConnectionTest(NativeResourceTest):
         elg = EventLoopGroup()
         resolver = DefaultHostResolver(elg)
         bootstrap = ClientBootstrap(elg, resolver)
-        client = Client(bootstrap, None)
+        client = Client(bootstrap, ClientTlsContext(TlsContextOptions()))
         connection = Connection(
             client=client,
             client_id=create_client_id(),
-            host_name=_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_HOST"),
-            port=int(_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_PORT")),
+            host_name=_get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST"),
+            port=int(443),
             use_websockets=True,
             websocket_handshake_transform=sign_function)
         connection.connect().result(TIMEOUT)

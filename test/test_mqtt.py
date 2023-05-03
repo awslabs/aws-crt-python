@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0.
 
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, Pkcs11Lib, TlsContextOptions
+from awscrt import io
 from awscrt import http
 from awscrt.mqtt import Client, Connection, QoS
 from test import NativeResourceTest
@@ -73,11 +74,11 @@ class MqttConnectionTest(NativeResourceTest):
 
     def test_pkcs11(self):
         test_input_endpoint = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
-        test_input_pkcs11_lib = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_PKCS11_LIB")
-        test_input_pkcs11_pin = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_PKCS11_PIN")
-        test_input_pkcs11_token_label = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_PKCS11_TOKEN_LABEL")
-        test_input_pkcs11_private_key = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_PKCS11_PKEY_LABEL")
-        test_input_pkcs11_cert = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_PKCS11_CERT_FILE")
+        test_input_pkcs11_lib = _get_env_variable("AWS_TEST_PKCS11_LIB")
+        test_input_pkcs11_pin = _get_env_variable("AWS_TEST_PKCS11_PIN")
+        test_input_pkcs11_token_label = _get_env_variable("AWS_TEST_PKCS11_TOKEN_LABEL")
+        test_input_pkcs11_private_key = _get_env_variable("AWS_TEST_PKCS11_PKEY_LABEL")
+        test_input_pkcs11_cert = _get_env_variable("AWS_TEST_PKCS11_CERT_FILE")
 
         test_pkcs11_lib = Pkcs11Lib(file=test_input_pkcs11_lib, behavior=Pkcs11Lib.InitializeFinalizeBehavior.STRICT)
         test_tls_opts = TlsContextOptions.create_client_with_mtls_pkcs11(
