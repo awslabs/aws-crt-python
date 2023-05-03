@@ -131,7 +131,7 @@ class MqttConnectionTest(NativeResourceTest):
             port=8883
         )
         tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_windows_cert_store_path(
-            _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_WINDOWS_PFX_CERT_NO_PASS")
+            _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_WINDOWS_CERT_STORE")
         )
         client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
 

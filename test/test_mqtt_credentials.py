@@ -44,7 +44,7 @@ class MqttConnectionTest(NativeResourceTest):
 
     def test_mqtt311_cred_windows_cert(self):
         tls_ctx_options = TlsContextOptions.create_client_with_mtls_windows_cert_store_path(
-            _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_WINDOWS_PFX_CERT_NO_PASS")
+            _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_WINDOWS_CERT_STORE")
         )
         elg = EventLoopGroup()
         resolver = DefaultHostResolver(elg)
