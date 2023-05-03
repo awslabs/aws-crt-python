@@ -333,7 +333,7 @@ class MqttConnectionTest(NativeResourceTest):
             host_name=_get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_BASIC_AUTH_HOST"),
             port=int(_get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_BASIC_AUTH_PORT")),
             username=_get_env_variable("AWS_TEST_MQTT311_BASIC_AUTH_USERNAME"),
-            password=_get_env_variable("AWS_TEST_MQTT311_BASIC_AUTH_USERNAME"))
+            password=_get_env_variable("AWS_TEST_MQTT311_BASIC_AUTH_PASSWORD"))
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
@@ -343,7 +343,7 @@ class MqttConnectionTest(NativeResourceTest):
         elg = EventLoopGroup()
         resolver = DefaultHostResolver(elg)
         bootstrap = ClientBootstrap(elg, resolver)
-        client = Client(bootstrap, io.ClientTlsContext(tls_ctx_options))
+        client = Client(bootstrap, ClientTlsContext(tls_ctx_options))
         connection = Connection(
             client=client,
             client_id=create_client_id(),
@@ -375,7 +375,7 @@ class MqttConnectionTest(NativeResourceTest):
         elg = EventLoopGroup()
         resolver = DefaultHostResolver(elg)
         bootstrap = ClientBootstrap(elg, resolver)
-        client = Client(bootstrap, io.ClientTlsContext(tls_ctx_options))
+        client = Client(bootstrap, ClientTlsContext(tls_ctx_options))
 
         http_proxy_options = http.HttpProxyOptions(
             host_name=_get_env_variable("AWS_TEST_MQTT311_PROXY_HOST"),
@@ -389,7 +389,7 @@ class MqttConnectionTest(NativeResourceTest):
             client_id=create_client_id(),
             host_name=_get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_TLS_HOST"),
             port=int(_get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_TLS_PORT")),
-            http_proxy_options=http_proxy_options)
+            proxy_options=http_proxy_options)
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
@@ -404,7 +404,7 @@ class MqttConnectionTest(NativeResourceTest):
             host_name=_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_HOST"),
             port=int(_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_PORT")),
             use_websockets=True,
-            websocket_handshake_transform=self._websocket_default_sign())
+            websocket_handshake_transform=self._websocket_default_sign)
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
@@ -421,7 +421,7 @@ class MqttConnectionTest(NativeResourceTest):
             username=_get_env_variable("AWS_TEST_MQTT311_BASIC_AUTH_USERNAME"),
             password=_get_env_variable("AWS_TEST_MQTT311_BASIC_AUTH_PASSWORD"),
             use_websockets=True,
-            websocket_handshake_transform=self._websocket_default_sign())
+            websocket_handshake_transform=self._websocket_default_sign)
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
@@ -431,14 +431,14 @@ class MqttConnectionTest(NativeResourceTest):
         elg = EventLoopGroup()
         resolver = DefaultHostResolver(elg)
         bootstrap = ClientBootstrap(elg, resolver)
-        client = Client(bootstrap, io.ClientTlsContext(tls_ctx_options))
+        client = Client(bootstrap, ClientTlsContext(tls_ctx_options))
         connection = Connection(
             client=client,
             client_id=create_client_id(),
             host_name=_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_TLS_HOST"),
             port=int(_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_TLS_PORT")),
             use_websockets=True,
-            websocket_handshake_transform=self._websocket_default_sign())
+            websocket_handshake_transform=self._websocket_default_sign)
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
@@ -463,8 +463,8 @@ class MqttConnectionTest(NativeResourceTest):
             host_name=_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_TLS_HOST"),
             port=int(_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_TLS_PORT")),
             use_websockets=True,
-            websocket_handshake_transform=self._websocket_default_sign(),
-            websocket_proxy_options=http_proxy_options)
+            websocket_handshake_transform=self._websocket_default_sign,
+            proxy_options=http_proxy_options)
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
