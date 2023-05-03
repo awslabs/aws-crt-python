@@ -342,6 +342,10 @@ class MqttConnectionTest(NativeResourceTest):
             host_name=_get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST"),
             port=443
         )
+        # Cache the current credentials
+        cache_access_key = os.environ.get("AWS_ACCESS_KEY_ID")
+        cache_secret_access_key = os.environ.get("AWS_SECRET_ACCESS_KEY")
+        cache_token = os.environ.get("AWS_SESSION_TOKEN")
         # Set the environment variables from the static credentials
         os.environ["AWS_ACCESS_KEY_ID"] = _get_env_variable("AWS_TEST_MQTT5_ROLE_CREDENTIAL_ACCESS_KEY")
         os.environ["AWS_SECRET_ACCESS_KEY"] = _get_env_variable("AWS_TEST_MQTT5_ROLE_CREDENTIAL_SECRET_ACCESS_KEY")
@@ -371,6 +375,11 @@ class MqttConnectionTest(NativeResourceTest):
         callbacks.future_connection_success.result(TIMEOUT)
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
+
+        # Set it back to the cached result
+        os.environ["AWS_ACCESS_KEY_ID"] = cache_access_key
+        os.environ["AWS_SECRET_ACCESS_KEY"] = cache_secret_access_key
+        os.environ["AWS_SESSION_TOKEN"] = cache_token
 
 
 if __name__ == 'main':
