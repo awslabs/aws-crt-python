@@ -237,8 +237,11 @@ class MqttConnectionTest(NativeResourceTest):
             service="iotdevicegateway",
             omit_session_token=True
         )
+
         def sign_function(transform_args, **kwargs):
-            signing_future = auth.aws_sign_request(http_request=transform_args.http_request, signing_config=signing_config)
+            signing_future = auth.aws_sign_request(
+                http_request=transform_args.http_request,
+                signing_config=signing_config)
             signing_future.add_done_callback(lambda x: transform_args.set_done(x.exception()))
 
         elg = EventLoopGroup()
@@ -296,15 +299,15 @@ class MqttConnectionTest(NativeResourceTest):
         connection.disconnect().result(TIMEOUT)
 
         # Set it back to the cached result
-        if (cache_access_key != None):
+        if (cache_access_key is not None):
             os.environ["AWS_ACCESS_KEY_ID"] = cache_access_key
         else:
             del os.environ["AWS_ACCESS_KEY_ID"]
-        if (cache_secret_access_key != None):
+        if (cache_secret_access_key is not None):
             os.environ["AWS_SECRET_ACCESS_KEY"] = cache_secret_access_key
         else:
             del os.environ["AWS_SECRET_ACCESS_KEY"]
-        if (cache_token != None):
+        if (cache_token is not None):
             os.environ["AWS_SESSION_TOKEN"] = cache_token
         else:
             del os.environ["AWS_SESSION_TOKEN"]
