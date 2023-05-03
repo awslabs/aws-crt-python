@@ -1,5 +1,5 @@
 autopep8 # for code formatting
 setuptools # for installing from source
-sphinx # for building docs
+sphinx==6.2.1 # for building docs
 websockets # for tests
 wheel # for building wheels
