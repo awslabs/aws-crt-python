@@ -18,6 +18,7 @@ class AWSCrtPython(Builder.Action):
         env.shell.setenv('AWS_TEST_S3', '1')
 
         actions = [
+            [python, "-m", "pip", "install", "--upgrade", "--ignore-installed", "pip"]
             [python, '-m', 'pip', 'install', '--upgrade', '--requirement', 'requirements-dev.txt'],
             Builder.SetupCrossCICrtEnvironment(),
             [python, '-m', 'pip', 'install', '--verbose', '.'],

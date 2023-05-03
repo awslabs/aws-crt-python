@@ -1,4 +1,3 @@
-pip # listed here so we can upgrade it as same time as everything else
 autopep8 # for code formatting
 setuptools # for installing from source
 markupsafe==2.0.1 # needed due to sphinx having a sub-dependency on jinja2 but jinja2 does not install markupsafe
