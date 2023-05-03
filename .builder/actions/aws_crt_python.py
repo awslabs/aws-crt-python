@@ -18,6 +18,8 @@ class AWSCrtPython(Builder.Action):
         env.shell.setenv('AWS_TEST_S3', '1')
 
         actions = [
+            # We force install pip because some containers cannot uninstall and upgrade pip, but we need a newer
+            # pip for setuptools. Not ideal, but gets the job done.
             [python, '-m', 'pip', 'install', '--upgrade', '--ignore-installed', 'pip'],
             [python, '-m', 'pip', 'install', '--upgrade', '--requirement', 'requirements-dev.txt'],
             Builder.SetupCrossCICrtEnvironment(),
