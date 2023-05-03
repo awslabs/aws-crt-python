@@ -460,6 +460,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             connack_timeout_ms=1000,
             ack_timeout_sec=100)
         callbacks = Mqtt5TestCallbacks()
+        client_options.websocket_handshake_transform = callbacks.ws_handshake_transform
         client = self._create_client(client_options=client_options, callbacks=callbacks)
         client.start()
         callbacks.future_connection_success.result(TIMEOUT)
