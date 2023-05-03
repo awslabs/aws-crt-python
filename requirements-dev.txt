@@ -1,5 +1,6 @@
 autopep8 # for code formatting
 setuptools # for installing from source
-sphinx==5.3.0 # for building docs (pinned to this version as it is the highest on our Windows containers)
+markupsafe==2.0.1 # needed due to sphinx having a sub-dependency on jinja2 but jinja2 does not install markupsafe
+sphinx # for generating documentation
 websockets # for tests
 wheel # for building wheels
