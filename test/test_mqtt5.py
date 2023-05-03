@@ -554,7 +554,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         client1 = self._create_client(client_options=client_options, callbacks=callbacks)
 
         callbacks2 = Mqtt5TestCallbacks()
-        client2 = self._create_client(client_options=client_options, callbacks=callbacks)
+        client2 = self._create_client(client_options=client_options, callbacks=callbacks2)
 
         client1.start()
         callbacks.future_connection_success.result(TIMEOUT)

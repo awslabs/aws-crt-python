@@ -465,6 +465,9 @@ class MqttConnectionTest(NativeResourceTest):
         http_proxy_options.connection_type = http.HttpProxyConnectionType.Tunneling
         http_proxy_options.auth_type = http.HttpProxyAuthenticationType.Nothing
 
+        def sign_function(transform_args, **kwargs):
+            transform_args.set_done()
+
         client = Client(bootstrap, ClientTlsContext(tls_ctx_options))
         connection = Connection(
             client=client,
