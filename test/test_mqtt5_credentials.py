@@ -177,6 +177,7 @@ class MqttConnectionTest(NativeResourceTest):
             _get_env_variable("AWS_TEST_MQTT5_ROLE_CREDENTIAL_SESSION_TOKEN")
         )
         credentials = auth.AwsCredentialsProvider.new_default_chain()
+
         def sign_function(transform_args, **kwargs):
             signing_config = auth.AwsSigningConfig(
                 algorithm=auth.AwsSigningAlgorithm.V4,
@@ -206,6 +207,7 @@ class MqttConnectionTest(NativeResourceTest):
             port=443
         )
         credentials = auth.AwsCredentialsProvider.new_default_chain()
+
         def sign_function(transform_args, **kwargs):
             signing_config = auth.AwsSigningConfig(
                 algorithm=auth.AwsSigningAlgorithm.V4,
@@ -278,6 +280,7 @@ class MqttConnectionTest(NativeResourceTest):
             thing_name=_get_env_variable("AWS_TEST_MQTT5_IOT_CORE_X509_THING_NAME"),
             tls_ctx=io.ClientTlsContext(x509_tls)
         )
+
         def sign_function(transform_args, **kwargs):
             signing_config = auth.AwsSigningConfig(
                 algorithm=auth.AwsSigningAlgorithm.V4,
@@ -310,6 +313,7 @@ class MqttConnectionTest(NativeResourceTest):
             config_filepath=_get_env_variable("AWS_TEST_MQTT5_IOT_PROFILE_CONFIG"),
             credentials_filepath=_get_env_variable("AWS_TEST_MQTT5_IOT_PROFILE_CREDENTIALS")
         )
+
         def sign_function(transform_args, **kwargs):
             signing_config = auth.AwsSigningConfig(
                 algorithm=auth.AwsSigningAlgorithm.V4,
