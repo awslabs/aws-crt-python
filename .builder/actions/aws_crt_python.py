@@ -1,11 +1,49 @@
 import Builder
 import argparse
+import os
 
 # Fall back on using the "{python}" builder variable
 PYTHON_DEFAULT = '{python}'
 
 
 class AWSCrtPython(Builder.Action):
+
+    # Some CI containers have pip installed via "rpm" or non-Python methods, and this causes issues when
+    # we try to update pip via "python -m pip install --upgrade" because there are no RECORD files present.
+    # Therefore, we have to seek alternative ways with a last resort of installing with "--ignore-installed"
+    # if nothing else works AND the builder is running in GitHub actions.
+    # As of writing, this is primarily an issue with the AL2-x64 image.
+    def try_to_upgrade_pip(self, env):
+        python = args.python if args.python else PYTHON_DEFAULT
+        did_upgrade = False
+
+        try:
+            cmd = [python, '-m', 'pip', 'install', '--upgrade', '--force-reinstall', 'pip']
+            env.shell.exec(*cmd, check=True, quiet=True)
+            did_upgrade = True
+        except Exception:
+            print("Could not update pip via normal pip upgrade. Next trying via package manager...")
+
+        if (did_upgrade == False):
+            try:
+                Builder.Script([Builder.InstallPackages(['pip'],)]).run(env)
+                did_upgrade = True
+            except Exception:
+                print("Could not update pip via package manager. Next resorting to forcing an ignore install...")
+
+        if (did_upgrade == False):
+            # Only run in GitHub actions by checking for specific environment variable
+            # Source: https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
+            if (os.getenv("GITHUB_ACTIONS") is not None):
+                try:
+                    cmd = [python, '-m', 'pip', 'install', '--upgrade', '--ignore-installed', 'pip']
+                    env.shell.exec(*cmd, check=True, quiet=True)
+                except Exception as ex:
+                    print("Could not update pip via ignore install! Something is terribly wrong!")
+                    raise (ex)
+                did_upgrade = True
+            else:
+                print("Not on GitHub actions - skipping reinstalling Pip. Update/Install pip manually and rerun the builder")
 
     def run(self, env):
         # allow custom python to be used
@@ -18,9 +56,8 @@ class AWSCrtPython(Builder.Action):
         env.shell.setenv('AWS_TEST_S3', '1')
 
         actions = [
-            # Force-reinstall Pip because some CI containers (al2-x64 being one) have Pip installed without
-            # a RECORD file and therefore it will not be able to uninstall via a normal upgrade call.
-            [python, '-m', 'pip', 'install', '--upgrade', '--force-reinstall', 'pip'],
+            # Upgrade Pip via a number of different methods
+            self.try_to_upgrade_pip,
             [python, '-m', 'pip', 'install', '--upgrade', '--requirement', 'requirements-dev.txt'],
             Builder.SetupCrossCICrtEnvironment(),
             [python, '-m', 'pip', 'install', '--verbose', '.'],
