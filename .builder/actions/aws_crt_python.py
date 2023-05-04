@@ -7,6 +7,7 @@ PYTHON_DEFAULT = '{python}'
 
 
 class AWSCrtPython(Builder.Action):
+    python = PYTHON_DEFAULT
 
     # Some CI containers have pip installed via "rpm" or non-Python methods, and this causes issues when
     # we try to update pip via "python -m pip install --upgrade" because there are no RECORD files present.
@@ -14,11 +15,9 @@ class AWSCrtPython(Builder.Action):
     # if nothing else works AND the builder is running in GitHub actions.
     # As of writing, this is primarily an issue with the AL2-x64 image.
     def try_to_upgrade_pip(self, env):
-        python = args.python if args.python else PYTHON_DEFAULT
         did_upgrade = False
-
         try:
-            cmd = [python, '-m', 'pip', 'install', '--upgrade', '--force-reinstall', 'pip']
+            cmd = [self.python, '-m', 'pip', 'install', '--upgrade', '--force-reinstall', 'pip']
             env.shell.exec(*cmd, check=True, quiet=True)
             did_upgrade = True
         except Exception:
@@ -36,7 +35,7 @@ class AWSCrtPython(Builder.Action):
             # Source: https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
             if (os.getenv("GITHUB_ACTIONS") is not None):
                 try:
-                    cmd = [python, '-m', 'pip', 'install', '--upgrade', '--ignore-installed', 'pip']
+                    cmd = [self.python, '-m', 'pip', 'install', '--upgrade', '--ignore-installed', 'pip']
                     env.shell.exec(*cmd, check=True, quiet=True)
                 except Exception as ex:
                     print("Could not update pip via ignore install! Something is terribly wrong!")
@@ -50,7 +49,7 @@ class AWSCrtPython(Builder.Action):
         parser = argparse.ArgumentParser()
         parser.add_argument('--python')
         args = parser.parse_known_args(env.args.args)[0]
-        python = args.python if args.python else PYTHON_DEFAULT
+        self.python = args.python if args.python else PYTHON_DEFAULT
 
         # Enable S3 tests
         env.shell.setenv('AWS_TEST_S3', '1')
@@ -58,15 +57,15 @@ class AWSCrtPython(Builder.Action):
         actions = [
             # Upgrade Pip via a number of different methods
             self.try_to_upgrade_pip,
-            [python, '-m', 'pip', 'install', '--upgrade', '--requirement', 'requirements-dev.txt'],
+            [self.python, '-m', 'pip', 'install', '--upgrade', '--requirement', 'requirements-dev.txt'],
             Builder.SetupCrossCICrtEnvironment(),
-            [python, '-m', 'pip', 'install', '--verbose', '.'],
+            [self.python, '-m', 'pip', 'install', '--verbose', '.'],
             # "--failfast" because, given how our leak-detection in tests currently works,
             # once one test fails all the rest usually fail too.
-            [python, '-m', 'unittest', 'discover', '--verbose', '--failfast'],
+            [self.python, '-m', 'unittest', 'discover', '--verbose', '--failfast'],
             # http_client_test.py launches external processes using the extra args
-            [python, 'crt/aws-c-http/integration-testing/http_client_test.py',
-                python, 'elasticurl.py'],
+            [self.python, 'crt/aws-c-http/integration-testing/http_client_test.py',
+                self.python, 'elasticurl.py'],
         ]
 
         return Builder.Script(actions, name='aws-crt-python')
