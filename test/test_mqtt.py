@@ -152,6 +152,7 @@ class MqttConnectionTest(NativeResourceTest):
             host_name=test_input_endpoint,
             port=8883,
             will=Will(self.TEST_TOPIC, QoS.AT_LEAST_ONCE, self.TEST_MSG, False),
+            ping_timeout_ms=500,
             keep_alive_secs=1
         )
         connection.connect().result(TIMEOUT)
