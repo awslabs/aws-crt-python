@@ -17,7 +17,7 @@ class AWSCrtPython(Builder.Action):
     def try_to_upgrade_pip(self, env):
         did_upgrade = False
         try:
-            Builder.Script([self.python, '-m', 'pip', 'install', '--upgrade', '--force-reinstall', 'pip']).run(env)
+            Builder.Script([[self.python, '-m', 'pip', 'install', '--upgrade', 'pip']]).run(env)
             did_upgrade = True
         except Exception:
             print("Could not update pip via normal pip upgrade. Next trying via package manager...")
@@ -34,8 +34,8 @@ class AWSCrtPython(Builder.Action):
             # Source: https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
             if (os.getenv("GITHUB_ACTIONS") is not None):
                 try:
-                    Builder.Script([self.python, '-m', 'pip', 'install', '--upgrade',
-                                   '--ignore-installed', 'pip']).run(env)
+                    Builder.Script([[self.python, '-m', 'pip', 'install', '--upgrade',
+                                   '--ignore-installed', 'pip']]).run(env)
                 except Exception as ex:
                     print("Could not update pip via ignore install! Something is terribly wrong!")
                     raise (ex)
