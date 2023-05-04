@@ -17,16 +17,16 @@ class AWSCrtPython(Builder.Action):
     # As of writing, this is primarily an issue with the AL2-x64 image.
     def try_to_upgrade_pip(self, env):
         did_upgrade = False
-        try:
-            Builder.Script(commands=[[self.python, '-m', 'pip', 'install',
-                           '--upgrade', 'pip']], exit_on_fail=False).run(env)
+
+        pip_result = env.shell.exec(self.python, '-m', 'pip', 'install', '--upgrade', 'pip', Check=False)
+        if pip_result.returncode == 0:
             did_upgrade = True
-        except Exception:
+        else:
             print("Could not update pip via normal pip upgrade. Next trying via package manager...")
 
         if (did_upgrade == False):
             try:
-                Builder.Script(commands=[Builder.InstallPackages(['pip'],)], exit_on_fail=False).run(env)
+                Builder.InstallPackages(['pip']).run(env)
                 did_upgrade = True
             except Exception:
                 print("Could not update pip via package manager. Next resorting to forcing an ignore install...")
@@ -35,13 +35,14 @@ class AWSCrtPython(Builder.Action):
             # Only run in GitHub actions by checking for specific environment variable
             # Source: https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
             if (os.getenv("GITHUB_ACTIONS") is not None):
-                try:
-                    Builder.Script(commands=[[self.python, '-m', 'pip', 'install', '--upgrade',
-                                   '--ignore-installed', 'pip']], exit_on_fail=False).run(env)
-                except Exception as ex:
+                pip_result = env.shell.exec(
+                    self.python, '-m', 'pip', 'install', '--upgrade',
+                    '--ignore-installed', 'pip', Check=False)
+                if pip_result.returncode == 0:
+                    did_upgrade = True
+                else:
                     print("Could not update pip via ignore install! Something is terribly wrong!")
                     sys.exit(12)
-                did_upgrade = True
             else:
                 print("Not on GitHub actions - skipping reinstalling Pip. Update/Install pip manually and rerun the builder")
 
