@@ -87,9 +87,10 @@ class MqttConnectionTest(NativeResourceTest):
             client_options: mqtt5.ClientOptions = None,
             callbacks: Mqtt5TestCallbacks = None):
 
+        default_host = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         if client_options is None:
             client_options = mqtt5.ClientOptions(
-                host_name=_get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST"),
+                host_name=default_host,
                 port=8883
             )
         if client_options.connect_options is None:
@@ -108,13 +109,17 @@ class MqttConnectionTest(NativeResourceTest):
         return client
 
     def test_mqtt5_cred_pkcs12(self):
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
+        input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_PKCS12_KEY")
+        input_key_password = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_PKCS12_KEY_PASSWORD")
+
         client_options = mqtt5.ClientOptions(
-            host_name=_get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST"),
+            host_name=input_host_name,
             port=8883
         )
         tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_pkcs12(
-            _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_PKCS12_KEY"),
-            _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_PKCS12_KEY_PASSWORD")
+            input_key,
+            input_key_password
         )
         client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
 
@@ -126,12 +131,15 @@ class MqttConnectionTest(NativeResourceTest):
         callbacks.future_stopped.result(TIMEOUT)
 
     def test_mqtt5_cred_windows_cert(self):
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
+        input_windows = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_WINDOWS_CERT_STORE")
+
         client_options = mqtt5.ClientOptions(
-            host_name=_get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST"),
+            host_name=input_host_name,
             port=8883
         )
         tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_windows_cert_store_path(
-            _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_WINDOWS_CERT_STORE")
+            input_windows
         )
         client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
 
@@ -143,19 +151,26 @@ class MqttConnectionTest(NativeResourceTest):
         callbacks.future_stopped.result(TIMEOUT)
 
     def test_mqtt5_cred_pkcs11(self):
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
+        input_pkcs11_lib = _get_env_variable("AWS_TEST_PKCS11_LIB")
+        input_pkcs11_pin = _get_env_variable("AWS_TEST_PKCS11_PIN")
+        input_pkcs11_token_label = _get_env_variable("AWS_TEST_PKCS11_TOKEN_LABEL")
+        input_pkcs11_private_label = _get_env_variable("AWS_TEST_PKCS11_PKEY_LABEL")
+        input_pkcs11_cert = _get_env_variable("AWS_TEST_PKCS11_CERT_FILE")
+
         client_options = mqtt5.ClientOptions(
-            host_name=_get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST"),
+            host_name=input_host_name,
             port=8883
         )
         test_pkcs11_lib = io.Pkcs11Lib(
-            file=_get_env_variable("AWS_TEST_PKCS11_LIB"),
+            file=input_pkcs11_lib,
             behavior=io.Pkcs11Lib.InitializeFinalizeBehavior.STRICT)
         tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_pkcs11(
             pkcs11_lib=test_pkcs11_lib,
-            user_pin=_get_env_variable("AWS_TEST_PKCS11_PIN"),
-            token_label=_get_env_variable("AWS_TEST_PKCS11_TOKEN_LABEL"),
-            private_key_label=_get_env_variable("AWS_TEST_PKCS11_PKEY_LABEL"),
-            cert_file_path=_get_env_variable("AWS_TEST_PKCS11_CERT_FILE")
+            user_pin=input_pkcs11_pin,
+            token_label=input_pkcs11_token_label,
+            private_key_label=input_pkcs11_private_label,
+            cert_file_path=input_pkcs11_cert
         )
         client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
 
@@ -167,14 +182,20 @@ class MqttConnectionTest(NativeResourceTest):
         callbacks.future_stopped.result(TIMEOUT)
 
     def test_mqtt5_ws_cred_static(self):
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
+        input_role_access_key = _get_env_variable("AWS_TEST_MQTT5_ROLE_CREDENTIAL_ACCESS_KEY")
+        input_role_secret_access_key = _get_env_variable("AWS_TEST_MQTT5_ROLE_CREDENTIAL_SECRET_ACCESS_KEY")
+        input_role_session_token = _get_env_variable("AWS_TEST_MQTT5_ROLE_CREDENTIAL_SESSION_TOKEN")
+        input_region = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_REGION")
+
         client_options = mqtt5.ClientOptions(
-            host_name=_get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST"),
+            host_name=input_host_name,
             port=443
         )
         credentials = auth.AwsCredentialsProvider.new_static(
-            _get_env_variable("AWS_TEST_MQTT5_ROLE_CREDENTIAL_ACCESS_KEY"),
-            _get_env_variable("AWS_TEST_MQTT5_ROLE_CREDENTIAL_SECRET_ACCESS_KEY"),
-            _get_env_variable("AWS_TEST_MQTT5_ROLE_CREDENTIAL_SESSION_TOKEN")
+            input_role_access_key,
+            input_role_secret_access_key,
+            input_role_session_token
         )
         credentials = auth.AwsCredentialsProvider.new_default_chain()
 
@@ -183,7 +204,7 @@ class MqttConnectionTest(NativeResourceTest):
                 algorithm=auth.AwsSigningAlgorithm.V4,
                 signature_type=auth.AwsSignatureType.HTTP_REQUEST_QUERY_PARAMS,
                 credentials_provider=credentials,
-                region=_get_env_variable("AWS_TEST_MQTT5_IOT_CORE_REGION"),
+                region=input_region,
                 service="iotdevicegateway",
                 omit_session_token=True
             )
@@ -202,8 +223,11 @@ class MqttConnectionTest(NativeResourceTest):
         callbacks.future_stopped.result(TIMEOUT)
 
     def test_mqtt5_ws_cred_default(self):
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
+        input_region = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_REGION")
+
         client_options = mqtt5.ClientOptions(
-            host_name=_get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST"),
+            host_name=input_host_name,
             port=443
         )
         credentials = auth.AwsCredentialsProvider.new_default_chain()
@@ -213,7 +237,7 @@ class MqttConnectionTest(NativeResourceTest):
                 algorithm=auth.AwsSigningAlgorithm.V4,
                 signature_type=auth.AwsSignatureType.HTTP_REQUEST_QUERY_PARAMS,
                 credentials_provider=credentials,
-                region=_get_env_variable("AWS_TEST_MQTT5_IOT_CORE_REGION"),
+                region=input_region,
                 service="iotdevicegateway",
                 omit_session_token=True
             )
@@ -232,13 +256,18 @@ class MqttConnectionTest(NativeResourceTest):
         callbacks.future_stopped.result(TIMEOUT)
 
     def test_mqtt5_ws_cred_cognito(self):
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
+        input_cognito_endpoint = _get_env_variable("AWS_TEST_MQTT5_COGNITO_ENDPOINT")
+        input_cognito_identity = _get_env_variable("AWS_TEST_MQTT5_COGNITO_IDENTITY")
+        input_region = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_REGION")
+
         client_options = mqtt5.ClientOptions(
-            host_name=_get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST"),
+            host_name=input_host_name,
             port=443
         )
         credentials = auth.AwsCredentialsProvider.new_cognito(
-            endpoint=_get_env_variable("AWS_TEST_MQTT5_COGNITO_ENDPOINT"),
-            identity=_get_env_variable("AWS_TEST_MQTT5_COGNITO_IDENTITY"),
+            endpoint=input_cognito_endpoint,
+            identity=input_cognito_identity,
             tls_ctx=io.ClientTlsContext(io.TlsContextOptions())
         )
 
@@ -247,7 +276,7 @@ class MqttConnectionTest(NativeResourceTest):
                 algorithm=auth.AwsSigningAlgorithm.V4,
                 signature_type=auth.AwsSignatureType.HTTP_REQUEST_QUERY_PARAMS,
                 credentials_provider=credentials,
-                region=_get_env_variable("AWS_TEST_MQTT5_IOT_CORE_REGION"),
+                region=input_region,
                 service="iotdevicegateway",
                 omit_session_token=True
             )
@@ -266,18 +295,26 @@ class MqttConnectionTest(NativeResourceTest):
         callbacks.future_stopped.result(TIMEOUT)
 
     def test_mqtt5_ws_cred_x509(self):
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
+        input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_X509_CERT")
+        input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_X509_KEY")
+        input_x509_endpoint = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_X509_ENDPOINT")
+        input_x509_role = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_X509_ROLE_ALIAS")
+        input_x509_thing = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_X509_THING_NAME")
+        input_region = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_REGION")
+
         client_options = mqtt5.ClientOptions(
-            host_name=_get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST"),
+            host_name=input_host_name,
             port=443
         )
         x509_tls = io.TlsContextOptions.create_client_with_mtls_from_path(
-            _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_X509_CERT"),
-            _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_X509_KEY")
+            input_cert,
+            input_key
         )
         credentials = auth.AwsCredentialsProvider.new_x509(
-            endpoint=_get_env_variable("AWS_TEST_MQTT5_IOT_CORE_X509_ENDPOINT"),
-            role_alias=_get_env_variable("AWS_TEST_MQTT5_IOT_CORE_X509_ROLE_ALIAS"),
-            thing_name=_get_env_variable("AWS_TEST_MQTT5_IOT_CORE_X509_THING_NAME"),
+            endpoint=input_x509_endpoint,
+            role_alias=input_x509_role,
+            thing_name=input_x509_thing,
             tls_ctx=io.ClientTlsContext(x509_tls)
         )
 
@@ -286,7 +323,7 @@ class MqttConnectionTest(NativeResourceTest):
                 algorithm=auth.AwsSigningAlgorithm.V4,
                 signature_type=auth.AwsSignatureType.HTTP_REQUEST_QUERY_PARAMS,
                 credentials_provider=credentials,
-                region=_get_env_variable("AWS_TEST_MQTT5_IOT_CORE_REGION"),
+                region=input_region,
                 service="iotdevicegateway",
                 omit_session_token=True
             )
@@ -305,13 +342,18 @@ class MqttConnectionTest(NativeResourceTest):
         callbacks.future_stopped.result(TIMEOUT)
 
     def test_mqtt5_ws_cred_profile(self):
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
+        input_profile_config = _get_env_variable("AWS_TEST_MQTT5_IOT_PROFILE_CONFIG")
+        input_profile_cred = _get_env_variable("AWS_TEST_MQTT5_IOT_PROFILE_CREDENTIALS")
+        input_region = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_REGION")
+
         client_options = mqtt5.ClientOptions(
-            host_name=_get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST"),
+            host_name=input_host_name,
             port=443
         )
         credentials = auth.AwsCredentialsProvider.new_profile(
-            config_filepath=_get_env_variable("AWS_TEST_MQTT5_IOT_PROFILE_CONFIG"),
-            credentials_filepath=_get_env_variable("AWS_TEST_MQTT5_IOT_PROFILE_CREDENTIALS")
+            config_filepath=input_profile_config,
+            credentials_filepath=input_profile_cred
         )
 
         def sign_function(transform_args, **kwargs):
@@ -319,7 +361,7 @@ class MqttConnectionTest(NativeResourceTest):
                 algorithm=auth.AwsSigningAlgorithm.V4,
                 signature_type=auth.AwsSignatureType.HTTP_REQUEST_QUERY_PARAMS,
                 credentials_provider=credentials,
-                region=_get_env_variable("AWS_TEST_MQTT5_IOT_CORE_REGION"),
+                region=input_region,
                 service="iotdevicegateway",
                 omit_session_token=True
             )
@@ -338,8 +380,14 @@ class MqttConnectionTest(NativeResourceTest):
         callbacks.future_stopped.result(TIMEOUT)
 
     def test_mqtt5_ws_cred_environment(self):
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
+        input_access_key = _get_env_variable("AWS_TEST_MQTT5_ROLE_CREDENTIAL_ACCESS_KEY")
+        input_secret_access_key = _get_env_variable("AWS_TEST_MQTT5_ROLE_CREDENTIAL_SECRET_ACCESS_KEY")
+        input_session_token = _get_env_variable("AWS_TEST_MQTT5_ROLE_CREDENTIAL_SESSION_TOKEN")
+        input_region = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_REGION")
+
         client_options = mqtt5.ClientOptions(
-            host_name=_get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST"),
+            host_name=input_host_name,
             port=443
         )
         # Cache the current credentials
@@ -347,9 +395,9 @@ class MqttConnectionTest(NativeResourceTest):
         cache_secret_access_key = os.environ.get("AWS_SECRET_ACCESS_KEY")
         cache_token = os.environ.get("AWS_SESSION_TOKEN")
         # Set the environment variables from the static credentials
-        os.environ["AWS_ACCESS_KEY_ID"] = _get_env_variable("AWS_TEST_MQTT5_ROLE_CREDENTIAL_ACCESS_KEY")
-        os.environ["AWS_SECRET_ACCESS_KEY"] = _get_env_variable("AWS_TEST_MQTT5_ROLE_CREDENTIAL_SECRET_ACCESS_KEY")
-        os.environ["AWS_SESSION_TOKEN"] = _get_env_variable("AWS_TEST_MQTT5_ROLE_CREDENTIAL_SESSION_TOKEN")
+        os.environ["AWS_ACCESS_KEY_ID"] = input_access_key
+        os.environ["AWS_SECRET_ACCESS_KEY"] = input_secret_access_key
+        os.environ["AWS_SESSION_TOKEN"] = input_session_token
         # This should load the environment variables we just set
         credentials = auth.AwsCredentialsProvider.new_environment()
 
@@ -358,7 +406,7 @@ class MqttConnectionTest(NativeResourceTest):
                 algorithm=auth.AwsSigningAlgorithm.V4,
                 signature_type=auth.AwsSignatureType.HTTP_REQUEST_QUERY_PARAMS,
                 credentials_provider=credentials,
-                region=_get_env_variable("AWS_TEST_MQTT5_IOT_CORE_REGION"),
+                region=input_region,
                 service="iotdevicegateway",
                 omit_session_token=True
             )

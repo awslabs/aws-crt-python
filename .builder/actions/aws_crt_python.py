@@ -26,7 +26,7 @@ class AWSCrtPython(Builder.Action):
 
         if (did_upgrade == False):
             try:
-                Builder.Script([Builder.InstallPackages(['pip'],)]).run(env)
+                Builder.Script(commands=[Builder.InstallPackages(['pip'],)], exit_on_fail=False).run(env)
                 did_upgrade = True
             except Exception:
                 print("Could not update pip via package manager. Next resorting to forcing an ignore install...")

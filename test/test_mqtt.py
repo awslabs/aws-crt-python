@@ -307,6 +307,9 @@ class MqttConnectionTest(NativeResourceTest):
     # ==============================================================
 
     def test_mqtt311_direct_connect_minimum(self):
+        input_host_name = _get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_HOST")
+        input_port = int(_get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_PORT"))
+
         elg = EventLoopGroup()
         resolver = DefaultHostResolver(elg)
         bootstrap = ClientBootstrap(elg, resolver)
@@ -314,12 +317,17 @@ class MqttConnectionTest(NativeResourceTest):
         connection = Connection(
             client=client,
             client_id=create_client_id(),
-            host_name=_get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_HOST"),
-            port=int(_get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_PORT")))
+            host_name=input_host_name,
+            port=input_port)
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
     def test_mqtt311_direct_connect_basic_auth(self):
+        input_host_name = _get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_BASIC_AUTH_HOST")
+        input_port = int(_get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_BASIC_AUTH_PORT"))
+        input_username = _get_env_variable("AWS_TEST_MQTT311_BASIC_AUTH_USERNAME")
+        input_password = _get_env_variable("AWS_TEST_MQTT311_BASIC_AUTH_PASSWORD")
+
         elg = EventLoopGroup()
         resolver = DefaultHostResolver(elg)
         bootstrap = ClientBootstrap(elg, resolver)
@@ -327,14 +335,17 @@ class MqttConnectionTest(NativeResourceTest):
         connection = Connection(
             client=client,
             client_id=create_client_id(),
-            host_name=_get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_BASIC_AUTH_HOST"),
-            port=int(_get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_BASIC_AUTH_PORT")),
-            username=_get_env_variable("AWS_TEST_MQTT311_BASIC_AUTH_USERNAME"),
-            password=_get_env_variable("AWS_TEST_MQTT311_BASIC_AUTH_PASSWORD"))
+            host_name=input_host_name,
+            port=input_port,
+            username=input_username,
+            password=input_password)
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
     def test_mqtt311_direct_connect_tls(self):
+        input_host_name = _get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_TLS_HOST")
+        input_port = int(_get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_TLS_PORT"))
+
         tls_ctx_options = TlsContextOptions()
         tls_ctx_options.verify_peer = False
         elg = EventLoopGroup()
@@ -344,15 +355,19 @@ class MqttConnectionTest(NativeResourceTest):
         connection = Connection(
             client=client,
             client_id=create_client_id(),
-            host_name=_get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_TLS_HOST"),
-            port=int(_get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_TLS_PORT")))
+            host_name=input_host_name,
+            port=input_port)
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
     def test_mqtt311_direct_connect_mutual_tls(self):
+        input_cert = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_CERT")
+        input_key = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_KEY")
+        input_host = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
+
         tls_ctx_options = TlsContextOptions.create_client_with_mtls_from_path(
-            _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_CERT"),
-            _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_KEY")
+            input_cert,
+            input_key
         )
         elg = EventLoopGroup()
         resolver = DefaultHostResolver(elg)
@@ -361,12 +376,17 @@ class MqttConnectionTest(NativeResourceTest):
         connection = Connection(
             client=client,
             client_id=create_client_id(),
-            host_name=_get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST"),
+            host_name=input_host,
             port=8883)
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
     def test_mqtt311_direct_connect_http_proxy_tls(self):
+        input_proxy_host = _get_env_variable("AWS_TEST_MQTT311_PROXY_HOST")
+        input_proxy_port = int(_get_env_variable("AWS_TEST_MQTT311_PROXY_PORT"))
+        input_host_name = _get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_TLS_HOST")
+        input_port = int(_get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_TLS_PORT"))
+
         tls_ctx_options = TlsContextOptions()
         tls_ctx_options.verify_peer = False
         elg = EventLoopGroup()
@@ -375,8 +395,8 @@ class MqttConnectionTest(NativeResourceTest):
         client = Client(bootstrap, ClientTlsContext(tls_ctx_options))
 
         http_proxy_options = http.HttpProxyOptions(
-            host_name=_get_env_variable("AWS_TEST_MQTT311_PROXY_HOST"),
-            port=int(_get_env_variable("AWS_TEST_MQTT311_PROXY_PORT"))
+            host_name=input_proxy_host,
+            port=input_proxy_port
         )
         http_proxy_options.connection_type = http.HttpProxyConnectionType.Tunneling
         http_proxy_options.auth_type = http.HttpProxyAuthenticationType.Nothing
@@ -384,13 +404,16 @@ class MqttConnectionTest(NativeResourceTest):
         connection = Connection(
             client=client,
             client_id=create_client_id(),
-            host_name=_get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_TLS_HOST"),
-            port=int(_get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_TLS_PORT")),
+            host_name=input_host_name,
+            port=input_port,
             proxy_options=http_proxy_options)
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
     def test_mqtt311_websocket_connect_minimum(self):
+        input_host_name = _get_env_variable("AWS_TEST_MQTT311_WS_MQTT_HOST")
+        input_port = int(_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_PORT"))
+
         elg = EventLoopGroup()
         resolver = DefaultHostResolver(elg)
         bootstrap = ClientBootstrap(elg, resolver)
@@ -402,14 +425,19 @@ class MqttConnectionTest(NativeResourceTest):
         connection = Connection(
             client=client,
             client_id=create_client_id(),
-            host_name=_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_HOST"),
-            port=int(_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_PORT")),
+            host_name=input_host_name,
+            port=input_port,
             use_websockets=True,
             websocket_handshake_transform=sign_function)
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
     def test_mqtt311_websocket_connect_basic_auth(self):
+        input_host_name = _get_env_variable("AWS_TEST_MQTT311_WS_MQTT_BASIC_AUTH_HOST")
+        input_port = int(_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_BASIC_AUTH_PORT"))
+        input_username = _get_env_variable("AWS_TEST_MQTT311_BASIC_AUTH_USERNAME")
+        input_password = _get_env_variable("AWS_TEST_MQTT311_BASIC_AUTH_PASSWORD")
+
         elg = EventLoopGroup()
         resolver = DefaultHostResolver(elg)
         bootstrap = ClientBootstrap(elg, resolver)
@@ -421,16 +449,19 @@ class MqttConnectionTest(NativeResourceTest):
         connection = Connection(
             client=client,
             client_id=create_client_id(),
-            host_name=_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_BASIC_AUTH_HOST"),
-            port=int(_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_BASIC_AUTH_PORT")),
-            username=_get_env_variable("AWS_TEST_MQTT311_BASIC_AUTH_USERNAME"),
-            password=_get_env_variable("AWS_TEST_MQTT311_BASIC_AUTH_PASSWORD"),
+            host_name=input_host_name,
+            port=input_port,
+            username=input_username,
+            password=input_password,
             use_websockets=True,
             websocket_handshake_transform=sign_function)
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
     def test_mqtt311_websocket_connect_tls(self):
+        input_host_name = _get_env_variable("AWS_TEST_MQTT311_WS_MQTT_TLS_HOST")
+        input_port = int(_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_TLS_PORT"))
+
         tls_ctx_options = TlsContextOptions()
         tls_ctx_options.verify_peer = False
         elg = EventLoopGroup()
@@ -444,14 +475,19 @@ class MqttConnectionTest(NativeResourceTest):
         connection = Connection(
             client=client,
             client_id=create_client_id(),
-            host_name=_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_TLS_HOST"),
-            port=int(_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_TLS_PORT")),
+            host_name=input_host_name,
+            port=input_port,
             use_websockets=True,
             websocket_handshake_transform=sign_function)
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
     def test_mqtt311_websocket_connect_http_proxy_tls(self):
+        input_proxy_host = _get_env_variable("AWS_TEST_MQTT311_PROXY_HOST")
+        input_proxy_port = int(_get_env_variable("AWS_TEST_MQTT311_PROXY_PORT"))
+        input_host_name = _get_env_variable("AWS_TEST_MQTT311_WS_MQTT_TLS_HOST")
+        input_port = int(_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_TLS_PORT"))
+
         tls_ctx_options = TlsContextOptions()
         tls_ctx_options.verify_peer = False
         elg = EventLoopGroup()
@@ -459,8 +495,8 @@ class MqttConnectionTest(NativeResourceTest):
         bootstrap = ClientBootstrap(elg, resolver)
 
         http_proxy_options = http.HttpProxyOptions(
-            host_name=_get_env_variable("AWS_TEST_MQTT311_PROXY_HOST"),
-            port=int(_get_env_variable("AWS_TEST_MQTT311_PROXY_PORT"))
+            host_name=input_proxy_host,
+            port=input_proxy_port
         )
         http_proxy_options.connection_type = http.HttpProxyConnectionType.Tunneling
         http_proxy_options.auth_type = http.HttpProxyAuthenticationType.Nothing
@@ -472,8 +508,8 @@ class MqttConnectionTest(NativeResourceTest):
         connection = Connection(
             client=client,
             client_id=create_client_id(),
-            host_name=_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_TLS_HOST"),
-            port=int(_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_TLS_PORT")),
+            host_name=input_host_name,
+            port=input_port,
             use_websockets=True,
             websocket_handshake_transform=sign_function,
             proxy_options=http_proxy_options)
