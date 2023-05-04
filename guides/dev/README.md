@@ -89,13 +89,10 @@ To stop using the virtual environment, run `deactivate`.
 
 ## Install
 
-You likely will need to update/install `pip` prior to installing the development dependencies. To update/install `pip` use the following:
+Ensure `pip` (Python's package manager) is installed and up to date:
 
 ```sh
-# To install pip:
 (.venv) $ python3 -m ensurepip --upgrade
-# To upgrade pip:
-(.venv) $ python3 -m pip install --upgrade pip
 ```
 
 Install dev dependencies:
