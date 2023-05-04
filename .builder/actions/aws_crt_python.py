@@ -18,9 +18,9 @@ class AWSCrtPython(Builder.Action):
         env.shell.setenv('AWS_TEST_S3', '1')
 
         actions = [
-            # We force install pip because some containers cannot uninstall and upgrade pip, but we need a newer
-            # pip for setuptools. Not ideal, but gets the job done.
-            [python, '-m', 'pip', 'install', '--upgrade', '--ignore-installed', 'pip'],
+            # Force-reinstall Pip because some CI containers (al2-x64 being one) have Pip installed without
+            # a RECORD file and therefore it will not be able to uninstall via a normal upgrade call.
+            [python, '-m', 'pip', 'install', '--upgrade', '--force-reinstall', 'pip'],
             [python, '-m', 'pip', 'install', '--upgrade', '--requirement', 'requirements-dev.txt'],
             Builder.SetupCrossCICrtEnvironment(),
             [python, '-m', 'pip', 'install', '--verbose', '.'],
