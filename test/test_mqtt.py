@@ -158,7 +158,7 @@ class MqttConnectionTest(NativeResourceTest):
         connection.connect().result(TIMEOUT)
 
         subscriber = Connection(
-            Client,
+            client=client,
             client_id=create_client_id(),
             host_name=test_input_endpoint,
             port=8883
