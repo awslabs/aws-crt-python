@@ -1,6 +1,7 @@
 import Builder
 import argparse
 import os
+import sys
 
 # Fall back on using the "{python}" builder variable
 PYTHON_DEFAULT = '{python}'
@@ -17,7 +18,8 @@ class AWSCrtPython(Builder.Action):
     def try_to_upgrade_pip(self, env):
         did_upgrade = False
         try:
-            Builder.Script([[self.python, '-m', 'pip', 'install', '--upgrade', 'pip']]).run(env)
+            Builder.Script(commands=[[self.python, '-m', 'pip', 'install',
+                           '--upgrade', 'pip']], exit_on_fail=False).run(env)
             did_upgrade = True
         except Exception:
             print("Could not update pip via normal pip upgrade. Next trying via package manager...")
@@ -34,11 +36,11 @@ class AWSCrtPython(Builder.Action):
             # Source: https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
             if (os.getenv("GITHUB_ACTIONS") is not None):
                 try:
-                    Builder.Script([[self.python, '-m', 'pip', 'install', '--upgrade',
-                                   '--ignore-installed', 'pip']]).run(env)
+                    Builder.Script(commands=[[self.python, '-m', 'pip', 'install', '--upgrade',
+                                   '--ignore-installed', 'pip']], exit_on_fail=False).run(env)
                 except Exception as ex:
                     print("Could not update pip via ignore install! Something is terribly wrong!")
-                    raise (ex)
+                    sys.exit(12)
                 did_upgrade = True
             else:
                 print("Not on GitHub actions - skipping reinstalling Pip. Update/Install pip manually and rerun the builder")
