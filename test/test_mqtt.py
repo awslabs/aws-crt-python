@@ -9,6 +9,7 @@ from concurrent.futures import Future
 import os
 import unittest
 import uuid
+import time
 
 TIMEOUT = 100.0
 
@@ -146,9 +147,10 @@ class MqttConnectionTest(NativeResourceTest):
         bootstrap = ClientBootstrap(elg, resolver)
         client = Client(bootstrap, test_tls)
 
+        will_client_id = create_client_id()
         connection = Connection(
             client=client,
-            client_id=create_client_id(),
+            client_id=will_client_id,
             host_name=test_input_endpoint,
             port=8883,
             will=Will(self.TEST_TOPIC, QoS.AT_LEAST_ONCE, self.TEST_MSG, False),
@@ -178,7 +180,17 @@ class MqttConnectionTest(NativeResourceTest):
         self.assertIs(QoS.AT_LEAST_ONCE, suback['qos'])
 
         # Disconnect the will client to send the will
-        connection.disconnect().result(TIMEOUT)
+        time.sleep(1.1)  # wait 1.1 seconds to ensure we can make another client ID connect
+        disconnecter = Connection(
+            client=client,
+            client_id=will_client_id,
+            host_name=test_input_endpoint,
+            port=8883,
+            will=Will(self.TEST_TOPIC, QoS.AT_LEAST_ONCE, self.TEST_MSG, False),
+            ping_timeout_ms=500,
+            keep_alive_secs=1
+        )
+        disconnecter.connect().result(TIMEOUT)
 
         # Receive message
         rcv = received.result(TIMEOUT)
@@ -187,6 +199,10 @@ class MqttConnectionTest(NativeResourceTest):
         self.assertFalse(rcv['dup'])
         self.assertEqual(QoS.AT_LEAST_ONCE, rcv['qos'])
         self.assertFalse(rcv['retain'])
+
+        # Disconnect the other clients
+        connection.disconnect().result(TIMEOUT)
+        disconnecter.disconnect().result(TIMEOUT)
 
         # unsubscribe
         unsubscribed, packet_id = subscriber.unsubscribe(self.TEST_TOPIC)
