@@ -18,7 +18,7 @@ class AWSCrtPython(Builder.Action):
     def try_to_upgrade_pip(self, env):
         did_upgrade = False
 
-        pip_result = env.shell.exec(self.python, '-m', 'pip', 'install', '--upgrade', 'pip', Check=False)
+        pip_result = env.shell.exec(self.python, '-m', 'pip', 'install', '--upgrade', 'pip', check=False)
         if pip_result.returncode == 0:
             did_upgrade = True
         else:
@@ -37,7 +37,7 @@ class AWSCrtPython(Builder.Action):
             if (os.getenv("GITHUB_ACTIONS") is not None):
                 pip_result = env.shell.exec(
                     self.python, '-m', 'pip', 'install', '--upgrade',
-                    '--ignore-installed', 'pip', Check=False)
+                    '--ignore-installed', 'pip', check=False)
                 if pip_result.returncode == 0:
                     did_upgrade = True
                 else:
