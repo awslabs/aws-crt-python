@@ -18,6 +18,9 @@ class AWSCrtPython(Builder.Action):
     def try_to_upgrade_pip(self, env):
         did_upgrade = False
 
+        if (self.python == '{python}'):
+            self.python = env.config["variables"]["python"]
+
         pip_result = env.shell.exec(self.python, '-m', 'pip', 'install', '--upgrade', 'pip', check=False)
         if pip_result.returncode == 0:
             did_upgrade = True
