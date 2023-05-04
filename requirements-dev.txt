@@ -1,10 +1,5 @@
 autopep8 # for code formatting
 setuptools # for installing from source
-
-# needed due to sphinx having a sub-dependency on jinja2 but jinja2 does not
-# properly install markupsafe on some Linux containers (gcc and clang containers)
-markupsafe==2.0.1
-
 sphinx # for building docs
 websockets # for tests
 wheel # for building wheels
