@@ -240,10 +240,11 @@ class AWSCrtPython(Builder.Action):
             # "--failfast" because, given how our leak-detection in tests currently works,
             # once one test fails all the rest usually fail too.
             ['ls', '-l'],
-            [python, '-m', 'unittest', 'discover', '--verbose', '--failfast'],
+            [python, '-m', 'unittest', 'test.test_s3.S3ClientTest'],
             # http_client_test.py launches external processes using the extra args
             [python, 'crt/aws-c-http/integration-testing/http_client_test.py',
                 python, 'elasticurl.py'],
+            [python, '-m', 'unittest', 'discover', '--verbose', '--failfast'],
         ]
 
         return Builder.Script(actions, name='aws-crt-python')
