@@ -200,7 +200,7 @@ jobs:
           envs: 'AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION AWS_REGION'
           usesh: true
           run: |
-            pkg install python3 py3-urllib3
+            pkg install -y python39 py39-urllib3
             find /usr/bin /bin/ /usr/local/bin -iname 'python*'
             python3 -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz', 'builder')"
             chmod a+x builder
