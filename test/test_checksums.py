@@ -81,14 +81,15 @@ class TestChecksums(NativeResourceTest):
 
     def test_crc32c_huge_buffer(self):
         io.init_logging(io.LogLevel.Trace, 'stdout')
-        # stress the internal logic that handles buffers larger than C's INT_MAX
-        try:
-            INT_MAX = 2**32 - 1
-            huge_buffer = bytes(INT_MAX + 5)
-        except (MemoryError, OverflowError):
-            raise unittest.SkipTest('Machine cant allocate giant buffer for giant buffer test')
-        val = checksums.crc32c(huge_buffer)
-        self.assertEqual(0x572a7c8a, val)
+        for i in range(10):
+            # stress the internal logic that handles buffers larger than C's INT_MAX
+            try:
+                INT_MAX = 2**32 - 1
+                huge_buffer = bytes(INT_MAX + 5)
+            except (MemoryError, OverflowError):
+                raise unittest.SkipTest('Machine cant allocate giant buffer for giant buffer test')
+            val = checksums.crc32c(huge_buffer)
+            self.assertEqual(0x572a7c8a, val)
 
 
 if __name__ == '__main__':
