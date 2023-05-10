@@ -199,6 +199,8 @@ jobs:
         with:
           envs: 'AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION AWS_REGION'
           usesh: true
+          sync: rsync
+          copyback: false
           run: |
             pkg install -y python3 py39-urllib3 py39-pip cmake
             python3 -m pip install awscli
