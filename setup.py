@@ -327,7 +327,6 @@ def awscrt_ext():
             # -lexecinfo needs to be passed, unlike Linux not a part of libc.
             extra_link_args += ['-lexecinfo']
 
-
         # hide the symbols from libcrypto.a
         # this prevents weird crashes if an application also ends up using
         # libcrypto.so from the system's OpenSSL installation.
