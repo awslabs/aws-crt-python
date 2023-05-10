@@ -3,7 +3,7 @@
 
 
 from test import NativeResourceTest
-from awscrt import checksums
+from awscrt import checksums, io
 import unittest
 
 
@@ -80,6 +80,7 @@ class TestChecksums(NativeResourceTest):
         self.assertEqual(0xfb5b991d, val)
 
     def test_crc32c_huge_buffer(self):
+        io.init_logging(io.LogLevel.Trace, 'stdout')
         # stress the internal logic that handles buffers larger than C's INT_MAX
         try:
             INT_MAX = 2**32 - 1

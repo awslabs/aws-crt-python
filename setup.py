@@ -323,8 +323,9 @@ def awscrt_ext():
         if using_system_libcrypto():
             libraries += ['crypto']
 
+        # FreeBSD doesn't have execinfo as a part of libc like other Unix variant.
+        # Passing linker flag to link execinfo properly
         if sys.platform.startswith('freebsd'):
-            # -lexecinfo needs to be passed, unlike Linux not a part of libc.
             extra_link_args += ['-lexecinfo']
 
         # hide the symbols from libcrypto.a
