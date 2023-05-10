@@ -323,7 +323,7 @@ def awscrt_ext():
         if using_system_libcrypto():
             libraries += ['crypto']
 
-        if sys.platform.startswith('FreeBSD'):
+        if sys.platform.startswith('freebsd'):
             # -lexecinfo needs to be passed, unlike Linux not a part of libc.
             extra_link_args += ['-lexecinfo']
 
