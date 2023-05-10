@@ -5,6 +5,7 @@
 from test import NativeResourceTest
 from awscrt import checksums, io
 import unittest
+import gc
 
 
 class TestChecksums(NativeResourceTest):
@@ -86,10 +87,11 @@ class TestChecksums(NativeResourceTest):
             try:
                 INT_MAX = 2**32 - 1
                 huge_buffer = bytes(INT_MAX + 5)
-            except (MemoryError, OverflowError):
+            except:
                 raise unittest.SkipTest('Machine cant allocate giant buffer for giant buffer test')
             val = checksums.crc32c(huge_buffer)
             self.assertEqual(0x572a7c8a, val)
+            gc.collect()
 
 
 if __name__ == '__main__':
