@@ -1867,7 +1867,7 @@ class ListenerOptions:
         on_lifecycle_event_connection_failure_fn (Callable[[LifecycleConnectFailureData],]): Callback for Lifecycle Event Connection Failure.
         on_lifecycle_event_disconnection_fn (Callable[[LifecycleDisconnectData],]): Callback for Lifecycle Event Disconnection.
     """
-    on_listener_publish_callback_fn: Callable[[PublishReceivedData], None] = None
+    on_listener_publish_callback_fn: Callable[[PublishReceivedData], bool] = None
     on_lifecycle_event_stopped_fn: Callable[[LifecycleStoppedData], None] = None
     on_lifecycle_event_attempting_connect_fn: Callable[[LifecycleAttemptingConnectData], None] = None
     on_lifecycle_event_connection_success_fn: Callable[[LifecycleConnectSuccessData], None] = None
