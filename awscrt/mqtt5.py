@@ -1853,3 +1853,104 @@ class Client(NativeResource):
 
         result = _awscrt.mqtt5_client_get_stats(self._binding)
         return OperationStatisticsData(result[0], result[1], result[2], result[3])
+
+
+@dataclass
+class ListenerOptions:
+    """Configuration for the creation of MQTTT5 clients
+
+    Args:
+        on_listener_publish_callback_fn (Callable[[PublishReceivedData], bool]): Callback for all publish packets received by listener.
+        on_lifecycle_event_stopped_fn (Callable[[LifecycleStoppedData],]): Callback for Lifecycle Event Stopped.
+        on_lifecycle_event_attempting_connect_fn (Callable[[LifecycleAttemptingConnectData],]): Callback for Lifecycle Event Attempting Connect.
+        on_lifecycle_event_connection_success_fn (Callable[[LifecycleConnectSuccessData],]): Callback for Lifecycle Event Connection Success.
+        on_lifecycle_event_connection_failure_fn (Callable[[LifecycleConnectFailureData],]): Callback for Lifecycle Event Connection Failure.
+        on_lifecycle_event_disconnection_fn (Callable[[LifecycleDisconnectData],]): Callback for Lifecycle Event Disconnection.
+    """
+    on_listener_publish_callback_fn: Callable[[PublishReceivedData], None] = None
+    on_lifecycle_event_stopped_fn: Callable[[LifecycleStoppedData], None] = None
+    on_lifecycle_event_attempting_connect_fn: Callable[[LifecycleAttemptingConnectData], None] = None
+    on_lifecycle_event_connection_success_fn: Callable[[LifecycleConnectSuccessData], None] = None
+    on_lifecycle_event_connection_failure_fn: Callable[[LifecycleConnectFailureData], None] = None
+    on_lifecycle_event_disconnection_fn: Callable[[LifecycleDisconnectData], None] = None
+
+# The underlying listener core for mqtt5 listener.
+# As it has similar features as _ClientCore, the listener core will extended from _ClientCore to reused the core
+class _ListenerCore(_ClientCore):
+    def __init__(self, listener_options: ListenerOptions, client: Client):
+        if client is None :
+            raise TypeError("Invalid Client")
+        if listener_options is None:
+            raise TypeError("Invalid ListenerOptions")
+
+        # The listener core has the same lifecycle callbacks as client core, reuse it to setup the lifecycle callbacks
+        client_options = ClientOptions("will be replaced", 0)
+        client_options._on_lifecycle_stopped_cb = _check_callback(listener_options.on_lifecycle_event_stopped_fn)
+        client_options._on_lifecycle_attempting_connect_cb = _check_callback(
+            listener_options.on_lifecycle_event_attempting_connect_fn)
+        client_options._on_lifecycle_connection_success_cb = _check_callback(
+            listener_options.on_lifecycle_event_connection_success_fn)
+        client_options._on_lifecycle_connection_failure_cb = _check_callback(
+            listener_options.on_lifecycle_event_connection_failure_fn)
+        client_options._on_lifecycle_disconnection_cb = _check_callback(listener_options.on_lifecycle_event_disconnection_fn)
+        super(_ListenerCore, self).__init__(client_options)
+
+        self._on_listener_publish_cb = _check_callback(listener_options.on_listener_publish_callback_fn)
+
+    def _on_listener_publish(
+            self,
+            payload,
+            qos,
+            retain,
+            topic,
+            payload_format_indicator_exists,
+            payload_format_indicator,
+            message_expiry_interval_sec_exists,
+            message_expiry_interval_sec,
+            topic_alias_exists,
+            topic_alias,
+            response_topic,
+            correlation_data,
+            subscription_identifiers_tuples,
+            content_type,
+            user_properties_tuples):
+        if self._on_listener_publish_cb is None:
+            return False
+
+        publish_packet = PublishPacket()
+        publish_packet.topic = topic
+        publish_packet.payload = payload
+        publish_packet.qos = _try_qos(qos)
+        publish_packet.retain = retain
+
+        if payload_format_indicator_exists:
+            publish_packet.payload_format_indicator = _try_payload_format_indicator(payload_format_indicator)
+        if message_expiry_interval_sec_exists:
+            publish_packet.message_expiry_interval_sec = message_expiry_interval_sec
+        if topic_alias_exists:
+            publish_packet.topic_alias = topic_alias
+        publish_packet.response_topic = response_topic
+        publish_packet.correlation_data = correlation_data
+        if publish_packet.subscription_identifiers is not None:
+            publish_packet.subscription_identifiers = [subscription_identifier
+                                                       for (subscription_identifier) in subscription_identifiers_tuples]
+        publish_packet.content_type = content_type
+        publish_packet.user_properties = _init_user_properties(user_properties_tuples)
+
+        return self._on_listener_publish_cb(PublishReceivedData(publish_packet=publish_packet))
+
+
+class Listener(NativeResource):
+    def __init__(self, listener_options: ListenerOptions, client: Client):
+        if client is None :
+            raise TypeError("Invalid Client")
+        if listener_options is None:
+            raise TypeError("Invalid ListenerOptions")
+
+        super().__init__()
+        core = _ListenerCore(listener_options, client)
+        # Listener should keep a reference to client to prevent the client get
+        # destoryed by Python gabage collection
+        self.client = client
+
+        self._binding = _awscrt.mqtt5_listener_new(self, client, core)
