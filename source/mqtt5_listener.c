@@ -17,49 +17,6 @@
 #include <stdio.h>
 
 static const char *s_capsule_name_mqtt5_listener = "aws_mqtt5_listener";
-static const char *s_capsule_name_ws_handshake_transform_data = "aws_ws_handshake_transform_data";
-
-static const char *AWS_PYOBJECT_KEY_CLIENT_OPTIONS = "ClientOptions";
-static const char *AWS_PYOBJECT_KEY_UNSUBSCRIBE_PACKET = "UnsubscribePacket";
-static const char *AWS_PYOBJECT_KEY_DISCONNECT_PACKET = "DisconnectPacket";
-static const char *AWS_PYOBJECT_KEY_PUBLISH_PACKET = "PublishPacket";
-static const char *AWS_PYOBJECT_KEY_SUBSCRIBE_PACKET = "SubscribePacket";
-static const char *AWS_PYOBJECT_KEY_CONNECT_PACKET = "ConnectPacket";
-static const char *AWS_PYOBJECT_KEY_WILL_PACKET = "WillPacket";
-static const char *AWS_PYOBJECT_KEY_SUBSCRIPTION = "Subscription";
-static const char *AWS_PYOBJECT_KEY_USER_PROPERTIES = "user_properties";
-static const char *AWS_PYOBJECT_KEY_REASON_CODE = "reason_code";
-static const char *AWS_PYOBJECT_KEY_NAME = "name";
-static const char *AWS_PYOBJECT_KEY_VALUE = "value";
-static const char *AWS_PYOBJECT_KEY_SESSION_EXPIRY_INTERVAL_SEC = "session_expiry_interval_sec";
-static const char *AWS_PYOBJECT_KEY_MESSAGE_EXPIRY_INTERVAL_SEC = "message_expiry_interval_sec";
-static const char *AWS_PYOBJECT_KEY_REQUEST_PROBLEM_INFORMATION = "request_problem_information";
-static const char *AWS_PYOBJECT_KEY_REQUEST_RESPONSE_INFORMATION = "request_response_information";
-static const char *AWS_PYOBJECT_KEY_RECEIVE_MAXIMUM = "receive_maximum";
-static const char *AWS_PYOBJECT_KEY_MAXIMUM_PACKET_SIZE = "maximum_packet_size";
-static const char *AWS_PYOBJECT_KEY_WILL_DELAY_INTERVAL = "will_delay_interval_sec";
-static const char *AWS_PYOBJECT_KEY_KEEP_ALIVE_INTERVAL_SEC = "keep_alive_interval_sec";
-static const char *AWS_PYOBJECT_KEY_SUBSCRIPTIONS = "subscriptions";
-static const char *AWS_PYOBJECT_KEY_SUBSCRIPTION_IDENTIFIER = "subscription_identifier";
-static const char *AWS_PYOBJECT_KEY_TOPIC_ALIAS = "topic_alias";
-static const char *AWS_PYOBJECT_KEY_TOPIC_FILTER = "topic_filter";
-static const char *AWS_PYOBJECT_KEY_TOPIC_FILTERS = "topic_filters";
-static const char *AWS_PYOBJECT_KEY_QOS = "qos";
-static const char *AWS_PYOBJECT_KEY_NO_LOCAL = "no_local";
-static const char *AWS_PYOBJECT_KEY_RETAIN_AS_PUBLISHED = "retain_as_published";
-static const char *AWS_PYOBJECT_KEY_RETAIN_HANDLING_TYPE = "retain_handling_type";
-static const char *AWS_PYOBJECT_KEY_PAYLOAD_FORMAT_INDICATOR = "payload_format_indicator";
-static const char *AWS_PYOBJECT_KEY_SESSION_BEHAVIOR = "session_behavior";
-static const char *AWS_PYOBJECT_KEY_EXTENDED_VALIDATION_AND_FLOW_CONTROL =
-    "extended_validation_and_flow_control_options";
-static const char *AWS_PYOBJECT_KEY_OFFLINE_QUEUE_BEHAVIOR = "offline_queue_behavior";
-static const char *AWS_PYOBJECT_KEY_RETRY_JITTER_MODE = "retry_jitter_mode";
-static const char *AWS_PYOBJECT_KEY_MIN_RECONNECT_DELAY_MS = "min_reconnect_delay_ms";
-static const char *AWS_PYOBJECT_KEY_MAX_RECONNECT_DELAY_MS = "max_reconnect_delay_ms";
-static const char *AWS_PYOBJECT_KEY_MIN_CONNECTED_TIME_TO_RESET_RECONNECT_DELAY_MS =
-    "min_connected_time_to_reset_reconnect_delay_ms";
-static const char *AWS_PYOBJECT_KEY_PING_TIMEOUT_MS = "ping_timeout_ms";
-static const char *AWS_PYOBJECT_KEY_ACK_TIMEOUT_SECONDS = "ack_timeout_seconds";
 
 struct mqtt5_listener_binding {
     struct aws_mqtt5_listener *native;

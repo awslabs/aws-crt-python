@@ -1875,7 +1875,8 @@ class ListenerOptions:
     on_lifecycle_event_disconnection_fn: Callable[[LifecycleDisconnectData], None] = None
 
 # The underlying listener core for mqtt5 listener.
-# As it has similar features as _ClientCore, the listener core will extended from _ClientCore to reused the core
+# As _ListenerCore has similar callbacks as _ClientCore, the _ListenerCore is extended from _ClientCore to reuse
+# lifecycle events callback
 class _ListenerCore(_ClientCore):
     def __init__(self, listener_options: ListenerOptions, client: Client):
         if client is None :
