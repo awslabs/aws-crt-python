@@ -6,7 +6,6 @@
 "C:\Program Files (x86)\Python39-32\python.exe" setup.py sdist bdist_wheel || goto error
 "C:\Program Files (x86)\Python310-32\python.exe" setup.py sdist bdist_wheel || goto error
 "C:\Program Files (x86)\Python311-32\python.exe" setup.py sdist bdist_wheel || goto error
-"C:\Program Files (x86)\Python312-32\python.exe" setup.py sdist bdist_wheel || goto error
 
 goto :EOF
 
