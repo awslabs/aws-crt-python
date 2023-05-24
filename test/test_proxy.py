@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0.
 
 from test import NativeResourceTest, TIMEOUT
-from awscrt.http import HttpProxyOptions, HttpProxyAuthenticationType, HttpProxyConnectionType, HttpClientConnection, HttpClientStream, HttpRequest
-from awscrt.io import init_logging, LogLevel, ClientTlsContext, TlsContextOptions, ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup
+from awscrt.http import HttpProxyOptions, HttpProxyAuthenticationType, HttpProxyConnectionType, HttpClientConnection, HttpRequest
+from awscrt.io import ClientTlsContext, TlsContextOptions, ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup
 from awscrt.mqtt import Client, Connection
 from awscrt.auth import AwsCredentialsProvider
 import os
@@ -60,15 +60,15 @@ class ProxyTestConfiguration():
     HTTP_PROXY_BASIC_AUTH_USERNAME = os.environ.get('AWS_TEST_BASIC_AUTH_USERNAME')
     HTTP_PROXY_BASIC_AUTH_PASSWORD = os.environ.get('AWS_TEST_BASIC_AUTH_PASSWORD')
 
-    HTTP_PROXY_TLS_CERT_PATH = os.environ.get('AWS_TEST_TLS_CERT_PATH')
-    HTTP_PROXY_TLS_KEY_PATH = os.environ.get('AWS_TEST_TLS_KEY_PATH')
-    HTTP_PROXY_TLS_ROOT_CA_PATH = os.environ.get('AWS_TEST_TLS_ROOT_CERT_PATH')
+    HTTP_PROXY_TLS_CERT_PATH = os.environ.get('AWS_TEST_MQTT311_IOT_CORE_RSA_CERT')
+    HTTP_PROXY_TLS_KEY_PATH = os.environ.get('AWS_TEST_MQTT311_IOT_CORE_RSA_KEY')
+    HTTP_PROXY_TLS_ROOT_CA_PATH = os.environ.get('AWS_TEST_MQTT311_ROOT_CA')
 
     X509_CREDENTIALS_ENDPOINT = os.environ.get("AWS_TEST_X509_ENDPOINT")
     X509_CREDENTIALS_THING_NAME = os.environ.get("AWS_TEST_X509_THING_NAME")
     X509_CREDENTIALS_ROLE_ALIAS = os.environ.get("AWS_TEST_X509_ROLE_ALIAS")
 
-    HTTP_PROXY_MQTT_ENDPOINT = os.environ.get('AWS_TEST_IOT_MQTT_ENDPOINT')
+    HTTP_PROXY_MQTT_ENDPOINT = os.environ.get('AWS_TEST_MQTT311_IOT_CORE_HOST')
 
     @staticmethod
     def is_proxy_environment_initialized():
