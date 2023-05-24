@@ -90,7 +90,6 @@ To stop using the virtual environment, run `deactivate`.
 ## Install
 
 Ensure `pip` (Python's package manager) is installed and up to date:
-
 ```sh
 (.venv) $ python3 -m ensurepip --upgrade
 ```
