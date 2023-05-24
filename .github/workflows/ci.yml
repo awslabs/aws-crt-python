@@ -8,7 +8,7 @@ on:
 
 env:
   BUILDER_VERSION: freebsd-ci
-  BUILDER_SOURCE: channel
+  BUILDER_SOURCE: channels
   BUILDER_HOST: https://d19elf31gohf1l.cloudfront.net
   PACKAGE_NAME: aws-crt-python
   LINUX_BASE_IMAGE: ubuntu-18-x64
