@@ -82,6 +82,7 @@ class TestChecksums(NativeResourceTest):
 
     def test_crc32c_huge_buffer(self):
         if sys.platform.startswith('freebsd'):
+            # Skip this test for freebsd, as it simply crashes instead of raising exception in this case
             raise unittest.SkipTest('Skip this test for freebsd')
         try:
             INT_MAX = 2**32 - 1
