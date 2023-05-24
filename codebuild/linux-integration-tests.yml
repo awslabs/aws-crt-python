@@ -4,8 +4,8 @@ version: 0.2
 env:
   shell: bash
   variables:
-    BUILDER_VERSION: setup_crt_ci_from_action
-    BUILDER_SOURCE: channels
+    BUILDER_VERSION: v0.9.44
+  BUILDER_SOURCE: releases
     BUILDER_HOST: https://d19elf31gohf1l.cloudfront.net
     PACKAGE_NAME: aws-crt-python
 phases:
