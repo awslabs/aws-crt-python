@@ -1,5 +1,4 @@
 autopep8 # for code formatting
-pip # listed here so we can upgrade it as same time as everything else
 setuptools # for installing from source
 sphinx # for building docs
 websockets # for tests
