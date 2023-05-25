@@ -5,6 +5,7 @@
 from test import NativeResourceTest
 from awscrt import checksums
 import unittest
+import sys
 
 
 class TestChecksums(NativeResourceTest):
@@ -41,6 +42,9 @@ class TestChecksums(NativeResourceTest):
 
     def test_crc32_huge_buffer(self):
         # stress the internal logic that handles buffers larger than C's INT_MAX
+        if sys.platform.startswith('freebsd'):
+            # Skip this test for freebsd, as it simply crashes instead of raising exception in this case
+            raise unittest.SkipTest('Skip this test for freebsd')
         try:
             INT_MAX = 2**32 - 1
             huge_buffer = bytes(INT_MAX + 5)
@@ -80,11 +84,13 @@ class TestChecksums(NativeResourceTest):
         self.assertEqual(0xfb5b991d, val)
 
     def test_crc32c_huge_buffer(self):
-        # stress the internal logic that handles buffers larger than C's INT_MAX
+        if sys.platform.startswith('freebsd'):
+            # Skip this test for freebsd, as it simply crashes instead of raising exception in this case
+            raise unittest.SkipTest('Skip this test for freebsd')
         try:
             INT_MAX = 2**32 - 1
             huge_buffer = bytes(INT_MAX + 5)
-        except (MemoryError, OverflowError):
+        except BaseException:
             raise unittest.SkipTest('Machine cant allocate giant buffer for giant buffer test')
         val = checksums.crc32c(huge_buffer)
         self.assertEqual(0x572a7c8a, val)
