@@ -30,8 +30,14 @@ class MqttConnectionTest(NativeResourceTest):
     TEST_MSG = 'NOTICE ME!'.encode('utf8')
 
     def _create_connection(
-            self, endpoint, tls_context, port=8883, use_static_singletons=False,
-            on_connection_success_callback=None, on_connection_failure_callback=None, on_connection_closed_callback=None):
+            self,
+            endpoint,
+            tls_context,
+            port=8883,
+            use_static_singletons=False,
+            on_connection_success_callback=None,
+            on_connection_failure_callback=None,
+            on_connection_closed_callback=None):
         if use_static_singletons:
             client = Client(tls_ctx=tls_context)
         else:
@@ -388,6 +394,11 @@ class MqttConnectionTest(NativeResourceTest):
         connection.disconnect().result(TIMEOUT)
 
     def test_connect_disconnect_with_callbacks_happy(self):
+        test_input_endpoint = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
+        test_input_cert = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_CERT")
+        test_input_key = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_KEY")
+        test_tls_opts = TlsContextOptions.create_client_with_mtls_from_path(test_input_cert, test_input_key)
+        test_tls = ClientTlsContext(test_tls_opts)
 
         onConnectionSuccessFuture = Future()
         onConnectionClosedFuture = Future()
@@ -403,6 +414,8 @@ class MqttConnectionTest(NativeResourceTest):
             onConnectionClosedFuture.set_result({})
 
         connection = self._create_connection(
+            endpoint=test_input_endpoint,
+            tls_context=test_tls,
             on_connection_success_callback=on_connection_success_callback,
             on_connection_failure_callback=on_connection_failure_callback,
             on_connection_closed_callback=on_connection_closed_callback)
@@ -414,6 +427,12 @@ class MqttConnectionTest(NativeResourceTest):
         onConnectionClosedFuture.result(TIMEOUT)
 
     def test_connect_disconnect_with_callbacks_unhappy(self):
+        test_input_endpoint = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
+        test_input_cert = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_CERT")
+        test_input_key = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_KEY")
+        test_tls_opts = TlsContextOptions.create_client_with_mtls_from_path(test_input_cert, test_input_key)
+        test_tls = ClientTlsContext(test_tls_opts)
+
         onConnectionFailureFuture = Future()
 
         def on_connection_success_callback(connection, callback_data: OnConnectionSuccessData):
@@ -426,6 +445,8 @@ class MqttConnectionTest(NativeResourceTest):
             pass
 
         connection = self._create_connection(
+            endpoint=test_input_endpoint,
+            tls_context=test_tls,
             port=1234,
             on_connection_success_callback=on_connection_success_callback,
             on_connection_failure_callback=on_connection_failure_callback,
