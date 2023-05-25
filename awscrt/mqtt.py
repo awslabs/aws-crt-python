@@ -725,6 +725,15 @@ class Connection(NativeResource):
 
         This is to help when resuming a connection with a clean session.
 
+        **Important**: Currently the resubscribe function does not take the AWS IoT Core maximum subscriptions
+        per subscribe request quota into account. If the client has more subscriptions than the maximum,
+        resubscribing must be done manually using the `subscribe()` function for each desired topic
+        filter. The client will be disconnected by AWS IoT Core if the resubscribe exceeds the subscriptions
+        per subscribe request quota.
+
+        The AWS IoT Core maximum subscriptions per subscribe request quota is listed at the following URL:
+        https://docs.aws.amazon.com/general/latest/gr/iot-core.html#genref_max_subscriptions_per_subscribe_request
+
         Returns:
             Tuple[concurrent.futures.Future, int]: Tuple containing a Future and
             the ID of the SUBSCRIBE packet. The Future completes when a SUBACK
