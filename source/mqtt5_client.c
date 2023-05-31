@@ -1398,7 +1398,7 @@ static void s_on_publish_complete_fn(
     size_t user_property_count = 0;
 
     if (packet_type == AWS_MQTT5_PT_PUBACK) {
-        if (puback != NULL) {
+        if (packet != NULL) {
             puback = packet;
             reason_code = puback->reason_code;
             reason_string = puback->reason_string;
