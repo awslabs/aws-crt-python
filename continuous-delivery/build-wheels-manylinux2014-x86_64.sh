@@ -19,7 +19,7 @@ auditwheel repair --plat manylinux2014_x86_64 dist/awscrt-*cp310*.whl
 /opt/python/cp311-cp311/bin/python setup.py sdist bdist_wheel
 auditwheel repair --plat manylinux2014_x86_64 dist/awscrt-*cp311*.whl
 
-/opt/python/cp311-cp311/bin/python setup.py sdist bdist_wheel
+/opt/python/cp312-cp312/bin/python setup.py sdist bdist_wheel
 auditwheel repair --plat manylinux2014_x86_64 dist/awscrt-*cp312*.whl
 
 rm dist/*.whl
