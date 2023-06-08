@@ -56,6 +56,10 @@ struct mqtt_connection_binding {
 };
 
 static void s_mqtt_python_connection_finish_destruction(struct mqtt_connection_binding *py_connection) {
+
+    /* Do not call the on_stopped callback if the python object is finished */
+    aws_mqtt_client_connection_set_connection_closed_handler(py_connection->native, NULL, NULL);
+
     aws_mqtt_client_connection_release(py_connection->native);
 
     Py_DECREF(py_connection->self_proxy);

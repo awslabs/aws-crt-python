@@ -453,19 +453,22 @@ class Connection(NativeResource):
                 transform_args.set_done(e)
 
     def _on_connection_closed(self):
-        if (self._on_connection_closed_cb):
-            data = OnConnectionClosedData()
-            self._on_connection_closed_cb(connection=self, callback_data=data)
+        if self:
+            if self._on_connection_closed_cb:
+                data = OnConnectionClosedData()
+                self._on_connection_closed_cb(connection=self, callback_data=data)
 
     def _on_connection_success(self, return_code, session_present):
-        if self._on_connection_success_cb:
-            data = OnConnectionSuccessData(return_code=ConnectReturnCode(return_code), session_present=session_present)
-            self._on_connection_success_cb(connection=self, callback_data=data)
+        if self:
+            if self._on_connection_success_cb:
+                data = OnConnectionSuccessData(return_code=ConnectReturnCode(return_code), session_present=session_present)
+                self._on_connection_success_cb(connection=self, callback_data=data)
 
     def _on_connection_failure(self, error_code):
-        if self._on_connection_failure_cb:
-            data = OnConnectionFailureData(error=awscrt.exceptions.from_code(error_code))
-            self._on_connection_failure_cb(connection=self, callback_data=data)
+        if self:
+            if self._on_connection_failure_cb:
+                data = OnConnectionFailureData(error=awscrt.exceptions.from_code(error_code))
+                self._on_connection_failure_cb(connection=self, callback_data=data)
 
     def connect(self):
         """Open the actual connection to the server (async).
