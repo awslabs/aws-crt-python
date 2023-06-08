@@ -211,13 +211,13 @@ static void s_websocket_on_connection_setup(
 
             PyObject *name_py = PyUnicode_FromAwsByteCursor(&header_i->name);
             AWS_FATAL_ASSERT(name_py && "header name wrangling failed");
-            PyTuple_SET_ITEM(tuple_py, 0, name_py);
+            PyTuple_SetItem(tuple_py, 0, name_py);
 
             PyObject *value_py = PyUnicode_FromAwsByteCursor(&header_i->value);
             AWS_FATAL_ASSERT(value_py && "header value wrangling failed");
-            PyTuple_SET_ITEM(tuple_py, 1, value_py);
+            PyTuple_SetItem(tuple_py, 1, value_py);
 
-            PyList_SET_ITEM(headers_py, i, tuple_py);
+            PyList_SetItem(headers_py, i, tuple_py);
         }
     }
 
@@ -580,13 +580,13 @@ PyObject *aws_py_websocket_create_handshake_request(PyObject *self, PyObject *ar
     if (!request_binding_py) {
         goto cleanup;
     }
-    PyTuple_SET_ITEM(tuple_py, 0, request_binding_py); /* steals reference to request_binding_py */
+    PyTuple_SetItem(tuple_py, 0, request_binding_py); /* steals reference to request_binding_py */
 
     PyObject *headers_binding_py = aws_py_http_headers_new_from_native(aws_http_message_get_headers(request));
     if (!headers_binding_py) {
         goto cleanup;
     }
-    PyTuple_SET_ITEM(tuple_py, 1, headers_binding_py); /* steals reference to headers_binding_py */
+    PyTuple_SetItem(tuple_py, 1, headers_binding_py); /* steals reference to headers_binding_py */
 
     /* Success! */
     success = true;

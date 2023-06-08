@@ -96,18 +96,18 @@ PyObject *aws_py_http_headers_add_pairs(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    const Py_ssize_t count = PySequence_Fast_GET_SIZE(py_sequence);
+    const Py_ssize_t count = PySequence_Size(py_sequence);
     for (Py_ssize_t i = 0; i < count; ++i) {
         /* XYZ_GET_ITEM() calls returns borrowed references */
-        PyObject *py_pair = PySequence_Fast_GET_ITEM(py_sequence, i);
+        PyObject *py_pair = PySequence_GetItem(py_sequence, i);
 
-        if (!PyTuple_Check(py_pair) || PyTuple_GET_SIZE(py_pair) != 2) {
+        if (!PyTuple_Check(py_pair) || PyTuple_Size(py_pair) != 2) {
             PyErr_SetString(PyExc_TypeError, type_errmsg);
             goto done;
         }
 
-        struct aws_byte_cursor name = aws_byte_cursor_from_pyunicode(PyTuple_GET_ITEM(py_pair, 0));
-        struct aws_byte_cursor value = aws_byte_cursor_from_pyunicode(PyTuple_GET_ITEM(py_pair, 1));
+        struct aws_byte_cursor name = aws_byte_cursor_from_pyunicode(PyTuple_GetItem(py_pair, 0));
+        struct aws_byte_cursor value = aws_byte_cursor_from_pyunicode(PyTuple_GetItem(py_pair, 1));
         if (!name.ptr || !value.ptr) {
             PyErr_SetString(PyExc_TypeError, type_errmsg);
             goto done;
@@ -175,8 +175,8 @@ static PyObject *s_py_tuple_from_header(struct aws_http_header header) {
         goto error;
     }
 
-    PyTuple_SET_ITEM(py_pair, 0, py_name);
-    PyTuple_SET_ITEM(py_pair, 1, py_value);
+    PyTuple_SetItem(py_pair, 0, py_name);
+    PyTuple_SetItem(py_pair, 1, py_value);
     return py_pair;
 
 error:

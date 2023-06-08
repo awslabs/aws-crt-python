@@ -533,18 +533,16 @@ void *aws_py_get_binding(PyObject *obj, const char *capsule_name, const char *cl
     if (!py_binding) {
         return PyErr_Format(
             PyExc_TypeError,
-            "Expected valid '%s', received '%s' (no '_binding' attribute)",
-            class_name,
-            Py_TYPE(obj)->tp_name);
+            "Expected valid '%s' (no '_binding' attribute)",
+            class_name);
     }
 
     void *binding = NULL;
     if (!PyCapsule_CheckExact(py_binding)) {
         PyErr_Format(
             PyExc_TypeError,
-            "Expected valid '%s', received '%s' ('_binding' attribute is not a capsule)",
-            class_name,
-            Py_TYPE(obj)->tp_name);
+            "Expected valid '%s' ('_binding' attribute is not a capsule)",
+            class_name);
         goto done;
     }
 
@@ -552,9 +550,8 @@ void *aws_py_get_binding(PyObject *obj, const char *capsule_name, const char *cl
     if (!binding) {
         PyErr_Format(
             PyExc_TypeError,
-            "Expected valid '%s', received '%s' ('_binding' attribute does not contain '%s')",
+            "Expected valid '%s' ('_binding' attribute does not contain '%s')",
             class_name,
-            Py_TYPE(obj)->tp_name,
             capsule_name);
         goto done;
     }

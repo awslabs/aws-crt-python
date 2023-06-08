@@ -200,7 +200,7 @@ static PyObject *s_aws_set_user_properties_to_PyObject(
             Py_XDECREF(user_properties_list);
             return NULL;
         }
-        PyList_SET_ITEM(user_properties_list, i, tuple); /* Steals reference to tuple */
+        PyList_SetItem(user_properties_list, i, tuple); /* Steals reference to tuple */
     }
     return user_properties_list;
 }
@@ -237,7 +237,7 @@ static void s_on_publish_received(const struct aws_mqtt5_packet_publish_view *pu
     }
 
     for (size_t i = 0; i < subscription_identifier_count; ++i) {
-        PyList_SET_ITEM(
+        PyList_SetItem(
             subscription_identifier_list, i, PyLong_FromLongLong(publish_packet->subscription_identifiers[i]));
     }
 
@@ -1629,7 +1629,7 @@ static void s_on_subscribe_complete_fn(
         }
 
         for (size_t i = 0; i < reason_codes_count; ++i) {
-            PyList_SET_ITEM(reason_codes_list, i, PyLong_FromLong(suback->reason_codes[i]));
+            PyList_SetItem(reason_codes_list, i, PyLong_FromLong(suback->reason_codes[i]));
         }
     }
 
@@ -1860,7 +1860,7 @@ static void s_on_unsubscribe_complete_fn(
         }
 
         for (size_t i = 0; i < reason_codes_count; ++i) {
-            PyList_SET_ITEM(reason_codes_list, i, PyLong_FromLong(unsuback->reason_codes[i]));
+            PyList_SetItem(reason_codes_list, i, PyLong_FromLong(unsuback->reason_codes[i]));
         }
     }
 
@@ -2030,23 +2030,23 @@ PyObject *aws_py_mqtt5_client_get_stats(PyObject *self, PyObject *args) {
         goto done;
     }
 
-    PyTuple_SET_ITEM(result, 0, PyLong_FromUnsignedLongLong((unsigned long long)stats.incomplete_operation_count));
-    if (PyTuple_GET_ITEM(result, 0) == NULL) {
+    PyTuple_SetItem(result, 0, PyLong_FromUnsignedLongLong((unsigned long long)stats.incomplete_operation_count));
+    if (PyTuple_GetItem(result, 0) == NULL) {
         goto done;
     }
 
-    PyTuple_SET_ITEM(result, 1, PyLong_FromUnsignedLongLong((unsigned long long)stats.incomplete_operation_size));
-    if (PyTuple_GET_ITEM(result, 1) == NULL) {
+    PyTuple_SetItem(result, 1, PyLong_FromUnsignedLongLong((unsigned long long)stats.incomplete_operation_size));
+    if (PyTuple_GetItem(result, 1) == NULL) {
         goto done;
     }
 
-    PyTuple_SET_ITEM(result, 2, PyLong_FromUnsignedLongLong((unsigned long long)stats.unacked_operation_count));
-    if (PyTuple_GET_ITEM(result, 2) == NULL) {
+    PyTuple_SetItem(result, 2, PyLong_FromUnsignedLongLong((unsigned long long)stats.unacked_operation_count));
+    if (PyTuple_GetItem(result, 2) == NULL) {
         goto done;
     }
 
-    PyTuple_SET_ITEM(result, 3, PyLong_FromUnsignedLongLong((unsigned long long)stats.unacked_operation_size));
-    if (PyTuple_GET_ITEM(result, 3) == NULL) {
+    PyTuple_SetItem(result, 3, PyLong_FromUnsignedLongLong((unsigned long long)stats.unacked_operation_size));
+    if (PyTuple_GetItem(result, 3) == NULL) {
         goto done;
     }
 
