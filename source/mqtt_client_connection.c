@@ -53,9 +53,6 @@ struct mqtt_connection_binding {
 
     /* Dependencies that must outlive this */
     PyObject *client;
-
-    /* Reference count - needed to keep the connection alive even if the Python object is destroyed */
-    struct aws_atomic_var ref_count;
 };
 
 static void s_mqtt_python_connection_finish_destruction(struct mqtt_connection_binding *py_connection) {
@@ -72,7 +69,10 @@ static void s_mqtt_python_connection_destructor_on_disconnect(
     struct aws_mqtt_client_connection *connection,
     void *userdata) {
 
-    (void)connection;
+    if (connection == NULL || userdata == NULL) {
+        return; // The connection is dead - skip!
+    }
+
     struct mqtt_connection_binding *py_connection = userdata;
 
     PyGILState_STATE state;
@@ -84,43 +84,28 @@ static void s_mqtt_python_connection_destructor_on_disconnect(
     PyGILState_Release(state);
 }
 
-static void s_mqtt_python_connection_destructor_ref_count(struct mqtt_connection_binding *connection) {
-    /* Do not call the on_stopped callback on the last disconnect */
-    aws_mqtt_client_connection_set_connection_closed_handler(connection->native, NULL, NULL);
-
-    if (aws_mqtt_client_connection_disconnect(
-            connection->native, s_mqtt_python_connection_destructor_on_disconnect, connection)) {
-        /* If this returns an error, we should immediately destroy the connection */
-        s_mqtt_python_connection_finish_destruction(connection);
-    }
-}
-
-void aws_mqtt_connection_binding_release(struct mqtt_connection_binding *connection) {
-    if (!connection) {
-        return;
-    }
-    size_t old_value = aws_atomic_fetch_sub(&connection->ref_count, 1);
-    if (old_value == 1) {
-        s_mqtt_python_connection_destructor_ref_count(connection);
-    }
-}
-
-void aws_mqtt_connection_binding_acquire(struct mqtt_connection_binding *connection) {
-    aws_atomic_fetch_add(&connection->ref_count, 1);
-}
-
 static void s_mqtt_python_connection_destructor(PyObject *connection_capsule) {
 
     struct mqtt_connection_binding *py_connection =
         PyCapsule_GetPointer(connection_capsule, s_capsule_name_mqtt_client_connection);
     assert(py_connection);
 
-    aws_mqtt_connection_binding_release(py_connection);
+    /* Do not call the on_stopped callback on the last disconnect */
+    aws_mqtt_client_connection_set_connection_closed_handler(py_connection->native, NULL, NULL);
+
+    if (aws_mqtt_client_connection_disconnect(
+            py_connection->native, s_mqtt_python_connection_destructor_on_disconnect, py_connection)) {
+
+        /* If this returns an error, we should immediately destroy the connection */
+        s_mqtt_python_connection_finish_destruction(py_connection);
+    }
 }
 
 static void s_on_connection_interrupted(struct aws_mqtt_client_connection *connection, int error_code, void *userdata) {
 
-    (void)connection;
+    if (connection == NULL || userdata == NULL) {
+        return; // The connection is dead - skip!
+    }
 
     struct mqtt_connection_binding *py_connection = userdata;
 
@@ -149,6 +134,10 @@ static void s_on_connection_resumed(
     bool session_present,
     void *userdata) {
 
+    if (connection == NULL || userdata == NULL) {
+        return; // The connection is dead - skip!
+    }
+
     (void)connection;
 
     struct mqtt_connection_binding *py_connection = userdata;
@@ -168,15 +157,15 @@ static void s_on_connection_resumed(
         } else {
             PyErr_WriteUnraisable(PyErr_Occurred());
         }
+    }
 
-        /* call _on_connection_success */
-        PyObject *success_result =
-            PyObject_CallMethod(self, "_on_connection_success", "(iN)", return_code, PyBool_FromLong(session_present));
-        if (success_result) {
-            Py_DECREF(success_result);
-        } else {
-            PyErr_WriteUnraisable(PyErr_Occurred());
-        }
+    /* call _on_connection_success */
+    PyObject *success_result =
+        PyObject_CallMethod(self, "_on_connection_success", "(iN)", return_code, PyBool_FromLong(session_present));
+    if (success_result) {
+        Py_DECREF(success_result);
+    } else {
+        PyErr_WriteUnraisable(PyErr_Occurred());
     }
 
     PyGILState_Release(state);
@@ -187,8 +176,10 @@ static void s_on_connection_closed(
     struct on_connection_closed_data *data,
     void *userdata) {
 
-    (void)connection;
-    (void)data;
+    if (connection == NULL || userdata == NULL) {
+        return; // The connection is dead - skip!
+    }
+    (void)data; // Not used for anything currently, but in the future it could be.
 
     struct mqtt_connection_binding *py_connection = userdata;
 
@@ -207,8 +198,7 @@ static void s_on_connection_closed(
             PyErr_WriteUnraisable(PyErr_Occurred());
         }
     }
-    aws_mqtt_connection_binding_release(py_connection);
-
+    Py_DECREF(py_connection->self_proxy);
     PyGILState_Release(state);
 }
 
@@ -292,8 +282,6 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
     py_connection->client = client_py;
     Py_INCREF(py_connection->client);
 
-    aws_atomic_store_int(&py_connection->ref_count, 1);
-
     return capsule;
 
 capsule_new_failed:
@@ -323,7 +311,9 @@ static void s_on_connect(
     bool session_present,
     void *user_data) {
 
-    (void)connection;
+    if (connection == NULL || user_data == NULL) {
+        return; // The connection is dead - skip!
+    }
 
     struct mqtt_connection_binding *py_connection = user_data;
 
@@ -371,14 +361,16 @@ static void s_on_connect(
         }
     }
 
-    aws_mqtt_connection_binding_release(py_connection);
-
     PyGILState_Release(state);
 }
 
 /* If unsuccessful, false is returned and a Python error has been set */
 bool s_set_will(struct aws_mqtt_client_connection *connection, PyObject *will) {
     assert(will && (will != Py_None));
+
+    if (connection == NULL) {
+        return false; // The connection is dead - skip!
+    }
 
     bool success = false;
 
@@ -711,8 +703,6 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
         py_connection->on_connect = on_connect;
     }
 
-    aws_mqtt_connection_binding_acquire(py_connection);
-
     struct aws_byte_cursor client_id_cur = aws_byte_cursor_from_array(client_id, client_id_len);
     struct aws_mqtt_connection_options options = {
         .host_name = server_name_cur,
@@ -729,7 +719,6 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
     };
     if (aws_mqtt_client_connection_connect(py_connection->native, &options)) {
         PyErr_SetAwsLastError();
-        aws_mqtt_connection_binding_release(py_connection);
         goto done;
     }
 
@@ -774,11 +763,8 @@ PyObject *aws_py_mqtt_client_connection_reconnect(PyObject *self, PyObject *args
         py_connection->on_connect = on_connect;
     }
 
-    aws_mqtt_connection_binding_acquire(py_connection);
-
     if (aws_mqtt_client_connection_reconnect(py_connection->native, s_on_connect, py_connection)) {
         Py_CLEAR(py_connection->on_connect);
-        aws_mqtt_connection_binding_release(py_connection);
         PyErr_SetAwsLastError();
         return NULL;
     }
@@ -799,7 +785,10 @@ static void s_publish_complete(
     uint16_t packet_id,
     int error_code,
     void *userdata) {
-    (void)connection;
+
+    if (connection == NULL || userdata == NULL) {
+        return; // The connection is dead - skip!
+    }
 
     struct publish_complete_userdata *metadata = userdata;
     assert(metadata);
@@ -907,7 +896,9 @@ static void s_subscribe_callback(
     bool retain,
     void *user_data) {
 
-    (void)connection;
+    if (connection == NULL || user_data == NULL) {
+        return; // The connection is dead - skip!
+    }
 
     PyObject *callback = user_data;
     if (callback == Py_None) {
@@ -960,7 +951,9 @@ static void s_suback_callback(
     int error_code,
     void *userdata) {
 
-    (void)connection;
+    if (connection == NULL || userdata == NULL) {
+        return; // The connection is dead - skip!
+    }
 
     PyObject *callback = userdata;
     AWS_FATAL_ASSERT(callback && callback != Py_None);
@@ -1069,7 +1062,10 @@ static void s_unsuback_callback(
     uint16_t packet_id,
     int error_code,
     void *userdata) {
-    (void)connection;
+
+    if (connection == NULL || userdata == NULL) {
+        return; // The connection is dead - skip!
+    }
 
     PyObject *callback = userdata;
 
@@ -1131,7 +1127,9 @@ static void s_suback_multi_callback(
     int error_code,
     void *userdata) {
 
-    (void)connection;
+    if (connection == NULL || userdata == NULL) {
+        return; // The connection is dead - skip!
+    }
 
     /* These must be DECREF'd when function ends */
     PyObject *callback = userdata;
@@ -1226,7 +1224,9 @@ PyObject *aws_py_mqtt_client_connection_resubscribe_existing_topics(PyObject *se
 
 static void s_on_disconnect(struct aws_mqtt_client_connection *connection, void *user_data) {
 
-    (void)connection;
+    if (connection == NULL || user_data == NULL) {
+        return; // The connection is dead - skip!
+    }
 
     PyObject *on_disconnect = user_data;
 
@@ -1246,9 +1246,6 @@ static void s_on_disconnect(struct aws_mqtt_client_connection *connection, void 
         Py_DECREF(on_disconnect);
 
         PyGILState_Release(state);
-
-        /* We do NOT want to dec-ref here, as we'll handle it as part of on_stopped which is called right after on a
-         * successful disconnect */
     }
 }
 
@@ -1268,12 +1265,12 @@ PyObject *aws_py_mqtt_client_connection_disconnect(PyObject *self, PyObject *arg
     }
 
     Py_INCREF(on_disconnect);
-    aws_mqtt_connection_binding_acquire(connection); /* Will be released by on_closed */
+    Py_INCREF(connection->self_proxy); /* We need to keep self_proxy alive for on_closed, which will dec-ref this */
 
     int err = aws_mqtt_client_connection_disconnect(connection->native, s_on_disconnect, on_disconnect);
     if (err) {
         Py_DECREF(on_disconnect);
-        aws_mqtt_connection_binding_release(connection);
+        Py_DECREF(connection->self_proxy);
         return PyErr_AwsLastError();
     }
 
