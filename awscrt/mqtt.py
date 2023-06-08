@@ -461,7 +461,9 @@ class Connection(NativeResource):
     def _on_connection_success(self, return_code, session_present):
         if self:
             if self._on_connection_success_cb:
-                data = OnConnectionSuccessData(return_code=ConnectReturnCode(return_code), session_present=session_present)
+                data = OnConnectionSuccessData(
+                    return_code=ConnectReturnCode(return_code),
+                    session_present=session_present)
                 self._on_connection_success_cb(connection=self, callback_data=data)
 
     def _on_connection_failure(self, error_code):
