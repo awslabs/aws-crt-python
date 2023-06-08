@@ -207,7 +207,12 @@ static void s_on_connection_closed(
     }
     Py_DECREF(py_connection->self_proxy);
 
-    // Allow the PyCapsule to be freed like normal again
+    /** Allow the PyCapsule to be freed like normal again.
+     * If this is the last reference (I.E customer code called disconnect and threw the Python object away)
+     * Then this will allow the MQTT311 class to be fully cleaned.
+     * If it is not the last reference (customer still has reference) then when the customer is done
+     * it will be freed like normal.
+     **/
     Py_DECREF(py_connection->self_capsule);
 
     PyGILState_Release(state);
@@ -1277,8 +1282,8 @@ PyObject *aws_py_mqtt_client_connection_disconnect(PyObject *self, PyObject *arg
     }
 
     Py_INCREF(on_disconnect);
-    Py_INCREF(connection->self_proxy); /* We need to keep self_proxy alive for on_closed, which will dec-ref this */
-    Py_INCREF(connection->self_capsule); /* Do not allow the PyCapsule to be freed, since we need it alive for on_closed */
+    Py_INCREF(connection->self_proxy);   /* We need to keep self_proxy alive for on_closed, which will dec-ref this */
+    Py_INCREF(connection->self_capsule); /* Do not allow the PyCapsule to be freed, we need it alive for on_closed */
 
     int err = aws_mqtt_client_connection_disconnect(connection->native, s_on_disconnect, on_disconnect);
     if (err) {
