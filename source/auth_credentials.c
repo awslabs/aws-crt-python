@@ -531,6 +531,7 @@ PyObject *aws_py_credentials_provider_new_chain(PyObject *self, PyObject *args) 
         if (!providers_carray[i]) {
             goto done;
         }
+        Py_XDECREF(provider_py);
     }
 
     struct credentials_provider_binding *binding;
@@ -752,6 +753,7 @@ PyObject *aws_py_credentials_provider_new_cognito(PyObject *self, PyObject *args
                         i);
                     goto done;
                 }
+                Py_XDECREF(login_tuple_py);
             }
         }
     }

@@ -179,6 +179,7 @@ bool aws_py_event_stream_native_headers_init(struct aws_array_list *native_heade
         if (!s_add_native_header(native_headers, header_py)) {
             goto done;
         }
+        Py_XDECREF(header_py);
     }
 
     success = true;

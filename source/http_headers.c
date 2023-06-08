@@ -108,6 +108,7 @@ PyObject *aws_py_http_headers_add_pairs(PyObject *self, PyObject *args) {
 
         struct aws_byte_cursor name = aws_byte_cursor_from_pyunicode(PyTuple_GetItem(py_pair, 0));
         struct aws_byte_cursor value = aws_byte_cursor_from_pyunicode(PyTuple_GetItem(py_pair, 1));
+        Py_DECREF(py_pair);
         if (!name.ptr || !value.ptr) {
             PyErr_SetString(PyExc_TypeError, type_errmsg);
             goto done;
