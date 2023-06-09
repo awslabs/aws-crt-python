@@ -85,6 +85,29 @@ PyObject *aws_py_http_headers_add(PyObject *self, PyObject *args) {
     Py_RETURN_NONE;
 }
 
+static int s_http_headers_add_pair(PyObject *py_pair, struct aws_http_headers *headers) {
+
+    const char *type_errmsg = "List of (name,value) pairs expected.";
+    if (!PyTuple_Check(py_pair) || PyTuple_Size(py_pair) != 2) {
+        PyErr_SetString(PyExc_TypeError, type_errmsg);
+        return AWS_OP_ERR;
+    }
+
+    struct aws_byte_cursor name = aws_byte_cursor_from_pyunicode(PyTuple_GetItem(py_pair, 0));
+    struct aws_byte_cursor value = aws_byte_cursor_from_pyunicode(PyTuple_GetItem(py_pair, 1));
+    if (!name.ptr || !value.ptr) {
+        PyErr_SetString(PyExc_TypeError, type_errmsg);
+        return AWS_OP_ERR;
+    }
+
+    if (aws_http_headers_add(headers, name, value)) {
+        PyErr_SetAwsLastError();
+        return AWS_OP_ERR;
+    }
+
+    return AWS_OP_SUCCESS;
+}
+
 PyObject *aws_py_http_headers_add_pairs(PyObject *self, PyObject *args) {
     PyObject *py_pairs;
     S_HEADERS_METHOD_START("O", &py_pairs);
@@ -96,26 +119,12 @@ PyObject *aws_py_http_headers_add_pairs(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    const Py_ssize_t count = PySequence_Size(py_sequence);
+    const Py_ssize_t count = PySequence_Size(py_pairs);
     for (Py_ssize_t i = 0; i < count; ++i) {
-        /* XYZ_GET_ITEM() calls returns borrowed references */
-        PyObject *py_pair = PySequence_GetItem(py_sequence, i);
-
-        if (!PyTuple_Check(py_pair) || PyTuple_Size(py_pair) != 2) {
-            PyErr_SetString(PyExc_TypeError, type_errmsg);
-            goto done;
-        }
-
-        struct aws_byte_cursor name = aws_byte_cursor_from_pyunicode(PyTuple_GetItem(py_pair, 0));
-        struct aws_byte_cursor value = aws_byte_cursor_from_pyunicode(PyTuple_GetItem(py_pair, 1));
+        PyObject *py_pair = PySequence_GetItem(py_sequence, i); /* New Reference */
+        int error = s_http_headers_add_pair(py_pair, headers);
         Py_DECREF(py_pair);
-        if (!name.ptr || !value.ptr) {
-            PyErr_SetString(PyExc_TypeError, type_errmsg);
-            goto done;
-        }
-
-        if (aws_http_headers_add(headers, name, value)) {
-            PyErr_SetAwsLastError();
+        if(error) {
             goto done;
         }
     }

@@ -298,6 +298,8 @@ def awscrt_ext():
     extra_compile_args = os.environ.get('CFLAGS', '').split()
     extra_link_args = os.environ.get('LDFLAGS', '').split()
     extra_objects = []
+    macros = []
+    py_limited_api = False
 
     libraries = [x.libname for x in AWS_LIBS]
 
@@ -361,17 +363,8 @@ def awscrt_ext():
                 extra_link_args += ['-Wl,-fatal_warnings']
 
     if sys.version_info >= (3, 11):
-        return setuptools.Extension(
-            '_awscrt',
-            language='c',
-            libraries=libraries,
-            sources=glob.glob('source/*.c'),
-            extra_compile_args=extra_compile_args,
-            extra_link_args=extra_link_args,
-            extra_objects=extra_objects,
-            define_macros=[('Py_LIMITED_API', '0x030B0000')],
-            py_limited_api=True,
-        )
+        macros = [('Py_LIMITED_API', '0x030B0000')]
+        py_limited_api = True
 
     return setuptools.Extension(
         '_awscrt',
@@ -380,7 +373,9 @@ def awscrt_ext():
         sources=glob.glob('source/*.c'),
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args,
-        extra_objects=extra_objects
+        extra_objects=extra_objects,
+        define_macros=macros,
+        py_limited_api=py_limited_api,
     )
 
 
