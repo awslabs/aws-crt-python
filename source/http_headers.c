@@ -93,8 +93,8 @@ static int s_http_headers_add_pair(PyObject *py_pair, struct aws_http_headers *h
         return AWS_OP_ERR;
     }
 
-    struct aws_byte_cursor name = aws_byte_cursor_from_pyunicode(PyTuple_GetItem(py_pair, 0) /* Steals a reference */);
-    struct aws_byte_cursor value = aws_byte_cursor_from_pyunicode(PyTuple_GetItem(py_pair, 1) /* Steals a reference */);
+    struct aws_byte_cursor name = aws_byte_cursor_from_pyunicode(PyTuple_GetItem(py_pair, 0) /* Borrowed reference */);
+    struct aws_byte_cursor value = aws_byte_cursor_from_pyunicode(PyTuple_GetItem(py_pair, 1) /* Borrowed reference */);
     if (!name.ptr || !value.ptr) {
         PyErr_SetString(PyExc_TypeError, type_errmsg);
         return AWS_OP_ERR;
