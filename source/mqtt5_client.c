@@ -238,7 +238,9 @@ static void s_on_publish_received(const struct aws_mqtt5_packet_publish_view *pu
 
     for (size_t i = 0; i < subscription_identifier_count; ++i) {
         PyList_SetItem(
-            subscription_identifier_list, i, PyLong_FromLongLong(publish_packet->subscription_identifiers[i]));
+            subscription_identifier_list,
+            i,
+            PyLong_FromLongLong(publish_packet->subscription_identifiers[i])); /* Steals a reference */
     }
 
     user_properties_list = s_aws_set_user_properties_to_PyObject(publish_packet->user_properties, user_property_count);
@@ -1629,7 +1631,7 @@ static void s_on_subscribe_complete_fn(
         }
 
         for (size_t i = 0; i < reason_codes_count; ++i) {
-            PyList_SetItem(reason_codes_list, i, PyLong_FromLong(suback->reason_codes[i]));
+            PyList_SetItem(reason_codes_list, i, PyLong_FromLong(suback->reason_codes[i])); /* Steals a reference */
         }
     }
 
@@ -1860,7 +1862,7 @@ static void s_on_unsubscribe_complete_fn(
         }
 
         for (size_t i = 0; i < reason_codes_count; ++i) {
-            PyList_SetItem(reason_codes_list, i, PyLong_FromLong(unsuback->reason_codes[i]));
+            PyList_SetItem(reason_codes_list, i, PyLong_FromLong(unsuback->reason_codes[i])); /* Steals a reference */
         }
     }
 
@@ -2030,23 +2032,35 @@ PyObject *aws_py_mqtt5_client_get_stats(PyObject *self, PyObject *args) {
         goto done;
     }
 
-    PyTuple_SetItem(result, 0, PyLong_FromUnsignedLongLong((unsigned long long)stats.incomplete_operation_count));
-    if (PyTuple_GetItem(result, 0) == NULL) {
+    PyTuple_SetItem(
+        result,
+        0,
+        PyLong_FromUnsignedLongLong((unsigned long long)stats.incomplete_operation_count)); /* Steals a reference */
+    if (PyTuple_GetItem(result, 0) == NULL) {                                               /* Borrowed reference */
         goto done;
     }
 
-    PyTuple_SetItem(result, 1, PyLong_FromUnsignedLongLong((unsigned long long)stats.incomplete_operation_size));
-    if (PyTuple_GetItem(result, 1) == NULL) {
+    PyTuple_SetItem(
+        result,
+        1,
+        PyLong_FromUnsignedLongLong((unsigned long long)stats.incomplete_operation_size)); /* Steals a reference */
+    if (PyTuple_GetItem(result, 1) == NULL) {                                              /* Borrowed reference */
         goto done;
     }
 
-    PyTuple_SetItem(result, 2, PyLong_FromUnsignedLongLong((unsigned long long)stats.unacked_operation_count));
-    if (PyTuple_GetItem(result, 2) == NULL) {
+    PyTuple_SetItem(
+        result,
+        2,
+        PyLong_FromUnsignedLongLong((unsigned long long)stats.unacked_operation_count)); /* Steals a reference */
+    if (PyTuple_GetItem(result, 2) == NULL) {                                            /* Borrowed reference */
         goto done;
     }
 
-    PyTuple_SetItem(result, 3, PyLong_FromUnsignedLongLong((unsigned long long)stats.unacked_operation_size));
-    if (PyTuple_GetItem(result, 3) == NULL) {
+    PyTuple_SetItem(
+        result,
+        3,
+        PyLong_FromUnsignedLongLong((unsigned long long)stats.unacked_operation_size)); /* Steals a reference */
+    if (PyTuple_GetItem(result, 3) == NULL) {                                           /* Borrowed reference */
         goto done;
     }
 
