@@ -363,7 +363,7 @@ def awscrt_ext():
                 extra_link_args += ['-Wl,-fatal_warnings']
 
     if sys.version_info >= (3, 11):
-        macros = [('Py_LIMITED_API', '0x030B0000')]
+        macros.append('Py_LIMITED_API', '0x030B0000')
         py_limited_api = True
 
     return setuptools.Extension(

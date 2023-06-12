@@ -2034,23 +2034,23 @@ PyObject *aws_py_mqtt5_client_get_stats(PyObject *self, PyObject *args) {
         goto done;
     }
 
-    PyTuple_SetItem(result, 0, PyLong_FromUnsignedLongLong((unsigned long long)stats.incomplete_operation_count));
-    if (PyTuple_GetItem(result, 0) == NULL) {
+    PyTuple_SetItem(result, 0, PyLong_FromUnsignedLongLong((unsigned long long)stats.incomplete_operation_count)); /* Steals a reference */
+    if (PyTuple_GetItem(result, 0) == NULL) { /* Steals a reference */
         goto done;
     }
 
-    PyTuple_SetItem(result, 1, PyLong_FromUnsignedLongLong((unsigned long long)stats.incomplete_operation_size));
-    if (PyTuple_GetItem(result, 1) == NULL) {
+    PyTuple_SetItem(result, 1, PyLong_FromUnsignedLongLong((unsigned long long)stats.incomplete_operation_size)); /* Steals a reference */
+    if (PyTuple_GetItem(result, 1) == NULL) { /* Steals a reference */
         goto done;
     }
 
-    PyTuple_SetItem(result, 2, PyLong_FromUnsignedLongLong((unsigned long long)stats.unacked_operation_count));
-    if (PyTuple_GetItem(result, 2) == NULL) {
+    PyTuple_SetItem(result, 2, PyLong_FromUnsignedLongLong((unsigned long long)stats.unacked_operation_count)); /* Steals a reference */
+    if (PyTuple_GetItem(result, 2) == NULL) { /* Steals a reference */
         goto done;
     }
 
-    PyTuple_SetItem(result, 3, PyLong_FromUnsignedLongLong((unsigned long long)stats.unacked_operation_size));
-    if (PyTuple_GetItem(result, 3) == NULL) {
+    PyTuple_SetItem(result, 3, PyLong_FromUnsignedLongLong((unsigned long long)stats.unacked_operation_size)); /* Steals a reference */
+    if (PyTuple_GetItem(result, 3) == NULL) { /* Steals a reference */
         goto done;
     }
 

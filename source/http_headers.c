@@ -185,8 +185,8 @@ static PyObject *s_py_tuple_from_header(struct aws_http_header header) {
         goto error;
     }
 
-    PyTuple_SetItem(py_pair, 0, py_name);
-    PyTuple_SetItem(py_pair, 1, py_value);
+    PyTuple_SetItem(py_pair, 0, py_name); /* Steals a reference */
+    PyTuple_SetItem(py_pair, 1, py_value); /* Steals a reference */
     return py_pair;
 
 error:

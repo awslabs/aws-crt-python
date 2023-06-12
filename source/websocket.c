@@ -211,13 +211,13 @@ static void s_websocket_on_connection_setup(
 
             PyObject *name_py = PyUnicode_FromAwsByteCursor(&header_i->name);
             AWS_FATAL_ASSERT(name_py && "header name wrangling failed");
-            PyTuple_SetItem(tuple_py, 0, name_py);
+            PyTuple_SetItem(tuple_py, 0, name_py); /* Steals a reference */
 
             PyObject *value_py = PyUnicode_FromAwsByteCursor(&header_i->value);
             AWS_FATAL_ASSERT(value_py && "header value wrangling failed");
-            PyTuple_SetItem(tuple_py, 1, value_py);
+            PyTuple_SetItem(tuple_py, 1, value_py); /* Steals a reference */
 
-            PyList_SetItem(headers_py, i, tuple_py);
+            PyList_SetItem(headers_py, i, tuple_py); /* Steals a reference */
         }
     }
 
