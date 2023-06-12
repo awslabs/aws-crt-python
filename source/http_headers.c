@@ -122,9 +122,9 @@ PyObject *aws_py_http_headers_add_pairs(PyObject *self, PyObject *args) {
     const Py_ssize_t count = PySequence_Size(py_pairs);
     for (Py_ssize_t i = 0; i < count; ++i) {
         PyObject *py_pair = PySequence_GetItem(py_sequence, i); /* New Reference */
-        bool result = s_py_http_headers_add_pair(py_pair, headers);
+        bool success = s_py_http_headers_add_pair(py_pair, headers);
         Py_DECREF(py_pair);
-        if (!result) {
+        if (!success) {
             goto done;
         }
     }
