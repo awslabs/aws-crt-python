@@ -2052,7 +2052,7 @@ PyObject *aws_py_mqtt5_client_get_stats(PyObject *self, PyObject *args) {
         result,
         2,
         PyLong_FromUnsignedLongLong((unsigned long long)stats.unacked_operation_count)); /* Steals a reference */
-    if (PyTuple_GetItem(result, 2) == NULL) {                                            /* Steals a reference */
+    if (PyTuple_GetItem(result, 2) == NULL) {                                            /* Borrowed reference */
         goto done;
     }
 
