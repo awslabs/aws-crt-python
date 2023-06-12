@@ -1357,7 +1357,7 @@ PyObject *aws_py_mqtt_client_connection_get_stats(PyObject *self, PyObject *args
         result,
         3,
         PyLong_FromUnsignedLongLong((unsigned long long)stats.unacked_operation_size)); /* Steals a reference */
-    if (PyTuple_GetItem(result, 3) == NULL) {                                           /* Steals a reference */
+    if (PyTuple_GetItem(result, 3) == NULL) {                                           /* Borrowed reference */
         goto done;
     }
 
