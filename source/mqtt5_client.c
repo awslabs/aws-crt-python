@@ -263,9 +263,7 @@ static void s_on_publish_received(const struct aws_mqtt5_packet_publish_view *pu
         /* i */ (int)(publish_packet->payload_format ? *publish_packet->payload_format : 0),
         /* O */ publish_packet->message_expiry_interval_seconds ? Py_True : Py_False,
         /* I */
-        (unsigned int)(publish_packet->message_expiry_interval_seconds
-                           ? *publish_packet->message_expiry_interval_seconds
-                           : 0),
+        (unsigned int)(publish_packet->message_expiry_interval_seconds ? *publish_packet->message_expiry_interval_seconds : 0),
         /* O */ publish_packet->topic_alias ? Py_True : Py_False,
         /* H */ (unsigned short)(publish_packet->topic_alias ? *publish_packet->topic_alias : 0),
         /* s */ publish_packet->response_topic ? publish_packet->response_topic->ptr : NULL,
@@ -533,9 +531,7 @@ static void s_lifecycle_event_disconnection(
         /* i */ (int)(disconnect ? disconnect->reason_code : 0),
         /* O */ (disconnect && disconnect->session_expiry_interval_seconds) ? Py_True : Py_False,
         /* I */
-        (unsigned int)((disconnect && disconnect->session_expiry_interval_seconds)
-                           ? *disconnect->session_expiry_interval_seconds
-                           : 0),
+        (unsigned int)((disconnect && disconnect->session_expiry_interval_seconds) ? *disconnect->session_expiry_interval_seconds : 0),
         /* s */ (disconnect && disconnect->reason_string) ? disconnect->reason_string->ptr : NULL,
         /* # */ (disconnect && disconnect->reason_string) ? disconnect->reason_string->len : 0,
         /* O */ user_property_count > 0 ? user_properties_list : Py_None,
