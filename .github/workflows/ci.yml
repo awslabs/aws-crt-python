@@ -70,7 +70,6 @@ jobs:
       matrix:
         image:
           - x64
-          - x86
           - aarch64
         python:
           - cp37-cp37m
