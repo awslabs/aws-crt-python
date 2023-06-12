@@ -3,7 +3,7 @@
 
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, Pkcs11Lib, TlsContextOptions
 from awscrt import http
-from awscrt.mqtt import Client, Connection, QoS, Will
+from awscrt.mqtt import Client, Connection, QoS, Will, OnConnectionClosedData, OnConnectionFailureData, OnConnectionSuccessData, ConnectReturnCode
 from test import NativeResourceTest
 from concurrent.futures import Future
 import os
@@ -29,7 +29,15 @@ class MqttConnectionTest(NativeResourceTest):
     TEST_TOPIC = '/test/me/senpai/' + str(uuid.uuid4())
     TEST_MSG = 'NOTICE ME!'.encode('utf8')
 
-    def _create_connection(self, endpoint, tls_context, use_static_singletons=False):
+    def _create_connection(
+            self,
+            endpoint,
+            tls_context,
+            port=8883,
+            use_static_singletons=False,
+            on_connection_success_callback=None,
+            on_connection_failure_callback=None,
+            on_connection_closed_callback=None):
         if use_static_singletons:
             client = Client(tls_ctx=tls_context)
         else:
@@ -42,7 +50,10 @@ class MqttConnectionTest(NativeResourceTest):
             client=client,
             client_id=create_client_id(),
             host_name=endpoint,
-            port=8883)
+            port=port,
+            on_connection_closed=on_connection_closed_callback,
+            on_connection_failure=on_connection_failure_callback,
+            on_connection_success=on_connection_success_callback)
         return connection
 
     def test_connect_disconnect(self):
@@ -381,6 +392,75 @@ class MqttConnectionTest(NativeResourceTest):
 
         # disconnect
         connection.disconnect().result(TIMEOUT)
+
+    def test_connect_disconnect_with_callbacks_happy(self):
+        test_input_endpoint = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
+        test_input_cert = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_CERT")
+        test_input_key = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_KEY")
+        test_tls_opts = TlsContextOptions.create_client_with_mtls_from_path(test_input_cert, test_input_key)
+        test_tls = ClientTlsContext(test_tls_opts)
+
+        onConnectionSuccessFuture = Future()
+        onConnectionClosedFuture = Future()
+
+        def on_connection_success_callback(connection, callback_data: OnConnectionSuccessData):
+            onConnectionSuccessFuture.set_result(
+                {'return_code': callback_data.return_code, "session_present": callback_data.session_present})
+
+        def on_connection_failure_callback(connection, callback_data: OnConnectionFailureData):
+            pass
+
+        def on_connection_closed_callback(connection, callback_data: OnConnectionClosedData):
+            onConnectionClosedFuture.set_result({})
+
+        connection = self._create_connection(
+            endpoint=test_input_endpoint,
+            tls_context=test_tls,
+            on_connection_success_callback=on_connection_success_callback,
+            on_connection_failure_callback=on_connection_failure_callback,
+            on_connection_closed_callback=on_connection_closed_callback)
+        connection.connect().result(TIMEOUT)
+        successData = onConnectionSuccessFuture.result(TIMEOUT)
+        self.assertEqual(successData['return_code'], ConnectReturnCode.ACCEPTED)
+        self.assertEqual(successData['session_present'], False)
+        connection.disconnect().result(TIMEOUT)
+        onConnectionClosedFuture.result(TIMEOUT)
+
+    def test_connect_disconnect_with_callbacks_unhappy(self):
+        test_input_endpoint = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
+        test_input_cert = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_CERT")
+        test_input_key = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_KEY")
+        test_tls_opts = TlsContextOptions.create_client_with_mtls_from_path(test_input_cert, test_input_key)
+        test_tls = ClientTlsContext(test_tls_opts)
+
+        onConnectionFailureFuture = Future()
+
+        def on_connection_success_callback(connection, callback_data: OnConnectionSuccessData):
+            pass
+
+        def on_connection_failure_callback(connection, callback_data: OnConnectionFailureData):
+            onConnectionFailureFuture.set_result({'error': callback_data.error})
+
+        def on_connection_closed_callback(connection, callback_data: OnConnectionClosedData):
+            pass
+
+        connection = self._create_connection(
+            endpoint=test_input_endpoint,
+            tls_context=test_tls,
+            port=1234,
+            on_connection_success_callback=on_connection_success_callback,
+            on_connection_failure_callback=on_connection_failure_callback,
+            on_connection_closed_callback=on_connection_closed_callback)
+
+        exception_occurred = False
+        try:
+            connection.connect().result(TIMEOUT)
+        except Exception:
+            exception_occurred = True
+        self.assertTrue(exception_occurred, "Exception did not occur when connecting with invalid arguments!")
+
+        failureData = onConnectionFailureFuture.result(TIMEOUT)
+        self.assertTrue(failureData['error'] is not None)
 
     # ==============================================================
     #             MOSQUITTO CONNECTION TESTS
