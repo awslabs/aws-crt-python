@@ -298,7 +298,7 @@ def awscrt_ext():
     extra_compile_args = os.environ.get('CFLAGS', '').split()
     extra_link_args = os.environ.get('LDFLAGS', '').split()
     extra_objects = []
-    macros = []
+    define_macros = []
     py_limited_api = False
 
     libraries = [x.libname for x in AWS_LIBS]
@@ -363,7 +363,7 @@ def awscrt_ext():
                 extra_link_args += ['-Wl,-fatal_warnings']
 
     if sys.version_info >= (3, 11):
-        macros.append(('Py_LIMITED_API', '0x030B0000'))
+        define_macros.append(('Py_LIMITED_API', '0x030B0000'))
         py_limited_api = True
 
     return setuptools.Extension(
@@ -374,7 +374,7 @@ def awscrt_ext():
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args,
         extra_objects=extra_objects,
-        define_macros=macros,
+        define_macros=define_macros,
         py_limited_api=py_limited_api,
     )
 

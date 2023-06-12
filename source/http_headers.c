@@ -85,27 +85,27 @@ PyObject *aws_py_http_headers_add(PyObject *self, PyObject *args) {
     Py_RETURN_NONE;
 }
 
-static int s_http_headers_add_pair(PyObject *py_pair, struct aws_http_headers *headers) {
+static bool s_py_http_headers_add_pair(PyObject *py_pair, struct aws_http_headers *headers) {
 
     const char *type_errmsg = "List of (name,value) pairs expected.";
     if (!PyTuple_Check(py_pair) || PyTuple_Size(py_pair) != 2) {
         PyErr_SetString(PyExc_TypeError, type_errmsg);
-        return AWS_OP_ERR;
+        return false;
     }
 
     struct aws_byte_cursor name = aws_byte_cursor_from_pyunicode(PyTuple_GetItem(py_pair, 0) /* Borrowed reference */);
     struct aws_byte_cursor value = aws_byte_cursor_from_pyunicode(PyTuple_GetItem(py_pair, 1) /* Borrowed reference */);
     if (!name.ptr || !value.ptr) {
         PyErr_SetString(PyExc_TypeError, type_errmsg);
-        return AWS_OP_ERR;
+        return false;
     }
 
     if (aws_http_headers_add(headers, name, value)) {
         PyErr_SetAwsLastError();
-        return AWS_OP_ERR;
+        return false;
     }
 
-    return AWS_OP_SUCCESS;
+    return true;
 }
 
 PyObject *aws_py_http_headers_add_pairs(PyObject *self, PyObject *args) {
@@ -122,9 +122,9 @@ PyObject *aws_py_http_headers_add_pairs(PyObject *self, PyObject *args) {
     const Py_ssize_t count = PySequence_Size(py_pairs);
     for (Py_ssize_t i = 0; i < count; ++i) {
         PyObject *py_pair = PySequence_GetItem(py_sequence, i); /* New Reference */
-        int error = s_http_headers_add_pair(py_pair, headers);
+        bool result = s_py_http_headers_add_pair(py_pair, headers);
         Py_DECREF(py_pair);
-        if (error) {
+        if (!result) {
             goto done;
         }
     }
