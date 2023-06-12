@@ -124,7 +124,7 @@ PyObject *aws_py_http_headers_add_pairs(PyObject *self, PyObject *args) {
         PyObject *py_pair = PySequence_GetItem(py_sequence, i); /* New Reference */
         int error = s_http_headers_add_pair(py_pair, headers);
         Py_DECREF(py_pair);
-        if(error) {
+        if (error) {
             goto done;
         }
     }
