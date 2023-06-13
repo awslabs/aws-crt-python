@@ -1,5 +1,5 @@
 #!/bin/bash
-#assumes image based on musllinux_1_1 + extras (pip)
+#assumes image based on musllinux_1_1
 set -ex
 
 /opt/python/cp39-cp39/bin/python ./continuous-delivery/update-version.py
