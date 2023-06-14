@@ -166,19 +166,20 @@ bool aws_py_event_stream_native_headers_init(struct aws_array_list *native_heade
     bool success = false;
     PyObject *sequence_py = NULL;
 
-    sequence_py = PySequence_Fast(headers_py, "Expected sequence of Headers"); /* New reference */
+    sequence_py = PySequence_Fast(headers_py, "Expected sequence of Headers");
     if (!sequence_py) {
         goto done;
     }
 
-    const Py_ssize_t count = PySequence_Fast_GET_SIZE(sequence_py);
+    const Py_ssize_t count = PySequence_Size(sequence_py);
     for (Py_ssize_t i = 0; i < count; ++i) {
-        /* Borrowed reference, don't need to decref */
-        PyObject *header_py = PySequence_Fast_GET_ITEM(sequence_py, i);
+        PyObject *header_py = PySequence_GetItem(sequence_py, i); /* New Reference */
 
         if (!s_add_native_header(native_headers, header_py)) {
+            Py_XDECREF(header_py);
             goto done;
         }
+        Py_XDECREF(header_py);
     }
 
     success = true;
@@ -270,7 +271,7 @@ PyObject *aws_py_event_stream_python_headers_create(
             goto error;
         }
 
-        PyList_SET_ITEM(list_py, i, tuple_py); /* steals reference to tuple */
+        PyList_SetItem(list_py, i, tuple_py); /* steals reference to tuple */
     }
 
     return list_py;
