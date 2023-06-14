@@ -7,7 +7,7 @@ on:
       - 'docs'
 
 env:
-  BUILDER_VERSION: v0.9.46
+  BUILDER_VERSION: v0.9.47
   BUILDER_SOURCE: releases
   BUILDER_HOST: https://d19elf31gohf1l.cloudfront.net
   PACKAGE_NAME: aws-crt-python
@@ -63,6 +63,30 @@ jobs:
         aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
         ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-manylinux2014-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }} --python /opt/python/${{ matrix.python }}/bin/python
 
+  musllinux-1-1:
+    runs-on: ubuntu-22.04 # latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - x64
+          - aarch64
+        python:
+          - cp37-cp37m
+          - cp38-cp38
+          - cp39-cp39
+          - cp310-cp310
+          - cp311-cp311
+          - cp312-cp312
+    steps:
+    # Only aarch64 needs this, but it doesn't hurt anything
+    - name: Install qemu/docker
+      run: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+
+    - name: Build ${{ env.PACKAGE_NAME }}
+      run: |
+        aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
+        ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-musllinux-1-1-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }} --python /opt/python/${{ matrix.python }}/bin/python
 
   raspberry:
     runs-on: ubuntu-20.04 # latest
