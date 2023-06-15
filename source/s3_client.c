@@ -73,6 +73,7 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
 
     PyObject *bootstrap_py = NULL;
     PyObject *credential_provider_py = NULL;
+    PyObject *signing_config_py = NULL;
     PyObject *tls_options_py = NULL;
     PyObject *on_shutdown_py = NULL;
     PyObject *py_core = NULL;
@@ -83,9 +84,10 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
     int tls_mode;
     if (!PyArg_ParseTuple(
             args,
-            "OOOOs#iKdO",
+            "OOOOOs#iKdO",
             &bootstrap_py,
             &credential_provider_py,
+            &signing_config_py,
             &tls_options_py,
             &on_shutdown_py,
             &region,
@@ -109,14 +111,22 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
             return NULL;
         }
     }
-
-    struct aws_signing_config_aws signing_config;
-    AWS_ZERO_STRUCT(signing_config);
+    struct aws_signing_config_aws *signing_config = NULL;
+    if (signing_config_py != Py_None) {
+        signing_config = aws_py_get_signing_config(signing_config_py);
+        if (!signing_config) {
+            return NULL;
+        }
+    }
+    struct aws_signing_config_aws signing_config_from_credentials_provider;
+    AWS_ZERO_STRUCT(signing_config_from_credentials_provider);
 
     struct aws_byte_cursor region_cursor = aws_byte_cursor_from_array((const uint8_t *)region, region_len);
 
     if (credential_provider) {
-        aws_s3_init_default_signing_config(&signing_config, region_cursor, credential_provider);
+        aws_s3_init_default_signing_config(
+            &signing_config_from_credentials_provider, region_cursor, credential_provider);
+        signing_config = &signing_config_from_credentials_provider;
     }
 
     struct aws_tls_connection_options *tls_options = NULL;
@@ -150,7 +160,7 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
         .region = aws_byte_cursor_from_array((const uint8_t *)region, region_len),
         .client_bootstrap = bootstrap,
         .tls_mode = tls_mode,
-        .signing_config = credential_provider ? &signing_config : NULL,
+        .signing_config = signing_config,
         .part_size = part_size,
         .tls_connection_options = tls_options,
         .throughput_target_gbps = throughput_target_gbps,
