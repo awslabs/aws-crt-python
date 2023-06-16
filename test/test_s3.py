@@ -469,7 +469,7 @@ class S3RequestTest(NativeResourceTest):
         s3_request = s3_client.make_request(
             request=request,
             type=request_type,
-            send_filepath=self.special_path.decode("utf-8"),
+            send_filepath=self.special_path,
             signing_config=signing_config,
             on_headers=self._on_request_headers,
             on_progress=self._on_progress)
