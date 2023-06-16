@@ -12,7 +12,7 @@ from concurrent.futures import Future
 from awscrt.http import HttpHeaders, HttpRequest
 from awscrt.s3 import S3Client, S3RequestType, aws_create_default_s3_signing_config
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions
-from awscrt.auth import AwsCredentialsProvider, AwsSignedBodyHeaderType, AwsSignedBodyValue, AwsSigningAlgorithm, AwsSigningConfig
+from awscrt.auth import AwsCredentialsProvider, AwsSignatureType, AwsSignedBodyHeaderType, AwsSignedBodyValue, AwsSigningAlgorithm, AwsSigningConfig
 
 MB = 1024 ** 2
 GB = 1024 ** 3
@@ -456,6 +456,7 @@ class S3RequestTest(NativeResourceTest):
         # Let signer to normalize uri path for us.
         signing_config = AwsSigningConfig(
             algorithm=AwsSigningAlgorithm.V4,
+            signature_type=AwsSignatureType.HTTP_REQUEST_HEADERS,
             service="s3",
             signed_body_header_type=AwsSignedBodyHeaderType.X_AMZ_CONTENT_SHA_256,
             signed_body_value=AwsSignedBodyValue.UNSIGNED_PAYLOAD,
