@@ -103,7 +103,6 @@ class FakeReadStream(object):
         return fake_data
 
 
-@unittest.skipUnless(os.environ.get('AWS_TEST_S3'), 'set env var to run test: AWS_TEST_S3')
 class S3ClientTest(NativeResourceTest):
 
     def setUp(self):

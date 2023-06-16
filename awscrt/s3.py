@@ -10,7 +10,7 @@ from concurrent.futures import Future
 from awscrt import NativeResource
 from awscrt.http import HttpRequest
 from awscrt.io import ClientBootstrap, TlsConnectionOptions
-from awscrt.auth import AwsCredentialsProvider, AwsSignedBodyHeaderType, AwsSignedBodyValue, AwsSigningAlgorithm, AwsSigningConfig
+from awscrt.auth import AwsCredentialsProvider, AwsSignatureType, AwsSignedBodyHeaderType, AwsSignedBodyValue, AwsSigningAlgorithm, AwsSigningConfig
 import awscrt.exceptions
 import threading
 from enum import IntEnum
@@ -407,6 +407,7 @@ class _S3RequestCore:
 def aws_create_default_s3_signing_config(region: str, credential_provider: AwsCredentialsProvider):
     return AwsSigningConfig(
         algorithm=AwsSigningAlgorithm.V4,
+        signature_type=AwsSignatureType.HTTP_REQUEST_HEADERS,
         service="s3",
         signed_body_header_type=AwsSignedBodyHeaderType.X_AMZ_CONTENT_SHA_256,
         signed_body_value=AwsSignedBodyValue.UNSIGNED_PAYLOAD,
