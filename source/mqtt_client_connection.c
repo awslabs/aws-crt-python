@@ -1180,7 +1180,7 @@ static void s_suback_multi_callback(
             goto done_prepping_args;
         }
 
-        PyList_SET_ITEM(topic_qos_list, i, tuple); /* Steals reference to tuple */
+        PyList_SetItem(topic_qos_list, i, tuple); /* Steals reference to tuple */
     }
 
 done_prepping_args:;
@@ -1329,23 +1329,35 @@ PyObject *aws_py_mqtt_client_connection_get_stats(PyObject *self, PyObject *args
         goto done;
     }
 
-    PyTuple_SET_ITEM(result, 0, PyLong_FromUnsignedLongLong((unsigned long long)stats.incomplete_operation_count));
-    if (PyTuple_GET_ITEM(result, 0) == NULL) {
+    PyTuple_SetItem(
+        result,
+        0,
+        PyLong_FromUnsignedLongLong((unsigned long long)stats.incomplete_operation_count)); /* Steals a reference */
+    if (PyTuple_GetItem(result, 0) == NULL) {                                               /* Borrowed reference */
         goto done;
     }
 
-    PyTuple_SET_ITEM(result, 1, PyLong_FromUnsignedLongLong((unsigned long long)stats.incomplete_operation_size));
-    if (PyTuple_GET_ITEM(result, 1) == NULL) {
+    PyTuple_SetItem(
+        result,
+        1,
+        PyLong_FromUnsignedLongLong((unsigned long long)stats.incomplete_operation_size)); /* Steals a reference */
+    if (PyTuple_GetItem(result, 1) == NULL) {                                              /* Borrowed reference */
         goto done;
     }
 
-    PyTuple_SET_ITEM(result, 2, PyLong_FromUnsignedLongLong((unsigned long long)stats.unacked_operation_count));
-    if (PyTuple_GET_ITEM(result, 2) == NULL) {
+    PyTuple_SetItem(
+        result,
+        2,
+        PyLong_FromUnsignedLongLong((unsigned long long)stats.unacked_operation_count)); /* Steals a reference */
+    if (PyTuple_GetItem(result, 2) == NULL) {                                            /* Borrowed reference */
         goto done;
     }
 
-    PyTuple_SET_ITEM(result, 3, PyLong_FromUnsignedLongLong((unsigned long long)stats.unacked_operation_size));
-    if (PyTuple_GET_ITEM(result, 3) == NULL) {
+    PyTuple_SetItem(
+        result,
+        3,
+        PyLong_FromUnsignedLongLong((unsigned long long)stats.unacked_operation_size)); /* Steals a reference */
+    if (PyTuple_GetItem(result, 3) == NULL) {                                           /* Borrowed reference */
         goto done;
     }
 

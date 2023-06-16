@@ -57,10 +57,9 @@ class TestClient(NativeResourceTest):
 
         self.server = HTTPServer((self.hostname, 0), TestRequestHandler)
         if secure:
-            self.server.socket = ssl.wrap_socket(self.server.socket,
-                                                 keyfile="test/resources/unittest.key",
-                                                 certfile='test/resources/unittest.crt',
-                                                 server_side=True)
+            context = ssl.SSLContext()
+            context.load_cert_chain(certfile='test/resources/unittest.crt', keyfile="test/resources/unittest.key")
+            self.server.socket = context.wrap_socket(self.server.socket, server_side=True)
         self.port = self.server.server_address[1]
 
         # put requests are stored in this dict

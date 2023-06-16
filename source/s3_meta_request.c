@@ -69,7 +69,7 @@ static PyObject *s_get_py_headers(const struct aws_http_headers *headers) {
         if (!tuple) {
             goto error;
         }
-        PyList_SET_ITEM(header_list, i, tuple); /* steals reference to tuple */
+        PyList_SetItem(header_list, i, tuple); /* steals reference to tuple */
     }
     return header_list;
 error:

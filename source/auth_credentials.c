@@ -513,7 +513,7 @@ PyObject *aws_py_credentials_provider_new_chain(PyObject *self, PyObject *args) 
     if (!providers_pyseq) {
         goto done;
     }
-    size_t provider_count = (size_t)PySequence_Fast_GET_SIZE(providers_pyseq);
+    size_t provider_count = (size_t)PySequence_Size(providers_pyseq);
     if (provider_count == 0) {
         PyErr_SetString(PyExc_ValueError, "Must supply at least one AwsCredentialsProvider.");
         goto done;
@@ -526,8 +526,9 @@ PyObject *aws_py_credentials_provider_new_chain(PyObject *self, PyObject *args) 
     }
 
     for (size_t i = 0; i < provider_count; ++i) {
-        PyObject *provider_py = PySequence_Fast_GET_ITEM(providers_pyseq, i);
+        PyObject *provider_py = PySequence_GetItem(providers_pyseq, i); /* new reference */
         providers_carray[i] = aws_py_get_credentials_provider(provider_py);
+        Py_XDECREF(provider_py);
         if (!providers_carray[i]) {
             goto done;
         }
@@ -724,7 +725,7 @@ PyObject *aws_py_credentials_provider_new_cognito(PyObject *self, PyObject *args
             goto done;
         }
 
-        logins_count = (size_t)PySequence_Fast_GET_SIZE(logins_pyseq);
+        logins_count = (size_t)PySequence_Size(logins_pyseq);
         if (logins_count > 0) {
 
             logins_carray =
@@ -735,7 +736,7 @@ PyObject *aws_py_credentials_provider_new_cognito(PyObject *self, PyObject *args
             }
 
             for (size_t i = 0; i < logins_count; ++i) {
-                PyObject *login_tuple_py = PySequence_Fast_GET_ITEM(logins_pyseq, i);
+                PyObject *login_tuple_py = PySequence_GetItem(logins_pyseq, i); /* New reference */
                 struct aws_cognito_identity_provider_token_pair *login_entry = &logins_carray[i];
                 AWS_ZERO_STRUCT(*login_entry);
 
@@ -750,8 +751,10 @@ PyObject *aws_py_credentials_provider_new_cognito(PyObject *self, PyObject *args
                         PyExc_TypeError,
                         "cognito credentials provider: logins[%zu] is invalid, should be type (str, str)",
                         i);
+                    Py_XDECREF(login_tuple_py);
                     goto done;
                 }
+                Py_XDECREF(login_tuple_py);
             }
         }
     }

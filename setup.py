@@ -14,10 +14,11 @@ import shutil
 import subprocess
 import sys
 import sysconfig
+from wheel.bdist_wheel import bdist_wheel
 
 
 def is_64bit():
-    return sys.maxsize > 2**32
+    return sys.maxsize > 2 ** 32
 
 
 def is_32bit():
@@ -152,7 +153,6 @@ AWS_LIBS.append(AwsLib('aws-c-auth'))
 AWS_LIBS.append(AwsLib('aws-c-mqtt'))
 AWS_LIBS.append(AwsLib('aws-c-s3'))
 
-
 PROJECT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 VERSION_RE = re.compile(r""".*__version__ = ["'](.*?)['"]""", re.S)
@@ -283,11 +283,23 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
         super().run()
 
 
+class bdist_wheel_abi3(bdist_wheel):
+    def get_tag(self):
+        python, abi, plat = super().get_tag()
+        if python.startswith("cp") and sys.version_info >= (3, 11):
+            # on CPython, our wheels are abi3 and compatible back to 3.11
+            return "cp311", "abi3", plat
+
+        return python, abi, plat
+
+
 def awscrt_ext():
     # fetch the CFLAGS/LDFLAGS from env
     extra_compile_args = os.environ.get('CFLAGS', '').split()
     extra_link_args = os.environ.get('LDFLAGS', '').split()
     extra_objects = []
+    define_macros = []
+    py_limited_api = False
 
     libraries = [x.libname for x in AWS_LIBS]
 
@@ -350,6 +362,10 @@ def awscrt_ext():
             if not is_macos_universal2():
                 extra_link_args += ['-Wl,-fatal_warnings']
 
+    if sys.version_info >= (3, 11):
+        define_macros.append(('Py_LIMITED_API', '0x030B0000'))
+        py_limited_api = True
+
     return setuptools.Extension(
         '_awscrt',
         language='c',
@@ -357,7 +373,9 @@ def awscrt_ext():
         sources=glob.glob('source/*.c'),
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args,
-        extra_objects=extra_objects
+        extra_objects=extra_objects,
+        define_macros=define_macros,
+        py_limited_api=py_limited_api,
     )
 
 
@@ -392,6 +410,6 @@ setuptools.setup(
     ],
     python_requires='>=3.7',
     ext_modules=[awscrt_ext()],
-    cmdclass={'build_ext': awscrt_build_ext},
+    cmdclass={'build_ext': awscrt_build_ext, "bdist_wheel": bdist_wheel_abi3},
     test_suite='test',
 )

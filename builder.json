@@ -7,6 +7,10 @@
         "manylinux": {
             "_comment": "Use existing compiler on manylinux. These are the images we use for release. We want to be sure things work with the defaults.",
             "needs_compiler": false
+        },
+        "musllinux": {
+            "_comment": "Use existing compiler on musllinux. These are the images we use for release. We want to be sure things work with the defaults.",
+            "needs_compiler": false
         }
     },
     "targets": {
