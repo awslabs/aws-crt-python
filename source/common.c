@@ -92,5 +92,5 @@ PyObject *aws_py_install_crash_handler(PyObject *self, PyObject *args) {
         sigaction(SIGILL, &sa, NULL);
         sigaction(SIGBUS, &sa, NULL);
     #endif
-    return Py_None;
+    Py_RETURN_NONE;
 }

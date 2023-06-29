@@ -21,4 +21,7 @@ def get_cpu_count_for_group(group_idx: int) -> int:
 
 
 def install_crash_handler():
+    """
+        Registers a crash handler that will generate crash dumps in the event of a fatal error.
+    """
     _awscrt.install_crash_handler()
