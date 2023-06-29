@@ -18,7 +18,3 @@ def get_cpu_count_for_group(group_idx: int) -> int:
     Returns number of processors in a given group.
     """
     return _awscrt.get_cpu_count_for_group(group_idx)
-
-
-def install_crash_handler():
-    _awscrt.install_crash_handler()

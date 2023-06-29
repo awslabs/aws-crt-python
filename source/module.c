@@ -613,6 +613,43 @@ PyObject *aws_py_native_memory_dump(PyObject *self, PyObject *args) {
     Py_RETURN_NONE;
 }
 
+/*******************************************************************************
+ * Crash handler
+ ******************************************************************************/
+#if defined(_WIN32)
+#    include <windows.h>
+static LONG WINAPI s_print_stack_trace(struct _EXCEPTION_POINTERS *exception_pointers) {
+    aws_backtrace_print(stderr, exception_pointers);
+    return EXCEPTION_EXECUTE_HANDLER;
+}
+#elif defined(AWS_HAVE_EXECINFO)
+#    include <signal.h>
+static void s_print_stack_trace(int sig, siginfo_t *sig_info, void *user_data) {
+    (void)sig;
+    (void)sig_info;
+    (void)user_data;
+    aws_backtrace_print(stderr, sig_info);
+    exit(-1);
+}
+#endif
+
+static void s_install_crash_handler(void) {
+#if defined(_WIN32)
+    SetUnhandledExceptionFilter(s_print_stack_trace);
+#elif defined(AWS_HAVE_EXECINFO)
+    struct sigaction sa;
+    memset(&sa, 0, sizeof(struct sigaction));
+    sigemptyset(&sa.sa_mask);
+
+    sa.sa_flags = SA_NODEFER;
+    sa.sa_sigaction = s_print_stack_trace;
+
+    sigaction(SIGSEGV, &sa, NULL);
+    sigaction(SIGABRT, &sa, NULL);
+    sigaction(SIGILL, &sa, NULL);
+    sigaction(SIGBUS, &sa, NULL);
+#endif
+}
 
 /*******************************************************************************
  * Definitions
@@ -631,7 +668,6 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(native_memory_usage, METH_NOARGS),
     AWS_PY_METHOD_DEF(native_memory_dump, METH_NOARGS),
     AWS_PY_METHOD_DEF(thread_join_all_managed, METH_VARARGS),
-    AWS_PY_METHOD_DEF(install_crash_handler, METH_NOARGS),
 
     /* IO */
     AWS_PY_METHOD_DEF(is_alpn_available, METH_NOARGS),
@@ -768,6 +804,7 @@ static PyMethodDef s_module_methods[] = {
 
 static const char s_module_name[] = "_awscrt";
 PyDoc_STRVAR(s_module_doc, "C extension for binding AWS implementations of MQTT, HTTP, and friends");
+AWS_STATIC_STRING_FROM_LITERAL(s_crash_handler_env_var, "AWS_CRT_ENABLE_CRASH_HANDLER");
 
 /*******************************************************************************
  * Module Init
@@ -795,6 +832,12 @@ PyMODINIT_FUNC PyInit__awscrt(void) {
 
     /* Don't report this memory when dumping possible leaks. */
     struct aws_allocator *nontracing_allocator = aws_default_allocator();
+
+    struct aws_string *crash_handler_env = NULL;
+    aws_get_environment_value(nontracing_allocator, s_crash_handler_env_var, &crash_handler_env);
+    if (aws_string_eq_c_str(crash_handler_env, "1")) {
+        s_install_crash_handler();
+    }
 
     aws_http_library_init(nontracing_allocator);
     aws_auth_library_init(nontracing_allocator);
