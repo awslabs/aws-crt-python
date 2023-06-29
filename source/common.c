@@ -75,22 +75,22 @@ static void s_print_stack_trace(int sig, siginfo_t *sig_info, void *user_data) {
 #endif
 
 PyObject *aws_py_install_crash_handler(PyObject *self, PyObject *args) {
-    (void) self;
-    (void) args;
-    #if defined(_WIN32)
-        SetUnhandledExceptionFilter(s_print_stack_trace);
-    #elif defined(AWS_HAVE_EXECINFO)
-        struct sigaction sa;
-        memset(&sa, 0, sizeof(struct sigaction));
-        sigemptyset(&sa.sa_mask);
+    (void)self;
+    (void)args;
+#if defined(_WIN32)
+    SetUnhandledExceptionFilter(s_print_stack_trace);
+#elif defined(AWS_HAVE_EXECINFO)
+    struct sigaction sa;
+    memset(&sa, 0, sizeof(struct sigaction));
+    sigemptyset(&sa.sa_mask);
 
-        sa.sa_flags = SA_NODEFER;
-        sa.sa_sigaction = s_print_stack_trace;
+    sa.sa_flags = SA_NODEFER;
+    sa.sa_sigaction = s_print_stack_trace;
 
-        sigaction(SIGSEGV, &sa, NULL);
-        sigaction(SIGABRT, &sa, NULL);
-        sigaction(SIGILL, &sa, NULL);
-        sigaction(SIGBUS, &sa, NULL);
-    #endif
+    sigaction(SIGSEGV, &sa, NULL);
+    sigaction(SIGABRT, &sa, NULL);
+    sigaction(SIGILL, &sa, NULL);
+    sigaction(SIGBUS, &sa, NULL);
+#endif
     Py_RETURN_NONE;
 }
