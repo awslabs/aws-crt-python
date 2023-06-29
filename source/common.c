@@ -53,3 +53,44 @@ PyObject *aws_py_thread_join_all_managed(PyObject *self, PyObject *args) {
 
     Py_RETURN_TRUE;
 }
+
+/*******************************************************************************
+ * Crash handler
+ ******************************************************************************/
+#if defined(_WIN32)
+#    include <windows.h>
+static LONG WINAPI s_print_stack_trace(struct _EXCEPTION_POINTERS *exception_pointers) {
+    aws_backtrace_print(stderr, exception_pointers);
+    return EXCEPTION_EXECUTE_HANDLER;
+}
+#elif defined(AWS_HAVE_EXECINFO)
+#    include <signal.h>
+static void s_print_stack_trace(int sig, siginfo_t *sig_info, void *user_data) {
+    (void)sig;
+    (void)sig_info;
+    (void)user_data;
+    aws_backtrace_print(stderr, sig_info);
+    exit(-1);
+}
+#endif
+
+PyObject *aws_py_install_crash_handler(PyObject *self, PyObject *args) {
+    (void) self;
+    (void) args;
+    #if defined(_WIN32)
+        SetUnhandledExceptionFilter(s_print_stack_trace);
+    #elif defined(AWS_HAVE_EXECINFO)
+        struct sigaction sa;
+        memset(&sa, 0, sizeof(struct sigaction));
+        sigemptyset(&sa.sa_mask);
+
+        sa.sa_flags = SA_NODEFER;
+        sa.sa_sigaction = s_print_stack_trace;
+
+        sigaction(SIGSEGV, &sa, NULL);
+        sigaction(SIGABRT, &sa, NULL);
+        sigaction(SIGILL, &sa, NULL);
+        sigaction(SIGBUS, &sa, NULL);
+    #endif
+    return Py_None;
+}
