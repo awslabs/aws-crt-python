@@ -68,5 +68,4 @@ static: certificate has an existing certificate-key pair that was previously imp
 ```
 
 ## Custom Configurations
-- Crash Handler: You can enable the crash handler by setting the environment variable `AWS_CRT_ENABLE_CRASH_HANDLER=1`. 
-This instructs the AWS Common Runtime (CRT) to take over the process's signal handlers to generate crash dumps in the event of a fatal error.
+- Crash Handler: You can enable the crash handler by setting the environment variable `AWS_CRT_ENABLE_CRASH_HANDLER=1`. This will generate crash dumps in the event of a fatal error.
