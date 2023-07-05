@@ -68,4 +68,4 @@ static: certificate has an existing certificate-key pair that was previously imp
 ```
 
 ## Crash Handler
-You can enable the crash handler by setting the environment variable `AWS_CRT_ENABLE_CRASH_HANDLER=1`. This will print the callstack to `stderr` in the event of a fatal error.
+You can enable the crash handler by setting the environment variable `AWS_CRT_CRASH_HANDLER=1`. This will print the callstack to `stderr` in the event of a fatal error.
