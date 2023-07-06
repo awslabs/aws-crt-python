@@ -66,3 +66,6 @@ Please note that on Mac, once a private key is used with a certificate, that cer
 ```
 static: certificate has an existing certificate-key pair that was previously imported into the Keychain. Using key from Keychain instead of the one provided.
 ```
+
+## Crash Handler
+You can enable the crash handler by setting the environment variable `AWS_CRT_CRASH_HANDLER=1`. This will print the callstack to `stderr` in the event of a fatal error.

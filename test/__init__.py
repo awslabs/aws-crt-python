@@ -6,6 +6,7 @@
 # the "noqa" comment prevents the autoformatter from moving this line below other imports
 import os
 os.environ['AWS_CRT_MEMORY_TRACING'] = '2'  # noqa
+os.environ['AWS_CRT_CRASH_HANDLER'] = '1'   # noqa
 
 from awscrt import NativeResource
 from awscrt._test import check_for_leaks

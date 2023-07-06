@@ -804,6 +804,7 @@ static PyMethodDef s_module_methods[] = {
 
 static const char s_module_name[] = "_awscrt";
 PyDoc_STRVAR(s_module_doc, "C extension for binding AWS implementations of MQTT, HTTP, and friends");
+AWS_STATIC_STRING_FROM_LITERAL(s_crash_handler_env_var, "AWS_CRT_CRASH_HANDLER");
 
 /*******************************************************************************
  * Module Init
@@ -828,10 +829,16 @@ PyMODINIT_FUNC PyInit__awscrt(void) {
     }
 
     s_init_allocator();
-    s_install_crash_handler();
 
     /* Don't report this memory when dumping possible leaks. */
     struct aws_allocator *nontracing_allocator = aws_default_allocator();
+
+    struct aws_string *crash_handler_env = NULL;
+    aws_get_environment_value(nontracing_allocator, s_crash_handler_env_var, &crash_handler_env);
+    if (aws_string_eq_c_str(crash_handler_env, "1")) {
+        s_install_crash_handler();
+    }
+    aws_string_destroy(crash_handler_env);
 
     aws_http_library_init(nontracing_allocator);
     aws_auth_library_init(nontracing_allocator);
