@@ -14,10 +14,11 @@ import shutil
 import subprocess
 import sys
 import sysconfig
+from wheel.bdist_wheel import bdist_wheel
 
 
 def is_64bit():
-    return sys.maxsize > 2**32
+    return sys.maxsize > 2 ** 32
 
 
 def is_32bit():
@@ -121,6 +122,10 @@ def get_cmake_path():
     raise Exception("CMake must be installed to build from source.")
 
 
+def using_system_libcrypto():
+    return os.getenv('AWS_CRT_BUILD_USE_SYSTEM_LIBCRYPTO') == '1'
+
+
 class AwsLib:
     def __init__(self, name, extra_cmake_args=[], libname=None):
         self.name = name
@@ -132,8 +137,9 @@ class AwsLib:
 # They're built along with the extension.
 AWS_LIBS = []
 if sys.platform != 'darwin' and sys.platform != 'win32':
-    # aws-lc produces libcrypto.a
-    AWS_LIBS.append(AwsLib('aws-lc', libname='crypto'))
+    if not using_system_libcrypto():
+        # aws-lc produces libcrypto.a
+        AWS_LIBS.append(AwsLib('aws-lc', libname='crypto'))
     AWS_LIBS.append(AwsLib('s2n'))
 AWS_LIBS.append(AwsLib('aws-c-common'))
 AWS_LIBS.append(AwsLib('aws-c-sdkutils'))
@@ -146,7 +152,6 @@ AWS_LIBS.append(AwsLib('aws-c-http'))
 AWS_LIBS.append(AwsLib('aws-c-auth'))
 AWS_LIBS.append(AwsLib('aws-c-mqtt'))
 AWS_LIBS.append(AwsLib('aws-c-s3'))
-
 
 PROJECT_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -181,6 +186,9 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
             f'-DCMAKE_INSTALL_PREFIX={install_path}',
             f'-DCMAKE_BUILD_TYPE={build_type}',
         ])
+
+        if using_system_libcrypto():
+            cmake_args.append('-DUSE_OPENSSL=ON')
 
         if sys.platform == 'darwin':
             # build lib with same MACOSX_DEPLOYMENT_TARGET that python will ultimately
@@ -256,8 +264,11 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
         else:
             print("Skip building dependencies, source not found.")
 
-        # update paths so awscrt_ext can access dependencies
-        self.include_dirs.append(os.path.join(dep_install_path, 'include'))
+        # update paths so awscrt_ext can access dependencies.
+        # add to the front of any list so that our dependencies are preferred
+        # over anything that might already be on the system (i.e. libcrypto.a)
+
+        self.include_dirs.insert(0, os.path.join(dep_install_path, 'include'))
 
         # some platforms (ex: fedora) use /lib64 instead of just /lib
         lib_dir = 'lib'
@@ -266,10 +277,20 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
         if is_32bit() and os.path.exists(os.path.join(dep_install_path, 'lib32')):
             lib_dir = 'lib32'
 
-        self.library_dirs.append(os.path.join(dep_install_path, lib_dir))
+        self.library_dirs.insert(0, os.path.join(dep_install_path, lib_dir))
 
         # continue with normal build_ext.run()
         super().run()
+
+
+class bdist_wheel_abi3(bdist_wheel):
+    def get_tag(self):
+        python, abi, plat = super().get_tag()
+        if python.startswith("cp") and sys.version_info >= (3, 11):
+            # on CPython, our wheels are abi3 and compatible back to 3.11
+            return "cp311", "abi3", plat
+
+        return python, abi, plat
 
 
 def awscrt_ext():
@@ -277,6 +298,8 @@ def awscrt_ext():
     extra_compile_args = os.environ.get('CFLAGS', '').split()
     extra_link_args = os.environ.get('LDFLAGS', '').split()
     extra_objects = []
+    define_macros = []
+    py_limited_api = False
 
     libraries = [x.libname for x in AWS_LIBS]
 
@@ -296,9 +319,26 @@ def awscrt_ext():
 
     else:  # unix
         # linker will prefer shared libraries over static if it can find both.
-        # force linker to choose static variant by using using "-l:libcrypto.a" syntax instead of just "-lcrypto".
+        # force linker to choose static variant by using using
+        # "-l:libaws-c-common.a" syntax instead of just "-laws-c-common".
+        #
+        # This helps AWS developers creating Lambda applications from Brazil.
+        # In Brazil, both shared and static libs are available.
+        # But Lambda requires all shared libs to be explicitly packaged up.
+        # So it's simpler to link them in statically and have less runtime dependencies.
         libraries = [':lib{}.a'.format(x) for x in libraries]
-        libraries += ['rt']
+
+        # OpenBSD doesn't have librt; functions are found in libc instead.
+        if not sys.platform.startswith('openbsd'):
+            libraries += ['rt']
+
+        if using_system_libcrypto():
+            libraries += ['crypto']
+
+        # FreeBSD doesn't have execinfo as a part of libc like other Unix variant.
+        # Passing linker flag to link execinfo properly
+        if sys.platform.startswith('freebsd'):
+            extra_link_args += ['-lexecinfo']
 
         # hide the symbols from libcrypto.a
         # this prevents weird crashes if an application also ends up using
@@ -322,6 +362,10 @@ def awscrt_ext():
             if not is_macos_universal2():
                 extra_link_args += ['-Wl,-fatal_warnings']
 
+    if sys.version_info >= (3, 11):
+        define_macros.append(('Py_LIMITED_API', '0x030B0000'))
+        py_limited_api = True
+
     return setuptools.Extension(
         '_awscrt',
         language='c',
@@ -329,7 +373,9 @@ def awscrt_ext():
         sources=glob.glob('source/*.c'),
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args,
-        extra_objects=extra_objects
+        extra_objects=extra_objects,
+        define_macros=define_macros,
+        py_limited_api=py_limited_api,
     )
 
 
@@ -364,6 +410,6 @@ setuptools.setup(
     ],
     python_requires='>=3.7',
     ext_modules=[awscrt_ext()],
-    cmdclass={'build_ext': awscrt_build_ext},
+    cmdclass={'build_ext': awscrt_build_ext, "bdist_wheel": bdist_wheel_abi3},
     test_suite='test',
 )

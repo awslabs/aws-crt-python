@@ -11,6 +11,7 @@
 #include <aws/auth/credentials.h>
 #include <aws/common/string.h>
 #include <aws/http/proxy.h>
+#include <aws/io/tls_channel_handler.h>
 
 static const char *s_capsule_name_credentials = "aws_credentials";
 static const char *s_capsule_name_credentials_provider = "aws_credentials_provider";
@@ -512,7 +513,7 @@ PyObject *aws_py_credentials_provider_new_chain(PyObject *self, PyObject *args) 
     if (!providers_pyseq) {
         goto done;
     }
-    size_t provider_count = (size_t)PySequence_Fast_GET_SIZE(providers_pyseq);
+    size_t provider_count = (size_t)PySequence_Size(providers_pyseq);
     if (provider_count == 0) {
         PyErr_SetString(PyExc_ValueError, "Must supply at least one AwsCredentialsProvider.");
         goto done;
@@ -525,8 +526,9 @@ PyObject *aws_py_credentials_provider_new_chain(PyObject *self, PyObject *args) 
     }
 
     for (size_t i = 0; i < provider_count; ++i) {
-        PyObject *provider_py = PySequence_Fast_GET_ITEM(providers_pyseq, i);
+        PyObject *provider_py = PySequence_GetItem(providers_pyseq, i); /* new reference */
         providers_carray[i] = aws_py_get_credentials_provider(provider_py);
+        Py_XDECREF(provider_py);
         if (!providers_carray[i]) {
             goto done;
         }
@@ -723,7 +725,7 @@ PyObject *aws_py_credentials_provider_new_cognito(PyObject *self, PyObject *args
             goto done;
         }
 
-        logins_count = (size_t)PySequence_Fast_GET_SIZE(logins_pyseq);
+        logins_count = (size_t)PySequence_Size(logins_pyseq);
         if (logins_count > 0) {
 
             logins_carray =
@@ -734,7 +736,7 @@ PyObject *aws_py_credentials_provider_new_cognito(PyObject *self, PyObject *args
             }
 
             for (size_t i = 0; i < logins_count; ++i) {
-                PyObject *login_tuple_py = PySequence_Fast_GET_ITEM(logins_pyseq, i);
+                PyObject *login_tuple_py = PySequence_GetItem(logins_pyseq, i); /* New reference */
                 struct aws_cognito_identity_provider_token_pair *login_entry = &logins_carray[i];
                 AWS_ZERO_STRUCT(*login_entry);
 
@@ -749,8 +751,10 @@ PyObject *aws_py_credentials_provider_new_cognito(PyObject *self, PyObject *args
                         PyExc_TypeError,
                         "cognito credentials provider: logins[%zu] is invalid, should be type (str, str)",
                         i);
+                    Py_XDECREF(login_tuple_py);
                     goto done;
                 }
+                Py_XDECREF(login_tuple_py);
             }
         }
     }
@@ -808,6 +812,98 @@ done:
         return capsule;
     }
 
+    Py_XDECREF(capsule);
+    return NULL;
+}
+
+PyObject *aws_py_credentials_provider_new_x509(PyObject *self, PyObject *args) {
+    (void)self;
+    struct aws_allocator *allocator = aws_py_get_allocator();
+
+    struct aws_byte_cursor endpoint_cursor;
+    AWS_ZERO_STRUCT(endpoint_cursor);
+    struct aws_byte_cursor thing_name_cursor;
+    AWS_ZERO_STRUCT(thing_name_cursor);
+    struct aws_byte_cursor role_alias_cursor;
+    AWS_ZERO_STRUCT(role_alias_cursor);
+    PyObject *tls_context_py = NULL;
+    PyObject *client_bootstrap_py = NULL;
+    PyObject *http_proxy_options_py = NULL;
+    struct aws_tls_connection_options tls_connection_options;
+    AWS_ZERO_STRUCT(tls_connection_options);
+
+    if (!PyArg_ParseTuple(
+            args,
+            "s#s#s#OOO",
+            &endpoint_cursor.ptr,   /* s */
+            &endpoint_cursor.len,   /* # */
+            &thing_name_cursor.ptr, /* s */
+            &thing_name_cursor.len, /* # */
+            &role_alias_cursor.ptr, /* s */
+            &role_alias_cursor.len, /* # */
+            &tls_context_py,        /* O */
+            &client_bootstrap_py,   /* O */
+            &http_proxy_options_py /* O */)) {
+        return NULL;
+    }
+
+    struct aws_client_bootstrap *bootstrap = aws_py_get_client_bootstrap(client_bootstrap_py);
+    if (!bootstrap) {
+        return NULL;
+    }
+
+    struct aws_tls_ctx *tls_context = aws_py_get_tls_ctx(tls_context_py);
+    if (!tls_context) {
+        return NULL;
+    }
+
+    /* From hereon, we need to clean up if errors occur.
+     * Fortunately, the capsule destructor will clean up anything stored inside the binding */
+    PyObject *capsule = NULL;
+    bool success = false;
+    aws_tls_connection_options_init_from_ctx(&tls_connection_options, tls_context);
+
+    struct aws_http_proxy_options http_proxy_options_storage;
+    struct aws_http_proxy_options *http_proxy_options = NULL;
+    if (http_proxy_options_py != Py_None) {
+        http_proxy_options = &http_proxy_options_storage;
+        if (!aws_py_http_proxy_options_init(http_proxy_options, http_proxy_options_py)) {
+            goto done;
+        }
+    }
+
+    struct credentials_provider_binding *binding = NULL;
+    capsule = s_new_credentials_provider_binding_and_capsule(&binding);
+    if (!capsule) {
+        goto done;
+    }
+
+    struct aws_credentials_provider_x509_options options = {
+        .endpoint = endpoint_cursor,
+        .thing_name = thing_name_cursor,
+        .role_alias = role_alias_cursor,
+        .shutdown_options =
+            {
+                .shutdown_callback = s_credentials_provider_shutdown_complete,
+                .shutdown_user_data = binding,
+            },
+        .tls_connection_options = &tls_connection_options,
+        .bootstrap = bootstrap,
+        .proxy_options = http_proxy_options,
+    };
+
+    binding->native = aws_credentials_provider_new_x509(allocator, &options);
+    if (!binding->native) {
+        PyErr_SetAwsLastError();
+        goto done;
+    }
+    success = true;
+
+done:
+    aws_tls_connection_options_clean_up(&tls_connection_options);
+    if (success) {
+        return capsule;
+    }
     Py_XDECREF(capsule);
     return NULL;
 }

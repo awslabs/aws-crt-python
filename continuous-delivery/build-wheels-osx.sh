@@ -11,4 +11,7 @@ set -ex
 /Library/Frameworks/Python.framework/Versions/3.10/bin/python3 setup.py sdist bdist_wheel
 /Library/Frameworks/Python.framework/Versions/3.11/bin/python3 setup.py sdist bdist_wheel
 
+# Don't need to build wheels for Python 3.12 and later.
+# The 3.11 wheel uses the stable ABI, so it works with newer versions too.
+
 #now you just need to run twine (that's in a different script)

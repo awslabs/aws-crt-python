@@ -200,7 +200,7 @@ static PyObject *s_aws_set_user_properties_to_PyObject(
             Py_XDECREF(user_properties_list);
             return NULL;
         }
-        PyList_SET_ITEM(user_properties_list, i, tuple); /* Steals reference to tuple */
+        PyList_SetItem(user_properties_list, i, tuple); /* Steals reference to tuple */
     }
     return user_properties_list;
 }
@@ -237,8 +237,10 @@ static void s_on_publish_received(const struct aws_mqtt5_packet_publish_view *pu
     }
 
     for (size_t i = 0; i < subscription_identifier_count; ++i) {
-        PyList_SET_ITEM(
-            subscription_identifier_list, i, PyLong_FromLongLong(publish_packet->subscription_identifiers[i]));
+        PyList_SetItem(
+            subscription_identifier_list,
+            i,
+            PyLong_FromLongLong(publish_packet->subscription_identifiers[i])); /* Steals a reference */
     }
 
     user_properties_list = s_aws_set_user_properties_to_PyObject(publish_packet->user_properties, user_property_count);
@@ -1398,7 +1400,7 @@ static void s_on_publish_complete_fn(
     size_t user_property_count = 0;
 
     if (packet_type == AWS_MQTT5_PT_PUBACK) {
-        if (puback != NULL) {
+        if (packet != NULL) {
             puback = packet;
             reason_code = puback->reason_code;
             reason_string = puback->reason_string;
@@ -1629,7 +1631,7 @@ static void s_on_subscribe_complete_fn(
         }
 
         for (size_t i = 0; i < reason_codes_count; ++i) {
-            PyList_SET_ITEM(reason_codes_list, i, PyLong_FromLong(suback->reason_codes[i]));
+            PyList_SetItem(reason_codes_list, i, PyLong_FromLong(suback->reason_codes[i])); /* Steals a reference */
         }
     }
 
@@ -1860,7 +1862,7 @@ static void s_on_unsubscribe_complete_fn(
         }
 
         for (size_t i = 0; i < reason_codes_count; ++i) {
-            PyList_SET_ITEM(reason_codes_list, i, PyLong_FromLong(unsuback->reason_codes[i]));
+            PyList_SetItem(reason_codes_list, i, PyLong_FromLong(unsuback->reason_codes[i])); /* Steals a reference */
         }
     }
 
@@ -2007,9 +2009,8 @@ PyObject *aws_py_mqtt5_client_get_stats(PyObject *self, PyObject *args) {
     bool success = false;
 
     PyObject *impl_capsule;
-    PyObject *get_stats_callback_fn_py;
 
-    if (!PyArg_ParseTuple(args, "OO", &impl_capsule, &get_stats_callback_fn_py)) {
+    if (!PyArg_ParseTuple(args, "O", &impl_capsule)) {
         return NULL;
     }
 
@@ -2018,7 +2019,7 @@ PyObject *aws_py_mqtt5_client_get_stats(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    /* These must be DECREF'd when function ends */
+    /* These must be DECREF'd when function ends on error */
     PyObject *result = NULL;
 
     struct aws_mqtt5_client_operation_statistics stats;
@@ -2026,26 +2027,49 @@ PyObject *aws_py_mqtt5_client_get_stats(PyObject *self, PyObject *args) {
 
     aws_mqtt5_client_get_stats(client->native, &stats);
 
-    result = PyObject_CallFunction(
-        get_stats_callback_fn_py,
-        "(KKKK)",
-        /* K */ (unsigned long long)stats.incomplete_operation_count,
-        /* K */ (unsigned long long)stats.incomplete_operation_size,
-        /* K */ (unsigned long long)stats.unacked_operation_count,
-        /* K */ (unsigned long long)stats.unacked_operation_size);
+    result = PyTuple_New(4);
     if (!result) {
-        PyErr_WriteUnraisable(PyErr_Occurred());
+        goto done;
+    }
+
+    PyTuple_SetItem(
+        result,
+        0,
+        PyLong_FromUnsignedLongLong((unsigned long long)stats.incomplete_operation_count)); /* Steals a reference */
+    if (PyTuple_GetItem(result, 0) == NULL) {                                               /* Borrowed reference */
+        goto done;
+    }
+
+    PyTuple_SetItem(
+        result,
+        1,
+        PyLong_FromUnsignedLongLong((unsigned long long)stats.incomplete_operation_size)); /* Steals a reference */
+    if (PyTuple_GetItem(result, 1) == NULL) {                                              /* Borrowed reference */
+        goto done;
+    }
+
+    PyTuple_SetItem(
+        result,
+        2,
+        PyLong_FromUnsignedLongLong((unsigned long long)stats.unacked_operation_count)); /* Steals a reference */
+    if (PyTuple_GetItem(result, 2) == NULL) {                                            /* Borrowed reference */
+        goto done;
+    }
+
+    PyTuple_SetItem(
+        result,
+        3,
+        PyLong_FromUnsignedLongLong((unsigned long long)stats.unacked_operation_size)); /* Steals a reference */
+    if (PyTuple_GetItem(result, 3) == NULL) {                                           /* Borrowed reference */
         goto done;
     }
 
     success = true;
 
 done:
-
-    Py_XDECREF(result);
-
     if (success) {
-        Py_RETURN_NONE;
+        return result;
     }
+    Py_XDECREF(result);
     return NULL;
 }

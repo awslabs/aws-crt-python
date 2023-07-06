@@ -1,14 +1,7 @@
-
 import Builder
 import argparse
-import json
-import os.path
 import os
-import pathlib
-import subprocess
-import re
 import sys
-import tempfile
 
 # Fall back on using the "{python}" builder variable
 PYTHON_DEFAULT = '{python}'
@@ -224,25 +217,71 @@ class SetupForTests(Builder.Action):
         raise Exception('No initialized tokens found')
 
 
+
 class AWSCrtPython(Builder.Action):
+    python = PYTHON_DEFAULT
+
+    # Some CI containers have pip installed via "rpm" or non-Python methods, and this causes issues when
+    # we try to update pip via "python -m pip install --upgrade" because there are no RECORD files present.
+    # Therefore, we have to seek alternative ways with a last resort of installing with "--ignore-installed"
+    # if nothing else works AND the builder is running in GitHub actions.
+    # As of writing, this is primarily an issue with the AL2-x64 image.
+    def try_to_upgrade_pip(self, env):
+        did_upgrade = False
+
+        if (self.python == '{python}'):
+            self.python = env.config["variables"]["python"]
+
+        pip_result = env.shell.exec(self.python, '-m', 'pip', 'install', '--upgrade', 'pip', check=False)
+        if pip_result.returncode == 0:
+            did_upgrade = True
+        else:
+            print("Could not update pip via normal pip upgrade. Next trying via package manager...")
+
+        if (did_upgrade == False):
+            try:
+                Builder.InstallPackages(['pip']).run(env)
+                did_upgrade = True
+            except Exception:
+                print("Could not update pip via package manager. Next resorting to forcing an ignore install...")
+
+        if (did_upgrade == False):
+            # Only run in GitHub actions by checking for specific environment variable
+            # Source: https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
+            if (os.getenv("GITHUB_ACTIONS") is not None):
+                pip_result = env.shell.exec(
+                    self.python, '-m', 'pip', 'install', '--upgrade',
+                    '--ignore-installed', 'pip', check=False)
+                if pip_result.returncode == 0:
+                    did_upgrade = True
+                else:
+                    print("Could not update pip via ignore install! Something is terribly wrong!")
+                    sys.exit(12)
+            else:
+                print("Not on GitHub actions - skipping reinstalling Pip. Update/Install pip manually and rerun the builder")
 
     def run(self, env):
         # allow custom python to be used
         parser = argparse.ArgumentParser()
         parser.add_argument('--python')
         args = parser.parse_known_args(env.args.args)[0]
-        python = args.python if args.python else PYTHON_DEFAULT
+        self.python = args.python if args.python else PYTHON_DEFAULT
+
+        # Enable S3 tests
+        env.shell.setenv('AWS_TEST_S3', '1')
 
         actions = [
-            [python, '-m', 'pip', 'install', '--upgrade', '--requirement', 'requirements-dev.txt'],
-            SetupForTests(),
-            [python, '-m', 'pip', 'install', '--verbose', '.'],
+            # Upgrade Pip via a number of different methods
+            self.try_to_upgrade_pip,
+            [self.python, '-m', 'pip', 'install', '--upgrade', '--requirement', 'requirements-dev.txt'],
+            Builder.SetupCrossCICrtEnvironment(),
+            [self.python, '-m', 'pip', 'install', '--verbose', '.'],
             # "--failfast" because, given how our leak-detection in tests currently works,
             # once one test fails all the rest usually fail too.
-            [python, '-m', 'unittest', 'discover', '--verbose', '--failfast'],
+            [self.python, '-m', 'unittest', 'discover', '--verbose', '--failfast'],
             # http_client_test.py launches external processes using the extra args
-            [python, 'crt/aws-c-http/integration-testing/http_client_test.py',
-                python, 'elasticurl.py'],
+            [self.python, 'crt/aws-c-http/integration-testing/http_client_test.py',
+                self.python, 'elasticurl.py'],
         ]
 
         return Builder.Script(actions, name='aws-crt-python')

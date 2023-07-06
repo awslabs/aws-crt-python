@@ -150,7 +150,6 @@ static void s_on_client_connection_setup(
     }
 
     Py_XDECREF(capsule);
-    Py_XDECREF(result);
     PyGILState_Release(state);
 }
 

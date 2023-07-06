@@ -7,7 +7,7 @@ on:
       - 'docs'
 
 env:
-  BUILDER_VERSION: v0.9.22
+  BUILDER_VERSION: v0.9.47
   BUILDER_SOURCE: releases
   BUILDER_HOST: https://d19elf31gohf1l.cloudfront.net
   PACKAGE_NAME: aws-crt-python
@@ -19,6 +19,24 @@ env:
   AWS_REGION: us-east-1
 
 jobs:
+  manylinux1:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - x64
+          - x86
+        python:
+          - cp37-cp37m
+          - cp38-cp38
+          - cp39-cp39
+    steps:
+    - name: Build ${{ env.PACKAGE_NAME }}
+      run: |
+        aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
+        ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-manylinux1-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }} --python /opt/python/${{ matrix.python }}/bin/python
+
   manylinux2014:
     runs-on: ubuntu-20.04 # latest
     strategy:
@@ -34,6 +52,7 @@ jobs:
           - cp39-cp39
           - cp310-cp310
           - cp311-cp311
+          - cp312-cp312
     steps:
     # Only aarch64 needs this, but it doesn't hurt anything
     - name: Install qemu/docker
@@ -44,6 +63,30 @@ jobs:
         aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
         ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-manylinux2014-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }} --python /opt/python/${{ matrix.python }}/bin/python
 
+  musllinux-1-1:
+    runs-on: ubuntu-22.04 # latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - x64
+          - aarch64
+        python:
+          - cp37-cp37m
+          - cp38-cp38
+          - cp39-cp39
+          - cp310-cp310
+          - cp311-cp311
+          - cp312-cp312
+    steps:
+    # Only aarch64 needs this, but it doesn't hurt anything
+    - name: Install qemu/docker
+      run: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+
+    - name: Build ${{ env.PACKAGE_NAME }}
+      run: |
+        aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
+        ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-musllinux-1-1-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }} --python /opt/python/${{ matrix.python }}/bin/python
 
   raspberry:
     runs-on: ubuntu-20.04 # latest
@@ -64,7 +107,7 @@ jobs:
 
 
   linux-compat:
-    runs-on: ubuntu-20.04 # latest
+    runs-on: ubuntu-22.04 # latest
     strategy:
       matrix:
         image:
@@ -81,7 +124,7 @@ jobs:
 
 
   linux-compiler-compat:
-    runs-on: ubuntu-20.04 # latest
+    runs-on: ubuntu-22.04 # latest
     strategy:
       matrix:
         compiler:
@@ -102,6 +145,28 @@ jobs:
           aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
           ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-${{ env.LINUX_BASE_IMAGE }} build -p ${{ env.PACKAGE_NAME }} --compiler=${{ matrix.compiler }}
 
+  use-system-libcrypto:
+    runs-on: ubuntu-20.04 # latest
+    steps:
+      - name: Build ${{ env.PACKAGE_NAME }}
+        env:
+          AWS_CRT_BUILD_USE_SYSTEM_LIBCRYPTO: '1'
+        run: |
+          python3 -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder')"
+          chmod a+x builder
+          ./builder build -p ${{ env.PACKAGE_NAME }}
+      - name: Assert libcrypto.so used
+        run: |
+          # assert it's linked against the system's libcrypto.so
+          AWSCRT_PATH=`python3 -c "import _awscrt; print(_awscrt.__file__)"`
+          printf "AWSCRT_PATH: $AWSCRT_PATH\n"
+
+          LINKED_AGAINST=`ldd $AWSCRT_PATH`
+          printf "LINKED AGAINST:\n$LINKED_AGAINST\n"
+
+          USES_LIBCRYPTO_SO=`echo "$LINKED_AGAINST" | grep 'libcrypto*.so' | head -1`
+          test -n "$USES_LIBCRYPTO_SO"
+
 
   windows:
     runs-on: windows-2022 # latest
@@ -116,7 +181,7 @@ jobs:
 
 
   osx:
-    runs-on: macos-11 # latest
+    runs-on: macos-13 # latest
     steps:
     - name: Build ${{ env.PACKAGE_NAME }} + consumers
       run: |
@@ -125,11 +190,55 @@ jobs:
         ./builder build -p ${{ env.PACKAGE_NAME }}
 
 
+  openbsd:
+    runs-on: ubuntu-latest # macos would be faster. TODO: diagnose why some tests are failing
+    steps:
+      # Cannot use builder to checkout as OpenBSD doesn't ship git in the base install
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - name: Build ${{ env.PACKAGE_NAME }} + consumers
+        uses: cross-platform-actions/action@v0.10.0
+        with:
+          operating_system: openbsd
+          architecture: x86-64
+          version: '7.2'
+          shell: bash
+          environment_variables: AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION AWS_REGION
+          run: |
+            sudo pkg_add awscli py3-pip py3-urllib3
+            python3 -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz', 'builder')"
+            chmod a+x builder
+            ./builder build -p ${{ env.PACKAGE_NAME }}
+
+
+  freebsd:
+    runs-on: macos-12
+    steps:
+      # Cannot use builder to checkout as OpenBSD doesn't ship git in the base install
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - name: Build ${{ env.PACKAGE_NAME }} + consumers
+        uses: vmactions/freebsd-vm@v0
+        with:
+          envs: 'AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION AWS_REGION'
+          usesh: true
+          sync: rsync
+          copyback: false
+          prepare: |
+            pkg install -y python3 py39-urllib3 py39-pip cmake
+            python3 -m pip install awscli
+          run: |
+            python3 -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz', 'builder')"
+            chmod a+x builder
+            ./builder build -p ${{ env.PACKAGE_NAME }}
+
   # check that tests requiring custom env-vars or AWS credentials are simply skipped
   tests-ok-without-env-vars:
-    runs-on: ubuntu-20.04 # latest
+    runs-on: ubuntu-22.04 # latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: true
       - name: Run tests without env-vars or AWS creds
@@ -144,9 +253,9 @@ jobs:
           python3 -m unittest discover --failfast --verbose
 
   package-source:
-    runs-on: ubuntu-20.04 # latest
+    runs-on: ubuntu-22.04 # latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: true
       - name: Package source + install
@@ -158,9 +267,9 @@ jobs:
 
   # check that docs can still build
   check-docs:
-    runs-on: ubuntu-20.04 # latest
+    runs-on: ubuntu-22.04 # latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: true
       - name: Check docs
@@ -170,10 +279,10 @@ jobs:
           ./scripts/make-docs.py
 
   check-submodules:
-    runs-on: ubuntu-20.04 # latest
+    runs-on: ubuntu-22.04 # latest
     steps:
     - name: Checkout Source
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         submodules: true
         fetch-depth: 0

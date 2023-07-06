@@ -20,6 +20,7 @@ PyObject *aws_py_mqtt_client_connection_on_message(PyObject *self, PyObject *arg
 PyObject *aws_py_mqtt_client_connection_unsubscribe(PyObject *self, PyObject *args);
 PyObject *aws_py_mqtt_client_connection_resubscribe_existing_topics(PyObject *self, PyObject *args);
 PyObject *aws_py_mqtt_client_connection_disconnect(PyObject *self, PyObject *args);
+PyObject *aws_py_mqtt_client_connection_get_stats(PyObject *self, PyObject *args);
 
 PyObject *aws_py_mqtt_ws_handshake_transform_complete(PyObject *self, PyObject *args);
 

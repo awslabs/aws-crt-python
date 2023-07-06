@@ -16,6 +16,7 @@ phases:
       - mkdir dist
       - cp -rv $CODEBUILD_SRC_DIR_aws_crt_python_windows/dist/* dist/
       - cp -rv $CODEBUILD_SRC_DIR_aws_crt_python_manylinux1/dist/* dist/
+      - cp -rv $CODEBUILD_SRC_DIR_aws_crt_python_musllinux1_1/dist/* dist/
       - cp -rv $CODEBUILD_SRC_DIR_aws_crt_python_osx/* dist/
       - ls -la dist/
       - cd aws-crt-python

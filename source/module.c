@@ -531,20 +531,12 @@ void *aws_py_get_binding(PyObject *obj, const char *capsule_name, const char *cl
 
     PyObject *py_binding = PyObject_GetAttrString(obj, "_binding"); /* new reference */
     if (!py_binding) {
-        return PyErr_Format(
-            PyExc_TypeError,
-            "Expected valid '%s', received '%s' (no '_binding' attribute)",
-            class_name,
-            Py_TYPE(obj)->tp_name);
+        return PyErr_Format(PyExc_TypeError, "Expected valid '%s' (no '_binding' attribute)", class_name);
     }
 
     void *binding = NULL;
     if (!PyCapsule_CheckExact(py_binding)) {
-        PyErr_Format(
-            PyExc_TypeError,
-            "Expected valid '%s', received '%s' ('_binding' attribute is not a capsule)",
-            class_name,
-            Py_TYPE(obj)->tp_name);
+        PyErr_Format(PyExc_TypeError, "Expected valid '%s' ('_binding' attribute is not a capsule)", class_name);
         goto done;
     }
 
@@ -552,9 +544,8 @@ void *aws_py_get_binding(PyObject *obj, const char *capsule_name, const char *cl
     if (!binding) {
         PyErr_Format(
             PyExc_TypeError,
-            "Expected valid '%s', received '%s' ('_binding' attribute does not contain '%s')",
+            "Expected valid '%s' ('_binding' attribute does not contain '%s')",
             class_name,
-            Py_TYPE(obj)->tp_name,
             capsule_name);
         goto done;
     }
@@ -706,6 +697,7 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(mqtt_client_connection_unsubscribe, METH_VARARGS),
     AWS_PY_METHOD_DEF(mqtt_client_connection_disconnect, METH_VARARGS),
     AWS_PY_METHOD_DEF(mqtt_ws_handshake_transform_complete, METH_VARARGS),
+    AWS_PY_METHOD_DEF(mqtt_client_connection_get_stats, METH_VARARGS),
 
     /* MQTT5 Client */
     AWS_PY_METHOD_DEF(mqtt5_client_new, METH_VARARGS),
@@ -769,6 +761,7 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(credentials_provider_new_chain, METH_VARARGS),
     AWS_PY_METHOD_DEF(credentials_provider_new_delegate, METH_VARARGS),
     AWS_PY_METHOD_DEF(credentials_provider_new_cognito, METH_VARARGS),
+    AWS_PY_METHOD_DEF(credentials_provider_new_x509, METH_VARARGS),
     AWS_PY_METHOD_DEF(signing_config_new, METH_VARARGS),
     AWS_PY_METHOD_DEF(signing_config_get_algorithm, METH_VARARGS),
     AWS_PY_METHOD_DEF(signing_config_get_signature_type, METH_VARARGS),
@@ -811,6 +804,7 @@ static PyMethodDef s_module_methods[] = {
 
 static const char s_module_name[] = "_awscrt";
 PyDoc_STRVAR(s_module_doc, "C extension for binding AWS implementations of MQTT, HTTP, and friends");
+AWS_STATIC_STRING_FROM_LITERAL(s_crash_handler_env_var, "AWS_CRT_CRASH_HANDLER");
 
 /*******************************************************************************
  * Module Init
@@ -835,10 +829,16 @@ PyMODINIT_FUNC PyInit__awscrt(void) {
     }
 
     s_init_allocator();
-    s_install_crash_handler();
 
     /* Don't report this memory when dumping possible leaks. */
     struct aws_allocator *nontracing_allocator = aws_default_allocator();
+
+    struct aws_string *crash_handler_env = NULL;
+    aws_get_environment_value(nontracing_allocator, s_crash_handler_env_var, &crash_handler_env);
+    if (aws_string_eq_c_str(crash_handler_env, "1")) {
+        s_install_crash_handler();
+    }
+    aws_string_destroy(crash_handler_env);
 
     aws_http_library_init(nontracing_allocator);
     aws_auth_library_init(nontracing_allocator);
