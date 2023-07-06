@@ -1,7 +1,0 @@
-awscrt
-======
-
-.. toctree::
-   :maxdepth: 4
-
-   awscrt

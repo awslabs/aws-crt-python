@@ -1,24 +1,25 @@
 {
     "name": "aws-crt-python",
+    "!cmake_args": [
+        "-DS2N_NO_PQ_ASM=ON"
+    ],
+    "hosts": {
+        "manylinux": {
+            "_comment": "Use existing compiler on manylinux. These are the images we use for release. We want to be sure things work with the defaults.",
+            "needs_compiler": false
+        },
+        "musllinux": {
+            "_comment": "Use existing compiler on musllinux. These are the images we use for release. We want to be sure things work with the defaults.",
+            "needs_compiler": false
+        }
+    },
     "targets": {
         "android": {
             "enabled": false,
             "_comment": "disabled until we have a reason to support python on android"
-        },
-        "linux": {
-            "variables": {
-                "openssl_include": "/opt/openssl/include",
-                "openssl_lib": "/opt/openssl/lib"
-            }
         }
     },
-    "hosts": {
-        "manylinux": {
-            "!build_steps": [
-                "manylinux-ci"
-            ]
-        }
-    },
+    "_comment": "build steps defined in: .builder/actions/aws_crt_python.py",
     "build_steps": [
         "aws-crt-python"
     ],

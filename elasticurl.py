@@ -1,6 +1,5 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
-from __future__ import print_function
 import argparse
 import sys
 import os
@@ -234,7 +233,10 @@ if url.path:
 if url.query:
     request.path += '?' + url.query
 
-request.headers.add('host', hostname)
+if connection.version == http.HttpVersion.Http2:
+    request.headers.add(':authority', hostname)
+else:
+    request.headers.add('host', hostname)
 request.headers.add('user-agent', 'elasticurl.py 1.0, Powered by the AWS Common Runtime.')
 
 if data_len != 0:

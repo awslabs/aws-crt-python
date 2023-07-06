@@ -26,6 +26,7 @@ static void s_async_signing_data_destroy(struct async_signing_data *async_data) 
         Py_XDECREF(async_data->py_signing_config);
         Py_XDECREF(async_data->py_on_complete);
         aws_signable_destroy(async_data->signable);
+        aws_mem_release(aws_py_get_allocator(), async_data);
     }
 }
 
@@ -104,6 +105,7 @@ PyObject *aws_py_sign_request_aws(PyObject *self, PyObject *args) {
 
     async_data->signable = aws_signable_new_http_request(aws_py_get_allocator(), http_request);
     if (!async_data->signable) {
+        PyErr_SetAwsLastError();
         goto error;
     }
 

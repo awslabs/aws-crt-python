@@ -7,12 +7,11 @@ All network operations in `awscrt.http` are asynchronous.
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 
-from __future__ import absolute_import
 import _awscrt
 from concurrent.futures import Future
 from awscrt import NativeResource
 import awscrt.exceptions
-from awscrt.io import ClientBootstrap, EventLoopGroup, DefaultHostResolver, InputStream, TlsConnectionOptions, SocketOptions
+from awscrt.io import ClientBootstrap, InputStream, TlsConnectionOptions, SocketOptions
 from enum import IntEnum
 
 
@@ -83,7 +82,7 @@ class HttpClientConnection(HttpConnectionBase):
     def new(cls,
             host_name,
             port,
-            bootstrap,
+            bootstrap=None,
             socket_options=None,
             tls_connection_options=None,
             proxy_options=None):
@@ -95,7 +94,8 @@ class HttpClientConnection(HttpConnectionBase):
 
             port (int): Connect to port.
 
-            bootstrap (ClientBootstrap): Client bootstrap to use when initiating socket connection.
+            bootstrap (Optional [ClientBootstrap]): Client bootstrap to use when initiating socket connection.
+                If None is provided, the default singleton is used.
 
             socket_options (Optional[SocketOptions]): Optional socket options.
                 If None is provided, then default options are used.
@@ -125,9 +125,7 @@ class HttpClientConnection(HttpConnectionBase):
                 socket_options = SocketOptions()
 
             if not bootstrap:
-                event_loop_group = EventLoopGroup(1)
-                host_resolver = DefaultHostResolver(event_loop_group)
-                bootstrap = ClientBootstrap(event_loop_group, host_resolver)
+                bootstrap = ClientBootstrap.get_or_create_static_default()
 
             connection = cls()
             connection._host_name = host_name
@@ -179,7 +177,7 @@ class HttpClientConnection(HttpConnectionBase):
     def request(self, request, on_response=None, on_body=None):
         """Create :class:`HttpClientStream` to carry out the request/response exchange.
 
-        NOTE: The stream sends no data until :meth:`HttpClientStream.activate()`
+        NOTE: The HTTP stream sends no data until :meth:`HttpClientStream.activate()`
         is called. Call activate() when you're ready for callbacks and events to fire.
 
         Args:
@@ -188,31 +186,31 @@ class HttpClientConnection(HttpConnectionBase):
             on_response: Optional callback invoked once main response headers are received.
                 The function should take the following arguments and return nothing:
 
-                *   `http_stream` (:class:`HttpClientStream`): Stream carrying
-                    out this request/response exchange.
+                    *   `http_stream` (:class:`HttpClientStream`): HTTP stream carrying
+                        out this request/response exchange.
 
-                *   `status_code` (int): Response status code.
+                    *   `status_code` (int): Response status code.
 
-                *   `headers` (List[Tuple[str, str]]): Response headers as a
-                    list of (name,value) pairs.
+                    *   `headers` (List[Tuple[str, str]]): Response headers as a
+                        list of (name,value) pairs.
 
-                *   `**kwargs` (dict): Forward compatibility kwargs.
+                    *   `**kwargs` (dict): Forward compatibility kwargs.
 
-                An exception raise by this function will cause the stream to end in error.
+                An exception raise by this function will cause the HTTP stream to end in error.
                 This callback is always invoked on the connection's event-loop thread.
 
             on_body: Optional callback invoked 0+ times as response body data is received.
                 The function should take the following arguments and return nothing:
 
-                *   `http_stream` (:class:`HttpClientStream`): Stream carrying
-                    out this request/response exchange.
+                    *   `http_stream` (:class:`HttpClientStream`): HTTP stream carrying
+                        out this request/response exchange.
 
-                *   `chunk` (buffer): Response body data (not necessarily
-                    a whole "chunk" of chunked encoding).
+                    *   `chunk` (buffer): Response body data (not necessarily
+                        a whole "chunk" of chunked encoding).
 
-                *   `**kwargs` (dict): Forward-compatibility kwargs.
+                    *   `**kwargs` (dict): Forward-compatibility kwargs.
 
-                An exception raise by this function will cause the stream to end in error.
+                An exception raise by this function will cause the HTTP stream to end in error.
                 This callback is always invoked on the connection's event-loop thread.
 
         Returns:
@@ -245,11 +243,11 @@ class HttpStreamBase(NativeResource):
 
 
 class HttpClientStream(HttpStreamBase):
-    """Stream that sends a request and receives a response.
+    """HTTP stream that sends a request and receives a response.
 
     Create an HttpClientStream with :meth:`HttpClientConnection.request()`.
 
-    NOTE: The stream sends no data until :meth:`HttpClientStream.activate()`
+    NOTE: The HTTP stream sends no data until :meth:`HttpClientStream.activate()`
     is called. Call activate() when you're ready for callbacks and events to fire.
 
     Attributes:
@@ -288,7 +286,7 @@ class HttpClientStream(HttpStreamBase):
     def activate(self):
         """Begin sending the request.
 
-        The stream does nothing until this is called. Call activate() when you
+        The HTTP stream does nothing until this is called. Call activate() when you
         are ready for its callbacks and events to fire.
         """
         _awscrt.http_client_stream_activate(self)
@@ -313,7 +311,7 @@ class HttpMessageBase(NativeResource):
     """
     Base for HttpRequest and HttpResponse classes.
     """
-    __slots__ = ('_headers')
+    __slots__ = ('_headers', '_body_stream')
 
     def __init__(self, binding, headers, body_stream=None):
         assert isinstance(headers, HttpHeaders)
@@ -321,6 +319,7 @@ class HttpMessageBase(NativeResource):
         super().__init__()
         self._binding = binding
         self._headers = headers
+        self._body_stream = None
 
         if body_stream:
             self.body_stream = body_stream
@@ -332,13 +331,12 @@ class HttpMessageBase(NativeResource):
 
     @property
     def body_stream(self):
-        """InputStream: Stream of outgoing body."""
-        return _awscrt.http_message_get_body_stream(self._binding)
+        return self._body_stream
 
     @body_stream.setter
     def body_stream(self, stream):
-        stream = InputStream.wrap(stream)
-        return _awscrt.http_message_set_body_stream(self._binding, stream)
+        self._body_stream = InputStream.wrap(stream)
+        _awscrt.http_message_set_body_stream(self._binding, self._body_stream)
 
 
 class HttpRequest(HttpMessageBase):
@@ -352,7 +350,7 @@ class HttpRequest(HttpMessageBase):
         path (str): HTTP path-and-query value. Default value is "/".
         headers (Optional[HttpHeaders]): Optional headers. If None specified,
             an empty :class:`HttpHeaders` is created.
-        body_string(Optional[Union[InputStream, io.IOBase]]): Optional body as stream.
+        body_stream(Optional[Union[InputStream, io.IOBase]]): Optional body as binary stream.
     """
 
     __slots__ = ()
@@ -533,6 +531,27 @@ class HttpHeaders(NativeResource):
         return self.__class__.__name__ + "(" + str([pair for pair in self]) + ")"
 
 
+class HttpProxyConnectionType(IntEnum):
+    """Proxy connection type enumeration"""
+    Legacy = 0
+    """
+    Use the old connection establishment logic that would use:
+
+         1. Forwarding if not using TLS
+         2. Tunneling if using TLS
+    """
+
+    Forwarding = 1
+    """
+    Establish a request forwarding connection to the proxy.
+
+    In this case, TLS is not a valid option.
+    """
+
+    Tunneling = 2
+    """Establish a tunneling connection through the proxy to the ultimate endpoint."""
+
+
 class HttpProxyAuthenticationType(IntEnum):
     """Proxy authentication type enumeration."""
     Nothing = 0
@@ -565,6 +584,10 @@ class HttpProxyOptions:
         auth_password (Optional[str]): Username to use when `auth_type` is
             :const:`HttpProxyAuthenticationType.Basic`.
 
+        connection_type (Optional[HttpProxyConnectionType): Type of proxy connection to make.
+            Default is :const:`HttpProxyConnectionType.Legacy`.
+
+
     Attributes:
         host_name (str): Name of the proxy server to connect through.
 
@@ -583,6 +606,8 @@ class HttpProxyOptions:
         auth_password (Optional[str]): Username to use when `auth_type` is
             :const:`HttpProxyAuthenticationType.Basic`.
 
+        connection_type (HttpProxyConnectionType): Type of proxy connection to make.
+
     """
 
     def __init__(self,
@@ -591,10 +616,12 @@ class HttpProxyOptions:
                  tls_connection_options=None,
                  auth_type=HttpProxyAuthenticationType.Nothing,
                  auth_username=None,
-                 auth_password=None):
+                 auth_password=None,
+                 connection_type=HttpProxyConnectionType.Legacy):
         self.host_name = host_name
         self.port = port
         self.tls_connection_options = tls_connection_options
         self.auth_type = auth_type
         self.auth_username = auth_username
         self.auth_password = auth_password
+        self.connection_type = connection_type

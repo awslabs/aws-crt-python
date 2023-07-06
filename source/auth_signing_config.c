@@ -38,6 +38,8 @@ static void s_signing_config_capsule_destructor(PyObject *py_capsule) {
     Py_XDECREF(binding->py_credentials_provider);
     Py_XDECREF(binding->py_should_sign_header_fn);
     Py_XDECREF(binding->py_date);
+
+    aws_mem_release(aws_py_get_allocator(), binding);
 }
 
 static bool s_should_sign_header(const struct aws_byte_cursor *name, void *userdata) {

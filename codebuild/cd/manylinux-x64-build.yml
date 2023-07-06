@@ -12,12 +12,13 @@ phases:
   build:
     commands:
       - echo Build started on `date`
-      - /opt/python/cp35-cp35m/bin/python setup.py sdist bdist_wheel
-      - auditwheel repair --plat manylinux1_x86_64 dist/awscrt-*cp35-cp35m-linux_x86_64.whl
-      - /opt/python/cp36-cp36m/bin/python setup.py sdist bdist_wheel
-      - auditwheel repair --plat manylinux1_x86_64 dist/awscrt-*cp36-cp36m-linux_x86_64.whl
       - /opt/python/cp37-cp37m/bin/python setup.py sdist bdist_wheel
       - auditwheel repair --plat manylinux1_x86_64 dist/awscrt-*cp37-cp37m-linux_x86_64.whl
+      - /opt/python/cp38-cp38/bin/python setup.py sdist bdist_wheel
+      - auditwheel repair --plat manylinux1_x86_64 dist/awscrt-*cp38-cp38-linux_x86_64.whl
+      - /opt/python/cp39-cp39/bin/python setup.py sdist bdist_wheel
+      - auditwheel repair --plat manylinux1_x86_64 dist/awscrt-*cp39-cp39-linux_x86_64.whl
+      # python 3.9 is the last version manylinux1 will ever receive
       - cp -r wheelhouse ../dist
       - cp dist/*.tar.gz ../dist/
   post_build:

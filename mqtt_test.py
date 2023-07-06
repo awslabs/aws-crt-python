@@ -1,8 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 
-from __future__ import print_function
-
 import argparse
 from awscrt import io, mqtt
 from awscrt.io import LogLevel
@@ -49,9 +47,12 @@ def on_connection_resumed(connection, return_code, session_present, **kwargs):
 
 receive_results = {}
 receive_event = threading.Event()
-def on_receive_message(topic, payload, **kwargs):
+def on_receive_message(topic, payload, dup, qos, retain, **kwargs):
     receive_results['topic'] = topic
     receive_results['payload'] = payload
+    receive_results['dup'] = dup
+    receive_results['qos'] = qos
+    receive_results['retain'] = retain
     receive_event.set()
 
 # Run

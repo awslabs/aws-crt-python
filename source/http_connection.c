@@ -8,6 +8,7 @@
 
 #include <aws/common/array_list.h>
 #include <aws/http/connection.h>
+#include <aws/http/proxy.h>
 #include <aws/http/request_response.h>
 #include <aws/io/socket.h>
 
@@ -149,7 +150,6 @@ static void s_on_client_connection_setup(
     }
 
     Py_XDECREF(capsule);
-    Py_XDECREF(result);
     PyGILState_Release(state);
 }
 

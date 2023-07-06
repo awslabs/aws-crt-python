@@ -1,58 +1,76 @@
-
 import Builder
+import argparse
 import os
 import sys
 
-
-class InstallPythonReqs(Builder.Action):
-    def __init__(self, trust_hosts=False, deps=[], python=sys.executable):
-        self.trust_hosts = trust_hosts
-        self.core = ('pip', 'setuptools')
-        self.deps = deps
-        self.python = python
-
-    def run(self, env):
-        trusted_hosts = []
-        # These are necessary for older hosts with out of date certs or pip
-        if self.trust_hosts:
-            trusted_hosts = ['--trusted-host', 'pypi.org', '--trusted-host', 'files.pythonhosted.org']
-
-        # setuptools must be installed before packages that need it, or else it won't be in the
-        # package database in time for the subsequent install and pip fails
-        steps = []
-        for deps in (self.core, self.deps):
-            steps.append([self.python, '-m', 'pip', 'install', *trusted_hosts, *deps])
-
-        return Builder.Script(steps, name='install-python-reqs')
+# Fall back on using the "{python}" builder variable
+PYTHON_DEFAULT = '{python}'
 
 
 class AWSCrtPython(Builder.Action):
-    def __init__(self, custom_python=None, name=None):
-        """
-        Prefer the current python3 executable (so that venv is used).
-        But allow a custom python to be used for installing and testing awscrt on.
-        """
-        self.python3 = sys.executable
-        self.custom_python = custom_python if custom_python else self.python3
-        self.name = name if name else 'aws-crt-python'
+    python = PYTHON_DEFAULT
+
+    # Some CI containers have pip installed via "rpm" or non-Python methods, and this causes issues when
+    # we try to update pip via "python -m pip install --upgrade" because there are no RECORD files present.
+    # Therefore, we have to seek alternative ways with a last resort of installing with "--ignore-installed"
+    # if nothing else works AND the builder is running in GitHub actions.
+    # As of writing, this is primarily an issue with the AL2-x64 image.
+    def try_to_upgrade_pip(self, env):
+        did_upgrade = False
+
+        if (self.python == '{python}'):
+            self.python = env.config["variables"]["python"]
+
+        pip_result = env.shell.exec(self.python, '-m', 'pip', 'install', '--upgrade', 'pip', check=False)
+        if pip_result.returncode == 0:
+            did_upgrade = True
+        else:
+            print("Could not update pip via normal pip upgrade. Next trying via package manager...")
+
+        if (did_upgrade == False):
+            try:
+                Builder.InstallPackages(['pip']).run(env)
+                did_upgrade = True
+            except Exception:
+                print("Could not update pip via package manager. Next resorting to forcing an ignore install...")
+
+        if (did_upgrade == False):
+            # Only run in GitHub actions by checking for specific environment variable
+            # Source: https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
+            if (os.getenv("GITHUB_ACTIONS") is not None):
+                pip_result = env.shell.exec(
+                    self.python, '-m', 'pip', 'install', '--upgrade',
+                    '--ignore-installed', 'pip', check=False)
+                if pip_result.returncode == 0:
+                    did_upgrade = True
+                else:
+                    print("Could not update pip via ignore install! Something is terribly wrong!")
+                    sys.exit(12)
+            else:
+                print("Not on GitHub actions - skipping reinstalling Pip. Update/Install pip manually and rerun the builder")
 
     def run(self, env):
-        install_options = []
-        if 'linux' == Builder.Host.current_os():
-            install_options = [
-                '--install-option=--include-dirs={openssl_include}',
-                '--install-option=--library-dirs={openssl_lib}']
+        # allow custom python to be used
+        parser = argparse.ArgumentParser()
+        parser.add_argument('--python')
+        args = parser.parse_known_args(env.args.args)[0]
+        self.python = args.python if args.python else PYTHON_DEFAULT
+
+        # Enable S3 tests
+        env.shell.setenv('AWS_TEST_S3', '1')
 
         actions = [
-            InstallPythonReqs(deps=['boto3'], python=self.custom_python),
-            [self.custom_python, '-m', 'pip', 'install', '.', '--install-option=--verbose',
-                '--install-option=build_ext', *install_options],
+            # Upgrade Pip via a number of different methods
+            self.try_to_upgrade_pip,
+            [self.python, '-m', 'pip', 'install', '--upgrade', '--requirement', 'requirements-dev.txt'],
+            Builder.SetupCrossCICrtEnvironment(),
+            [self.python, '-m', 'pip', 'install', '--verbose', '.'],
             # "--failfast" because, given how our leak-detection in tests currently works,
             # once one test fails all the rest usually fail too.
-            [self.custom_python, '-m', 'unittest', 'discover', '--verbose', '--failfast'],
-            # http_client_test.py is python3-only. It launches external processes using the extra args
-            [self.python3, 'crt/aws-c-http/integration-testing/http_client_test.py',
-                self.custom_python, 'elasticurl.py'],
+            [self.python, '-m', 'unittest', 'discover', '--verbose', '--failfast'],
+            # http_client_test.py launches external processes using the extra args
+            [self.python, 'crt/aws-c-http/integration-testing/http_client_test.py',
+                self.python, 'elasticurl.py'],
         ]
 
-        return Builder.Script(actions, name=self.name)
+        return Builder.Script(actions, name='aws-crt-python')

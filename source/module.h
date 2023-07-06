@@ -18,6 +18,15 @@ struct aws_byte_buf;
 struct aws_byte_cursor;
 struct aws_string;
 
+#define AWS_CRT_PYTHON_PACKAGE_ID 10
+
+/* Error codes, unique to aws-crt-python, for passing back to C layers */
+enum aws_crt_python_errors {
+    AWS_ERROR_CRT_CALLBACK_EXCEPTION = AWS_ERROR_ENUM_BEGIN_RANGE(AWS_CRT_PYTHON_PACKAGE_ID),
+
+    AWS_ERROR_CRT_END_RANGE = AWS_ERROR_ENUM_END_RANGE(AWS_CRT_PYTHON_PACKAGE_ID)
+};
+
 /* AWS Specific Helpers */
 PyObject *PyUnicode_FromAwsByteCursor(const struct aws_byte_cursor *cursor);
 PyObject *PyUnicode_FromAwsString(const struct aws_string *aws_str);
@@ -26,8 +35,31 @@ PyObject *PyUnicode_FromAwsString(const struct aws_string *aws_str);
  * If conversion cannot occur a python exception is set (check PyExc_Occurred()) */
 uint32_t PyObject_GetAttrAsUint32(PyObject *o, const char *class_name, const char *attr_name);
 uint16_t PyObject_GetAttrAsUint16(PyObject *o, const char *class_name, const char *attr_name);
+uint8_t PyObject_GetAttrAsUint8(PyObject *o, const char *class_name, const char *attr_name);
 bool PyObject_GetAttrAsBool(PyObject *o, const char *class_name, const char *attr_name);
 int PyObject_GetAttrAsIntEnum(PyObject *o, const char *class_name, const char *attr_name);
+
+/* Checks if the named attribute is None, converts it to the specified type, then stores
+ * the value and returns a pointer to the stored value or NULL if it doesn't exist or fails.
+ * If conversion cannot occur a python exception is set (check PyExc_Occured()) */
+uint64_t *PyObject_GetAsOptionalUint64(
+    PyObject *o,
+    const char *class_name,
+    const char *attr_name,
+    uint64_t *stored_int);
+uint32_t *PyObject_GetAsOptionalUint32(
+    PyObject *o,
+    const char *class_name,
+    const char *attr_name,
+    uint32_t *stored_int);
+uint16_t *PyObject_GetAsOptionalUint16(
+    PyObject *o,
+    const char *class_name,
+    const char *attr_name,
+    uint16_t *stored_int);
+uint8_t *PyObject_GetAsOptionalUint8(PyObject *o, const char *class_name, const char *attr_name, uint8_t *stored_int);
+bool *PyObject_GetAsOptionalBool(PyObject *o, const char *class_name, const char *attr_name, bool *stored_bool);
+int *PyObject_GetAsOptionalIntEnum(PyObject *o, const char *class_name, const char *attr_name, int *stored_enum);
 
 /* Create cursor from PyUnicode.
  * If conversion cannot occur, cursor->ptr will be NULL and a python exception is set */
@@ -42,6 +74,14 @@ void PyErr_SetAwsLastError(void);
 
 /* Set current thread's error indicator based on aws_last_error() and returns NULL */
 PyObject *PyErr_AwsLastError(void);
+
+/**
+ * Return an AWS error code corresponding to the current Python error (fallback is AWS_ERROR_UNKNOWN).
+ *
+ * Prints the current Python error to stderr and clears the Python error indicator.
+ *
+ * The Python error indicator MUST be set and the GIL MUST be held when calling this function. */
+int aws_py_translate_py_error(void);
 
 /**
  * Raise an AWS error corresponding to the current Python error.

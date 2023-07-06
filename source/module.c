@@ -5,20 +5,29 @@
 #include "module.h"
 
 #include "auth.h"
+#include "checksums.h"
+#include "common.h"
 #include "crypto.h"
+#include "event_stream.h"
 #include "http.h"
 #include "io.h"
+#include "mqtt5_client.h"
 #include "mqtt_client.h"
 #include "mqtt_client_connection.h"
+#include "s3.h"
+#include "websocket.h"
 
 #include <aws/auth/auth.h>
 #include <aws/common/byte_buf.h>
+#include <aws/common/environment.h>
 #include <aws/common/system_info.h>
+#include <aws/event-stream/event_stream.h>
 #include <aws/http/http.h>
 #include <aws/io/io.h>
 #include <aws/io/logging.h>
 #include <aws/io/tls_channel_handler.h>
 #include <aws/mqtt/mqtt.h>
+#include <aws/s3/s3.h>
 
 #include <memoryobject.h>
 
@@ -35,7 +44,9 @@ PyObject *aws_py_init_logging(PyObject *self, PyObject *args) {
 
     s_logger_init = true;
 
-    struct aws_allocator *allocator = aws_py_get_allocator();
+    /* NOTE: We are NOT using aws_py_get_allocator() for logging.
+     * This avoid deadlock during aws_mem_tracer_dump() */
+    struct aws_allocator *allocator = aws_default_allocator();
 
     int log_level = 0;
     const char *file_path = NULL;
@@ -114,26 +125,8 @@ uint32_t PyObject_GetAttrAsUint32(PyObject *o, const char *class_name, const cha
         return result;
     }
 
-    /* Using PyLong_AsLongLong() because it will convert floating point numbers (PyLong_AsUnsignedLong() will not).
-     * By using "long long" (not just "long") we can be sure to fit the whole range of 32bit numbers. */
-    long long val = PyLong_AsLongLong(attr);
-    if (PyErr_Occurred()) {
-        PyErr_Format(PyErr_Occurred(), "Cannot convert %s.%s to a C uint32_t", class_name, attr_name);
-        goto done;
-    }
+    PyObject_GetAsOptionalUint32(attr, class_name, attr_name, &result);
 
-    if (val < 0) {
-        PyErr_Format(PyExc_OverflowError, "%s.%s cannot be negative", class_name, attr_name);
-        goto done;
-    }
-
-    if (val > UINT32_MAX) {
-        PyErr_Format(PyExc_OverflowError, "%s.%s too large to convert to C uint32_t", class_name, attr_name);
-        goto done;
-    }
-
-    result = (uint32_t)val;
-done:
     Py_DECREF(attr);
     return result;
 }
@@ -147,25 +140,23 @@ uint16_t PyObject_GetAttrAsUint16(PyObject *o, const char *class_name, const cha
         return result;
     }
 
-    /* Using PyLong_AsLong() because it will convert floating point numbers (PyLong_AsUnsignedLong() will not) */
-    long val = PyLong_AsLong(attr);
-    if (PyErr_Occurred()) {
-        PyErr_Format(PyErr_Occurred(), "Cannot convert %s.%s to C uint16_t", class_name, attr_name);
-        goto done;
+    PyObject_GetAsOptionalUint16(attr, class_name, attr_name, &result);
+
+    Py_DECREF(attr);
+    return result;
+}
+
+uint8_t PyObject_GetAttrAsUint8(PyObject *o, const char *class_name, const char *attr_name) {
+    uint8_t result = UINT8_MAX;
+
+    PyObject *attr = PyObject_GetAttrString(o, attr_name);
+    if (!attr) {
+        PyErr_Format(PyExc_AttributeError, "'%s.%s' attribute not found", class_name, attr_name);
+        return result;
     }
 
-    if (val < 0) {
-        PyErr_Format(PyExc_OverflowError, "%s.%s cannot be negative", class_name, attr_name);
-        goto done;
-    }
+    PyObject_GetAsOptionalUint8(attr, class_name, attr_name, &result);
 
-    if (val > UINT16_MAX) {
-        PyErr_Format(PyExc_OverflowError, "%s.%s too large to convert to C uint16_t", class_name, attr_name);
-        goto done;
-    }
-
-    result = (uint16_t)val;
-done:
     Py_DECREF(attr);
     return result;
 }
@@ -200,15 +191,165 @@ int PyObject_GetAttrAsIntEnum(PyObject *o, const char *class_name, const char *a
         return result;
     }
 
-    if (!PyLong_Check(attr)) {
+    PyObject_GetAsOptionalIntEnum(attr, class_name, attr_name, &result);
+
+    Py_DECREF(attr);
+    return result;
+}
+
+bool *PyObject_GetAsOptionalBool(PyObject *o, const char *class_name, const char *attr_name, bool *stored_bool) {
+    if (o == Py_None) {
+        goto done;
+    }
+
+    int val = PyObject_IsTrue(o);
+    if (val == -1) {
+        PyErr_Format(PyExc_TypeError, "Cannot convert %s.%s to bool", class_name, attr_name);
+        goto done;
+    }
+
+    *stored_bool = (bool)(val != 0);
+    return stored_bool;
+
+done:
+    return NULL;
+}
+
+uint64_t *PyObject_GetAsOptionalUint64(
+    PyObject *o,
+    const char *class_name,
+    const char *attr_name,
+    uint64_t *stored_int) {
+    if (o == Py_None) {
+        goto done;
+    }
+
+    unsigned long long val = PyLong_AsUnsignedLongLong(o);
+    if (PyErr_Occurred()) {
+        PyErr_Format(PyErr_Occurred(), "Cannot convert %s.%s to a C uint64_t", class_name, attr_name);
+        goto done;
+    }
+
+    *stored_int = (uint64_t)val;
+    return stored_int;
+
+done:
+    return NULL;
+}
+
+uint32_t *PyObject_GetAsOptionalUint32(
+    PyObject *o,
+    const char *class_name,
+    const char *attr_name,
+    uint32_t *stored_int) {
+
+    if (o == Py_None) {
+        goto done;
+    }
+
+    /* Using PyLong_AsLongLong() because it will convert floating point numbers (PyLong_AsUnsignedLong() will not).
+     * By using "long long" (not just "long") we can be sure to fit the whole range of 32bit numbers. */
+    long long val = PyLong_AsLongLong(o);
+    if (PyErr_Occurred()) {
+        PyErr_Format(PyErr_Occurred(), "Cannot convert %s.%s to a C uint32_t", class_name, attr_name);
+        goto done;
+    }
+
+    if (val < 0) {
+        PyErr_Format(PyExc_OverflowError, "%s.%s cannot be negative", class_name, attr_name);
+        goto done;
+    }
+
+    if (val > UINT32_MAX) {
+        PyErr_Format(PyExc_OverflowError, "%s.%s too large to convert to C uint32_t", class_name, attr_name);
+        goto done;
+    }
+
+    *stored_int = (uint32_t)val;
+    return stored_int;
+
+done:
+    return NULL;
+}
+
+uint16_t *PyObject_GetAsOptionalUint16(
+    PyObject *o,
+    const char *class_name,
+    const char *attr_name,
+    uint16_t *stored_int) {
+
+    if (o == Py_None) {
+        goto done;
+    }
+
+    long val = PyLong_AsLong(o);
+    if (PyErr_Occurred()) {
+        PyErr_Format(PyErr_Occurred(), "Cannot convert %s.%s to a C uint16_t", class_name, attr_name);
+        goto done;
+    }
+
+    if (val < 0) {
+        PyErr_Format(PyExc_OverflowError, "%s.%s cannot be negative", class_name, attr_name);
+        goto done;
+    }
+
+    if (val > UINT16_MAX) {
+        PyErr_Format(PyExc_OverflowError, "%s.%s too large to convert to C uint16_t", class_name, attr_name);
+        goto done;
+    }
+
+    *stored_int = (uint16_t)val;
+
+    return stored_int;
+
+done:
+    return NULL;
+}
+
+uint8_t *PyObject_GetAsOptionalUint8(PyObject *o, const char *class_name, const char *attr_name, uint8_t *stored_int) {
+
+    if (o == Py_None) {
+        goto done;
+    }
+
+    long val = PyLong_AsLong(o);
+    if (PyErr_Occurred()) {
+        PyErr_Format(PyErr_Occurred(), "Cannot convert %s.%s to a C uint8_t", class_name, attr_name);
+        goto done;
+    }
+
+    if (val < 0) {
+        PyErr_Format(PyExc_OverflowError, "%s.%s cannot be negative", class_name, attr_name);
+        goto done;
+    }
+
+    if (val > UINT8_MAX) {
+        PyErr_Format(PyExc_OverflowError, "%s.%s too large to convert to C uint8_t", class_name, attr_name);
+        goto done;
+    }
+
+    *stored_int = (uint8_t)val;
+
+    return stored_int;
+
+done:
+    return NULL;
+}
+
+int *PyObject_GetAsOptionalIntEnum(PyObject *o, const char *class_name, const char *attr_name, int *stored_enum) {
+    if (o == Py_None) {
+        goto done;
+    }
+
+    if (!PyLong_Check(o)) {
         PyErr_Format(PyExc_TypeError, "%s.%s is not a valid enum", class_name, attr_name);
         goto done;
     }
 
-    result = PyLong_AsLong(attr);
+    *stored_enum = PyLong_AsLong(o);
+    return stored_enum;
 done:
-    Py_DECREF(attr);
-    return result;
+    return NULL;
 }
 
 void PyErr_SetAwsLastError(void) {
@@ -221,6 +362,22 @@ PyObject *PyErr_AwsLastError(void) {
     const char *msg = aws_error_str(err);
     return PyErr_Format(PyExc_RuntimeError, "%d (%s): %s", err, name, msg);
 }
+
+#define AWS_DEFINE_ERROR_INFO_CRT(CODE, STR)                                                                           \
+    [(CODE)-AWS_ERROR_ENUM_BEGIN_RANGE(AWS_CRT_PYTHON_PACKAGE_ID)] = AWS_DEFINE_ERROR_INFO(CODE, STR, "aws-crt-python")
+
+/* clang-format off */
+static struct aws_error_info s_errors[] = {
+    AWS_DEFINE_ERROR_INFO_CRT(
+        AWS_ERROR_CRT_CALLBACK_EXCEPTION,
+        "Callback raised an exception."),
+};
+/* clang-format on */
+
+static struct aws_error_info_list s_error_list = {
+    .error_list = s_errors,
+    .count = AWS_ARRAY_SIZE(s_errors),
+};
 
 /* Mappings between Python built-in exception types and AWS_ERROR_ codes
  * Stored in hashtables as `PyObject*` of Python exception type, and `int` of AWS_ERROR_ enum (cast to void*) */
@@ -249,7 +406,7 @@ static void s_error_map_init(void) {
 
     if (aws_hash_table_init(
             &s_py_to_aws_error_map,
-            aws_py_get_allocator(),
+            aws_default_allocator(), /* non-tracing allocator so this doesn't show up in leak dumps */
             AWS_ARRAY_SIZE(s_error_array),
             aws_hash_ptr,
             aws_ptr_eq,
@@ -260,7 +417,7 @@ static void s_error_map_init(void) {
 
     if (aws_hash_table_init(
             &s_aws_to_py_error_map,
-            aws_py_get_allocator(),
+            aws_default_allocator(), /* non-tracing allocator so this doesn't show up in leak dumps */
             AWS_ARRAY_SIZE(s_error_array),
             aws_hash_ptr,
             aws_ptr_eq,
@@ -281,7 +438,7 @@ static void s_error_map_init(void) {
     }
 }
 
-int aws_py_raise_error(void) {
+int aws_py_translate_py_error(void) {
     AWS_ASSERT(PyErr_Occurred() != NULL);
     AWS_ASSERT(PyGILState_Check() == 1);
 
@@ -297,6 +454,12 @@ int aws_py_raise_error(void) {
     PyErr_Print();
     fprintf(stderr, "Treating Python exception as error %d(%s)\n", aws_error_code, aws_error_name(aws_error_code));
 
+    return aws_error_code;
+}
+
+int aws_py_raise_error(void) {
+
+    int aws_error_code = aws_py_translate_py_error();
     return aws_raise_error(aws_error_code);
 }
 
@@ -363,25 +526,17 @@ int aws_py_gilstate_ensure(PyGILState_STATE *out_state) {
 
 void *aws_py_get_binding(PyObject *obj, const char *capsule_name, const char *class_name) {
     if (!obj || obj == Py_None) {
-        return PyErr_Format(PyExc_TypeError, "Excepted '%s', received 'NoneType'", class_name);
+        return PyErr_Format(PyExc_TypeError, "Expected '%s', received 'NoneType'", class_name);
     }
 
     PyObject *py_binding = PyObject_GetAttrString(obj, "_binding"); /* new reference */
     if (!py_binding) {
-        return PyErr_Format(
-            PyExc_AttributeError,
-            "Expected valid '%s', received '%s' (no '_binding' attribute)",
-            class_name,
-            Py_TYPE(obj)->tp_name);
+        return PyErr_Format(PyExc_TypeError, "Expected valid '%s' (no '_binding' attribute)", class_name);
     }
 
     void *binding = NULL;
     if (!PyCapsule_CheckExact(py_binding)) {
-        PyErr_Format(
-            PyExc_TypeError,
-            "Expected valid '%s', received '%s' ('_binding' attribute is not a capsule)",
-            class_name,
-            Py_TYPE(obj)->tp_name);
+        PyErr_Format(PyExc_TypeError, "Expected valid '%s' ('_binding' attribute is not a capsule)", class_name);
         goto done;
     }
 
@@ -389,9 +544,8 @@ void *aws_py_get_binding(PyObject *obj, const char *capsule_name, const char *cl
     if (!binding) {
         PyErr_Format(
             PyExc_TypeError,
-            "Expected valid '%s', received '%s' ('_binding' attribute does not contain '%s')",
+            "Expected valid '%s' ('_binding' attribute does not contain '%s')",
             class_name,
-            Py_TYPE(obj)->tp_name,
             capsule_name);
         goto done;
     }
@@ -404,9 +558,59 @@ done:
 /*******************************************************************************
  * Allocator
  ******************************************************************************/
+static struct aws_allocator *s_allocator = NULL;
 
 struct aws_allocator *aws_py_get_allocator(void) {
-    return aws_default_allocator();
+    return s_allocator;
+}
+
+AWS_STATIC_STRING_FROM_LITERAL(s_mem_tracing_env_var, "AWS_CRT_MEMORY_TRACING");
+
+static void s_init_allocator(void) {
+    /* use non-tracing allocator by default */
+    s_allocator = aws_default_allocator();
+
+    /* read environment variable. must be number correlating to trace mode */
+    struct aws_string *value_str = NULL;
+    aws_get_environment_value(aws_default_allocator(), s_mem_tracing_env_var, &value_str);
+    if (value_str == NULL) {
+        return;
+    }
+
+    int level = atoi(aws_string_c_str(value_str));
+    aws_string_destroy(value_str);
+    value_str = NULL;
+
+    if (level <= AWS_MEMTRACE_NONE || level > AWS_MEMTRACE_STACKS) {
+        return;
+    }
+
+    s_allocator = aws_mem_tracer_new(aws_default_allocator(), NULL, level, 16);
+}
+
+PyObject *aws_py_native_memory_usage(PyObject *self, PyObject *args) {
+    (void)self;
+    (void)args;
+
+    size_t bytes = 0;
+    struct aws_allocator *alloc = aws_py_get_allocator();
+    if (alloc != aws_default_allocator()) {
+        bytes = aws_mem_tracer_bytes(alloc);
+    }
+
+    return PyLong_FromSize_t(bytes);
+}
+
+PyObject *aws_py_native_memory_dump(PyObject *self, PyObject *args) {
+    (void)self;
+    (void)args;
+
+    struct aws_allocator *alloc = aws_py_get_allocator();
+    if (alloc != aws_default_allocator()) {
+        aws_mem_tracer_dump(alloc);
+    }
+
+    Py_RETURN_NONE;
 }
 
 /*******************************************************************************
@@ -459,9 +663,15 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(get_error_name, METH_VARARGS),
     AWS_PY_METHOD_DEF(get_error_message, METH_VARARGS),
     AWS_PY_METHOD_DEF(get_corresponding_builtin_exception, METH_VARARGS),
+    AWS_PY_METHOD_DEF(get_cpu_group_count, METH_VARARGS),
+    AWS_PY_METHOD_DEF(get_cpu_count_for_group, METH_VARARGS),
+    AWS_PY_METHOD_DEF(native_memory_usage, METH_NOARGS),
+    AWS_PY_METHOD_DEF(native_memory_dump, METH_NOARGS),
+    AWS_PY_METHOD_DEF(thread_join_all_managed, METH_VARARGS),
 
     /* IO */
     AWS_PY_METHOD_DEF(is_alpn_available, METH_NOARGS),
+    AWS_PY_METHOD_DEF(is_tls_cipher_supported, METH_VARARGS),
     AWS_PY_METHOD_DEF(event_loop_group_new, METH_VARARGS),
     AWS_PY_METHOD_DEF(host_resolver_new_default, METH_VARARGS),
     AWS_PY_METHOD_DEF(client_bootstrap_new, METH_VARARGS),
@@ -471,6 +681,7 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(tls_connection_options_set_server_name, METH_VARARGS),
     AWS_PY_METHOD_DEF(init_logging, METH_VARARGS),
     AWS_PY_METHOD_DEF(input_stream_new, METH_VARARGS),
+    AWS_PY_METHOD_DEF(pkcs11_lib_new, METH_VARARGS),
 
     /* MQTT Client */
     AWS_PY_METHOD_DEF(mqtt_client_new, METH_VARARGS),
@@ -486,15 +697,31 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(mqtt_client_connection_unsubscribe, METH_VARARGS),
     AWS_PY_METHOD_DEF(mqtt_client_connection_disconnect, METH_VARARGS),
     AWS_PY_METHOD_DEF(mqtt_ws_handshake_transform_complete, METH_VARARGS),
+    AWS_PY_METHOD_DEF(mqtt_client_connection_get_stats, METH_VARARGS),
+
+    /* MQTT5 Client */
+    AWS_PY_METHOD_DEF(mqtt5_client_new, METH_VARARGS),
+    AWS_PY_METHOD_DEF(mqtt5_client_start, METH_VARARGS),
+    AWS_PY_METHOD_DEF(mqtt5_client_stop, METH_VARARGS),
+    AWS_PY_METHOD_DEF(mqtt5_client_publish, METH_VARARGS),
+    AWS_PY_METHOD_DEF(mqtt5_client_subscribe, METH_VARARGS),
+    AWS_PY_METHOD_DEF(mqtt5_client_unsubscribe, METH_VARARGS),
+    AWS_PY_METHOD_DEF(mqtt5_client_get_stats, METH_VARARGS),
+    AWS_PY_METHOD_DEF(mqtt5_ws_handshake_transform_complete, METH_VARARGS),
 
     /* Cryptographic primitives */
     AWS_PY_METHOD_DEF(md5_new, METH_NOARGS),
     AWS_PY_METHOD_DEF(sha256_new, METH_NOARGS),
+    AWS_PY_METHOD_DEF(sha1_new, METH_NOARGS),
     AWS_PY_METHOD_DEF(hash_update, METH_VARARGS),
     AWS_PY_METHOD_DEF(hash_digest, METH_VARARGS),
     AWS_PY_METHOD_DEF(sha256_hmac_new, METH_VARARGS),
     AWS_PY_METHOD_DEF(hash_update, METH_VARARGS),
     AWS_PY_METHOD_DEF(hash_digest, METH_VARARGS),
+
+    /* Checksum primitives */
+    AWS_PY_METHOD_DEF(checksums_crc32, METH_VARARGS),
+    AWS_PY_METHOD_DEF(checksums_crc32c, METH_VARARGS),
 
     /* HTTP */
     AWS_PY_METHOD_DEF(http_connection_close, METH_VARARGS),
@@ -507,7 +734,6 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(http_message_set_request_method, METH_VARARGS),
     AWS_PY_METHOD_DEF(http_message_get_request_path, METH_VARARGS),
     AWS_PY_METHOD_DEF(http_message_set_request_path, METH_VARARGS),
-    AWS_PY_METHOD_DEF(http_message_get_body_stream, METH_VARARGS),
     AWS_PY_METHOD_DEF(http_message_set_body_stream, METH_VARARGS),
     AWS_PY_METHOD_DEF(http_headers_new, METH_VARARGS),
     AWS_PY_METHOD_DEF(http_headers_add, METH_VARARGS),
@@ -525,9 +751,17 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(credentials_access_key_id, METH_VARARGS),
     AWS_PY_METHOD_DEF(credentials_secret_access_key, METH_VARARGS),
     AWS_PY_METHOD_DEF(credentials_session_token, METH_VARARGS),
+    AWS_PY_METHOD_DEF(credentials_expiration_timestamp_seconds, METH_VARARGS),
     AWS_PY_METHOD_DEF(credentials_provider_get_credentials, METH_VARARGS),
     AWS_PY_METHOD_DEF(credentials_provider_new_chain_default, METH_VARARGS),
     AWS_PY_METHOD_DEF(credentials_provider_new_static, METH_VARARGS),
+    AWS_PY_METHOD_DEF(credentials_provider_new_profile, METH_VARARGS),
+    AWS_PY_METHOD_DEF(credentials_provider_new_process, METH_VARARGS),
+    AWS_PY_METHOD_DEF(credentials_provider_new_environment, METH_VARARGS),
+    AWS_PY_METHOD_DEF(credentials_provider_new_chain, METH_VARARGS),
+    AWS_PY_METHOD_DEF(credentials_provider_new_delegate, METH_VARARGS),
+    AWS_PY_METHOD_DEF(credentials_provider_new_cognito, METH_VARARGS),
+    AWS_PY_METHOD_DEF(credentials_provider_new_x509, METH_VARARGS),
     AWS_PY_METHOD_DEF(signing_config_new, METH_VARARGS),
     AWS_PY_METHOD_DEF(signing_config_get_algorithm, METH_VARARGS),
     AWS_PY_METHOD_DEF(signing_config_get_signature_type, METH_VARARGS),
@@ -543,11 +777,34 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(signing_config_get_omit_session_token, METH_VARARGS),
     AWS_PY_METHOD_DEF(sign_request_aws, METH_VARARGS),
 
+    /* Event Stream */
+    AWS_PY_METHOD_DEF(event_stream_rpc_client_connection_connect, METH_VARARGS),
+    AWS_PY_METHOD_DEF(event_stream_rpc_client_connection_close, METH_VARARGS),
+    AWS_PY_METHOD_DEF(event_stream_rpc_client_connection_is_open, METH_VARARGS),
+    AWS_PY_METHOD_DEF(event_stream_rpc_client_connection_send_protocol_message, METH_VARARGS),
+    AWS_PY_METHOD_DEF(event_stream_rpc_client_connection_new_stream, METH_VARARGS),
+    AWS_PY_METHOD_DEF(event_stream_rpc_client_continuation_activate, METH_VARARGS),
+    AWS_PY_METHOD_DEF(event_stream_rpc_client_continuation_send_message, METH_VARARGS),
+    AWS_PY_METHOD_DEF(event_stream_rpc_client_continuation_is_closed, METH_VARARGS),
+
+    /* S3 */
+    AWS_PY_METHOD_DEF(s3_client_new, METH_VARARGS),
+    AWS_PY_METHOD_DEF(s3_client_make_meta_request, METH_VARARGS),
+    AWS_PY_METHOD_DEF(s3_meta_request_cancel, METH_VARARGS),
+
+    /* WebSocket */
+    AWS_PY_METHOD_DEF(websocket_client_connect, METH_VARARGS),
+    AWS_PY_METHOD_DEF(websocket_close, METH_VARARGS),
+    AWS_PY_METHOD_DEF(websocket_send_frame, METH_VARARGS),
+    AWS_PY_METHOD_DEF(websocket_increment_read_window, METH_VARARGS),
+    AWS_PY_METHOD_DEF(websocket_create_handshake_request, METH_VARARGS),
+
     {NULL, NULL, 0, NULL},
 };
 
 static const char s_module_name[] = "_awscrt";
 PyDoc_STRVAR(s_module_doc, "C extension for binding AWS implementations of MQTT, HTTP, and friends");
+AWS_STATIC_STRING_FROM_LITERAL(s_crash_handler_env_var, "AWS_CRT_CRASH_HANDLER");
 
 /*******************************************************************************
  * Module Init
@@ -571,17 +828,44 @@ PyMODINIT_FUNC PyInit__awscrt(void) {
         return NULL;
     }
 
-    s_install_crash_handler();
+    s_init_allocator();
 
-    aws_http_library_init(aws_py_get_allocator());
-    aws_auth_library_init(aws_py_get_allocator());
-    aws_mqtt_library_init(aws_py_get_allocator());
+    /* Don't report this memory when dumping possible leaks. */
+    struct aws_allocator *nontracing_allocator = aws_default_allocator();
 
+    struct aws_string *crash_handler_env = NULL;
+    aws_get_environment_value(nontracing_allocator, s_crash_handler_env_var, &crash_handler_env);
+    if (aws_string_eq_c_str(crash_handler_env, "1")) {
+        s_install_crash_handler();
+    }
+    aws_string_destroy(crash_handler_env);
+
+    aws_http_library_init(nontracing_allocator);
+    aws_auth_library_init(nontracing_allocator);
+    aws_mqtt_library_init(nontracing_allocator);
+    aws_event_stream_library_init(nontracing_allocator);
+    aws_s3_library_init(nontracing_allocator);
+
+#if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 9
     if (!PyEval_ThreadsInitialized()) {
         PyEval_InitThreads();
     }
+#endif
 
+    aws_register_error_info(&s_error_list);
     s_error_map_init();
 
     return m;
 }
+
+/**
+ * align with the the vanilla C types Python tends to use.
+ * This is important when passing arguments between C and Python
+ * via things like PyArg_ParseTuple() and PyObject_CallFunction()
+ * https://docs.python.org/3/c-api/arg.html
+ */
+AWS_STATIC_ASSERT(sizeof(uint8_t) == sizeof(unsigned char));       /* we pass uint8_t as "B" (unsigned char) */
+AWS_STATIC_ASSERT(sizeof(uint16_t) == sizeof(unsigned short));     /* we pass uint16_t as "H" (unsigned short) */
+AWS_STATIC_ASSERT(sizeof(uint32_t) == sizeof(unsigned int));       /* we pass uint32_t as "I" (unsigned int) */
+AWS_STATIC_ASSERT(sizeof(uint64_t) == sizeof(unsigned long long)); /* we pass uint64_t as "K" (unsigned long long) */
+AWS_STATIC_ASSERT(sizeof(enum aws_log_level) == sizeof(int));      /* we pass enums as "i" (int) */

@@ -1,0 +1,30 @@
+version: 0.2
+#this build spec assumes the manylinux1 image for pypi
+#additional packages we installed: cmake 3.5, libcrypto 1.1.0j, gcc 4.8.4
+env:
+  shell: bash
+  variables:
+    BUILDER_VERSION: v0.9.44
+    BUILDER_SOURCE: releases
+    BUILDER_HOST: https://d19elf31gohf1l.cloudfront.net
+    PACKAGE_NAME: aws-crt-python
+phases:
+  install:
+    commands:
+      - add-apt-repository ppa:ubuntu-toolchain-r/test
+      - apt-get update -y
+      - apt-get install gcc-7 cmake ninja-build python3 python3-pip -y
+  pre_build:
+    commands:
+      - export CC=gcc-7
+  build:
+    commands:
+      - echo Build started on `date`
+      - git submodule update --init
+      # Build library and test
+      - python3 -c "from urllib.request import urlretrieve; urlretrieve('$BUILDER_HOST/$BUILDER_SOURCE/$BUILDER_VERSION/builder.pyz?run=$CODEBUILD_BUILD_ID', 'builder.pyz')"
+      - python3 builder.pyz build --project aws-crt-python downstream
+  post_build:
+    commands:
+      - echo Build completed on `date`
+

@@ -1,24 +1,28 @@
 #!/bin/bash
-#before running this, you'll need cmake3 and a compiler. These python versions are just
-#using the default python installers from python.org. Each version needs updated pip, wheel, and setuptools
-set -e
+#assumes image based on manylinux2014 + extras (cmake3, libcrypto, etc)
+set -ex
 
-/usr/local/bin/python3.8 ./continuous-delivery/update-version.py
+/opt/python/cp39-cp39/bin/python ./continuous-delivery/update-version.py
 
-/usr/local/bin/python3.5m setup.py sdist bdist_wheel
-auditwheel repair --plat manylinux2014_x86_64 dist/awscrt-*cp35*.whl
-
-/usr/local/bin/python3.6m setup.py sdist bdist_wheel
-auditwheel repair --plat manylinux2014_x86_64 dist/awscrt-*cp36*.whl
-
-/usr/local/bin/python3.7m setup.py sdist bdist_wheel
+/opt/python/cp37-cp37m/bin/python setup.py sdist bdist_wheel
 auditwheel repair --plat manylinux2014_x86_64 dist/awscrt-*cp37*.whl
 
-/usr/local/bin/python3.8 setup.py sdist bdist_wheel
+/opt/python/cp38-cp38/bin/python setup.py sdist bdist_wheel
 auditwheel repair --plat manylinux2014_x86_64 dist/awscrt-*cp38*.whl
 
+/opt/python/cp39-cp39/bin/python setup.py sdist bdist_wheel
+auditwheel repair --plat manylinux2014_x86_64 dist/awscrt-*cp39*.whl
+
+/opt/python/cp310-cp310/bin/python setup.py sdist bdist_wheel
+auditwheel repair --plat manylinux2014_x86_64 dist/awscrt-*cp310*.whl
+
+/opt/python/cp311-cp311/bin/python setup.py sdist bdist_wheel
+auditwheel repair --plat manylinux2014_x86_64 dist/awscrt-*cp311*.whl
+
+# Don't need to build wheels for Python 3.12 and later.
+# The 3.11 wheel uses the stable ABI, so it works with newer versions too.
+
 rm dist/*.whl
-cp -r wheelhouse/* dist/
+cp -rv wheelhouse/* dist/
 
 #now you just need to run twine (that's in a different script)
-

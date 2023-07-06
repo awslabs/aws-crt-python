@@ -12,10 +12,18 @@ PyObject *aws_py_credentials_new(PyObject *self, PyObject *args);
 PyObject *aws_py_credentials_access_key_id(PyObject *self, PyObject *args);
 PyObject *aws_py_credentials_secret_access_key(PyObject *self, PyObject *args);
 PyObject *aws_py_credentials_session_token(PyObject *self, PyObject *args);
+PyObject *aws_py_credentials_expiration_timestamp_seconds(PyObject *self, PyObject *args);
 
 PyObject *aws_py_credentials_provider_get_credentials(PyObject *self, PyObject *args);
 PyObject *aws_py_credentials_provider_new_chain_default(PyObject *self, PyObject *args);
 PyObject *aws_py_credentials_provider_new_static(PyObject *self, PyObject *args);
+PyObject *aws_py_credentials_provider_new_profile(PyObject *self, PyObject *args);
+PyObject *aws_py_credentials_provider_new_process(PyObject *self, PyObject *args);
+PyObject *aws_py_credentials_provider_new_environment(PyObject *self, PyObject *args);
+PyObject *aws_py_credentials_provider_new_chain(PyObject *self, PyObject *args);
+PyObject *aws_py_credentials_provider_new_delegate(PyObject *self, PyObject *args);
+PyObject *aws_py_credentials_provider_new_cognito(PyObject *self, PyObject *args);
+PyObject *aws_py_credentials_provider_new_x509(PyObject *self, PyObject *args);
 
 PyObject *aws_py_signing_config_new(PyObject *self, PyObject *args);
 PyObject *aws_py_signing_config_get_algorithm(PyObject *self, PyObject *args);

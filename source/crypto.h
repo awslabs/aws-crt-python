@@ -11,6 +11,7 @@ extern const char *s_capsule_name_hash;
 /** Name string for hmac capsule. */
 extern const char *s_capsule_name_hmac;
 
+PyObject *aws_py_sha1_new(PyObject *self, PyObject *args);
 PyObject *aws_py_sha256_new(PyObject *self, PyObject *args);
 PyObject *aws_py_md5_new(PyObject *self, PyObject *args);
 

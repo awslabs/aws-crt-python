@@ -1,0 +1,5 @@
+autopep8 # for code formatting
+setuptools # for installing from source
+sphinx # for building docs
+websockets # for tests
+wheel # for building wheels

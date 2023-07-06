@@ -102,12 +102,16 @@ static int s_on_incoming_header_block_done(
 
     for (Py_ssize_t i = 0; i < num_headers; ++i) {
         const char *name_str = (const char *)string_cursor.ptr;
-        size_t name_len = strlen((const char *)string_cursor.ptr);
+
+        /* the entire header block remaining length is a safe bound for the next header name length */
+        size_t name_len = strnlen((const char *)string_cursor.ptr, string_cursor.len);
 
         aws_byte_cursor_advance(&string_cursor, name_len + 1);
 
         const char *value_str = (const char *)string_cursor.ptr;
-        size_t value_len = strlen((const char *)string_cursor.ptr);
+
+        /* the entire header block remaining length is a safe bound for the next header value length */
+        size_t value_len = strnlen((const char *)string_cursor.ptr, string_cursor.len);
 
         aws_byte_cursor_advance(&string_cursor, value_len + 1);
 
@@ -117,7 +121,7 @@ static int s_on_incoming_header_block_done(
             goto done;
         }
 
-        PyList_SET_ITEM(header_list, i, tuple); /* steals reference to tuple */
+        PyList_SetItem(header_list, i, tuple); /* steals reference to tuple */
     }
 
     /* TODO: handle informational and trailing headers */

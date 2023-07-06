@@ -7,16 +7,13 @@ import subprocess
 tag = subprocess.check_output(['git', 'describe', '--tags'])
 # strip the leading v
 version = str(tag[1:].strip(), 'utf8')
-setup_path = os.path.join(os.path.dirname(__file__), '..', 'setup.py')
-print("Updating setup.py to version {}".format(version))
+init_path = os.path.join(os.path.dirname(__file__), '..', 'awscrt', '__init__.py')
+print("Updating awscrt.__version__ to version {}".format(version))
 contents = None
-with open(setup_path, 'r+') as setup_py:
-    contents = setup_py.read()
+with open(init_path, 'r+') as init_py:
+    contents = init_py.read()
 
-contents = re.sub(r'(\s)version="1\.0\.0-dev",', r'\1version="{}",'.format(version), contents)
+contents = re.sub(r"__version__ = '[^']+'", f"__version__ = '{version}'", contents)
 
-with open(setup_path, 'w') as setup_py:
-    setup_py.write(contents)
-
-# setup = contents[contents.rfind('setuptools.setup'):]
-# print(setup)
+with open(init_path, 'w') as init_py:
+    init_py.write(contents)

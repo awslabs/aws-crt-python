@@ -2,109 +2,291 @@ name: CI
 
 on:
   push:
-    branches:
-      - '*'
-      - '!master'
+    branches-ignore:
+      - 'main'
+      - 'docs'
 
 env:
-  BUILDER_VERSION: v0.6.0
+  BUILDER_VERSION: v0.9.47
+  BUILDER_SOURCE: releases
   BUILDER_HOST: https://d19elf31gohf1l.cloudfront.net
   PACKAGE_NAME: aws-crt-python
-  LINUX_BASE_IMAGE: ubuntu-16-x64
+  LINUX_BASE_IMAGE: ubuntu-18-x64
   RUN: ${{ github.run_id }}-${{ github.run_number }}
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
   AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+  AWS_REGION: us-east-1
 
 jobs:
-  linux-compat:
+  manylinux1:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - x64
+          - x86
+        python:
+          - cp37-cp37m
+          - cp38-cp38
+          - cp39-cp39
+    steps:
+    - name: Build ${{ env.PACKAGE_NAME }}
+      run: |
+        aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
+        ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-manylinux1-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }} --python /opt/python/${{ matrix.python }}/bin/python
+
+  manylinux2014:
+    runs-on: ubuntu-20.04 # latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - x64
+          - x86
+          - aarch64
+        python:
+          - cp37-cp37m
+          - cp38-cp38
+          - cp39-cp39
+          - cp310-cp310
+          - cp311-cp311
+          - cp312-cp312
+    steps:
+    # Only aarch64 needs this, but it doesn't hurt anything
+    - name: Install qemu/docker
+      run: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+
+    - name: Build ${{ env.PACKAGE_NAME }}
+      run: |
+        aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
+        ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-manylinux2014-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }} --python /opt/python/${{ matrix.python }}/bin/python
+
+  musllinux-1-1:
+    runs-on: ubuntu-22.04 # latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - x64
+          - aarch64
+        python:
+          - cp37-cp37m
+          - cp38-cp38
+          - cp39-cp39
+          - cp310-cp310
+          - cp311-cp311
+          - cp312-cp312
+    steps:
+    # Only aarch64 needs this, but it doesn't hurt anything
+    - name: Install qemu/docker
+      run: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+
+    - name: Build ${{ env.PACKAGE_NAME }}
+      run: |
+        aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
+        ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-musllinux-1-1-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }} --python /opt/python/${{ matrix.python }}/bin/python
+
+  raspberry:
+    runs-on: ubuntu-20.04 # latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - raspbian-bullseye
+    steps:
+    # set arm arch
+    - name: Install qemu/docker
+      run: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+
+    - name: Build ${{ env.PACKAGE_NAME }}
+      run: |
+        aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
+        ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }}
+
+
+  linux-compat:
+    runs-on: ubuntu-22.04 # latest
     strategy:
       matrix:
         image:
-          - manylinux1-x64
-          - manylinux1-x86
-          - manylinux2014-x64
-          - manylinux2014-x86
+          - al2-x64
+          - fedora-34-x64
+          - opensuse-leap
+          - rhel8-x64
     steps:
         # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
     - name: Build ${{ env.PACKAGE_NAME }}
       run: |
-        echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u awslabs --password-stdin
-        export DOCKER_IMAGE=docker.pkg.github.com/awslabs/aws-crt-builder/aws-crt-${{ matrix.image }}:${{ env.BUILDER_VERSION }}
-        docker pull $DOCKER_IMAGE
-        docker run --env GITHUB_REF --env AWS_ACCESS_KEY_ID --env AWS_SECRET_ACCESS_KEY --env AWS_DEFAULT_REGION $DOCKER_IMAGE build -p ${{ env.PACKAGE_NAME }}
+        aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
+        ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }}
 
-  al2:
-    runs-on: ubuntu-latest
-    steps:
-        # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
-    - name: Build ${{ env.PACKAGE_NAME }} + consumers
-      run: |
-        echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u awslabs --password-stdin
-        export DOCKER_IMAGE=docker.pkg.github.com/awslabs/aws-crt-builder/aws-crt-al2-x64:${{ env.BUILDER_VERSION }}
-        docker pull $DOCKER_IMAGE
-        docker run --env GITHUB_REF --env AWS_ACCESS_KEY_ID --env AWS_SECRET_ACCESS_KEY --env AWS_DEFAULT_REGION $DOCKER_IMAGE build -p ${{ env.PACKAGE_NAME }}
 
-  clang-compat:
-    runs-on: ubuntu-latest
+  linux-compiler-compat:
+    runs-on: ubuntu-22.04 # latest
     strategy:
       matrix:
-        version: [3, 6, 8, 9]
+        compiler:
+          - clang-3
+          - clang-6
+          - clang-8
+          - clang-9
+          - clang-10
+          - clang-11
+          - gcc-5
+          - gcc-6
+          - gcc-7
+          - gcc-8
     steps:
-        # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
-    - name: Build ${{ env.PACKAGE_NAME }}
-      run: |
-        echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u awslabs --password-stdin
-        export DOCKER_IMAGE=docker.pkg.github.com/awslabs/aws-crt-builder/aws-crt-${{ env.LINUX_BASE_IMAGE }}:${{ env.BUILDER_VERSION }}
-        docker pull $DOCKER_IMAGE
-        docker run --env GITHUB_REF --env AWS_ACCESS_KEY_ID --env AWS_SECRET_ACCESS_KEY --env AWS_DEFAULT_REGION $DOCKER_IMAGE build -p ${{ env.PACKAGE_NAME }} --compiler=clang-${{ matrix.version }}
+      # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
+      - name: Build ${{ env.PACKAGE_NAME }}
+        run: |
+          aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
+          ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-${{ env.LINUX_BASE_IMAGE }} build -p ${{ env.PACKAGE_NAME }} --compiler=${{ matrix.compiler }}
 
-  gcc-compat:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        version: [5, 6, 7, 8] # no 4.8 on ubuntu due to the -Wdate-time missing command line options
+  use-system-libcrypto:
+    runs-on: ubuntu-20.04 # latest
     steps:
-        # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
-    - name: Build ${{ env.PACKAGE_NAME }}
-      run: |
-        echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u awslabs --password-stdin
-        export DOCKER_IMAGE=docker.pkg.github.com/awslabs/aws-crt-builder/aws-crt-${{ env.LINUX_BASE_IMAGE }}:${{ env.BUILDER_VERSION }}
-        docker pull $DOCKER_IMAGE
-        docker run --env GITHUB_REF --env AWS_ACCESS_KEY_ID --env AWS_SECRET_ACCESS_KEY --env AWS_DEFAULT_REGION $DOCKER_IMAGE build -p ${{ env.PACKAGE_NAME }} --compiler=gcc-${{ matrix.version }}
+      - name: Build ${{ env.PACKAGE_NAME }}
+        env:
+          AWS_CRT_BUILD_USE_SYSTEM_LIBCRYPTO: '1'
+        run: |
+          python3 -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder')"
+          chmod a+x builder
+          ./builder build -p ${{ env.PACKAGE_NAME }}
+      - name: Assert libcrypto.so used
+        run: |
+          # assert it's linked against the system's libcrypto.so
+          AWSCRT_PATH=`python3 -c "import _awscrt; print(_awscrt.__file__)"`
+          printf "AWSCRT_PATH: $AWSCRT_PATH\n"
+
+          LINKED_AGAINST=`ldd $AWSCRT_PATH`
+          printf "LINKED AGAINST:\n$LINKED_AGAINST\n"
+
+          USES_LIBCRYPTO_SO=`echo "$LINKED_AGAINST" | grep 'libcrypto*.so' | head -1`
+          test -n "$USES_LIBCRYPTO_SO"
+
 
   windows:
-    runs-on: windows-latest
-    steps:
-    - name: Build ${{ env.PACKAGE_NAME }} + consumers
-      run: |
-        python -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/releases/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder.pyz')"
-        python builder.pyz build -p ${{ env.PACKAGE_NAME }}
-
-  windows-vc14:
-    runs-on: windows-latest
+    runs-on: windows-2022 # latest
     strategy:
       matrix:
         arch: [x86, x64]
     steps:
-    - uses: ilammy/msvc-dev-cmd@v1
-      with:
-        toolset: 14.0
-        arch: ${{ matrix.arch }}
-        uwp: false
-        spectre: true
     - name: Build ${{ env.PACKAGE_NAME }} + consumers
       run: |
-        python -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/releases/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder.pyz')"
-        python builder.pyz build -p ${{ env.PACKAGE_NAME }}
+        python -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder.pyz')"
+        python builder.pyz build -p ${{ env.PACKAGE_NAME }} --python "C:\\hostedtoolcache\\windows\\Python\\3.7.9\\${{ matrix.arch }}\\python.exe"
+
 
   osx:
-    runs-on: macos-latest
+    runs-on: macos-13 # latest
     steps:
     - name: Build ${{ env.PACKAGE_NAME }} + consumers
       run: |
-        python3 -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/releases/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder')"
+        python3 -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder')"
         chmod a+x builder
         ./builder build -p ${{ env.PACKAGE_NAME }}
 
+
+  openbsd:
+    runs-on: ubuntu-latest # macos would be faster. TODO: diagnose why some tests are failing
+    steps:
+      # Cannot use builder to checkout as OpenBSD doesn't ship git in the base install
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - name: Build ${{ env.PACKAGE_NAME }} + consumers
+        uses: cross-platform-actions/action@v0.10.0
+        with:
+          operating_system: openbsd
+          architecture: x86-64
+          version: '7.2'
+          shell: bash
+          environment_variables: AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION AWS_REGION
+          run: |
+            sudo pkg_add awscli py3-pip py3-urllib3
+            python3 -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz', 'builder')"
+            chmod a+x builder
+            ./builder build -p ${{ env.PACKAGE_NAME }}
+
+
+  freebsd:
+    runs-on: macos-12
+    steps:
+      # Cannot use builder to checkout as OpenBSD doesn't ship git in the base install
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - name: Build ${{ env.PACKAGE_NAME }} + consumers
+        uses: vmactions/freebsd-vm@v0
+        with:
+          envs: 'AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION AWS_REGION'
+          usesh: true
+          sync: rsync
+          copyback: false
+          prepare: |
+            pkg install -y python3 py39-urllib3 py39-pip cmake
+            python3 -m pip install awscli
+          run: |
+            python3 -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz', 'builder')"
+            chmod a+x builder
+            ./builder build -p ${{ env.PACKAGE_NAME }}
+
+  # check that tests requiring custom env-vars or AWS credentials are simply skipped
+  tests-ok-without-env-vars:
+    runs-on: ubuntu-22.04 # latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - name: Run tests without env-vars or AWS creds
+        env:
+          # unset env-vars that provide AWS credentials
+          AWS_ACCESS_KEY_ID:
+          AWS_SECRET_ACCESS_KEY:
+          AWS_DEFAULT_REGION:
+        run: |
+          python3 -m pip install --upgrade --requirement requirements-dev.txt
+          python3 -m pip install . --verbose
+          python3 -m unittest discover --failfast --verbose
+
+  package-source:
+    runs-on: ubuntu-22.04 # latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - name: Package source + install
+        run: |
+          python3 setup.py sdist
+          cd dist
+          python3 -m pip install -v awscrt-1.0.0.dev0.tar.gz
+          python3 -c "import awscrt.io"
+
+  # check that docs can still build
+  check-docs:
+    runs-on: ubuntu-22.04 # latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - name: Check docs
+        run: |
+          python3 -m pip install sphinx
+          python3 -m pip install --verbose .
+          ./scripts/make-docs.py
+
+  check-submodules:
+    runs-on: ubuntu-22.04 # latest
+    steps:
+    - name: Checkout Source
+      uses: actions/checkout@v3
+      with:
+        submodules: true
+        fetch-depth: 0
+    - name: Check Submodules
+      # note: using "@main" because "@${{env.BUILDER_VERSION}}" doesn't work
+      # https://github.com/actions/runner/issues/480
+      uses: awslabs/aws-crt-builder/.github/actions/check-submodules@main
