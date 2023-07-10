@@ -476,6 +476,7 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     PyObject *s3_client_py = NULL;
     PyObject *http_request_py = NULL;
     int type;
+    PyObject *signing_config_py = NULL;
     PyObject *credential_provider_py = NULL;
     const char *recv_filepath;
     const char *send_filepath;
@@ -484,11 +485,12 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     PyObject *py_core = NULL;
     if (!PyArg_ParseTuple(
             args,
-            "OOOiOzzs#O",
+            "OOOiOOzzs#O",
             &py_s3_request,
             &s3_client_py,
             &http_request_py,
             &type,
+            &signing_config_py,
             &credential_provider_py,
             &recv_filepath,
             &send_filepath,
@@ -507,6 +509,14 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
         return NULL;
     }
 
+    struct aws_signing_config_aws *signing_config = NULL;
+    if (signing_config_py != Py_None) {
+        signing_config = aws_py_get_signing_config(signing_config_py);
+        if (!signing_config) {
+            return NULL;
+        }
+    }
+
     struct aws_credentials_provider *credential_provider = NULL;
     if (credential_provider_py != Py_None) {
         credential_provider = aws_py_get_credentials_provider(credential_provider_py);
@@ -515,11 +525,13 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
         }
     }
 
-    struct aws_signing_config_aws signing_config;
-    AWS_ZERO_STRUCT(signing_config);
+    struct aws_signing_config_aws signing_config_from_credentials_provider;
+    AWS_ZERO_STRUCT(signing_config_from_credentials_provider);
     if (credential_provider) {
         struct aws_byte_cursor region_cursor = aws_byte_cursor_from_array((const uint8_t *)region, region_len);
-        aws_s3_init_default_signing_config(&signing_config, region_cursor, credential_provider);
+        aws_s3_init_default_signing_config(
+            &signing_config_from_credentials_provider, region_cursor, credential_provider);
+        signing_config = &signing_config_from_credentials_provider;
     }
 
     struct s3_meta_request_binding *meta_request = aws_mem_calloc(allocator, 1, sizeof(struct s3_meta_request_binding));
@@ -566,7 +578,7 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     struct aws_s3_meta_request_options s3_meta_request_opt = {
         .type = type,
         .message = meta_request->copied_message ? meta_request->copied_message : http_request,
-        .signing_config = credential_provider ? &signing_config : NULL,
+        .signing_config = signing_config,
         .headers_callback = s_s3_request_on_headers,
         .body_callback = s_s3_request_on_body,
         .finish_callback = s_s3_request_on_finish,

@@ -10,7 +10,7 @@ from concurrent.futures import Future
 from awscrt import NativeResource
 from awscrt.http import HttpRequest
 from awscrt.io import ClientBootstrap, TlsConnectionOptions
-from awscrt.auth import AwsCredentialsProvider
+from awscrt.auth import AwsCredentialsProvider, AwsSignatureType, AwsSignedBodyHeaderType, AwsSignedBodyValue, AwsSigningAlgorithm, AwsSigningConfig
 import awscrt.exceptions
 import threading
 from enum import IntEnum
@@ -68,8 +68,12 @@ class S3Client(NativeResource):
             If this is :attr:`S3RequestTlsMode.DISABLED`:
                 No TLS options will be used, regardless of `tls_connection_options` value.
 
-        credential_provider (Optional[AwsCredentialsProvider]): Credentials providers source the
-            :class:`~awscrt.auth.AwsCredentials` needed to sign an authenticated AWS request.
+        signing_config (Optional[AwsSigningConfig]):
+             Configuration for signing of the client. Use :func:`create_default_s3_signing_config()` to create the default config.
+             If None is provided, the request will not be signed.
+
+        credential_provider (Optional[AwsCredentialsProvider]): Deprecated, prefer `signing_config` instead.
+            Credentials providers source the :class:`~awscrt.auth.AwsCredentials` needed to sign an authenticated AWS request.
             If None is provided, the request will not be signed.
 
         tls_connection_options (Optional[TlsConnectionOptions]): Optional TLS Options to be used
@@ -91,12 +95,14 @@ class S3Client(NativeResource):
             bootstrap,
             region,
             tls_mode=None,
+            signing_config=None,
             credential_provider=None,
             tls_connection_options=None,
             part_size=None,
             throughput_target_gbps=None):
         assert isinstance(bootstrap, ClientBootstrap) or bootstrap is None
         assert isinstance(region, str)
+        assert isinstance(signing_config, AwsSigningConfig) or signing_config is None
         assert isinstance(credential_provider, AwsCredentialsProvider) or credential_provider is None
         assert isinstance(tls_connection_options, TlsConnectionOptions) or tls_connection_options is None
         assert isinstance(part_size, int) or part_size is None
@@ -105,6 +111,10 @@ class S3Client(NativeResource):
             int) or isinstance(
             throughput_target_gbps,
             float) or throughput_target_gbps is None
+
+        if credential_provider and signing_config:
+            raise ValueError("'credential_provider' has been deprecated in favor of 'signing_config'.  "
+                             "Both parameters may not be set.")
 
         super().__init__()
 
@@ -117,7 +127,8 @@ class S3Client(NativeResource):
 
         if not bootstrap:
             bootstrap = ClientBootstrap.get_or_create_static_default()
-        s3_client_core = _S3ClientCore(bootstrap, credential_provider, tls_connection_options)
+
+        s3_client_core = _S3ClientCore(bootstrap, credential_provider, signing_config, tls_connection_options)
 
         # C layer uses 0 to indicate defaults
         if tls_mode is None:
@@ -129,6 +140,7 @@ class S3Client(NativeResource):
 
         self._binding = _awscrt.s3_client_new(
             bootstrap,
+            signing_config,
             credential_provider,
             tls_connection_options,
             on_shutdown,
@@ -143,6 +155,7 @@ class S3Client(NativeResource):
             *,
             request,
             type,
+            signing_config=None,
             credential_provider=None,
             recv_filepath=None,
             send_filepath=None,
@@ -161,9 +174,13 @@ class S3Client(NativeResource):
             type (S3RequestType): The type of S3 request passed in,
                 :attr:`~S3RequestType.GET_OBJECT`/:attr:`~S3RequestType.PUT_OBJECT` can be accelerated
 
-            credential_provider (Optional[AwsCredentialsProvider]): Credentials providers source the
-                :class:`~awscrt.auth.AwsCredentials` needed to sign an authenticated AWS request, for this request only.
-                If None is provided, the credential provider in the client will be used.
+            signing_config (Optional[AwsSigningConfig]):
+                Configuration for signing of the request to override the configuration from client. Use :func:`create_default_s3_signing_config()` to create the default config.
+                If None is provided, the client configuration will be used.
+
+            credential_provider (Optional[AwsCredentialsProvider]):  Deprecated, prefer `signing_config` instead.
+                Credentials providers source the :class:`~awscrt.auth.AwsCredentials` needed to sign an authenticated AWS request, for this request only.
+                If None is provided, the client configuration will be used.
 
             recv_filepath (Optional[str]): Optional file path. If set, the
                 response body is written directly to a file and the
@@ -229,6 +246,7 @@ class S3Client(NativeResource):
             client=self,
             request=request,
             type=type,
+            signing_config=signing_config,
             credential_provider=credential_provider,
             recv_filepath=recv_filepath,
             send_filepath=send_filepath,
@@ -261,6 +279,7 @@ class S3Request(NativeResource):
             client,
             request,
             type,
+            signing_config=None,
             credential_provider=None,
             recv_filepath=None,
             send_filepath=None,
@@ -284,6 +303,7 @@ class S3Request(NativeResource):
             request,
             self._finished_future,
             self.shutdown_event,
+            signing_config,
             credential_provider,
             on_headers,
             on_body,
@@ -295,6 +315,7 @@ class S3Request(NativeResource):
             client,
             request,
             type,
+            signing_config,
             credential_provider,
             recv_filepath,
             send_filepath,
@@ -316,9 +337,11 @@ class _S3ClientCore:
 
     def __init__(self, bootstrap,
                  credential_provider=None,
+                 signing_config=None,
                  tls_connection_options=None):
         self._bootstrap = bootstrap
         self._credential_provider = credential_provider
+        self._signing_config = signing_config
         self._tls_connection_options = tls_connection_options
 
 
@@ -332,6 +355,7 @@ class _S3RequestCore:
             request,
             finish_future,
             shutdown_event,
+            signing_config=None,
             credential_provider=None,
             on_headers=None,
             on_body=None,
@@ -339,6 +363,7 @@ class _S3RequestCore:
             on_progress=None):
 
         self._request = request
+        self._signing_config = signing_config
         self._credential_provider = credential_provider
 
         self._on_headers_cb = on_headers
@@ -377,3 +402,30 @@ class _S3RequestCore:
     def _on_progress(self, progress):
         if self._on_progress_cb:
             self._on_progress_cb(progress)
+
+
+def create_default_s3_signing_config(*, region: str, credential_provider: AwsCredentialsProvider, **kwargs):
+    """Create a default `AwsSigningConfig` for S3 service.
+
+        Attributes:
+            region (str): The region to sign against.
+
+            credential_provider (AwsCredentialsProvider): Credentials provider
+                to fetch signing credentials with.
+
+            `**kwargs`: Forward compatibility kwargs.
+
+        Returns:
+            AwsSigningConfig
+    """
+    return AwsSigningConfig(
+        algorithm=AwsSigningAlgorithm.V4,
+        signature_type=AwsSignatureType.HTTP_REQUEST_HEADERS,
+        service="s3",
+        signed_body_header_type=AwsSignedBodyHeaderType.X_AMZ_CONTENT_SHA_256,
+        signed_body_value=AwsSignedBodyValue.UNSIGNED_PAYLOAD,
+        region=region,
+        credentials_provider=credential_provider,
+        use_double_uri_encode=False,
+        should_normalize_uri_path=False,
+    )

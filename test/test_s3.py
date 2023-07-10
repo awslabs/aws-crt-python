@@ -10,9 +10,9 @@ from test import NativeResourceTest
 from concurrent.futures import Future
 
 from awscrt.http import HttpHeaders, HttpRequest
-from awscrt.s3 import S3Client, S3RequestType
+from awscrt.s3 import S3Client, S3RequestType, create_default_s3_signing_config
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions
-from awscrt.auth import AwsCredentialsProvider
+from awscrt.auth import AwsCredentialsProvider, AwsSignatureType, AwsSignedBodyHeaderType, AwsSignedBodyValue, AwsSigningAlgorithm, AwsSigningConfig
 
 MB = 1024 ** 2
 GB = 1024 ** 3
@@ -74,6 +74,7 @@ def s3_client_new(secure, region, part_size=0):
     host_resolver = DefaultHostResolver(event_loop_group)
     bootstrap = ClientBootstrap(event_loop_group, host_resolver)
     credential_provider = AwsCredentialsProvider.new_default_chain(bootstrap)
+    signing_config = create_default_s3_signing_config(region=region, credential_provider=credential_provider)
     tls_option = None
     if secure:
         opt = TlsContextOptions()
@@ -83,7 +84,7 @@ def s3_client_new(secure, region, part_size=0):
     s3_client = S3Client(
         bootstrap=bootstrap,
         region=region,
-        credential_provider=credential_provider,
+        signing_config=signing_config,
         tls_connection_options=tls_option,
         part_size=part_size)
 
@@ -102,7 +103,6 @@ class FakeReadStream(object):
         return fake_data
 
 
-@unittest.skipUnless(os.environ.get('AWS_TEST_S3'), 'set env var to run test: AWS_TEST_S3')
 class S3ClientTest(NativeResourceTest):
 
     def setUp(self):
@@ -137,6 +137,7 @@ class S3RequestTest(NativeResourceTest):
         self.bucket_name = "aws-crt-canary-bucket"
         self.timeout = 100  # seconds
         self.num_threads = 0
+        self.special_path = "put_object_test_10MB@$%.txt"
         self.non_ascii_file_name = "ÉxÅmple.txt".encode("utf-8")
 
         self.response_headers = None
@@ -438,6 +439,50 @@ class S3RequestTest(NativeResourceTest):
         request.headers.set("Content-MD5", "something")
         self._test_s3_put_get_object(request, S3RequestType.PUT_OBJECT, "AWS_ERROR_S3_INVALID_RESPONSE_STATUS")
         self.put_body_stream.close()
+
+    def test_special_filepath_upload(self):
+        # remove the input file when request done
+        with open(self.special_path, 'wb') as file:
+            file.write(b"a" * 10 * MB)
+        request = self._put_object_request(self.special_path)
+        self.put_body_stream.close()
+        s3_client = s3_client_new(False, self.region, 5 * MB)
+        request_type = S3RequestType.PUT_OBJECT
+
+        event_loop_group = EventLoopGroup()
+        host_resolver = DefaultHostResolver(event_loop_group)
+        bootstrap = ClientBootstrap(event_loop_group, host_resolver)
+        credential_provider = AwsCredentialsProvider.new_default_chain(bootstrap)
+        # Let signer to normalize uri path for us.
+        signing_config = AwsSigningConfig(
+            algorithm=AwsSigningAlgorithm.V4,
+            signature_type=AwsSignatureType.HTTP_REQUEST_HEADERS,
+            service="s3",
+            signed_body_header_type=AwsSignedBodyHeaderType.X_AMZ_CONTENT_SHA_256,
+            signed_body_value=AwsSignedBodyValue.UNSIGNED_PAYLOAD,
+            region=self.region,
+            credentials_provider=credential_provider,
+            use_double_uri_encode=False,
+            should_normalize_uri_path=True,
+        )
+
+        s3_request = s3_client.make_request(
+            request=request,
+            type=request_type,
+            send_filepath=self.special_path,
+            signing_config=signing_config,
+            on_headers=self._on_request_headers,
+            on_progress=self._on_progress)
+        finished_future = s3_request.finished_future
+        finished_future.result(self.timeout)
+
+        # check result
+        self.assertEqual(
+            self.data_len,
+            self.transferred_len,
+            "the transferred length reported does not match body we sent")
+        self._validate_successful_get_response(request_type is S3RequestType.PUT_OBJECT)
+        os.remove(self.special_path)
 
     def test_non_ascii_filepath_upload(self):
         # remove the input file when request done
