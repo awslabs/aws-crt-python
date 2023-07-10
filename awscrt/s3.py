@@ -405,7 +405,7 @@ class _S3RequestCore:
 
 
 def create_default_s3_signing_config(*, region: str, credential_provider: AwsCredentialsProvider, **kwargs):
-    """Create a default :class:`AwsSigningConfig` for S3 service.
+    """Create a default `AwsSigningConfig` for S3 service.
 
         Attributes:
             region (str): The region to sign against.
