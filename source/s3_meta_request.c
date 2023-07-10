@@ -476,8 +476,8 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     PyObject *s3_client_py = NULL;
     PyObject *http_request_py = NULL;
     int type;
-    PyObject *credential_provider_py = NULL;
     PyObject *signing_config_py = NULL;
+    PyObject *credential_provider_py = NULL;
     const char *recv_filepath;
     const char *send_filepath;
     const char *region;
@@ -490,8 +490,8 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
             &s3_client_py,
             &http_request_py,
             &type,
-            &credential_provider_py,
             &signing_config_py,
+            &credential_provider_py,
             &recv_filepath,
             &send_filepath,
             &region,
@@ -509,17 +509,18 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    struct aws_credentials_provider *credential_provider = NULL;
-    if (credential_provider_py != Py_None) {
-        credential_provider = aws_py_get_credentials_provider(credential_provider_py);
-        if (!credential_provider) {
-            return NULL;
-        }
-    }
     struct aws_signing_config_aws *signing_config = NULL;
     if (signing_config_py != Py_None) {
         signing_config = aws_py_get_signing_config(signing_config_py);
         if (!signing_config) {
+            return NULL;
+        }
+    }
+
+    struct aws_credentials_provider *credential_provider = NULL;
+    if (credential_provider_py != Py_None) {
+        credential_provider = aws_py_get_credentials_provider(credential_provider_py);
+        if (!credential_provider) {
             return NULL;
         }
     }

@@ -10,7 +10,7 @@ from test import NativeResourceTest
 from concurrent.futures import Future
 
 from awscrt.http import HttpHeaders, HttpRequest
-from awscrt.s3 import S3Client, S3RequestType, aws_create_default_s3_signing_config
+from awscrt.s3 import S3Client, S3RequestType, create_default_s3_signing_config
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions
 from awscrt.auth import AwsCredentialsProvider, AwsSignatureType, AwsSignedBodyHeaderType, AwsSignedBodyValue, AwsSigningAlgorithm, AwsSigningConfig
 
@@ -74,7 +74,7 @@ def s3_client_new(secure, region, part_size=0):
     host_resolver = DefaultHostResolver(event_loop_group)
     bootstrap = ClientBootstrap(event_loop_group, host_resolver)
     credential_provider = AwsCredentialsProvider.new_default_chain(bootstrap)
-    signing_config = aws_create_default_s3_signing_config(region, credential_provider)
+    signing_config = create_default_s3_signing_config(region, credential_provider)
     tls_option = None
     if secure:
         opt = TlsContextOptions()

@@ -72,8 +72,8 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
     struct aws_allocator *allocator = aws_py_get_allocator();
 
     PyObject *bootstrap_py = NULL;
-    PyObject *credential_provider_py = NULL;
     PyObject *signing_config_py = NULL;
+    PyObject *credential_provider_py = NULL;
     PyObject *tls_options_py = NULL;
     PyObject *on_shutdown_py = NULL;
     PyObject *py_core = NULL;
@@ -86,8 +86,8 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
             args,
             "OOOOOs#iKdO",
             &bootstrap_py,
-            &credential_provider_py,
             &signing_config_py,
+            &credential_provider_py,
             &tls_options_py,
             &on_shutdown_py,
             &region,
