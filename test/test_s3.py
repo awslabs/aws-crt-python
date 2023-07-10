@@ -74,7 +74,7 @@ def s3_client_new(secure, region, part_size=0):
     host_resolver = DefaultHostResolver(event_loop_group)
     bootstrap = ClientBootstrap(event_loop_group, host_resolver)
     credential_provider = AwsCredentialsProvider.new_default_chain(bootstrap)
-    signing_config = create_default_s3_signing_config(region, credential_provider)
+    signing_config = create_default_s3_signing_config(region=region, credential_provider=credential_provider)
     tls_option = None
     if secure:
         opt = TlsContextOptions()
