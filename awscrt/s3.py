@@ -69,7 +69,7 @@ class S3Client(NativeResource):
                 No TLS options will be used, regardless of `tls_connection_options` value.
 
         signing_config (Optional[AwsSigningConfig]):
-             Configuration for signing of the client. Use `create_default_s3_signing_config` to create the default config.
+             Configuration for signing of the client. Use :func:`create_default_s3_signing_config()` to create the default config.
              If None is provided, the request will not be signed.
 
         credential_provider (Optional[AwsCredentialsProvider]): Deprecated, prefer `signing_config` instead.
@@ -175,7 +175,7 @@ class S3Client(NativeResource):
                 :attr:`~S3RequestType.GET_OBJECT`/:attr:`~S3RequestType.PUT_OBJECT` can be accelerated
 
             signing_config (Optional[AwsSigningConfig]):
-                Configuration for signing of the request to override the configuration from client. Use `create_default_s3_signing_config` to create the default config.
+                Configuration for signing of the request to override the configuration from client. Use :func:`create_default_s3_signing_config()` to create the default config.
                 If None is provided, the client configuration will be used.
 
             credential_provider (Optional[AwsCredentialsProvider]):  Deprecated, prefer `signing_config` instead.
