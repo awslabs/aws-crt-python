@@ -400,18 +400,18 @@ class MqttConnectionTest(NativeResourceTest):
         test_tls_opts = TlsContextOptions.create_client_with_mtls_from_path(test_input_cert, test_input_key)
         test_tls = ClientTlsContext(test_tls_opts)
 
-        onConnectionSuccessFuture = Future()
-        onConnectionClosedFuture = Future()
+        on_connection_success_future = Future()
+        on_connection_closed_future = Future()
 
         def on_connection_success_callback(connection, callback_data: OnConnectionSuccessData):
-            onConnectionSuccessFuture.set_result(
+            on_connection_success_future.set_result(
                 {'return_code': callback_data.return_code, "session_present": callback_data.session_present})
 
         def on_connection_failure_callback(connection, callback_data: OnConnectionFailureData):
             pass
 
         def on_connection_closed_callback(connection, callback_data: OnConnectionClosedData):
-            onConnectionClosedFuture.set_result({})
+            on_connection_closed_future.set_result({})
 
         connection = self._create_connection(
             endpoint=test_input_endpoint,
@@ -420,11 +420,11 @@ class MqttConnectionTest(NativeResourceTest):
             on_connection_failure_callback=on_connection_failure_callback,
             on_connection_closed_callback=on_connection_closed_callback)
         connection.connect().result(TIMEOUT)
-        successData = onConnectionSuccessFuture.result(TIMEOUT)
-        self.assertEqual(successData['return_code'], ConnectReturnCode.ACCEPTED)
-        self.assertEqual(successData['session_present'], False)
+        success_data = on_connection_success_future.result(TIMEOUT)
+        self.assertEqual(success_data['return_code'], ConnectReturnCode.ACCEPTED)
+        self.assertEqual(success_data['session_present'], False)
         connection.disconnect().result(TIMEOUT)
-        onConnectionClosedFuture.result(TIMEOUT)
+        on_connection_closed_future.result(TIMEOUT)
 
     def test_connect_disconnect_with_callbacks_unhappy(self):
         test_input_endpoint = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
