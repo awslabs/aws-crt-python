@@ -436,13 +436,13 @@ class MqttConnectionTest(NativeResourceTest):
         test_tls_opts = TlsContextOptions.create_client_with_mtls_from_path(test_input_cert, test_input_key)
         test_tls = ClientTlsContext(test_tls_opts)
 
-        onConnectionFailureFuture = Future()
+        on_onnection_failure_future = Future()
 
         def on_connection_success_callback(connection, callback_data: OnConnectionSuccessData):
             pass
 
         def on_connection_failure_callback(connection, callback_data: OnConnectionFailureData):
-            onConnectionFailureFuture.set_result({'error': callback_data.error})
+            on_onnection_failure_future.set_result({'error': callback_data.error})
 
         def on_connection_closed_callback(connection, callback_data: OnConnectionClosedData):
             pass
@@ -462,15 +462,15 @@ class MqttConnectionTest(NativeResourceTest):
             exception_occurred = True
         self.assertTrue(exception_occurred, "Exception did not occur when connecting with invalid arguments!")
 
-        failureData = onConnectionFailureFuture.result(TIMEOUT)
-        self.assertTrue(failureData['error'] is not None)
+        failure_data = on_onnection_failure_future.result(TIMEOUT)
+        self.assertTrue(failure_data['error'] is not None)
 
     def test_connect_disconnect_with_callbacks_happy_on_resume(self):
         # Check that an on_connection_success callback fires on a resumed connection.
 
-        # NOTE Since there is no mocked server available on this level, the only sensible approach is to interrupt
-        # a connection, and wait for it to be resumed automatically. For that, another connection with the same
-        # client_id connects to the server and then immediately disconnects.
+        # NOTE Since there is no mocked server available on this abstraction level, the only sensible approach
+        # is to interrupt a connection, and wait for it to be resumed automatically. For that, another client
+        # with the same client_id connects to the server and then immediately disconnects.
 
         test_input_endpoint = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
         test_input_cert = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_CERT")
@@ -511,7 +511,7 @@ class MqttConnectionTest(NativeResourceTest):
         def on_connection_success_callback_dup(connection, callback_data: OnConnectionSuccessData):
             on_connection_success_future_dup.set_result({})
 
-        # Reuse the same client_id to displace the first connection.
+        # Reuse the same client_id to displace the first client.
         connection_dup = self._create_connection(
             endpoint=test_input_endpoint,
             tls_context=test_tls,
