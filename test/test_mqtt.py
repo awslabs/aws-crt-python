@@ -504,6 +504,7 @@ class MqttConnectionTest(NativeResourceTest):
         self.assertEqual(success_data['return_code'], ConnectReturnCode.ACCEPTED)
         self.assertEqual(success_data['session_present'], False)
 
+        # Reset the future for the reconnect attempt.
         on_connection_success_future = Future()
 
         on_connection_success_future_dup = Future()
