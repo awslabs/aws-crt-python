@@ -12,6 +12,7 @@
 #include "module.h"
 
 PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args);
+PyObject *aws_py_mqtt_client_connection_new_from_mqtt5_client(PyObject *self, PyObject *args);
 PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args);
 PyObject *aws_py_mqtt_client_connection_reconnect(PyObject *self, PyObject *args);
 PyObject *aws_py_mqtt_client_connection_publish(PyObject *self, PyObject *args);

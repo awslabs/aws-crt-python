@@ -15,6 +15,7 @@ import awscrt.exceptions
 from awscrt.http import HttpProxyOptions, HttpRequest
 from awscrt.io import ClientBootstrap, ClientTlsContext, SocketOptions
 from dataclasses import dataclass
+import mqtt5
 
 
 class QoS(IntEnum):
@@ -350,7 +351,7 @@ class Connection(NativeResource):
                  on_connection_closed=None
                  ):
 
-        assert isinstance(client, Client)
+        assert isinstance(client, Client) or isinstance(client, mqtt5.Client)
         assert callable(on_connection_interrupted) or on_connection_interrupted is None
         assert callable(on_connection_resumed) or on_connection_resumed is None
         assert isinstance(will, Will) or will is None
@@ -376,6 +377,7 @@ class Connection(NativeResource):
 
         # init-only
         self.client = client
+        self._client_version = 5 if isinstance(client, mqtt5.Client) else 3
         self._on_connection_interrupted_cb = on_connection_interrupted
         self._on_connection_resumed_cb = on_connection_resumed
         self._use_websockets = use_websockets
@@ -400,11 +402,18 @@ class Connection(NativeResource):
         self.socket_options = socket_options if socket_options else SocketOptions()
         self.proxy_options = proxy_options if proxy_options else websocket_proxy_options
 
-        self._binding = _awscrt.mqtt_client_connection_new(
-            self,
-            client,
-            use_websockets,
-        )
+        if self._client_version == 3:
+            self._binding = _awscrt.mqtt_client_connection_new(
+                self,
+                client,
+                use_websockets,
+            )
+        elif self._client_version == 5:
+            self._binding = _awscrt.mqtt_client_connection_new_from_mqtt5_client(
+                self,
+                client,
+                use_websockets,
+            )
 
     def _check_uses_old_message_callback_signature(self, callback):
         # The callback used to have fewer args. Passing only those args, if it

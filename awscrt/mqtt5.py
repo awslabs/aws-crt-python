@@ -15,6 +15,7 @@ from awscrt.io import ClientBootstrap, SocketOptions, ClientTlsContext
 from dataclasses import dataclass
 from collections.abc import Sequence
 from inspect import signature
+from mqtt import Connection
 
 
 class QoS(IntEnum):
@@ -1629,6 +1630,31 @@ class _ClientCore:
                     disconnect_packet=None,
                     exception=exceptions.from_code(error_code)))
 
+@dataclass
+class _Mqtt5to3AdapterOptions:
+    """This internal class stores the options that required for creating a new Mqtt3 connection from the mqtt5 client
+    Args:
+        host_name (str): Host name of the MQTT server to connect to.
+        port (int): Network port of the MQTT server to connect to.
+        client_id (str): A unique string identifying the client to the server.  Used to restore session state between connections. If left empty, the broker will auto-assign a unique client id.  When reconnecting, the mqtt5 client will always use the auto-assigned client id.
+        socket_options (SocketOptions): The socket properties of the underlying MQTT connections made by the client or None if defaults are used.
+        min_reconnect_delay_ms (int): The minimum amount of time to wait to reconnect after a disconnect. Exponential backoff is performed with jitter after each connection failure.
+        max_reconnect_delay_ms (int): The maximum amount of time to wait to reconnect after a disconnect.  Exponential backoff is performed with jitter after each connection failure.
+        ping_timeout_ms (int): The time interval to wait after sending a PINGREQ for a PINGRESP to arrive. If one does not arrive, the client will close the current connection.
+        keep_alive_secs (int): The keep alive value, in seconds, A PING will automatically be sent at this interval.
+        ack_timeout_secs (int): The time interval to wait for an ack after sending a QoS 1+ PUBLISH, SUBSCRIBE, or UNSUBSCRIBE before failing the operation.
+        clean_session (bool): Whether or not to start a clean session with each reconnect.
+    """
+    host_name: str
+    port: int
+    client_id: str
+    socket_options: SocketOptions
+    min_reconnect_delay_ms: int
+    max_reconnect_delay_ms: int
+    ping_timeout_ms : int
+    keep_alive_secs : int
+    ack_timeout_secs: int
+    clean_session: bool
 
 class Client(NativeResource):
     """This class wraps the aws-c-mqtt MQTT5 client to provide the basic MQTT5 pub/sub functionalities via the AWS Common Runtime
@@ -1645,6 +1671,8 @@ class Client(NativeResource):
         super().__init__()
 
         core = _ClientCore(client_options)
+
+        self.client_options = client_options
 
         bootstrap = client_options.bootstrap
 
@@ -1709,6 +1737,19 @@ class Client(NativeResource):
                                                  client_options.ack_timeout_sec,
                                                  websocket_is_none,
                                                  core)
+
+        # Store the options for mqtt3 adapter
+        self.adapter_options = _Mqtt5to3AdapterOptions(hostname = client_options.host_name,
+                                                 port = client_options.port,
+                                                 client_id=connect_options.client_id
+                                                 socket_options = socket_options,
+                                                 min_reconnect_delay_ms=client_options.min_reconnect_delay_ms,
+                                                 max_reconnect_delay_ms=client_options.max_reconnect_delay_ms,
+                                                 ping_timeout_ms=client_options.ping_timeout_ms,
+                                                 keep_alive_secs=connect_options.keep_alive_interval_sec,
+                                                 ack_timeout_secs=client_options.ack_timeout_sec,
+                                                 clean_session=client_options.session_behavior < ClientSessionBehaviorType.REJOIN_ALWAYS)
+
 
     def start(self):
         """Notifies the MQTT5 client that you want it maintain connectivity to the configured endpoint.
@@ -1853,3 +1894,36 @@ class Client(NativeResource):
 
         result = _awscrt.mqtt5_client_get_stats(self._binding)
         return OperationStatisticsData(result[0], result[1], result[2], result[3])
+
+
+    def new_connection(self, on_connection_interrupted = None, on_connection_resumed=None,
+                       on_connection_success=None, on_connection_failure=None, on_connection_closed=None):
+        return Connection(
+            self,
+            self.adapter_options.host_name,
+            self.adapter_options.port,
+            self.adapter_options.client_id,
+            clean_session=self.adapter_options.clean_session,
+            on_connection_interrupted=on_connection_interrupted,
+            on_connection_resumed=on_connection_resumed,
+            on_connection_success=on_connection_success,
+            on_connection_failure=on_connection_failure,
+            on_connection_closed=on_connection_closed,
+            reconnect_min_timeout_secs=self.adapter_options.min_reconnect_delay_ms,
+            reconnect_max_timeout_secs=self.adapter_options.max_reconnect_delay_ms,
+            keep_alive_secs=self.adapter_options.keep_alive_secs,
+            ping_timeout_ms=self.adapter_options.ping_timeout_ms,
+            protocol_operation_timeout_ms=self.adapter_options.ack_timeout_sec * 1000,
+            socket_options = self.adapter_options.socket_options,
+
+            # For the arugments below, set it to `None` will directly use the options from mqtt5 client underlying.
+            will=None,
+            will=None,
+            username=None,
+            password=None,
+            # Similar to previous options, set it False will use mqtt5 setup for websockets. It is not necessary means the websocket is disabled.
+            use_websockets=False,
+            websocket_proxy_options=None,
+            websocket_handshake_transform=None,
+            proxy_options=None
+        )
