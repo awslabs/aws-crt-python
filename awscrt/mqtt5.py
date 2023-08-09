@@ -1739,10 +1739,10 @@ class Client(NativeResource):
                                                  core)
 
         # Store the options for mqtt3 adapter
-        self.adapter_options = _Mqtt5to3AdapterOptions(hostname = client_options.host_name,
-                                                 port = client_options.port,
+        self.adapter_options = _Mqtt5to3AdapterOptions(hostname=client_options.host_name,
+                                                 port=client_options.port,
                                                  client_id=connect_options.client_id
-                                                 socket_options = socket_options,
+                                                 socket_options=socket_options,
                                                  min_reconnect_delay_ms=client_options.min_reconnect_delay_ms,
                                                  max_reconnect_delay_ms=client_options.max_reconnect_delay_ms,
                                                  ping_timeout_ms=client_options.ping_timeout_ms,
