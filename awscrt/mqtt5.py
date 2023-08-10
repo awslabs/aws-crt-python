@@ -1918,7 +1918,6 @@ class Client(NativeResource):
 
             # For the arugments below, set it to `None` will directly use the options from mqtt5 client underlying.
             will=None,
-            will=None,
             username=None,
             password=None,
             # Similar to previous options, set it False will use mqtt5 setup for websockets. It is not necessary means the websocket is disabled.
