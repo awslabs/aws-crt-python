@@ -15,7 +15,7 @@ import awscrt.exceptions
 from awscrt.http import HttpProxyOptions, HttpRequest
 from awscrt.io import ClientBootstrap, ClientTlsContext, SocketOptions
 from dataclasses import dataclass
-import awscrt.mqtt5
+from awscrt.mqtt5 import Client as Mqtt5Client
 
 
 class QoS(IntEnum):
@@ -351,7 +351,7 @@ class Connection(NativeResource):
                  on_connection_closed=None
                  ):
 
-        assert isinstance(client, Client) or isinstance(client, awscrt.mqtt5.Client)
+        assert isinstance(client, Client) or isinstance(client, Mqtt5Client)
         assert callable(on_connection_interrupted) or on_connection_interrupted is None
         assert callable(on_connection_resumed) or on_connection_resumed is None
         assert isinstance(will, Will) or will is None

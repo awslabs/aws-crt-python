@@ -15,7 +15,6 @@ from awscrt.io import ClientBootstrap, SocketOptions, ClientTlsContext
 from dataclasses import dataclass
 from collections.abc import Sequence
 from inspect import signature
-from mqtt import Connection
 
 
 class QoS(IntEnum):
@@ -1898,6 +1897,7 @@ class Client(NativeResource):
 
     def new_connection(self, on_connection_interrupted = None, on_connection_resumed=None,
                        on_connection_success=None, on_connection_failure=None, on_connection_closed=None):
+        from awscrt.mqtt import Connection
         return Connection(
             self,
             self.adapter_options.host_name,
