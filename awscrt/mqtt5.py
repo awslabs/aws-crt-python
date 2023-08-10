@@ -1688,8 +1688,6 @@ class Client(NativeResource):
 
         core = _ClientCore(client_options)
 
-        self.client_options = client_options
-
         bootstrap = client_options.bootstrap
 
         if not bootstrap:
@@ -1754,7 +1752,7 @@ class Client(NativeResource):
                                                  websocket_is_none,
                                                  core)
 
-        # Store the options for mqtt3 adapter
+        # Store the options for adapter
         self.adapter_options = _Mqtt5to3AdapterOptions(
             host_name=client_options.host_name,
             port=client_options.port,
