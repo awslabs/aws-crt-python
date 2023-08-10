@@ -1644,17 +1644,9 @@ class _Mqtt5to3AdapterOptions:
         keep_alive_secs (int): The keep alive value, in seconds, A PING will automatically be sent at this interval.
         ack_timeout_secs (int): The time interval to wait for an ack after sending a QoS 1+ PUBLISH, SUBSCRIBE, or UNSUBSCRIBE before failing the operation.
         clean_session (bool): Whether or not to start a clean session with each reconnect.
+
+        The default values are referred from awscrt.mqtt.Connection
     """
-    host_name: str
-    port: int
-    client_id: str
-    socket_options: SocketOptions
-    min_reconnect_delay_ms: int
-    max_reconnect_delay_ms: int
-    ping_timeout_ms: int
-    keep_alive_secs: int
-    ack_timeout_secs: int
-    clean_session: bool
 
     def __init__(
             self,
