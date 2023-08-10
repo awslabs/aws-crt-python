@@ -1629,6 +1629,7 @@ class _ClientCore:
                     disconnect_packet=None,
                     exception=exceptions.from_code(error_code)))
 
+
 @dataclass
 class _Mqtt5to3AdapterOptions:
     """This internal class stores the options that required for creating a new Mqtt3 connection from the mqtt5 client
@@ -1650,10 +1651,11 @@ class _Mqtt5to3AdapterOptions:
     socket_options: SocketOptions
     min_reconnect_delay_ms: int
     max_reconnect_delay_ms: int
-    ping_timeout_ms : int
-    keep_alive_secs : int
+    ping_timeout_ms: int
+    keep_alive_secs: int
     ack_timeout_secs: int
     clean_session: bool
+
 
 class Client(NativeResource):
     """This class wraps the aws-c-mqtt MQTT5 client to provide the basic MQTT5 pub/sub functionalities via the AWS Common Runtime
@@ -1738,17 +1740,18 @@ class Client(NativeResource):
                                                  core)
 
         # Store the options for mqtt3 adapter
-        self.adapter_options = _Mqtt5to3AdapterOptions(hostname=client_options.host_name,
-                                                 port=client_options.port,
-                                                 client_id=connect_options.client_id,
-                                                 socket_options=socket_options,
-                                                 min_reconnect_delay_ms=client_options.min_reconnect_delay_ms,
-                                                 max_reconnect_delay_ms=client_options.max_reconnect_delay_ms,
-                                                 ping_timeout_ms=client_options.ping_timeout_ms,
-                                                 keep_alive_secs=connect_options.keep_alive_interval_sec,
-                                                 ack_timeout_secs=client_options.ack_timeout_sec,
-                                                 clean_session=(client_options.session_behavior < ClientSessionBehaviorType.REJOIN_ALWAYS))
-
+        self.adapter_options = _Mqtt5to3AdapterOptions(
+            host_name=client_options.host_name,
+            port=client_options.port,
+            client_id=connect_options.client_id,
+            socket_options=socket_options,
+            min_reconnect_delay_ms=client_options.min_reconnect_delay_ms,
+            max_reconnect_delay_ms=client_options.max_reconnect_delay_ms,
+            ping_timeout_ms=client_options.ping_timeout_ms,
+            keep_alive_secs=connect_options.keep_alive_interval_sec,
+            ack_timeout_secs=client_options.ack_timeout_sec,
+            clean_session=(
+                client_options.session_behavior < ClientSessionBehaviorType.REJOIN_ALWAYS))
 
     def start(self):
         """Notifies the MQTT5 client that you want it maintain connectivity to the configured endpoint.
@@ -1894,8 +1897,7 @@ class Client(NativeResource):
         result = _awscrt.mqtt5_client_get_stats(self._binding)
         return OperationStatisticsData(result[0], result[1], result[2], result[3])
 
-
-    def new_connection(self, on_connection_interrupted = None, on_connection_resumed=None,
+    def new_connection(self, on_connection_interrupted=None, on_connection_resumed=None,
                        on_connection_success=None, on_connection_failure=None, on_connection_closed=None):
         from awscrt.mqtt import Connection
         return Connection(
@@ -1914,13 +1916,14 @@ class Client(NativeResource):
             keep_alive_secs=self.adapter_options.keep_alive_secs,
             ping_timeout_ms=self.adapter_options.ping_timeout_ms,
             protocol_operation_timeout_ms=self.adapter_options.ack_timeout_sec * 1000,
-            socket_options = self.adapter_options.socket_options,
+            socket_options=self.adapter_options.socket_options,
 
             # For the arugments below, set it to `None` will directly use the options from mqtt5 client underlying.
             will=None,
             username=None,
             password=None,
-            # Similar to previous options, set it False will use mqtt5 setup for websockets. It is not necessary means the websocket is disabled.
+            # Similar to previous options, set it False will use mqtt5 setup for
+            # websockets. It is not necessary means the websocket is disabled.
             use_websockets=False,
             websocket_proxy_options=None,
             websocket_handshake_transform=None,
