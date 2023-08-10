@@ -377,7 +377,7 @@ class Connection(NativeResource):
 
         # init-only
         self.client = client
-        self._client_version = 5 if isinstance(client, mqtt5.Client) else 3
+        self._client_version = 5 if isinstance(client, Mqtt5Client) else 3
         self._on_connection_interrupted_cb = on_connection_interrupted
         self._on_connection_resumed_cb = on_connection_resumed
         self._use_websockets = use_websockets
