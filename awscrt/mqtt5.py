@@ -1656,6 +1656,29 @@ class _Mqtt5to3AdapterOptions:
     ack_timeout_secs: int
     clean_session: bool
 
+    def __init__(
+            self,
+            host_name: str,
+            port: float,
+            client_id: int,
+            socket_options: SocketOptions,
+            min_reconnect_delay_ms: int,
+            max_reconnect_delay_ms: int,
+            ping_timeout_ms: int,
+            keep_alive_secs: int,
+            ack_timeout_secs: int,
+            clean_session: int):
+        self.host_name = host_name
+        self.port = port
+        self.client_id = client_id
+        self.socket_options = socket_options
+        self.min_reconnect_delay_ms = 5 if min_reconnect_delay_ms is None else min_reconnect_delay_ms
+        self.max_reconnect_delay_ms: int = 60 if max_reconnect_delay_ms is None else max_reconnect_delay_ms
+        self.ping_timeout_ms: int = 3000 if ping_timeout_ms is None else ping_timeout_ms
+        self.keep_alive_secs: int = 1200 if keep_alive_secs is None else keep_alive_secs
+        self.ack_timeout_secs: int = 0 if ack_timeout_secs is None else ack_timeout_secs
+        self.clean_session: bool = True if clean_session is None else clean_session
+
 
 class Client(NativeResource):
     """This class wraps the aws-c-mqtt MQTT5 client to provide the basic MQTT5 pub/sub functionalities via the AWS Common Runtime
@@ -1751,7 +1774,7 @@ class Client(NativeResource):
             keep_alive_secs=connect_options.keep_alive_interval_sec,
             ack_timeout_secs=client_options.ack_timeout_sec,
             clean_session=(
-                client_options.session_behavior < ClientSessionBehaviorType.REJOIN_ALWAYS))
+                client_options.session_behavior < ClientSessionBehaviorType.REJOIN_ALWAYS if client_options.session_behavior else True))
 
     def start(self):
         """Notifies the MQTT5 client that you want it maintain connectivity to the configured endpoint.
@@ -1915,7 +1938,8 @@ class Client(NativeResource):
             reconnect_max_timeout_secs=self.adapter_options.max_reconnect_delay_ms,
             keep_alive_secs=self.adapter_options.keep_alive_secs,
             ping_timeout_ms=self.adapter_options.ping_timeout_ms,
-            protocol_operation_timeout_ms=self.adapter_options.ack_timeout_secs * 1000,
+            protocol_operation_timeout_ms=self.adapter_options.ack_timeout_secs *
+            1000 if self.adapter_options.ack_timeout_secs is not None else None,
             socket_options=self.adapter_options.socket_options,
 
             # For the arugments below, set it to `None` will directly use the options from mqtt5 client underlying.
