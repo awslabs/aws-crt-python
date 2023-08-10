@@ -1912,6 +1912,62 @@ class Client(NativeResource):
 
     def new_connection(self, on_connection_interrupted=None, on_connection_resumed=None,
                        on_connection_success=None, on_connection_failure=None, on_connection_closed=None):
+        """ Returns a new Mqtt3 Connection Object wraps the Mqtt5 client.
+
+            Args:
+                on_connection_interrupted: Optional callback invoked whenever the MQTT connection is lost.
+                    The MQTT client will automatically attempt to reconnect.
+                    The function should take the following arguments return nothing:
+
+                        *   `connection` (:class:`Connection`): This MQTT Connection.
+
+                        *   `error` (:class:`awscrt.exceptions.AwsCrtError`): Exception which caused connection loss.
+
+                        *   `**kwargs` (dict): Forward-compatibility kwargs.
+
+                on_connection_resumed: Optional callback invoked whenever the MQTT connection
+                    is automatically resumed. Function should take the following arguments and return nothing:
+
+                        *   `connection` (:class:`Connection`): This MQTT Connection
+
+                        *   `return_code` (:class:`ConnectReturnCode`): Connect return
+                            code received from the server.
+
+                        *   `session_present` (bool): True if resuming existing session. False if new session.
+                            Note that the server has forgotten all previous subscriptions if this is False.
+                            Subscriptions can be re-established via resubscribe_existing_topics().
+
+                        *   `**kwargs` (dict): Forward-compatibility kwargs.
+
+                on_connection_success: Optional callback invoked whenever the connection successfully connects.
+                    This callback is invoked for every successful connect and every successful reconnect.
+
+                    Function should take the following arguments and return nothing:
+
+                        * `connection` (:class:`Connection`): This MQTT Connection
+
+                        * `callback_data` (:class:`OnConnectionSuccessData`): The data returned from the connection success.
+
+                on_connection_failure: Optional callback invoked whenever the connection fails to connect.
+                    This callback is invoked for every failed connect and every failed reconnect.
+
+                    Function should take the following arguments and return nothing:
+
+                        * `connection` (:class:`Connection`): This MQTT Connection
+
+                        * `callback_data` (:class:`OnConnectionFailureData`): The data returned from the connection failure.
+
+                on_connection_closed: Optional callback invoked whenever the connection has been disconnected and shutdown successfully.
+                    Function should take the following arguments and return nothing:
+
+                    * `connection` (:class:`Connection`): This MQTT Connection
+
+                    * `callback_data` (:class:`OnConnectionClosedData`): The data returned from the connection close.
+
+
+            Returns:
+                The (:class:`Connection`) wrapper for the mqtt5 client
+        """
         from awscrt.mqtt import Connection
         return Connection(
             self,
