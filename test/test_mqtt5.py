@@ -1669,7 +1669,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             input_key
         )
         client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
-
+        callbacks = Mqtt5TestCallbacks()
         client = self._create_client(client_options=client_options, callbacks=callbacks)
         connection = client.new_connection()
         connection.connect().result(TIMEOUT)
