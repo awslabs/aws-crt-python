@@ -1915,7 +1915,7 @@ class Client(NativeResource):
             reconnect_max_timeout_secs=self.adapter_options.max_reconnect_delay_ms,
             keep_alive_secs=self.adapter_options.keep_alive_secs,
             ping_timeout_ms=self.adapter_options.ping_timeout_ms,
-            protocol_operation_timeout_ms=self.adapter_options.ack_timeout_sec * 1000,
+            protocol_operation_timeout_ms=self.adapter_options.ack_timeout_secs * 1000,
             socket_options=self.adapter_options.socket_options,
 
             # For the arugments below, set it to `None` will directly use the options from mqtt5 client underlying.
