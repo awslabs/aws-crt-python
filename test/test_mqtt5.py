@@ -1651,9 +1651,9 @@ class Mqtt5ClientTest(NativeResourceTest):
 
         client = self._create_client(client_options=client_options, callbacks=callbacks)
         connection = client.new_connection()
-        connection.connect(TIMEOUT)
+        connection.connect().result(TIMEOUT)
         callbacks.future_connection_success.result(TIMEOUT)
-        connection.disconnect(TIMEOUT)
+        connection.disconnect().result(TIMEOUT)
 
     def test_5to3Adapter_direct_connect_mutual_tls(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")

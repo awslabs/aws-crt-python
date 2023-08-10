@@ -1711,7 +1711,7 @@ class Client(NativeResource):
             will = connect_options.will
 
         websocket_is_none = client_options.websocket_handshake_transform is None
-
+        self.tls_ctx = client_options.tls_ctx
         self._binding = _awscrt.mqtt5_client_new(self,
                                                  client_options.host_name,
                                                  client_options.port,
