@@ -655,6 +655,9 @@ class Connection(NativeResource):
 
         try:
             assert callable(callback) or callback is None
+            from awscrt.mqtt5 import QoS as Mqtt5QoS
+            if (isinstance(qos, Mqtt5QoS)):
+                qos = qos.to_mqtt3()
             assert isinstance(qos, QoS)
             packet_id = _awscrt.mqtt_client_connection_subscribe(
                 self._binding, topic, qos.value, callback_wrapper, suback)
@@ -819,6 +822,10 @@ class Connection(NativeResource):
                 future.set_result(dict(packet_id=packet_id))
 
         try:
+            from awscrt.mqtt5 import QoS as Mqtt5QoS
+            if (isinstance(qos, Mqtt5QoS)):
+                qos = qos.to_mqtt3()
+            assert (qos, QoS)
             packet_id = _awscrt.mqtt_client_connection_publish(self._binding, topic, payload, qos.value, retain, puback)
         except Exception as e:
             future.set_exception(e)

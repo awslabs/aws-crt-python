@@ -41,6 +41,13 @@ class QoS(IntEnum):
     Note that this client does not currently support QoS 2 as of (August 2022)
     """
 
+    def to_mqtt3(self):
+        from awscrt.mqtt import QoS as Mqtt3QoS
+        """Convert a Mqtt5 QoS to Mqtt3
+
+        """
+        return Mqtt3QoS(self._value_)
+
 
 def _try_qos(value):
     try:
