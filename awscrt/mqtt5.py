@@ -1912,6 +1912,7 @@ class Client(NativeResource):
 
     def new_connection(self, on_connection_interrupted=None, on_connection_resumed=None,
                        on_connection_success=None, on_connection_failure=None, on_connection_closed=None):
+        from awscrt.mqtt import Connection
         """ Returns a new Mqtt3 Connection Object wraps the Mqtt5 client.
 
             Args:
@@ -1968,7 +1969,6 @@ class Client(NativeResource):
             Returns:
                 The (:class:`Connection`) wrapper for the mqtt5 client
         """
-        from awscrt.mqtt import Connection
         return Connection(
             self,
             self.adapter_options.host_name,
