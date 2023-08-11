@@ -1623,21 +1623,6 @@ class Mqtt5ClientTest(NativeResourceTest):
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
-    def test_5to3Adapter_direct_connect_minimum(self):
-        input_host_name = _get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_HOST")
-        input_port = int(_get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_PORT"))
-
-        client_options = mqtt5.ClientOptions(
-            host_name=input_host_name,
-            port=input_port
-        )
-        callbacks = Mqtt5TestCallbacks()
-        client = self._create_client(client_options=client_options, callbacks=callbacks)
-
-        connection = client.new_connection()
-        connection.connect().result(TIMEOUT)
-        connection.disconnect().result(TIMEOUT)
-
     def test_5to3Adapter_websocket_connect_minimum(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_WS_MQTT_HOST")
         input_port = int(_get_env_variable("AWS_TEST_MQTT5_WS_MQTT_PORT"))

@@ -275,11 +275,21 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
     PyObject *self_py;
     PyObject *client_py;
     PyObject *use_websocket_py;
-    if (!PyArg_ParseTuple(args, "OOO", &self_py, &client_py, &use_websocket_py)) {
+    unsigned char client_version;
+    if (!PyArg_ParseTuple(args, "OOOb", &self_py, &client_py, &use_websocket_py, &client_version)) {
         return NULL;
     }
 
-    struct aws_mqtt_client *client = aws_py_get_mqtt_client(client_py);
+    void *client = NULL;
+    if (client_version == 3) {
+        client = aws_py_get_mqtt_client(client_py);
+    } else if (client_version == 5) {
+        client = aws_py_get_mqtt5_client(client_py);
+    } else {
+        PyErr_SetString(PyExc_TypeError, "Mqtt Client version not supported. Failed to create connection.");
+        return NULL;
+    }
+
     if (!client) {
         return NULL;
     }
@@ -293,7 +303,11 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
 
     /* From hereon, we need to clean up if errors occur */
 
-    py_connection->native = aws_mqtt_client_connection_new(client);
+    if (client_version == 3) {
+        py_connection->native = aws_mqtt_client_connection_new(client);
+    } else if (client_version == 5) {
+        py_connection->native = aws_mqtt_client_connection_new_from_mqtt5_client(client);
+    }
     if (!py_connection->native) {
         PyErr_SetAwsLastError();
         goto connection_new_failed;

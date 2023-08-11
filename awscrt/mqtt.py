@@ -402,18 +402,12 @@ class Connection(NativeResource):
         self.socket_options = socket_options if socket_options else SocketOptions()
         self.proxy_options = proxy_options if proxy_options else websocket_proxy_options
 
-        if self._client_version == 3:
-            self._binding = _awscrt.mqtt_client_connection_new(
-                self,
-                client,
-                use_websockets,
-            )
-        elif self._client_version == 5:
-            self._binding = _awscrt.mqtt_client_connection_new_from_mqtt5_client(
-                self,
-                client,
-                use_websockets,
-            )
+        self._binding = _awscrt.mqtt_client_connection_new(
+            self,
+            client,
+            use_websockets,
+            self._client_version
+        )
 
     def _check_uses_old_message_callback_signature(self, callback):
         # The callback used to have fewer args. Passing only those args, if it
@@ -825,7 +819,7 @@ class Connection(NativeResource):
             from awscrt.mqtt5 import QoS as Mqtt5QoS
             if (isinstance(qos, Mqtt5QoS)):
                 qos = qos.to_mqtt3()
-            assert (qos, QoS)
+            assert isinstance(qos, QoS)
             packet_id = _awscrt.mqtt_client_connection_publish(self._binding, topic, payload, qos.value, retain, puback)
         except Exception as e:
             future.set_exception(e)

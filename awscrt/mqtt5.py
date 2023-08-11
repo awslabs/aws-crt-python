@@ -46,7 +46,7 @@ class QoS(IntEnum):
         """Convert a Mqtt5 QoS to Mqtt3
 
         """
-        return Mqtt3QoS(self._value_)
+        return Mqtt3QoS(self.value)
 
 
 def _try_qos(value):
@@ -1658,8 +1658,8 @@ class _Mqtt5to3AdapterOptions:
     def __init__(
             self,
             host_name: str,
-            port: float,
-            client_id: int,
+            port: int,
+            client_id: str,
             socket_options: SocketOptions,
             min_reconnect_delay_ms: int,
             max_reconnect_delay_ms: int,
@@ -1669,7 +1669,7 @@ class _Mqtt5to3AdapterOptions:
             clean_session: int):
         self.host_name = host_name
         self.port = port
-        self.client_id = client_id
+        self.client_id = "" if client_id is None else client_id
         self.socket_options = socket_options
         self.min_reconnect_delay_ms = 5 if min_reconnect_delay_ms is None else min_reconnect_delay_ms
         self.max_reconnect_delay_ms: int = 60 if max_reconnect_delay_ms is None else max_reconnect_delay_ms
@@ -1991,8 +1991,7 @@ class Client(NativeResource):
             reconnect_max_timeout_secs=self.adapter_options.max_reconnect_delay_ms,
             keep_alive_secs=self.adapter_options.keep_alive_secs,
             ping_timeout_ms=self.adapter_options.ping_timeout_ms,
-            protocol_operation_timeout_ms=self.adapter_options.ack_timeout_secs *
-            1000 if self.adapter_options.ack_timeout_secs is not None else None,
+            protocol_operation_timeout_ms=self.adapter_options.ack_timeout_secs * 1000,
             socket_options=self.adapter_options.socket_options,
 
             # For the arugments below, set it to `None` will directly use the options from mqtt5 client underlying.
