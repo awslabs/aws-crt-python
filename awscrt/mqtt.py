@@ -49,6 +49,13 @@ class QoS(IntEnum):
     does not support QoS 2 at time of writing (May 2020).
     """
 
+    def to_mqtt5(self):
+        from awscrt.mqtt5 import QoS as Mqtt5QoS
+        """Convert a Mqtt3 QoS to Mqtt5 QoS
+
+        """
+        return Mqtt5QoS(self.value)
+
 
 def _try_qos(qos_value):
     """Return None if the value cannot be converted to Qos (ex: 0x80 subscribe failure)"""
