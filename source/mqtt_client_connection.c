@@ -68,6 +68,7 @@ static void s_mqtt_python_connection_finish_destruction(struct mqtt_connection_b
     Py_XDECREF(py_connection->on_any_publish);
 
     aws_mem_release(aws_py_get_allocator(), py_connection);
+    py_connection = NULL;
 }
 
 // static void s_mqtt_python_connection_destructor_on_disconnect(
