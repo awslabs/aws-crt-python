@@ -62,9 +62,6 @@ struct mqtt_connection_binding {
 
 static void s_mqtt_python_connection_finish_destruction(struct mqtt_connection_binding *py_connection) {
 
-    /* Do not call the on_stopped callback if the python object is finished/destroyed */
-    aws_mqtt_client_connection_set_connection_closed_handler(py_connection->native, NULL, NULL);
-
     Py_DECREF(py_connection->self_proxy);
     Py_DECREF(py_connection->client);
     Py_XDECREF(py_connection->on_any_publish);
@@ -74,6 +71,7 @@ static void s_mqtt_python_connection_finish_destruction(struct mqtt_connection_b
 
 static void s_mqtt_python_connection_destructor_on_close(
     struct aws_mqtt_client_connection *connection,
+    struct on_connection_closed_data *data,
     void *userdata) {
 
     if (connection == NULL || userdata == NULL) {
@@ -108,11 +106,14 @@ static void s_mqtt_python_connection_destructor(PyObject *connection_capsule) {
     /* This is the destructor from Python - so we can ignore the closed callback here */
     if (aws_mqtt_client_connection_set_connection_closed_handler(
             py_connection->native, s_mqtt_python_connection_destructor_on_close, py_connection)) {
+        /* Do not call the on_stopped callback if the python object is finished/destroyed */
+        aws_mqtt_client_connection_set_connection_closed_handler(py_connection->native, NULL, NULL);
+        aws_mqtt_client_connection_release(py_connection->native);
         s_mqtt_python_connection_finish_destruction(py_connection);
         return;
     }
     // release client
-    Py_INCREF(connection->self_capsule); /* Do not allow the PyCapsule to be freed, we need it alive for on_closed */
+    Py_INCREF(py_connection->self_capsule); /* Do not allow the PyCapsule to be freed, we need it alive for on_closed */
     aws_mqtt_client_connection_release(py_connection->native);
 
     // if (aws_mqtt_client_connection_disconnect(
