@@ -61,8 +61,6 @@ static void s_mqtt_python_connection_finish_destruction(struct mqtt_connection_b
     /* Do not call the on_stopped callback if the python object is finished/destroyed */
     aws_mqtt_client_connection_set_connection_closed_handler(py_connection->native, NULL, NULL);
 
-    aws_mqtt_client_connection_release(py_connection->native);
-
     Py_DECREF(py_connection->self_proxy);
     Py_DECREF(py_connection->client);
     Py_XDECREF(py_connection->on_any_publish);
@@ -71,24 +69,24 @@ static void s_mqtt_python_connection_finish_destruction(struct mqtt_connection_b
     py_connection = NULL;
 }
 
-// static void s_mqtt_python_connection_destructor_on_disconnect(
-//     struct aws_mqtt_client_connection *connection,
-//     void *userdata) {
+static void s_mqtt_python_connection_destructor_on_close(
+    struct aws_mqtt_client_connection *connection,
+    void *userdata) {
 
-//     if (connection == NULL || userdata == NULL) {
-//         return; // The connection is dead - skip!
-//     }
+    if (connection == NULL || userdata == NULL) {
+        return; // The connection is dead - skip!
+    }
 
-//     struct mqtt_connection_binding *py_connection = userdata;
+    struct mqtt_connection_binding *py_connection = userdata;
 
-//     PyGILState_STATE state;
-//     if (aws_py_gilstate_ensure(&state)) {
-//         return; /* Python has shut down. Nothing matters anymore, but don't crash */
-//     }
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
 
-//     # s_mqtt_python_connection_finish_destruction(py_connection);
-//     PyGILState_Release(state);
-// }
+    s_mqtt_python_connection_finish_destruction(py_connection);
+    PyGILState_Release(state);
+}
 
 static void s_mqtt_python_connection_destructor(PyObject *connection_capsule) {
 
@@ -97,9 +95,14 @@ static void s_mqtt_python_connection_destructor(PyObject *connection_capsule) {
     assert(py_connection);
 
     /* This is the destructor from Python - so we can ignore the closed callback here */
-    aws_mqtt_client_connection_set_connection_closed_handler(py_connection->native, NULL, NULL);
-
-    s_mqtt_python_connection_finish_destruction(py_connection);
+    if(aws_mqtt_client_connection_set_connection_closed_handler(py_connection->native,
+    s_mqtt_python_connection_destructor_on_close, py_connection))
+    {
+        s_mqtt_python_connection_finish_destruction(py_connection);
+        return;
+    }
+    // release client
+    aws_mqtt_client_connection_release(py_connection->native);
 
     // if (aws_mqtt_client_connection_disconnect(
     //         py_connection->native, s_mqtt_python_connection_destructor_on_disconnect, py_connection)) {
