@@ -58,7 +58,6 @@ struct mqtt_connection_binding {
 
 static void s_mqtt_python_connection_finish_destruction(struct mqtt_connection_binding *py_connection) {
 
-
     Py_DECREF(py_connection->self_proxy);
     Py_DECREF(py_connection->client);
     Py_XDECREF(py_connection->on_any_publish);
@@ -66,9 +65,9 @@ static void s_mqtt_python_connection_finish_destruction(struct mqtt_connection_b
     aws_mem_release(aws_py_get_allocator(), py_connection);
 }
 
-static void s_mqtt_python_connection_termination(struct aws_mqtt_client_connection *connection, void *userdata) {
+static void s_mqtt_python_connection_termination(void *userdata) {
 
-    if (connection == NULL || userdata == NULL) {
+    if (userdata == NULL) {
         return; // The connection is dead - skip!
     }
 
