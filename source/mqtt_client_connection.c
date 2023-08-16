@@ -70,7 +70,7 @@ static void s_mqtt_python_connection_termination(
     struct on_connection_closed_data *data,
     void *userdata) {
 
-    if (connection == NULL || userdata == NULL) {
+    if (userdata == NULL) {
         return; // The connection is dead - skip!
     }
 
@@ -80,7 +80,6 @@ static void s_mqtt_python_connection_termination(
     if (aws_py_gilstate_ensure(&state)) {
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
-
 
     s_mqtt_python_connection_finish_destruction(py_connection);
     PyGILState_Release(state);
@@ -289,8 +288,8 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
         goto connection_new_failed;
     }
 
-    if(aws_mqtt_client_connection_set_termination_handler(py_connection->native, s_mqtt_python_connection_termination, py_connection))
-    {
+    if (aws_mqtt_client_connection_set_termination_handler(
+            py_connection->native, s_mqtt_python_connection_termination, py_connection)) {
         PyErr_SetAwsLastError();
         goto set_termination_failed;
     }
