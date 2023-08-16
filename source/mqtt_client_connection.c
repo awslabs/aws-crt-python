@@ -49,6 +49,10 @@ struct mqtt_connection_binding {
      * Lets us invoke callbacks on the python object without preventing the GC from cleaning it up. */
     PyObject *self_proxy;
 
+    /* To not run into a segfault calling on_close with the connection being freed before the callback
+     * can be invoked, we need to keep the PyCapsule alive. */
+    PyObject *self_capsule;
+
     PyObject *on_connect;
     PyObject *on_any_publish;
 
@@ -58,6 +62,8 @@ struct mqtt_connection_binding {
 
 static void s_mqtt_python_connection_finish_destruction(struct mqtt_connection_binding *py_connection) {
 
+    Py_DECREF(py_connection->self_capsule);
+
     Py_DECREF(py_connection->self_proxy);
     Py_DECREF(py_connection->client);
     Py_XDECREF(py_connection->on_any_publish);
@@ -65,11 +71,9 @@ static void s_mqtt_python_connection_finish_destruction(struct mqtt_connection_b
     aws_mem_release(aws_py_get_allocator(), py_connection);
 }
 
-static void s_mqtt_python_connection_termination(
-    struct aws_mqtt_client_connection *connection,
-    void *userdata) {
+static void s_mqtt_python_connection_termination(struct aws_mqtt_client_connection *connection, void *userdata) {
 
-    if (userdata == NULL) {
+    if (connection == NULL || userdata == NULL) {
         return; // The connection is dead - skip!
     }
 
@@ -90,6 +94,7 @@ static void s_mqtt_python_connection_destructor(PyObject *connection_capsule) {
         PyCapsule_GetPointer(connection_capsule, s_capsule_name_mqtt_client_connection);
     assert(py_connection);
 
+    Py_INCREF(py_connection->self_capsule);
     aws_mqtt_client_connection_release(py_connection->native);
 }
 
@@ -341,6 +346,8 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
     }
 
     /* From hereon, nothing will fail */
+    py_connection->self_capsule = capsule;
+
     py_connection->self_proxy = self_proxy;
 
     py_connection->client = client_py;
