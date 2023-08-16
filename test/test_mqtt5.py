@@ -1549,6 +1549,117 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
+    # ==============================================================
+    #             5to3 ADAPTER TEST CASES
+    # ==============================================================
+    def test_5to3Adapter_connection_creation_minimum(self):
+        client5 = self._create_client()
+        connection = client5.new_connection()
+
+    def test_5to3Adapter_connection_creation_maximum(self):
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
+
+        user_properties = []
+        user_properties.append(mqtt5.UserProperty(name="name1", value="value1"))
+        user_properties.append(mqtt5.UserProperty(name="name2", value="value2"))
+
+        publish_packet = mqtt5.PublishPacket(
+            payload="TEST_PAYLOAD",
+            qos=mqtt5.QoS.AT_LEAST_ONCE,
+            retain=False,
+            topic="TEST_TOPIC",
+            payload_format_indicator=mqtt5.PayloadFormatIndicator.AWS_MQTT5_PFI_UTF8,
+            message_expiry_interval_sec=10,
+            topic_alias=1,
+            response_topic="TEST_RESPONSE_TOPIC",
+            correlation_data="TEST_CORRELATION_DATA",
+            content_type="TEST_CONTENT_TYPE",
+            user_properties=user_properties
+        )
+
+        connect_options = mqtt5.ConnectPacket(
+            keep_alive_interval_sec=10,
+            client_id="TEST_CLIENT",
+            username="USERNAME",
+            password="PASSWORD",
+            session_expiry_interval_sec=100,
+            request_response_information=1,
+            request_problem_information=1,
+            receive_maximum=1000,
+            maximum_packet_size=10000,
+            will_delay_interval_sec=1000,
+            will=publish_packet,
+            user_properties=user_properties
+        )
+        client_options = mqtt5.ClientOptions(
+            host_name=input_host_name,
+            port=8883,
+            connect_options=connect_options,
+            session_behavior=mqtt5.ClientSessionBehaviorType.CLEAN,
+            extended_validation_and_flow_control_options=mqtt5.ExtendedValidationAndFlowControlOptions.AWS_IOT_CORE_DEFAULTS,
+            offline_queue_behavior=mqtt5.ClientOperationQueueBehaviorType.FAIL_ALL_ON_DISCONNECT,
+            retry_jitter_mode=mqtt5.ExponentialBackoffJitterMode.DECORRELATED,
+            min_reconnect_delay_ms=100,
+            max_reconnect_delay_ms=50000,
+            min_connected_time_to_reset_reconnect_delay_ms=1000,
+            ping_timeout_ms=1000,
+            connack_timeout_ms=1000,
+            ack_timeout_sec=100)
+        client = self._create_client(client_options=client_options)
+        connection = client.new_connection()
+
+    def test_5to3Adapter_direct_connect_minimum(self):
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_HOST")
+        input_port = int(_get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_PORT"))
+
+        client_options = mqtt5.ClientOptions(
+            host_name=input_host_name,
+            port=input_port
+        )
+        callbacks = Mqtt5TestCallbacks()
+        client = self._create_client(client_options=client_options, callbacks=callbacks)
+
+        connection = client.new_connection()
+        connection.connect().result(TIMEOUT)
+        connection.disconnect().result(TIMEOUT)
+
+    def test_5to3Adapter_websocket_connect_minimum(self):
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_WS_MQTT_HOST")
+        input_port = int(_get_env_variable("AWS_TEST_MQTT5_WS_MQTT_PORT"))
+
+        client_options = mqtt5.ClientOptions(
+            host_name=input_host_name,
+            port=input_port
+        )
+        callbacks = Mqtt5TestCallbacks()
+        client_options.websocket_handshake_transform = callbacks.ws_handshake_transform
+
+        client = self._create_client(client_options=client_options, callbacks=callbacks)
+        connection = client.new_connection()
+        connection.connect().result(TIMEOUT)
+        callbacks.future_connection_success.result(TIMEOUT)
+        connection.disconnect().result(TIMEOUT)
+
+    def test_5to3Adapter_direct_connect_mutual_tls(self):
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
+        input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
+        input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
+
+        client_options = mqtt5.ClientOptions(
+            host_name=input_host_name,
+            port=8883
+        )
+        tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(
+            input_cert,
+            input_key
+        )
+        client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
+        callbacks = Mqtt5TestCallbacks()
+        client = self._create_client(client_options=client_options, callbacks=callbacks)
+        connection = client.new_connection()
+        connection.connect().result(TIMEOUT)
+        connection.disconnect().result(TIMEOUT)
+
 
 if __name__ == 'main':
     unittest.main()

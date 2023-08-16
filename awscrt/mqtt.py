@@ -15,6 +15,7 @@ import awscrt.exceptions
 from awscrt.http import HttpProxyOptions, HttpRequest
 from awscrt.io import ClientBootstrap, ClientTlsContext, SocketOptions
 from dataclasses import dataclass
+from awscrt.mqtt5 import Client as Mqtt5Client
 
 
 class QoS(IntEnum):
@@ -47,6 +48,13 @@ class QoS(IntEnum):
     Note that, while this client supports QoS 2, the AWS IoT Core server
     does not support QoS 2 at time of writing (May 2020).
     """
+
+    def to_mqtt5(self):
+        from awscrt.mqtt5 import QoS as Mqtt5QoS
+        """Convert a Mqtt3 QoS to Mqtt5 QoS
+
+        """
+        return Mqtt5QoS(self.value)
 
 
 def _try_qos(qos_value):
@@ -350,7 +358,7 @@ class Connection(NativeResource):
                  on_connection_closed=None
                  ):
 
-        assert isinstance(client, Client)
+        assert isinstance(client, Client) or isinstance(client, Mqtt5Client)
         assert callable(on_connection_interrupted) or on_connection_interrupted is None
         assert callable(on_connection_resumed) or on_connection_resumed is None
         assert isinstance(will, Will) or will is None
@@ -376,6 +384,7 @@ class Connection(NativeResource):
 
         # init-only
         self.client = client
+        self._client_version = 5 if isinstance(client, Mqtt5Client) else 3
         self._on_connection_interrupted_cb = on_connection_interrupted
         self._on_connection_resumed_cb = on_connection_resumed
         self._use_websockets = use_websockets
@@ -404,6 +413,7 @@ class Connection(NativeResource):
             self,
             client,
             use_websockets,
+            self._client_version
         )
 
     def _check_uses_old_message_callback_signature(self, callback):
@@ -646,6 +656,9 @@ class Connection(NativeResource):
 
         try:
             assert callable(callback) or callback is None
+            from awscrt.mqtt5 import QoS as Mqtt5QoS
+            if (isinstance(qos, Mqtt5QoS)):
+                qos = qos.to_mqtt3()
             assert isinstance(qos, QoS)
             packet_id = _awscrt.mqtt_client_connection_subscribe(
                 self._binding, topic, qos.value, callback_wrapper, suback)
@@ -810,6 +823,10 @@ class Connection(NativeResource):
                 future.set_result(dict(packet_id=packet_id))
 
         try:
+            from awscrt.mqtt5 import QoS as Mqtt5QoS
+            if (isinstance(qos, Mqtt5QoS)):
+                qos = qos.to_mqtt3()
+            assert isinstance(qos, QoS)
             packet_id = _awscrt.mqtt_client_connection_publish(self._binding, topic, payload, qos.value, retain, puback)
         except Exception as e:
             future.set_exception(e)

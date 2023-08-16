@@ -102,7 +102,7 @@ class TestProvider(NativeResourceTest):
     def test_default_provider(self):
         # Default credentials provider should pick up environment variables.
         with ScopedEnvironmentVariable('AWS_ACCESS_KEY_ID', EXAMPLE_ACCESS_KEY_ID), \
-                ScopedEnvironmentVariable('AWS_SECRET_ACCESS_KEY', EXAMPLE_SECRET_ACCESS_KEY),\
+                ScopedEnvironmentVariable('AWS_SECRET_ACCESS_KEY', EXAMPLE_SECRET_ACCESS_KEY), \
                 ScopedEnvironmentVariable('AWS_SESSION_TOKEN', None):
 
             event_loop_group = awscrt.io.EventLoopGroup()

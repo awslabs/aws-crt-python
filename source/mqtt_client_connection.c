@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0.
  */
 #include "mqtt_client_connection.h"
+#include "mqtt5_client.h"
 
 #include "http.h"
 #include "io.h"
@@ -109,6 +110,63 @@ static void s_mqtt_python_connection_destructor(PyObject *connection_capsule) {
     }
 }
 
+static void s_on_connection_success(
+    struct aws_mqtt_client_connection *connection,
+    enum aws_mqtt_connect_return_code return_code,
+    bool session_present,
+    void *user_data) {
+
+    if (connection == NULL || user_data == NULL) {
+        return; // The connection is dead - skip!
+    }
+
+    struct mqtt_connection_binding *py_connection = user_data;
+
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
+
+    PyObject *self = PyWeakref_GetObject(py_connection->self_proxy); /* borrowed reference */
+    if (self != Py_None) {
+        PyObject *success_result =
+            PyObject_CallMethod(self, "_on_connection_success", "(iN)", return_code, PyBool_FromLong(session_present));
+        if (success_result) {
+            Py_DECREF(success_result);
+        } else {
+            PyErr_WriteUnraisable(PyErr_Occurred());
+        }
+    }
+
+    PyGILState_Release(state);
+}
+
+static void s_on_connection_failure(struct aws_mqtt_client_connection *connection, int error_code, void *user_data) {
+
+    if (connection == NULL || user_data == NULL) {
+        return; // The connection is dead - skip!
+    }
+
+    struct mqtt_connection_binding *py_connection = user_data;
+
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
+
+    PyObject *self = PyWeakref_GetObject(py_connection->self_proxy); /* borrowed reference */
+    if (self != Py_None) {
+        PyObject *success_result = PyObject_CallMethod(self, "_on_connection_failure", "(i)", error_code);
+        if (success_result) {
+            Py_DECREF(success_result);
+        } else {
+            PyErr_WriteUnraisable(PyErr_Occurred());
+        }
+    }
+
+    PyGILState_Release(state);
+}
+
 static void s_on_connection_interrupted(struct aws_mqtt_client_connection *connection, int error_code, void *userdata) {
 
     if (connection == NULL || userdata == NULL) {
@@ -167,15 +225,6 @@ static void s_on_connection_resumed(
         }
     }
 
-    /* call _on_connection_success */
-    PyObject *success_result =
-        PyObject_CallMethod(self, "_on_connection_success", "(iN)", return_code, PyBool_FromLong(session_present));
-    if (success_result) {
-        Py_DECREF(success_result);
-    } else {
-        PyErr_WriteUnraisable(PyErr_Occurred());
-    }
-
     PyGILState_Release(state);
 }
 
@@ -226,11 +275,21 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
     PyObject *self_py;
     PyObject *client_py;
     PyObject *use_websocket_py;
-    if (!PyArg_ParseTuple(args, "OOO", &self_py, &client_py, &use_websocket_py)) {
+    unsigned char client_version;
+    if (!PyArg_ParseTuple(args, "OOOb", &self_py, &client_py, &use_websocket_py, &client_version)) {
         return NULL;
     }
 
-    struct aws_mqtt_client *client = aws_py_get_mqtt_client(client_py);
+    void *client = NULL;
+    if (client_version == 3) {
+        client = aws_py_get_mqtt_client(client_py);
+    } else if (client_version == 5) {
+        client = aws_py_get_mqtt5_client(client_py);
+    } else {
+        PyErr_SetString(PyExc_TypeError, "Mqtt Client version not supported. Failed to create connection.");
+        return NULL;
+    }
+
     if (!client) {
         return NULL;
     }
@@ -244,10 +303,20 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
 
     /* From hereon, we need to clean up if errors occur */
 
-    py_connection->native = aws_mqtt_client_connection_new(client);
+    if (client_version == 3) {
+        py_connection->native = aws_mqtt_client_connection_new(client);
+    } else if (client_version == 5) {
+        py_connection->native = aws_mqtt_client_connection_new_from_mqtt5_client(client);
+    }
     if (!py_connection->native) {
         PyErr_SetAwsLastError();
         goto connection_new_failed;
+    }
+
+    if (aws_mqtt_client_connection_set_connection_result_handlers(
+            py_connection->native, s_on_connection_success, py_connection, s_on_connection_failure, py_connection)) {
+        PyErr_SetAwsLastError();
+        goto set_connection_handlers_failed;
     }
 
     if (aws_mqtt_client_connection_set_connection_interruption_handlers(
@@ -306,6 +375,7 @@ capsule_new_failed:
 proxy_new_failed:
 use_websockets_failed:
 set_interruption_failed:
+set_connection_handlers_failed:
     aws_mqtt_client_connection_release(py_connection->native);
 connection_new_failed:
     aws_mem_release(allocator, py_connection);
@@ -353,29 +423,6 @@ static void s_on_connect(
         }
 
         Py_XDECREF(callback);
-    }
-
-    /* Call on_connection_success or failure based on the result */
-    PyObject *self = PyWeakref_GetObject(py_connection->self_proxy); /* borrowed reference */
-    if (self != Py_None) {
-        /* Successful connection - call _on_connection_success */
-        if (error_code == AWS_ERROR_SUCCESS) {
-            PyObject *success_result = PyObject_CallMethod(
-                self, "_on_connection_success", "(iN)", return_code, PyBool_FromLong(session_present));
-            if (success_result) {
-                Py_DECREF(success_result);
-            } else {
-                PyErr_WriteUnraisable(PyErr_Occurred());
-            }
-            /* Unsuccessful connection - call _on_connection_failure */
-        } else {
-            PyObject *success_result = PyObject_CallMethod(self, "_on_connection_failure", "(i)", error_code);
-            if (success_result) {
-                Py_DECREF(success_result);
-            } else {
-                PyErr_WriteUnraisable(PyErr_Occurred());
-            }
-        }
     }
 
     PyGILState_Release(state);
