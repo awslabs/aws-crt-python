@@ -67,7 +67,6 @@ static void s_mqtt_python_connection_finish_destruction(struct mqtt_connection_b
 
 static void s_mqtt_python_connection_termination(
     struct aws_mqtt_client_connection *connection,
-    struct on_connection_closed_data *data,
     void *userdata) {
 
     if (userdata == NULL) {
