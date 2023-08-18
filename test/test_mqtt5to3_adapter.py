@@ -39,6 +39,7 @@ import time
 
 TIMEOUT = 100.0
 
+
 class Mqtt311TestCallbacks():
     def __init__(self):
         self.last_exception = None
@@ -51,7 +52,7 @@ class Mqtt311TestCallbacks():
         self.future_message_received = Future()
         self.received_message = 0
 
-    def on_connection_interrupted(self, connection: mqtt.Connection, error: exceptions.AwsCrtError ):
+    def on_connection_interrupted(self, connection: mqtt.Connection, error: exceptions.AwsCrtError):
         if self.future_interrupted:
             self.future_interrupted.set_result(error)
 
@@ -68,7 +69,7 @@ class Mqtt311TestCallbacks():
         if self.future_connection_failure:
             self.future_connection_failure.set_result({'error': callback_data.error})
 
-    def on_connection_closed(self, on_connection_closed, callback_data: mqtt.OnConnectionClosedData ):
+    def on_connection_closed(self, on_connection_closed, callback_data: mqtt.OnConnectionClosedData):
         if self.future_closed:
             self.future_closed.set_result()
 
@@ -76,6 +77,7 @@ class Mqtt311TestCallbacks():
         self.received_message += 1
         if self.future_message_received:
             self.future_message_received.set_result(kwargs)
+
 
 class Mqtt5to3AdapterTest(NativeResourceTest):
     TEST_MSG = 'NOTICE ME!'.encode('utf8')
@@ -107,8 +109,8 @@ class Mqtt5to3AdapterTest(NativeResourceTest):
         return client
 
     def _create_connection(self,
-            client: mqtt5.Client,
-            mqtt3_callbacks: Mqtt311TestCallbacks = None):
+                           client: mqtt5.Client,
+                           mqtt3_callbacks: Mqtt311TestCallbacks = None):
         connection = client.new_connection(on_connection_closed=mqtt3_callbacks.on_connection_closed,
                                            on_connection_failure=mqtt3_callbacks.on_connection_failure,
                                            on_connection_success=mqtt3_callbacks.on_connection_success,
@@ -238,10 +240,10 @@ class Mqtt5to3AdapterTest(NativeResourceTest):
         callbacks = Mqtt5TestCallbacks()
         return self._create_client(client_options=client_options, callbacks=callbacks), callbacks
 
-
     # ==============================================================
     #             CONNECTION TEST HELPER FUNCTIONS
     # ==============================================================
+
     def _test_with_mqtt3_connect(self, setup_client: callable):
         client, callbacks = setup_client()
         connection = client.new_connection()
@@ -256,7 +258,6 @@ class Mqtt5to3AdapterTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-
     # ==============================================================
     #             CREATION TEST CASES
     # ==============================================================
@@ -264,7 +265,6 @@ class Mqtt5to3AdapterTest(NativeResourceTest):
     def test_client_creation_minimum(self):
         client = self._create_client()
         connection = client.new_connection()
-
 
     def test_client_creation_maximum(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
@@ -336,10 +336,10 @@ class Mqtt5to3AdapterTest(NativeResourceTest):
     def test_direct_connect_through_mqtt311_websocket_http_proxy_tls(self):
         self._test_with_mqtt3_connect(self._setup_websocket_connect_http_proxy_tls)
 
-
     # ==============================================================
     #         CONNECT THROUGH MQTT5 INTERFACE TEST CASES
     # ==============================================================
+
     def test_direct_connect_through_mqtt5_minimum(self):
         self._test_with_mqtt5_connect(self._setup_direct_connect_minimum)
 
@@ -354,7 +354,6 @@ class Mqtt5to3AdapterTest(NativeResourceTest):
 
     def test_direct_connect_through_mqtt5_websocket_http_proxy_tls(self):
         self._test_with_mqtt5_connect(self._setup_websocket_connect_http_proxy_tls)
-
 
     # ==============================================================
     #             OPERATION TEST CASES
@@ -376,20 +375,18 @@ class Mqtt5to3AdapterTest(NativeResourceTest):
         self.assertEqual(TEST_TOPIC, suback['topic'])
         self.assertIs(mqtt.QoS.AT_LEAST_ONCE, suback['qos'])
 
-
         # publish
         published, packet_id = connection.publish(TEST_TOPIC, self.TEST_MSG, mqtt.QoS.AT_LEAST_ONCE)
         puback = published.result(TIMEOUT)
         self.assertEqual(packet_id, puback['packet_id'])
 
-         # receive message
+        # receive message
         rcv = mqtt311_callbacks.future_message_received.result(TIMEOUT)
         self.assertEqual(TEST_TOPIC, rcv['topic'])
         self.assertEqual(self.TEST_MSG, rcv['payload'])
         self.assertFalse(rcv['dup'])
         self.assertEqual(mqtt.QoS.AT_LEAST_ONCE, rcv['qos'])
         self.assertFalse(rcv['retain'])
-
 
         # unsubscribe
         unsubscribed, packet_id = connection.unsubscribe(TEST_TOPIC)
@@ -410,7 +407,7 @@ class Mqtt5to3AdapterTest(NativeResourceTest):
     #                 MQTT311 CALLBACK TEST CASES
     # ==============================================================
     def test_connection_success_callback(self):
-        client,_ = self._setup_direct_connect_minimum()
+        client, _ = self._setup_direct_connect_minimum()
         mqtt311_callbacks = Mqtt311TestCallbacks()
         connection = self._create_connection(client, mqtt311_callbacks)
 
@@ -492,17 +489,15 @@ class Mqtt5to3AdapterTest(NativeResourceTest):
         client.start()
         mqtt5_callbacks.future_connection_success.result(TIMEOUT)
 
-        # Invalid case. The adapters has no idea about client start here
-        # mqtt311_callbacks1.future_connection_success.result(TIMEOUT)
-        # mqtt311_callbacks2.future_connection_success.result(TIMEOUT)
-        # mqtt311_callbacks3.future_connection_success.result(TIMEOUT)
-
         # subscribe
-        subscribed, packet_id = connection1.subscribe(TEST_TOPIC1, mqtt.QoS.AT_LEAST_ONCE, mqtt311_callbacks1.on_message)
+        subscribed, packet_id = connection1.subscribe(
+            TEST_TOPIC1, mqtt.QoS.AT_LEAST_ONCE, mqtt311_callbacks1.on_message)
         suback = subscribed.result(TIMEOUT)
-        subscribed, packet_id = connection2.subscribe(TEST_TOPIC2, mqtt.QoS.AT_LEAST_ONCE, mqtt311_callbacks2.on_message)
+        subscribed, packet_id = connection2.subscribe(
+            TEST_TOPIC2, mqtt.QoS.AT_LEAST_ONCE, mqtt311_callbacks2.on_message)
         suback = subscribed.result(TIMEOUT)
-        subscribed, packet_id = connection3.subscribe(TEST_TOPIC3, mqtt.QoS.AT_LEAST_ONCE, mqtt311_callbacks3.on_message)
+        subscribed, packet_id = connection3.subscribe(
+            TEST_TOPIC3, mqtt.QoS.AT_LEAST_ONCE, mqtt311_callbacks3.on_message)
         suback = subscribed.result(TIMEOUT)
 
         # publish on topic1
@@ -513,14 +508,12 @@ class Mqtt5to3AdapterTest(NativeResourceTest):
 
         client.publish(publish_packet=publish_packet).result(TIMEOUT)
 
-
         # only connection1 should receive message
         mqtt311_callbacks1.future_message_received.result(TIMEOUT)
 
         self.assertEqual(mqtt311_callbacks1.received_message, 1)
         self.assertEqual(mqtt311_callbacks2.received_message, 0)
         self.assertEqual(mqtt311_callbacks3.received_message, 0)
-
 
         # publish on topic2
         publish_packet = mqtt5.PublishPacket(
@@ -537,7 +530,6 @@ class Mqtt5to3AdapterTest(NativeResourceTest):
         self.assertEqual(mqtt311_callbacks2.received_message, 1)
         self.assertEqual(mqtt311_callbacks3.received_message, 0)
 
-
         # publish on topic3
         publish_packet = mqtt5.PublishPacket(
             payload=self.TEST_MSG,
@@ -546,15 +538,15 @@ class Mqtt5to3AdapterTest(NativeResourceTest):
 
         client.publish(publish_packet=publish_packet).result(TIMEOUT)
 
-         # connection3 should receive message
+        # connection3 should receive message
         mqtt311_callbacks3.future_message_received.result(TIMEOUT)
         self.assertEqual(mqtt311_callbacks1.received_message, 1)
         self.assertEqual(mqtt311_callbacks2.received_message, 1)
         self.assertEqual(mqtt311_callbacks3.received_message, 1)
 
-
         client.stop()
         mqtt5_callbacks.future_stopped.result(TIMEOUT)
+
 
 if __name__ == 'main':
     unittest.main()
