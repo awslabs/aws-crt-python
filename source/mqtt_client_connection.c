@@ -285,7 +285,7 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
         goto connection_new_failed;
     }
 
-    if (aws_mqtt_client_connection_set_termination_handler(
+    if (aws_mqtt_client_connection_set_connection_termination_handler(
             py_connection->native, s_mqtt_python_connection_termination, py_connection)) {
         PyErr_SetAwsLastError();
         goto set_termination_failed;
