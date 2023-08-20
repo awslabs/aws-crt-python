@@ -78,15 +78,23 @@ struct mqtt5_client_binding {
 /* Called on either failed client creation or by the client upon normal client termination */
 static void s_mqtt5_client_on_terminate(void *user_data) {
     struct mqtt5_client_binding *client = user_data;
+
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
+    if(client->client_core != NULL)
+        // Make sure to release the python client object
+        Py_XDECREF(client->client_core);
+
     aws_mem_release(aws_py_get_allocator(), client);
+    PyGILState_Release(state);
 }
 
 /* Called when capsule's refcount hits 0 */
 static void s_mqtt5_python_client_destructor(PyObject *client_capsule) {
     struct mqtt5_client_binding *client = PyCapsule_GetPointer(client_capsule, s_capsule_name_mqtt5_client);
     assert(client);
-
-    Py_XDECREF(client->client_core);
 
     if (client->native != NULL) {
         /* If client is not NULL, it can be shutdown and cleaned normally */

@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0.
 
 from concurrent.futures import Future
-from awscrt import mqtt5, mqtt, io, http, exceptions
+from awscrt import mqtt5, io, http, exceptions
+from awscrt.mqtt import Connection, ConnectReturnCode, OnConnectionSuccessData, OnConnectionFailureData,OnConnectionClosedData, QoS
 from test import NativeResourceTest
 from test.test_mqtt5 import Mqtt5TestCallbacks, _get_env_variable, create_client_id
 import os
@@ -52,26 +53,26 @@ class Mqtt311TestCallbacks():
         self.future_message_received = Future()
         self.received_message = 0
 
-    def on_connection_interrupted(self, connection: mqtt.Connection, error: exceptions.AwsCrtError):
+    def on_connection_interrupted(self, connection: Connection, error: exceptions.AwsCrtError):
         if self.future_interrupted:
             self.future_interrupted.set_result(error)
 
-    def on_connection_resumed(self, connection, return_code: mqtt.ConnectReturnCode, session_present):
+    def on_connection_resumed(self, connection: Connection, return_code: ConnectReturnCode, session_present):
         if self.future_resumed:
             self.future_resumed.set_result({'return_code': return_code, "session_present": session_present})
 
-    def on_connection_success(self, connection: mqtt.Connection, callback_data: mqtt.OnConnectionSuccessData):
+    def on_connection_success(self, connection: Connection, callback_data: OnConnectionSuccessData):
         if self.future_connection_success:
             self.future_connection_success.set_result(
                 {'return_code': callback_data.return_code, "session_present": callback_data.session_present})
 
-    def on_connection_failure(self, connection: mqtt.Connection, callback_data: mqtt.OnConnectionFailureData):
+    def on_connection_failure(self, connection: Connection, callback_data: OnConnectionFailureData):
         if self.future_connection_failure:
             self.future_connection_failure.set_result({'error': callback_data.error})
 
-    def on_connection_closed(self, on_connection_closed, callback_data: mqtt.OnConnectionClosedData):
+    def on_connection_closed(self, connection: Connection, callback_data: OnConnectionClosedData):
         if self.future_closed:
-            self.future_closed.set_result()
+            self.future_closed.set_result({})
 
     def on_message(self, **kwargs):
         self.received_message += 1
@@ -229,18 +230,6 @@ class Mqtt5to3AdapterTest(NativeResourceTest):
         callbacks.future_stopped.result(TIMEOUT)
 
     # ==============================================================
-    #             NEGATIVE CONNECT TEST SETUP
-    # ==============================================================
-
-    def _steup_invalid_connection(self):
-        client_options = mqtt5.ClientOptions(
-            host_name="badhost",
-            port=1883
-        )
-        callbacks = Mqtt5TestCallbacks()
-        return self._create_client(client_options=client_options, callbacks=callbacks), callbacks
-
-    # ==============================================================
     #             CONNECTION TEST HELPER FUNCTIONS
     # ==============================================================
 
@@ -369,14 +358,14 @@ class Mqtt5to3AdapterTest(NativeResourceTest):
         connection.connect().result(TIMEOUT)
 
         # subscribe
-        subscribed, packet_id = connection.subscribe(TEST_TOPIC, mqtt.QoS.AT_LEAST_ONCE, mqtt311_callbacks.on_message)
+        subscribed, packet_id = connection.subscribe(TEST_TOPIC, QoS.AT_LEAST_ONCE, mqtt311_callbacks.on_message)
         suback = subscribed.result(TIMEOUT)
         self.assertEqual(packet_id, suback['packet_id'])
         self.assertEqual(TEST_TOPIC, suback['topic'])
-        self.assertIs(mqtt.QoS.AT_LEAST_ONCE, suback['qos'])
+        self.assertIs(QoS.AT_LEAST_ONCE, suback['qos'])
 
         # publish
-        published, packet_id = connection.publish(TEST_TOPIC, self.TEST_MSG, mqtt.QoS.AT_LEAST_ONCE)
+        published, packet_id = connection.publish(TEST_TOPIC, self.TEST_MSG, QoS.AT_LEAST_ONCE)
         puback = published.result(TIMEOUT)
         self.assertEqual(packet_id, puback['packet_id'])
 
@@ -385,7 +374,7 @@ class Mqtt5to3AdapterTest(NativeResourceTest):
         self.assertEqual(TEST_TOPIC, rcv['topic'])
         self.assertEqual(self.TEST_MSG, rcv['payload'])
         self.assertFalse(rcv['dup'])
-        self.assertEqual(mqtt.QoS.AT_LEAST_ONCE, rcv['qos'])
+        self.assertEqual(QoS.AT_LEAST_ONCE, rcv['qos'])
         self.assertFalse(rcv['retain'])
 
         # unsubscribe
@@ -394,7 +383,7 @@ class Mqtt5to3AdapterTest(NativeResourceTest):
         self.assertEqual(packet_id, unsuback['packet_id'])
 
         # publish
-        published, packet_id = connection.publish(TEST_TOPIC, self.TEST_MSG, mqtt.QoS.AT_LEAST_ONCE)
+        published, packet_id = connection.publish(TEST_TOPIC, self.TEST_MSG, QoS.AT_LEAST_ONCE)
         puback = published.result(TIMEOUT)
         self.assertEqual(packet_id, puback['packet_id'])
 
@@ -491,13 +480,13 @@ class Mqtt5to3AdapterTest(NativeResourceTest):
 
         # subscribe
         subscribed, packet_id = connection1.subscribe(
-            TEST_TOPIC1, mqtt.QoS.AT_LEAST_ONCE, mqtt311_callbacks1.on_message)
+            TEST_TOPIC1, QoS.AT_LEAST_ONCE, mqtt311_callbacks1.on_message)
         suback = subscribed.result(TIMEOUT)
         subscribed, packet_id = connection2.subscribe(
-            TEST_TOPIC2, mqtt.QoS.AT_LEAST_ONCE, mqtt311_callbacks2.on_message)
+            TEST_TOPIC2, QoS.AT_LEAST_ONCE, mqtt311_callbacks2.on_message)
         suback = subscribed.result(TIMEOUT)
         subscribed, packet_id = connection3.subscribe(
-            TEST_TOPIC3, mqtt.QoS.AT_LEAST_ONCE, mqtt311_callbacks3.on_message)
+            TEST_TOPIC3, QoS.AT_LEAST_ONCE, mqtt311_callbacks3.on_message)
         suback = subscribed.result(TIMEOUT)
 
         # publish on topic1
