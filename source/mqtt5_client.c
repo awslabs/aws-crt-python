@@ -83,10 +83,10 @@ static void s_mqtt5_client_on_terminate(void *user_data) {
     if (aws_py_gilstate_ensure(&state)) {
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
-    if(client->client_core != NULL)
+    if (client->client_core != NULL) {
         // Make sure to release the python client object
         Py_XDECREF(client->client_core);
-
+    }
     aws_mem_release(aws_py_get_allocator(), client);
     PyGILState_Release(state);
 }
