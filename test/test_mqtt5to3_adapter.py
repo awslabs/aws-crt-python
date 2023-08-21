@@ -3,7 +3,7 @@
 
 from concurrent.futures import Future
 from awscrt import mqtt5, io, http, exceptions
-from awscrt.mqtt import Connection, ConnectReturnCode, OnConnectionSuccessData, OnConnectionFailureData,OnConnectionClosedData, QoS
+from awscrt.mqtt import Connection, ConnectReturnCode, OnConnectionSuccessData, OnConnectionFailureData, OnConnectionClosedData, QoS
 from test import NativeResourceTest
 from test.test_mqtt5 import Mqtt5TestCallbacks, _get_env_variable, create_client_id
 import os
@@ -56,8 +56,9 @@ class Mqtt311TestCallbacks():
     def on_connection_interrupted(self, connection: Connection, error: exceptions.AwsCrtError):
         if self.future_interrupted:
             self.future_interrupted.set_result(error)
+            self.future_connection_success = self._reset_future(self.future_connection_success)
 
-    def on_connection_resumed(self, connection: Connection, return_code: ConnectReturnCode, session_present):
+    def on_connection_resumed(self, connection: Connection, return_code: ConnectReturnCode, session_present: bool):
         if self.future_resumed:
             self.future_resumed.set_result({'return_code': return_code, "session_present": session_present})
 
@@ -78,6 +79,11 @@ class Mqtt311TestCallbacks():
         self.received_message += 1
         if self.future_message_received:
             self.future_message_received.set_result(kwargs)
+
+    def _reset_future(self, future: Future):
+        if future.done():
+            return Future()
+        return future
 
 
 class Mqtt5to3AdapterTest(NativeResourceTest):
