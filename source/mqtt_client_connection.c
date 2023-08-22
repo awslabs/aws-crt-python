@@ -71,10 +71,6 @@ static void s_start_destroy_native(struct mqtt_connection_binding *py_connection
     }
 
     if (py_connection->native != NULL) {
-        struct aws_mqtt_client_connection *native_binding = py_connection->native;
-        // We set native to NULL to avoid destructor get called again after we released the python
-        // object in termination callback
-        py_connection->native = NULL;
         aws_mqtt_client_connection_release(native_binding);
     } else {
         /* The native client is released already, we directly tear down the binding. */
