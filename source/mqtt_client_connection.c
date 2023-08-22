@@ -49,10 +49,6 @@ struct mqtt_connection_binding {
      * Lets us invoke callbacks on the python object without preventing the GC from cleaning it up. */
     PyObject *self_proxy;
 
-    /* To not run into a segfault calling on_close with the connection being freed before the callback
-     * can be invoked, we need to keep the PyCapsule alive. */
-    PyObject *self_capsule;
-
     PyObject *on_connect;
     PyObject *on_any_publish;
 
@@ -71,19 +67,17 @@ static void s_mqtt_python_connection_finish_destruction(struct mqtt_connection_b
 
 static void s_start_destroy_native(struct mqtt_connection_binding *py_connection) {
     if (py_connection == NULL) {
-        printf("s_start_destroy_native: assert pyconnection\n");
         return;
     }
 
     if (py_connection->native != NULL) {
-
         struct aws_mqtt_client_connection *native_binding = py_connection->native;
+        // We set native to NULL to avoid destructor get called again after we released the python
+        // object in termination callback
         py_connection->native = NULL;
         aws_mqtt_client_connection_release(native_binding);
-
     } else {
-        // The termination callback will not be triggered or already triggered,
-        // try releaseing the self_capsule
+        /* The native client is released already, we directly tear down the binding. */
         s_mqtt_python_connection_finish_destruction(py_connection);
     }
 }
@@ -125,14 +119,10 @@ static void s_mqtt_python_connection_destructor(PyObject *connection_capsule) {
 
     struct mqtt_connection_binding *py_connection =
         PyCapsule_GetPointer(connection_capsule, s_capsule_name_mqtt_client_connection);
-    if (py_connection == NULL) {
-        printf("s_mqtt_python_connection_destructor: assert pyconnection\n");
-        assert(py_connection);
-    }
+    assert(py_connection);
 
-    /* we have already released the native client */
-    if(py_connection->native == NULL)
-    {
+    /* We have already released the native client. */
+    if (py_connection->native == NULL) {
         return;
     }
 
@@ -141,8 +131,7 @@ static void s_mqtt_python_connection_destructor(PyObject *connection_capsule) {
 
     if (aws_mqtt_client_connection_disconnect(
             py_connection->native, s_mqtt_python_connection_destructor_on_disconnect, py_connection)) {
-
-        /* If this returns an error, we should immediately terminate the connection */
+        /* If this returns an error, we should immediately terminate the native connection */
         s_start_destroy_native(py_connection);
     }
 }
@@ -395,7 +384,6 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
     }
 
     /* From hereon, nothing will fail */
-    py_connection->self_capsule = capsule;
     py_connection->self_proxy = self_proxy;
 
     py_connection->client = client_py;
