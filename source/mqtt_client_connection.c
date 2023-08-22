@@ -71,6 +71,7 @@ static void s_start_destroy_native(struct mqtt_connection_binding *py_connection
     }
 
     aws_mqtt_client_connection_release(py_connection->native);
+    py_connection->native = nullptr;
 }
 
 static void s_mqtt_python_connection_termination(void *userdata) {
