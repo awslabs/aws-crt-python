@@ -57,23 +57,24 @@ struct mqtt_connection_binding {
 };
 
 static void s_mqtt_python_connection_finish_destruction(struct mqtt_connection_binding *py_connection) {
-
+    printf("TEST - s_mqtt_python_connection_finish_destruction called TEST");
     Py_DECREF(py_connection->self_proxy);
     Py_DECREF(py_connection->client);
     Py_XDECREF(py_connection->on_any_publish);
 
     aws_mem_release(aws_py_get_allocator(), py_connection);
+    printf("TEST - s_mqtt_python_connection_finish_destruction finished TEST");
 }
 
 static void s_start_destroy_native(struct mqtt_connection_binding *py_connection) {
     if (py_connection == NULL || py_connection->native == NULL) {
         return;
     }
-    printf("TEST - aws_mqtt_client_connection_release(py_connection->native)\n");
+    printf("TEST - aws_mqtt_client_connection_release(py_connection->native) TEST");
     aws_mqtt_client_connection_release(py_connection->native);
-    printf("TEST - py_connection->native = NULL\n");
+    printf("TEST - py_connection->native = NULL TEST");
     py_connection->native = NULL;
-    printf("TEST - POST py_connection->native = NULL\n");
+    printf("TEST - POST py_connection->native = NULL TEST");
 }
 
 static void s_mqtt_python_connection_termination(void *userdata) {
