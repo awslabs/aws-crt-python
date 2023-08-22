@@ -113,7 +113,9 @@ static void s_mqtt_python_connection_destructor(PyObject *connection_capsule) {
     struct mqtt_connection_binding *py_connection =
         PyCapsule_GetPointer(connection_capsule, s_capsule_name_mqtt_client_connection);
     AWS_FATAL_ASSERT(py_connection);
-    AWS_FATAL_ASSERT(py_connection->native);
+
+    // AWS_FATAL_ASSERT(py_connection->native);
+    if(py_connection->native == NULL) return;
 
     /* This is the destructor from Python - so we can ignore the closed callback here */
     aws_mqtt_client_connection_set_connection_closed_handler(py_connection->native, NULL, NULL);
