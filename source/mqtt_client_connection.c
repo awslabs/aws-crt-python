@@ -132,7 +132,7 @@ static void s_mqtt_python_connection_destructor(PyObject *connection_capsule) {
             py_connection->native, s_mqtt_python_connection_destructor_on_disconnect, py_connection)) {
 
         /* If this returns an error, we should immediately terminate the connection */
-        s_mqtt_python_connection_termination(py_connection);
+        s_start_destroy_native(py_connection);
     }
 }
 
