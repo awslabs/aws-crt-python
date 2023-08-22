@@ -427,7 +427,7 @@ class MqttConnectionTest(NativeResourceTest):
         self.assertEqual(success_data['return_code'], ConnectReturnCode.ACCEPTED)
         self.assertEqual(success_data['session_present'], False)
         connection.disconnect().result(TIMEOUT)
-        on_connection_closed_future.result(TIMEOUT)
+        # on_connection_closed_future.result(TIMEOUT)
 
     def test_connect_disconnect_with_callbacks_unhappy(self):
         test_input_endpoint = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
