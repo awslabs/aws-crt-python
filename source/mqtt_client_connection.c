@@ -70,7 +70,10 @@ static void s_mqtt_python_connection_finish_destruction(struct mqtt_connection_b
 }
 
 static void s_start_destroy_native(struct mqtt_connection_binding *py_connection) {
-    assert(py_connection);
+    if (py_connection == NULL) {
+        sprintf("s_start_destroy_native: assert pyconnection\n");
+        return;
+    }
 
     if (py_connection->native != NULL) {
 
@@ -122,7 +125,10 @@ static void s_mqtt_python_connection_destructor(PyObject *connection_capsule) {
 
     struct mqtt_connection_binding *py_connection =
         PyCapsule_GetPointer(connection_capsule, s_capsule_name_mqtt_client_connection);
-    assert(py_connection);
+    if (py_connection == NULL) {
+        sprintf("s_mqtt_python_connection_destructor: assert pyconnection\n");
+        assert(py_connection);
+    }
 
     /* we have already released the native client */
     if(py_connection->native == NULL)
