@@ -71,11 +71,8 @@ static void s_start_destroy_native(struct mqtt_connection_binding *py_connection
     }
 
     if (py_connection->native != NULL) {
-        struct aws_mqtt_client_connection *native_binding = py_connection->native;
-        // We set native to NULL to avoid destructor get called again after we released the python
-        // object in termination callback
-        py_connection->native = NULL;
         aws_mqtt_client_connection_release(native_binding);
+        py_connection->native = NULL;
     } else {
         /* The native client is released already, we directly tear down the binding. */
         s_mqtt_python_connection_finish_destruction(py_connection);
@@ -85,7 +82,7 @@ static void s_start_destroy_native(struct mqtt_connection_binding *py_connection
 static void s_mqtt_python_connection_termination(void *userdata) {
 
     if (userdata == NULL) {
-        return; // The connection is dead - skip!
+        return; // The binding is dead - skip!
     }
 
     struct mqtt_connection_binding *py_connection = userdata;
@@ -120,18 +117,14 @@ static void s_mqtt_python_connection_destructor(PyObject *connection_capsule) {
     struct mqtt_connection_binding *py_connection =
         PyCapsule_GetPointer(connection_capsule, s_capsule_name_mqtt_client_connection);
     assert(py_connection);
-
-    /* We have already released the native client. */
-    if (py_connection->native == NULL) {
-        return;
-    }
+    assert(py_connection->native);
 
     /* This is the destructor from Python - so we can ignore the closed callback here */
     aws_mqtt_client_connection_set_connection_closed_handler(py_connection->native, NULL, NULL);
 
     if (aws_mqtt_client_connection_disconnect(
             py_connection->native, s_mqtt_python_connection_destructor_on_disconnect, py_connection)) {
-        /* If this returns an error, we should immediately terminate the native connection */
+        /* If we already disconnected, we should immediately release the native connection */
         s_start_destroy_native(py_connection);
     }
 }
