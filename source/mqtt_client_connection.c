@@ -119,7 +119,6 @@ static void s_mqtt_python_connection_destructor_on_disconnect(
 
 static void s_mqtt_python_connection_destructor(PyObject *connection_capsule) {
 
-    printf("s_mqtt_python_connection_destructor: on zero ref\n");
     struct mqtt_connection_binding *py_connection =
         PyCapsule_GetPointer(connection_capsule, s_capsule_name_mqtt_client_connection);
     assert(py_connection);
