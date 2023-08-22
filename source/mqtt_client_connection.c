@@ -73,9 +73,11 @@ static void s_start_destroy_native(struct mqtt_connection_binding *py_connection
     assert(py_connection);
 
     if (py_connection->native != NULL) {
-        Py_INCREF(py_connection->self_capsule);
-        aws_mqtt_client_connection_release(py_connection->native);
+
+        struct aws_mqtt_client_connection *native_binding = py_connection->native;
         py_connection->native = NULL;
+        aws_mqtt_client_connection_release(native_binding);
+
     } else {
         // The termination callback will not be triggered or already triggered,
         // try releaseing the self_capsule
@@ -86,7 +88,7 @@ static void s_start_destroy_native(struct mqtt_connection_binding *py_connection
 static void s_mqtt_python_connection_termination(void *userdata) {
 
     if (userdata == NULL) {
-        return;
+        return; // The connection is dead - skip!
     }
 
     struct mqtt_connection_binding *py_connection = userdata;
@@ -96,7 +98,6 @@ static void s_mqtt_python_connection_termination(void *userdata) {
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
-    Py_XDECREF(py_connection->self_capsule);
     s_mqtt_python_connection_finish_destruction(py_connection);
     PyGILState_Release(state);
 }
