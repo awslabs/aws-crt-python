@@ -66,16 +66,11 @@ static void s_mqtt_python_connection_finish_destruction(struct mqtt_connection_b
 }
 
 static void s_start_destroy_native(struct mqtt_connection_binding *py_connection) {
-    if (py_connection == NULL) {
+    if (py_connection == NULL || py_connection->native == NULL) {
         return;
     }
 
-    if (py_connection->native != NULL) {
-        aws_mqtt_client_connection_release(py_connection->native);
-    } else {
-        /* The native client is released already, we directly tear down the binding. */
-        s_mqtt_python_connection_finish_destruction(py_connection);
-    }
+    aws_mqtt_client_connection_release(py_connection->native);
 }
 
 static void s_mqtt_python_connection_termination(void *userdata) {
@@ -115,8 +110,8 @@ static void s_mqtt_python_connection_destructor(PyObject *connection_capsule) {
 
     struct mqtt_connection_binding *py_connection =
         PyCapsule_GetPointer(connection_capsule, s_capsule_name_mqtt_client_connection);
-    assert(py_connection);
-    assert(py_connection->native);
+    AWS_FATAL_ASSERT(py_connection);
+    AWS_FATAL_ASSERT(py_connection->native);
 
     /* This is the destructor from Python - so we can ignore the closed callback here */
     aws_mqtt_client_connection_set_connection_closed_handler(py_connection->native, NULL, NULL);
