@@ -78,7 +78,7 @@ static void s_start_destroy_native(struct mqtt_connection_binding *py_connection
     } else {
         // The termination callback will not be triggered or already triggered,
         // try releaseing the self_capsule
-        Py_XDECREF(py_connection->self_capsule);
+        // Py_XDECREF(py_connection->self_capsule);
         s_mqtt_python_connection_finish_destruction(py_connection);
     }
 }
@@ -96,7 +96,7 @@ static void s_mqtt_python_connection_termination(void *userdata) {
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
-    Py_XDECREF(py_connection->self_capsule);
+    // Py_XDECREF(py_connection->self_capsule);
     s_mqtt_python_connection_finish_destruction(py_connection);
     PyGILState_Release(state);
 }
@@ -126,8 +126,8 @@ static void s_mqtt_python_connection_destructor(PyObject *connection_capsule) {
     /* This is the destructor from Python - so we can ignore the closed callback here */
     aws_mqtt_client_connection_set_connection_closed_handler(py_connection->native, NULL, NULL);
 
-    // keep a self reference to avoid the object get released before termination callback
-    Py_INCREF(py_connection->self_capsule);
+    // // keep a self reference to avoid the object get released before termination callback
+    // Py_INCREF(py_connection->self_capsule);
     if (aws_mqtt_client_connection_disconnect(
             py_connection->native, s_mqtt_python_connection_destructor_on_disconnect, py_connection)) {
 
