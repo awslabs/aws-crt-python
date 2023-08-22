@@ -69,9 +69,9 @@ static void s_start_destroy_native(struct mqtt_connection_binding *py_connection
     if (py_connection == NULL || py_connection->native == NULL) {
         return;
     }
-
+    printf("TEST - aws_mqtt_client_connection_release(py_connection->native)");
     aws_mqtt_client_connection_release(py_connection->native);
-    aws_thread_current_sleep(1000000000);
+    printf("TEST - py_connection->native = NULL");
     py_connection->native = NULL;
 }
 
