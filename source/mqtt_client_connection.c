@@ -49,10 +49,6 @@ struct mqtt_connection_binding {
      * Lets us invoke callbacks on the python object without preventing the GC from cleaning it up. */
     PyObject *self_proxy;
 
-    /* To not run into a segfault calling on_close with the connection being freed before the callback
-     * can be invoked, we need to keep the PyCapsule alive. */
-    PyObject *self_capsule;
-
     PyObject *on_connect;
     PyObject *on_any_publish;
 
@@ -62,11 +58,6 @@ struct mqtt_connection_binding {
 
 static void s_mqtt_python_connection_finish_destruction(struct mqtt_connection_binding *py_connection) {
 
-    /* Do not call the on_stopped callback if the python object is finished/destroyed */
-    aws_mqtt_client_connection_set_connection_closed_handler(py_connection->native, NULL, NULL);
-
-    aws_mqtt_client_connection_release(py_connection->native);
-
     Py_DECREF(py_connection->self_proxy);
     Py_DECREF(py_connection->client);
     Py_XDECREF(py_connection->on_any_publish);
@@ -74,12 +65,18 @@ static void s_mqtt_python_connection_finish_destruction(struct mqtt_connection_b
     aws_mem_release(aws_py_get_allocator(), py_connection);
 }
 
-static void s_mqtt_python_connection_destructor_on_disconnect(
-    struct aws_mqtt_client_connection *connection,
-    void *userdata) {
+static void s_start_destroy_native(struct mqtt_connection_binding *py_connection) {
+    if (py_connection == NULL || py_connection->native == NULL) {
+        return;
+    }
 
-    if (connection == NULL || userdata == NULL) {
-        return; // The connection is dead - skip!
+    aws_mqtt_client_connection_release(py_connection->native);
+}
+
+static void s_mqtt_python_connection_termination(void *userdata) {
+
+    if (userdata == NULL) {
+        return; // The binding is dead - skip!
     }
 
     struct mqtt_connection_binding *py_connection = userdata;
@@ -93,20 +90,36 @@ static void s_mqtt_python_connection_destructor_on_disconnect(
     PyGILState_Release(state);
 }
 
+static void s_mqtt_python_connection_destructor_on_disconnect(
+    struct aws_mqtt_client_connection *connection,
+    void *user_data) {
+    if (connection == NULL || user_data == NULL) {
+        return; // The connection is dead - skip!
+    }
+
+    struct mqtt_connection_binding *py_connection = user_data;
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
+    s_start_destroy_native(py_connection);
+    PyGILState_Release(state);
+}
+
 static void s_mqtt_python_connection_destructor(PyObject *connection_capsule) {
 
     struct mqtt_connection_binding *py_connection =
         PyCapsule_GetPointer(connection_capsule, s_capsule_name_mqtt_client_connection);
-    assert(py_connection);
+    AWS_FATAL_ASSERT(py_connection);
+    AWS_FATAL_ASSERT(py_connection->native);
 
     /* This is the destructor from Python - so we can ignore the closed callback here */
     aws_mqtt_client_connection_set_connection_closed_handler(py_connection->native, NULL, NULL);
 
     if (aws_mqtt_client_connection_disconnect(
             py_connection->native, s_mqtt_python_connection_destructor_on_disconnect, py_connection)) {
-
-        /* If this returns an error, we should immediately destroy the connection */
-        s_mqtt_python_connection_finish_destruction(py_connection);
+        /* If we already disconnected, we should immediately release the native connection */
+        s_start_destroy_native(py_connection);
     }
 }
 
@@ -254,15 +267,6 @@ static void s_on_connection_closed(
             PyErr_WriteUnraisable(PyErr_Occurred());
         }
     }
-    Py_DECREF(py_connection->self_proxy);
-
-    /** Allow the PyCapsule to be freed like normal again.
-     * If this is the last reference (I.E customer code called disconnect and threw the Python object away)
-     * Then this will allow the MQTT311 class to be fully cleaned.
-     * If it is not the last reference (customer still has reference) then when the customer is done
-     * it will be freed like normal.
-     **/
-    Py_DECREF(py_connection->self_capsule);
 
     PyGILState_Release(state);
 }
@@ -272,6 +276,7 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
 
     struct aws_allocator *allocator = aws_py_get_allocator();
 
+    PyObject *self_proxy;
     PyObject *self_py;
     PyObject *client_py;
     PyObject *use_websocket_py;
@@ -310,13 +315,19 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
     }
     if (!py_connection->native) {
         PyErr_SetAwsLastError();
-        goto connection_new_failed;
+        goto on_error;
+    }
+
+    if (aws_mqtt_client_connection_set_connection_termination_handler(
+            py_connection->native, s_mqtt_python_connection_termination, py_connection)) {
+        PyErr_SetAwsLastError();
+        goto on_error;
     }
 
     if (aws_mqtt_client_connection_set_connection_result_handlers(
             py_connection->native, s_on_connection_success, py_connection, s_on_connection_failure, py_connection)) {
         PyErr_SetAwsLastError();
-        goto set_connection_handlers_failed;
+        goto on_error;
     }
 
     if (aws_mqtt_client_connection_set_connection_interruption_handlers(
@@ -327,13 +338,13 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
             py_connection)) {
 
         PyErr_SetAwsLastError();
-        goto set_interruption_failed;
+        goto on_error;
     }
 
     if (aws_mqtt_client_connection_set_connection_closed_handler(
             py_connection->native, s_on_connection_closed, py_connection)) {
         PyErr_SetAwsLastError();
-        goto set_interruption_failed;
+        goto on_error;
     }
 
     if (PyObject_IsTrue(use_websocket_py)) {
@@ -345,24 +356,22 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
                 NULL /*validator userdata*/)) {
 
             PyErr_SetAwsLastError();
-            goto use_websockets_failed;
+            goto on_error;
         }
     }
 
-    PyObject *self_proxy = PyWeakref_NewProxy(self_py, NULL);
+    self_proxy = PyWeakref_NewProxy(self_py, NULL);
     if (!self_proxy) {
-        goto proxy_new_failed;
+        goto on_error;
     }
 
     PyObject *capsule =
         PyCapsule_New(py_connection, s_capsule_name_mqtt_client_connection, s_mqtt_python_connection_destructor);
     if (!capsule) {
-        goto capsule_new_failed;
+        goto on_error;
     }
 
     /* From hereon, nothing will fail */
-
-    py_connection->self_capsule = capsule;
     py_connection->self_proxy = self_proxy;
 
     py_connection->client = client_py;
@@ -370,14 +379,9 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
 
     return capsule;
 
-capsule_new_failed:
-    Py_DECREF(self_proxy);
-proxy_new_failed:
-use_websockets_failed:
-set_interruption_failed:
-set_connection_handlers_failed:
+on_error:
+    Py_XDECREF(self_proxy);
     aws_mqtt_client_connection_release(py_connection->native);
-connection_new_failed:
     aws_mem_release(allocator, py_connection);
     return NULL;
 }
@@ -1329,14 +1333,10 @@ PyObject *aws_py_mqtt_client_connection_disconnect(PyObject *self, PyObject *arg
     }
 
     Py_INCREF(on_disconnect);
-    Py_INCREF(connection->self_proxy);   /* We need to keep self_proxy alive for on_closed, which will dec-ref this */
-    Py_INCREF(connection->self_capsule); /* Do not allow the PyCapsule to be freed, we need it alive for on_closed */
 
     int err = aws_mqtt_client_connection_disconnect(connection->native, s_on_disconnect, on_disconnect);
     if (err) {
         Py_DECREF(on_disconnect);
-        Py_DECREF(connection->self_proxy);
-        Py_DECREF(connection->self_capsule);
         return PyErr_AwsLastError();
     }
 
