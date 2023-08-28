@@ -315,19 +315,19 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
     }
     if (!py_connection->native) {
         PyErr_SetAwsLastError();
-        goto creation_failed;
+        goto on_error;
     }
 
     if (aws_mqtt_client_connection_set_connection_termination_handler(
             py_connection->native, s_mqtt_python_connection_termination, py_connection)) {
         PyErr_SetAwsLastError();
-        goto creation_failed;
+        goto on_error;
     }
 
     if (aws_mqtt_client_connection_set_connection_result_handlers(
             py_connection->native, s_on_connection_success, py_connection, s_on_connection_failure, py_connection)) {
         PyErr_SetAwsLastError();
-        goto creation_failed;
+        goto on_error;
     }
 
     if (aws_mqtt_client_connection_set_connection_interruption_handlers(
@@ -338,13 +338,13 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
             py_connection)) {
 
         PyErr_SetAwsLastError();
-        goto creation_failed;
+        goto on_error;
     }
 
     if (aws_mqtt_client_connection_set_connection_closed_handler(
             py_connection->native, s_on_connection_closed, py_connection)) {
         PyErr_SetAwsLastError();
-        goto creation_failed;
+        goto on_error;
     }
 
     if (PyObject_IsTrue(use_websocket_py)) {
@@ -356,19 +356,19 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
                 NULL /*validator userdata*/)) {
 
             PyErr_SetAwsLastError();
-            goto creation_failed;
+            goto on_error;
         }
     }
 
     self_proxy = PyWeakref_NewProxy(self_py, NULL);
     if (!self_proxy) {
-        goto creation_failed;
+        goto on_error;
     }
 
     PyObject *capsule =
         PyCapsule_New(py_connection, s_capsule_name_mqtt_client_connection, s_mqtt_python_connection_destructor);
     if (!capsule) {
-        goto creation_failed;
+        goto on_error;
     }
 
     /* From hereon, nothing will fail */
@@ -379,14 +379,10 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
 
     return capsule;
 
-creation_failed:
+on_error:
     Py_XDECREF(self_proxy);
-    if (py_connection) {
-        if (py_connection->native) {
-            aws_mqtt_client_connection_release(py_connection->native);
-        }
-        aws_mem_release(allocator, py_connection);
-    }
+    aws_mqtt_client_connection_release(py_connection->native);
+    aws_mem_release(allocator, py_connection);
     return NULL;
 }
 
