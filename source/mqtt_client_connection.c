@@ -276,7 +276,6 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
 
     struct aws_allocator *allocator = aws_py_get_allocator();
 
-    PyObject *self_proxy;
     PyObject *self_py;
     PyObject *client_py;
     PyObject *use_websocket_py;
@@ -307,6 +306,7 @@ PyObject *aws_py_mqtt_client_connection_new(PyObject *self, PyObject *args) {
     }
 
     /* From hereon, we need to clean up if errors occur */
+    PyObject *self_proxy = NULL;
 
     if (client_version == 3) {
         py_connection->native = aws_mqtt_client_connection_new(client);

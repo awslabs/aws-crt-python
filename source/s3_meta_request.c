@@ -155,7 +155,15 @@ static int s_s3_request_on_body(
     if (request_binding->recv_file) {
         /* The callback will be invoked with the right order, so we don't need to seek first. */
         if (fwrite((void *)body->ptr, body->len, 1, request_binding->recv_file) < 1) {
-            return aws_translate_and_raise_io_error(errno);
+            int errno_value = ferror(request_binding->recv_file) ? errno : 0; /* Always cache errno  */
+            aws_translate_and_raise_io_error_or(errno_value, AWS_ERROR_FILE_WRITE_FAILURE);
+            AWS_LOGF_ERROR(
+                AWS_LS_S3_META_REQUEST,
+                "id=%p Failed writing to file. errno:%d. aws-error:%s",
+                (void *)meta_request,
+                errno_value,
+                aws_error_name(aws_last_error()));
+            return AWS_OP_ERR;
         }
         if (!report_progress) {
             return AWS_OP_SUCCESS;
@@ -212,8 +220,24 @@ static void s_s3_request_on_finish(
     (void)meta_request;
     struct s3_meta_request_binding *request_binding = user_data;
 
+    int error_code = meta_request_result->error_code;
+
     if (request_binding->recv_file) {
-        fclose(request_binding->recv_file);
+        if (fclose(request_binding->recv_file) != 0) {
+            /* Failed to close file, so we can't guarantee it flushed to disk.
+             * If the meta-request's error_code was 0, change it to failure */
+            if (error_code == 0) {
+                int errno_value = errno; /* Always cache errno before potential side-effect */
+                aws_translate_and_raise_io_error_or(errno_value, AWS_ERROR_FILE_WRITE_FAILURE);
+                error_code = aws_last_error();
+                AWS_LOGF_ERROR(
+                    AWS_LS_S3_META_REQUEST,
+                    "id=%p Failed closing file. errno:%d. aws-error:%s",
+                    (void *)meta_request,
+                    errno_value,
+                    aws_error_name(error_code));
+            }
+        }
         request_binding->recv_file = NULL;
     }
     /*************** GIL ACQUIRE ***************/
@@ -227,12 +251,13 @@ static void s_s3_request_on_finish(
 
     request_binding->copied_message = aws_http_message_release(request_binding->copied_message);
 
-    if (request_binding->size_transferred) {
+    if (request_binding->size_transferred && (error_code == 0)) {
         /* report the remaining progress */
         result =
             PyObject_CallMethod(request_binding->py_core, "_on_progress", "(K)", request_binding->size_transferred);
         if (!result) {
             PyErr_WriteUnraisable(request_binding->py_core);
+            /* We MUST keep going and invoke the final callback */
         } else {
             Py_DECREF(result);
         }
@@ -245,7 +270,7 @@ static void s_s3_request_on_finish(
         header_list = s_get_py_headers(meta_request_result->error_response_headers);
         if (!header_list) {
             PyErr_WriteUnraisable(request_binding->py_core);
-            goto done;
+            /* We MUST keep going and invoke the final callback. These headers were optional anyway. */
         }
     }
     if (meta_request_result->error_response_body) {
@@ -255,7 +280,7 @@ static void s_s3_request_on_finish(
         request_binding->py_core,
         "_on_finish",
         "(iOy#)",
-        meta_request_result->error_code,
+        error_code,
         header_list ? header_list : Py_None,
         (const char *)(error_body.buffer),
         (Py_ssize_t)error_body.len);
@@ -266,7 +291,7 @@ static void s_s3_request_on_finish(
         /* Callback might fail during application shutdown */
         PyErr_WriteUnraisable(request_binding->py_core);
     }
-done:
+
     Py_XDECREF(header_list);
     PyGILState_Release(state);
     /*************** GIL RELEASE ***************/
