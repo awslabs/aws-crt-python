@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0.
 
 from weakref import WeakSet
+from .config import crt_wheel_installed
 
 __all__ = [
     'auth',

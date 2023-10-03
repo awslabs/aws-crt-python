@@ -67,5 +67,14 @@ Please note that on Mac, once a private key is used with a certificate, that cer
 static: certificate has an existing certificate-key pair that was previously imported into the Keychain. Using key from Keychain instead of the one provided.
 ```
 
+## Using With a System-Level Installation of the _awscrt Module or as an Optional Dependency
+
+Upon installation, if both the wheel is unavailable from PyPi and setup.py cannot build the _awscrt module, installation will still succeed. 
+This is intended to allow the crt to be installed into other libraries or applications as a library without failing its install step if a compiler
+or any other required build tool is not available. This also allows _awscrt to be loaded at the system level via. operating system package managers
+as this will cause the loader to look at the system path when it can't find the locally installed module.
+
+````awscrt.crt_wheel_installed()```` will always return without throwing an Exception even if the build itself failed. If this function returns true, the rest of the modules in this package may be used.
+
 ## Crash Handler
 You can enable the crash handler by setting the environment variable `AWS_CRT_CRASH_HANDLER=1`. This will print the callstack to `stderr` in the event of a fatal error.

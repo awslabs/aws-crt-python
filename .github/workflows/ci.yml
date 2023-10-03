@@ -17,6 +17,7 @@ env:
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
   AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
   AWS_REGION: us-east-1
+  AWS_CRT_BUILD_STRICT_MODE: ON
 
 jobs:
   manylinux1:
@@ -264,6 +265,14 @@ jobs:
           cd dist
           python3 -m pip install -v awscrt-1.0.0.dev0.tar.gz
           python3 -c "import awscrt.io"
+
+  non-strict-system-mode:
+    runs-on: ubuntu-22.04 #latest
+    steps:
+      - uses: actions/checkout@v3
+    - name: Non Strict/System Mode
+      run: |
+        ./codebuild/test-sys-install-mode.sh    
 
   # check that docs can still build
   check-docs:
