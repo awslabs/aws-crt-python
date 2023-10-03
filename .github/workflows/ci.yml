@@ -269,7 +269,7 @@ jobs:
   non-strict-system-mode:
     runs-on: ubuntu-22.04 #latest
     steps:
-      - uses: actions/checkout@v3
+    - uses: actions/checkout@v3
     - name: Non Strict/System Mode
       run: |
         ./codebuild/test-sys-install-mode.sh    
