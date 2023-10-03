@@ -6,5 +6,5 @@ set -euxo pipefail
 # git submodule update --init
 
 export AWS_CRT_BUILD_STRICT_MODE=OFF
-python -m pip install --upgrade --requirement requirements-dev.txt
+python -m setup.py install
 python codebuild/test-config-on-failure.py
