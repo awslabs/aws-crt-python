@@ -132,11 +132,6 @@ def strict_build_success_mode():
     return strict_mode is not None and strict_mode.strip().lower() != 'off'
 
 
-def report_build_status(status):
-    with open('awscrt/config.py', 'w') as f:
-        f.write("crt_wheel_installed = {}".format(status))
-
-
 class AwsLib:
     def __init__(self, name, extra_cmake_args=[], libname=None):
         self.name = name
