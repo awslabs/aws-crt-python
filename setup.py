@@ -127,7 +127,7 @@ def using_system_libcrypto():
 
 def strict_build_success_mode():
     strict_mode = os.getenv('AWS_CRT_BUILD_STRICT_MODE')
-    return strict_mode != None and strict_mode.lower() != 'off'
+    return strict_mode != None and strict_mode.strip().lower() != 'off'
 
 def report_build_status(status):
     with open('awscrt/config.py', 'w') as f:

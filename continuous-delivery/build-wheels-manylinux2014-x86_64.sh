@@ -1,6 +1,7 @@
 #!/bin/bash
 #assumes image based on manylinux2014 + extras (cmake3, libcrypto, etc)
 set -ex
+export AWS_CRT_BUILD_STRICT_MODE=ON
 
 /opt/python/cp39-cp39/bin/python ./continuous-delivery/update-version.py
 
