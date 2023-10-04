@@ -3,7 +3,7 @@ Config module which can always be checked regardless of if the CRT was successfu
 """
 
 """
-Returns True if either _awscrt was installed in the local environment or loaded from the system. 
+Returns True if either _awscrt was installed in the local environment or loaded from the system.
 Otherwise returns False indicating that any other functions or modules in this library will also fail.
 """
 
