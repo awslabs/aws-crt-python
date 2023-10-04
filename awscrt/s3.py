@@ -5,7 +5,7 @@ S3 client
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 
-import _awscrt
+from awscrt._c_lib_importer import _awscrt
 from concurrent.futures import Future
 from awscrt import NativeResource
 from awscrt.http import HttpRequest

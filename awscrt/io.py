@@ -8,7 +8,7 @@ Long-running event-loop threads are used for concurrency.
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 
-import _awscrt
+from awscrt._c_lib_importer import _awscrt
 from awscrt import NativeResource
 from enum import IntEnum
 import threading

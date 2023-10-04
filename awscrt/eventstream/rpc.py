@@ -5,7 +5,7 @@ event-stream RPC (remote procedure call) protocol library for `awscrt`.
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 
-import _awscrt
+from awscrt._c_lib_importer import _awscrt
 from abc import ABC, abstractmethod
 from awscrt import NativeResource
 import awscrt.exceptions
