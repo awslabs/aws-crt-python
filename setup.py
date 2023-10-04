@@ -127,8 +127,7 @@ def using_system_libcrypto():
 
 def strict_build_success_mode():
     strict_mode = os.getenv('AWS_CRT_BUILD_STRICT_MODE')
-    print(strict_mode)
-    print(strict_mode.strip().lower())
+    print("Strict-Mode is set to: {}".format(strict_mode))
     return strict_mode != None and strict_mode.strip().lower() != 'off'
 
 def report_build_status(status):
@@ -422,7 +421,7 @@ try:
             test_suite='test',
         )    
 
-except Exception as e:
+except (SystemExit, Exception) as e:
     if (strict_build_success_mode()):
         raise e
     
