@@ -270,6 +270,12 @@ class S3RequestTest(NativeResourceTest):
                 on_headers=self._on_request_headers,
                 on_progress=self._on_progress)
             finished_future = s3_request.finished_future
+
+            # Regression test: let S3Request get GC'd before everything completes.
+            # Once upon a time there was a bug where the file closed before the download completed.
+            # Everything ought to continue without problems.
+            del s3_request
+
             finished_future.result(self.timeout)
 
             # Result check
