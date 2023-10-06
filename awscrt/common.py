@@ -18,3 +18,17 @@ def get_cpu_count_for_group(group_idx: int) -> int:
     Returns number of processors in a given group.
     """
     return _awscrt.get_cpu_count_for_group(group_idx)
+
+class SystemEnvironment:
+
+    def __init__(self):
+        self._env = _awscrt.load_system_environment()
+
+    def is_ec2_nitro_instance(self) -> bool:    
+        return _awscrt.is_env_ec2(self._env)
+    
+    def get_ec2_instance_type(self) -> str:
+        return _awscrt.get_ec2_instance_type(self._env)
+    
+    def is_crt_s3_optimized_for_ec2_instance_type(self) -> bool:
+        return _awscrt.is_crt_s3_optimized_for_ec2_instance_type(self._env)

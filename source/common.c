@@ -6,6 +6,9 @@
 
 #include <aws/common/system_info.h>
 #include <aws/common/thread.h>
+#include <aws/s3/s3.h>
+
+const char *s_capsule_name_sys_env = "aws_system_environment";
 
 PyObject *aws_py_get_cpu_group_count(PyObject *self, PyObject *args) {
     (void)self;
@@ -25,6 +28,94 @@ PyObject *aws_py_get_cpu_count_for_group(PyObject *self, PyObject *args) {
     size_t count = aws_get_cpu_count_for_group(group_idx);
     return PyLong_FromSize_t(count);
 }
+
+static void s_sys_env_destructor(PyObject *sys_env_capsule) {
+    assert(PyCapsule_CheckExact(sys_env_capsule));
+
+    struct aws_system_environment *env = PyCapsule_GetPointer(sys_env_capsule, s_capsule_name_sys_env);
+    assert(env);
+
+    aws_system_environment_destroy(env);
+}
+
+ PyObject *aws_py_load_system_environment(PyObject *self, PyObject *args) {
+    (void)self;
+    (void)args;
+
+    struct aws_allocator *allocator = aws_py_get_allocator();
+
+    struct aws_system_environment *env = aws_system_environment_load(allocator);
+
+    if (!env) {
+        return PyErr_AwsLastError();
+    }
+
+    PyObject *capsule = PyCapsule_New(env, s_capsule_name_sys_env, s_sys_env_destructor);
+
+    if (capsule == NULL) {
+        aws_system_environment_destroy(env);
+        return NULL;
+    }
+
+    return capsule;
+}
+
+PyObject *aws_py_is_env_ec2(PyObject *self, PyObject *args) {
+    PyObject *env_capsule = NULL;
+    if (!PyArg_ParseTuple(args, "O", &env_capsule)) {
+        return PyErr_AwsLastError();
+    }
+
+    struct aws_system_environment *env = PyCapsule_GetPointer(env_capsule, s_capsule_name_sys_env);
+    if (!env) {
+        return PyErr_AwsLastError();
+    }
+    
+    struct aws_byte_cursor system_virt_name = aws_system_environment_get_virtualization_vendor(env);
+    
+    if (aws_byte_cursor_eq_c_str_ignore_case(&system_virt_name, "amazon ec2")) {
+        Py_RETURN_TRUE;
+    }
+
+    Py_RETURN_FALSE;
+}
+
+PyObject *aws_py_get_ec2_instance_type(PyObject *self, PyObject *args) {
+    PyObject *env_capsule = NULL;
+    if (!PyArg_ParseTuple(args, "O", &env_capsule)) {
+        return PyErr_AwsLastError();
+    }
+
+    struct aws_system_environment *env = PyCapsule_GetPointer(env_capsule, s_capsule_name_sys_env);
+    if (!env) {
+        return PyErr_AwsLastError();
+    }
+    
+    struct aws_byte_cursor product_name = aws_system_environment_get_virtualization_product_name(env);
+    
+    return PyBytes_FromStringAndSize((const char *)product_name.ptr, product_name.len);
+}
+
+PyObject *aws_py_is_crt_s3_optimized_for_ec2_instance_type(PyObject *self, PyObject *args) {
+    PyObject *env_capsule = NULL;
+    if (!PyArg_ParseTuple(args, "O", &env_capsule)) {
+        return PyErr_AwsLastError();
+    }
+
+    struct aws_system_environment *env = PyCapsule_GetPointer(env_capsule, s_capsule_name_sys_env);
+    if (!env) {
+        return PyErr_AwsLastError();
+    }
+    
+    bool is_optimized = aws_s3_is_optimized_for_system_env(env);
+
+    if (is_optimized) {
+        Py_RETURN_TRUE;
+    }
+
+    Py_RETURN_FALSE;
+}
+
 
 PyObject *aws_py_thread_join_all_managed(PyObject *self, PyObject *args) {
     (void)self;

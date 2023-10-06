@@ -668,6 +668,12 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(native_memory_usage, METH_NOARGS),
     AWS_PY_METHOD_DEF(native_memory_dump, METH_NOARGS),
     AWS_PY_METHOD_DEF(thread_join_all_managed, METH_VARARGS),
+    AWS_PY_METHOD_DEF(load_system_environment, METH_NOARGS),
+    AWS_PY_METHOD_DEF(is_env_ec2, METH_VARARGS),
+    AWS_PY_METHOD_DEF(get_ec2_instance_type, METH_VARARGS),
+    AWS_PY_METHOD_DEF(is_crt_s3_optimized_for_ec2_instance_type, METH_VARARGS),
+
+
 
     /* IO */
     AWS_PY_METHOD_DEF(is_alpn_available, METH_NOARGS),
