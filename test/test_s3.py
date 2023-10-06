@@ -271,9 +271,10 @@ class S3RequestTest(NativeResourceTest):
                 on_progress=self._on_progress)
             finished_future = s3_request.finished_future
 
-            # Regression test: let S3Request get GC'd before everything completes.
-            # Once upon a time there was a bug where the file closed before the download completed.
-            # Everything ought to continue without problems.
+            # Regression test: Let S3Request get GC'd early.
+            # The download should continue without problems.
+            # We once had a bug where the file would get close too early:
+            # https://github.com/awslabs/aws-crt-python/pull/506
             del s3_request
 
             finished_future.result(self.timeout)
