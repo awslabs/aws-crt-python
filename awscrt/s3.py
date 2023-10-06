@@ -11,13 +11,9 @@ from awscrt import NativeResource
 from awscrt.http import HttpRequest
 from awscrt.io import ClientBootstrap, TlsConnectionOptions
 from awscrt.auth import AwsCredentialsProvider, AwsSignatureType, AwsSignedBodyHeaderType, AwsSignedBodyValue, AwsSigningAlgorithm, AwsSigningConfig
-from awscrt.common import SystemEnvironment
 import awscrt.exceptions
 import threading
 from enum import IntEnum
-
-def is_crt_s3_optimized_for_system_env(env: SystemEnvironment, optInstanceTypeOverride: str = None) -> bool:
-        return _awscrt.s3_is_crt_s3_optimized_for_system_env(env._env, optInstanceTypeOverride)
 
 class S3RequestType(IntEnum):
     """The type of the AWS S3 request"""

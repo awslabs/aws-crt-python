@@ -24,9 +24,16 @@ class SystemEnvironment:
     def __init__(self):
         self._env = _awscrt.load_system_environment()
 
+        if self.is_ec2_nitro_instance():
+            self._detected_instance_type = self.get_ec2_instance_type()
+        else:
+            self._detected_instance_type = None
+
     def is_ec2_nitro_instance(self) -> bool:    
         return _awscrt.is_env_ec2(self._env)
     
-    def get_ec2_instance_type(self) -> str:
-        return _awscrt.get_ec2_instance_type(self._env)
+    def get_ec2_instance_type(self) -> str:        
+        return self._detected_instance_type
     
+    def is_crt_s3_optimized_for_system_env(self) -> bool:
+        return _awscrt.is_crt_s3_optimized_for_system(self._env, self._detected_instance_type)

@@ -182,34 +182,3 @@ error:
     Py_DECREF(capsule);
     return NULL;
 }
-
-PyObject *aws_py_s3_is_crt_s3_optimized_for_system_env(PyObject *self, PyObject *args) {
-    PyObject *env_capsule = NULL;
-    const char *override_str = NULL;
-    Py_ssize_t override_str_len = 0;
-
-    if (!PyArg_ParseTuple(args, "Oz#", &env_capsule, &override_str, &override_str_len)) {
-        return PyErr_AwsLastError();
-    }
-
-    struct aws_system_environment *env = PyCapsule_GetPointer(env_capsule, s_capsule_name_sys_env);
-    if (!env) {
-        return PyErr_AwsLastError();
-    }
-
-    struct aws_byte_cursor *override_param = NULL;
-    struct aws_byte_cursor override_cur;
-
-    if (override_str_len > 0) {
-        override_cur = aws_byte_cursor_from_array(override_str, (size_t)override_str_len);
-        override_param = &override_cur;
-    }
-    
-    bool is_optimized = aws_s3_is_optimized_for_system_env(env, override_param);
-
-    if (is_optimized) {
-        Py_RETURN_TRUE;
-    }
-
-    Py_RETURN_FALSE;
-}

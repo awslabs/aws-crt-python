@@ -69,11 +69,9 @@ PyObject *aws_py_is_env_ec2(PyObject *self, PyObject *args) {
     struct aws_system_environment *env = PyCapsule_GetPointer(env_capsule, s_capsule_name_sys_env);
     if (!env) {
         return PyErr_AwsLastError();
-    }
+    }    
     
-    struct aws_byte_cursor system_virt_name = aws_system_environment_get_virtualization_vendor(env);
-    
-    if (aws_byte_cursor_eq_c_str_ignore_case(&system_virt_name, "amazon ec2")) {
+    if (aws_s3_is_running_on_ec2(env)) {
         Py_RETURN_TRUE;
     }
 
@@ -89,11 +87,50 @@ PyObject *aws_py_get_ec2_instance_type(PyObject *self, PyObject *args) {
     struct aws_system_environment *env = PyCapsule_GetPointer(env_capsule, s_capsule_name_sys_env);
     if (!env) {
         return PyErr_AwsLastError();
+    }   
+
+    struct aws_allocator *allocator = aws_py_get_allocator();
+
+    struct aws_string *instance_type = aws_s3_get_ec2_instance_type(allocator, env);
+
+    if (instance_type) {
+        PyObject *ret_value = PyUnicode_FromAwsString(&instance_type);
+        aws_string_destroy(instance_type);
+        return ret_value;
     }
     
-    struct aws_byte_cursor product_name = aws_system_environment_get_virtualization_product_name(env);
+    return NULL;
+}
+
+PyObject *aws_py_is_crt_s3_optimized_for_system(PyObject *self, PyObject *args) {
+    PyObject *env_capsule = NULL;
+    const char *instance_type_str = NULL;
+    Py_ssize_t instance_type_str_len = 0;
+
+    if (!PyArg_ParseTuple(args, "Oz#", &env_capsule, &instance_type_str, &instance_type_str_len)) {
+        return PyErr_AwsLastError();
+    }
+
+    struct aws_system_environment *env = PyCapsule_GetPointer(env_capsule, s_capsule_name_sys_env);
+    if (!env) {
+        return PyErr_AwsLastError();
+    }
+
+    struct aws_byte_cursor *instance_type_to_pass = NULL;
+    struct aws_byte_cursor instance_type_cur;
+
+    if (instance_type_str_len > 0) {
+        instance_type_cur = aws_byte_cursor_from_array(instance_type_str, (size_t)instance_type_str_len);
+        instance_type_to_pass = &instance_type_cur;
+    }
     
-    return PyUnicode_FromAwsByteCursor(&product_name);
+    bool is_optimized = aws_s3_is_optimized_for_system_env(env, instance_type_to_pass);
+
+    if (is_optimized) {
+        Py_RETURN_TRUE;
+    }
+
+    Py_RETURN_FALSE;
 }
 
 PyObject *aws_py_thread_join_all_managed(PyObject *self, PyObject *args) {

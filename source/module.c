@@ -671,6 +671,8 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(load_system_environment, METH_NOARGS),
     AWS_PY_METHOD_DEF(is_env_ec2, METH_VARARGS),
     AWS_PY_METHOD_DEF(get_ec2_instance_type, METH_VARARGS),
+    AWS_PY_METHOD_DEF(is_crt_s3_optimized_for_system, METH_VARARGS),
+
 
     /* IO */
     AWS_PY_METHOD_DEF(is_alpn_available, METH_NOARGS),
@@ -794,7 +796,6 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(s3_client_new, METH_VARARGS),
     AWS_PY_METHOD_DEF(s3_client_make_meta_request, METH_VARARGS),
     AWS_PY_METHOD_DEF(s3_meta_request_cancel, METH_VARARGS),
-    AWS_PY_METHOD_DEF(s3_is_crt_s3_optimized_for_system_env, METH_VARARGS),
 
 
     /* WebSocket */
