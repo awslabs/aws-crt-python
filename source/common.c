@@ -93,29 +93,8 @@ PyObject *aws_py_get_ec2_instance_type(PyObject *self, PyObject *args) {
     
     struct aws_byte_cursor product_name = aws_system_environment_get_virtualization_product_name(env);
     
-    return PyBytes_FromStringAndSize((const char *)product_name.ptr, product_name.len);
+    return PyUnicode_FromAwsByteCursor(&product_name);
 }
-
-PyObject *aws_py_is_crt_s3_optimized_for_ec2_instance_type(PyObject *self, PyObject *args) {
-    PyObject *env_capsule = NULL;
-    if (!PyArg_ParseTuple(args, "O", &env_capsule)) {
-        return PyErr_AwsLastError();
-    }
-
-    struct aws_system_environment *env = PyCapsule_GetPointer(env_capsule, s_capsule_name_sys_env);
-    if (!env) {
-        return PyErr_AwsLastError();
-    }
-    
-    bool is_optimized = aws_s3_is_optimized_for_system_env(env);
-
-    if (is_optimized) {
-        Py_RETURN_TRUE;
-    }
-
-    Py_RETURN_FALSE;
-}
-
 
 PyObject *aws_py_thread_join_all_managed(PyObject *self, PyObject *args) {
     (void)self;

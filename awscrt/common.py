@@ -30,5 +30,3 @@ class SystemEnvironment:
     def get_ec2_instance_type(self) -> str:
         return _awscrt.get_ec2_instance_type(self._env)
     
-    def is_crt_s3_optimized_for_ec2_instance_type(self) -> bool:
-        return _awscrt.is_crt_s3_optimized_for_ec2_instance_type(self._env)
