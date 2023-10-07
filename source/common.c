@@ -54,7 +54,7 @@ static void s_sys_env_destructor(PyObject *sys_env_capsule) {
 
     if (capsule == NULL) {
         aws_system_environment_destroy(env);
-        return NULL;
+        return PyErr_AwsLastError();
     }
 
     return capsule;
@@ -94,7 +94,7 @@ PyObject *aws_py_get_ec2_instance_type(PyObject *self, PyObject *args) {
     struct aws_string *instance_type = aws_s3_get_ec2_instance_type(allocator, env);
 
     if (instance_type) {
-        PyObject *ret_value = PyUnicode_FromAwsString(&instance_type);
+        PyObject *ret_value = PyUnicode_FromAwsString(instance_type);
         aws_string_destroy(instance_type);
         return ret_value;
     }

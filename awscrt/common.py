@@ -20,13 +20,14 @@ def get_cpu_count_for_group(group_idx: int) -> int:
     return _awscrt.get_cpu_count_for_group(group_idx)
 
 class SystemEnvironment:
-    _detected_instance_type = None
 
     def __init__(self):
         self._env = _awscrt.load_system_environment()
 
         if self.is_ec2_nitro_instance():
-            self._detected_instance_type = self.get_ec2_instance_type()        
+            self._detected_instance_type = _awscrt.get_ec2_instance_type(self._env)
+        else:
+            self._detected_instance_type = None       
 
     def is_ec2_nitro_instance(self) -> bool:    
         return _awscrt.is_env_ec2(self._env)
