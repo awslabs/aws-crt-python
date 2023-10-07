@@ -37,3 +37,4 @@ class SystemEnvironment:
     
     def is_crt_s3_optimized_for_system_env(self) -> bool:
         return _awscrt.is_crt_s3_optimized_for_system(self._env, self._detected_instance_type)
+    
