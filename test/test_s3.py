@@ -273,7 +273,7 @@ class S3RequestTest(NativeResourceTest):
 
             # Regression test: Let S3Request get GC'd early.
             # The download should continue without problems.
-            # We once had a bug where the file would get close too early:
+            # We once had a bug where the file would get closed too early:
             # https://github.com/awslabs/aws-crt-python/pull/506
             del s3_request
 

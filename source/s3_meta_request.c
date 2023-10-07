@@ -300,8 +300,8 @@ static void s_s3_request_on_finish(
     /*************** GIL RELEASE ***************/
 }
 
-/* Invoked when the python object get cleaned up.
- * DO NOT destroy the binding or anything inside it yet.
+/* Invoked when S3Request._binding gets cleaned up.
+ * DO NOT destroy the C binding struct or anything inside it yet.
  * The user might have let S3Request get GC'd,
  * but the s3_meta_request_binding* must outlive the native aws_s3_meta_request* */
 static void s_s3_meta_request_capsule_destructor(PyObject *capsule) {
