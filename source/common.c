@@ -38,7 +38,7 @@ static void s_sys_env_destructor(PyObject *sys_env_capsule) {
     aws_system_environment_destroy(env);
 }
 
- PyObject *aws_py_load_system_environment(PyObject *self, PyObject *args) {
+PyObject *aws_py_load_system_environment(PyObject *self, PyObject *args) {
     (void)self;
     (void)args;
 
@@ -69,8 +69,8 @@ PyObject *aws_py_is_env_ec2(PyObject *self, PyObject *args) {
     struct aws_system_environment *env = PyCapsule_GetPointer(env_capsule, s_capsule_name_sys_env);
     if (!env) {
         return PyErr_AwsLastError();
-    }    
-    
+    }
+
     if (aws_s3_is_running_on_ec2(env)) {
         Py_RETURN_TRUE;
     }
@@ -87,7 +87,7 @@ PyObject *aws_py_get_ec2_instance_type(PyObject *self, PyObject *args) {
     struct aws_system_environment *env = PyCapsule_GetPointer(env_capsule, s_capsule_name_sys_env);
     if (!env) {
         return PyErr_AwsLastError();
-    }   
+    }
 
     struct aws_allocator *allocator = aws_py_get_allocator();
 
@@ -98,7 +98,7 @@ PyObject *aws_py_get_ec2_instance_type(PyObject *self, PyObject *args) {
         aws_string_destroy(instance_type);
         return ret_value;
     }
-    
+
     return NULL;
 }
 
@@ -123,7 +123,7 @@ PyObject *aws_py_is_crt_s3_optimized_for_system(PyObject *self, PyObject *args) 
         instance_type_cur = aws_byte_cursor_from_array(instance_type_str, (size_t)instance_type_str_len);
         instance_type_to_pass = &instance_type_cur;
     }
-    
+
     bool is_optimized = aws_s3_is_optimized_for_system_env(env, instance_type_to_pass);
 
     if (is_optimized) {

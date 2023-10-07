@@ -7,10 +7,8 @@
 #include "auth.h"
 #include "io.h"
 #include <aws/s3/s3_client.h>
-#include <aws/common/system_info.h>
 
 static const char *s_capsule_name_s3_client = "aws_s3_client";
-static const char *s_capsule_name_sys_env = "aws_system_environment";
 
 struct s3_client_binding {
     struct aws_s3_client *native;
