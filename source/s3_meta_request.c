@@ -336,39 +336,21 @@ static void s_s3_request_on_shutdown(void *user_data) {
     /*************** GIL RELEASE ***************/
 }
 
-/*
- * file-based python input stream for reporting the progress
- */
-struct aws_input_py_stream_file_impl {
-    struct aws_input_stream base;
-    struct aws_input_stream *actual_stream;
-    struct s3_meta_request_binding *binding;
-};
+static void s_s3_request_on_progress(
+    struct aws_s3_meta_request *meta_request,
+    const struct aws_s3_meta_request_progress *progress,
+    void *user_data) {
 
-static int s_aws_input_stream_file_read(struct aws_input_stream *stream, struct aws_byte_buf *dest) {
-    struct aws_input_py_stream_file_impl *impl = AWS_CONTAINER_OF(stream, struct aws_input_py_stream_file_impl, base);
-    size_t pre_len = dest->len;
-
-    if (aws_input_stream_read(impl->actual_stream, dest)) {
-        return AWS_OP_ERR;
-    }
-
-    size_t actually_read = 0;
-    if (aws_sub_size_checked(dest->len, pre_len, &actually_read)) {
-        return AWS_OP_ERR;
-    }
+    struct s3_meta_request_binding *request_binding = user_data;
 
     bool report_progress;
-    struct s3_meta_request_binding *request_binding = impl->binding;
-    if (s_record_progress(request_binding, (uint64_t)actually_read, &report_progress)) {
-        return AWS_OP_ERR;
-    }
+    s_record_progress(request_binding, progress->bytes_transferred, &report_progress);
 
     if (report_progress) {
         /*************** GIL ACQUIRE ***************/
         PyGILState_STATE state;
         if (aws_py_gilstate_ensure(&state)) {
-            return AWS_OP_ERR; /* Python has shut down. Nothing matters anymore, but don't crash */
+            return; /* Python has shut down. Nothing matters anymore, but don't crash */
         }
         PyObject *result =
             PyObject_CallMethod(request_binding->py_core, "_on_progress", "(K)", request_binding->size_transferred);
@@ -378,61 +360,7 @@ static int s_aws_input_stream_file_read(struct aws_input_stream *stream, struct 
         request_binding->size_transferred = 0;
         PyGILState_Release(state);
         /*************** GIL RELEASE ***************/
-        if (!result) {
-            return aws_py_raise_error();
-        }
     }
-    return AWS_OP_SUCCESS;
-}
-static int s_aws_input_stream_file_seek(
-    struct aws_input_stream *stream,
-    int64_t offset,
-    enum aws_stream_seek_basis basis) {
-    struct aws_input_py_stream_file_impl *impl = AWS_CONTAINER_OF(stream, struct aws_input_py_stream_file_impl, base);
-    return aws_input_stream_seek(impl->actual_stream, offset, basis);
-}
-
-static int s_aws_input_stream_file_get_status(struct aws_input_stream *stream, struct aws_stream_status *status) {
-    struct aws_input_py_stream_file_impl *impl = AWS_CONTAINER_OF(stream, struct aws_input_py_stream_file_impl, base);
-    return aws_input_stream_get_status(impl->actual_stream, status);
-}
-
-static int s_aws_input_stream_file_get_length(struct aws_input_stream *stream, int64_t *length) {
-    struct aws_input_py_stream_file_impl *impl = AWS_CONTAINER_OF(stream, struct aws_input_py_stream_file_impl, base);
-    return aws_input_stream_get_length(impl->actual_stream, length);
-}
-
-static void s_aws_input_stream_file_destroy(struct aws_input_py_stream_file_impl *impl) {
-    struct aws_allocator *allocator = aws_py_get_allocator();
-    aws_input_stream_release(impl->actual_stream);
-    aws_mem_release(allocator, impl);
-}
-
-static struct aws_input_stream_vtable s_aws_input_stream_file_vtable = {
-    .seek = s_aws_input_stream_file_seek,
-    .read = s_aws_input_stream_file_read,
-    .get_status = s_aws_input_stream_file_get_status,
-    .get_length = s_aws_input_stream_file_get_length,
-};
-
-static struct aws_input_stream *s_input_stream_new_from_file(
-    struct aws_allocator *allocator,
-    const char *file_name,
-    struct s3_meta_request_binding *request_binding) {
-    struct aws_input_py_stream_file_impl *impl =
-        aws_mem_calloc(allocator, 1, sizeof(struct aws_input_py_stream_file_impl));
-
-    impl->base.vtable = &s_aws_input_stream_file_vtable;
-    aws_ref_count_init(&impl->base.ref_count, impl, (aws_simple_completion_callback *)s_aws_input_stream_file_destroy);
-
-    impl->actual_stream = aws_input_stream_new_from_file(allocator, file_name);
-    if (!impl->actual_stream) {
-        aws_mem_release(allocator, impl);
-        return NULL;
-    }
-    impl->binding = request_binding;
-
-    return &impl->base;
 }
 
 PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
@@ -532,11 +460,12 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
         .type = type,
         .message = http_request,
         .signing_config = signing_config,
+        .send_filepath = aws_byte_cursor_from_c_str(send_filepath),
         .headers_callback = s_s3_request_on_headers,
         .body_callback = s_s3_request_on_body,
         .finish_callback = s_s3_request_on_finish,
-        .send_filepath = send_filepath,
         .shutdown_callback = s_s3_request_on_shutdown,
+        .progress_callback = s_s3_request_on_progress,
         .user_data = meta_request,
     };
 

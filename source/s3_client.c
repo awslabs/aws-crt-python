@@ -82,6 +82,7 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
     uint64_t part_size = 0;
     double throughput_target_gbps = 0;
     int tls_mode;
+    fprintf(stderr, "###### why???? 1 \n");
     if (!PyArg_ParseTuple(
             args,
             "OOOOOs#iKdO",
@@ -99,6 +100,7 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
         return NULL;
     }
 
+    fprintf(stderr, "###### why???? 2 \n");
     struct aws_client_bootstrap *bootstrap = aws_py_get_client_bootstrap(bootstrap_py);
     if (!bootstrap) {
         return NULL;
@@ -106,11 +108,13 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
 
     struct aws_credentials_provider *credential_provider = NULL;
     if (credential_provider_py != Py_None) {
+        fprintf(stderr, "###### why???? 3 \n");
         credential_provider = aws_py_get_credentials_provider(credential_provider_py);
         if (!credential_provider) {
             return NULL;
         }
     }
+    fprintf(stderr, "###### why???? 4 \n");
     struct aws_signing_config_aws *signing_config = NULL;
     if (signing_config_py != Py_None) {
         signing_config = aws_py_get_signing_config(signing_config_py);
