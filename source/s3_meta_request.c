@@ -30,8 +30,6 @@ struct s3_meta_request_binding {
      **/
     FILE *recv_file;
 
-    struct aws_http_message *copied_message;
-
     /* Batch up the transferred size in one sec. */
     uint64_t size_transferred;
     /* The time stamp when the progress reported */
@@ -46,9 +44,6 @@ struct aws_s3_meta_request *aws_py_get_s3_meta_request(PyObject *meta_request) {
 static void s_destroy(struct s3_meta_request_binding *meta_request) {
     if (meta_request->recv_file) {
         fclose(meta_request->recv_file);
-    }
-    if (meta_request->copied_message) {
-        aws_http_message_release(meta_request->copied_message);
     }
     Py_XDECREF(meta_request->py_core);
     aws_mem_release(aws_py_get_allocator(), meta_request);
@@ -252,8 +247,6 @@ static void s_s3_request_on_finish(
     PyObject *header_list = NULL;
     PyObject *result = NULL;
 
-    request_binding->copied_message = aws_http_message_release(request_binding->copied_message);
-
     if (request_binding->size_transferred && (error_code == 0)) {
         /* report the remaining progress */
         result =
@@ -442,58 +435,6 @@ static struct aws_input_stream *s_input_stream_new_from_file(
     return &impl->base;
 }
 
-/* Copy an existing HTTP message without body. */
-struct aws_http_message *s_copy_http_message(struct aws_allocator *allocator, struct aws_http_message *base_message) {
-    AWS_PRECONDITION(allocator);
-    AWS_PRECONDITION(base_message);
-
-    struct aws_http_message *message = aws_http_message_new_request(allocator);
-
-    if (message == NULL) {
-        return NULL;
-    }
-
-    struct aws_byte_cursor request_method;
-    if (aws_http_message_get_request_method(base_message, &request_method)) {
-        goto error_clean_up;
-    }
-
-    if (aws_http_message_set_request_method(message, request_method)) {
-        goto error_clean_up;
-    }
-
-    struct aws_byte_cursor request_path;
-    if (aws_http_message_get_request_path(base_message, &request_path)) {
-        goto error_clean_up;
-    }
-
-    if (aws_http_message_set_request_path(message, request_path)) {
-        goto error_clean_up;
-    }
-
-    size_t num_headers = aws_http_message_get_header_count(base_message);
-    for (size_t header_index = 0; header_index < num_headers; ++header_index) {
-        struct aws_http_header header;
-        if (aws_http_message_get_header(base_message, &header, header_index)) {
-            goto error_clean_up;
-        }
-        if (aws_http_message_add_header(message, header)) {
-            goto error_clean_up;
-        }
-    }
-
-    return message;
-
-error_clean_up:
-
-    if (message != NULL) {
-        aws_http_message_release(message);
-        message = NULL;
-    }
-
-    return NULL;
-}
-
 PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     (void)self;
 
@@ -586,29 +527,15 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
             goto error;
         }
     }
-    if (send_filepath) {
-        if (type == AWS_S3_META_REQUEST_TYPE_PUT_OBJECT) {
-            /* Copy the http request from python object and replace the old pointer with new pointer */
-            meta_request->copied_message = s_copy_http_message(allocator, http_request);
-            struct aws_input_stream *input_body = s_input_stream_new_from_file(allocator, send_filepath, meta_request);
-            if (!input_body) {
-                PyErr_SetAwsLastError();
-                goto error;
-            }
-            /* rewrite the input stream of the original request */
-            aws_http_message_set_body_stream(meta_request->copied_message, input_body);
-            /* Input body is owned by copied message */
-            aws_input_stream_release(input_body);
-        }
-    }
 
     struct aws_s3_meta_request_options s3_meta_request_opt = {
         .type = type,
-        .message = meta_request->copied_message ? meta_request->copied_message : http_request,
+        .message = http_request,
         .signing_config = signing_config,
         .headers_callback = s_s3_request_on_headers,
         .body_callback = s_s3_request_on_body,
         .finish_callback = s_s3_request_on_finish,
+        .send_filepath = send_filepath,
         .shutdown_callback = s_s3_request_on_shutdown,
         .user_data = meta_request,
     };
