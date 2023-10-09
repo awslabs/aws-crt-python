@@ -147,10 +147,6 @@ static int s_s3_request_on_body(
     (void)meta_request;
     struct s3_meta_request_binding *request_binding = user_data;
 
-    bool report_progress;
-    if (s_record_progress(request_binding, (uint64_t)body->len, &report_progress)) {
-        return AWS_OP_ERR;
-    }
     if (request_binding->recv_file) {
         /* The callback will be invoked with the right order, so we don't need to seek first. */
         if (fwrite((void *)body->ptr, body->len, 1, request_binding->recv_file) < 1) {
@@ -164,9 +160,7 @@ static int s_s3_request_on_body(
                 aws_error_name(aws_last_error()));
             return AWS_OP_ERR;
         }
-        if (!report_progress) {
-            return AWS_OP_SUCCESS;
-        }
+        return AWS_OP_SUCCESS;
     }
     bool error = true;
     /*************** GIL ACQUIRE ***************/
@@ -189,17 +183,6 @@ static int s_s3_request_on_body(
             goto done;
         }
         Py_DECREF(result);
-    }
-    if (report_progress) {
-        /* Hold the GIL before enterring here */
-        result =
-            PyObject_CallMethod(request_binding->py_core, "_on_progress", "(K)", request_binding->size_transferred);
-        if (!result) {
-            PyErr_WriteUnraisable(request_binding->py_core);
-        } else {
-            Py_DECREF(result);
-        }
-        request_binding->size_transferred = 0;
     }
     error = false;
 done:
@@ -344,7 +327,7 @@ static void s_s3_request_on_progress(
 
     struct s3_meta_request_binding *request_binding = user_data;
 
-    bool report_progress;
+    bool report_progress = false;
     s_record_progress(request_binding, progress->bytes_transferred, &report_progress);
 
     if (report_progress) {
