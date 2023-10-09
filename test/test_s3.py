@@ -231,14 +231,14 @@ class S3RequestTest(NativeResourceTest):
         self._test_s3_put_get_object(request, S3RequestType.GET_OBJECT)
 
     def test_put_object(self):
-        put_body_stream = open(self.temp_put_obj_file_path, "r+b")
+        put_body_stream = open(self.temp_put_obj_file_path, "rb")
         content_length = os.stat(self.temp_put_obj_file_path).st_size
         request = self._put_object_request(put_body_stream, content_length)
         self._test_s3_put_get_object(request, S3RequestType.PUT_OBJECT)
         put_body_stream.close()
 
     def test_put_object_unknown_content_length(self):
-        put_body_stream = open(self.temp_put_obj_file_path, "r+b")
+        put_body_stream = open(self.temp_put_obj_file_path, "rb")
         content_length = os.stat(self.temp_put_obj_file_path).st_size
         request = self._put_object_request(put_body_stream, content_length, unknown_content_length=True)
         self._test_s3_put_get_object(request, S3RequestType.PUT_OBJECT)
@@ -257,9 +257,8 @@ class S3RequestTest(NativeResourceTest):
         for i in range(3):
             tempfile = self.files.create_file_with_size("temp_file_{}".format(str(i)), 10 * MB)
             path = "/put_object_test_py_10MB_{}.txt".format(str(i))
-            put_body_stream = open(path, "r+b")
-            content_length = os.stat(path).st_size
-            request = self._put_object_request(put_body_stream, content_length)
+            content_length = os.stat(tempfile).st_size
+            request = self._put_object_request(None, content_length, path=path)
             s3_request = s3_client.make_request(
                 request=request,
                 type=S3RequestType.PUT_OBJECT,
@@ -267,7 +266,6 @@ class S3RequestTest(NativeResourceTest):
                 on_headers=self._on_request_headers,
                 on_body=self._on_request_body)
             finished_futures.append(s3_request.finished_future)
-            put_body_stream.close()
             # request keeps connection alive. delete pointer so connection can shut down
             del s3_request
         try:
@@ -320,26 +318,20 @@ class S3RequestTest(NativeResourceTest):
             os.remove(file.name)
 
     def test_put_object_filepath(self):
-        put_body_stream = open(self.temp_put_obj_file_path, "r+b")
         content_length = os.stat(self.temp_put_obj_file_path).st_size
-        request = self._put_object_request(put_body_stream, content_length)
+        request = self._put_object_request(None, content_length)
         self._test_s3_put_get_object(request, S3RequestType.PUT_OBJECT, send_filepath=self.temp_put_obj_file_path)
-        put_body_stream.close()
 
     def test_put_object_filepath_unknown_content_length(self):
-        put_body_stream = open(self.temp_put_obj_file_path, "r+b")
         content_length = os.stat(self.temp_put_obj_file_path).st_size
-        request = self._put_object_request(put_body_stream, content_length, unknown_content_length=True)
+        request = self._put_object_request(None, content_length, unknown_content_length=True)
         self._test_s3_put_get_object(request, S3RequestType.PUT_OBJECT, send_filepath=self.temp_put_obj_file_path)
-        put_body_stream.close()
 
     def test_put_object_filepath_move(self):
         # remove the input file when request done
         tempfile = self.files.create_file_with_size("temp_file", 10 * MB)
-        put_body_stream = open(tempfile, "r+b")
         content_length = os.stat(tempfile).st_size
-        request = self._put_object_request(put_body_stream, content_length)
-        put_body_stream.close()
+        request = self._put_object_request(None, content_length)
         s3_client = s3_client_new(False, self.region, 5 * MB)
         request_type = S3RequestType.PUT_OBJECT
         done_future = Future()
@@ -359,7 +351,7 @@ class S3RequestTest(NativeResourceTest):
 
         # check result
         self.assertEqual(
-            self.data_len,
+            content_length,
             self.transferred_len,
             "the transferred length reported does not match body we sent")
         self._validate_successful_response(request_type is S3RequestType.PUT_OBJECT)
@@ -472,10 +464,8 @@ class S3RequestTest(NativeResourceTest):
         with open(self.special_path, 'wb') as file:
             file.write(b"a" * 10 * MB)
 
-        put_body_stream = open(self.special_path, "r+b")
         content_length = os.stat(self.special_path).st_size
-        request = self._put_object_request(put_body_stream, content_length)
-        put_body_stream.close()
+        request = self._put_object_request(None, content_length)
         s3_client = s3_client_new(False, self.region, 5 * MB)
         request_type = S3RequestType.PUT_OBJECT
 
@@ -508,7 +498,7 @@ class S3RequestTest(NativeResourceTest):
 
         # check result
         self.assertEqual(
-            self.data_len,
+            content_length,
             self.transferred_len,
             "the transferred length reported does not match body we sent")
         self._validate_successful_response(request_type is S3RequestType.PUT_OBJECT)
@@ -519,10 +509,8 @@ class S3RequestTest(NativeResourceTest):
         with open(self.non_ascii_file_name, 'wb') as file:
             file.write(b"a" * 10 * MB)
 
-        put_body_stream = open(self.non_ascii_file_name, "r+b")
         content_length = os.stat(self.non_ascii_file_name).st_size
-        request = self._put_object_request(put_body_stream, content_length)
-        put_body_stream.close()
+        request = self._put_object_request(None, content_length)
         s3_client = s3_client_new(False, self.region, 5 * MB)
         request_type = S3RequestType.PUT_OBJECT
 
@@ -537,7 +525,7 @@ class S3RequestTest(NativeResourceTest):
 
         # check result
         self.assertEqual(
-            self.data_len,
+            content_length,
             self.transferred_len,
             "the transferred length reported does not match body we sent")
         self._validate_successful_response(request_type is S3RequestType.PUT_OBJECT)
