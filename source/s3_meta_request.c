@@ -44,6 +44,9 @@ struct aws_s3_meta_request *aws_py_get_s3_meta_request(PyObject *meta_request) {
 }
 
 static void s_destroy(struct s3_meta_request_binding *meta_request) {
+    if (meta_request->recv_file) {
+        fclose(meta_request->recv_file);
+    }
     if (meta_request->copied_message) {
         aws_http_message_release(meta_request->copied_message);
     }
@@ -297,14 +300,13 @@ static void s_s3_request_on_finish(
     /*************** GIL RELEASE ***************/
 }
 
-/* Invoked when the python object get cleaned up */
+/* Invoked when S3Request._binding gets cleaned up.
+ * DO NOT destroy the C binding struct or anything inside it yet.
+ * The user might have let S3Request get GC'd,
+ * but the s3_meta_request_binding* must outlive the native aws_s3_meta_request* */
 static void s_s3_meta_request_capsule_destructor(PyObject *capsule) {
     struct s3_meta_request_binding *meta_request = PyCapsule_GetPointer(capsule, s_capsule_name_s3_meta_request);
 
-    if (meta_request->recv_file) {
-        fclose(meta_request->recv_file);
-        meta_request->recv_file = NULL;
-    }
     if (meta_request->native) {
         aws_s3_meta_request_release(meta_request->native);
     } else {
