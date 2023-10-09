@@ -117,6 +117,7 @@ done:
     }
 }
 
+/* To avoid reporting progress to python too often. We cache it up and only report to python after at least 1 sec. */
 static int s_record_progress(struct s3_meta_request_binding *request_binding, uint64_t length, bool *report_progress) {
     if (aws_add_u64_checked(request_binding->size_transferred, length, &request_binding->size_transferred)) {
         /* Wow */
