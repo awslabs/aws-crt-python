@@ -410,10 +410,89 @@ class Connection(NativeResource):
         self.proxy_options = proxy_options if proxy_options else websocket_proxy_options
 
         self._binding = _awscrt.mqtt_client_connection_new(
-            self,
-            client,
-            use_websockets,
-            self._client_version
+            self, client, use_websockets, self._client_version
+        )
+
+    """MQTT client connection.
+
+    Args:
+        client (mqtt5.Client): MQTT5 client to spawn connection from.
+
+        on_connection_interrupted: Optional callback invoked whenever the MQTT connection is lost.
+            The MQTT client will automatically attempt to reconnect.
+            The function should take the following arguments return nothing:
+
+                *   `connection` (:class:`Connection`): This MQTT Connection.
+
+                *   `error` (:class:`awscrt.exceptions.AwsCrtError`): Exception which caused connection loss.
+
+                *   `**kwargs` (dict): Forward-compatibility kwargs.
+
+        on_connection_resumed: Optional callback invoked whenever the MQTT connection
+            is automatically resumed. Function should take the following arguments and return nothing:
+
+                *   `connection` (:class:`Connection`): This MQTT Connection
+
+                *   `return_code` (:class:`ConnectReturnCode`): Connect return
+                    code received from the server.
+
+                *   `session_present` (bool): True if resuming existing session. False if new session.
+                    Note that the server has forgotten all previous subscriptions if this is False.
+                    Subscriptions can be re-established via resubscribe_existing_topics().
+
+                *   `**kwargs` (dict): Forward-compatibility kwargs.
+
+        on_connection_success: Optional callback invoked whenever the connection successfully connects.
+            This callback is invoked for every successful connect and every successful reconnect.
+
+            Function should take the following arguments and return nothing:
+
+                * `connection` (:class:`Connection`): This MQTT Connection
+
+                * `callback_data` (:class:`OnConnectionSuccessData`): The data returned from the connection success.
+
+        on_connection_failure: Optional callback invoked whenever the connection fails to connect.
+            This callback is invoked for every failed connect and every failed reconnect.
+
+            Function should take the following arguments and return nothing:
+
+                * `connection` (:class:`Connection`): This MQTT Connection
+
+                * `callback_data` (:class:`OnConnectionFailureData`): The data returned from the connection failure.
+
+        on_connection_closed: Optional callback invoked whenever the connection has been disconnected and shutdown successfully.
+            Function should take the following arguments and return nothing:
+
+                * `connection` (:class:`Connection`): This MQTT Connection
+
+                * `callback_data` (:class:`OnConnectionClosedData`): The data returned from the connection close.
+        """
+
+    def __init__(
+        self,
+        client5,
+        on_connection_interrupted=None,
+        on_connection_resumed=None,
+        on_connection_success=None,
+        on_connection_failure=None,
+        on_connection_closed=None,
+    ):
+        assert isinstance(client5, Mqtt5Client)
+        assert callable(on_connection_interrupted) or on_connection_interrupted is None
+        assert callable(on_connection_resumed) or on_connection_resumed is None
+        assert callable(on_connection_success) or on_connection_success is None
+        assert callable(on_connection_failure) or on_connection_failure is None
+        assert callable(on_connection_closed) or on_connection_closed is None
+
+        assert isinstance(socket_options, SocketOptions) or socket_options is None
+        assert (
+            isinstance(websocket_proxy_options, HttpProxyOptions)
+            or websocket_proxy_options is None
+        )
+        assert isinstance(proxy_options, HttpProxyOptions) or proxy_options is None
+        assert (
+            callable(websocket_handshake_transform)
+            or websocket_handshake_transform is None
         )
 
     def _check_uses_old_message_callback_signature(self, callback):
