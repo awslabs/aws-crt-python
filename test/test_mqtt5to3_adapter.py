@@ -420,7 +420,7 @@ class Mqtt5to3AdapterTest(NativeResourceTest):
         except Exception:
             exception_occurred = True
 
-        assert(exception_occurred)
+        assert (exception_occurred)
 
     # ==============================================================
     #                 MQTT311 CALLBACK TEST CASES
