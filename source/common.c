@@ -85,7 +85,7 @@ PyObject *aws_py_get_ec2_instance_type(PyObject *self, PyObject *args) {
 
     struct aws_system_environment *env = PyCapsule_GetPointer(env_capsule, s_capsule_name_sys_env);
     if (!env) {
-        return PyErr_AwsLastError();
+        return NULL;
     }
 
     struct aws_allocator *allocator = aws_py_get_allocator();
