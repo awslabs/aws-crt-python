@@ -51,10 +51,9 @@ PyObject *aws_py_load_system_environment(PyObject *self, PyObject *args) {
     }
 
     PyObject *capsule = PyCapsule_New(env, s_capsule_name_sys_env, s_sys_env_destructor);
-
     if (capsule == NULL) {
         aws_system_environment_destroy(env);
-        return PyErr_AwsLastError();
+        return NULL;
     }
 
     return capsule;
