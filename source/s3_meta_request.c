@@ -169,21 +169,15 @@ static int s_s3_request_on_body(
     if (aws_py_gilstate_ensure(&state)) {
         return AWS_OP_ERR; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
-    if (!request_binding->recv_file) {
-        result = PyObject_CallMethod(
-            request_binding->py_core,
-            "_on_body",
-            "(y#K)",
-            (const char *)(body->ptr),
-            (Py_ssize_t)body->len,
-            range_start);
 
-        if (!result) {
-            PyErr_WriteUnraisable(request_binding->py_core);
-            goto done;
-        }
-        Py_DECREF(result);
+    result = PyObject_CallMethod(
+        request_binding->py_core, "_on_body", "(y#K)", (const char *)(body->ptr), (Py_ssize_t)body->len, range_start);
+
+    if (!result) {
+        PyErr_WriteUnraisable(request_binding->py_core);
+        goto done;
     }
+    Py_DECREF(result);
     error = false;
 done:
     PyGILState_Release(state);
@@ -432,7 +426,7 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     Py_INCREF(meta_request->py_core);
 
     if (recv_filepath) {
-        meta_request->recv_file = aws_fopen(recv_filepath, "wb+");
+        meta_request->recv_file = aws_fopen(recv_filepath, "wb");
         if (!meta_request->recv_file) {
             aws_translate_and_raise_io_error(errno);
             PyErr_SetAwsLastError();
