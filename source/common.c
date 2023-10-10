@@ -80,7 +80,7 @@ PyObject *aws_py_is_env_ec2(PyObject *self, PyObject *args) {
 PyObject *aws_py_get_ec2_instance_type(PyObject *self, PyObject *args) {
     PyObject *env_capsule = NULL;
     if (!PyArg_ParseTuple(args, "O", &env_capsule)) {
-        return PyErr_AwsLastError();
+        return NULL;
     }
 
     struct aws_system_environment *env = PyCapsule_GetPointer(env_capsule, s_capsule_name_sys_env);
