@@ -67,7 +67,7 @@ PyObject *aws_py_is_env_ec2(PyObject *self, PyObject *args) {
 
     struct aws_system_environment *env = PyCapsule_GetPointer(env_capsule, s_capsule_name_sys_env);
     if (!env) {
-        return PyErr_AwsLastError();
+        return NULL;
     }
 
     if (aws_s3_is_running_on_ec2(env)) {
