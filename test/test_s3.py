@@ -270,6 +270,13 @@ class S3RequestTest(NativeResourceTest):
                 on_headers=self._on_request_headers,
                 on_progress=self._on_progress)
             finished_future = s3_request.finished_future
+
+            # Regression test: Let S3Request get GC'd early.
+            # The download should continue without problems.
+            # We once had a bug where the file would get closed too early:
+            # https://github.com/awslabs/aws-crt-python/pull/506
+            del s3_request
+
             finished_future.result(self.timeout)
 
             # Result check
