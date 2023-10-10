@@ -112,7 +112,7 @@ PyObject *aws_py_is_crt_s3_optimized_for_system(PyObject *self, PyObject *args) 
 
     struct aws_system_environment *env = PyCapsule_GetPointer(env_capsule, s_capsule_name_sys_env);
     if (!env) {
-        return PyErr_AwsLastError();
+        return NULL;
     }
 
     struct aws_byte_cursor *instance_type_to_pass = NULL;
