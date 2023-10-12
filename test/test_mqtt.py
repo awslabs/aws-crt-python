@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0.
 
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, Pkcs11Lib, TlsContextOptions
-from awscrt import http
+from awscrt import http, io
 from awscrt.mqtt import Client, Connection, QoS, Will, OnConnectionClosedData, OnConnectionFailureData, OnConnectionSuccessData, ConnectReturnCode
 from test import NativeResourceTest
 from concurrent.futures import Future
@@ -10,6 +10,7 @@ import os
 import unittest
 import uuid
 import time
+import sys
 
 TIMEOUT = 100.0
 
@@ -72,6 +73,8 @@ class MqttConnectionTest(NativeResourceTest):
         connection.disconnect().result(TIMEOUT)
 
     def test_ecc_connect_disconnect(self):
+        io.init_logging(io.LogLevel.Debug, "stdout")
+
         test_input_endpoint = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
         test_input_cert = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_ECC_CERT")
         test_input_key = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_ECC_KEY")
@@ -84,6 +87,7 @@ class MqttConnectionTest(NativeResourceTest):
         connection.disconnect().result(TIMEOUT)
 
     def test_pkcs11(self):
+
         test_input_endpoint = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
         test_input_pkcs11_lib = _get_env_variable("AWS_TEST_PKCS11_LIB")
         test_input_pkcs11_pin = _get_env_variable("AWS_TEST_PKCS11_PIN")
