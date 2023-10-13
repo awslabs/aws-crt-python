@@ -3,7 +3,7 @@
 
 
 from test import NativeResourceTest
-from awscrt.crypto import Hash, RSA, RSAEncryptionAlgorithmType, RSASignatureAlgorithmType
+from awscrt.crypto import Hash, RSA, RSAEncryptionAlgorithm, RSASignatureAlgorithm
 import unittest
 
 RSA_PRIVATE_KEY_PEM = """
@@ -117,9 +117,9 @@ class TestCredentials(NativeResourceTest):
         self.assertEqual(expected, digest)
 
     def test_rsa_encryption_roundtrip(self):
-        param_list = [RSAEncryptionAlgorithmType.PKCS1_5,
-                      RSAEncryptionAlgorithmType.OAEP_SHA256,
-                      RSAEncryptionAlgorithmType.OAEP_SHA512]
+        param_list = [RSAEncryptionAlgorithm.PKCS1_5,
+                      RSAEncryptionAlgorithm.OAEP_SHA256,
+                      RSAEncryptionAlgorithm.OAEP_SHA512]
 
         for p in param_list:
             with self.subTest(msg="RSA Encryption Roundtrip using algo p", p=p):
@@ -139,8 +139,8 @@ class TestCredentials(NativeResourceTest):
         h.update(b'totally original test string')
         digest = h.digest()
 
-        param_list = [RSASignatureAlgorithmType.PKCS1_5_SHA256,
-                      RSASignatureAlgorithmType.PSS_SHA256]
+        param_list = [RSASignatureAlgorithm.PKCS1_5_SHA256,
+                      RSASignatureAlgorithm.PSS_SHA256]
 
         for p in param_list:
             with self.subTest(msg="RSA Signing Roundtrip using algo p", p=p):
@@ -168,9 +168,9 @@ class TestCredentials(NativeResourceTest):
         digest2 = h2.digest()
 
         rsa = RSA.rsa_private_key_from_pem_data(RSA_PRIVATE_KEY_PEM)
-        signature = rsa.sign(RSASignatureAlgorithmType.PKCS1_5_SHA256, digest)
-        self.assertEqual(rsa.verify(RSASignatureAlgorithmType.PKCS1_5_SHA256, digest2, signature), False)
-        self.assertEqual(rsa.verify(RSASignatureAlgorithmType.PKCS1_5_SHA256, digest, b'bad signature'), False)
+        signature = rsa.sign(RSASignatureAlgorithm.PKCS1_5_SHA256, digest)
+        self.assertEqual(rsa.verify(RSASignatureAlgorithm.PKCS1_5_SHA256, digest2, signature), False)
+        self.assertEqual(rsa.verify(RSASignatureAlgorithm.PKCS1_5_SHA256, digest, b'bad signature'), False)
 
 
 if __name__ == '__main__':

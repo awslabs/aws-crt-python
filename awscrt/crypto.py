@@ -119,21 +119,21 @@ class RSA:
         """
         return RSA(native_handle=_awscrt.rsa_public_key_from_pem_data(pem_data))
 
-    def encrypt(self, encryption_algorithm: RSAEncryptionAlgorithmType,
+    def encrypt(self, encryption_algorithm: RSAEncryptionAlgorithm,
                 plaintext: Union[str, bytes, bytearray, memoryview]) -> bytes:
         """
         Encrypts data using a given algorithm.
         """
         return _awscrt.rsa_encrypt(self._rsa, encryption_algorithm, plaintext)
 
-    def decrypt(self, encryption_algorithm: RSAEncryptionAlgorithmType,
+    def decrypt(self, encryption_algorithm: RSAEncryptionAlgorithm,
                 ciphertext: Union[str, bytes, bytearray, memoryview]) -> bytes:
         """
         Decrypts data using a given algorithm.
         """
         return _awscrt.rsa_decrypt(self._rsa, encryption_algorithm, ciphertext)
 
-    def sign(self, encryption_algorithm: RSASignatureAlgorithmType,
+    def sign(self, encryption_algorithm: RSASignatureAlgorithm,
              digest: Union[str, bytes, bytearray, memoryview]) -> bytes:
         """
         Signs data using a given algorithm.
@@ -141,7 +141,7 @@ class RSA:
         """
         return _awscrt.rsa_sign(self._rsa, encryption_algorithm, digest)
 
-    def verify(self, encryption_algorithm: RSASignatureAlgorithmType,
+    def verify(self, encryption_algorithm: RSASignatureAlgorithm,
                digest: Union[str, bytes, bytearray, memoryview],
                signature: Union[str, bytes, bytearray, memoryview]) -> bool:
         """
