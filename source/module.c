@@ -402,7 +402,8 @@ static void s_error_map_init(void) {
         {PyExc_ValueError, AWS_ERROR_INVALID_ARGUMENT},
         {PyExc_FileNotFoundError, AWS_ERROR_FILE_INVALID_PATH},
         {PyExc_BlockingIOError, AWS_IO_READ_WOULD_BLOCK},
-        {PyExc_BrokenPipeError, AWS_IO_BROKEN_PIPE}};
+        {PyExc_BrokenPipeError, AWS_IO_BROKEN_PIPE},
+    };
 
     if (aws_hash_table_init(
             &s_py_to_aws_error_map,
