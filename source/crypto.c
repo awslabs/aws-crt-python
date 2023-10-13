@@ -7,9 +7,12 @@
 
 #include "aws/cal/hash.h"
 #include "aws/cal/hmac.h"
+#include "aws/cal/rsa.h"
+#include "aws/io/pem.h"
 
 const char *s_capsule_name_hash = "aws_hash";
 const char *s_capsule_name_hmac = "aws_hmac";
+const char *s_capsule_name_rsa = "aws_rsa";
 
 static void s_hash_destructor(PyObject *hash_capsule) {
     assert(PyCapsule_CheckExact(hash_capsule));
@@ -237,4 +240,237 @@ PyObject *aws_py_hmac_digest(PyObject *self, PyObject *args) {
     }
 
     return PyBytes_FromStringAndSize((const char *)output, digest_buf.len);
+}
+
+static void s_rsa_destructor(PyObject *rsa_capsule) {
+    assert(PyCapsule_CheckExact(rsa_capsule));
+
+    struct aws_rsa_key_pair *key_pair = PyCapsule_GetPointer(rsa_capsule, s_capsule_name_rsa);
+    assert(key_pair);
+
+    aws_rsa_key_pair_release(key_pair);
+}
+
+struct aws_pem_object *s_find_pem_object(struct aws_array_list *pem_list, enum aws_pem_object_type pem_type) {
+    for (size_t i = 0; i < aws_array_list_length(pem_list); ++i) {
+        struct aws_pem_object *pem_object = NULL;
+        if (aws_array_list_get_at_ptr(pem_list, (void **)&pem_object, 0)) {
+            return NULL;
+        }
+
+        if (pem_object->type == pem_type) {
+            return pem_object;
+        }
+    }
+
+    return NULL;
+}
+
+PyObject *aws_py_rsa_private_key_from_pem_data(PyObject *self, PyObject *args) {
+    (void)self;
+
+    const char *pem_data_ptr;
+    Py_ssize_t pem_data_len;
+    if (!PyArg_ParseTuple(args, "s#", &pem_data_ptr, &pem_data_len)) {
+        return NULL;
+    }
+
+    PyObject *capsule = NULL;
+    struct aws_byte_cursor pem_data_cur = aws_byte_cursor_from_array(pem_data_ptr, pem_data_len);
+    struct aws_allocator *allocator = aws_py_get_allocator();
+    struct aws_array_list pem_list;
+    if (aws_pem_objects_init_from_file_contents(&pem_list, allocator, pem_data_cur)) {
+        return PyErr_AwsLastError();
+    }
+
+    struct aws_pem_object *found_pem_object = s_find_pem_object(&pem_list, AWS_PEM_TYPE_PRIVATE_RSA_PKCS1);
+
+    if (found_pem_object == NULL) {
+        PyErr_SetString(PyExc_ValueError, "RSA private key not found in PEM.");
+        goto on_done;
+    }
+
+    struct aws_rsa_key_pair *key_pair =
+        aws_rsa_key_pair_new_from_private_key_pkcs1(allocator, aws_byte_cursor_from_buf(&found_pem_object->data));
+
+    if (key_pair == NULL) {
+        PyErr_AwsLastError();
+        goto on_done;
+    }
+
+    capsule = PyCapsule_New(key_pair, s_capsule_name_rsa, s_rsa_destructor);
+
+    if (capsule == NULL) {
+        aws_rsa_key_pair_release(key_pair);
+    }
+
+on_done:
+    aws_pem_objects_clean_up(&pem_list);
+    return capsule;
+}
+
+PyObject *aws_py_rsa_public_key_from_pem_data(PyObject *self, PyObject *args) {
+    (void)self;
+
+    const char *pem_data_ptr;
+    Py_ssize_t pem_data_len;
+    if (!PyArg_ParseTuple(args, "s#", &pem_data_ptr, &pem_data_len)) {
+        return NULL;
+    }
+
+    PyObject *capsule = NULL;
+    struct aws_byte_cursor pem_data_cur = aws_byte_cursor_from_array(pem_data_ptr, pem_data_len);
+    struct aws_allocator *allocator = aws_py_get_allocator();
+    struct aws_array_list pem_list;
+    if (aws_pem_objects_init_from_file_contents(&pem_list, allocator, pem_data_cur)) {
+        return PyErr_AwsLastError();
+    }
+
+    struct aws_pem_object *found_pem_object = s_find_pem_object(&pem_list, AWS_PEM_TYPE_PUBLIC_RSA_PKCS1);
+
+    if (found_pem_object == NULL) {
+        PyErr_SetString(PyExc_ValueError, "RSA public key not found in PEM.");
+        goto on_done;
+    }
+
+    struct aws_rsa_key_pair *key_pair =
+        aws_rsa_key_pair_new_from_public_key_pkcs1(allocator, aws_byte_cursor_from_buf(&found_pem_object->data));
+
+    if (key_pair == NULL) {
+        PyErr_AwsLastError();
+        goto on_done;
+    }
+
+    capsule = PyCapsule_New(key_pair, s_capsule_name_rsa, s_rsa_destructor);
+
+    if (capsule == NULL) {
+        aws_rsa_key_pair_release(key_pair);
+    }
+
+on_done:
+    aws_pem_objects_clean_up(&pem_list);
+    return capsule;
+}
+
+PyObject *aws_py_rsa_encrypt(PyObject *self, PyObject *args) {
+    (void)self;
+
+    struct aws_allocator *allocator = aws_py_get_allocator();
+    PyObject *rsa_capsule = NULL;
+    int encrypt_algo = 0;
+    const char *plaintext_ptr;
+    Py_ssize_t plaintext_len;
+    if (!PyArg_ParseTuple(args, "Ois#", &rsa_capsule, &encrypt_algo, &plaintext_ptr, &plaintext_len)) {
+        return NULL;
+    }
+
+    struct aws_rsa_key_pair *rsa = PyCapsule_GetPointer(rsa_capsule, s_capsule_name_rsa);
+    if (rsa == NULL) {
+        return PyErr_AwsLastError();
+    }
+
+    struct aws_byte_cursor plaintext_cur = aws_byte_cursor_from_array(plaintext_ptr, plaintext_len);
+    struct aws_byte_buf result_buf;
+    aws_byte_buf_init(&result_buf, allocator, aws_rsa_key_pair_block_length(rsa));
+
+    if (aws_rsa_key_pair_encrypt(rsa, encrypt_algo, plaintext_cur, &result_buf)) {
+        return PyErr_AwsLastError();
+    }
+
+    PyObject *ret = PyBytes_FromStringAndSize((const char *)result_buf.buffer, result_buf.len);
+    aws_byte_buf_clean_up_secure(&result_buf);
+    return ret;
+}
+
+PyObject *aws_py_rsa_decrypt(PyObject *self, PyObject *args) {
+    (void)self;
+
+    struct aws_allocator *allocator = aws_py_get_allocator();
+    PyObject *rsa_capsule = NULL;
+    int encrypt_algo = 0;
+    const char *ciphertext_ptr;
+    Py_ssize_t ciphertext_len;
+    if (!PyArg_ParseTuple(args, "Ois#", &rsa_capsule, &encrypt_algo, &ciphertext_ptr, &ciphertext_len)) {
+        return NULL;
+    }
+
+    struct aws_rsa_key_pair *rsa = PyCapsule_GetPointer(rsa_capsule, s_capsule_name_rsa);
+    if (rsa == NULL) {
+        return PyErr_AwsLastError();
+    }
+
+    struct aws_byte_cursor ciphertext_cur = aws_byte_cursor_from_array(ciphertext_ptr, ciphertext_len);
+    struct aws_byte_buf result_buf;
+    aws_byte_buf_init(&result_buf, allocator, aws_rsa_key_pair_block_length(rsa));
+
+    if (aws_rsa_key_pair_decrypt(rsa, encrypt_algo, ciphertext_cur, &result_buf)) {
+        return PyErr_AwsLastError();
+    }
+
+    PyObject *ret = PyBytes_FromStringAndSize((const char *)result_buf.buffer, result_buf.len);
+    aws_byte_buf_clean_up_secure(&result_buf);
+    return ret;
+}
+
+PyObject *aws_py_rsa_sign(PyObject *self, PyObject *args) {
+    (void)self;
+
+    struct aws_allocator *allocator = aws_py_get_allocator();
+    PyObject *rsa_capsule = NULL;
+    int sign_algo = 0;
+    const char *digest_ptr;
+    Py_ssize_t digest_len;
+    if (!PyArg_ParseTuple(args, "Ois#", &rsa_capsule, &sign_algo, &digest_ptr, &digest_len)) {
+        return NULL;
+    }
+
+    struct aws_rsa_key_pair *rsa = PyCapsule_GetPointer(rsa_capsule, s_capsule_name_rsa);
+    if (rsa == NULL) {
+        return PyErr_AwsLastError();
+    }
+
+    struct aws_byte_cursor digest_cur = aws_byte_cursor_from_array(digest_ptr, digest_len);
+    struct aws_byte_buf result_buf;
+    aws_byte_buf_init(&result_buf, allocator, aws_rsa_key_pair_signature_length(rsa));
+
+    if (aws_rsa_key_pair_sign_message(rsa, sign_algo, digest_cur, &result_buf)) {
+        return PyErr_AwsLastError();
+    }
+
+    PyObject *ret = PyBytes_FromStringAndSize((const char *)result_buf.buffer, result_buf.len);
+    aws_byte_buf_clean_up_secure(&result_buf);
+    return ret;
+}
+
+PyObject *aws_py_rsa_verify(PyObject *self, PyObject *args) {
+    (void)self;
+
+    PyObject *rsa_capsule = NULL;
+    int sign_algo = 0;
+    const char *digest_ptr;
+    Py_ssize_t digest_len;
+    const char *signature_ptr;
+    Py_ssize_t signature_len;
+    if (!PyArg_ParseTuple(
+            args, "Ois#s#", &rsa_capsule, &sign_algo, &digest_ptr, &digest_len, &signature_ptr, &signature_len)) {
+        return NULL;
+    }
+
+    struct aws_rsa_key_pair *rsa = PyCapsule_GetPointer(rsa_capsule, s_capsule_name_rsa);
+    if (rsa == NULL) {
+        return PyErr_AwsLastError();
+    }
+
+    struct aws_byte_cursor digest_cur = aws_byte_cursor_from_array(digest_ptr, digest_len);
+    struct aws_byte_cursor signature_cur = aws_byte_cursor_from_array(signature_ptr, signature_len);
+
+    if (aws_rsa_key_pair_verify_signature(rsa, sign_algo, digest_cur, signature_cur)) {
+        if (aws_last_error() == AWS_ERROR_CAL_SIGNATURE_VALIDATION_FAILED) {
+            aws_reset_error();
+            Py_RETURN_FALSE;
+        }
+        return PyErr_AwsLastError();
+    }
+
+    Py_RETURN_TRUE;
 }

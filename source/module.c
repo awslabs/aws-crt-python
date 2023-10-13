@@ -18,6 +18,7 @@
 #include "websocket.h"
 
 #include <aws/auth/auth.h>
+#include <aws/cal/cal.h>
 #include <aws/common/byte_buf.h>
 #include <aws/common/environment.h>
 #include <aws/common/system_info.h>
@@ -401,8 +402,7 @@ static void s_error_map_init(void) {
         {PyExc_ValueError, AWS_ERROR_INVALID_ARGUMENT},
         {PyExc_FileNotFoundError, AWS_ERROR_FILE_INVALID_PATH},
         {PyExc_BlockingIOError, AWS_IO_READ_WOULD_BLOCK},
-        {PyExc_BrokenPipeError, AWS_IO_BROKEN_PIPE},
-    };
+        {PyExc_BrokenPipeError, AWS_IO_BROKEN_PIPE}};
 
     if (aws_hash_table_init(
             &s_py_to_aws_error_map,
@@ -718,6 +718,14 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(sha256_hmac_new, METH_VARARGS),
     AWS_PY_METHOD_DEF(hash_update, METH_VARARGS),
     AWS_PY_METHOD_DEF(hash_digest, METH_VARARGS),
+
+    /* RSA crypto primitives */
+    AWS_PY_METHOD_DEF(rsa_private_key_from_pem_data, METH_VARARGS),
+    AWS_PY_METHOD_DEF(rsa_public_key_from_pem_data, METH_VARARGS),
+    AWS_PY_METHOD_DEF(rsa_encrypt, METH_VARARGS),
+    AWS_PY_METHOD_DEF(rsa_decrypt, METH_VARARGS),
+    AWS_PY_METHOD_DEF(rsa_sign, METH_VARARGS),
+    AWS_PY_METHOD_DEF(rsa_verify, METH_VARARGS),
 
     /* Checksum primitives */
     AWS_PY_METHOD_DEF(checksums_crc32, METH_VARARGS),
