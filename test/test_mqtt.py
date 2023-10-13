@@ -73,7 +73,7 @@ class MqttConnectionTest(NativeResourceTest):
         connection.disconnect().result(TIMEOUT)
 
     def test_ecc_connect_disconnect(self):
-        io.init_logging(io.LogLevel.Debug, "stdout")
+        io.init_logging(io.LogLevel.Debug, "stderr")
 
         test_input_endpoint = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
         test_input_cert = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_ECC_CERT")
@@ -87,7 +87,6 @@ class MqttConnectionTest(NativeResourceTest):
         connection.disconnect().result(TIMEOUT)
 
     def test_pkcs11(self):
-
         test_input_endpoint = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
         test_input_pkcs11_lib = _get_env_variable("AWS_TEST_PKCS11_LIB")
         test_input_pkcs11_pin = _get_env_variable("AWS_TEST_PKCS11_PIN")
