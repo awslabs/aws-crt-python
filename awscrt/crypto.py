@@ -82,7 +82,7 @@ class RSAEncryptionAlgorithm(IntEnum):
     """
 
 
-class RSASignatureAlgorithmType(IntEnum):
+class RSASignatureAlgorithm(IntEnum):
     """RSA Encryption Algorithm"""
 
     PKCS1_5_SHA256 = 0
