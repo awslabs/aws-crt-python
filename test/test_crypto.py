@@ -146,10 +146,10 @@ class TestCredentials(NativeResourceTest):
             with self.subTest(msg="RSA Signing Roundtrip using algo p", p=p):
                 rsa = RSA.new_private_key_from_pem_data(RSA_PRIVATE_KEY_PEM)
                 signature = rsa.sign(p, digest)
-                self.assertEqual(rsa.verify(p, digest, signature), True)
+                self.assertTrue(rsa.verify(p, digest, signature))
 
                 rsa_pub = RSA.new_private_key_from_pem_data(RSA_PRIVATE_KEY_PEM)
-                self.assertEqual(rsa_pub.verify(p, digest, signature), True)
+                self.assertTrue(rsa_pub.verify(p, digest, signature))
 
     def test_rsa_load_error(self):
         with self.assertRaises(ValueError):
@@ -169,8 +169,8 @@ class TestCredentials(NativeResourceTest):
 
         rsa = RSA.new_private_key_from_pem_data(RSA_PRIVATE_KEY_PEM)
         signature = rsa.sign(RSASignatureAlgorithm.PKCS1_5_SHA256, digest)
-        self.assertEqual(rsa.verify(RSASignatureAlgorithm.PKCS1_5_SHA256, digest2, signature), False)
-        self.assertEqual(rsa.verify(RSASignatureAlgorithm.PKCS1_5_SHA256, digest, b'bad signature'), False)
+        self.assertFalse(rsa.verify(RSASignatureAlgorithm.PKCS1_5_SHA256, digest2, signature))
+        self.assertFalse(rsa.verify(RSASignatureAlgorithm.PKCS1_5_SHA256, digest, b'bad signature'))
 
 
 if __name__ == '__main__':
