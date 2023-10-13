@@ -104,7 +104,7 @@ class RSA:
         self._rsa = native_handle
 
     @staticmethod
-    def new_private_key_from_pem_data(pem_data: Union[str, bytes, bytearray, memoryview]) -> RSA :
+    def new_private_key_from_pem_data(pem_data: Union[str, bytes, bytearray, memoryview]) -> 'RSA' :
         """
         Creates a new instance of private RSA key pair from pem data.
         Raises ValueError if pem does not have private key object.
@@ -112,7 +112,7 @@ class RSA:
         return RSA(native_handle=_awscrt.rsa_private_key_from_pem_data(pem_data))
 
     @staticmethod
-    def new_public_key_from_pem_data(pem_data: Union[str, bytes, bytearray, memoryview]):
+    def new_public_key_from_pem_data(pem_data: Union[str, bytes, bytearray, memoryview]) -> 'RSA':
         """
         Creates a new instance of public RSA key pair from pem data.
         Raises ValueError if pem does not have public key object.
