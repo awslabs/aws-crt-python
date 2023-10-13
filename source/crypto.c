@@ -363,7 +363,7 @@ PyObject *aws_py_rsa_encrypt(PyObject *self, PyObject *args) {
 
     struct aws_rsa_key_pair *rsa = PyCapsule_GetPointer(rsa_capsule, s_capsule_name_rsa);
     if (rsa == NULL) {
-        return NULL();
+        return NULL;
     }
 
     struct aws_byte_buf result_buf;
@@ -444,7 +444,6 @@ PyObject *aws_py_rsa_verify(PyObject *self, PyObject *args) {
     int sign_algo = 0;
     struct aws_byte_cursor digest_cur;
     struct aws_byte_cursor signature_cur;
-    Py_ssize_t signature_len;
     if (!PyArg_ParseTuple(
             args, "Oiy#y#", &rsa_capsule, &sign_algo, &digest_cur.ptr, &digest_cur.len, &signature_cur.ptr, &signature_cur.len)) {
         return NULL;
