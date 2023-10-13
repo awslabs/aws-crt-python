@@ -390,7 +390,7 @@ PyObject *aws_py_rsa_decrypt(PyObject *self, PyObject *args) {
     int encrypt_algo = 0;
     const char *ciphertext_ptr;
     Py_ssize_t ciphertext_len;
-    if (!PyArg_ParseTuple(args, "Ois#", &rsa_capsule, &encrypt_algo, &ciphertext_ptr, &ciphertext_len)) {
+    if (!PyArg_ParseTuple(args, "Oiy#", &rsa_capsule, &encrypt_algo, &ciphertext_ptr, &ciphertext_len)) {
         return NULL;
     }
 
@@ -420,7 +420,7 @@ PyObject *aws_py_rsa_sign(PyObject *self, PyObject *args) {
     int sign_algo = 0;
     const char *digest_ptr;
     Py_ssize_t digest_len;
-    if (!PyArg_ParseTuple(args, "Ois#", &rsa_capsule, &sign_algo, &digest_ptr, &digest_len)) {
+    if (!PyArg_ParseTuple(args, "Oiy#", &rsa_capsule, &sign_algo, &digest_ptr, &digest_len)) {
         return NULL;
     }
 
@@ -452,7 +452,7 @@ PyObject *aws_py_rsa_verify(PyObject *self, PyObject *args) {
     const char *signature_ptr;
     Py_ssize_t signature_len;
     if (!PyArg_ParseTuple(
-            args, "Ois#s#", &rsa_capsule, &sign_algo, &digest_ptr, &digest_len, &signature_ptr, &signature_len)) {
+            args, "Oiy#y#", &rsa_capsule, &sign_algo, &digest_ptr, &digest_len, &signature_ptr, &signature_len)) {
         return NULL;
     }
 

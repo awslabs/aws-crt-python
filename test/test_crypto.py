@@ -124,7 +124,7 @@ class TestCredentials(NativeResourceTest):
         for p in param_list:
             with self.subTest(msg="RSA Encryption Roundtrip using algo p", p=p):
                 test_pt = b'totally original test string'
-                rsa = RSA.rsa_private_key_from_pem_data(RSA_PRIVATE_KEY_PEM)
+                rsa = RSA.new_private_key_from_pem_data(RSA_PRIVATE_KEY_PEM)
                 ct = rsa.encrypt(p, test_pt)
                 pt = rsa.decrypt(p, ct)
                 self.assertEqual(test_pt, pt)
@@ -144,19 +144,19 @@ class TestCredentials(NativeResourceTest):
 
         for p in param_list:
             with self.subTest(msg="RSA Signing Roundtrip using algo p", p=p):
-                rsa = RSA.rsa_private_key_from_pem_data(RSA_PRIVATE_KEY_PEM)
+                rsa = RSA.new_private_key_from_pem_data(RSA_PRIVATE_KEY_PEM)
                 signature = rsa.sign(p, digest)
                 self.assertEqual(rsa.verify(p, digest, signature), True)
 
-                rsa_pub = RSA.rsa_private_key_from_pem_data(RSA_PRIVATE_KEY_PEM)
+                rsa_pub = RSA.new_private_key_from_pem_data(RSA_PRIVATE_KEY_PEM)
                 self.assertEqual(rsa_pub.verify(p, digest, signature), True)
 
     def test_rsa_load_error(self):
         with self.assertRaises(ValueError):
-            RSA.rsa_private_key_from_pem_data(RSA_PUBLIC_KEY_PEM)
+            RSA.new_private_key_from_pem_data(RSA_PUBLIC_KEY_PEM)
 
         with self.assertRaises(ValueError):
-            RSA.rsa_public_key_from_pem_data(RSA_PRIVATE_KEY_PEM)
+            RSA.new_public_key_from_pem_data(RSA_PRIVATE_KEY_PEM)
 
     def test_rsa_signing_verify_fail(self):
         h = Hash.sha256_new()
@@ -167,7 +167,7 @@ class TestCredentials(NativeResourceTest):
         h2.update(b'another totally original test string')
         digest2 = h2.digest()
 
-        rsa = RSA.rsa_private_key_from_pem_data(RSA_PRIVATE_KEY_PEM)
+        rsa = RSA.new_private_key_from_pem_data(RSA_PRIVATE_KEY_PEM)
         signature = rsa.sign(RSASignatureAlgorithm.PKCS1_5_SHA256, digest)
         self.assertEqual(rsa.verify(RSASignatureAlgorithm.PKCS1_5_SHA256, digest2, signature), False)
         self.assertEqual(rsa.verify(RSASignatureAlgorithm.PKCS1_5_SHA256, digest, b'bad signature'), False)
