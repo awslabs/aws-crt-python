@@ -243,8 +243,6 @@ PyObject *aws_py_hmac_digest(PyObject *self, PyObject *args) {
 }
 
 static void s_rsa_destructor(PyObject *rsa_capsule) {
-    assert(PyCapsule_CheckExact(rsa_capsule));
-
     struct aws_rsa_key_pair *key_pair = PyCapsule_GetPointer(rsa_capsule, s_capsule_name_rsa);
     assert(key_pair);
 
@@ -269,19 +267,19 @@ struct aws_pem_object *s_find_pem_object(struct aws_array_list *pem_list, enum a
 PyObject *aws_py_rsa_private_key_from_pem_data(PyObject *self, PyObject *args) {
     (void)self;
 
-    const char *pem_data_ptr;
-    Py_ssize_t pem_data_len;
-    if (!PyArg_ParseTuple(args, "s#", &pem_data_ptr, &pem_data_len)) {
+    struct aws_byte_cursor pem_data_cur;
+    if (!PyArg_ParseTuple(args, "s#", &pem_data.ptr, &pem_data.len)) {
         return NULL;
     }
 
     PyObject *capsule = NULL;
-    struct aws_byte_cursor pem_data_cur = aws_byte_cursor_from_array(pem_data_ptr, pem_data_len);
     struct aws_allocator *allocator = aws_py_get_allocator();
     struct aws_array_list pem_list;
     if (aws_pem_objects_init_from_file_contents(&pem_list, allocator, pem_data_cur)) {
         return PyErr_AwsLastError();
     }
+
+    /* From hereon, we need to clean up if errors occur */
 
     struct aws_pem_object *found_pem_object = s_find_pem_object(&pem_list, AWS_PEM_TYPE_PRIVATE_RSA_PKCS1);
 
@@ -312,19 +310,19 @@ on_done:
 PyObject *aws_py_rsa_public_key_from_pem_data(PyObject *self, PyObject *args) {
     (void)self;
 
-    const char *pem_data_ptr;
-    Py_ssize_t pem_data_len;
-    if (!PyArg_ParseTuple(args, "s#", &pem_data_ptr, &pem_data_len)) {
+    struct aws_byte_cursor pem_data_cur;
+    if (!PyArg_ParseTuple(args, "s#", &pem_data_cur.ptr, &pem_data_cur.len)) {
         return NULL;
     }
 
     PyObject *capsule = NULL;
-    struct aws_byte_cursor pem_data_cur = aws_byte_cursor_from_array(pem_data_ptr, pem_data_len);
     struct aws_allocator *allocator = aws_py_get_allocator();
     struct aws_array_list pem_list;
     if (aws_pem_objects_init_from_file_contents(&pem_list, allocator, pem_data_cur)) {
         return PyErr_AwsLastError();
     }
+
+    /* From hereon, we need to clean up if errors occur */
 
     struct aws_pem_object *found_pem_object = s_find_pem_object(&pem_list, AWS_PEM_TYPE_PUBLIC_RSA_PKCS1);
 
@@ -358,22 +356,21 @@ PyObject *aws_py_rsa_encrypt(PyObject *self, PyObject *args) {
     struct aws_allocator *allocator = aws_py_get_allocator();
     PyObject *rsa_capsule = NULL;
     int encrypt_algo = 0;
-    const char *plaintext_ptr;
-    Py_ssize_t plaintext_len;
-    if (!PyArg_ParseTuple(args, "Ois#", &rsa_capsule, &encrypt_algo, &plaintext_ptr, &plaintext_len)) {
+    struct aws_byte_cursor plaintext_cur;
+    if (!PyArg_ParseTuple(args, "Ois#", &rsa_capsule, &encrypt_algo, &plaintext_cur.ptr, &plaintext_cur.len)) {
         return NULL;
     }
 
     struct aws_rsa_key_pair *rsa = PyCapsule_GetPointer(rsa_capsule, s_capsule_name_rsa);
     if (rsa == NULL) {
-        return PyErr_AwsLastError();
+        return NULL();
     }
 
-    struct aws_byte_cursor plaintext_cur = aws_byte_cursor_from_array(plaintext_ptr, plaintext_len);
     struct aws_byte_buf result_buf;
     aws_byte_buf_init(&result_buf, allocator, aws_rsa_key_pair_block_length(rsa));
 
     if (aws_rsa_key_pair_encrypt(rsa, encrypt_algo, plaintext_cur, &result_buf)) {
+        aws_byte_buf_clean_up_secure(&result_buf);
         return PyErr_AwsLastError();
     }
 
@@ -388,22 +385,21 @@ PyObject *aws_py_rsa_decrypt(PyObject *self, PyObject *args) {
     struct aws_allocator *allocator = aws_py_get_allocator();
     PyObject *rsa_capsule = NULL;
     int encrypt_algo = 0;
-    const char *ciphertext_ptr;
-    Py_ssize_t ciphertext_len;
-    if (!PyArg_ParseTuple(args, "Oiy#", &rsa_capsule, &encrypt_algo, &ciphertext_ptr, &ciphertext_len)) {
+    struct aws_byte_cursor ciphertext_cur;
+    if (!PyArg_ParseTuple(args, "Oiy#", &rsa_capsule, &encrypt_algo, &ciphertext_cur.ptr, &ciphertext_cur.len)) {
         return NULL;
     }
 
     struct aws_rsa_key_pair *rsa = PyCapsule_GetPointer(rsa_capsule, s_capsule_name_rsa);
     if (rsa == NULL) {
-        return PyErr_AwsLastError();
+        return NULL;
     }
 
-    struct aws_byte_cursor ciphertext_cur = aws_byte_cursor_from_array(ciphertext_ptr, ciphertext_len);
     struct aws_byte_buf result_buf;
     aws_byte_buf_init(&result_buf, allocator, aws_rsa_key_pair_block_length(rsa));
 
     if (aws_rsa_key_pair_decrypt(rsa, encrypt_algo, ciphertext_cur, &result_buf)) {
+        aws_byte_buf_clean_up_secure(&result_buf);
         return PyErr_AwsLastError();
     }
 
@@ -418,22 +414,21 @@ PyObject *aws_py_rsa_sign(PyObject *self, PyObject *args) {
     struct aws_allocator *allocator = aws_py_get_allocator();
     PyObject *rsa_capsule = NULL;
     int sign_algo = 0;
-    const char *digest_ptr;
-    Py_ssize_t digest_len;
-    if (!PyArg_ParseTuple(args, "Oiy#", &rsa_capsule, &sign_algo, &digest_ptr, &digest_len)) {
+    struct aws_byte_cursor digest_cur;
+    if (!PyArg_ParseTuple(args, "Oiy#", &rsa_capsule, &sign_algo, &digest_cur.ptr, &digest_cur.len)) {
         return NULL;
     }
 
     struct aws_rsa_key_pair *rsa = PyCapsule_GetPointer(rsa_capsule, s_capsule_name_rsa);
     if (rsa == NULL) {
-        return PyErr_AwsLastError();
+        return NULL;
     }
 
-    struct aws_byte_cursor digest_cur = aws_byte_cursor_from_array(digest_ptr, digest_len);
     struct aws_byte_buf result_buf;
     aws_byte_buf_init(&result_buf, allocator, aws_rsa_key_pair_signature_length(rsa));
 
     if (aws_rsa_key_pair_sign_message(rsa, sign_algo, digest_cur, &result_buf)) {
+        aws_byte_buf_clean_up_secure(&result_buf);
         return PyErr_AwsLastError();
     }
 
@@ -447,22 +442,18 @@ PyObject *aws_py_rsa_verify(PyObject *self, PyObject *args) {
 
     PyObject *rsa_capsule = NULL;
     int sign_algo = 0;
-    const char *digest_ptr;
-    Py_ssize_t digest_len;
-    const char *signature_ptr;
+    struct aws_byte_cursor digest_cur;
+    struct aws_byte_cursor signature_cur;
     Py_ssize_t signature_len;
     if (!PyArg_ParseTuple(
-            args, "Oiy#y#", &rsa_capsule, &sign_algo, &digest_ptr, &digest_len, &signature_ptr, &signature_len)) {
+            args, "Oiy#y#", &rsa_capsule, &sign_algo, &digest_cur.ptr, &digest_cur.len, &signature_cur.ptr, &signature_cur.len)) {
         return NULL;
     }
 
     struct aws_rsa_key_pair *rsa = PyCapsule_GetPointer(rsa_capsule, s_capsule_name_rsa);
     if (rsa == NULL) {
-        return PyErr_AwsLastError();
+        return NULL;
     }
-
-    struct aws_byte_cursor digest_cur = aws_byte_cursor_from_array(digest_ptr, digest_len);
-    struct aws_byte_cursor signature_cur = aws_byte_cursor_from_array(signature_ptr, signature_len);
 
     if (aws_rsa_key_pair_verify_signature(rsa, sign_algo, digest_cur, signature_cur)) {
         if (aws_last_error() == AWS_ERROR_CAL_SIGNATURE_VALIDATION_FAILED) {
