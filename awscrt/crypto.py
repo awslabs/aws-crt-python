@@ -63,7 +63,7 @@ class HMAC:
         return _awscrt.hmac_digest(self._hmac, truncate_to)
 
 
-class RSAEncryptionAlgorithmType(IntEnum):
+class RSAEncryptionAlgorithm(IntEnum):
     """RSA Encryption Algorithm"""
 
     PKCS1_5 = 0
