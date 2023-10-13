@@ -681,4 +681,16 @@ FodyWeavers.xsd
 ### VisualStudio Patch ###
 # Additional files built by Visual Studio
 
-# End of https://www.toptal.com/developers/gitignore/api/git,c++,cmake,python,visualstudio,visualstudiocode,macos
+# End of
+# https://www.toptal.com/developers/gitignore/api/git,c++,cmake,python,visualstudio,visualstudiocode,macos
+
+# credentials
+.key
+*.pem
+.crt
+
+# deps from build-deps.sh
+deps/
+
+# API docs are updated automatically by .github/workflows/docs.yml
+docs/
