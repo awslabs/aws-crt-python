@@ -268,7 +268,7 @@ PyObject *aws_py_rsa_private_key_from_pem_data(PyObject *self, PyObject *args) {
     (void)self;
 
     struct aws_byte_cursor pem_data_cur;
-    if (!PyArg_ParseTuple(args, "s#", &pem_data.ptr, &pem_data.len)) {
+    if (!PyArg_ParseTuple(args, "s#", &pem_data_cur.ptr, &pem_data_cur.len)) {
         return NULL;
     }
 
