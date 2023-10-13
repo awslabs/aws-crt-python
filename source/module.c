@@ -18,7 +18,6 @@
 #include "websocket.h"
 
 #include <aws/auth/auth.h>
-#include <aws/cal/cal.h>
 #include <aws/common/byte_buf.h>
 #include <aws/common/environment.h>
 #include <aws/common/system_info.h>
