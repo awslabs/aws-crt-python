@@ -445,7 +445,14 @@ PyObject *aws_py_rsa_verify(PyObject *self, PyObject *args) {
     struct aws_byte_cursor digest_cur;
     struct aws_byte_cursor signature_cur;
     if (!PyArg_ParseTuple(
-            args, "Oiy#y#", &rsa_capsule, &sign_algo, &digest_cur.ptr, &digest_cur.len, &signature_cur.ptr, &signature_cur.len)) {
+            args,
+            "Oiy#y#",
+            &rsa_capsule,
+            &sign_algo,
+            &digest_cur.ptr,
+            &digest_cur.len,
+            &signature_cur.ptr,
+            &signature_cur.len)) {
         return NULL;
     }
 
