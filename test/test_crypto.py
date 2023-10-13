@@ -129,7 +129,7 @@ class TestCredentials(NativeResourceTest):
                 pt = rsa.decrypt(p, ct)
                 self.assertEqual(test_pt, pt)
 
-                rsa_pub = RSA.rsa_public_key_from_pem_data(RSA_PUBLIC_KEY_PEM)
+                rsa_pub = RSA.new_public_key_from_pem_data(RSA_PUBLIC_KEY_PEM)
                 ct_pub = rsa_pub.encrypt(p, test_pt)
                 pt_pub = rsa.decrypt(p, ct_pub)
                 self.assertEqual(test_pt, pt_pub)
