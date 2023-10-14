@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0.
 
 import _awscrt
+from awscrt import NativeResource
 from typing import Union
 from enum import IntEnum
 
@@ -96,12 +97,10 @@ class RSASignatureAlgorithm(IntEnum):
     """
 
 
-class RSA:
-    def __init__(self, native_handle):
-        """
-        don't call me, I'm private
-        """
-        self._rsa = native_handle
+class RSA(NativeResource):
+    def __init__(self, binding):
+        super().__init__()
+        self._binding = binding
 
     @staticmethod
     def new_private_key_from_pem_data(pem_data: Union[str, bytes, bytearray, memoryview]) -> 'RSA':
@@ -109,7 +108,7 @@ class RSA:
         Creates a new instance of private RSA key pair from pem data.
         Raises ValueError if pem does not have private key object.
         """
-        return RSA(native_handle=_awscrt.rsa_private_key_from_pem_data(pem_data))
+        return RSA(binding=_awscrt.rsa_private_key_from_pem_data(pem_data))
 
     @staticmethod
     def new_public_key_from_pem_data(pem_data: Union[str, bytes, bytearray, memoryview]) -> 'RSA':
@@ -117,35 +116,35 @@ class RSA:
         Creates a new instance of public RSA key pair from pem data.
         Raises ValueError if pem does not have public key object.
         """
-        return RSA(native_handle=_awscrt.rsa_public_key_from_pem_data(pem_data))
+        return RSA(binding=_awscrt.rsa_public_key_from_pem_data(pem_data))
 
     def encrypt(self, encryption_algorithm: RSAEncryptionAlgorithm,
-                plaintext: Union[str, bytes, bytearray, memoryview]) -> bytes:
+                plaintext: Union[bytes, bytearray, memoryview]) -> bytes:
         """
         Encrypts data using a given algorithm.
         """
-        return _awscrt.rsa_encrypt(self._rsa, encryption_algorithm, plaintext)
+        return _awscrt.rsa_encrypt(self._binding, encryption_algorithm, plaintext)
 
     def decrypt(self, encryption_algorithm: RSAEncryptionAlgorithm,
                 ciphertext: Union[bytes, bytearray, memoryview]) -> bytes:
         """
         Decrypts data using a given algorithm.
         """
-        return _awscrt.rsa_decrypt(self._rsa, encryption_algorithm, ciphertext)
+        return _awscrt.rsa_decrypt(self._binding, encryption_algorithm, ciphertext)
 
-    def sign(self, encryption_algorithm: RSASignatureAlgorithm,
+    def sign(self, signature_algorithm: RSASignatureAlgorithm,
              digest: Union[bytes, bytearray, memoryview]) -> bytes:
         """
         Signs data using a given algorithm.
         Note: function expects digest of the message, ex sha256
         """
-        return _awscrt.rsa_sign(self._rsa, encryption_algorithm, digest)
+        return _awscrt.rsa_sign(self._binding, signature_algorithm, digest)
 
-    def verify(self, encryption_algorithm: RSASignatureAlgorithm,
+    def verify(self, signature_algorithm: RSASignatureAlgorithm,
                digest: Union[bytes, bytearray, memoryview],
                signature: Union[bytes, bytearray, memoryview]) -> bool:
         """
         Verifies signature against digest.
         Returns True if signature matches and False if not.
         """
-        return _awscrt.rsa_verify(self._rsa, encryption_algorithm, digest, signature)
+        return _awscrt.rsa_verify(self._binding, signature_algorithm, digest, signature)
