@@ -126,6 +126,12 @@ def using_system_libcrypto():
     return os.getenv('AWS_CRT_BUILD_USE_SYSTEM_LIBCRYPTO') == '1'
 
 
+def strict_build_success_mode():
+    strict_mode = os.getenv('AWS_CRT_BUILD_STRICT_MODE')
+    print("Strict-Mode is set to: {}".format(strict_mode))
+    return strict_mode is not None and strict_mode.strip().lower() != 'off'
+
+
 class AwsLib:
     def __init__(self, name, extra_cmake_args=[], libname=None):
         self.name = name
@@ -391,25 +397,52 @@ def _load_version():
         return VERSION_RE.match(fp.read()).group(1)
 
 
-setuptools.setup(
-    name="awscrt",
-    version=_load_version(),
-    license="Apache 2.0",
-    author="Amazon Web Services, Inc",
-    author_email="aws-sdk-common-runtime@amazon.com",
-    description="A common runtime for AWS Python projects",
-    long_description=_load_readme(),
-    long_description_content_type='text/markdown',
-    url="https://github.com/awslabs/aws-crt-python",
-    # Note: find_packages() without extra args will end up installing test/
-    packages=setuptools.find_packages(include=['awscrt*']),
-    classifiers=[
-        "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: Apache Software License",
-        "Operating System :: OS Independent",
-    ],
-    python_requires='>=3.7',
-    ext_modules=[awscrt_ext()],
-    cmdclass={'build_ext': awscrt_build_ext, "bdist_wheel": bdist_wheel_abi3},
-    test_suite='test',
-)
+try:
+    setuptools.setup(
+        name="awscrt",
+        version=_load_version(),
+        license="Apache 2.0",
+        author="Amazon Web Services, Inc",
+        author_email="aws-sdk-common-runtime@amazon.com",
+        description="A common runtime for AWS Python projects",
+        long_description=_load_readme(),
+        long_description_content_type='text/markdown',
+        url="https://github.com/awslabs/aws-crt-python",
+        # Note: find_packages() without extra args will end up installing test/
+            packages=setuptools.find_packages(include=['awscrt*']),
+            classifiers=[
+                "Programming Language :: Python :: 3",
+                "License :: OSI Approved :: Apache Software License",
+                "Operating System :: OS Independent",
+        ],
+        python_requires='>=3.7',
+        ext_modules=[awscrt_ext()],
+        cmdclass={'build_ext': awscrt_build_ext, "bdist_wheel": bdist_wheel_abi3},
+        test_suite='test',
+    )
+
+except (SystemExit, Exception) as e:
+    if (strict_build_success_mode()):
+        raise e
+
+    # build without the c extension, and allow the system loader to pick it up if/when it's available.
+    # The config module will provide users with a way to check.
+    setuptools.setup(
+        name="awscrt",
+        version=_load_version(),
+        license="Apache 2.0",
+        author="Amazon Web Services, Inc",
+        author_email="aws-sdk-common-runtime@amazon.com",
+        description="A common runtime for AWS Python projects",
+        long_description=_load_readme(),
+        long_description_content_type='text/markdown',
+        url="https://github.com/awslabs/aws-crt-python",
+        # Note: find_packages() without extra args will end up installing test/
+            packages=setuptools.find_packages(include=['awscrt*']),
+            classifiers=[
+                "Programming Language :: Python :: 3",
+                "License :: OSI Approved :: Apache Software License",
+                "Operating System :: OS Independent",
+        ],
+        python_requires='>=3.7',
+    )
