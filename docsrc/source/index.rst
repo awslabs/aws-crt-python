@@ -13,6 +13,7 @@ API Reference
 
    api/auth
    api/common
+   api/crypto
    api/exceptions
    api/eventstream
    api/http
