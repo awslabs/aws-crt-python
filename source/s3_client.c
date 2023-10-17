@@ -123,8 +123,7 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
     AWS_ZERO_STRUCT(signing_config_from_credentials_provider);
 
     if (credential_provider) {
-        aws_s3_init_default_signing_config(
-            &signing_config_from_credentials_provider, region, credential_provider);
+        aws_s3_init_default_signing_config(&signing_config_from_credentials_provider, region, credential_provider);
         signing_config = &signing_config_from_credentials_provider;
     }
 
