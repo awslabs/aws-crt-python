@@ -7,8 +7,48 @@
 #include "auth.h"
 #include "io.h"
 #include <aws/s3/s3_client.h>
+#include <aws/s3/s3_platform_info.h>
 
 static const char *s_capsule_name_s3_client = "aws_s3_client";
+
+PyObject *aws_py_s3_is_env_ec2(PyObject *self, PyObject *args) {
+    (void)args;
+    
+    /* This will grab the metadata s3 knows about. In the case this is Amazon EC2, the instance
+    type field will be populated. */
+    const struct aws_s3_compute_platform_info *compute_info = aws_s3_current_compute_platform_info();
+    
+    if (compute_info->instance_type.len > 0) {
+        Py_RETURN_TRUE;
+    }
+
+    Py_RETURN_FALSE;
+}
+
+PyObject *aws_py_s3_get_ec2_instance_type(PyObject *self, PyObject *args) {
+    (void *)args;
+
+    const struct aws_s3_compute_platform_info *compute_info = aws_s3_current_compute_platform_info();
+
+    if (compute_info->instance_type.len) {
+        PyObject *ret_value = PyUnicode_FromAwsByteCursor(&compute_info->instance_type);
+        return ret_value;
+    }
+
+    Py_RETURN_NONE;
+}
+
+PyObject *aws_py_s3_is_crt_s3_optimized_for_system(PyObject *self, PyObject *args) {
+    (void *)args;
+    
+    const struct aws_s3_compute_platform_info *compute_info = aws_s3_current_compute_platform_info();
+
+    if (compute_info->has_recommended_configuration) {
+        Py_RETURN_TRUE;
+    }
+
+    Py_RETURN_FALSE;
+}
 
 struct s3_client_binding {
     struct aws_s3_client *native;
