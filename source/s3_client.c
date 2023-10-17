@@ -80,11 +80,10 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
     int tls_mode;                     /* i */
     uint64_t part_size;               /* K */
     double throughput_target_gbps;    /* d */
-    int compute_content_md5;          /* p - boolean predicate */
     PyObject *py_core;                /* O */
     if (!PyArg_ParseTuple(
             args,
-            "OOOOOs#iKdpO",
+            "OOOOOs#iKdO",
             &bootstrap_py,
             &signing_config_py,
             &credential_provider_py,
@@ -95,7 +94,6 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
             &tls_mode,
             &part_size,
             &throughput_target_gbps,
-            &compute_content_md5,
             &py_core)) {
         return NULL;
     }
@@ -162,7 +160,6 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
         .part_size = part_size,
         .tls_connection_options = tls_options,
         .throughput_target_gbps = throughput_target_gbps,
-        .compute_content_md5 = compute_content_md5 != 0,
         .shutdown_callback = s_s3_client_shutdown,
         .shutdown_callback_user_data = s3_client,
     };

@@ -141,14 +141,6 @@ class S3Client(NativeResource):
 
         throughput_target_gbps (Optional[float]): Throughput target in Gbps that we are trying to reach.
             (5 Gbps by default)
-
-        compute_content_md5 (Optional[bool]):
-            Whether to calculate and add the "Content-MD5" header to upload
-            requests that could use it (no other checksum algorithm is being used,
-            and the header is not already present or the upload is being split
-            into parts). For single-part uploads, if the Content-MD5 header is
-            already present, it will remain unchanged.
-            (False by default)
     """
 
     __slots__ = ('shutdown_event', '_region')
@@ -163,8 +155,7 @@ class S3Client(NativeResource):
             credential_provider=None,
             tls_connection_options=None,
             part_size=None,
-            throughput_target_gbps=None,
-            compute_content_md5=None):
+            throughput_target_gbps=None):
         assert isinstance(bootstrap, ClientBootstrap) or bootstrap is None
         assert isinstance(region, str)
         assert isinstance(signing_config, AwsSigningConfig) or signing_config is None
@@ -195,9 +186,6 @@ class S3Client(NativeResource):
 
         s3_client_core = _S3ClientCore(bootstrap, credential_provider, signing_config, tls_connection_options)
 
-        if compute_content_md5 is None:
-            compute_content_md5 = False
-
         # C layer uses 0 to indicate defaults
         if tls_mode is None:
             tls_mode = 0
@@ -216,7 +204,6 @@ class S3Client(NativeResource):
             tls_mode,
             part_size,
             throughput_target_gbps,
-            compute_content_md5,
             s3_client_core)
 
     def make_request(
