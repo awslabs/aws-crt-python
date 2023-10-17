@@ -12,7 +12,9 @@ from awscrt.http import HttpRequest
 from awscrt.io import ClientBootstrap, TlsConnectionOptions
 from awscrt.auth import AwsCredentialsProvider, AwsSignatureType, AwsSignedBodyHeaderType, AwsSignedBodyValue, AwsSigningAlgorithm, AwsSigningConfig
 import awscrt.exceptions
+from dataclasses import dataclass
 import threading
+from typing import Optional
 from enum import IntEnum
 
 
@@ -50,6 +52,60 @@ class S3RequestTlsMode(IntEnum):
     """
 
 
+class S3ChecksumAlgorithm(IntEnum):
+    """
+    Checksum algorithm used to verify object integrity.
+    https://docs.aws.amazon.com/AmazonS3/latest/userguide/checking-object-integrity.html
+    """
+
+    CRC32C = 1
+    """CRC32C"""
+
+    CRC32 = 2
+    """CRC32"""
+
+    SHA1 = 3
+    """SHA-1"""
+
+    SHA256 = 4
+    """SHA-256"""
+
+
+class S3ChecksumLocation(IntEnum):
+    """Where to put the checksum."""
+
+    HEADER = 1
+    """
+    Add checksum as a request header field.
+    The checksum is calculated before any part of the request is sent to the server.
+    """
+
+    TRAILER = 2
+    """
+    Add checksum as a request trailer field.
+    The checksum is calculated as the body is streamed to the server, then
+    added as a trailer field. This may be more efficient than HEADER, but
+    can only be used with "streaming" requests that support it.
+    """
+
+
+@dataclass
+class S3ChecksumConfig:
+    """Configures how the S3Client calculates and verifies checksums."""
+
+    algorithm: Optional[S3ChecksumAlgorithm] = None
+    """
+    If set, the S3Client will calculate a checksum using this algorithm
+    and add it to the request. If you set this, you must also set `location`.
+    """
+
+    location: Optional[S3ChecksumLocation] = None
+    """Where to put the request checksum."""
+
+    validate_response: bool = False
+    """Whether to retrieve and validate response checksums."""
+
+
 class S3Client(NativeResource):
     """S3 client
 
@@ -85,6 +141,14 @@ class S3Client(NativeResource):
 
         throughput_target_gbps (Optional[float]): Throughput target in Gbps that we are trying to reach.
             (5 Gbps by default)
+
+        compute_content_md5 (Optional[bool]):
+            Whether to calculate and add the "Content-MD5" header to upload
+            requests that could use it (no other checksum algorithm is being used,
+            and the header is not already present or the upload is being split
+            into parts). For single-part uploads, if the Content-MD5 header is
+            already present, it will remain unchanged.
+            (False by default)
     """
 
     __slots__ = ('shutdown_event', '_region')
@@ -99,7 +163,8 @@ class S3Client(NativeResource):
             credential_provider=None,
             tls_connection_options=None,
             part_size=None,
-            throughput_target_gbps=None):
+            throughput_target_gbps=None,
+            compute_content_md5=None):
         assert isinstance(bootstrap, ClientBootstrap) or bootstrap is None
         assert isinstance(region, str)
         assert isinstance(signing_config, AwsSigningConfig) or signing_config is None
@@ -130,6 +195,9 @@ class S3Client(NativeResource):
 
         s3_client_core = _S3ClientCore(bootstrap, credential_provider, signing_config, tls_connection_options)
 
+        if compute_content_md5 is None:
+            compute_content_md5 = False
+
         # C layer uses 0 to indicate defaults
         if tls_mode is None:
             tls_mode = 0
@@ -148,17 +216,19 @@ class S3Client(NativeResource):
             tls_mode,
             part_size,
             throughput_target_gbps,
+            compute_content_md5,
             s3_client_core)
 
     def make_request(
             self,
             *,
-            request,
             type,
-            signing_config=None,
-            credential_provider=None,
+            request,
             recv_filepath=None,
             send_filepath=None,
+            signing_config=None,
+            credential_provider=None,
+            checksum_config=None,
             on_headers=None,
             on_body=None,
             on_done=None,
@@ -168,19 +238,11 @@ class S3Client(NativeResource):
         requests under the hood for acceleration.
 
         Keyword Args:
-            request (HttpRequest): The overall outgoing API request for S3 operation.
-                If the request body is a file, set send_filepath for better performance.
-
             type (S3RequestType): The type of S3 request passed in,
                 :attr:`~S3RequestType.GET_OBJECT`/:attr:`~S3RequestType.PUT_OBJECT` can be accelerated
 
-            signing_config (Optional[AwsSigningConfig]):
-                Configuration for signing of the request to override the configuration from client. Use :func:`create_default_s3_signing_config()` to create the default config.
-                If None is provided, the client configuration will be used.
-
-            credential_provider (Optional[AwsCredentialsProvider]):  Deprecated, prefer `signing_config` instead.
-                Credentials providers source the :class:`~awscrt.auth.AwsCredentials` needed to sign an authenticated AWS request, for this request only.
-                If None is provided, the client configuration will be used.
+            request (HttpRequest): The overall outgoing API request for S3 operation.
+                If the request body is a file, set send_filepath for better performance.
 
             recv_filepath (Optional[str]): Optional file path. If set, the
                 response body is written directly to a file and the
@@ -191,6 +253,16 @@ class S3Client(NativeResource):
                 request body is read directly from a file and the
                 request's `body_stream` is ignored. This should give better
                 performance than reading a file from a stream.
+
+            signing_config (Optional[AwsSigningConfig]):
+                Configuration for signing of the request to override the configuration from client. Use :func:`create_default_s3_signing_config()` to create the default config.
+                If None is provided, the client configuration will be used.
+
+            credential_provider (Optional[AwsCredentialsProvider]):  Deprecated, prefer `signing_config` instead.
+                Credentials providers source the :class:`~awscrt.auth.AwsCredentials` needed to sign an authenticated AWS request, for this request only.
+                If None is provided, the client configuration will be used.
+
+            checksum_config (Optional[S3ChecksumConfig]): Optional checksum settings.
 
             on_headers: Optional callback invoked as the response received, and even the API request
                 has been split into multiple parts, this callback will only be invoked once as
@@ -244,12 +316,13 @@ class S3Client(NativeResource):
         """
         return S3Request(
             client=self,
-            request=request,
             type=type,
-            signing_config=signing_config,
-            credential_provider=credential_provider,
+            request=request,
             recv_filepath=recv_filepath,
             send_filepath=send_filepath,
+            signing_config=signing_config,
+            credential_provider=credential_provider,
+            checksum_config=checksum_config,
             on_headers=on_headers,
             on_body=on_body,
             on_done=on_done,
@@ -277,12 +350,13 @@ class S3Request(NativeResource):
             self,
             *,
             client,
-            request,
             type,
-            signing_config=None,
-            credential_provider=None,
+            request,
             recv_filepath=None,
             send_filepath=None,
+            signing_config=None,
+            credential_provider=None,
+            checksum_config=None,
             on_headers=None,
             on_body=None,
             on_done=None,
@@ -298,6 +372,16 @@ class S3Request(NativeResource):
 
         self._finished_future = Future()
         self.shutdown_event = threading.Event()
+
+        checksum_algorithm = 0  # 0 means NONE in C
+        checksum_location = 0  # 0 means NONE in C
+        validate_response_checksum = False
+        if checksum_config is not None:
+            if checksum_config.algorithm is not None:
+                checksum_algorithm = checksum_config.algorithm.value
+            if checksum_config.location is not None:
+                checksum_location = checksum_config.location.value
+            validate_response_checksum = checksum_config.validate_response
 
         s3_request_core = _S3RequestCore(
             request,
@@ -320,6 +404,9 @@ class S3Request(NativeResource):
             recv_filepath,
             send_filepath,
             region,
+            checksum_algorithm,
+            checksum_location,
+            validate_response_checksum,
             s3_request_core)
 
     @property

@@ -319,6 +319,7 @@ static void s_s3_request_on_progress(
     const struct aws_s3_meta_request_progress *progress,
     void *user_data) {
 
+    (void)meta_request;
     struct s3_meta_request_binding *request_binding = user_data;
 
     bool report_progress = false;
@@ -346,20 +347,22 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
 
     struct aws_allocator *allocator = aws_py_get_allocator();
 
-    PyObject *py_s3_request = NULL;
-    PyObject *s3_client_py = NULL;
-    PyObject *http_request_py = NULL;
-    int type;
-    PyObject *signing_config_py = NULL;
-    PyObject *credential_provider_py = NULL;
-    const char *recv_filepath;
-    const char *send_filepath;
-    const char *region;
-    Py_ssize_t region_len;
-    PyObject *py_core = NULL;
+    PyObject *py_s3_request;                           /* O */
+    PyObject *s3_client_py;                            /* O */
+    PyObject *http_request_py;                         /* O */
+    int type;                                          /* i */
+    PyObject *signing_config_py;                       /* O */
+    PyObject *credential_provider_py;                  /* O */
+    const char *recv_filepath;                         /* z */
+    const char *send_filepath;                         /* z */
+    struct aws_byte_cursor region;                     /* s# */
+    enum aws_s3_checksum_algorithm checksum_algorithm; /* i */
+    enum aws_s3_checksum_location checksum_location;   /* i */
+    int validate_response_checksum;                    /* p - boolean predicate */
+    PyObject *py_core;                                 /* O */
     if (!PyArg_ParseTuple(
             args,
-            "OOOiOOzzs#O",
+            "OOOiOOzzs#iipO",
             &py_s3_request,
             &s3_client_py,
             &http_request_py,
@@ -368,8 +371,11 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
             &credential_provider_py,
             &recv_filepath,
             &send_filepath,
-            &region,
-            &region_len,
+            &region.ptr,
+            &region.len,
+            &checksum_algorithm,
+            &checksum_location,
+            &validate_response_checksum,
             &py_core)) {
         return NULL;
     }
@@ -402,11 +408,15 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     struct aws_signing_config_aws signing_config_from_credentials_provider;
     AWS_ZERO_STRUCT(signing_config_from_credentials_provider);
     if (credential_provider) {
-        struct aws_byte_cursor region_cursor = aws_byte_cursor_from_array((const uint8_t *)region, region_len);
-        aws_s3_init_default_signing_config(
-            &signing_config_from_credentials_provider, region_cursor, credential_provider);
+        aws_s3_init_default_signing_config(&signing_config_from_credentials_provider, region, credential_provider);
         signing_config = &signing_config_from_credentials_provider;
     }
+
+    struct aws_s3_checksum_config checksum_config = {
+        .checksum_algorithm = checksum_algorithm,
+        .location = checksum_location,
+        .validate_response_checksum = validate_response_checksum != 0,
+    };
 
     struct s3_meta_request_binding *meta_request = aws_mem_calloc(allocator, 1, sizeof(struct s3_meta_request_binding));
     if (!meta_request) {
@@ -438,6 +448,7 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
         .type = type,
         .message = http_request,
         .signing_config = signing_config,
+        .checksum_config = &checksum_config,
         .send_filepath = aws_byte_cursor_from_c_str(send_filepath),
         .headers_callback = s_s3_request_on_headers,
         .body_callback = s_s3_request_on_body,

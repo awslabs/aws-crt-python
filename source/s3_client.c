@@ -71,30 +71,31 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
 
     struct aws_allocator *allocator = aws_py_get_allocator();
 
-    PyObject *bootstrap_py = NULL;
-    PyObject *signing_config_py = NULL;
-    PyObject *credential_provider_py = NULL;
-    PyObject *tls_options_py = NULL;
-    PyObject *on_shutdown_py = NULL;
-    PyObject *py_core = NULL;
-    const char *region;
-    Py_ssize_t region_len;
-    uint64_t part_size = 0;
-    double throughput_target_gbps = 0;
-    int tls_mode;
+    PyObject *bootstrap_py;           /* O */
+    PyObject *signing_config_py;      /* O */
+    PyObject *credential_provider_py; /* O */
+    PyObject *tls_options_py;         /* O */
+    PyObject *on_shutdown_py;         /* O */
+    struct aws_byte_cursor region;    /* s# */
+    int tls_mode;                     /* i */
+    uint64_t part_size;               /* K */
+    double throughput_target_gbps;    /* d */
+    int compute_content_md5;          /* p - boolean predicate */
+    PyObject *py_core;                /* O */
     if (!PyArg_ParseTuple(
             args,
-            "OOOOOs#iKdO",
+            "OOOOOs#iKdpO",
             &bootstrap_py,
             &signing_config_py,
             &credential_provider_py,
             &tls_options_py,
             &on_shutdown_py,
-            &region,
-            &region_len,
+            &region.ptr,
+            &region.len,
             &tls_mode,
             &part_size,
             &throughput_target_gbps,
+            &compute_content_md5,
             &py_core)) {
         return NULL;
     }
@@ -121,11 +122,9 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
     struct aws_signing_config_aws signing_config_from_credentials_provider;
     AWS_ZERO_STRUCT(signing_config_from_credentials_provider);
 
-    struct aws_byte_cursor region_cursor = aws_byte_cursor_from_array((const uint8_t *)region, region_len);
-
     if (credential_provider) {
         aws_s3_init_default_signing_config(
-            &signing_config_from_credentials_provider, region_cursor, credential_provider);
+            &signing_config_from_credentials_provider, region, credential_provider);
         signing_config = &signing_config_from_credentials_provider;
     }
 
@@ -157,13 +156,14 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
     Py_INCREF(s3_client->py_core);
 
     struct aws_s3_client_config s3_config = {
-        .region = aws_byte_cursor_from_array((const uint8_t *)region, region_len),
+        .region = region,
         .client_bootstrap = bootstrap,
         .tls_mode = tls_mode,
         .signing_config = signing_config,
         .part_size = part_size,
         .tls_connection_options = tls_options,
         .throughput_target_gbps = throughput_target_gbps,
+        .compute_content_md5 = compute_content_md5 != 0,
         .shutdown_callback = s_s3_client_shutdown,
         .shutdown_callback_user_data = s3_client,
     };

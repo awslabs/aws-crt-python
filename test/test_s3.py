@@ -1,6 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 
+import base64
 from io import BytesIO
 import unittest
 import os
@@ -11,9 +12,31 @@ from test import NativeResourceTest
 from concurrent.futures import Future
 
 from awscrt.http import HttpHeaders, HttpRequest
-from awscrt.s3 import S3Client, S3RequestType, create_default_s3_signing_config
-from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions
-from awscrt.auth import AwsCredentialsProvider, AwsSignatureType, AwsSignedBodyHeaderType, AwsSignedBodyValue, AwsSigningAlgorithm, AwsSigningConfig
+from awscrt.s3 import (
+    S3ChecksumAlgorithm,
+    S3ChecksumConfig,
+    S3ChecksumLocation,
+    S3Client,
+    S3RequestType,
+    create_default_s3_signing_config,
+)
+from awscrt.io import (
+    ClientBootstrap,
+    ClientTlsContext,
+    DefaultHostResolver,
+    EventLoopGroup,
+    TlsConnectionOptions,
+    TlsContextOptions,
+)
+from awscrt.auth import (
+    AwsCredentialsProvider,
+    AwsSignatureType,
+    AwsSignedBodyHeaderType,
+    AwsSignedBodyValue,
+    AwsSigningAlgorithm,
+    AwsSigningConfig,
+)
+import zlib
 
 MB = 1024 ** 2
 GB = 1024 ** 3
@@ -131,6 +154,7 @@ class S3ClientTest(NativeResourceTest):
 @unittest.skipUnless(os.environ.get('AWS_TEST_S3'), 'set env var to run test: AWS_TEST_S3')
 class S3RequestTest(NativeResourceTest):
     def setUp(self):
+        super().setUp()
         # TODO: use env-vars to customize how these tests are run, instead of relying on hard-coded values
         self.get_test_object_path = "/get_object_test_10MB.txt"
         self.put_test_object_path = "/put_object_test_py_10MB.txt"
@@ -150,7 +174,6 @@ class S3RequestTest(NativeResourceTest):
 
         self.files = FileCreator()
         self.temp_put_obj_file_path = self.files.create_file_with_size("temp_put_obj_10mb", 10 * MB)
-        super().setUp()
 
     def tearDown(self):
         self.files.remove_all()
@@ -203,17 +226,16 @@ class S3RequestTest(NativeResourceTest):
             request,
             request_type,
             exception_name=None,
-            send_filepath=None,
-            recv_filepath=None):
+            **kwargs,
+    ):
 
         s3_client = s3_client_new(False, self.region, 5 * MB)
         s3_request = s3_client.make_request(
             request=request,
             type=request_type,
             on_headers=self._on_request_headers,
-            send_filepath=send_filepath,
-            recv_filepath=recv_filepath,
-            on_body=self._on_request_body)
+            on_body=self._on_request_body,
+            **kwargs)
         finished_future = s3_request.finished_future
         try:
             finished_future.result(self.timeout)
@@ -355,6 +377,37 @@ class S3RequestTest(NativeResourceTest):
             self.transferred_len,
             "the transferred length reported does not match body we sent")
         self._validate_successful_response(request_type is S3RequestType.PUT_OBJECT)
+
+    def test_put_get_with_checksum(self):
+        put_body = b'hello world'
+        put_body_stream = BytesIO(put_body)
+        content_length = len(put_body)
+        path = '/hello-world.txt'
+
+        # calculate expected CRC32 header value:
+        # a string containing the url-safe-base64-encoding of a big-endian-32-bit-CRC
+        crc32_int = zlib.crc32(put_body)
+        crc32_big_endian = crc32_int.to_bytes(4, 'big')
+        crc32_base64_bytes = base64.urlsafe_b64encode(crc32_big_endian)
+        crc32_base64_str = crc32_base64_bytes.decode()
+
+        # upload, with client adding checksum
+        upload_request = self._put_object_request(put_body_stream, content_length, path=path)
+        upload_checksum_config = S3ChecksumConfig(
+            algorithm=S3ChecksumAlgorithm.CRC32,
+            location=S3ChecksumLocation.TRAILER)
+        self._test_s3_put_get_object(upload_request, S3RequestType.PUT_OBJECT,
+                                     checksum_config=upload_checksum_config)
+        self.assertEqual(HttpHeaders(self.response_headers).get('x-amz-checksum-crc32'),
+                         crc32_base64_str)
+
+        # download, with client validating checksum
+        download_request = self._get_object_request(path)
+        download_checksum_config = S3ChecksumConfig(validate_response=True)
+        self._test_s3_put_get_object(download_request, S3RequestType.GET_OBJECT,
+                                     checksum_config=download_checksum_config)
+        self.assertEqual(HttpHeaders(self.response_headers).get('x-amz-checksum-crc32'),
+                         crc32_base64_str)
 
     def _on_progress_cancel_after_first_chunk(self, progress):
         self.transferred_len += progress
