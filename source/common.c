@@ -7,8 +7,6 @@
 #include <aws/common/system_info.h>
 #include <aws/common/thread.h>
 
-const char *s_capsule_name_sys_env = "aws_system_environment";
-
 PyObject *aws_py_get_cpu_group_count(PyObject *self, PyObject *args) {
     (void)self;
     (void)args;
