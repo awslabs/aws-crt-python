@@ -30,8 +30,6 @@ struct s3_meta_request_binding {
      **/
     FILE *recv_file;
 
-    struct aws_http_message *copied_message;
-
     /* Batch up the transferred size in one sec. */
     uint64_t size_transferred;
     /* The time stamp when the progress reported */
@@ -44,8 +42,8 @@ struct aws_s3_meta_request *aws_py_get_s3_meta_request(PyObject *meta_request) {
 }
 
 static void s_destroy(struct s3_meta_request_binding *meta_request) {
-    if (meta_request->copied_message) {
-        aws_http_message_release(meta_request->copied_message);
+    if (meta_request->recv_file) {
+        fclose(meta_request->recv_file);
     }
     Py_XDECREF(meta_request->py_core);
     aws_mem_release(aws_py_get_allocator(), meta_request);
@@ -119,6 +117,7 @@ done:
     }
 }
 
+/* To avoid reporting progress to python too often. We cache it up and only report to python after at least 1 sec. */
 static int s_record_progress(struct s3_meta_request_binding *request_binding, uint64_t length, bool *report_progress) {
     if (aws_add_u64_checked(request_binding->size_transferred, length, &request_binding->size_transferred)) {
         /* Wow */
@@ -148,10 +147,6 @@ static int s_s3_request_on_body(
     (void)meta_request;
     struct s3_meta_request_binding *request_binding = user_data;
 
-    bool report_progress;
-    if (s_record_progress(request_binding, (uint64_t)body->len, &report_progress)) {
-        return AWS_OP_ERR;
-    }
     if (request_binding->recv_file) {
         /* The callback will be invoked with the right order, so we don't need to seek first. */
         if (fwrite((void *)body->ptr, body->len, 1, request_binding->recv_file) < 1) {
@@ -165,9 +160,7 @@ static int s_s3_request_on_body(
                 aws_error_name(aws_last_error()));
             return AWS_OP_ERR;
         }
-        if (!report_progress) {
-            return AWS_OP_SUCCESS;
-        }
+        return AWS_OP_SUCCESS;
     }
     bool error = true;
     /*************** GIL ACQUIRE ***************/
@@ -176,32 +169,15 @@ static int s_s3_request_on_body(
     if (aws_py_gilstate_ensure(&state)) {
         return AWS_OP_ERR; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
-    if (!request_binding->recv_file) {
-        result = PyObject_CallMethod(
-            request_binding->py_core,
-            "_on_body",
-            "(y#K)",
-            (const char *)(body->ptr),
-            (Py_ssize_t)body->len,
-            range_start);
 
-        if (!result) {
-            PyErr_WriteUnraisable(request_binding->py_core);
-            goto done;
-        }
-        Py_DECREF(result);
+    result = PyObject_CallMethod(
+        request_binding->py_core, "_on_body", "(y#K)", (const char *)(body->ptr), (Py_ssize_t)body->len, range_start);
+
+    if (!result) {
+        PyErr_WriteUnraisable(request_binding->py_core);
+        goto done;
     }
-    if (report_progress) {
-        /* Hold the GIL before enterring here */
-        result =
-            PyObject_CallMethod(request_binding->py_core, "_on_progress", "(K)", request_binding->size_transferred);
-        if (!result) {
-            PyErr_WriteUnraisable(request_binding->py_core);
-        } else {
-            Py_DECREF(result);
-        }
-        request_binding->size_transferred = 0;
-    }
+    Py_DECREF(result);
     error = false;
 done:
     PyGILState_Release(state);
@@ -249,8 +225,6 @@ static void s_s3_request_on_finish(
     PyObject *header_list = NULL;
     PyObject *result = NULL;
 
-    request_binding->copied_message = aws_http_message_release(request_binding->copied_message);
-
     if (request_binding->size_transferred && (error_code == 0)) {
         /* report the remaining progress */
         result =
@@ -297,14 +271,13 @@ static void s_s3_request_on_finish(
     /*************** GIL RELEASE ***************/
 }
 
-/* Invoked when the python object get cleaned up */
+/* Invoked when S3Request._binding gets cleaned up.
+ * DO NOT destroy the C binding struct or anything inside it yet.
+ * The user might have let S3Request get GC'd,
+ * but the s3_meta_request_binding* must outlive the native aws_s3_meta_request* */
 static void s_s3_meta_request_capsule_destructor(PyObject *capsule) {
     struct s3_meta_request_binding *meta_request = PyCapsule_GetPointer(capsule, s_capsule_name_s3_meta_request);
 
-    if (meta_request->recv_file) {
-        fclose(meta_request->recv_file);
-        meta_request->recv_file = NULL;
-    }
     if (meta_request->native) {
         aws_s3_meta_request_release(meta_request->native);
     } else {
@@ -341,39 +314,22 @@ static void s_s3_request_on_shutdown(void *user_data) {
     /*************** GIL RELEASE ***************/
 }
 
-/*
- * file-based python input stream for reporting the progress
- */
-struct aws_input_py_stream_file_impl {
-    struct aws_input_stream base;
-    struct aws_input_stream *actual_stream;
-    struct s3_meta_request_binding *binding;
-};
+static void s_s3_request_on_progress(
+    struct aws_s3_meta_request *meta_request,
+    const struct aws_s3_meta_request_progress *progress,
+    void *user_data) {
 
-static int s_aws_input_stream_file_read(struct aws_input_stream *stream, struct aws_byte_buf *dest) {
-    struct aws_input_py_stream_file_impl *impl = AWS_CONTAINER_OF(stream, struct aws_input_py_stream_file_impl, base);
-    size_t pre_len = dest->len;
+    (void)meta_request;
+    struct s3_meta_request_binding *request_binding = user_data;
 
-    if (aws_input_stream_read(impl->actual_stream, dest)) {
-        return AWS_OP_ERR;
-    }
-
-    size_t actually_read = 0;
-    if (aws_sub_size_checked(dest->len, pre_len, &actually_read)) {
-        return AWS_OP_ERR;
-    }
-
-    bool report_progress;
-    struct s3_meta_request_binding *request_binding = impl->binding;
-    if (s_record_progress(request_binding, (uint64_t)actually_read, &report_progress)) {
-        return AWS_OP_ERR;
-    }
+    bool report_progress = false;
+    s_record_progress(request_binding, progress->bytes_transferred, &report_progress);
 
     if (report_progress) {
         /*************** GIL ACQUIRE ***************/
         PyGILState_STATE state;
         if (aws_py_gilstate_ensure(&state)) {
-            return AWS_OP_ERR; /* Python has shut down. Nothing matters anymore, but don't crash */
+            return; /* Python has shut down. Nothing matters anymore, but don't crash */
         }
         PyObject *result =
             PyObject_CallMethod(request_binding->py_core, "_on_progress", "(K)", request_binding->size_transferred);
@@ -383,113 +339,7 @@ static int s_aws_input_stream_file_read(struct aws_input_stream *stream, struct 
         request_binding->size_transferred = 0;
         PyGILState_Release(state);
         /*************** GIL RELEASE ***************/
-        if (!result) {
-            return aws_py_raise_error();
-        }
     }
-    return AWS_OP_SUCCESS;
-}
-static int s_aws_input_stream_file_seek(
-    struct aws_input_stream *stream,
-    int64_t offset,
-    enum aws_stream_seek_basis basis) {
-    struct aws_input_py_stream_file_impl *impl = AWS_CONTAINER_OF(stream, struct aws_input_py_stream_file_impl, base);
-    return aws_input_stream_seek(impl->actual_stream, offset, basis);
-}
-
-static int s_aws_input_stream_file_get_status(struct aws_input_stream *stream, struct aws_stream_status *status) {
-    struct aws_input_py_stream_file_impl *impl = AWS_CONTAINER_OF(stream, struct aws_input_py_stream_file_impl, base);
-    return aws_input_stream_get_status(impl->actual_stream, status);
-}
-
-static int s_aws_input_stream_file_get_length(struct aws_input_stream *stream, int64_t *length) {
-    struct aws_input_py_stream_file_impl *impl = AWS_CONTAINER_OF(stream, struct aws_input_py_stream_file_impl, base);
-    return aws_input_stream_get_length(impl->actual_stream, length);
-}
-
-static void s_aws_input_stream_file_destroy(struct aws_input_py_stream_file_impl *impl) {
-    struct aws_allocator *allocator = aws_py_get_allocator();
-    aws_input_stream_release(impl->actual_stream);
-    aws_mem_release(allocator, impl);
-}
-
-static struct aws_input_stream_vtable s_aws_input_stream_file_vtable = {
-    .seek = s_aws_input_stream_file_seek,
-    .read = s_aws_input_stream_file_read,
-    .get_status = s_aws_input_stream_file_get_status,
-    .get_length = s_aws_input_stream_file_get_length,
-};
-
-static struct aws_input_stream *s_input_stream_new_from_file(
-    struct aws_allocator *allocator,
-    const char *file_name,
-    struct s3_meta_request_binding *request_binding) {
-    struct aws_input_py_stream_file_impl *impl =
-        aws_mem_calloc(allocator, 1, sizeof(struct aws_input_py_stream_file_impl));
-
-    impl->base.vtable = &s_aws_input_stream_file_vtable;
-    aws_ref_count_init(&impl->base.ref_count, impl, (aws_simple_completion_callback *)s_aws_input_stream_file_destroy);
-
-    impl->actual_stream = aws_input_stream_new_from_file(allocator, file_name);
-    if (!impl->actual_stream) {
-        aws_mem_release(allocator, impl);
-        return NULL;
-    }
-    impl->binding = request_binding;
-
-    return &impl->base;
-}
-
-/* Copy an existing HTTP message without body. */
-struct aws_http_message *s_copy_http_message(struct aws_allocator *allocator, struct aws_http_message *base_message) {
-    AWS_PRECONDITION(allocator);
-    AWS_PRECONDITION(base_message);
-
-    struct aws_http_message *message = aws_http_message_new_request(allocator);
-
-    if (message == NULL) {
-        return NULL;
-    }
-
-    struct aws_byte_cursor request_method;
-    if (aws_http_message_get_request_method(base_message, &request_method)) {
-        goto error_clean_up;
-    }
-
-    if (aws_http_message_set_request_method(message, request_method)) {
-        goto error_clean_up;
-    }
-
-    struct aws_byte_cursor request_path;
-    if (aws_http_message_get_request_path(base_message, &request_path)) {
-        goto error_clean_up;
-    }
-
-    if (aws_http_message_set_request_path(message, request_path)) {
-        goto error_clean_up;
-    }
-
-    size_t num_headers = aws_http_message_get_header_count(base_message);
-    for (size_t header_index = 0; header_index < num_headers; ++header_index) {
-        struct aws_http_header header;
-        if (aws_http_message_get_header(base_message, &header, header_index)) {
-            goto error_clean_up;
-        }
-        if (aws_http_message_add_header(message, header)) {
-            goto error_clean_up;
-        }
-    }
-
-    return message;
-
-error_clean_up:
-
-    if (message != NULL) {
-        aws_http_message_release(message);
-        message = NULL;
-    }
-
-    return NULL;
 }
 
 PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
@@ -497,20 +347,22 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
 
     struct aws_allocator *allocator = aws_py_get_allocator();
 
-    PyObject *py_s3_request = NULL;
-    PyObject *s3_client_py = NULL;
-    PyObject *http_request_py = NULL;
-    int type;
-    PyObject *signing_config_py = NULL;
-    PyObject *credential_provider_py = NULL;
-    const char *recv_filepath;
-    const char *send_filepath;
-    const char *region;
-    Py_ssize_t region_len;
-    PyObject *py_core = NULL;
+    PyObject *py_s3_request;                           /* O */
+    PyObject *s3_client_py;                            /* O */
+    PyObject *http_request_py;                         /* O */
+    int type;                                          /* i */
+    PyObject *signing_config_py;                       /* O */
+    PyObject *credential_provider_py;                  /* O */
+    const char *recv_filepath;                         /* z */
+    const char *send_filepath;                         /* z */
+    struct aws_byte_cursor region;                     /* s# */
+    enum aws_s3_checksum_algorithm checksum_algorithm; /* i */
+    enum aws_s3_checksum_location checksum_location;   /* i */
+    int validate_response_checksum;                    /* p - boolean predicate */
+    PyObject *py_core;                                 /* O */
     if (!PyArg_ParseTuple(
             args,
-            "OOOiOOzzs#O",
+            "OOOiOOzzs#iipO",
             &py_s3_request,
             &s3_client_py,
             &http_request_py,
@@ -519,8 +371,11 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
             &credential_provider_py,
             &recv_filepath,
             &send_filepath,
-            &region,
-            &region_len,
+            &region.ptr,
+            &region.len,
+            &checksum_algorithm,
+            &checksum_location,
+            &validate_response_checksum,
             &py_core)) {
         return NULL;
     }
@@ -553,11 +408,15 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     struct aws_signing_config_aws signing_config_from_credentials_provider;
     AWS_ZERO_STRUCT(signing_config_from_credentials_provider);
     if (credential_provider) {
-        struct aws_byte_cursor region_cursor = aws_byte_cursor_from_array((const uint8_t *)region, region_len);
-        aws_s3_init_default_signing_config(
-            &signing_config_from_credentials_provider, region_cursor, credential_provider);
+        aws_s3_init_default_signing_config(&signing_config_from_credentials_provider, region, credential_provider);
         signing_config = &signing_config_from_credentials_provider;
     }
+
+    struct aws_s3_checksum_config checksum_config = {
+        .checksum_algorithm = checksum_algorithm,
+        .location = checksum_location,
+        .validate_response_checksum = validate_response_checksum != 0,
+    };
 
     struct s3_meta_request_binding *meta_request = aws_mem_calloc(allocator, 1, sizeof(struct s3_meta_request_binding));
     if (!meta_request) {
@@ -577,37 +436,25 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     Py_INCREF(meta_request->py_core);
 
     if (recv_filepath) {
-        meta_request->recv_file = aws_fopen(recv_filepath, "wb+");
+        meta_request->recv_file = aws_fopen(recv_filepath, "wb");
         if (!meta_request->recv_file) {
             aws_translate_and_raise_io_error(errno);
             PyErr_SetAwsLastError();
             goto error;
         }
     }
-    if (send_filepath) {
-        if (type == AWS_S3_META_REQUEST_TYPE_PUT_OBJECT) {
-            /* Copy the http request from python object and replace the old pointer with new pointer */
-            meta_request->copied_message = s_copy_http_message(allocator, http_request);
-            struct aws_input_stream *input_body = s_input_stream_new_from_file(allocator, send_filepath, meta_request);
-            if (!input_body) {
-                PyErr_SetAwsLastError();
-                goto error;
-            }
-            /* rewrite the input stream of the original request */
-            aws_http_message_set_body_stream(meta_request->copied_message, input_body);
-            /* Input body is owned by copied message */
-            aws_input_stream_release(input_body);
-        }
-    }
 
     struct aws_s3_meta_request_options s3_meta_request_opt = {
         .type = type,
-        .message = meta_request->copied_message ? meta_request->copied_message : http_request,
+        .message = http_request,
         .signing_config = signing_config,
+        .checksum_config = &checksum_config,
+        .send_filepath = aws_byte_cursor_from_c_str(send_filepath),
         .headers_callback = s_s3_request_on_headers,
         .body_callback = s_s3_request_on_body,
         .finish_callback = s_s3_request_on_finish,
         .shutdown_callback = s_s3_request_on_shutdown,
+        .progress_callback = s_s3_request_on_progress,
         .user_data = meta_request,
     };
 
