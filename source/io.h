@@ -29,7 +29,7 @@ PyObject *aws_py_init_logging(PyObject *self, PyObject *args);
 PyObject *aws_py_is_alpn_available(PyObject *self, PyObject *args);
 
 /**
- * Returns True if the input TLS Cipher Preference Enum is suupported on the current platform. False otherwise.
+ * Returns True if the input TLS Cipher Preference Enum is supported on the current platform. False otherwise.
  */
 PyObject *aws_py_is_tls_cipher_supported(PyObject *self, PyObject *args);
 
