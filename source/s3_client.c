@@ -14,11 +14,11 @@ static const char *s_capsule_name_s3_client = "aws_s3_client";
 PyObject *aws_py_s3_is_env_ec2(PyObject *self, PyObject *args) {
     (void)self;
     (void)args;
-    
+
     /* This will grab the metadata s3 knows about. In the case this is Amazon EC2, the instance
     type field will be populated. */
     const struct aws_s3_compute_platform_info *compute_info = aws_s3_current_compute_platform_info();
-    
+
     if (compute_info->instance_type.len > 0) {
         Py_RETURN_TRUE;
     }
@@ -43,7 +43,7 @@ PyObject *aws_py_s3_get_ec2_instance_type(PyObject *self, PyObject *args) {
 PyObject *aws_py_s3_is_crt_s3_optimized_for_system(PyObject *self, PyObject *args) {
     (void)self;
     (void)args;
-    
+
     const struct aws_s3_compute_platform_info *compute_info = aws_s3_current_compute_platform_info();
 
     if (compute_info->has_recommended_configuration) {

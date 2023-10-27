@@ -15,6 +15,7 @@ import awscrt.exceptions
 import threading
 from enum import IntEnum
 
+
 class S3RequestType(IntEnum):
     """The type of the AWS S3 request"""
 
