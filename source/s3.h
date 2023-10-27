@@ -7,7 +7,6 @@
 
 #include "module.h"
 
-PyObject *aws_py_s3_is_env_ec2(PyObject *self, PyObject *args);
 PyObject *aws_py_s3_get_ec2_instance_type(PyObject *self, PyObject *args);
 PyObject *aws_py_s3_is_crt_s3_optimized_for_system(PyObject *self, PyObject *args);
 

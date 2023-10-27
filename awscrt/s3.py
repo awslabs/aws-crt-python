@@ -507,15 +507,6 @@ def create_default_s3_signing_config(*, region: str, credential_provider: AwsCre
     )
 
 
-def is_running_on_ec2_nitro():
-    """
-        Returns:
-             true if the current process is running on an Amazon EC2
-             instance powered by Nitro. Does not make any network calls.
-    """
-    return _awscrt.s3_is_env_ec2()
-
-
 def get_ec2_instance_type():
     """
         First this function will check it's running on EC2 via. attempting to read DMI info to avoid making IMDS calls.
