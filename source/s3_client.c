@@ -7,7 +7,6 @@
 #include "auth.h"
 #include "io.h"
 #include <aws/s3/s3_client.h>
-#include <aws/s3/s3_compute_platform_info.h>
 
 static const char *s_capsule_name_s3_client = "aws_s3_client";
 
