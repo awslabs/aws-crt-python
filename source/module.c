@@ -656,9 +656,7 @@ static void s_install_crash_handler(void) {
  ******************************************************************************/
 
 #define AWS_PY_METHOD_DEF(NAME, FLAGS)                                                                                 \
-    {                                                                                                                  \
-#        NAME, aws_py_##NAME, (FLAGS), NULL                                                                            \
-    }
+    { #NAME, aws_py_##NAME, (FLAGS), NULL }
 
 static PyMethodDef s_module_methods[] = {
     /* Common */
