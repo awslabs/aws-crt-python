@@ -436,7 +436,7 @@ def create_default_s3_signing_config(*, region: str, credential_provider: AwsCre
 def is_running_on_ec2_nitro():
     """
         Returns:
-             true if the current process is running on an Amazon EC2 
+             true if the current process is running on an Amazon EC2
              instance powered by Nitro. Does not make any network calls.
     """
     return _awscrt.s3_is_env_ec2()
@@ -445,10 +445,10 @@ def is_running_on_ec2_nitro():
 def get_ec2_instance_type():
     """
         First this function will check it's running on EC2 via. attempting to read DMI info to avoid making IMDS calls.
- 
+
         If the function detects it's on EC2, and it was able to detect the instance type without a call to IMDS
         it will return it.
- 
+
         Finally, it will call IMDS and return the instance type from there.
         Note that in the case of the IMDS call, a new client stack is spun up using 1 background thread. The call is made
         synchronously with a 1 second timeout: It's not cheap. To make this easier, the underlying result is cached
