@@ -10,7 +10,8 @@ from concurrent.futures import Future
 from awscrt import NativeResource
 from awscrt.http import HttpRequest
 from awscrt.io import ClientBootstrap, TlsConnectionOptions
-from awscrt.auth import AwsCredentialsProvider, AwsSignatureType, AwsSignedBodyHeaderType, AwsSignedBodyValue, AwsSigningAlgorithm, AwsSigningConfig
+from awscrt.auth import AwsCredentialsProvider, AwsSignatureType, AwsSignedBodyHeaderType, AwsSignedBodyValue, \
+    AwsSigningAlgorithm, AwsSigningConfig
 import awscrt.exceptions
 from dataclasses import dataclass
 import threading
@@ -178,6 +179,7 @@ class S3Client(NativeResource):
 
         def on_shutdown():
             shutdown_event.set()
+
         self._region = region
         self.shutdown_event = shutdown_event
 
@@ -503,3 +505,30 @@ def create_default_s3_signing_config(*, region: str, credential_provider: AwsCre
         use_double_uri_encode=False,
         should_normalize_uri_path=False,
     )
+
+
+def get_ec2_instance_type():
+    """
+        First this function will check it's running on EC2 via. attempting to read DMI info to avoid making IMDS calls.
+
+        If the function detects it's on EC2, and it was able to detect the instance type without a call to IMDS
+        it will return it.
+
+        Finally, it will call IMDS and return the instance type from there.
+        Note that in the case of the IMDS call, a new client stack is spun up using 1 background thread. The call is made
+        synchronously with a 1 second timeout: It's not cheap. To make this easier, the underlying result is cached
+        internally and will be freed when this module is unloaded is called.
+
+        Returns:
+           A string indicating the instance type or None if it could not be determined.
+    """
+    return _awscrt.s3_get_ec2_instance_type()
+
+
+def is_optimized_for_system():
+    """
+        Returns:
+            true if the current build of this module has an optimized configuration
+            for the current system.
+    """
+    return _awscrt.s3_is_crt_s3_optimized_for_system()
