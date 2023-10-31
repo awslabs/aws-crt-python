@@ -253,8 +253,9 @@ static void s_s3_request_on_finish(
     result = PyObject_CallMethod(
         request_binding->py_core,
         "_on_finish",
-        "(iOy#)",
+        "(iiOy#)",
         error_code,
+        meta_request_result->response_status,
         header_list ? header_list : Py_None,
         (const char *)(error_body.buffer),
         (Py_ssize_t)error_body.len);

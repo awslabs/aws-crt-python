@@ -137,11 +137,17 @@ class S3Client(NativeResource):
             for each connection, unless `tls_mode` is :attr:`S3RequestTlsMode.DISABLED`
 
         part_size (Optional[int]): Size, in bytes, of parts that files will be downloaded or uploaded in.
-            Note: for :attr:`S3RequestType.PUT_OBJECT` request, S3 requires the part size greater than 5MB.
-            (5*1024*1024 by default)
+            Note: for :attr:`S3RequestType.PUT_OBJECT` request, S3 requires the part size greater than 5 MiB.
+            (8*1024*1024 by default)
 
-        throughput_target_gbps (Optional[float]): Throughput target in Gbps that we are trying to reach.
-            (5 Gbps by default)
+        multipart_upload_threshold (Optional[int]): The size threshold in bytes, for when to use multipart uploads.
+            Uploads over this size will use the multipart upload strategy.
+            Uploads this size or less will use a single request.
+            If not set, `part_size` is used as the threshold.
+
+        throughput_target_gbps (Optional[float]): Throughput target in
+            Gigabits per second (Gbps) that we are trying to reach.
+            (10.0 Gbps by default)
     """
 
     __slots__ = ('shutdown_event', '_region')
@@ -156,6 +162,7 @@ class S3Client(NativeResource):
             credential_provider=None,
             tls_connection_options=None,
             part_size=None,
+            multipart_upload_threshold=None,
             throughput_target_gbps=None):
         assert isinstance(bootstrap, ClientBootstrap) or bootstrap is None
         assert isinstance(region, str)
@@ -193,6 +200,8 @@ class S3Client(NativeResource):
             tls_mode = 0
         if part_size is None:
             part_size = 0
+        if multipart_upload_threshold is None:
+            multipart_upload_threshold = 0
         if throughput_target_gbps is None:
             throughput_target_gbps = 0
 
@@ -205,6 +214,7 @@ class S3Client(NativeResource):
             region,
             tls_mode,
             part_size,
+            multipart_upload_threshold,
             throughput_target_gbps,
             s3_client_core)
 
@@ -287,9 +297,15 @@ class S3Client(NativeResource):
                         failed because server side sent an unsuccessful response, the headers
                         of the response is provided here. Else None will be returned.
 
-                    *   `error_body` (Optional[Bytes]): If request failed because server
+                    *   `error_body` (Optional[bytes]): If request failed because server
                         side sent an unsuccessful response, the body of the response is
                         provided here. Else None will be returned.
+
+                    *   `status_code` (Optional[int]): HTTP response status code (if available).
+                        If request failed because server side sent an unsuccessful response,
+                        this is its status code. If the operation was successful,
+                        this is the final response's status code. If the operation
+                        failed for another reason, None is returned.
 
                     *   `**kwargs` (dict): Forward-compatibility kwargs.
 
@@ -461,19 +477,26 @@ class _S3RequestCore:
     def _on_shutdown(self):
         self._shutdown_event.set()
 
-    def _on_finish(self, error_code, error_headers, error_body):
+    def _on_finish(self, error_code, status_code, error_headers, error_body):
+        # If C layer gives status_code 0, that means "unknown"
+        if status_code == 0:
+            status_code = None
+
         error = None
         if error_code:
             error = awscrt.exceptions.from_code(error_code)
             if error_body:
                 # TODO The error body is XML, will need to parse it to something prettier.
-                extra_message = ". Body from error request is: " + str(error_body)
-                error.message = error.message + extra_message
+                try:
+                    extra_message = ". Body from error request is: " + str(error_body)
+                    error.message = error.message + extra_message
+                except BaseException:
+                    pass
             self._finished_future.set_exception(error)
         else:
             self._finished_future.set_result(None)
         if self._on_done_cb:
-            self._on_done_cb(error=error, error_headers=error_headers, error_body=error_body)
+            self._on_done_cb(error=error, error_headers=error_headers, error_body=error_body, status_code=status_code)
 
     def _on_progress(self, progress):
         if self._on_progress_cb:

@@ -98,19 +98,20 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
 
     struct aws_allocator *allocator = aws_py_get_allocator();
 
-    PyObject *bootstrap_py;           /* O */
-    PyObject *signing_config_py;      /* O */
-    PyObject *credential_provider_py; /* O */
-    PyObject *tls_options_py;         /* O */
-    PyObject *on_shutdown_py;         /* O */
-    struct aws_byte_cursor region;    /* s# */
-    int tls_mode;                     /* i */
-    uint64_t part_size;               /* K */
-    double throughput_target_gbps;    /* d */
-    PyObject *py_core;                /* O */
+    PyObject *bootstrap_py;              /* O */
+    PyObject *signing_config_py;         /* O */
+    PyObject *credential_provider_py;    /* O */
+    PyObject *tls_options_py;            /* O */
+    PyObject *on_shutdown_py;            /* O */
+    struct aws_byte_cursor region;       /* s# */
+    int tls_mode;                        /* i */
+    uint64_t part_size;                  /* K */
+    uint64_t multipart_upload_threshold; /* K */
+    double throughput_target_gbps;       /* d */
+    PyObject *py_core;                   /* O */
     if (!PyArg_ParseTuple(
             args,
-            "OOOOOs#iKdO",
+            "OOOOOs#iKKdO",
             &bootstrap_py,
             &signing_config_py,
             &credential_provider_py,
@@ -120,6 +121,7 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
             &region.len,
             &tls_mode,
             &part_size,
+            &multipart_upload_threshold,
             &throughput_target_gbps,
             &py_core)) {
         return NULL;
@@ -185,6 +187,7 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
         .tls_mode = tls_mode,
         .signing_config = signing_config,
         .part_size = part_size,
+        .multipart_upload_threshold = multipart_upload_threshold,
         .tls_connection_options = tls_options,
         .throughput_target_gbps = throughput_target_gbps,
         .shutdown_callback = s_s3_client_shutdown,

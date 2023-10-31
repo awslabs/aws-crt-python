@@ -205,11 +205,20 @@ class S3RequestTest(NativeResourceTest):
     def _on_request_body(self, chunk, offset, **kargs):
         self.received_body_len = self.received_body_len + len(chunk)
 
+    def _on_request_done(self, error, error_headers, error_body, status_code, **kwargs):
+        self.done_error = error
+        self.done_error_headers = error_headers
+        self.done_error_body = error_body
+        self.done_status_code = status_code
+
     def _on_progress(self, progress):
         self.transferred_len += progress
 
     def _validate_successful_response(self, is_put_object):
         self.assertEqual(self.response_status_code, 200, "status code is not 200")
+        self.assertEqual(self.done_status_code, self.response_status_code,
+                         "status-code from on_done doesn't match code from on_headers")
+        self.assertIsNone(self.done_error)
         headers = HttpHeaders(self.response_headers)
         self.assertIsNone(headers.get("Content-Range"))
         body_length = headers.get("Content-Length")
@@ -235,18 +244,21 @@ class S3RequestTest(NativeResourceTest):
             type=request_type,
             on_headers=self._on_request_headers,
             on_body=self._on_request_body,
+            on_done=self._on_request_done,
             **kwargs)
-        finished_future = s3_request.finished_future
-        try:
-            finished_future.result(self.timeout)
-        except Exception as e:
-            self.assertEqual(e.name, exception_name)
-        else:
-            self._validate_successful_response(request_type is S3RequestType.PUT_OBJECT)
 
+        finished_future = s3_request.finished_future
         shutdown_event = s3_request.shutdown_event
         s3_request = None
         self.assertTrue(shutdown_event.wait(self.timeout))
+
+        if exception_name is None:
+            finished_future.result()
+            self._validate_successful_response(request_type is S3RequestType.PUT_OBJECT)
+        else:
+            e = finished_future.exception()
+            self.assertEqual(e.name, exception_name)
+            self.assertEqual(e, self.done_error)
 
     def test_get_object(self):
         request = self._get_object_request(self.get_test_object_path)
@@ -505,11 +517,23 @@ class S3RequestTest(NativeResourceTest):
         return self._put_object_cancel_helper(False)
 
     def test_multipart_upload_with_invalid_request(self):
-        put_body_stream = open(self.temp_put_obj_file_path, "r+b")
-        content_length = os.stat(self.temp_put_obj_file_path).st_size
+        # send upload with incorrect Content-MD5
+        # need to do single-part upload so the Content-MD5 header is sent along as-is.
+        content_length = 100
+        file_path = self.files.create_file_with_size("temp_file", content_length)
+        put_body_stream = open(file_path, "r+b")
         request = self._put_object_request(put_body_stream, content_length)
         request.headers.set("Content-MD5", "something")
         self._test_s3_put_get_object(request, S3RequestType.PUT_OBJECT, "AWS_ERROR_S3_INVALID_RESPONSE_STATUS")
+
+        # check that data from on_done callback came through correctly
+        self.assertIsNotNone(self.done_error)
+        self.assertEqual(self.done_status_code, 400)
+        self.assertIsNotNone(self.done_error_headers)
+        self.assertTrue(any(h[0].lower() == 'x-amz-request-id' for h in self.done_error_headers))
+        self.assertIsNotNone(self.done_error_body)
+        self.assertTrue(b"InvalidDigest" in self.done_error_body)
+
         put_body_stream.close()
 
     def test_special_filepath_upload(self):
