@@ -656,7 +656,9 @@ static void s_install_crash_handler(void) {
  ******************************************************************************/
 
 #define AWS_PY_METHOD_DEF(NAME, FLAGS)                                                                                 \
-    { #NAME, aws_py_##NAME, (FLAGS), NULL }
+    {                                                                                                                  \
+#        NAME, aws_py_##NAME, (FLAGS), NULL                                                                            \
+    }
 
 static PyMethodDef s_module_methods[] = {
     /* Common */
@@ -801,6 +803,8 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(s3_meta_request_cancel, METH_VARARGS),
     AWS_PY_METHOD_DEF(s3_get_ec2_instance_type, METH_NOARGS),
     AWS_PY_METHOD_DEF(s3_is_crt_s3_optimized_for_system, METH_NOARGS),
+    AWS_PY_METHOD_DEF(s3_instance_lock_acquire, METH_VARARGS),
+    AWS_PY_METHOD_DEF(s3_instance_lock_release, METH_VARARGS),
 
     /* WebSocket */
     AWS_PY_METHOD_DEF(websocket_client_connect, METH_VARARGS),

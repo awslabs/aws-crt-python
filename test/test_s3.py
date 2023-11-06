@@ -8,6 +8,7 @@ import os
 import tempfile
 import math
 import shutil
+import time
 from test import NativeResourceTest
 from concurrent.futures import Future
 
@@ -18,6 +19,8 @@ from awscrt.s3 import (
     S3ChecksumLocation,
     S3Client,
     S3RequestType,
+    InstanceLock,
+    crt_instance_lock_acquire,
     create_default_s3_signing_config,
 )
 from awscrt.io import (
@@ -160,6 +163,47 @@ class S3ClientTest(NativeResourceTest):
         shutdown_event = s3_client.shutdown_event
         del s3_client
         self.assertTrue(shutdown_event.wait(self.timeout))
+
+from multiprocessing import Process
+
+cross_process_lock_name = "instance_lock_test"
+
+def cross_proc_task():
+    lock = crt_instance_lock_acquire(cross_process_lock_name)
+    lock.release()        
+
+class InstanceLockTest(NativeResourceTest):
+    def setUp(self):
+        self.nonce = time.time()
+        super().setUp()
+
+    def test_with_statement(self):
+        nonce_str = 'lock_a_{}'.format(self.nonce)
+        with crt_instance_lock_acquire(nonce_str) as lock:
+            try:
+                new_lock = crt_instance_lock_acquire(nonce_str)
+                self.fail("Acquiring a lock by the same nonce should fail when it's already held")
+            except RuntimeError as e:
+                unique_nonce_str = 'lock_b{}'.format(self.nonce)
+                new_lock = crt_instance_lock_acquire(unique_nonce_str)
+                self.assertTrue(new_lock != None)
+                new_lock.release()
+
+        lock_after_with_same_nonce = crt_instance_lock_acquire(nonce_str)
+        self.assertTrue(lock_after_with_same_nonce != None)
+        lock_after_with_same_nonce.release()
+
+    def test_cross_proc(self):
+        with crt_instance_lock_acquire(cross_process_lock_name) as lock:
+            process = Process(target=cross_proc_task)
+            process.start()
+            process.join()
+            self.assertNotEqual(0, process.exitcode)
+
+        unlocked_process = Process(target=cross_proc_task)
+        unlocked_process.start()
+        unlocked_process.join()
+        self.assertEqual(0, unlocked_process.exitcode)
 
 
 @unittest.skipUnless(os.environ.get('AWS_TEST_S3'), 'set env var to run test: AWS_TEST_S3')

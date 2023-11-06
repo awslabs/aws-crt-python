@@ -6,9 +6,11 @@
 
 #include "auth.h"
 #include "io.h"
+#include <aws/common/cross_process_lock.h>
 #include <aws/s3/s3_client.h>
 
 static const char *s_capsule_name_s3_client = "aws_s3_client";
+static const char *s_capsule_name_s3_instance_lock = "aws_cross_process_lock";
 
 PyObject *aws_py_s3_get_ec2_instance_type(PyObject *self, PyObject *args) {
     (void)self;
@@ -35,6 +37,70 @@ PyObject *aws_py_s3_is_crt_s3_optimized_for_system(PyObject *self, PyObject *arg
     }
 
     Py_RETURN_FALSE;
+}
+
+struct instance_lock_binding {
+    struct aws_cross_process_lock *lock;
+};
+
+/* Invoked when the python object gets cleaned up */
+static void s_s3_instance_lock_destructor(PyObject *capsule) {
+    struct instance_lock_binding *lock_binding = PyCapsule_GetPointer(capsule, s_capsule_name_s3_instance_lock);
+
+    if (lock_binding->lock) {
+        aws_cross_process_lock_release(lock_binding->lock);
+        lock_binding->lock = NULL;
+    }
+
+    aws_mem_release(aws_py_get_allocator(), lock_binding);
+}
+
+PyObject *aws_py_s3_instance_lock_acquire(PyObject *self, PyObject *args) {
+    (void)self;
+
+    struct aws_allocator *allocator = aws_py_get_allocator();
+
+    struct aws_byte_cursor lock_name; /* s# */
+
+    if (!PyArg_ParseTuple(args, "s#", &lock_name.ptr, &lock_name.len)) {
+        return NULL;
+    }
+
+    struct aws_cross_process_lock *lock = aws_cross_process_lock_try_acquire(allocator, lock_name);
+
+    if (!lock) {
+        return PyErr_AwsLastError();
+    }
+
+    struct instance_lock_binding *binding = aws_mem_calloc(allocator, 1, sizeof(struct instance_lock_binding));
+    binding->lock = lock;
+
+    PyObject *capsule = PyCapsule_New(binding, s_capsule_name_s3_instance_lock, s_s3_instance_lock_destructor);
+    if (!capsule) {
+        aws_mem_release(allocator, binding);
+        return PyErr_AwsLastError();
+    }
+
+    return capsule;
+}
+
+PyObject *aws_py_s3_instance_lock_release(PyObject *self, PyObject *args) {
+    struct aws_allocator *allocator = aws_py_get_allocator();
+
+    PyObject *lock_capsule; /* O */
+
+    if (!PyArg_ParseTuple(args, "O", &lock_capsule)) {
+        return NULL;
+    }
+
+    struct instance_lock_binding *lock_binding = PyCapsule_GetPointer(lock_capsule, s_capsule_name_s3_instance_lock);
+
+    if (lock_binding->lock) {
+        aws_cross_process_lock_release(lock_binding->lock);
+        lock_binding->lock = NULL;
+    }
+
+    Py_RETURN_NONE;
 }
 
 struct s3_client_binding {

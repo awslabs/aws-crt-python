@@ -18,6 +18,44 @@ import threading
 from typing import Optional
 from enum import IntEnum
 
+class InstanceLock(NativeResource):
+    """
+    Class representing an exclusive cross-process lock.
+    It is created by calling crt_instance_lock_acquire().
+
+    Recommended usage is to either explicitly call release() when the lock is no longer required,
+    or use this in a 'with' statement.
+
+    If the lock has not been explicitly released when the process exits, it will be released by 
+    the operating system.
+    """
+    def __init__(self, lock_handle):
+        super().__init__()
+        self._binding = lock_handle
+
+    def __enter__(self):
+        # do nothing as we already have the lock
+        return
+    
+    def release(self):
+        if self._binding != None:
+            _awscrt.s3_instance_lock_release(self._binding)
+            self._binding = None
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        self.release()
+
+
+def crt_instance_lock_acquire(lock_scope_name):
+    """
+    Acquires an exclusive cross-process lock scoped by 'lock_scope_name'.
+    Throws a Runtime Error with error code: AWS_ERROR_MUTEX_CALLER_NOT_OWNER, if
+    the lock is already held by another caller. Callers should use this value
+    in a with block for automatic release when they're finished with it, or explicitly call
+    release(). When the process exits, this lock will be released regardless of if 
+    release has been invoked. """
+    return InstanceLock(_awscrt.s3_instance_lock_acquire(lock_scope_name))
+
 
 class S3RequestType(IntEnum):
     """The type of the AWS S3 request"""
