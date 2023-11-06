@@ -53,7 +53,14 @@ def crt_instance_lock_acquire(lock_scope_name):
     the lock is already held by another caller. Callers should use this value
     in a with block for automatic release when they're finished with it, or explicitly call
     release(). When the process exits, this lock will be released regardless of if 
-    release has been invoked. """
+    release has been invoked.
+    
+    Keyword Args:
+        lock_scope_name (str): Unique string identifying the caller holding the lock.
+        
+    Returns:
+        InstanceLock
+    """
     return InstanceLock(_awscrt.s3_instance_lock_acquire(lock_scope_name))
 
 
