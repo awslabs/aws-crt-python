@@ -93,7 +93,6 @@ class InstanceLockTest(NativeResourceTest):
         self.assertEqual(0, unlocked_process.exitcode)
 
 
-
 class FileCreator(object):
     def __init__(self):
         self.rootdir = tempfile.mkdtemp()
