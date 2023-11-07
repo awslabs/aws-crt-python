@@ -18,6 +18,7 @@ import threading
 from typing import Optional
 from enum import IntEnum
 
+
 class CrossProcessLock(NativeResource):
     """
     Class representing an exclusive cross-process lock, scoped by `lock_scope_name`

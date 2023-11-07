@@ -46,6 +46,7 @@ GB = 1024 ** 3
 
 cross_process_lock_name = "instance_lock_test"
 
+
 def cross_proc_task():
     try:
         lock = CrossProcessLock(cross_process_lock_name)
@@ -53,7 +54,8 @@ def cross_proc_task():
         lock.release()
         exit(0)
     except RuntimeError as e:
-        exit(-1)      
+        exit(-1)
+
 
 class CrossProcessLockTest(NativeResourceTest):
     def setUp(self):
@@ -82,7 +84,7 @@ class CrossProcessLockTest(NativeResourceTest):
             process = Process(target=cross_proc_task)
             process.start()
             process.join()
-            # aquiring this lock in a sub-process should fail since we 
+            # aquiring this lock in a sub-process should fail since we
             # already hold the lock in this process.
             self.assertNotEqual(0, process.exitcode)
 
@@ -212,6 +214,7 @@ class S3ClientTest(NativeResourceTest):
         shutdown_event = s3_client.shutdown_event
         del s3_client
         self.assertTrue(shutdown_event.wait(self.timeout))
+
 
 @unittest.skipUnless(os.environ.get('AWS_TEST_S3'), 'set env var to run test: AWS_TEST_S3')
 class S3RequestTest(NativeResourceTest):
