@@ -22,18 +22,16 @@ class CrossProcessLock(NativeResource):
     """
     Class representing an exclusive cross-process lock, scoped by `lock_scope_name`
     
-    Recommended usage is to either explicitly call acquire() followed by release() when the lock 
-    is no longer required, or use this in a 'with' statement.
+    Recommended usage is to either explicitly call acquire() followed by release() when the lock  is no longer required, or use this in a 'with' statement.
 
-    acquire() will throw a RuntimeError with AWS_MUTEX_CALLER_NOT_OWNER as the error code, 
-    if the lock could not be acquired.
+    acquire() will throw a RuntimeError with AWS_MUTEX_CALLER_NOT_OWNER as the error code, if the lock could not be acquired.
 
-    If the lock has not been explicitly released when the process exits, it will be released by 
-    the operating system.
+    If the lock has not been explicitly released when the process exits, it will be released by the operating system.
 
     Keyword Args:
         lock_scope_name (str): Unique string identifying the caller holding the lock.
     """
+
     def __init__(self, lock_scope_name):
         super().__init__()
         self._binding = _awscrt.s3_cross_process_lock_new(lock_scope_name)
@@ -42,8 +40,8 @@ class CrossProcessLock(NativeResource):
         _awscrt.s3_cross_process_lock_acquire(self._binding)
 
     def __enter__(self):
-        self.acquire()       
-    
+         self.acquire()
+
     def release(self):
         _awscrt.s3_cross_process_lock_release(self._binding)
 
