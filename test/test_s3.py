@@ -20,8 +20,7 @@ from awscrt.s3 import (
     S3ChecksumLocation,
     S3Client,
     S3RequestType,
-    InstanceLock,
-    crt_instance_lock_acquire,
+    CrossProcessLock,
     create_default_s3_signing_config,
 )
 from awscrt.io import (
@@ -49,35 +48,37 @@ cross_process_lock_name = "instance_lock_test"
 
 def cross_proc_task():
     try:
-        lock = crt_instance_lock_acquire(cross_process_lock_name)
+        lock = CrossProcessLock(cross_process_lock_name)
+        lock.acquire()
         lock.release()
         exit(0)
     except RuntimeError as e:
         exit(-1)      
 
-class InstanceLockTest(NativeResourceTest):
+class CrossProcessLockTest(NativeResourceTest):
     def setUp(self):
         self.nonce = time.time()
         super().setUp()
 
     def test_with_statement(self):
-        nonce_str = 'lock_a_{}'.format(self.nonce)
-        with crt_instance_lock_acquire(nonce_str) as lock:
+        nonce_str = f'lock_a_{self.nonce}'
+        with CrossProcessLock(nonce_str) as lock:
             try:
-                new_lock = crt_instance_lock_acquire(nonce_str)
+                new_lock = CrossProcessLock(nonce_str)
+                new_lock.acquire()
                 self.fail("Acquiring a lock by the same nonce should fail when it's already held")
             except RuntimeError as e:
-                unique_nonce_str = 'lock_b{}'.format(self.nonce)
-                new_lock = crt_instance_lock_acquire(unique_nonce_str)
-                self.assertTrue(new_lock != None)
+                unique_nonce_str = f'lock_b{self.nonce}'
+                new_lock = CrossProcessLock(unique_nonce_str)
+                new_lock.acquire()
                 new_lock.release()
 
-        lock_after_with_same_nonce = crt_instance_lock_acquire(nonce_str)
-        self.assertTrue(lock_after_with_same_nonce != None)
+        lock_after_with_same_nonce = CrossProcessLock(nonce_str)
+        lock_after_with_same_nonce.acquire()
         lock_after_with_same_nonce.release()
 
     def test_cross_proc(self):
-        with crt_instance_lock_acquire(cross_process_lock_name) as lock:
+        with CrossProcessLock(cross_process_lock_name) as lock:
             process = Process(target=cross_proc_task)
             process.start()
             process.join()

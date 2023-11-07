@@ -39,23 +39,28 @@ PyObject *aws_py_s3_is_crt_s3_optimized_for_system(PyObject *self, PyObject *arg
     Py_RETURN_FALSE;
 }
 
-struct instance_lock_binding {
+struct cross_process_lock_binding {
     struct aws_cross_process_lock *lock;
+    struct aws_string *name;
 };
 
 /* Invoked when the python object gets cleaned up */
-static void s_s3_instance_lock_destructor(PyObject *capsule) {
-    struct instance_lock_binding *lock_binding = PyCapsule_GetPointer(capsule, s_capsule_name_s3_instance_lock);
+static void s_s3_cross_process_lock_destructor(PyObject *capsule) {
+    struct cross_process_lock_binding *lock_binding = PyCapsule_GetPointer(capsule, s_capsule_name_s3_instance_lock);
 
     if (lock_binding->lock) {
         aws_cross_process_lock_release(lock_binding->lock);
         lock_binding->lock = NULL;
     }
 
+    if (lock_binding->name) {
+        aws_string_destroy(lock_binding->name);
+    }
+
     aws_mem_release(aws_py_get_allocator(), lock_binding);
 }
 
-PyObject *aws_py_s3_instance_lock_acquire(PyObject *self, PyObject *args) {
+PyObject *aws_py_s3_cross_process_lock_new(PyObject *self, PyObject *args) {
     (void)self;
 
     struct aws_allocator *allocator = aws_py_get_allocator();
@@ -66,17 +71,13 @@ PyObject *aws_py_s3_instance_lock_acquire(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    struct aws_cross_process_lock *lock = aws_cross_process_lock_try_acquire(allocator, lock_name);
+    struct cross_process_lock_binding *binding =
+        aws_mem_calloc(allocator, 1, sizeof(struct cross_process_lock_binding));
+    binding->name = aws_string_new_from_cursor(allocator, &lock_name);
 
-    if (!lock) {
-        return PyErr_AwsLastError();
-    }
-
-    struct instance_lock_binding *binding = aws_mem_calloc(allocator, 1, sizeof(struct instance_lock_binding));
-    binding->lock = lock;
-
-    PyObject *capsule = PyCapsule_New(binding, s_capsule_name_s3_instance_lock, s_s3_instance_lock_destructor);
+    PyObject *capsule = PyCapsule_New(binding, s_capsule_name_s3_instance_lock, s_s3_cross_process_lock_destructor);
     if (!capsule) {
+        aws_string_destroy(binding->name);
         aws_mem_release(allocator, binding);
         return PyErr_AwsLastError();
     }
@@ -84,7 +85,9 @@ PyObject *aws_py_s3_instance_lock_acquire(PyObject *self, PyObject *args) {
     return capsule;
 }
 
-PyObject *aws_py_s3_instance_lock_release(PyObject *self, PyObject *args) {
+PyObject *aws_py_s3_cross_process_lock_acquire(PyObject *self, PyObject *args) {
+    (void)self;
+
     struct aws_allocator *allocator = aws_py_get_allocator();
 
     PyObject *lock_capsule; /* O */
@@ -93,7 +96,37 @@ PyObject *aws_py_s3_instance_lock_release(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    struct instance_lock_binding *lock_binding = PyCapsule_GetPointer(lock_capsule, s_capsule_name_s3_instance_lock);
+    struct cross_process_lock_binding *lock_binding =
+        PyCapsule_GetPointer(lock_capsule, s_capsule_name_s3_instance_lock);
+    if (!lock_binding) {
+        return NULL;
+    }
+
+    if (!lock_binding->lock) {
+        struct aws_cross_process_lock *lock =
+            aws_cross_process_lock_try_acquire(allocator, aws_byte_cursor_from_string(lock_binding->name));
+
+        if (!lock) {
+            return PyErr_AwsLastError();
+        }
+        lock_binding->lock = lock;
+    }
+
+    Py_RETURN_NONE;
+}
+
+PyObject *aws_py_s3_cross_process_lock_release(PyObject *self, PyObject *args) {
+    PyObject *lock_capsule; /* O */
+
+    if (!PyArg_ParseTuple(args, "O", &lock_capsule)) {
+        return NULL;
+    }
+
+    struct cross_process_lock_binding *lock_binding =
+        PyCapsule_GetPointer(lock_capsule, s_capsule_name_s3_instance_lock);
+    if (!lock_binding) {
+        return NULL;
+    }
 
     if (lock_binding->lock) {
         aws_cross_process_lock_release(lock_binding->lock);

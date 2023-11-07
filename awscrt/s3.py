@@ -18,50 +18,37 @@ import threading
 from typing import Optional
 from enum import IntEnum
 
-class InstanceLock(NativeResource):
+class CrossProcessLock(NativeResource):
     """
-    Class representing an exclusive cross-process lock.
-    It is created by calling crt_instance_lock_acquire().
+    Class representing an exclusive cross-process lock, scoped by `lock_scope_name`
+    
+    Recommended usage is to either explicitly call acquire() followed by release() when the lock 
+    is no longer required, or use this in a 'with' statement.
 
-    Recommended usage is to either explicitly call release() when the lock is no longer required,
-    or use this in a 'with' statement.
+    acquire() will throw a RuntimeError with AWS_MUTEX_CALLER_NOT_OWNER as the error code, 
+    if the lock could not be acquired.
 
     If the lock has not been explicitly released when the process exits, it will be released by 
     the operating system.
+
+    Keyword Args:
+        lock_scope_name (str): Unique string identifying the caller holding the lock.
     """
-    def __init__(self, lock_handle):
+    def __init__(self, lock_scope_name):
         super().__init__()
-        self._binding = lock_handle
+        self._binding = _awscrt.s3_cross_process_lock_new(lock_scope_name)
+
+    def acquire(self):
+        _awscrt.s3_cross_process_lock_acquire(self._binding)
 
     def __enter__(self):
-        # do nothing as we already have the lock
-        return
+        self.acquire()       
     
     def release(self):
-        if self._binding != None:
-            _awscrt.s3_instance_lock_release(self._binding)
-            self._binding = None
+        _awscrt.s3_cross_process_lock_release(self._binding)
 
     def __exit__(self, exc_type, exc_value, exc_tb):
         self.release()
-
-
-def crt_instance_lock_acquire(lock_scope_name):
-    """
-    Acquires an exclusive cross-process lock scoped by 'lock_scope_name'.
-    Throws a Runtime Error with error code: AWS_ERROR_MUTEX_CALLER_NOT_OWNER, if
-    the lock is already held by another caller. Callers should use this value
-    in a with block for automatic release when they're finished with it, or explicitly call
-    release(). When the process exits, this lock will be released regardless of if 
-    release has been invoked.
-    
-    Keyword Args:
-        lock_scope_name (str): Unique string identifying the caller holding the lock.
-        
-    Returns:
-        InstanceLock
-    """
-    return InstanceLock(_awscrt.s3_instance_lock_acquire(lock_scope_name))
 
 
 class S3RequestType(IntEnum):
