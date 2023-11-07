@@ -21,7 +21,7 @@ from enum import IntEnum
 class CrossProcessLock(NativeResource):
     """
     Class representing an exclusive cross-process lock, scoped by `lock_scope_name`
-    
+
     Recommended usage is to either explicitly call acquire() followed by release() when the lock  is no longer required, or use this in a 'with' statement.
 
     acquire() will throw a RuntimeError with AWS_MUTEX_CALLER_NOT_OWNER as the error code, if the lock could not be acquired.
@@ -40,7 +40,7 @@ class CrossProcessLock(NativeResource):
         _awscrt.s3_cross_process_lock_acquire(self._binding)
 
     def __enter__(self):
-         self.acquire()
+        self.acquire()
 
     def release(self):
         _awscrt.s3_cross_process_lock_release(self._binding)
