@@ -597,7 +597,7 @@ def get_recommended_max_throughput_gbps():
     # Currently the CRT returns 0 if it was unable to make a good guess on configuration. Pre-known configs, have this value set.
     # Eventually, the CRT will make a full calculation based on NIC and CPU configuration, but until then handle 0.
     max_value = _awscrt.s3_get_recommended_max_throughput_gbps()
-    if abs(max_value) > 0:
+    if max_value > 0:
         return max_value
     else:
         return 5.0
