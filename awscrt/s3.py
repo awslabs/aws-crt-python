@@ -587,6 +587,7 @@ def is_optimized_for_system():
     """
     return _awscrt.s3_is_crt_s3_optimized_for_system()
 
+
 def get_recommended_max_throughput_gbps():
     """
         Returns:
