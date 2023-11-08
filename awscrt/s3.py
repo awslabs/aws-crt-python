@@ -590,9 +590,10 @@ def is_optimized_for_system():
 
 def get_recommended_max_throughput_gbps():
     """
-        Returns:
-        Recommended max throughput in Gbps for the CRT S3 client based on detected system configuration as a PyFloat.
-        If the best throughput configuration is unknown, returns 5Gbps.
+    Returns:
+        Recommended throughput, in gigabits per second, based on detected system configuration.
+        If the best throughput configuration is unknown, returns 5.0 Gbps.
+        Use this as the S3Client's `throughput_target_gbps`.
     """
     # Currently the CRT returns 0 if it was unable to make a good guess on configuration. Pre-known configs, have this value set.
     # Eventually, the CRT will make a full calculation based on NIC and CPU configuration, but until then handle 0.
