@@ -178,7 +178,7 @@ class S3Client(NativeResource):
 
         throughput_target_gbps (Optional[float]): Throughput target in
             Gigabits per second (Gbps) that we are trying to reach.
-            You can also use `get_recommended_throughput_target_gbps` to get recommended value for your system.
+            You can also use `get_recommended_throughput_target_gbps()` to get recommended value for your system.
             10.0 Gbps by default (may change in future)
     """
 
