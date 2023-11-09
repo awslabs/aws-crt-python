@@ -586,3 +586,12 @@ def is_optimized_for_system():
             for the current system.
     """
     return _awscrt.s3_is_crt_s3_optimized_for_system()
+
+
+def get_platforms_with_recommended_config():
+    """
+        Returns a list of platforms identifiers such as EC2 instance types that have a recommended throughput target in gigabits per second (Gbps).
+        Returns:
+            list[str]: A list of platform identifiers with recommended throughput configurations.
+    """
+    return _awscrt.s3_get_platforms_with_recommended_config()

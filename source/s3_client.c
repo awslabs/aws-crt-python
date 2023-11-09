@@ -39,6 +39,33 @@ PyObject *aws_py_s3_is_crt_s3_optimized_for_system(PyObject *self, PyObject *arg
     Py_RETURN_FALSE;
 }
 
+
+PyObject *aws_py_s3_get_platforms_with_recommended_config(PyObject *self, PyObject *args) {
+    (void)self;
+    (void)args;
+
+    struct aws_array_list platform_list = aws_s3_get_platforms_with_recommended_config();
+
+    size_t list_length = aws_array_list_length(&platform_list);
+
+    PyObject *py_list = PyList_New(list_length);
+    AWS_FATAL_ASSERT(py_list && "platform list allocation failed");
+
+    for (size_t i = 0; i < list_length; ++i) {
+        struct aws_byte_cursor cursor;
+        if (aws_array_list_get_at(&platform_list, &cursor, i) == AWS_OP_SUCCESS) {
+            PyObject *platform_str = PyUnicode_FromStringAndSize((char *)cursor.ptr, cursor.len);
+            AWS_FATAL_ASSERT(platform_str && "platform str allocation failed");
+            PyList_SetItem(py_list, i, platform_str);  /* Steals a Reference */
+
+        }
+    }
+
+    aws_array_list_clean_up(&platform_list);
+
+    return py_list;
+}
+
 struct cross_process_lock_binding {
     struct aws_cross_process_lock *lock;
     struct aws_string *name;
@@ -116,6 +143,7 @@ PyObject *aws_py_s3_cross_process_lock_acquire(PyObject *self, PyObject *args) {
 }
 
 PyObject *aws_py_s3_cross_process_lock_release(PyObject *self, PyObject *args) {
+    (void) self;
     PyObject *lock_capsule; /* O */
 
     if (!PyArg_ParseTuple(args, "O", &lock_capsule)) {
