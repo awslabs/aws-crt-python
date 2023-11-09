@@ -64,8 +64,7 @@ PyObject *aws_py_s3_get_optimized_platforms(PyObject *self, PyObject *args) {
         if (aws_array_list_get_at(&platform_list, &cursor, i) == AWS_OP_SUCCESS) {
             PyObject *platform_str = PyUnicode_FromStringAndSize((char *)cursor.ptr, cursor.len);
             AWS_FATAL_ASSERT(platform_str && "platform str allocation failed");
-            PyList_SetItem(py_list, i, platform_str);  /* Steals a Reference */
-
+            PyList_SetItem(py_list, i, platform_str); /* Steals a Reference */
         }
     }
 
@@ -151,7 +150,7 @@ PyObject *aws_py_s3_cross_process_lock_acquire(PyObject *self, PyObject *args) {
 }
 
 PyObject *aws_py_s3_cross_process_lock_release(PyObject *self, PyObject *args) {
-    (void) self;
+    (void)self;
     PyObject *lock_capsule; /* O */
 
     if (!PyArg_ParseTuple(args, "O", &lock_capsule)) {

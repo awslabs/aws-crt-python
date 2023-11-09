@@ -614,4 +614,3 @@ def get_recommended_throughput_target_gbps() -> Optional[float]:
         return max_value
     else:
         return None
-
