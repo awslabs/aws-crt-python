@@ -589,6 +589,16 @@ def is_optimized_for_system():
     return _awscrt.s3_is_crt_s3_optimized_for_system()
 
 
+def get_optimized_platforms():
+    """
+    Returns:
+        A list[str] of platform identifiers, such as EC2 instance types, for which S3 client is pre-optimized
+        and have a recommended throughput_target_gbps. You can use `get_recommended_throughput_target_gbps()`
+        to obtain the recommended throughput_target_gbps for those platforms.
+    """
+    return _awscrt.s3_get_optimized_platforms()
+
+
 def get_recommended_throughput_target_gbps() -> Optional[float]:
     """
     Returns:
@@ -605,11 +615,3 @@ def get_recommended_throughput_target_gbps() -> Optional[float]:
     else:
         return None
 
-
-def get_platforms_with_recommended_config():
-    """
-        Returns a list of platforms identifiers such as EC2 instance types that have a recommended throughput target in gigabits per second (Gbps).
-        Returns:
-            list[str]: A list of platform identifiers with recommended throughput configurations.
-    """
-    return _awscrt.s3_get_platforms_with_recommended_config()

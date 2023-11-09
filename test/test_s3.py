@@ -21,7 +21,8 @@ from awscrt.s3 import (
     S3Client,
     S3RequestType,
     CrossProcessLock,
-    create_default_s3_signing_config, get_platforms_with_recommended_config,
+    create_default_s3_signing_config,
+    get_optimized_platforms,
 )
 from awscrt.io import (
     ClientBootstrap,
@@ -215,8 +216,8 @@ class S3ClientTest(NativeResourceTest):
         del s3_client
         self.assertTrue(shutdown_event.wait(self.timeout))
 
-    def test_get_platforms_with_recommended_config(self):
-        platform_list = get_platforms_with_recommended_config()
+    def test_get_optimized_platforms(self):
+        platform_list = get_optimized_platforms()
         self.assertTrue(len(platform_list) > 0)
         self.assertTrue("p4d.24xlarge" in platform_list)
 

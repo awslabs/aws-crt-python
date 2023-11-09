@@ -48,11 +48,11 @@ PyObject *aws_py_s3_get_recommended_throughput_target_gbps(PyObject *self, PyObj
     return PyFloat_FromDouble(platform_info->max_throughput_gbps);
 }
 
-PyObject *aws_py_s3_get_platforms_with_recommended_config(PyObject *self, PyObject *args) {
+PyObject *aws_py_s3_get_optimized_platforms(PyObject *self, PyObject *args) {
     (void)self;
     (void)args;
 
-    struct aws_array_list platform_list = aws_s3_get_platforms_with_recommended_config();
+    struct aws_array_list platform_list = aws_s3_get_optimized_platforms();
 
     size_t list_length = aws_array_list_length(&platform_list);
 
