@@ -589,7 +589,7 @@ def is_optimized_for_system():
     return _awscrt.s3_is_crt_s3_optimized_for_system()
 
 
-def get_recommended_throughput_target_gbps():
+def get_recommended_throughput_target_gbps() -> Optional[float]:
     """
     Returns:
         Recommended throughput, in gigabits per second, based on detected system configuration.
