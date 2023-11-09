@@ -178,7 +178,8 @@ class S3Client(NativeResource):
 
         throughput_target_gbps (Optional[float]): Throughput target in
             Gigabits per second (Gbps) that we are trying to reach.
-            (10.0 Gbps by default)
+            You can also use `get_recommended_throughput_target_gbps()` to get recommended value for your system.
+            10.0 Gbps by default (may change in future)
     """
 
     __slots__ = ('shutdown_event', '_region')
@@ -586,6 +587,23 @@ def is_optimized_for_system():
             for the current system.
     """
     return _awscrt.s3_is_crt_s3_optimized_for_system()
+
+
+def get_recommended_throughput_target_gbps() -> Optional[float]:
+    """
+    Returns:
+        Recommended throughput, in gigabits per second, based on detected system configuration.
+        If the best throughput configuration is unknown, returns None.
+        Use this as the S3Client's `throughput_target_gbps`.
+    """
+    # Currently the CRT returns 0 if it was unable to make a good guess on configuration. Pre-known configs,
+    # have this value set. Eventually, the CRT will make a full calculation based on NIC and CPU configuration,
+    # but until then handle 0.
+    max_value = _awscrt.s3_get_recommended_throughput_target_gbps()
+    if max_value > 0:
+        return max_value
+    else:
+        return None
 
 
 def get_platforms_with_recommended_config():

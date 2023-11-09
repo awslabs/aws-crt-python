@@ -39,6 +39,14 @@ PyObject *aws_py_s3_is_crt_s3_optimized_for_system(PyObject *self, PyObject *arg
     Py_RETURN_FALSE;
 }
 
+PyObject *aws_py_s3_get_recommended_throughput_target_gbps(PyObject *self, PyObject *args) {
+    (void)self;
+    (void)args;
+
+    const struct aws_s3_platform_info *platform_info = aws_s3_get_current_platform_info();
+
+    return PyFloat_FromDouble(platform_info->max_throughput_gbps);
+}
 
 PyObject *aws_py_s3_get_platforms_with_recommended_config(PyObject *self, PyObject *args) {
     (void)self;
