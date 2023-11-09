@@ -62,8 +62,7 @@ PyObject *aws_py_s3_get_optimized_platforms(PyObject *self, PyObject *args) {
     for (size_t i = 0; i < list_length; ++i) {
         struct aws_byte_cursor cursor;
         if (aws_array_list_get_at(&platform_list, &cursor, i) == AWS_OP_SUCCESS) {
-            PyObject *platform_str = PyUnicode_FromStringAndSize((char *)cursor.ptr, cursor.len);
-            AWS_FATAL_ASSERT(platform_str && "platform str allocation failed");
+            PyObject *platform_str = PyUnicode_FromAwsByteCursor(&cursor);
             PyList_SetItem(py_list, i, platform_str); /* Steals a Reference */
         }
     }
