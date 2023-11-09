@@ -52,7 +52,7 @@ PyObject *aws_py_s3_get_optimized_platforms(PyObject *self, PyObject *args) {
     (void)self;
     (void)args;
 
-    struct aws_array_list platform_list = aws_s3_get_optimized_platforms();
+    struct aws_array_list platform_list = aws_s3_get_platforms_with_recommended_config();
 
     size_t list_length = aws_array_list_length(&platform_list);
 
