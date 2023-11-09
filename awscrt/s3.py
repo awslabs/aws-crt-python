@@ -15,7 +15,7 @@ from awscrt.auth import AwsCredentialsProvider, AwsSignatureType, AwsSignedBodyH
 import awscrt.exceptions
 from dataclasses import dataclass
 import threading
-from typing import Optional
+from typing import List, Optional, Tuple
 from enum import IntEnum
 
 
@@ -453,6 +453,34 @@ class S3Request(NativeResource):
         _awscrt.s3_meta_request_cancel(self)
 
 
+class S3ResponseError(awscrt.exceptions.AwsCrtError):
+    '''
+    An error response from S3.
+
+    Subclasses :class:`awscrt.exceptions.AwsCrtError`.
+
+    Attributes:
+        status_code (int): HTTP response status code.
+        headers (list[tuple[str, str]]): Headers from HTTP response.
+        body (Optional[bytes]): Body of HTTP response (if any).
+        code (int): CRT error code.
+        name (str): CRT error name.
+        message (str): CRT error message.
+    '''
+
+    def __init__(self, *,
+                 code: int,
+                 name: str,
+                 message: str,
+                 status_code: List[Tuple[str, str]] = None,
+                 headers: List[Tuple[str, str]] = None,
+                 body: Optional[bytes] = None):
+        super().__init__(code, name, message)
+        self.status_code = status_code
+        self.headers = headers
+        self.body = body
+
+
 class _S3ClientCore:
     '''
     Private class to keep all the related Python object alive until C land clean up for S3Client
@@ -516,13 +544,18 @@ class _S3RequestCore:
         error = None
         if error_code:
             error = awscrt.exceptions.from_code(error_code)
-            if error_body:
-                # TODO The error body is XML, will need to parse it to something prettier.
-                try:
-                    extra_message = ". Body from error request is: " + str(error_body)
-                    error.message = error.message + extra_message
-                except BaseException:
-                    pass
+
+            # Make this into an S3ResponseError, if possible
+            if isinstance(error, awscrt.exceptions.AwsCrtError) \
+                    and status_code is not None \
+                    and error_headers is not None:
+                error = S3ResponseError(
+                    code=error.code,
+                    name=error.name,
+                    message=error.message,
+                    status_code=status_code,
+                    headers=error_headers,
+                    body=error_body)
             self._finished_future.set_exception(error)
         else:
             self._finished_future.set_result(None)

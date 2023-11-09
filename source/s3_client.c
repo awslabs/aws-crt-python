@@ -116,6 +116,8 @@ PyObject *aws_py_s3_cross_process_lock_acquire(PyObject *self, PyObject *args) {
 }
 
 PyObject *aws_py_s3_cross_process_lock_release(PyObject *self, PyObject *args) {
+    (void)self;
+
     PyObject *lock_capsule; /* O */
 
     if (!PyArg_ParseTuple(args, "O", &lock_capsule)) {
