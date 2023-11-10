@@ -20,6 +20,7 @@ from awscrt.s3 import (
     S3ChecksumLocation,
     S3Client,
     S3RequestType,
+    S3ResponseError,
     CrossProcessLock,
     create_default_s3_signing_config,
 )
@@ -288,6 +289,8 @@ class S3RequestTest(NativeResourceTest):
         self.assertEqual(self.done_status_code, self.response_status_code,
                          "status-code from on_done doesn't match code from on_headers")
         self.assertIsNone(self.done_error)
+        self.assertIsNone(self.done_error_headers)
+        self.assertIsNone(self.done_error_body)
         headers = HttpHeaders(self.response_headers)
         self.assertIsNone(headers.get("Content-Range"))
         body_length = headers.get("Content-Length")
@@ -596,12 +599,15 @@ class S3RequestTest(NativeResourceTest):
         self._test_s3_put_get_object(request, S3RequestType.PUT_OBJECT, "AWS_ERROR_S3_INVALID_RESPONSE_STATUS")
 
         # check that data from on_done callback came through correctly
-        self.assertIsNotNone(self.done_error)
+        self.assertIsInstance(self.done_error, S3ResponseError)
         self.assertEqual(self.done_status_code, 400)
+        self.assertEqual(self.done_error.status_code, 400)
         self.assertIsNotNone(self.done_error_headers)
         self.assertTrue(any(h[0].lower() == 'x-amz-request-id' for h in self.done_error_headers))
+        self.assertListEqual(self.done_error_headers, self.done_error.headers)
         self.assertIsNotNone(self.done_error_body)
         self.assertTrue(b"InvalidDigest" in self.done_error_body)
+        self.assertEqual(self.done_error_body, self.done_error.body)
 
         put_body_stream.close()
 
