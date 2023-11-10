@@ -24,6 +24,7 @@ from awscrt.s3 import (
     S3ResponseError,
     CrossProcessLock,
     create_default_s3_signing_config,
+    get_optimized_platforms,
 )
 from awscrt.io import (
     ClientBootstrap,
@@ -216,6 +217,11 @@ class S3ClientTest(NativeResourceTest):
         shutdown_event = s3_client.shutdown_event
         del s3_client
         self.assertTrue(shutdown_event.wait(self.timeout))
+
+    def test_get_optimized_platforms(self):
+        platform_list = get_optimized_platforms()
+        self.assertTrue(len(platform_list) > 0)
+        self.assertTrue("p4d.24xlarge" in platform_list)
 
 
 @unittest.skipUnless(os.environ.get('AWS_TEST_S3'), 'set env var to run test: AWS_TEST_S3')

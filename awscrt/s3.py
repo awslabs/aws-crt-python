@@ -637,6 +637,16 @@ def is_optimized_for_system():
     return _awscrt.s3_is_crt_s3_optimized_for_system()
 
 
+def get_optimized_platforms():
+    """
+    Returns:
+        A list[str] of platform identifiers, such as EC2 instance types, for which S3 client is pre-optimized
+        and have a recommended throughput_target_gbps. You can use `get_recommended_throughput_target_gbps()`
+        to obtain the recommended throughput_target_gbps for those platforms.
+    """
+    return _awscrt.s3_get_optimized_platforms()
+
+
 def get_recommended_throughput_target_gbps() -> Optional[float]:
     """
     Returns:
@@ -644,8 +654,9 @@ def get_recommended_throughput_target_gbps() -> Optional[float]:
         If the best throughput configuration is unknown, returns None.
         Use this as the S3Client's `throughput_target_gbps`.
     """
-    # Currently the CRT returns 0 if it was unable to make a good guess on configuration. Pre-known configs, have this value set.
-    # Eventually, the CRT will make a full calculation based on NIC and CPU configuration, but until then handle 0.
+    # Currently the CRT returns 0 if it was unable to make a good guess on configuration. Pre-known configs,
+    # have this value set. Eventually, the CRT will make a full calculation based on NIC and CPU configuration,
+    # but until then handle 0.
     max_value = _awscrt.s3_get_recommended_throughput_target_gbps()
     if max_value > 0:
         return max_value
