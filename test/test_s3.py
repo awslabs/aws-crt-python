@@ -634,8 +634,6 @@ class S3RequestTest(NativeResourceTest):
         self.assertEqual(str(e), "Error in on_headers")
 
     def test_on_body_callback_failure(self):
-        io.init_logging(io.LogLevel.Trace, "logs.txt")
-
         request = self._get_object_request(self.get_test_object_path)
 
         s3_client = s3_client_new(False, self.region, 5 * MB)
