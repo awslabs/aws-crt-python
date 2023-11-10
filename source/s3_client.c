@@ -48,6 +48,38 @@ PyObject *aws_py_s3_get_recommended_throughput_target_gbps(PyObject *self, PyObj
     return PyFloat_FromDouble(platform_info->max_throughput_gbps);
 }
 
+PyObject *aws_py_s3_get_optimized_platforms(PyObject *self, PyObject *args) {
+    (void)self;
+    (void)args;
+
+    bool success = false;
+    struct aws_array_list platform_list = aws_s3_get_platforms_with_recommended_config();
+
+    size_t list_length = aws_array_list_length(&platform_list);
+
+    PyObject *py_list = PyList_New(list_length);
+    if (!py_list) {
+        goto clean_up;
+    }
+
+    for (size_t i = 0; i < list_length; ++i) {
+        struct aws_byte_cursor cursor;
+        if (aws_array_list_get_at(&platform_list, &cursor, i) == AWS_OP_SUCCESS) {
+            PyObject *platform_str = PyUnicode_FromAwsByteCursor(&cursor);
+            if (!platform_str) {
+                Py_DECREF(py_list);
+                goto clean_up;
+            }
+            PyList_SetItem(py_list, i, platform_str); /* Steals a Reference */
+        }
+    }
+    success = true;
+
+clean_up:
+    aws_array_list_clean_up(&platform_list);
+    return success ? py_list : NULL;
+}
+
 struct cross_process_lock_binding {
     struct aws_cross_process_lock *lock;
     struct aws_string *name;
@@ -126,7 +158,6 @@ PyObject *aws_py_s3_cross_process_lock_acquire(PyObject *self, PyObject *args) {
 
 PyObject *aws_py_s3_cross_process_lock_release(PyObject *self, PyObject *args) {
     (void)self;
-
     PyObject *lock_capsule; /* O */
 
     if (!PyArg_ParseTuple(args, "O", &lock_capsule)) {
