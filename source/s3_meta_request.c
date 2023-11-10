@@ -104,8 +104,10 @@ static int s_s3_request_on_headers(
         PyErr_WriteUnraisable(request_binding->py_core);
         goto done;
     }
+    /* If user's callback raises an exception, _S3RequestCore._on_headers
+     * stores it to throw later and returns False */
+    error = (result == Py_False);
     Py_DECREF(result);
-    error = false;
 done:
     Py_XDECREF(header_list);
     PyGILState_Release(state);
@@ -177,8 +179,10 @@ static int s_s3_request_on_body(
         PyErr_WriteUnraisable(request_binding->py_core);
         goto done;
     }
+    /* If user's callback raises an exception, _S3RequestCore._on_body
+     * stores it to throw later and returns False */
+    error = (result == Py_False);
     Py_DECREF(result);
-    error = false;
 done:
     PyGILState_Release(state);
     /*************** GIL RELEASE ***************/
