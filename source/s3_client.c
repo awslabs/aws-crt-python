@@ -58,7 +58,7 @@ PyObject *aws_py_s3_get_optimized_platforms(PyObject *self, PyObject *args) {
     size_t list_length = aws_array_list_length(&platform_list);
 
     PyObject *py_list = PyList_New(list_length);
-    if(!py_list) {
+    if (!py_list) {
         PyErr_SetString(PyExc_MemoryError, "Failed to allocate memory for platform list");
         goto clean_up;
     }
@@ -67,12 +67,12 @@ PyObject *aws_py_s3_get_optimized_platforms(PyObject *self, PyObject *args) {
         struct aws_byte_cursor cursor;
         if (aws_array_list_get_at(&platform_list, &cursor, i) == AWS_OP_SUCCESS) {
             PyObject *platform_str = PyUnicode_FromAwsByteCursor(&cursor);
-            if(!platform_str) {
+            if (!platform_str) {
                 Py_DECREF(py_list);
                 PyErr_SetString(PyExc_MemoryError, "Failed to convert platform string to PyObject");
                 goto clean_up;
             }
-            if(PyList_SetItem(py_list, i, platform_str) /* Steals a Reference */) {
+            if (PyList_SetItem(py_list, i, platform_str) /* Steals a Reference */) {
                 /* PyList_SetItem failed, platform_str reference not stolen so DECREF it */
                 Py_DECREF(platform_str);
                 Py_DECREF(py_list);
