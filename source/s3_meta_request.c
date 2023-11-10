@@ -178,14 +178,11 @@ static int s_s3_request_on_body(
     if (!result) {
         PyErr_WriteUnraisable(request_binding->py_core);
         goto done;
-    } else if (result == Py_False) {
-        /* _on_body stored the exception to throw later, so we don't have to do anything */
-        PyErr_Clear();
-        Py_DECREF(result);
-        goto done;
     }
+    /* If user's callback raises an exception, _S3RequestCore._on_body
+     * stores it to throw later and returns False */
+    error = (result == Py_False);
     Py_DECREF(result);
-    error = false;
 done:
     PyGILState_Release(state);
     /*************** GIL RELEASE ***************/

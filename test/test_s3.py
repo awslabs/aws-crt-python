@@ -618,13 +618,15 @@ class S3RequestTest(NativeResourceTest):
         put_body_stream.close()
 
     def test_on_headers_callback_failure(self):
-        request = self._get_object_request(self.get_test_object_path)
+        def _explode(**kwargs):
+            raise RuntimeError("Error in on_headers callback")
 
+        request = self._get_object_request(self.get_test_object_path)
         s3_client = s3_client_new(False, self.region, 5 * MB)
         s3_request = s3_client.make_request(
             request=request,
             type=S3RequestType.GET_OBJECT,
-            on_headers=lambda status_code, headers: (_ for _ in ()).throw(RuntimeError("Error in on_headers")),
+            on_headers=_explode,
             on_body=self._on_request_body,
         )
 
@@ -636,17 +638,19 @@ class S3RequestTest(NativeResourceTest):
         e = finished_future.exception()
         # check that data from on_done callback came through correctly
         self.assertIsInstance(e, RuntimeError)
-        self.assertEqual(str(e), "Error in on_headers")
+        self.assertEqual(str(e), "Error in on_headers callback")
 
     def test_on_body_callback_failure(self):
-        request = self._get_object_request(self.get_test_object_path)
+        def _explode(**kwargs):
+            raise RuntimeError("Error in on_body callback")
 
+        request = self._get_object_request(self.get_test_object_path)
         s3_client = s3_client_new(False, self.region, 5 * MB)
         s3_request = s3_client.make_request(
             request=request,
             type=S3RequestType.GET_OBJECT,
             on_headers=self._on_request_headers,
-            on_body=lambda chunk, offset: (_ for _ in ()).throw(RuntimeError("Error in on_body"))
+            on_body=_explode,
         )
 
         finished_future = s3_request.finished_future
@@ -657,7 +661,7 @@ class S3RequestTest(NativeResourceTest):
         e = finished_future.exception()
         # check that data from on_done callback came through correctly
         self.assertIsInstance(e, RuntimeError)
-        self.assertEqual(str(e), "Error in on_body")
+        self.assertEqual(str(e), "Error in on_body callback")
 
     def test_special_filepath_upload(self):
         # remove the input file when request done
