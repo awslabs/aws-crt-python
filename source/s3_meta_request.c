@@ -101,7 +101,7 @@ static int s_s3_request_on_headers(
     PyObject *result =
         PyObject_CallMethod(request_binding->py_core, "_on_headers", "(iO)", response_status, header_list);
     if (!result) {
-        /* _on_body stores the exception to throw later, so we don't have to anything */
+        /* _on_headers stores the exception to throw later, so we don't have to anything */
         PyErr_Clear();
         goto done;
     }
