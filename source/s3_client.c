@@ -59,7 +59,6 @@ PyObject *aws_py_s3_get_optimized_platforms(PyObject *self, PyObject *args) {
 
     PyObject *py_list = PyList_New(list_length);
     if (!py_list) {
-        PyErr_SetString(PyExc_MemoryError, "Failed to allocate memory for platform list");
         goto clean_up;
     }
 
