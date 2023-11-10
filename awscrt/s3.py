@@ -533,17 +533,19 @@ class _S3RequestCore:
         if self._on_headers_cb:
             try:
                 self._on_headers_cb(status_code=status_code, headers=headers)
-            except Exception as e:
+                return True
+            except BaseException as e:
                 self._python_callback_exception = e
-                raise
+                return False
 
     def _on_body(self, chunk, offset):
         if self._on_body_cb:
             try:
                 self._on_body_cb(chunk=chunk, offset=offset)
-            except Exception as e:
+                return True
+            except BaseException as e:
                 self._python_callback_exception = e
-                raise
+                return False
 
     def _on_shutdown(self):
         self._shutdown_event.set()
@@ -557,21 +559,22 @@ class _S3RequestCore:
         if error_code:
 
             error = awscrt.exceptions.from_code(error_code)
-            if (error.name == "AWS_ERROR_CRT_CALLBACK_EXCEPTION"
-                    and self._python_callback_exception is not None):
-                error = self._python_callback_exception
-            # If the failure was due to a response, make it into an S3ResponseError.
-            # When failure is due to a response, its headers are always included.
-            elif isinstance(error, awscrt.exceptions.AwsCrtError) \
-                    and status_code is not None \
-                    and error_headers is not None:
-                error = S3ResponseError(
-                    code=error.code,
-                    name=error.name,
-                    message=error.message,
-                    status_code=status_code,
-                    headers=error_headers,
-                    body=error_body)
+
+            if isinstance(error, awscrt.exceptions.AwsCrtError):
+                if (error.name == "AWS_ERROR_CRT_CALLBACK_EXCEPTION"
+                        and self._python_callback_exception is not None):
+                    error = self._python_callback_exception
+                # If the failure was due to a response, make it into an S3ResponseError.
+                # When failure is due to a response, its headers are always included.
+                elif status_code is not None \
+                        and error_headers is not None:
+                    error = S3ResponseError(
+                        code=error.code,
+                        name=error.name,
+                        message=error.message,
+                        status_code=status_code,
+                        headers=error_headers,
+                        body=error_body)
             self._finished_future.set_exception(error)
         else:
             self._finished_future.set_result(None)

@@ -100,8 +100,12 @@ static int s_s3_request_on_headers(
     /* Deliver the built up list of (name,value) tuples */
     PyObject *result =
         PyObject_CallMethod(request_binding->py_core, "_on_headers", "(iO)", response_status, header_list);
+
     if (!result) {
-        /* _on_headers stores the exception to throw later, so we don't have to anything */
+        PyErr_WriteUnraisable(request_binding->py_core);
+        goto done;
+    } else if (result == Py_False) {
+        /* _on_headers stored the exception to throw later, so we don't have to do anything */
         PyErr_Clear();
         goto done;
     }
@@ -175,10 +179,14 @@ static int s_s3_request_on_body(
         request_binding->py_core, "_on_body", "(y#K)", (const char *)(body->ptr), (Py_ssize_t)body->len, range_start);
 
     if (!result) {
-        /* _on_body stores the exception to throw later, so we don't have to anything */
+        PyErr_WriteUnraisable(request_binding->py_core);
+        goto done;
+    } else if (result == Py_False) {
+        /* _on_body stored the exception to throw later, so we don't have to do anything */
         PyErr_Clear();
         goto done;
     }
+
     Py_DECREF(result);
     error = false;
 done:
