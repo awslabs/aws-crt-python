@@ -52,24 +52,40 @@ PyObject *aws_py_s3_get_optimized_platforms(PyObject *self, PyObject *args) {
     (void)self;
     (void)args;
 
+    bool success = false;
     struct aws_array_list platform_list = aws_s3_get_platforms_with_recommended_config();
 
     size_t list_length = aws_array_list_length(&platform_list);
 
     PyObject *py_list = PyList_New(list_length);
-    AWS_FATAL_ASSERT(py_list && "platform list allocation failed");
+    if(!py_list) {
+        PyErr_SetString(PyExc_MemoryError, "Failed to allocate memory for platform list");
+        goto clean_up;
+    }
 
     for (size_t i = 0; i < list_length; ++i) {
         struct aws_byte_cursor cursor;
         if (aws_array_list_get_at(&platform_list, &cursor, i) == AWS_OP_SUCCESS) {
             PyObject *platform_str = PyUnicode_FromAwsByteCursor(&cursor);
-            PyList_SetItem(py_list, i, platform_str); /* Steals a Reference */
+            if(!platform_str) {
+                Py_DECREF(py_list);
+                PyErr_SetString(PyExc_MemoryError, "Failed to convert platform string to PyObject");
+                goto clean_up;
+            }
+            if(PyList_SetItem(py_list, i, platform_str) /* Steals a Reference */) {
+                /* PyList_SetItem failed, platform_str reference not stolen so DECREF it */
+                Py_DECREF(platform_str);
+                Py_DECREF(py_list);
+                PyErr_SetString(PyExc_RuntimeError, "Failed to set item in the plaform list");
+                goto clean_up;
+            }
         }
     }
+    success = true;
 
+clean_up:
     aws_array_list_clean_up(&platform_list);
-
-    return py_list;
+    return success ? py_list : NULL;
 }
 
 struct cross_process_lock_binding {
