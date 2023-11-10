@@ -106,6 +106,7 @@ static int s_s3_request_on_headers(
     } else if (result == Py_False) {
         /* _on_headers stored the exception to throw later, so we don't have to do anything */
         PyErr_Clear();
+        Py_DECREF(result);
         goto done;
     }
     Py_DECREF(result);
@@ -183,6 +184,7 @@ static int s_s3_request_on_body(
     } else if (result == Py_False) {
         /* _on_body stored the exception to throw later, so we don't have to do anything */
         PyErr_Clear();
+        Py_DECREF(result);
         goto done;
     }
     Py_DECREF(result);
