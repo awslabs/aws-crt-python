@@ -464,6 +464,7 @@ class S3ResponseError(awscrt.exceptions.AwsCrtError):
         status_code (int): HTTP response status code.
         headers (list[tuple[str, str]]): Headers from HTTP response.
         body (Optional[bytes]): Body of HTTP response (if any).
+            This is usually XML. It may be None in the case of a HEAD response.
         code (int): CRT error code.
         name (str): CRT error name.
         message (str): CRT error message.
@@ -546,7 +547,8 @@ class _S3RequestCore:
         if error_code:
             error = awscrt.exceptions.from_code(error_code)
 
-            # Make this into an S3ResponseError, if possible
+            # If the failure was due to a response, make it into an S3ResponseError.
+            # When failure is due to a response, its headers are always included.
             if isinstance(error, awscrt.exceptions.AwsCrtError) \
                     and status_code is not None \
                     and error_headers is not None:
