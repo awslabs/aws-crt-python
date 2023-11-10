@@ -100,7 +100,6 @@ static int s_s3_request_on_headers(
     /* Deliver the built up list of (name,value) tuples */
     PyObject *result =
         PyObject_CallMethod(request_binding->py_core, "_on_headers", "(iO)", response_status, header_list);
-
     if (!result) {
         PyErr_WriteUnraisable(request_binding->py_core);
         goto done;
@@ -186,7 +185,6 @@ static int s_s3_request_on_body(
         PyErr_Clear();
         goto done;
     }
-
     Py_DECREF(result);
     error = false;
 done:

@@ -9,7 +9,6 @@ import tempfile
 import math
 import shutil
 import time
-
 from test import NativeResourceTest
 from concurrent.futures import Future
 from multiprocessing import Process
