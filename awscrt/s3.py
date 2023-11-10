@@ -515,7 +515,8 @@ class _S3RequestCore:
             on_done=None,
             on_progress=None):
 
-        self._python_exception = None
+        # Stores exception raised in on_headers or on_body callback so that we can rethrow it in the on_done callback
+        self._python_callback_exception = None
         self._request = request
         self._signing_config = signing_config
         self._credential_provider = credential_provider
@@ -533,7 +534,7 @@ class _S3RequestCore:
             try:
                 self._on_headers_cb(status_code=status_code, headers=headers)
             except Exception as e:
-                self._python_exception = e
+                self._python_callback_exception = e
                 raise
 
     def _on_body(self, chunk, offset):
@@ -541,7 +542,7 @@ class _S3RequestCore:
             try:
                 self._on_body_cb(chunk=chunk, offset=offset)
             except Exception as e:
-                self._python_exception = e
+                self._python_callback_exception = e
                 raise
 
     def _on_shutdown(self):
@@ -557,8 +558,8 @@ class _S3RequestCore:
 
             error = awscrt.exceptions.from_code(error_code)
             if (error.name == "AWS_ERROR_CRT_CALLBACK_EXCEPTION"
-                    and self._python_exception is not None):
-                error = self._python_exception
+                    and self._python_callback_exception is not None):
+                error = self._python_callback_exception
             # If the failure was due to a response, make it into an S3ResponseError.
             # When failure is due to a response, its headers are always included.
             elif isinstance(error, awscrt.exceptions.AwsCrtError) \

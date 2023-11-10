@@ -656,8 +656,6 @@ class S3RequestTest(NativeResourceTest):
         self.assertIsInstance(e, RuntimeError)
         self.assertEqual(str(e), "Error in on_body")
 
-
-
     def test_special_filepath_upload(self):
         # remove the input file when request done
         content_length = 10 * MB
