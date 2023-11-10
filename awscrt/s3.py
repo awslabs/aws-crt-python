@@ -557,7 +557,6 @@ class _S3RequestCore:
 
         error = None
         if error_code:
-
             error = awscrt.exceptions.from_code(error_code)
 
             if isinstance(error, awscrt.exceptions.AwsCrtError):
