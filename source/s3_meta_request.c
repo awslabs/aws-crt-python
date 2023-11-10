@@ -101,7 +101,8 @@ static int s_s3_request_on_headers(
     PyObject *result =
         PyObject_CallMethod(request_binding->py_core, "_on_headers", "(iO)", response_status, header_list);
     if (!result) {
-        PyErr_WriteUnraisable(request_binding->py_core);
+        /* _on_body stores the exception to throw later, so we don't have to anything */
+        PyErr_Clear();
         goto done;
     }
     Py_DECREF(result);
@@ -174,7 +175,8 @@ static int s_s3_request_on_body(
         request_binding->py_core, "_on_body", "(y#K)", (const char *)(body->ptr), (Py_ssize_t)body->len, range_start);
 
     if (!result) {
-        PyErr_WriteUnraisable(request_binding->py_core);
+        /* _on_body stores the exception to throw later, so we don't have to anything */
+        PyErr_Clear();
         goto done;
     }
     Py_DECREF(result);

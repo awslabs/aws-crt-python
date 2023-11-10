@@ -9,6 +9,7 @@ import tempfile
 import math
 import shutil
 import time
+
 from test import NativeResourceTest
 from concurrent.futures import Future
 from multiprocessing import Process
@@ -610,6 +611,52 @@ class S3RequestTest(NativeResourceTest):
         self.assertEqual(self.done_error_body, self.done_error.body)
 
         put_body_stream.close()
+
+    def test_on_headers_callback_failure(self):
+        request = self._get_object_request(self.get_test_object_path)
+
+        s3_client = s3_client_new(False, self.region, 5 * MB)
+        s3_request = s3_client.make_request(
+            request=request,
+            type=S3RequestType.GET_OBJECT,
+            on_headers=lambda status_code, headers: (_ for _ in ()).throw(RuntimeError("Error in on_headers")),
+            on_body=self._on_request_body,
+        )
+
+        finished_future = s3_request.finished_future
+        shutdown_event = s3_request.shutdown_event
+        s3_request = None
+        self.assertTrue(shutdown_event.wait(self.timeout))
+
+        e = finished_future.exception()
+        # check that data from on_done callback came through correctly
+        self.assertIsInstance(e, RuntimeError)
+        self.assertEqual(str(e), "Error in on_headers")
+
+    def test_on_body_callback_failure(self):
+        io.init_logging(io.LogLevel.Trace, "logs.txt")
+
+        request = self._get_object_request(self.get_test_object_path)
+
+        s3_client = s3_client_new(False, self.region, 5 * MB)
+        s3_request = s3_client.make_request(
+            request=request,
+            type=S3RequestType.GET_OBJECT,
+            on_headers=self._on_request_headers,
+            on_body=lambda chunk, offset: (_ for _ in ()).throw(RuntimeError("Error in on_body"))
+        )
+
+        finished_future = s3_request.finished_future
+        shutdown_event = s3_request.shutdown_event
+        s3_request = None
+        self.assertTrue(shutdown_event.wait(self.timeout))
+
+        e = finished_future.exception()
+        # check that data from on_done callback came through correctly
+        self.assertIsInstance(e, RuntimeError)
+        self.assertEqual(str(e), "Error in on_body")
+
+
 
     def test_special_filepath_upload(self):
         # remove the input file when request done
