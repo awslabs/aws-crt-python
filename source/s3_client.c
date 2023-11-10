@@ -68,7 +68,6 @@ PyObject *aws_py_s3_get_optimized_platforms(PyObject *self, PyObject *args) {
             PyObject *platform_str = PyUnicode_FromAwsByteCursor(&cursor);
             if (!platform_str) {
                 Py_DECREF(py_list);
-                PyErr_SetString(PyExc_MemoryError, "Failed to convert platform string to PyObject");
                 goto clean_up;
             }
             if (PyList_SetItem(py_list, i, platform_str) /* Steals a Reference */) {
