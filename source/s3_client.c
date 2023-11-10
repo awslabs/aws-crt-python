@@ -70,13 +70,7 @@ PyObject *aws_py_s3_get_optimized_platforms(PyObject *self, PyObject *args) {
                 Py_DECREF(py_list);
                 goto clean_up;
             }
-            if (PyList_SetItem(py_list, i, platform_str) /* Steals a Reference */) {
-                /* PyList_SetItem failed, platform_str reference not stolen so DECREF it */
-                Py_DECREF(platform_str);
-                Py_DECREF(py_list);
-                PyErr_SetString(PyExc_RuntimeError, "Failed to set item in the plaform list");
-                goto clean_up;
-            }
+            PyList_SetItem(py_list, i, platform_str); /* Steals a Reference */
         }
     }
     success = true;
