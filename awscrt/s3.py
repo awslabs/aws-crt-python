@@ -10,12 +10,44 @@ from concurrent.futures import Future
 from awscrt import NativeResource
 from awscrt.http import HttpRequest
 from awscrt.io import ClientBootstrap, TlsConnectionOptions
-from awscrt.auth import AwsCredentialsProvider, AwsSignatureType, AwsSignedBodyHeaderType, AwsSignedBodyValue, AwsSigningAlgorithm, AwsSigningConfig
+from awscrt.auth import AwsCredentialsProvider, AwsSignatureType, AwsSignedBodyHeaderType, AwsSignedBodyValue, \
+    AwsSigningAlgorithm, AwsSigningConfig
 import awscrt.exceptions
 from dataclasses import dataclass
 import threading
-from typing import Optional
+from typing import List, Optional, Tuple
 from enum import IntEnum
+
+
+class CrossProcessLock(NativeResource):
+    """
+    Class representing an exclusive cross-process lock, scoped by `lock_scope_name`
+
+    Recommended usage is to either explicitly call acquire() followed by release() when the lock  is no longer required, or use this in a 'with' statement.
+
+    acquire() will throw a RuntimeError with AWS_MUTEX_CALLER_NOT_OWNER as the error code, if the lock could not be acquired.
+
+    If the lock has not been explicitly released when the process exits, it will be released by the operating system.
+
+    Keyword Args:
+        lock_scope_name (str): Unique string identifying the caller holding the lock.
+    """
+
+    def __init__(self, lock_scope_name):
+        super().__init__()
+        self._binding = _awscrt.s3_cross_process_lock_new(lock_scope_name)
+
+    def acquire(self):
+        _awscrt.s3_cross_process_lock_acquire(self._binding)
+
+    def __enter__(self):
+        self.acquire()
+
+    def release(self):
+        _awscrt.s3_cross_process_lock_release(self._binding)
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        self.release()
 
 
 class S3RequestType(IntEnum):
@@ -136,11 +168,18 @@ class S3Client(NativeResource):
             for each connection, unless `tls_mode` is :attr:`S3RequestTlsMode.DISABLED`
 
         part_size (Optional[int]): Size, in bytes, of parts that files will be downloaded or uploaded in.
-            Note: for :attr:`S3RequestType.PUT_OBJECT` request, S3 requires the part size greater than 5MB.
-            (5*1024*1024 by default)
+            Note: for :attr:`S3RequestType.PUT_OBJECT` request, S3 requires the part size greater than 5 MiB.
+            (8*1024*1024 by default)
 
-        throughput_target_gbps (Optional[float]): Throughput target in Gbps that we are trying to reach.
-            (5 Gbps by default)
+        multipart_upload_threshold (Optional[int]): The size threshold in bytes, for when to use multipart uploads.
+            Uploads over this size will use the multipart upload strategy.
+            Uploads this size or less will use a single request.
+            If not set, `part_size` is used as the threshold.
+
+        throughput_target_gbps (Optional[float]): Throughput target in
+            Gigabits per second (Gbps) that we are trying to reach.
+            You can also use `get_recommended_throughput_target_gbps()` to get recommended value for your system.
+            10.0 Gbps by default (may change in future)
     """
 
     __slots__ = ('shutdown_event', '_region')
@@ -155,6 +194,7 @@ class S3Client(NativeResource):
             credential_provider=None,
             tls_connection_options=None,
             part_size=None,
+            multipart_upload_threshold=None,
             throughput_target_gbps=None):
         assert isinstance(bootstrap, ClientBootstrap) or bootstrap is None
         assert isinstance(region, str)
@@ -178,6 +218,7 @@ class S3Client(NativeResource):
 
         def on_shutdown():
             shutdown_event.set()
+
         self._region = region
         self.shutdown_event = shutdown_event
 
@@ -191,6 +232,8 @@ class S3Client(NativeResource):
             tls_mode = 0
         if part_size is None:
             part_size = 0
+        if multipart_upload_threshold is None:
+            multipart_upload_threshold = 0
         if throughput_target_gbps is None:
             throughput_target_gbps = 0
 
@@ -203,6 +246,7 @@ class S3Client(NativeResource):
             region,
             tls_mode,
             part_size,
+            multipart_upload_threshold,
             throughput_target_gbps,
             s3_client_core)
 
@@ -285,9 +329,15 @@ class S3Client(NativeResource):
                         failed because server side sent an unsuccessful response, the headers
                         of the response is provided here. Else None will be returned.
 
-                    *   `error_body` (Optional[Bytes]): If request failed because server
+                    *   `error_body` (Optional[bytes]): If request failed because server
                         side sent an unsuccessful response, the body of the response is
                         provided here. Else None will be returned.
+
+                    *   `status_code` (Optional[int]): HTTP response status code (if available).
+                        If request failed because server side sent an unsuccessful response,
+                        this is its status code. If the operation was successful,
+                        this is the final response's status code. If the operation
+                        failed for another reason, None is returned.
 
                     *   `**kwargs` (dict): Forward-compatibility kwargs.
 
@@ -404,6 +454,35 @@ class S3Request(NativeResource):
         _awscrt.s3_meta_request_cancel(self)
 
 
+class S3ResponseError(awscrt.exceptions.AwsCrtError):
+    '''
+    An error response from S3.
+
+    Subclasses :class:`awscrt.exceptions.AwsCrtError`.
+
+    Attributes:
+        status_code (int): HTTP response status code.
+        headers (list[tuple[str, str]]): Headers from HTTP response.
+        body (Optional[bytes]): Body of HTTP response (if any).
+            This is usually XML. It may be None in the case of a HEAD response.
+        code (int): CRT error code.
+        name (str): CRT error name.
+        message (str): CRT error message.
+    '''
+
+    def __init__(self, *,
+                 code: int,
+                 name: str,
+                 message: str,
+                 status_code: List[Tuple[str, str]] = None,
+                 headers: List[Tuple[str, str]] = None,
+                 body: Optional[bytes] = None):
+        super().__init__(code, name, message)
+        self.status_code = status_code
+        self.headers = headers
+        self.body = body
+
+
 class _S3ClientCore:
     '''
     Private class to keep all the related Python object alive until C land clean up for S3Client
@@ -436,6 +515,8 @@ class _S3RequestCore:
             on_done=None,
             on_progress=None):
 
+        # Stores exception raised in on_headers or on_body callback so that we can rethrow it in the on_done callback
+        self._python_callback_exception = None
         self._request = request
         self._signing_config = signing_config
         self._credential_provider = credential_provider
@@ -450,28 +531,54 @@ class _S3RequestCore:
 
     def _on_headers(self, status_code, headers):
         if self._on_headers_cb:
-            self._on_headers_cb(status_code=status_code, headers=headers)
+            try:
+                self._on_headers_cb(status_code=status_code, headers=headers)
+                return True
+            except BaseException as e:
+                self._python_callback_exception = e
+                return False
 
     def _on_body(self, chunk, offset):
         if self._on_body_cb:
-            self._on_body_cb(chunk=chunk, offset=offset)
+            try:
+                self._on_body_cb(chunk=chunk, offset=offset)
+                return True
+            except BaseException as e:
+                self._python_callback_exception = e
+                return False
 
     def _on_shutdown(self):
         self._shutdown_event.set()
 
-    def _on_finish(self, error_code, error_headers, error_body):
+    def _on_finish(self, error_code, status_code, error_headers, error_body):
+        # If C layer gives status_code 0, that means "unknown"
+        if status_code == 0:
+            status_code = None
+
         error = None
         if error_code:
             error = awscrt.exceptions.from_code(error_code)
-            if error_body:
-                # TODO The error body is XML, will need to parse it to something prettier.
-                extra_message = ". Body from error request is: " + str(error_body)
-                error.message = error.message + extra_message
+
+            if isinstance(error, awscrt.exceptions.AwsCrtError):
+                if (error.name == "AWS_ERROR_CRT_CALLBACK_EXCEPTION"
+                        and self._python_callback_exception is not None):
+                    error = self._python_callback_exception
+                # If the failure was due to a response, make it into an S3ResponseError.
+                # When failure is due to a response, its headers are always included.
+                elif status_code is not None \
+                        and error_headers is not None:
+                    error = S3ResponseError(
+                        code=error.code,
+                        name=error.name,
+                        message=error.message,
+                        status_code=status_code,
+                        headers=error_headers,
+                        body=error_body)
             self._finished_future.set_exception(error)
         else:
             self._finished_future.set_result(None)
         if self._on_done_cb:
-            self._on_done_cb(error=error, error_headers=error_headers, error_body=error_body)
+            self._on_done_cb(error=error, error_headers=error_headers, error_body=error_body, status_code=status_code)
 
     def _on_progress(self, progress):
         if self._on_progress_cb:
@@ -503,3 +610,57 @@ def create_default_s3_signing_config(*, region: str, credential_provider: AwsCre
         use_double_uri_encode=False,
         should_normalize_uri_path=False,
     )
+
+
+def get_ec2_instance_type():
+    """
+        First this function will check it's running on EC2 via. attempting to read DMI info to avoid making IMDS calls.
+
+        If the function detects it's on EC2, and it was able to detect the instance type without a call to IMDS
+        it will return it.
+
+        Finally, it will call IMDS and return the instance type from there.
+        Note that in the case of the IMDS call, a new client stack is spun up using 1 background thread. The call is made
+        synchronously with a 1 second timeout: It's not cheap. To make this easier, the underlying result is cached
+        internally and will be freed when this module is unloaded is called.
+
+        Returns:
+           A string indicating the instance type or None if it could not be determined.
+    """
+    return _awscrt.s3_get_ec2_instance_type()
+
+
+def is_optimized_for_system():
+    """
+        Returns:
+            true if the current build of this module has an optimized configuration
+            for the current system.
+    """
+    return _awscrt.s3_is_crt_s3_optimized_for_system()
+
+
+def get_optimized_platforms():
+    """
+    Returns:
+        A list[str] of platform identifiers, such as EC2 instance types, for which S3 client is pre-optimized
+        and have a recommended throughput_target_gbps. You can use `get_recommended_throughput_target_gbps()`
+        to obtain the recommended throughput_target_gbps for those platforms.
+    """
+    return _awscrt.s3_get_optimized_platforms()
+
+
+def get_recommended_throughput_target_gbps() -> Optional[float]:
+    """
+    Returns:
+        Recommended throughput, in gigabits per second, based on detected system configuration.
+        If the best throughput configuration is unknown, returns None.
+        Use this as the S3Client's `throughput_target_gbps`.
+    """
+    # Currently the CRT returns 0 if it was unable to make a good guess on configuration. Pre-known configs,
+    # have this value set. Eventually, the CRT will make a full calculation based on NIC and CPU configuration,
+    # but until then handle 0.
+    max_value = _awscrt.s3_get_recommended_throughput_target_gbps()
+    if max_value > 0:
+        return max_value
+    else:
+        return None

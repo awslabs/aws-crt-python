@@ -618,7 +618,7 @@ done:
     PyGILState_Release(state);
 
     if (!native_credentials) {
-        return aws_raise_error(AWS_ERROR_CRT_CALLBACK_EXCEPTION);
+        return aws_raise_error(AWS_AUTH_CREDENTIALS_PROVIDER_DELEGATE_FAILURE);
     }
 
     callback(native_credentials, AWS_ERROR_SUCCESS, callback_user_data);
