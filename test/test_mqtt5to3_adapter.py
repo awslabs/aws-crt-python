@@ -397,6 +397,29 @@ class Mqtt5to3AdapterTest(NativeResourceTest):
 
         connection.disconnect().result(TIMEOUT)
 
+    def test_operation_null_ack(self):
+        TEST_TOPIC = '/test/topic/adapter' + str(uuid.uuid4())
+        exception_occurred = False
+
+        client, mqtt5_callbacks = self._setup_direct_connect_mutual_tls()
+        mqtt311_callbacks = Mqtt311TestCallbacks()
+        connection = self._create_connection(client, mqtt311_callbacks)
+
+        # publish an offline packet so that the publish operation would be incomplete
+        published, packet_id = connection.publish(TEST_TOPIC, self.TEST_MSG, QoS.AT_LEAST_ONCE)
+
+        # Manually destroyed the connection so that the incomplete publish operation should fail with exception
+        del connection
+        try:
+            published.result(TIMEOUT)
+        except TimeoutError:
+            # Directly failed the test if the result time out
+            self.assertTrue(False, "Operation Time out. The connection does not fail the callback on destroy. ")
+        except Exception:
+            exception_occurred = True
+
+        assert (exception_occurred)
+
     # ==============================================================
     #                 MQTT311 CALLBACK TEST CASES
     # ==============================================================
