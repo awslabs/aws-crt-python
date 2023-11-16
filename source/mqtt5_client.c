@@ -731,6 +731,69 @@ PyObject *aws_py_mqtt5_ws_handshake_transform_complete(PyObject *self, PyObject 
     Py_RETURN_NONE;
 }
 
+static bool s_py_topic_aliasing_options_init(
+    struct aws_mqtt5_client_topic_alias_options *topic_aliasing_options,
+    PyObject *py_topic_aliasing_options) {
+    AWS_ZERO_STRUCT(*topic_aliasing_options);
+
+    bool success = false;
+    PyObject *py_outbound_behavior = PyObject_GetAttrString(py_topic_aliasing_options, "outbound_behavior");
+    PyObject *py_outbound_cache_max_size = PyObject_GetAttrString(py_topic_aliasing_options, "outbound_cache_max_size");
+    PyObject *py_inbound_behavior = PyObject_GetAttrString(py_topic_aliasing_options, "inbound_behavior");
+    PyObject *py_inbound_cache_max_size = PyObject_GetAttrString(py_topic_aliasing_options, "inbound_cache_max_size");
+
+    if (!PyObject_GetAsOptionalIntEnum(
+            py_outbound_behavior,
+            "TopicAliasingOptions",
+            "outbound_behavior",
+            &topic_aliasing_options->outbound_topic_alias_behavior)) {
+        if (PyErr_Occurred()) {
+            goto done;
+        }
+    }
+
+    if (!PyObject_GetAsOptionalUint16(
+            py_outbound_cache_max_size,
+            "TopicAliasingOptions",
+            "outbound_cache_max_size",
+            &topic_aliasing_options->outbound_alias_cache_max_size)) {
+        if (PyErr_Occurred()) {
+            goto done;
+        }
+    }
+
+    if (!PyObject_GetAsOptionalIntEnum(
+            py_inbound_behavior,
+            "TopicAliasingOptions",
+            "inbound_behavior",
+            &topic_aliasing_options->inbound_topic_alias_behavior)) {
+        if (PyErr_Occurred()) {
+            goto done;
+        }
+    }
+
+    if (!PyObject_GetAsOptionalUint16(
+            py_inbound_cache_max_size,
+            "TopicAliasingOptions",
+            "inbound_cache_max_size",
+            &topic_aliasing_options->inbound_alias_cache_size)) {
+        if (PyErr_Occurred()) {
+            goto done;
+        }
+    }
+
+    success = true;
+
+done:
+
+    Py_XDECREF(py_outbound_behavior);
+    Py_XDECREF(py_outbound_cache_max_size);
+    Py_XDECREF(py_inbound_behavior);
+    Py_XDECREF(py_inbound_cache_max_size);
+
+    return success;
+}
+
 /*******************************************************************************
  * Client Init
  ******************************************************************************/
@@ -784,13 +847,14 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
     PyObject *min_connected_time_to_reset_reconnect_delay_ms_py; /* optional uint64_t */
     PyObject *ping_timeout_ms_py;                                /* optional uint32_t */
     PyObject *ack_timeout_seconds_py;                            /* optional uint32_t */
+    PyObject *topic_aliasing_options_py;                         /* optional TopicAliasingOptions */
     /* Callbacks */
     PyObject *is_websocket_none_py;
     PyObject *client_core_py;
 
     if (!PyArg_ParseTuple(
             args,
-            "Os#HOOOOz#Oz#z#OOOOOOOOOz*Oz#OOOz#z*z#OOOOOOOOOOOO",
+            "Os#HOOOOz#Oz#z#OOOOOOOOOz*Oz#OOOz#z*z#OOOOOOOOOOOOO",
             /* O */ &self_py,
             /* s */ &host_name.ptr,
             /* # */ &host_name.len,
@@ -841,6 +905,7 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
             /* O */ &min_connected_time_to_reset_reconnect_delay_ms_py,
             /* O */ &ping_timeout_ms_py,
             /* O */ &ack_timeout_seconds_py,
+            /* O */ &topic_aliasing_options_py,
 
             /* O */ &is_websocket_none_py,
             /* O */ &client_core_py)) {
@@ -873,6 +938,7 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
     AWS_ZERO_STRUCT(will_options);
 
     struct aws_http_proxy_options proxy_options;
+    struct aws_mqtt5_client_topic_alias_options topic_aliasing_options;
 
     struct aws_tls_ctx *tls_ctx = NULL;
 
@@ -1023,6 +1089,13 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
         goto done;
     }
 
+    if (topic_aliasing_options_py != Py_None) {
+        if (!s_py_topic_aliasing_options_init(&topic_aliasing_options, topic_aliasing_options_py)) {
+            goto done;
+        }
+        client_options.topic_aliasing_options = &topic_aliasing_options;
+    }
+
     /* CONNECT OPTIONS */
 
     connect_options.client_id = client_id;
@@ -1158,12 +1231,6 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
             AWS_PYOBJECT_KEY_WILL_PACKET,
             AWS_PYOBJECT_KEY_MESSAGE_EXPIRY_INTERVAL_SEC,
             &will_message_expiry_interval_seconds_tmp);
-        if (PyErr_Occurred()) {
-            goto done;
-        }
-
-        will.topic_alias = PyObject_GetAsOptionalUint16(
-            will_topic_alias_py, AWS_PYOBJECT_KEY_WILL_PACKET, AWS_PYOBJECT_KEY_TOPIC_ALIAS, &will_topic_alias_tmp);
         if (PyErr_Occurred()) {
             goto done;
         }

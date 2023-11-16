@@ -906,6 +906,72 @@ def _init_user_properties(user_properties_tuples):
     return [UserProperty(name=name, value=value) for (name, value) in user_properties_tuples]
 
 
+class OutboundTopicAliasBehaviorType(IntEnum):
+    """An enumeration that controls how the client applies topic aliasing to outbound publish packets.
+
+    Topic alias behavior is described in `MQTT5 Topic Aliasing<https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901113>`_
+    """
+
+    DEFAULT = 0,
+    """Maps to Disabled.  This keeps the client from being broken (by default) if the broker
+     topic aliasing implementation has a problem.
+    """
+
+    MANUAL = 1,
+    """
+     Outbound aliasing is the user's responsibility.  Client will cache and use
+     previously-established aliases if they fall within the negotiated limits of the connection.
+
+     The user must still always submit a full topic in their publishes because disconnections disrupt
+     topic alias mappings unpredictably.  The client will properly use a requested alias when the most-recently-seen
+     binding for a topic alias value matches the alias and topic in the publish packet.
+    """
+
+    LRU = 2,
+    """ (Recommended) The client will ignore any user-specified topic aliasing and instead use an LRU cache to drive
+    alias usage.
+    """
+
+    DISABLED = 3,
+    """Completely disable outbound topic aliasing."""
+
+
+class InboundTopicAliasBehaviorType(IntEnum):
+    """An enumeration that controls whether or not the client allows the broker to send publishes that use topic
+        aliasing.
+
+    Topic alias behavior is described in `MQTT5 Topic Aliasing<https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901113>`_
+    """
+
+    DEFAULT = 0,
+    """Maps to Disabled.  This keeps the client from being broken (by default) if the broker
+     topic aliasing implementation has a problem.
+     """
+
+    ENABLED = 1,
+    """Allow the server to send PUBLISH packets to the client that use topic aliasing"""
+
+    DISABLED = 2,
+    """Forbid the server from sending PUBLISH packets to the client that use topic aliasing"""
+
+
+@dataclass
+class TopicAliasingOptions:
+    """
+    Configuration for all client topic aliasing behavior.
+
+    Args:
+        outbound_behavior (OutboundTopicAliasBehaviorType):  Controls what kind of outbound topic aliasing behavior the client should attempt to use.  If topic aliasing is not supported by the server, this setting has no effect and any attempts to directly manipulate the topic alias id in outbound publishes will be ignored.  If left undefined, then outbound topic aliasing is disabled.
+        outbound_cache_max_size (int):  If outbound topic aliasing is set to LRU, this controls the maximum size of the cache.  If outbound topic aliasing is set to LRU and this is zero or undefined, a sensible default is used (25).  If outbound topic aliasing is not set to LRU, then this setting has no effect.
+        inbound_behavior (InboundTopicAliasBehaviorType):  Controls whether or not the client allows the broker to use topic aliasing when sending publishes.  Even if inbound topic aliasing is enabled, it is up to the server to choose whether or not to use it.  If left undefined, then inbound topic aliasing is disabled.
+        inbound_cache_max_size (int):  If inbound topic aliasing is enabled, this will control the size of the inbound alias cache.  If inbound aliases are enabled and this is zero or undefined, then a sensible default will be used (25).  If inbound aliases are disabled, this setting has no effect.  Behaviorally, this value overrides anything present in the topic_alias_maximum field of the CONNECT packet options.
+    """
+    outbound_behavior: OutboundTopicAliasBehaviorType = None
+    outbound_cache_max_size: int = None
+    inbound_behavior: InboundTopicAliasBehaviorType = None
+    inbound_cache_max_size: int = None
+
+
 @dataclass
 class NegotiatedSettings:
     """
@@ -925,9 +991,9 @@ class NegotiatedSettings:
         session_expiry_interval_sec (int): The amount of time in seconds the server will retain the MQTT session after a disconnect.
         receive_maximum_from_server (int): The number of in-flight QoS 1 and QoS 2 publications the server is willing to process concurrently.
         maximum_packet_size_to_server (int): The maximum packet size the server is willing to accept.
-        topic_alias_maximum_to_server (int): Not Currently Supported
-        topic_alias_maximum_to_client (int): Not Currently Supported
-        server_keep_alive_sec (int): The maximum amount of time in seconds between client packets. The client should use PINGREQs to ensure this limit is not breached.  The server will disconnect the client for inactivity if no MQTT packet is received in a time interval equal to 1.5 x this value.
+        topic_alias_maximum_to_server (int): the maximum allowed topic alias value on publishes sent from client to server
+        topic_alias_maximum_to_client (int): the maximum allowed topic alias value on publishes sent from server to client
+        server_keep_alive_sec (int): The maximum amount of time in seconds between client packets. The client will use PINGREQs to ensure this limit is not breached.  The server will disconnect the client for inactivity if no MQTT packet is received in a time interval equal to 1.5 x this value.
         retain_available (bool): Whether the server supports retained messages.
         wildcard_subscriptions_available (bool): Whether the server supports wildcard subscriptions.
         subscription_identifiers_available (bool): Whether the server supports subscription identifiers
@@ -1092,7 +1158,7 @@ class PublishPacket:
         topic (str): The topic associated with this PUBLISH packet.
         payload_format_indicator (PayloadFormatIndicator): Property specifying the format of the payload data. The mqtt5 client does not enforce or use this value in a meaningful way.
         message_expiry_interval_sec (int): Sent publishes - indicates the maximum amount of time allowed to elapse for message delivery before the server should instead delete the message (relative to a recipient). Received publishes - indicates the remaining amount of time (from the server's perspective) before the message would have been deleted relative to the subscribing client. If left None, indicates no expiration timeout.
-        topic_alias (int): An integer value that is used to identify the Topic instead of using the Topic Name.
+        topic_alias (int): An integer value that is used to identify the Topic instead of using the Topic Name.  On outbound publishes, this will only be used if the outbound topic aliasing behavior has been set to Manual.
         response_topic (str): Opaque topic string intended to assist with request/response implementations.  Not internally meaningful to MQTT5 or this client.
         correlation_data (Any): Opaque binary data used to correlate between publish messages, as a potential method for request-response implementation.  Not internally meaningful to MQTT5.
         subscription_identifiers (Sequence[int]): The subscription identifiers of all the subscriptions this message matched.
@@ -1317,6 +1383,7 @@ class ClientOptions:
         ping_timeout_ms (int): The time interval to wait after sending a PINGREQ for a PINGRESP to arrive. If one does not arrive, the client will close the current connection.
         connack_timeout_ms (int): The time interval to wait after sending a CONNECT request for a CONNACK to arrive.  If one does not arrive, the connection will be shut down.
         ack_timeout_sec (int): The time interval to wait for an ack after sending a QoS 1+ PUBLISH, SUBSCRIBE, or UNSUBSCRIBE before failing the operation.
+        topic_aliasing_options (TopicAliasingOptions): All configurable options with respect to client topic aliasing behavior.
         on_publish_callback_fn (Callable[[PublishReceivedData],]): Callback for all publish packets received by client.
         on_lifecycle_event_stopped_fn (Callable[[LifecycleStoppedData],]): Callback for Lifecycle Event Stopped.
         on_lifecycle_event_attempting_connect_fn (Callable[[LifecycleAttemptingConnectData],]): Callback for Lifecycle Event Attempting Connect.
@@ -1342,6 +1409,7 @@ class ClientOptions:
     ping_timeout_ms: int = None
     connack_timeout_ms: int = None
     ack_timeout_sec: int = None
+    topic_aliasing_options: TopicAliasingOptions = None
     on_publish_callback_fn: Callable[[PublishReceivedData], None] = None
     on_lifecycle_event_stopped_fn: Callable[[LifecycleStoppedData], None] = None
     on_lifecycle_event_attempting_connect_fn: Callable[[LifecycleAttemptingConnectData], None] = None
@@ -1762,6 +1830,7 @@ class Client(NativeResource):
                                                  client_options.min_connected_time_to_reset_reconnect_delay_ms,
                                                  client_options.ping_timeout_ms,
                                                  client_options.ack_timeout_sec,
+                                                 client_options.topic_aliasing_options,
                                                  websocket_is_none,
                                                  core)
 
