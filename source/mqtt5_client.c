@@ -742,41 +742,41 @@ static bool s_py_topic_aliasing_options_init(
     PyObject *py_inbound_behavior = PyObject_GetAttrString(py_topic_aliasing_options, "inbound_behavior");
     PyObject *py_inbound_cache_max_size = PyObject_GetAttrString(py_topic_aliasing_options, "inbound_cache_max_size");
 
-    if (!PyObject_GetAsOptionalIntEnum(
-            py_outbound_behavior,
-            "TopicAliasingOptions",
-            "outbound_behavior",
-            &topic_aliasing_options->outbound_topic_alias_behavior)) {
+    if (py_outbound_behavior != NULL && !PyObject_GetAsOptionalIntEnum(
+                                            py_outbound_behavior,
+                                            "TopicAliasingOptions",
+                                            "outbound_behavior",
+                                            &topic_aliasing_options->outbound_topic_alias_behavior)) {
         if (PyErr_Occurred()) {
             goto done;
         }
     }
 
-    if (!PyObject_GetAsOptionalUint16(
-            py_outbound_cache_max_size,
-            "TopicAliasingOptions",
-            "outbound_cache_max_size",
-            &topic_aliasing_options->outbound_alias_cache_max_size)) {
+    if (py_outbound_cache_max_size != NULL && !PyObject_GetAsOptionalUint16(
+                                                  py_outbound_cache_max_size,
+                                                  "TopicAliasingOptions",
+                                                  "outbound_cache_max_size",
+                                                  &topic_aliasing_options->outbound_alias_cache_max_size)) {
         if (PyErr_Occurred()) {
             goto done;
         }
     }
 
-    if (!PyObject_GetAsOptionalIntEnum(
-            py_inbound_behavior,
-            "TopicAliasingOptions",
-            "inbound_behavior",
-            &topic_aliasing_options->inbound_topic_alias_behavior)) {
+    if (py_inbound_behavior != NULL && !PyObject_GetAsOptionalIntEnum(
+                                           py_inbound_behavior,
+                                           "TopicAliasingOptions",
+                                           "inbound_behavior",
+                                           &topic_aliasing_options->inbound_topic_alias_behavior)) {
         if (PyErr_Occurred()) {
             goto done;
         }
     }
 
-    if (!PyObject_GetAsOptionalUint16(
-            py_inbound_cache_max_size,
-            "TopicAliasingOptions",
-            "inbound_cache_max_size",
-            &topic_aliasing_options->inbound_alias_cache_size)) {
+    if (py_inbound_cache_max_size != NULL && !PyObject_GetAsOptionalUint16(
+                                                 py_inbound_cache_max_size,
+                                                 "TopicAliasingOptions",
+                                                 "inbound_cache_max_size",
+                                                 &topic_aliasing_options->inbound_alias_cache_size)) {
         if (PyErr_Occurred()) {
             goto done;
         }
