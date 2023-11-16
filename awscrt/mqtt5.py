@@ -960,6 +960,7 @@ class ConnackPacket:
         retain_available (bool): Indicates whether the server supports retained messages.  If None, retained messages are supported.
         maximum_packet_size (int): Specifies the maximum packet size, in bytes, that the server is willing to accept.  If None, there is no limit beyond what is imposed by the MQTT spec itself.
         assigned_client_identifier (str): Specifies a client identifier assigned to this connection by the server.  Only valid when the client id of the preceding CONNECT packet was left empty.
+        topic_alias_maximum (int): The maximum allowed value for topic aliases in outbound publish packets.  If 0 or None, then outbound topic aliasing is not allowed.
         reason_string (str): Additional diagnostic information about the result of the connection attempt.
         user_properties (Sequence[UserProperty]): List of MQTT5 user properties included with the packet.
         wildcard_subscriptions_available (bool): Indicates whether the server supports wildcard subscriptions.  If None, wildcard subscriptions are supported.
@@ -977,6 +978,7 @@ class ConnackPacket:
     retain_available: bool = None
     maximum_packet_size: int = None
     assigned_client_identifier: str = None
+    topic_alias_maximum: int = None
     reason_string: str = None
     user_properties: 'Sequence[UserProperty]' = None
     wildcard_subscriptions_available: bool = None
@@ -1463,6 +1465,8 @@ class _ClientCore:
             connack_maximum_packet_size_exists,
             connack_maximum_packet_size,
             connack_assigned_client_identifier,
+            connack_topic_alias_maximum_exists,
+            connack_topic_alias_maximum,
             connack_reason_string,
             connack_user_properties_tuples,
             connack_wildcard_subscriptions_available_exist,
@@ -1504,6 +1508,8 @@ class _ClientCore:
         if connack_maximum_packet_size_exists:
             connack_packet.maximum_packet_size = connack_maximum_packet_size
         connack_packet.assigned_client_identifier = connack_assigned_client_identifier
+        if connack_topic_alias_maximum_exists:
+            connack_packet.topic_alias_maximum = connack_topic_alias_maximum
         connack_packet.reason_string = connack_reason_string
         connack_packet.user_properties = _init_user_properties(connack_user_properties_tuples)
         if connack_wildcard_subscriptions_available_exist:

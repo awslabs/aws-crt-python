@@ -363,7 +363,7 @@ static void s_lifecycle_event_connection_success(
     result = PyObject_CallMethod(
         client->client_core,
         "_on_lifecycle_connection_success",
-        "(OiOIOHOiOOOIs#s#OOOOOOOOHs#s#iIHIHHHOOOOO)",
+        "(OiOIOHOiOOOIs#OIs#OOOOOOOOHs#s#iIHIHHHOOOOO)",
         /* connack packet  */
         /* O */ connack->session_present ? Py_True : Py_False,
         /* i */ (int)connack->reason_code,
@@ -379,6 +379,8 @@ static void s_lifecycle_event_connection_success(
         /* I */ (unsigned int)(connack->maximum_packet_size ? *connack->maximum_packet_size : 0),
         /* s */ connack->assigned_client_identifier ? connack->assigned_client_identifier->ptr : NULL,
         /* # */ connack->assigned_client_identifier ? connack->assigned_client_identifier->len : 0,
+        /* O */ connack->topic_alias_maximum ? Py_True : Py_False,
+        /* I */ (unsigned int)(connack->topic_alias_maximum ? *connack->topic_alias_maximum : 0),
         /* s */ connack->reason_string ? connack->reason_string->ptr : NULL,
         /* # */ connack->reason_string ? connack->reason_string->len : 0,
         /* O */ user_property_count > 0 ? user_properties_list : Py_None,
