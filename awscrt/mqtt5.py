@@ -909,7 +909,7 @@ def _init_user_properties(user_properties_tuples):
 class OutboundTopicAliasBehaviorType(IntEnum):
     """An enumeration that controls how the client applies topic aliasing to outbound publish packets.
 
-    Topic alias behavior is described in `MQTT5 Topic Aliasing<https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901113>`_
+    Topic alias behavior is described in `MQTT5 Topic Aliasing <https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901113>`_
     """
 
     DEFAULT = 0,
@@ -940,7 +940,7 @@ class InboundTopicAliasBehaviorType(IntEnum):
     """An enumeration that controls whether or not the client allows the broker to send publishes that use topic
         aliasing.
 
-    Topic alias behavior is described in `MQTT5 Topic Aliasing<https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901113>`_
+    Topic alias behavior is described in `MQTT5 Topic Aliasing <https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901113>`_
     """
 
     DEFAULT = 0,
