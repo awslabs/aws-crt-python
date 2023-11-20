@@ -353,7 +353,7 @@ def awscrt_ext():
         extra_compile_args += ['-Wno-strict-aliasing', '-std=gnu99']
 
         # treat warnings as errors in development mode
-        if is_development_mode():
+        if is_development_mode() or os.getenv('AWS_CRT_BUILD_WARNINGS_ARE_ERRORS') == '1':
             extra_compile_args += ['-Wextra', '-Werror']
 
             # ...except when we take shortcuts in development mode and don't make
