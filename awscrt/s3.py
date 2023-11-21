@@ -182,7 +182,7 @@ class S3Client(NativeResource):
             10.0 Gbps by default (may change in future)
 
         memory_limit (Optional[int]): Memory limit, in bytes, of how much memory
-            client can use for buffering data for requests. 
+            client can use for buffering data for requests.
             Default values scale with target throughput and are currently
             between 2GBs and 8GBs (might change in future.)
     """
