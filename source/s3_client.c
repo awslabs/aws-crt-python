@@ -265,6 +265,7 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
             &part_size,
             &multipart_upload_threshold,
             &throughput_target_gbps,
+            &mem_limit,
             &py_core)) {
         return NULL;
     }
