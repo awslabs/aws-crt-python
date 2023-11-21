@@ -360,7 +360,10 @@ def awscrt_ext():
             # a proper MacOS Universal2 binary. The linker warns us about this,
             # but WHATEVER. Building everything twice (x86_64 and arm64) takes too long.
             if not is_macos_universal2():
-                extra_link_args += ['-Wl,--fatal-warnings']
+                if sys.platform == 'darwin' or sys.platform.contains('bsd'):
+                    extra_link_args += ['-Wl,-fatal_warnings']
+                else:
+                    extra_link_args += ['-Wl,--fatal-warnings']
 
     if sys.version_info >= (3, 11):
         define_macros.append(('Py_LIMITED_API', '0x030B0000'))
