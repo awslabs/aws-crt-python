@@ -360,8 +360,10 @@ def awscrt_ext():
             # a proper MacOS Universal2 binary. The linker warns us about this,
             # but WHATEVER. Building everything twice (x86_64 and arm64) takes too long.
             if not is_macos_universal2():
-                if sys.platform == 'darwin' or 'bsd' in sys.platform:
+                if sys.platform == 'darwin':
                     extra_link_args += ['-Wl,-fatal_warnings']
+                elif 'bsd' in sys.platform:
+                    extra_link_args += ['-Wl,-fatal-warnings']
                 else:
                     extra_link_args += ['-Wl,--fatal-warnings']
 
