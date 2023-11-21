@@ -184,7 +184,7 @@ class S3Client(NativeResource):
         memory_limit (Optional[int]): Memory limit, in bytes, of how much memory
             client can use for buffering data for requests.
             Default values scale with target throughput and are currently
-            between 2GBs and 8GBs (may change in future)
+            between 2GiB and 8GiB (may change in future)
     """
 
     __slots__ = ('shutdown_event', '_region')
