@@ -746,7 +746,7 @@ static bool s_py_topic_aliasing_options_init(
                                             py_outbound_behavior,
                                             "TopicAliasingOptions",
                                             "outbound_behavior",
-                                            &topic_aliasing_options->outbound_topic_alias_behavior)) {
+                                            (int *)&topic_aliasing_options->outbound_topic_alias_behavior)) {
         if (PyErr_Occurred()) {
             goto done;
         }
@@ -766,7 +766,7 @@ static bool s_py_topic_aliasing_options_init(
                                            py_inbound_behavior,
                                            "TopicAliasingOptions",
                                            "inbound_behavior",
-                                           &topic_aliasing_options->inbound_topic_alias_behavior)) {
+                                           (int *)&topic_aliasing_options->inbound_topic_alias_behavior)) {
         if (PyErr_Occurred()) {
             goto done;
         }
@@ -1204,7 +1204,6 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
     int will_payload_format_tmp = 0;
     enum aws_mqtt5_payload_format_indicator will_payload_format_enum_tmp = 0;
     uint32_t will_message_expiry_interval_seconds_tmp = 0;
-    uint16_t will_topic_alias_tmp = 0;
     struct aws_byte_cursor will_correlation_data_tmp;
     if (!PyObject_IsTrue(is_will_none_py)) {
         will.qos = PyObject_GetIntEnum(will_qos_val_py, AWS_PYOBJECT_KEY_QOS);

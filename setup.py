@@ -353,14 +353,19 @@ def awscrt_ext():
         extra_compile_args += ['-Wno-strict-aliasing', '-std=gnu99']
 
         # treat warnings as errors in development mode
-        if is_development_mode():
+        if is_development_mode() or os.getenv('AWS_CRT_BUILD_WARNINGS_ARE_ERRORS') == '1':
             extra_compile_args += ['-Wextra', '-Werror']
 
             # ...except when we take shortcuts in development mode and don't make
             # a proper MacOS Universal2 binary. The linker warns us about this,
             # but WHATEVER. Building everything twice (x86_64 and arm64) takes too long.
             if not is_macos_universal2():
-                extra_link_args += ['-Wl,-fatal_warnings']
+                if sys.platform == 'darwin':
+                    extra_link_args += ['-Wl,-fatal_warnings']
+                elif 'bsd' in sys.platform:
+                    extra_link_args += ['-Wl,-fatal-warnings']
+                else:
+                    extra_link_args += ['-Wl,--fatal-warnings']
 
     if sys.version_info >= (3, 11):
         define_macros.append(('Py_LIMITED_API', '0x030B0000'))
