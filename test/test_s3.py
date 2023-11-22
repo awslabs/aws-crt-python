@@ -248,6 +248,7 @@ class S3RequestTest(NativeResourceTest):
         self.done_status_code = None
         self.done_error_headers = None
         self.done_error_body = None
+        self.done_error_operation_name = None
 
         self.files = FileCreator()
         self.temp_put_obj_file_path = self.files.create_file_with_size("temp_put_obj_10mb", 10 * MB)
@@ -282,10 +283,11 @@ class S3RequestTest(NativeResourceTest):
     def _on_request_body(self, chunk, offset, **kargs):
         self.received_body_len = self.received_body_len + len(chunk)
 
-    def _on_request_done(self, error, error_headers, error_body, status_code, **kwargs):
+    def _on_request_done(self, error, error_headers, error_body, error_operation_name, status_code, **kwargs):
         self.done_error = error
         self.done_error_headers = error_headers
         self.done_error_body = error_body
+        self.done_error_operation_name = error_operation_name
         self.done_status_code = status_code
 
     def _on_progress(self, progress):
@@ -298,6 +300,7 @@ class S3RequestTest(NativeResourceTest):
         self.assertIsNone(self.done_error)
         self.assertIsNone(self.done_error_headers)
         self.assertIsNone(self.done_error_body)
+        self.assertIsNone(self.done_error_operation_name)
         headers = HttpHeaders(self.response_headers)
         self.assertIsNone(headers.get("Content-Range"))
         body_length = headers.get("Content-Length")
@@ -607,7 +610,7 @@ class S3RequestTest(NativeResourceTest):
     def test_put_object_quick_cancel(self):
         return self._put_object_cancel_helper(False)
 
-    def test_multipart_upload_with_invalid_request(self):
+    def test_singlepart_upload_with_invalid_request(self):
         # send upload with incorrect Content-MD5
         # need to do single-part upload so the Content-MD5 header is sent along as-is.
         content_length = 100
@@ -625,10 +628,30 @@ class S3RequestTest(NativeResourceTest):
         self.assertTrue(any(h[0].lower() == 'x-amz-request-id' for h in self.done_error_headers))
         self.assertListEqual(self.done_error_headers, self.done_error.headers)
         self.assertIsNotNone(self.done_error_body)
+        self.assertEqual(self.done_error_operation_name, "PutObject")
+        self.assertEqual(self.done_error_operation_name, self.done_error.operation_name)
         self.assertTrue(b"InvalidDigest" in self.done_error_body)
         self.assertEqual(self.done_error_body, self.done_error.body)
 
         put_body_stream.close()
+
+    def test_default_request_failure(self):
+        # send invalid DEFAULT S3Request
+        # ensure error info (including custom operation_name) comes through correctly
+        s3_client = S3Client(region=self.region)
+
+        # send invalid request to S3.
+        http_request = HttpRequest(method="GET", path="/obviously-invalid-path-object-does-not-exist")
+        http_request.headers.add("host", self._build_endpoint_string(self.region, self.bucket_name))
+        http_request.headers.add("content-length", "0")
+        s3_request = s3_client.make_request(
+            type=S3RequestType.DEFAULT,
+            request=http_request,
+            operation_name="MyNewOperationName")
+
+        exception = s3_request.finished_future.exception(self.timeout)
+        self.assertIsInstance(exception, S3ResponseError)
+        self.assertEqual(exception.operation_name, "MyNewOperationName")
 
     def test_on_headers_callback_failure(self):
         def _explode(**kwargs):

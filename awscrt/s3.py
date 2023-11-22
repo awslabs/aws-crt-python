@@ -192,7 +192,7 @@ class S3Client(NativeResource):
     def __init__(
             self,
             *,
-            bootstrap,
+            bootstrap=None,
             region,
             tls_mode=None,
             signing_config=None,
@@ -264,6 +264,7 @@ class S3Client(NativeResource):
             *,
             type,
             request,
+            operation_name=None,
             recv_filepath=None,
             send_filepath=None,
             signing_config=None,
@@ -283,6 +284,11 @@ class S3Client(NativeResource):
 
             request (HttpRequest): The overall outgoing API request for S3 operation.
                 If the request body is a file, set send_filepath for better performance.
+
+            operation_name(Optional[str]): Optional S3 operation name (e.g. "CreateBucket").
+                This will only be used when `type` is :attr:`~S3RequestType.DEFAULT`;
+                it is automatically populated for other types.
+                This name is used to fill out details in metrics and error reports.
 
             recv_filepath (Optional[str]): Optional file path. If set, the
                 response body is written directly to a file and the
@@ -342,6 +348,16 @@ class S3Client(NativeResource):
                         side sent an unsuccessful response, the body of the response is
                         provided here. Else None will be returned.
 
+                    *   `error_operation_name` (Optional[str]): If request failed
+                        because server side sent and unsuccessful response, this
+                        is the name of the S3 operation it was responding to.
+                        For example, if a :attr:`~S3RequestType.PUT_OBJECT` fails
+                        this could be "PutObject", "CreateMultipartUpload", "UploadPart",
+                        "CompleteMultipartUpload", or others. For :attr:`~S3RequestType.DEFAULT`,
+                        this is the `operation_name` passed to :meth:`S3Client.make_request()`.
+                        This will be None if the request failed for another reason,
+                        or the S3 operation name is unknown.
+
                     *   `status_code` (Optional[int]): HTTP response status code (if available).
                         If request failed because server side sent an unsuccessful response,
                         this is its status code. If the operation was successful,
@@ -364,6 +380,7 @@ class S3Client(NativeResource):
             client=self,
             type=type,
             request=request,
+            operation_name=operation_name,
             recv_filepath=recv_filepath,
             send_filepath=send_filepath,
             signing_config=signing_config,
@@ -398,6 +415,7 @@ class S3Request(NativeResource):
             client,
             type,
             request,
+            operation_name=None,
             recv_filepath=None,
             send_filepath=None,
             signing_config=None,
@@ -445,6 +463,7 @@ class S3Request(NativeResource):
             client,
             request,
             type,
+            operation_name,
             signing_config,
             credential_provider,
             recv_filepath,
@@ -474,6 +493,12 @@ class S3ResponseError(awscrt.exceptions.AwsCrtError):
         headers (list[tuple[str, str]]): Headers from HTTP response.
         body (Optional[bytes]): Body of HTTP response (if any).
             This is usually XML. It may be None in the case of a HEAD response.
+        operation_name (Optional[str]): Name of the S3 operation that failed (if known).
+            For example, if a :attr:`~S3RequestType.PUT_OBJECT` fails
+            this could be "PutObject", "CreateMultipartUpload", "UploadPart",
+            "CompleteMultipartUpload", or others. For :attr:`~S3RequestType.DEFAULT`,
+            this is the `operation_name` passed to :meth:`S3Client.make_request()`.
+            If the S3 operation name is unknown, this will be None.
         code (int): CRT error code.
         name (str): CRT error name.
         message (str): CRT error message.
@@ -485,11 +510,13 @@ class S3ResponseError(awscrt.exceptions.AwsCrtError):
                  message: str,
                  status_code: List[Tuple[str, str]] = None,
                  headers: List[Tuple[str, str]] = None,
-                 body: Optional[bytes] = None):
+                 body: Optional[bytes] = None,
+                 operation_name: Optional[str] = None):
         super().__init__(code, name, message)
         self.status_code = status_code
         self.headers = headers
         self.body = body
+        self.operation_name = operation_name
 
 
 class _S3ClientCore:
@@ -559,7 +586,7 @@ class _S3RequestCore:
     def _on_shutdown(self):
         self._shutdown_event.set()
 
-    def _on_finish(self, error_code, status_code, error_headers, error_body):
+    def _on_finish(self, error_code, status_code, error_headers, error_body, error_operation_name):
         # If C layer gives status_code 0, that means "unknown"
         if status_code == 0:
             status_code = None
@@ -582,12 +609,18 @@ class _S3RequestCore:
                         message=error.message,
                         status_code=status_code,
                         headers=error_headers,
-                        body=error_body)
+                        body=error_body,
+                        operation_name=error_operation_name)
             self._finished_future.set_exception(error)
         else:
             self._finished_future.set_result(None)
         if self._on_done_cb:
-            self._on_done_cb(error=error, error_headers=error_headers, error_body=error_body, status_code=status_code)
+            self._on_done_cb(
+                error=error,
+                error_headers=error_headers,
+                error_body=error_body,
+                error_operation_name=error_operation_name,
+                status_code=status_code)
 
     def _on_progress(self, progress):
         if self._on_progress_cb:
