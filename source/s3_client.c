@@ -249,10 +249,11 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
     uint64_t part_size;                  /* K */
     uint64_t multipart_upload_threshold; /* K */
     double throughput_target_gbps;       /* d */
+    uint64_t mem_limit;                  /* K */
     PyObject *py_core;                   /* O */
     if (!PyArg_ParseTuple(
             args,
-            "OOOOOs#iKKdO",
+            "OOOOOs#iKKdKO",
             &bootstrap_py,
             &signing_config_py,
             &credential_provider_py,
@@ -264,6 +265,7 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
             &part_size,
             &multipart_upload_threshold,
             &throughput_target_gbps,
+            &mem_limit,
             &py_core)) {
         return NULL;
     }
@@ -328,6 +330,7 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
         .tls_mode = tls_mode,
         .signing_config = signing_config,
         .part_size = part_size,
+        .memory_limit_in_bytes = mem_limit,
         .multipart_upload_threshold = multipart_upload_threshold,
         .tls_connection_options = tls_options,
         .throughput_target_gbps = throughput_target_gbps,

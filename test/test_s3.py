@@ -148,7 +148,7 @@ class FileCreator(object):
         return os.path.join(self.rootdir, filename)
 
 
-def s3_client_new(secure, region, part_size=0, is_cancel_test=False):
+def s3_client_new(secure, region, part_size=0, is_cancel_test=False, mem_limit=None):
 
     if is_cancel_test:
         # for cancellation tests, make things slow, so it's less likely that
@@ -177,6 +177,7 @@ def s3_client_new(secure, region, part_size=0, is_cancel_test=False):
         signing_config=signing_config,
         tls_connection_options=tls_option,
         part_size=part_size,
+        memory_limit=mem_limit,
         throughput_target_gbps=throughput_target_gbps)
 
     return s3_client
@@ -313,10 +314,11 @@ class S3RequestTest(NativeResourceTest):
             request,
             request_type,
             exception_name=None,
+            mem_limit=None,
             **kwargs,
     ):
 
-        s3_client = s3_client_new(False, self.region, 5 * MB)
+        s3_client = s3_client_new(False, self.region, 5 * MB, mem_limit=mem_limit)
         s3_request = s3_client.make_request(
             request=request,
             type=request_type,
@@ -342,11 +344,22 @@ class S3RequestTest(NativeResourceTest):
         request = self._get_object_request(self.get_test_object_path)
         self._test_s3_put_get_object(request, S3RequestType.GET_OBJECT)
 
+    def test_get_object_mem_limit(self):
+        request = self._get_object_request(self.get_test_object_path)
+        self._test_s3_put_get_object(request, S3RequestType.GET_OBJECT, mem_limit=2 * GB)
+
     def test_put_object(self):
         put_body_stream = open(self.temp_put_obj_file_path, "rb")
         content_length = os.stat(self.temp_put_obj_file_path).st_size
         request = self._put_object_request(put_body_stream, content_length)
         self._test_s3_put_get_object(request, S3RequestType.PUT_OBJECT)
+        put_body_stream.close()
+
+    def test_put_object_mem_limit(self):
+        put_body_stream = open(self.temp_put_obj_file_path, "rb")
+        content_length = os.stat(self.temp_put_obj_file_path).st_size
+        request = self._put_object_request(put_body_stream, content_length)
+        self._test_s3_put_get_object(request, S3RequestType.PUT_OBJECT, mem_limit=2 * GB)
         put_body_stream.close()
 
     def test_put_object_unknown_content_length(self):

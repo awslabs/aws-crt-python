@@ -180,6 +180,11 @@ class S3Client(NativeResource):
             Gigabits per second (Gbps) that we are trying to reach.
             You can also use `get_recommended_throughput_target_gbps()` to get recommended value for your system.
             10.0 Gbps by default (may change in future)
+
+        memory_limit (Optional[int]): Memory limit, in bytes, of how much memory
+            client can use for buffering data for requests.
+            Default values scale with target throughput and are currently
+            between 2GiB and 8GiB (may change in future)
     """
 
     __slots__ = ('shutdown_event', '_region')
@@ -195,7 +200,8 @@ class S3Client(NativeResource):
             tls_connection_options=None,
             part_size=None,
             multipart_upload_threshold=None,
-            throughput_target_gbps=None):
+            throughput_target_gbps=None,
+            memory_limit=None):
         assert isinstance(bootstrap, ClientBootstrap) or bootstrap is None
         assert isinstance(region, str)
         assert isinstance(signing_config, AwsSigningConfig) or signing_config is None
@@ -236,6 +242,8 @@ class S3Client(NativeResource):
             multipart_upload_threshold = 0
         if throughput_target_gbps is None:
             throughput_target_gbps = 0
+        if memory_limit is None:
+            memory_limit = 0
 
         self._binding = _awscrt.s3_client_new(
             bootstrap,
@@ -248,6 +256,7 @@ class S3Client(NativeResource):
             part_size,
             multipart_upload_threshold,
             throughput_target_gbps,
+            memory_limit,
             s3_client_core)
 
     def make_request(
