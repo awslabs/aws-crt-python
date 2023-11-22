@@ -254,15 +254,22 @@ static void s_s3_request_on_finish(
     if (meta_request_result->error_response_body) {
         error_body = *(meta_request_result->error_response_body);
     }
+
+    const char *operation_name = NULL;
+    if (meta_request_result->error_response_operation_name != NULL) {
+        operation_name = aws_string_c_str(meta_request_result->error_response_operation_name);
+    }
+
     result = PyObject_CallMethod(
         request_binding->py_core,
         "_on_finish",
-        "(iiOy#)",
+        "(iiOy#s)",
         error_code,
         meta_request_result->response_status,
         header_list ? header_list : Py_None,
         (const char *)(error_body.buffer),
-        (Py_ssize_t)error_body.len);
+        (Py_ssize_t)error_body.len,
+        operation_name);
 
     if (result) {
         Py_DECREF(result);
@@ -356,6 +363,7 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     PyObject *s3_client_py;                            /* O */
     PyObject *http_request_py;                         /* O */
     int type;                                          /* i */
+    const char *operation_name;                        /* z */
     PyObject *signing_config_py;                       /* O */
     PyObject *credential_provider_py;                  /* O */
     const char *recv_filepath;                         /* z */
@@ -367,11 +375,12 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     PyObject *py_core;                                 /* O */
     if (!PyArg_ParseTuple(
             args,
-            "OOOiOOzzs#iipO",
+            "OOOizOOzzs#iipO",
             &py_s3_request,
             &s3_client_py,
             &http_request_py,
             &type,
+            &operation_name,
             &signing_config_py,
             &credential_provider_py,
             &recv_filepath,
@@ -451,6 +460,7 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
 
     struct aws_s3_meta_request_options s3_meta_request_opt = {
         .type = type,
+        .operation_name = aws_byte_cursor_from_c_str(operation_name),
         .message = http_request,
         .signing_config = signing_config,
         .checksum_config = &checksum_config,
