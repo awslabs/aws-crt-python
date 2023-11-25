@@ -772,7 +772,7 @@ def _try_payload_format_indicator(value):
         return None
 
 
-class RetainAndHandlingType(IntEnum):
+class RetainHandlingType(IntEnum):
     """Configures how retained messages should be handled when subscribing with a topic filter that matches topics with
     associated retained messages.
 
@@ -795,6 +795,12 @@ class RetainAndHandlingType(IntEnum):
     Subscriptions must not trigger any retained message publishes from the server.
     """
 
+def RetainAndHandlingType(value: IntEnum):
+    """DEPRECATED.
+
+    `RetainAndHandlingType` is deprecated, please use `RetainHandlingType`
+    """
+    return RetainHandlingType(value)
 
 class ExtendedValidationAndFlowControlOptions(IntEnum):
     """Additional controls for client behavior with respect to operation validation and flow control; these checks
