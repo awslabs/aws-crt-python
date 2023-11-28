@@ -23,6 +23,15 @@ static void s_credentials_capsule_destructor(PyObject *capsule) {
     aws_credentials_release(credentials);
 }
 
+PyObject *aws_py_credentials_new_request_from_native(struct aws_credentials *credentials) {
+    PyObject *capsule = PyCapsule_New(credentials, s_capsule_name_credentials, s_credentials_capsule_destructor);
+    if (!capsule) {
+        return NULL;
+    }
+    aws_credentials_acquire(credentials);
+    return capsule;
+}
+
 PyObject *aws_py_credentials_new(PyObject *self, PyObject *args) {
     (void)self;
 

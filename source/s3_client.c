@@ -6,7 +6,11 @@
 
 #include "auth.h"
 #include "io.h"
+
+#include <aws/auth/credentials.h>
 #include <aws/common/cross_process_lock.h>
+#include <aws/common/hash_table.h>
+#include <aws/common/string.h>
 #include <aws/s3/s3_client.h>
 
 static const char *s_capsule_name_s3_client = "aws_s3_client";
@@ -158,6 +162,8 @@ PyObject *aws_py_s3_cross_process_lock_acquire(PyObject *self, PyObject *args) {
 
 PyObject *aws_py_s3_cross_process_lock_release(PyObject *self, PyObject *args) {
     (void)self;
+    (void)args;
+
     PyObject *lock_capsule; /* O */
 
     if (!PyArg_ParseTuple(args, "O", &lock_capsule)) {
@@ -249,11 +255,12 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
     uint64_t part_size;                  /* K */
     uint64_t multipart_upload_threshold; /* K */
     double throughput_target_gbps;       /* d */
+    int enable_s3express;                /* p */
     uint64_t mem_limit;                  /* K */
     PyObject *py_core;                   /* O */
     if (!PyArg_ParseTuple(
             args,
-            "OOOOOs#iKKdKO",
+            "OOOOOs#iKKdpKO",
             &bootstrap_py,
             &signing_config_py,
             &credential_provider_py,
@@ -265,6 +272,7 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
             &part_size,
             &multipart_upload_threshold,
             &throughput_target_gbps,
+            &enable_s3express,
             &mem_limit,
             &py_core)) {
         return NULL;
@@ -282,20 +290,6 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
             return NULL;
         }
     }
-    struct aws_signing_config_aws *signing_config = NULL;
-    if (signing_config_py != Py_None) {
-        signing_config = aws_py_get_signing_config(signing_config_py);
-        if (!signing_config) {
-            return NULL;
-        }
-    }
-    struct aws_signing_config_aws signing_config_from_credentials_provider;
-    AWS_ZERO_STRUCT(signing_config_from_credentials_provider);
-
-    if (credential_provider) {
-        aws_s3_init_default_signing_config(&signing_config_from_credentials_provider, region, credential_provider);
-        signing_config = &signing_config_from_credentials_provider;
-    }
 
     struct aws_tls_connection_options *tls_options = NULL;
     if (tls_options_py != Py_None) {
@@ -305,15 +299,33 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
         }
     }
 
-    struct s3_client_binding *s3_client = aws_mem_calloc(allocator, 1, sizeof(struct s3_client_binding));
-    if (!s3_client) {
-        return PyErr_AwsLastError();
+    struct aws_signing_config_aws default_signing_config;
+    AWS_ZERO_STRUCT(default_signing_config);
+
+    struct aws_signing_config_aws *signing_config = NULL;
+    struct aws_credentials *anonymous_credentials = NULL;
+    if (signing_config_py != Py_None) {
+        signing_config = aws_py_get_signing_config(signing_config_py);
+        if (!signing_config) {
+            return NULL;
+        }
+    } else if (credential_provider) {
+        aws_s3_init_default_signing_config(&default_signing_config, region, credential_provider);
+        signing_config = &default_signing_config;
+    } else {
+        /* Default to use a signing config with anonymous credentials */
+        anonymous_credentials = aws_credentials_new_anonymous(allocator);
+        default_signing_config.credentials = anonymous_credentials;
+        signing_config = &default_signing_config;
     }
+
+    struct s3_client_binding *s3_client = aws_mem_calloc(allocator, 1, sizeof(struct s3_client_binding));
 
     /* From hereon, we need to clean up if errors occur */
 
     PyObject *capsule = PyCapsule_New(s3_client, s_capsule_name_s3_client, s_s3_client_capsule_destructor);
     if (!capsule) {
+        aws_credentials_release(anonymous_credentials);
         aws_mem_release(allocator, s3_client);
         return NULL;
     }
@@ -336,6 +348,7 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
         .throughput_target_gbps = throughput_target_gbps,
         .shutdown_callback = s_s3_client_shutdown,
         .shutdown_callback_user_data = s3_client,
+        .enable_s3express = enable_s3express,
     };
 
     s3_client->native = aws_s3_client_new(allocator, &s3_config);
@@ -343,10 +356,11 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
         PyErr_SetAwsLastError();
         goto error;
     }
-
+    aws_credentials_release(anonymous_credentials);
     return capsule;
 
 error:
+    aws_credentials_release(anonymous_credentials);
     Py_DECREF(capsule);
     return NULL;
 }

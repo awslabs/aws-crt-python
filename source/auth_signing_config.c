@@ -72,7 +72,7 @@ PyObject *aws_py_signing_config_new(PyObject *self, PyObject *args) {
 
     int algorithm;
     int signature_type;
-    PyObject *py_credentials_provider;
+    PyObject *py_credentials_provider = NULL;
     struct aws_byte_cursor region;
     struct aws_byte_cursor service;
     PyObject *py_date;
@@ -136,13 +136,14 @@ PyObject *aws_py_signing_config_new(PyObject *self, PyObject *args) {
     binding->native.flags.omit_session_token = PyObject_IsTrue(py_omit_session_token);
 
     /* credentials_provider */
-    binding->native.credentials_provider = aws_py_get_credentials_provider(py_credentials_provider);
-    if (!binding->native.credentials_provider) {
-        goto error;
+    if (py_credentials_provider != Py_None) {
+        binding->native.credentials_provider = aws_py_get_credentials_provider(py_credentials_provider);
+        if (!binding->native.credentials_provider) {
+            goto error;
+        }
+        binding->py_credentials_provider = py_credentials_provider;
+        Py_INCREF(binding->py_credentials_provider);
     }
-    binding->py_credentials_provider = py_credentials_provider;
-    Py_INCREF(binding->py_credentials_provider);
-
     /* backup strings */
     if (aws_byte_buf_init_cache_and_update_cursors(
             &binding->string_storage,
@@ -220,8 +221,9 @@ PyObject *aws_py_signing_config_get_credentials_provider(PyObject *self, PyObjec
     if (!binding) {
         return NULL;
     }
-
-    Py_INCREF(binding->py_credentials_provider);
+    if (binding->py_credentials_provider) {
+        Py_INCREF(binding->py_credentials_provider);
+    }
     return binding->py_credentials_provider;
 }
 

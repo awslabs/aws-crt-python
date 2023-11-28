@@ -10,11 +10,12 @@ from concurrent.futures import Future
 from awscrt import NativeResource
 from awscrt.http import HttpRequest
 from awscrt.io import ClientBootstrap, TlsConnectionOptions
+from awscrt.auth import AwsCredentials, AwsCredentialsProvider, AwsSignatureType, AwsSignedBodyHeaderType, AwsSignedBodyValue, AwsSigningAlgorithm, AwsSigningConfig
 from awscrt.auth import AwsCredentialsProvider, AwsSignatureType, AwsSignedBodyHeaderType, AwsSignedBodyValue, \
     AwsSigningAlgorithm, AwsSigningConfig
 import awscrt.exceptions
-from dataclasses import dataclass
 import threading
+from dataclasses import dataclass
 from typing import List, Optional, Tuple
 from enum import IntEnum
 
@@ -156,9 +157,22 @@ class S3Client(NativeResource):
             If this is :attr:`S3RequestTlsMode.DISABLED`:
                 No TLS options will be used, regardless of `tls_connection_options` value.
 
-        signing_config (Optional[AwsSigningConfig]):
-             Configuration for signing of the client. Use :func:`create_default_s3_signing_config()` to create the default config.
-             If None is provided, the request will not be signed.
+        signing_config (Optional[AwsSigningConfig]): Configuration for signing of the client.
+            Use :func:`create_default_s3_signing_config()` to create the default config.
+
+            If not set, a default config will be used with anonymous credentials and skip signing the request.
+
+            If set:
+                Credentials provider is required. Other configs are all optional, and will be default to what
+                    needs to sign the request for S3, only overrides when Non-zero/Not-empty is set.
+
+                S3 Client will derive the right config for signing process based on this.
+
+            Notes:
+
+                1. For SIGV4_S3EXPRESS, S3 client will use the credentials in the config to derive the S3 Express
+                    credentials that are used in the signing process.
+                2. Client may make modifications to signing config before passing it on to signer.
 
         credential_provider (Optional[AwsCredentialsProvider]): Deprecated, prefer `signing_config` instead.
             Credentials providers source the :class:`~awscrt.auth.AwsCredentials` needed to sign an authenticated AWS request.
@@ -181,6 +195,11 @@ class S3Client(NativeResource):
             You can also use `get_recommended_throughput_target_gbps()` to get recommended value for your system.
             10.0 Gbps by default (may change in future)
 
+        enable_s3express (Optional[bool]): To enable S3 Express support for the client.
+            The typical usage for a S3 Express request is to set this to true and let the request to be
+            signed with `AwsSigningAlgorithm.V4_S3EXPRESS`, either from the client-level `signing_config`
+            or the request-level override.
+
         memory_limit (Optional[int]): Memory limit, in bytes, of how much memory
             client can use for buffering data for requests.
             Default values scale with target throughput and are currently
@@ -201,6 +220,7 @@ class S3Client(NativeResource):
             part_size=None,
             multipart_upload_threshold=None,
             throughput_target_gbps=None,
+            enable_s3express=False,
             memory_limit=None):
         assert isinstance(bootstrap, ClientBootstrap) or bootstrap is None
         assert isinstance(region, str)
@@ -213,6 +233,7 @@ class S3Client(NativeResource):
             int) or isinstance(
             throughput_target_gbps,
             float) or throughput_target_gbps is None
+        assert isinstance(enable_s3express, bool) or enable_s3express is None
 
         if credential_provider and signing_config:
             raise ValueError("'credential_provider' has been deprecated in favor of 'signing_config'.  "
@@ -231,7 +252,11 @@ class S3Client(NativeResource):
         if not bootstrap:
             bootstrap = ClientBootstrap.get_or_create_static_default()
 
-        s3_client_core = _S3ClientCore(bootstrap, credential_provider, signing_config, tls_connection_options)
+        s3_client_core = _S3ClientCore(
+            bootstrap,
+            credential_provider,
+            signing_config,
+            tls_connection_options)
 
         # C layer uses 0 to indicate defaults
         if tls_mode is None:
@@ -256,6 +281,7 @@ class S3Client(NativeResource):
             part_size,
             multipart_upload_threshold,
             throughput_target_gbps,
+            enable_s3express,
             memory_limit,
             s3_client_core)
 
@@ -300,9 +326,20 @@ class S3Client(NativeResource):
                 request's `body_stream` is ignored. This should give better
                 performance than reading a file from a stream.
 
-            signing_config (Optional[AwsSigningConfig]):
-                Configuration for signing of the request to override the configuration from client. Use :func:`create_default_s3_signing_config()` to create the default config.
+            signing_config (Optional[AwsSigningConfig]): Configuration for signing of the request to override the configuration from client.
+                Use :func:`create_default_s3_signing_config()` to create the default config.
+
                 If None is provided, the client configuration will be used.
+
+                If set:
+                    All fields are optional. The credentials will be resolve from client if not set.
+                    S3 Client will derive the right config for signing process based on this.
+
+                Notes:
+
+                    1. For SIGV4_S3EXPRESS, S3 client will use the credentials in the config to derive the S3 Express
+                        credentials that are used in the signing process.
+                    2. Client may make modifications to signing config before passing it on to signer.
 
             credential_provider (Optional[AwsCredentialsProvider]):  Deprecated, prefer `signing_config` instead.
                 Credentials providers source the :class:`~awscrt.auth.AwsCredentials` needed to sign an authenticated AWS request, for this request only.
