@@ -47,5 +47,6 @@ PyObject *aws_py_sign_request_aws(PyObject *self, PyObject *args);
 struct aws_credentials *aws_py_get_credentials(PyObject *credentials);
 struct aws_credentials_provider *aws_py_get_credentials_provider(PyObject *credentials_provider);
 struct aws_signing_config_aws *aws_py_get_signing_config(PyObject *signing_config);
+PyObject *aws_py_credentials_new_request_from_native(struct aws_credentials *credentials);
 
 #endif // AWS_CRT_PYTHON_AUTH_H

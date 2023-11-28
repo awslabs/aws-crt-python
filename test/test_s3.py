@@ -14,6 +14,9 @@ from concurrent.futures import Future
 from multiprocessing import Process
 
 from awscrt.http import HttpHeaders, HttpRequest
+from awscrt.s3 import S3Client, S3RequestType, create_default_s3_signing_config
+from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions
+from awscrt.auth import AwsCredentials, AwsCredentialsProvider, AwsSignatureType, AwsSignedBodyHeaderType, AwsSignedBodyValue, AwsSigningAlgorithm, AwsSigningConfig
 from awscrt.s3 import (
     S3ChecksumAlgorithm,
     S3ChecksumConfig,
@@ -45,6 +48,7 @@ import zlib
 
 MB = 1024 ** 2
 GB = 1024 ** 3
+S3EXPRESS_ENDPOINT = "crts-east1--use1-az4--x-s3.s3express-use1-az4.us-east-1.amazonaws.com"
 
 cross_process_lock_name = "instance_lock_test"
 
@@ -148,7 +152,13 @@ class FileCreator(object):
         return os.path.join(self.rootdir, filename)
 
 
-def s3_client_new(secure, region, part_size=0, is_cancel_test=False, mem_limit=None):
+def s3_client_new(
+        secure,
+        region,
+        part_size=0,
+        is_cancel_test=False,
+        enable_s3express=False,
+        mem_limit=None):
 
     if is_cancel_test:
         # for cancellation tests, make things slow, so it's less likely that
@@ -177,8 +187,9 @@ def s3_client_new(secure, region, part_size=0, is_cancel_test=False, mem_limit=N
         signing_config=signing_config,
         tls_connection_options=tls_option,
         part_size=part_size,
-        memory_limit=mem_limit,
-        throughput_target_gbps=throughput_target_gbps)
+        throughput_target_gbps=throughput_target_gbps,
+        enable_s3express=enable_s3express,
+        memory_limit=mem_limit)
 
     return s3_client
 
@@ -252,22 +263,33 @@ class S3RequestTest(NativeResourceTest):
 
         self.files = FileCreator()
         self.temp_put_obj_file_path = self.files.create_file_with_size("temp_put_obj_10mb", 10 * MB)
+        self.s3express_preload_cache = [('key_1', AwsCredentials("accesskey_1", "secretAccessKey", "sessionToken")),
+                                        ('key_2', AwsCredentials("accesskey_2", "secretAccessKey", "sessionToken"))]
 
     def tearDown(self):
         self.files.remove_all()
+        self.s3express_preload_cache = None
         super().tearDown()
 
-    def _build_endpoint_string(self, region, bucket_name):
+    def _build_endpoint_string(self, region, bucket_name, enable_s3express=False):
+        if enable_s3express:
+            return S3EXPRESS_ENDPOINT
         return bucket_name + ".s3." + region + ".amazonaws.com"
 
-    def _get_object_request(self, object_path):
-        headers = HttpHeaders([("host", self._build_endpoint_string(self.region, self.bucket_name))])
+    def _get_object_request(self, object_path, enable_s3express=False):
+        headers = HttpHeaders([("host", self._build_endpoint_string(self.region, self.bucket_name, enable_s3express))])
         request = HttpRequest("GET", object_path, headers)
         return request
 
-    def _put_object_request(self, input_stream, content_len, path=None, unknown_content_length=False):
+    def _put_object_request(
+            self,
+            input_stream,
+            content_len,
+            path=None,
+            unknown_content_length=False,
+            enable_s3express=False):
         # if send file path is set, the body_stream of http request will be ignored (using file handler from C instead)
-        headers = HttpHeaders([("host", self._build_endpoint_string(self.region, self.bucket_name)),
+        headers = HttpHeaders([("host", self._build_endpoint_string(self.region, self.bucket_name, enable_s3express)),
                                ("Content-Type", "text/plain")])
         if unknown_content_length is False:
             headers.add("Content-Length", str(content_len))
@@ -317,14 +339,25 @@ class S3RequestTest(NativeResourceTest):
             request,
             request_type,
             exception_name=None,
+            enable_s3express=False,
+            region="us-west-2",
             mem_limit=None,
-            **kwargs,
-    ):
+            **kwargs):
+        s3_client = s3_client_new(
+            False,
+            region,
+            5 * MB,
+            enable_s3express=enable_s3express,
+            mem_limit=mem_limit)
+        signing_config = None
+        if enable_s3express:
+            signing_config = AwsSigningConfig(
+                algorithm=AwsSigningAlgorithm.V4_S3EXPRESS)
 
-        s3_client = s3_client_new(False, self.region, 5 * MB, mem_limit=mem_limit)
         s3_request = s3_client.make_request(
             request=request,
             type=request_type,
+            signing_config=signing_config,
             on_headers=self._on_request_headers,
             on_body=self._on_request_body,
             on_done=self._on_request_done,
@@ -377,6 +410,17 @@ class S3RequestTest(NativeResourceTest):
         put_body_stream = BytesIO(data_bytes)
         request = self._put_object_request(put_body_stream, len(data_bytes), unknown_content_length=True)
         self._test_s3_put_get_object(request, S3RequestType.PUT_OBJECT)
+        put_body_stream.close()
+
+    def test_get_object_s3express(self):
+        request = self._get_object_request("/crt-download-10MB", enable_s3express=True)
+        self._test_s3_put_get_object(request, S3RequestType.GET_OBJECT, enable_s3express=True, region="us-east-1")
+
+    def test_put_object_s3express(self):
+        put_body_stream = open(self.temp_put_obj_file_path, "rb")
+        content_length = os.stat(self.temp_put_obj_file_path).st_size
+        request = self._put_object_request(put_body_stream, content_length, enable_s3express=True)
+        self._test_s3_put_get_object(request, S3RequestType.PUT_OBJECT, enable_s3express=True, region="us-east-1")
         put_body_stream.close()
 
     def test_put_object_multiple_times(self):
