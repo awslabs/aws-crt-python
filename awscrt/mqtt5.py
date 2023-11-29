@@ -795,12 +795,28 @@ class RetainHandlingType(IntEnum):
     Subscriptions must not trigger any retained message publishes from the server.
     """
 
-def RetainAndHandlingType(value: IntEnum):
+class RetainAndHandlingType(IntEnum):
     """DEPRECATED.
 
     `RetainAndHandlingType` is deprecated, please use `RetainHandlingType`
     """
-    return RetainHandlingType(value)
+    SEND_ON_SUBSCRIBE = 0
+    """
+    The server should always send all retained messages on topics that match a subscription's filter.
+    """
+
+    SEND_ON_SUBSCRIBE_IF_NEW = 1
+    """
+    The server should send retained messages on topics that match the subscription's filter, but only for the
+    first matching subscription, per session.
+    """
+
+    DONT_SEND = 2
+    """
+    Subscriptions must not trigger any retained message publishes from the server.
+    """
+
+
 
 class ExtendedValidationAndFlowControlOptions(IntEnum):
     """Additional controls for client behavior with respect to operation validation and flow control; these checks
@@ -993,6 +1009,7 @@ class NegotiatedSettings:
     Negotiated settings are communicated with every successful connection establishment.
 
     Args:
+        client_id (str): The final client id in use by the newly-established connection.  This will be the configured client id if one was given in the configuration, otherwise, if no client id was specified, this will be the client id assigned by the server.  Reconnection attempts will always use the auto-assigned client id, allowing for auto-assigned session resumption.
         maximum_qos (QoS): The maximum QoS allowed for publishes on this connection instance
         session_expiry_interval_sec (int): The amount of time in seconds the server will retain the MQTT session after a disconnect.
         receive_maximum_from_server (int): The number of in-flight QoS 1 and QoS 2 publications the server is willing to process concurrently.
@@ -1006,6 +1023,7 @@ class NegotiatedSettings:
         shared_subscriptions_available (bool): Whether the server supports shared subscriptions
         rejoined_session (bool): Whether the client has rejoined an existing session.
     """
+    client_id:str = None
     maximum_qos: QoS = None
     session_expiry_interval_sec: int = None
     receive_maximum_from_server: int = None
@@ -1056,7 +1074,7 @@ class ConnackPacket:
     wildcard_subscriptions_available: bool = None
     subscription_identifiers_available: bool = None
     shared_subscription_available: bool = None
-    server_keep_alive: int = None
+    server_keep_alive_sec: int = None
     response_information: str = None
     server_reference: str = None
 
@@ -1089,13 +1107,13 @@ class Subscription:
         qos (QoS): The maximum QoS on which the subscriber will accept publish messages
         no_local (bool): Whether the server will not send publishes to a client when that client was the one who sent the publish
         retain_as_published (bool): Whether messages sent due to this subscription keep the retain flag preserved on the message
-        retain_handling_type (RetainAndHandlingType): Whether retained messages on matching topics be sent in reaction to this subscription
+        retain_handling_type (RetainHandlingType): Whether retained messages on matching topics be sent in reaction to this subscription
     """
     topic_filter: str
     qos: QoS = QoS.AT_MOST_ONCE
     no_local: bool = False
     retain_as_published: bool = False
-    retain_handling_type: RetainAndHandlingType = RetainAndHandlingType.SEND_ON_SUBSCRIBE
+    retain_handling_type: RetainHandlingType | RetainAndHandlingType = RetainHandlingType.SEND_ON_SUBSCRIBE
 
 
 @dataclass
