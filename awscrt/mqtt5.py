@@ -1118,7 +1118,7 @@ class Subscription:
     qos: QoS = QoS.AT_MOST_ONCE
     no_local: bool = False
     retain_as_published: bool = False
-    retain_handling_type: RetainHandlingType | RetainAndHandlingType = RetainHandlingType.SEND_ON_SUBSCRIBE
+    retain_handling_type: RetainHandlingType or RetainAndHandlingType = RetainHandlingType.SEND_ON_SUBSCRIBE
 
 
 @dataclass
