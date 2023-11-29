@@ -363,7 +363,7 @@ static void s_lifecycle_event_connection_success(
     result = PyObject_CallMethod(
         client->client_core,
         "_on_lifecycle_connection_success",
-        "(OiOIOHOiOOOIs#OIs#OOOOOOOOHs#s#iIHIHHHOOOOO)",
+        "(OiOIOHOiOOOIs#OIs#OOOOOOOOHs#s#iIHIHHHOOOOOs#)",
         /* connack packet  */
         /* O */ connack->session_present ? Py_True : Py_False,
         /* i */ (int)connack->reason_code,
@@ -412,7 +412,9 @@ static void s_lifecycle_event_connection_success(
         /* O */ settings->wildcard_subscriptions_available ? Py_True : Py_False,
         /* O */ settings->subscription_identifiers_available ? Py_True : Py_False,
         /* O */ settings->shared_subscriptions_available ? Py_True : Py_False,
-        /* O */ settings->rejoined_session ? Py_True : Py_False);
+        /* O */ settings->rejoined_session ? Py_True : Py_False,
+        /* s */ settings->client_id_storage.len > 0 ? settings->client_id_storage.buffer : NULL,
+        /* # */ settings->client_id_storage.len);
     if (!result) {
         PyErr_WriteUnraisable(PyErr_Occurred());
     }

@@ -1009,7 +1009,6 @@ class NegotiatedSettings:
     Negotiated settings are communicated with every successful connection establishment.
 
     Args:
-        client_id (str): The final client id in use by the newly-established connection.  This will be the configured client id if one was given in the configuration, otherwise, if no client id was specified, this will be the client id assigned by the server.  Reconnection attempts will always use the auto-assigned client id, allowing for auto-assigned session resumption.
         maximum_qos (QoS): The maximum QoS allowed for publishes on this connection instance
         session_expiry_interval_sec (int): The amount of time in seconds the server will retain the MQTT session after a disconnect.
         receive_maximum_from_server (int): The number of in-flight QoS 1 and QoS 2 publications the server is willing to process concurrently.
@@ -1022,8 +1021,8 @@ class NegotiatedSettings:
         subscription_identifiers_available (bool): Whether the server supports subscription identifiers
         shared_subscriptions_available (bool): Whether the server supports shared subscriptions
         rejoined_session (bool): Whether the client has rejoined an existing session.
+        client_id (str): The final client id in use by the newly-established connection.  This will be the configured client id if one was given in the configuration, otherwise, if no client id was specified, this will be the client id assigned by the server.  Reconnection attempts will always use the auto-assigned client id, allowing for auto-assigned session resumption.
     """
-    client_id: str = None
     maximum_qos: QoS = None
     session_expiry_interval_sec: int = None
     receive_maximum_from_server: int = None
@@ -1036,6 +1035,7 @@ class NegotiatedSettings:
     subscription_identifiers_available: bool = None
     shared_subscriptions_available: bool = None
     rejoined_session: bool = None
+    client_id: str = None
 
 
 @dataclass
@@ -1056,7 +1056,8 @@ class ConnackPacket:
         wildcard_subscriptions_available (bool): Indicates whether the server supports wildcard subscriptions.  If None, wildcard subscriptions are supported.
         subscription_identifiers_available (bool): Indicates whether the server supports subscription identifiers.  If None, subscription identifiers are supported.
         shared_subscription_available (bool): Indicates whether the server supports shared subscription topic filters.  If None, shared subscriptions are supported.
-        server_keep_alive (int): Server-requested override of the keep alive interval, in seconds.  If None, the keep alive value sent by the client should be used.
+        server_keep_alive (int) : DEPRECATED. Please use `server_keep_alive_sec`.
+        server_keep_alive_sec (int): Server-requested override of the keep alive interval, in seconds.  If None, the keep alive value sent by the client should be used.
         response_information (str): A value that can be used in the creation of a response topic associated with this connection. MQTT5-based request/response is outside the purview of the MQTT5 spec and this client.
         server_reference (str): Property indicating an alternate server that the client may temporarily or permanently attempt to connect to instead of the configured endpoint.  Will only be set if the reason code indicates another server may be used (ServerMoved, UseAnotherServer).
     """
@@ -1077,6 +1078,10 @@ class ConnackPacket:
     server_keep_alive_sec: int = None
     response_information: str = None
     server_reference: str = None
+
+    @property
+    def server_keep_alive(self):
+        return self.server_keep_alive_sec
 
 
 @dataclass
@@ -1582,7 +1587,8 @@ class _ClientCore:
             settings_wildcard_subscriptions_available,
             settings_subscription_identifiers_available,
             settings_shared_subscriptions_available,
-            settings_rejoined_session):
+            settings_rejoined_session,
+            settings_client_id):
         if self._on_lifecycle_connection_success_cb is None:
             return
 
@@ -1611,7 +1617,7 @@ class _ClientCore:
         if connack_shared_subscriptions_available_exists:
             connack_packet.shared_subscription_available = connack_shared_subscriptions_available
         if connack_server_keep_alive_exists:
-            connack_packet.server_keep_alive = connack_server_keep_alive
+            connack_packet.server_keep_alive_sec = connack_server_keep_alive
         connack_packet.response_information = connack_response_information
         connack_packet.server_reference = connack_server_reference
 
@@ -1628,6 +1634,7 @@ class _ClientCore:
         negotiated_settings.subscription_identifiers_available = settings_subscription_identifiers_available
         negotiated_settings.shared_subscriptions_available = settings_shared_subscriptions_available
         negotiated_settings.rejoined_session = settings_rejoined_session
+        negotiated_settings.client_id = settings_client_id
 
         self._on_lifecycle_connection_success_cb(
             LifecycleConnectSuccessData(
@@ -1690,7 +1697,7 @@ class _ClientCore:
             if connack_shared_subscriptions_available_exists:
                 connack_packet.shared_subscription_available = connack_shared_subscriptions_available
             if connack_server_keep_alive_exists:
-                connack_packet.server_keep_alive = connack_server_keep_alive
+                connack_packet.server_keep_alive_sec = connack_server_keep_alive
             connack_packet.response_information = connack_response_information
             connack_packet.server_reference = connack_server_reference
 
