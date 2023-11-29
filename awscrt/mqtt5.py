@@ -795,6 +795,7 @@ class RetainHandlingType(IntEnum):
     Subscriptions must not trigger any retained message publishes from the server.
     """
 
+
 class RetainAndHandlingType(IntEnum):
     """DEPRECATED.
 
@@ -815,7 +816,6 @@ class RetainAndHandlingType(IntEnum):
     """
     Subscriptions must not trigger any retained message publishes from the server.
     """
-
 
 
 class ExtendedValidationAndFlowControlOptions(IntEnum):
@@ -1023,7 +1023,7 @@ class NegotiatedSettings:
         shared_subscriptions_available (bool): Whether the server supports shared subscriptions
         rejoined_session (bool): Whether the client has rejoined an existing session.
     """
-    client_id:str = None
+    client_id: str = None
     maximum_qos: QoS = None
     session_expiry_interval_sec: int = None
     receive_maximum_from_server: int = None
