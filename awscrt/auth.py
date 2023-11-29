@@ -455,6 +455,9 @@ class AwsSigningAlgorithm(IntEnum):
     V4_ASYMMETRIC = 1
     """Signature Version 4 - Asymmetric"""
 
+    V4_S3EXPRESS = 2
+    """Signature Version 4 - S3 Express"""
+
 
 class AwsSignatureType(IntEnum):
     """Which sort of signature should be computed from the signable."""
@@ -595,11 +598,11 @@ class AwsSigningConfig(NativeResource):
     )
 
     def __init__(self,
-                 algorithm,
-                 signature_type,
-                 credentials_provider,
-                 region,
-                 service,
+                 algorithm=AwsSigningAlgorithm.V4,
+                 signature_type=AwsSignatureType.HTTP_REQUEST_HEADERS,
+                 credentials_provider=None,
+                 region="",
+                 service="",
                  date=None,
                  should_sign_header=None,
                  use_double_uri_encode=True,
@@ -612,7 +615,7 @@ class AwsSigningConfig(NativeResource):
 
         assert isinstance(algorithm, AwsSigningAlgorithm)
         assert isinstance(signature_type, AwsSignatureType)
-        assert isinstance(credentials_provider, AwsCredentialsProvider)
+        assert isinstance(credentials_provider, AwsCredentialsProvider) or credentials_provider is None
         assert isinstance(region, str)
         assert isinstance(service, str)
         assert callable(should_sign_header) or should_sign_header is None
