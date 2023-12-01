@@ -1082,8 +1082,9 @@ class ConnackPacket:
     @property
     def server_keep_alive(self):
         return self.server_keep_alive_sec
+
     @server_keep_alive.setter
-    def attr(self, value):
+    def server_keep_alive(self, value):
         self.server_keep_alive_sec = value
 
 
