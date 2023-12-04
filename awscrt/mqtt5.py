@@ -659,95 +659,6 @@ class ClientSessionBehaviorType(IntEnum):
     """
 
 
-class PacketType(IntEnum):
-    """MQTT5 Packet Type enumeration
-    """
-
-    NONE = -1
-    """
-    internal indicator that the associated packet is None
-    """
-
-    RESERVED = 0
-    """
-    Reserved
-    """
-
-    CONNECT = 1
-    """
-    Connection request
-    """
-
-    CONNACK = 2
-    """
-    Connect acknowledgment
-    """
-
-    PUBLISH = 3
-    """
-    Publish message"""
-
-    PUBACK = 4
-    """
-    Publish acknowledgment (QoS 1)
-    """
-
-    PUBREC = 5
-    """
-    Publish received (QoS 2 delivery part 1)
-    """
-
-    PUBREL = 6
-    """
-    Publish release (QoS 2 delivery part 2)
-    """
-
-    PUBCOMP = 7
-    """
-    Publish complete (QoS 2 delivery part 3)
-    """
-
-    SUBSCRIBE = 8
-    """
-    Subscribe request
-    """
-
-    SUBACK = 9
-    """
-    Subscribe acknowledgment
-    """
-
-    UNSUBSCRIBE = 10
-    """
-    Unsubscribe request
-    """
-
-    UNSUBACK = 11
-    """
-    Unsubscribe acknowledgment
-    """
-
-    PINGREQ = 12
-    """
-    PING request
-    """
-
-    PINGRESP = 13
-    """
-    PING response
-    """
-
-    DISCONNECT = 14
-    """
-    Disconnect notification
-    """
-
-    AUTH = 15
-    """
-    Authentication exchange
-    """
-
-
 class PayloadFormatIndicator(IntEnum):
     """Optional property describing a PUBLISH payload's format.
 
@@ -772,13 +683,35 @@ def _try_payload_format_indicator(value):
         return None
 
 
-class RetainAndHandlingType(IntEnum):
+class RetainHandlingType(IntEnum):
     """Configures how retained messages should be handled when subscribing with a topic filter that matches topics with
     associated retained messages.
 
     Enum values match `MQTT5 spec <https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901169>`_ encoding values.
     """
 
+    SEND_ON_SUBSCRIBE = 0
+    """
+    The server should always send all retained messages on topics that match a subscription's filter.
+    """
+
+    SEND_ON_SUBSCRIBE_IF_NEW = 1
+    """
+    The server should send retained messages on topics that match the subscription's filter, but only for the
+    first matching subscription, per session.
+    """
+
+    DONT_SEND = 2
+    """
+    Subscriptions must not trigger any retained message publishes from the server.
+    """
+
+
+class RetainAndHandlingType(IntEnum):
+    """DEPRECATED.
+
+    `RetainAndHandlingType` is deprecated, please use `RetainHandlingType`
+    """
     SEND_ON_SUBSCRIBE = 0
     """
     The server should always send all retained messages on topics that match a subscription's filter.
@@ -999,6 +932,7 @@ class NegotiatedSettings:
         subscription_identifiers_available (bool): Whether the server supports subscription identifiers
         shared_subscriptions_available (bool): Whether the server supports shared subscriptions
         rejoined_session (bool): Whether the client has rejoined an existing session.
+        client_id (str): The final client id in use by the newly-established connection.  This will be the configured client id if one was given in the configuration, otherwise, if no client id was specified, this will be the client id assigned by the server.  Reconnection attempts will always use the auto-assigned client id, allowing for auto-assigned session resumption.
     """
     maximum_qos: QoS = None
     session_expiry_interval_sec: int = None
@@ -1012,6 +946,7 @@ class NegotiatedSettings:
     subscription_identifiers_available: bool = None
     shared_subscriptions_available: bool = None
     rejoined_session: bool = None
+    client_id: str = None
 
 
 @dataclass
@@ -1032,7 +967,8 @@ class ConnackPacket:
         wildcard_subscriptions_available (bool): Indicates whether the server supports wildcard subscriptions.  If None, wildcard subscriptions are supported.
         subscription_identifiers_available (bool): Indicates whether the server supports subscription identifiers.  If None, subscription identifiers are supported.
         shared_subscription_available (bool): Indicates whether the server supports shared subscription topic filters.  If None, shared subscriptions are supported.
-        server_keep_alive (int): Server-requested override of the keep alive interval, in seconds.  If None, the keep alive value sent by the client should be used.
+        server_keep_alive (int) : DEPRECATED. Please use `server_keep_alive_sec`.
+        server_keep_alive_sec (int): Server-requested override of the keep alive interval, in seconds.  If None, the keep alive value sent by the client should be used.
         response_information (str): A value that can be used in the creation of a response topic associated with this connection. MQTT5-based request/response is outside the purview of the MQTT5 spec and this client.
         server_reference (str): Property indicating an alternate server that the client may temporarily or permanently attempt to connect to instead of the configured endpoint.  Will only be set if the reason code indicates another server may be used (ServerMoved, UseAnotherServer).
     """
@@ -1050,9 +986,17 @@ class ConnackPacket:
     wildcard_subscriptions_available: bool = None
     subscription_identifiers_available: bool = None
     shared_subscription_available: bool = None
-    server_keep_alive: int = None
+    server_keep_alive_sec: int = None
     response_information: str = None
     server_reference: str = None
+
+    @property
+    def server_keep_alive(self):
+        return self.server_keep_alive_sec
+
+    @server_keep_alive.setter
+    def server_keep_alive(self, value):
+        self.server_keep_alive_sec = value
 
 
 @dataclass
@@ -1083,13 +1027,13 @@ class Subscription:
         qos (QoS): The maximum QoS on which the subscriber will accept publish messages
         no_local (bool): Whether the server will not send publishes to a client when that client was the one who sent the publish
         retain_as_published (bool): Whether messages sent due to this subscription keep the retain flag preserved on the message
-        retain_handling_type (RetainAndHandlingType): Whether retained messages on matching topics be sent in reaction to this subscription
+        retain_handling_type (RetainHandlingType): Whether retained messages on matching topics be sent in reaction to this subscription
     """
     topic_filter: str
     qos: QoS = QoS.AT_MOST_ONCE
     no_local: bool = False
     retain_as_published: bool = False
-    retain_handling_type: RetainAndHandlingType = RetainAndHandlingType.SEND_ON_SUBSCRIBE
+    retain_handling_type: RetainHandlingType or RetainAndHandlingType = RetainHandlingType.SEND_ON_SUBSCRIBE
 
 
 @dataclass
@@ -1558,7 +1502,8 @@ class _ClientCore:
             settings_wildcard_subscriptions_available,
             settings_subscription_identifiers_available,
             settings_shared_subscriptions_available,
-            settings_rejoined_session):
+            settings_rejoined_session,
+            settings_client_id):
         if self._on_lifecycle_connection_success_cb is None:
             return
 
@@ -1587,7 +1532,7 @@ class _ClientCore:
         if connack_shared_subscriptions_available_exists:
             connack_packet.shared_subscription_available = connack_shared_subscriptions_available
         if connack_server_keep_alive_exists:
-            connack_packet.server_keep_alive = connack_server_keep_alive
+            connack_packet.server_keep_alive_sec = connack_server_keep_alive
         connack_packet.response_information = connack_response_information
         connack_packet.server_reference = connack_server_reference
 
@@ -1604,6 +1549,7 @@ class _ClientCore:
         negotiated_settings.subscription_identifiers_available = settings_subscription_identifiers_available
         negotiated_settings.shared_subscriptions_available = settings_shared_subscriptions_available
         negotiated_settings.rejoined_session = settings_rejoined_session
+        negotiated_settings.client_id = settings_client_id
 
         self._on_lifecycle_connection_success_cb(
             LifecycleConnectSuccessData(
@@ -1666,7 +1612,7 @@ class _ClientCore:
             if connack_shared_subscriptions_available_exists:
                 connack_packet.shared_subscription_available = connack_shared_subscriptions_available
             if connack_server_keep_alive_exists:
-                connack_packet.server_keep_alive = connack_server_keep_alive
+                connack_packet.server_keep_alive_sec = connack_server_keep_alive
             connack_packet.response_information = connack_response_information
             connack_packet.server_reference = connack_server_reference
 

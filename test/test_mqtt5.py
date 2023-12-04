@@ -904,6 +904,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         self.assertTrue(callbacks.negotiated_settings.subscription_identifiers_available)
         self.assertTrue(callbacks.negotiated_settings.shared_subscriptions_available)
         self.assertFalse(callbacks.negotiated_settings.rejoined_session)
+        self.assertEqual(callbacks.negotiated_settings.client_id, client_id)
 
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
