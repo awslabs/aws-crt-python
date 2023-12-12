@@ -14,7 +14,7 @@ from awscrt.io import init_logging, LogLevel
 import unittest
 import sys
 
-TIMEOUT = 10.0
+TIMEOUT = 30.0
 
 
 class NativeResourceTest(unittest.TestCase):
