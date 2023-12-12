@@ -52,7 +52,7 @@ PyObject *aws_py_websocket_client_connect(PyObject *self, PyObject *args) {
     (void)self;
 
     struct aws_byte_cursor host;    /* s# */
-    uint16_t port;                  /* H */
+    uint32_t port;                  /* I */
     PyObject *handshake_request_py; /* O */
     PyObject *bootstrap_py;         /* O */
     PyObject *socket_options_py;    /* O */
@@ -64,7 +64,7 @@ PyObject *aws_py_websocket_client_connect(PyObject *self, PyObject *args) {
 
     if (!PyArg_ParseTuple(
             args,
-            "s#HOOOOOpnO",
+            "s#IOOOOOpnO",
             &host.ptr,
             &host.len,
             &port,

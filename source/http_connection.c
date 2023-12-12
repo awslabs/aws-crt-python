@@ -163,14 +163,14 @@ PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args) {
     PyObject *on_shutdown_py;
     const char *host_name;
     Py_ssize_t host_name_len;
-    uint16_t port_number;
+    uint32_t port_number;
     PyObject *socket_options_py;
     PyObject *tls_options_py;
     PyObject *proxy_options_py;
 
     if (!PyArg_ParseTuple(
             args,
-            "OOOs#HOOO",
+            "OOOs#IOOO",
             &bootstrap_py,
             &on_connection_setup_py,
             &on_shutdown_py,

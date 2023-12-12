@@ -645,7 +645,7 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
     Py_ssize_t client_id_len;
     const char *server_name;
     Py_ssize_t server_name_len;
-    uint16_t port_number;
+    uint32_t port_number;
     PyObject *socket_options_py;
     PyObject *tls_ctx_py;
     uint64_t reconnect_min_timeout_secs;
@@ -663,7 +663,7 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
     PyObject *proxy_options_py;
     if (!PyArg_ParseTuple(
             args,
-            "Os#s#HOOKKHIIOz#z#OOO",
+            "Os#s#IOOKKHIIOz#z#OOO",
             &impl_capsule,
             &client_id,
             &client_id_len,
