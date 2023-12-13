@@ -359,7 +359,7 @@ class TestClient(NativeResourceTest):
         stream.activate()
 
         # wait for stream to complete (use long timeout, it's a big file)
-        stream_completion_result = stream.completion_future.result(60)
+        stream_completion_result = stream.completion_future.result(80)
 
         # check result
         self.assertEqual(200, response.status_code)
