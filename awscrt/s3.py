@@ -489,14 +489,21 @@ class S3Request(NativeResource):
         assert callable(on_headers) or on_headers is None
         assert callable(on_body) or on_body is None
         assert callable(on_done) or on_done is None
+        assert isinstance(part_size, int) or part_size is None
+        assert isinstance(multipart_upload_threshold, int) or multipart_upload_threshold is None
 
         super().__init__()
 
         self._finished_future = Future()
         self.shutdown_event = threading.Event()
 
-        checksum_algorithm = 0  # 0 means NONE in C
-        checksum_location = 0  # 0 means NONE in C
+        # C layer uses 0 to indicate defaults
+        if part_size is None:
+            part_size = 0
+        if multipart_upload_threshold is None:
+            multipart_upload_threshold = 0
+        checksum_algorithm = 0
+        checksum_location = 0
         validate_response_checksum = False
         if checksum_config is not None:
             if checksum_config.algorithm is not None:
