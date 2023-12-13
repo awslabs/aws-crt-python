@@ -392,7 +392,7 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
             &checksum_algorithm,
             &checksum_location,
             &validate_response_checksum,
-            $part_size,
+            &part_size,
             &multipart_upload_threshold,
             &py_core)) {
         return NULL;
