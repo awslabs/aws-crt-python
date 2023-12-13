@@ -372,10 +372,12 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     enum aws_s3_checksum_algorithm checksum_algorithm; /* i */
     enum aws_s3_checksum_location checksum_location;   /* i */
     int validate_response_checksum;                    /* p - boolean predicate */
+    uint64_t part_size;                                /* K */
+    uint64_t multipart_upload_threshold;               /* K */
     PyObject *py_core;                                 /* O */
     if (!PyArg_ParseTuple(
             args,
-            "OOOizOOzzs#iipO",
+            "OOOizOOzzs#iipKKO",
             &py_s3_request,
             &s3_client_py,
             &http_request_py,
@@ -390,6 +392,8 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
             &checksum_algorithm,
             &checksum_location,
             &validate_response_checksum,
+            $part_size,
+            &multipart_upload_threshold,
             &py_core)) {
         return NULL;
     }
@@ -470,6 +474,8 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
         .finish_callback = s_s3_request_on_finish,
         .shutdown_callback = s_s3_request_on_shutdown,
         .progress_callback = s_s3_request_on_progress,
+        .part_size = part_size,
+        .multipart_upload_threshold = multipart_upload_threshold,
         .user_data = meta_request,
     };
 

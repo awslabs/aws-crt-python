@@ -182,13 +182,14 @@ class S3Client(NativeResource):
             for each connection, unless `tls_mode` is :attr:`S3RequestTlsMode.DISABLED`
 
         part_size (Optional[int]): Size, in bytes, of parts that files will be downloaded or uploaded in.
-            Note: for :attr:`S3RequestType.PUT_OBJECT` request, S3 requires the part size greater than 5 MiB.
-            (8*1024*1024 by default)
+            Note: for :attr:`S3RequestType.PUT_OBJECT` request, client will adjust the part size to meet the service limits.
+            (max number of parts per upload is 10,000, minimum upload part size is 5 MiB)
 
         multipart_upload_threshold (Optional[int]): The size threshold in bytes, for when to use multipart uploads.
+            This only affects :attr:`S3RequestType.PUT_OBJECT` request.
             Uploads over this size will use the multipart upload strategy.
             Uploads this size or less will use a single request.
-            If not set, `part_size` is used as the threshold.
+            If not set, maximal of `part_size` and 5 MiB will be used.
 
         throughput_target_gbps (Optional[float]): Throughput target in
             Gigabits per second (Gbps) that we are trying to reach.
@@ -296,6 +297,8 @@ class S3Client(NativeResource):
             signing_config=None,
             credential_provider=None,
             checksum_config=None,
+            part_size=None,
+            multipart_upload_threshold=None,
             on_headers=None,
             on_body=None,
             on_done=None,
@@ -346,6 +349,20 @@ class S3Client(NativeResource):
                 If None is provided, the client configuration will be used.
 
             checksum_config (Optional[S3ChecksumConfig]): Optional checksum settings.
+
+            part_size (Optional[int]): Size, in bytes, of parts that files will be downloaded or uploaded in.
+                If not set, the part size configured for the client will be used.
+                Note: for :attr:`S3RequestType.PUT_OBJECT` request, client will adjust the part size to meet the service limits.
+                (max number of parts per upload is 10,000, minimum upload part size is 5 MiB)
+
+            multipart_upload_threshold (Optional[int]): The size threshold in bytes, for when to use multipart uploads.
+                This only affects :attr:`S3RequestType.PUT_OBJECT` request.
+                Uploads over this size will use the multipart upload strategy.
+                Uploads this size or less will use a single request.
+                If set, this should be at least `part_size`.
+                If not set, `part_size` adjusted by client will be used as the threshold.
+                If both `part_size` and `multipart_upload_threshold` are not set,
+                the values from `aws_s3_client_config` are used.
 
             on_headers: Optional callback invoked as the response received, and even the API request
                 has been split into multiple parts, this callback will only be invoked once as
@@ -423,6 +440,8 @@ class S3Client(NativeResource):
             signing_config=signing_config,
             credential_provider=credential_provider,
             checksum_config=checksum_config,
+            part_size=part_size,
+            multipart_upload_threshold=multipart_upload_threshold,
             on_headers=on_headers,
             on_body=on_body,
             on_done=on_done,
@@ -458,6 +477,8 @@ class S3Request(NativeResource):
             signing_config=None,
             credential_provider=None,
             checksum_config=None,
+            part_size=None,
+            multipart_upload_threshold=None,
             on_headers=None,
             on_body=None,
             on_done=None,
@@ -509,6 +530,8 @@ class S3Request(NativeResource):
             checksum_algorithm,
             checksum_location,
             validate_response_checksum,
+            part_size,
+            multipart_upload_threshold,
             s3_request_core)
 
     @property
