@@ -260,6 +260,8 @@ class S3RequestTest(NativeResourceTest):
         self.done_error_headers = None
         self.done_error_body = None
         self.done_error_operation_name = None
+        self.did_validate_checksum = None
+        self.checksum_validation_algorithm = None
 
         self.files = FileCreator()
         self.temp_put_obj_file_path = self.files.create_file_with_size("temp_put_obj_10mb", 10 * MB)
@@ -305,12 +307,23 @@ class S3RequestTest(NativeResourceTest):
     def _on_request_body(self, chunk, offset, **kargs):
         self.received_body_len = self.received_body_len + len(chunk)
 
-    def _on_request_done(self, error, error_headers, error_body, error_operation_name, status_code, **kwargs):
+    def _on_request_done(
+            self,
+            error,
+            error_headers,
+            error_body,
+            error_operation_name,
+            status_code,
+            did_validate_checksum,
+            checksum_validation_algorithm,
+            **kwargs):
         self.done_error = error
         self.done_error_headers = error_headers
         self.done_error_body = error_body
         self.done_error_operation_name = error_operation_name
         self.done_status_code = status_code
+        self.did_validate_checksum = did_validate_checksum
+        self.checksum_validation_algorithm = checksum_validation_algorithm
 
     def _on_progress(self, progress):
         self.transferred_len += progress
@@ -452,6 +465,38 @@ class S3RequestTest(NativeResourceTest):
         del s3_client
         self.assertTrue(client_shutdown_event.wait(self.timeout))
 
+    def test_put_object_request_override_part_size(self):
+        s3_client = s3_client_new(False, self.region, 5 * MB)
+
+        tempfile = self.files.create_file_with_size("temp_file_override", 10 * MB)
+        path = "/put_object_test_py_10MB_override.txt"
+        content_length = os.stat(tempfile).st_size
+        request = self._put_object_request(None, content_length, path=path)
+        # Override the threshold to 10 MB, which will result in a single part upload
+        s3_request = s3_client.make_request(
+            request=request,
+            type=S3RequestType.PUT_OBJECT,
+            send_filepath=tempfile,
+            on_headers=self._on_request_headers,
+            on_body=self._on_request_body,
+            on_done=self._on_request_done,
+            multipart_upload_threshold=10 * MB)
+        try:
+            s3_request.finished_future.result(self.timeout)
+        except Exception as e:
+            # failed
+            self.assertTrue(False)
+
+        # Etag headers for a MPU will be formatted with `-[part number]`
+        etag = HttpHeaders(self.response_headers).get("Etag")
+        # make sure we uploaded as single part as we override the threshold
+        self.assertFalse("-" in etag)
+
+        del s3_request
+        client_shutdown_event = s3_client.shutdown_event
+        del s3_client
+        self.assertTrue(client_shutdown_event.wait(self.timeout))
+
     def test_get_object_filepath(self):
         request = self._get_object_request(self.get_test_object_path)
         request_type = S3RequestType.GET_OBJECT
@@ -559,6 +604,8 @@ class S3RequestTest(NativeResourceTest):
         download_checksum_config = S3ChecksumConfig(validate_response=True)
         self._test_s3_put_get_object(download_request, S3RequestType.GET_OBJECT,
                                      checksum_config=download_checksum_config)
+        self.assertTrue(self.did_validate_checksum)
+        self.assertEqual(self.checksum_validation_algorithm, S3ChecksumAlgorithm.CRC32)
         self.assertEqual(HttpHeaders(self.response_headers).get('x-amz-checksum-crc32'),
                          crc32_base64_str)
 

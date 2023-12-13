@@ -418,6 +418,13 @@ class S3Client(NativeResource):
                         this is the final response's status code. If the operation
                         failed for another reason, None is returned.
 
+                    *   `did_validate_checksum` (Optional[bool]):
+                            Was the server side checksum compared against a calculated checksum of the response body.
+                            This may be false even if :attr:`S3ChecksumConfig.validate_response` was set because
+                            the object was uploaded without a checksum, or downloaded differently from how it's uploaded.
+
+                    *   `checksum_validation_algorithm` (Optional[S3ChecksumAlgorithm]): The checksum algorithm used to validate the response.
+
                     *   `**kwargs` (dict): Forward-compatibility kwargs.
 
             on_progress: Optional callback invoked when part of the transfer is done to report the progress.
@@ -653,7 +660,15 @@ class _S3RequestCore:
     def _on_shutdown(self):
         self._shutdown_event.set()
 
-    def _on_finish(self, error_code, status_code, error_headers, error_body, error_operation_name):
+    def _on_finish(
+            self,
+            error_code,
+            status_code,
+            error_headers,
+            error_body,
+            error_operation_name,
+            did_validate_checksum,
+            checksum_validation_algorithm):
         # If C layer gives status_code 0, that means "unknown"
         if status_code == 0:
             status_code = None
@@ -687,7 +702,9 @@ class _S3RequestCore:
                 error_headers=error_headers,
                 error_body=error_body,
                 error_operation_name=error_operation_name,
-                status_code=status_code)
+                status_code=status_code,
+                did_validate_checksum=did_validate_checksum,
+                checksum_validation_algorithm=checksum_validation_algorithm)
 
     def _on_progress(self, progress):
         if self._on_progress_cb:
