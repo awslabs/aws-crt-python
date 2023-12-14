@@ -609,8 +609,7 @@ class S3RequestTest(NativeResourceTest):
         download_checksum_config = S3ChecksumConfig(validate_response=True)
         self._test_s3_put_get_object(download_request, S3RequestType.GET_OBJECT,
                                      checksum_config=download_checksum_config)
-        self.assertTrue(self.did_validate_checksum)
-        self.assertEqual(self.checksum_validation_algorithm, S3ChecksumAlgorithm.CRC32)
+        self.assertTrue(self.done_did_validate_checksum)
         self.assertEqual(HttpHeaders(self.response_headers).get('x-amz-checksum-crc32'),
                          crc32_base64_str)
 
