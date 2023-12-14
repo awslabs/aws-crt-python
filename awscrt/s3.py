@@ -418,7 +418,7 @@ class S3Client(NativeResource):
                         this is the final response's status code. If the operation
                         failed for another reason, None is returned.
 
-                    *   `did_validate_checksum` (Optional[bool]):
+                    *   `did_validate_checksum` (bool):
                             Was the server side checksum compared against a calculated checksum of the response body.
                             This may be false even if :attr:`S3ChecksumConfig.validate_response` was set because
                             the object was uploaded without a checksum, or downloaded differently from how it's uploaded.
@@ -676,7 +676,6 @@ class _S3RequestCore:
         error = None
         if error_code:
             error = awscrt.exceptions.from_code(error_code)
-
             if isinstance(error, awscrt.exceptions.AwsCrtError):
                 if (error.name == "AWS_ERROR_CRT_CALLBACK_EXCEPTION"
                         and self._python_callback_exception is not None):
@@ -696,6 +695,11 @@ class _S3RequestCore:
             self._finished_future.set_exception(error)
         else:
             self._finished_future.set_result(None)
+        if checksum_validation_algorithm:
+            checksum_validation_algorithm = S3ChecksumAlgorithm(checksum_validation_algorithm)
+        else:
+            checksum_validation_algorithm = None
+
         if self._on_done_cb:
             self._on_done_cb(
                 error=error,

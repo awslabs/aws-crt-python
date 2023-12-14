@@ -260,8 +260,8 @@ class S3RequestTest(NativeResourceTest):
         self.done_error_headers = None
         self.done_error_body = None
         self.done_error_operation_name = None
-        self.did_validate_checksum = None
-        self.checksum_validation_algorithm = None
+        self.done_did_validate_checksum = None
+        self.done_checksum_validation_algorithm = None
 
         self.files = FileCreator()
         self.temp_put_obj_file_path = self.files.create_file_with_size("temp_put_obj_10mb", 10 * MB)
@@ -322,8 +322,8 @@ class S3RequestTest(NativeResourceTest):
         self.done_error_body = error_body
         self.done_error_operation_name = error_operation_name
         self.done_status_code = status_code
-        self.did_validate_checksum = did_validate_checksum
-        self.checksum_validation_algorithm = checksum_validation_algorithm
+        self.done_did_validate_checksum = did_validate_checksum
+        self.done_checksum_validation_algorithm = checksum_validation_algorithm
 
     def _on_progress(self, progress):
         self.transferred_len += progress
@@ -336,6 +336,11 @@ class S3RequestTest(NativeResourceTest):
         self.assertIsNone(self.done_error_headers)
         self.assertIsNone(self.done_error_body)
         self.assertIsNone(self.done_error_operation_name)
+        self.assertIsNotNone(self.done_did_validate_checksum)
+        if self.done_did_validate_checksum:
+            self.assertIsInstance(self.done_checksum_validation_algorithm, S3ChecksumAlgorithm)
+        else:
+            self.assertIsNone(self.done_checksum_validation_algorithm)
         headers = HttpHeaders(self.response_headers)
         self.assertIsNone(headers.get("Content-Range"))
         body_length = headers.get("Content-Length")
