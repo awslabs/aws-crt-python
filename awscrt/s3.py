@@ -695,6 +695,7 @@ class _S3RequestCore:
             self._finished_future.set_exception(error)
         else:
             self._finished_future.set_result(None)
+
         if checksum_validation_algorithm:
             checksum_validation_algorithm = S3ChecksumAlgorithm(checksum_validation_algorithm)
         else:
