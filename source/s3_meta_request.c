@@ -263,13 +263,15 @@ static void s_s3_request_on_finish(
     result = PyObject_CallMethod(
         request_binding->py_core,
         "_on_finish",
-        "(iiOy#s)",
+        "(iiOy#sOi)",
         error_code,
         meta_request_result->response_status,
         header_list ? header_list : Py_None,
         (const char *)(error_body.buffer),
         (Py_ssize_t)error_body.len,
-        operation_name);
+        operation_name,
+        meta_request_result->did_validate ? Py_True : Py_False,
+        (int)meta_request_result->validation_algorithm);
 
     if (result) {
         Py_DECREF(result);
@@ -372,10 +374,12 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     enum aws_s3_checksum_algorithm checksum_algorithm; /* i */
     enum aws_s3_checksum_location checksum_location;   /* i */
     int validate_response_checksum;                    /* p - boolean predicate */
+    uint64_t part_size;                                /* K */
+    uint64_t multipart_upload_threshold;               /* K */
     PyObject *py_core;                                 /* O */
     if (!PyArg_ParseTuple(
             args,
-            "OOOizOOzzs#iipO",
+            "OOOizOOzzs#iipKKO",
             &py_s3_request,
             &s3_client_py,
             &http_request_py,
@@ -390,6 +394,8 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
             &checksum_algorithm,
             &checksum_location,
             &validate_response_checksum,
+            &part_size,
+            &multipart_upload_threshold,
             &py_core)) {
         return NULL;
     }
@@ -470,6 +476,8 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
         .finish_callback = s_s3_request_on_finish,
         .shutdown_callback = s_s3_request_on_shutdown,
         .progress_callback = s_s3_request_on_progress,
+        .part_size = part_size,
+        .multipart_upload_threshold = multipart_upload_threshold,
         .user_data = meta_request,
     };
 

@@ -182,13 +182,14 @@ class S3Client(NativeResource):
             for each connection, unless `tls_mode` is :attr:`S3RequestTlsMode.DISABLED`
 
         part_size (Optional[int]): Size, in bytes, of parts that files will be downloaded or uploaded in.
-            Note: for :attr:`S3RequestType.PUT_OBJECT` request, S3 requires the part size greater than 5 MiB.
-            (8*1024*1024 by default)
+            Note: for :attr:`S3RequestType.PUT_OBJECT` request, client will adjust the part size to meet the service limits.
+            (max number of parts per upload is 10,000, minimum upload part size is 5 MiB)
 
         multipart_upload_threshold (Optional[int]): The size threshold in bytes, for when to use multipart uploads.
+            This only affects :attr:`S3RequestType.PUT_OBJECT` request.
             Uploads over this size will use the multipart upload strategy.
             Uploads this size or less will use a single request.
-            If not set, `part_size` is used as the threshold.
+            If not set, maximal of `part_size` and 5 MiB will be used.
 
         throughput_target_gbps (Optional[float]): Throughput target in
             Gigabits per second (Gbps) that we are trying to reach.
@@ -296,6 +297,8 @@ class S3Client(NativeResource):
             signing_config=None,
             credential_provider=None,
             checksum_config=None,
+            part_size=None,
+            multipart_upload_threshold=None,
             on_headers=None,
             on_body=None,
             on_done=None,
@@ -346,6 +349,20 @@ class S3Client(NativeResource):
                 If None is provided, the client configuration will be used.
 
             checksum_config (Optional[S3ChecksumConfig]): Optional checksum settings.
+
+            part_size (Optional[int]): Size, in bytes, of parts that files will be downloaded or uploaded in.
+                If not set, the part size configured for the client will be used.
+                Note: for :attr:`S3RequestType.PUT_OBJECT` request, client will adjust the part size to meet the service limits.
+                (max number of parts per upload is 10,000, minimum upload part size is 5 MiB)
+
+            multipart_upload_threshold (Optional[int]): The size threshold in bytes, for when to use multipart uploads.
+                This only affects :attr:`S3RequestType.PUT_OBJECT` request.
+                Uploads over this size will use the multipart upload strategy.
+                Uploads this size or less will use a single request.
+                If set, this should be at least `part_size`.
+                If not set, `part_size` adjusted by client will be used as the threshold.
+                If both `part_size` and `multipart_upload_threshold` are not set,
+                the values from `aws_s3_client_config` are used.
 
             on_headers: Optional callback invoked as the response received, and even the API request
                 has been split into multiple parts, this callback will only be invoked once as
@@ -401,6 +418,13 @@ class S3Client(NativeResource):
                         this is the final response's status code. If the operation
                         failed for another reason, None is returned.
 
+                    *   `did_validate_checksum` (bool):
+                            Was the server side checksum compared against a calculated checksum of the response body.
+                            This may be false even if :attr:`S3ChecksumConfig.validate_response` was set because
+                            the object was uploaded without a checksum, or downloaded differently from how it's uploaded.
+
+                    *   `checksum_validation_algorithm` (Optional[S3ChecksumAlgorithm]): The checksum algorithm used to validate the response.
+
                     *   `**kwargs` (dict): Forward-compatibility kwargs.
 
             on_progress: Optional callback invoked when part of the transfer is done to report the progress.
@@ -423,6 +447,8 @@ class S3Client(NativeResource):
             signing_config=signing_config,
             credential_provider=credential_provider,
             checksum_config=checksum_config,
+            part_size=part_size,
+            multipart_upload_threshold=multipart_upload_threshold,
             on_headers=on_headers,
             on_body=on_body,
             on_done=on_done,
@@ -458,6 +484,8 @@ class S3Request(NativeResource):
             signing_config=None,
             credential_provider=None,
             checksum_config=None,
+            part_size=None,
+            multipart_upload_threshold=None,
             on_headers=None,
             on_body=None,
             on_done=None,
@@ -468,14 +496,21 @@ class S3Request(NativeResource):
         assert callable(on_headers) or on_headers is None
         assert callable(on_body) or on_body is None
         assert callable(on_done) or on_done is None
+        assert isinstance(part_size, int) or part_size is None
+        assert isinstance(multipart_upload_threshold, int) or multipart_upload_threshold is None
 
         super().__init__()
 
         self._finished_future = Future()
         self.shutdown_event = threading.Event()
 
-        checksum_algorithm = 0  # 0 means NONE in C
-        checksum_location = 0  # 0 means NONE in C
+        # C layer uses 0 to indicate defaults
+        if part_size is None:
+            part_size = 0
+        if multipart_upload_threshold is None:
+            multipart_upload_threshold = 0
+        checksum_algorithm = 0
+        checksum_location = 0
         validate_response_checksum = False
         if checksum_config is not None:
             if checksum_config.algorithm is not None:
@@ -509,6 +544,8 @@ class S3Request(NativeResource):
             checksum_algorithm,
             checksum_location,
             validate_response_checksum,
+            part_size,
+            multipart_upload_threshold,
             s3_request_core)
 
     @property
@@ -623,7 +660,15 @@ class _S3RequestCore:
     def _on_shutdown(self):
         self._shutdown_event.set()
 
-    def _on_finish(self, error_code, status_code, error_headers, error_body, error_operation_name):
+    def _on_finish(
+            self,
+            error_code,
+            status_code,
+            error_headers,
+            error_body,
+            error_operation_name,
+            did_validate_checksum,
+            checksum_validation_algorithm):
         # If C layer gives status_code 0, that means "unknown"
         if status_code == 0:
             status_code = None
@@ -631,7 +676,6 @@ class _S3RequestCore:
         error = None
         if error_code:
             error = awscrt.exceptions.from_code(error_code)
-
             if isinstance(error, awscrt.exceptions.AwsCrtError):
                 if (error.name == "AWS_ERROR_CRT_CALLBACK_EXCEPTION"
                         and self._python_callback_exception is not None):
@@ -651,13 +695,21 @@ class _S3RequestCore:
             self._finished_future.set_exception(error)
         else:
             self._finished_future.set_result(None)
+
+        if checksum_validation_algorithm:
+            checksum_validation_algorithm = S3ChecksumAlgorithm(checksum_validation_algorithm)
+        else:
+            checksum_validation_algorithm = None
+
         if self._on_done_cb:
             self._on_done_cb(
                 error=error,
                 error_headers=error_headers,
                 error_body=error_body,
                 error_operation_name=error_operation_name,
-                status_code=status_code)
+                status_code=status_code,
+                did_validate_checksum=did_validate_checksum,
+                checksum_validation_algorithm=checksum_validation_algorithm)
 
     def _on_progress(self, progress):
         if self._on_progress_cb:
