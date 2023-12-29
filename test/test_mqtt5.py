@@ -1036,7 +1036,6 @@ class Mqtt5ClientTest(NativeResourceTest):
             #input_cert,
             #input_key
         #)
-
         #client_options1 = mqtt5.ClientOptions(
             #host_name=input_host_name,
             #port=8883
@@ -1048,7 +1047,6 @@ class Mqtt5ClientTest(NativeResourceTest):
        # callbacks1 = Mqtt5TestCallbacks()
        # client1 = self._create_client(client_options=client_options1, callbacks=callbacks1)
 #
-#
 #       client_options.on_publish_callback_fn = callbacks.on_publish_received
 #       client_options.on_lifecycle_event_stopped_fn = callbacks.on_lifecycle_stopped
 #       client_options.on_lifecycle_event_attempting_connect_fn = callbacks.on_lifecycle_attempting_connect
@@ -1056,7 +1054,6 @@ class Mqtt5ClientTest(NativeResourceTest):
 #       client_options.on_lifecycle_event_connection_failure_fn = callbacks.on_lifecycle_connection_failure
 #       client_options.on_lifecycle_event_disconnection_fn = callbacks.on_lifecycle_disconnection
 #       client = mqtt5.Client(client_options)
-#
 #
        # client1.start()
        # callbacks1.future_connection_success.result(TIMEOUT)
@@ -1068,15 +1065,16 @@ class Mqtt5ClientTest(NativeResourceTest):
         )
         # subscriber 1
         connect_subscriber1_options = mqtt5.ConnectPacket(
-            keep_alive_interval_sec=10,
             client_id=client_id_subscriber1,
+            keep_alive_interval_sec=10,
             session_expiry_interval_sec=100,
             request_response_information=1,
             request_problem_information=1,
             receive_maximum=1000,
             maximum_packet_size=10000,
+            tls_ctx=io.ClientTlsContext(tls_ctx_options)
         )
-        connect_subscriber1_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
+        subscriber1_generic_callback=Mqtt5TestCallbacks()
         subscriber1_options = mqtt5.ClientOptions(
             host_name=input_host_name,
             port=8883,
@@ -1090,10 +1088,13 @@ class Mqtt5ClientTest(NativeResourceTest):
             min_connected_time_to_reset_reconnect_delay_ms=1000,
             ping_timeout_ms=1000,
             connack_timeout_ms=1000,
-            ack_timeout_sec=100)
-        subscriber1_options.on_publish_callback_fn = self.subscriber1_callback
-        subscriber1_callback = Mqtt5TestCallbacks()
-        subscriber1_options.on_lifecycle_connection_success_fn = subscriber1_callback.on_lifecycle_connection_success
+            ack_timeout_sec=100,
+            on_lifecycle_event_connection_success_fn=subscriber1_generic_callback.on_lifecycle_connection_success,
+            on_publish_callback_fn=self.subscriber1_callback
+        )
+
+        #subscriber1_options.on_publish_callback_fn = self.subscriber1_callback
+        #subscriber1_options.on_lifecycle_connection_success_fn = subscriber1_generic_callback.on_lifecycle_connection_success
         #subscriber1_client = self._create_client(client_options=subscriber1_options, callbacks=subscriber1_callback)
         subscriber1_client = mqtt5.Client(client_options=subscriber1_options)
 
