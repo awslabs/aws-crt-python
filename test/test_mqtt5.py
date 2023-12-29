@@ -1007,8 +1007,8 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    sub1_callbacks = false 
-    sub2_callbacks = false 
+    sub1_callbacks = False 
+    sub2_callbacks = False 
     total_callbacks = 0
     all_packets_received = Future()
     mutex = Lock();
