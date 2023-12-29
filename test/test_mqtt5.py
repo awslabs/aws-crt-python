@@ -86,7 +86,6 @@ class Mqtt5TestCallbacks():
         pass
 
     def on_lifecycle_connection_success(self, lifecycle_connection_success: mqtt5.LifecycleConnectSuccessData):
-        print("lifecylce connection success receved\n")
         self.negotiated_settings = lifecycle_connection_success.negotiated_settings
         self.connack_packet = lifecycle_connection_success.connack_packet
         if self.future_connection_success:
@@ -1008,15 +1007,30 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
+    sub1_callbacks = false 
+    sub2_callbacks = false 
     total_callbacks = 0
+    all_packets_received = Future()
+    mutex = Lock();
 
-    def subscriber2_callback(self, publish_received_data: mqtt5.PublishReceivedData):
-        print("subscriber2 received")
-        total_callbacks = total_callbacks + 1
 
     def subscriber1_callback(self, publish_received_data: mqtt5.PublishReceivedData):
         print("subscriber1 received")
+        mutex.acquire()
+        sub1_callbacks = True
         total_callbacks = total_callbacks + 1
+        if total_callbacks == 10:
+            all_packets_received.set_result()
+        mutex.release()
+
+    def subscriber2_callback(self, publish_received_data: mqtt5.PublishReceivedData):
+        print("subscriber2 received")
+        mutex.acquire()
+        sub2_callbacks = True
+        total_callbacks = total_callbacks + 1
+        if sub2_callback == 10:
+            all_packets_received.set_result()
+        mutex.release()
 
     def test_operation_shared_subscription(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
@@ -1030,39 +1044,11 @@ class Mqtt5ClientTest(NativeResourceTest):
         testTopic = "test/MQTT5_Binding_Python_{uuid.uuid4()}"
         sharedTopicfilter = "$share/crttest/test/MQTT5_Binding_Python_{uuid.uuid4()}"
 
-
-# ===================================
-        #tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(
-            #input_cert,
-            #input_key
-        #)
-        #client_options1 = mqtt5.ClientOptions(
-            #host_name=input_host_name,
-            #port=8883
-        #)
-        #client_options1.connect_options = mqtt5.ConnectPacket(client_id=client_id_publisher,
-                                                              #will_delay_interval_sec=0,
-                                                              #will=will_packet)
-       # client_options1.tls_ctx = io.ClientTlsContext(tls_ctx_options)
-       # callbacks1 = Mqtt5TestCallbacks()
-       # client1 = self._create_client(client_options=client_options1, callbacks=callbacks1)
-#
-#       client_options.on_publish_callback_fn = callbacks.on_publish_received
-#       client_options.on_lifecycle_event_stopped_fn = callbacks.on_lifecycle_stopped
-#       client_options.on_lifecycle_event_attempting_connect_fn = callbacks.on_lifecycle_attempting_connect
-#       client_options.on_lifecycle_event_connection_success_fn = callbacks.on_lifecycle_connection_success
-#       client_options.on_lifecycle_event_connection_failure_fn = callbacks.on_lifecycle_connection_failure
-#       client_options.on_lifecycle_event_disconnection_fn = callbacks.on_lifecycle_disconnection
-#       client = mqtt5.Client(client_options)
-#
-       # client1.start()
-       # callbacks1.future_connection_success.result(TIMEOUT)
-# ========================================
-
         tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(
             input_cert,
             input_key
         )
+
         # subscriber 1
         connect_subscriber1_options = mqtt5.ConnectPacket(client_id=client_id_subscriber1)
         subscriber1_generic_callback=Mqtt5TestCallbacks()
@@ -1114,7 +1100,6 @@ class Mqtt5ClientTest(NativeResourceTest):
 
         print("Connecting all 3 clients\n")
         subscriber1_client.start()
-        #subscriber1_callback.future_connection_success.result(TIMEOUT)
         subscriber1_generic_callback.future_connection_success.result(TIMEOUT)
 
         subscriber2_client.start()
@@ -1146,6 +1131,11 @@ class Mqtt5ClientTest(NativeResourceTest):
             publish_future = publisher_client.publish(publish_packet)
             publish_future.result(TIMEOUT)
 
+        all_packets_received.future.result(TIMEOUT)
+
+        self.assertEqual(sub1_callbacks , True)
+        self.assertEqual(sub2_callbacks , True)
+        self.assertEqual(total_callbacks , 10)
 
         subscriber1_client.stop()
         subscriber1_generic_callback.future_stopped.result(TIMEOUT)
