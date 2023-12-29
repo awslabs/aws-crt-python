@@ -1091,16 +1091,8 @@ class Mqtt5ClientTest(NativeResourceTest):
             host_name=input_host_name,
             port=8883,
             connect_options=connect_subscriber2_options,
-            session_behavior=mqtt5.ClientSessionBehaviorType.CLEAN,
-            extended_validation_and_flow_control_options=mqtt5.ExtendedValidationAndFlowControlOptions.AWS_IOT_CORE_DEFAULTS,
-            offline_queue_behavior=mqtt5.ClientOperationQueueBehaviorType.FAIL_ALL_ON_DISCONNECT,
-            retry_jitter_mode=mqtt5.ExponentialBackoffJitterMode.DECORRELATED,
-            min_reconnect_delay_ms=100,
-            max_reconnect_delay_ms=50000,
-            min_connected_time_to_reset_reconnect_delay_ms=1000,
-            ping_timeout_ms=1000,
-            connack_timeout_ms=1000,
-            ack_timeout_sec=100)
+            #session_behavior=mqtt5.ClientSessionBehaviorType.CLEAN,
+        )
         subscriber2_options.on_publish_callback_fn = self.subscriber2_callback
         subscriber2_callback = Mqtt5TestCallbacks()
         subscriber2_options.on_lifecycle_connection_success_fn = subscriber2_callback.on_lifecycle_connection_success
@@ -1114,16 +1106,8 @@ class Mqtt5ClientTest(NativeResourceTest):
             host_name=input_host_name,
             port=8883,
             connect_options=connect_publisher_options,
-            session_behavior=mqtt5.ClientSessionBehaviorType.CLEAN,
-            extended_validation_and_flow_control_options=mqtt5.ExtendedValidationAndFlowControlOptions.AWS_IOT_CORE_DEFAULTS,
-            offline_queue_behavior=mqtt5.ClientOperationQueueBehaviorType.FAIL_ALL_ON_DISCONNECT,
-            retry_jitter_mode=mqtt5.ExponentialBackoffJitterMode.DECORRELATED,
-            min_reconnect_delay_ms=100,
-            max_reconnect_delay_ms=50000,
-            min_connected_time_to_reset_reconnect_delay_ms=1000,
-            ping_timeout_ms=1000,
-            connack_timeout_ms=1000,
-            ack_timeout_sec=100)
+            #session_behavior=mqtt5.ClientSessionBehaviorType.CLEAN,
+        )
         publisher_callback = Mqtt5TestCallbacks()
         #publisher_client = self._create_client(client_options=publisher_options, callbacks=publisher_callback)
         publisher_options.on_lifecycle_connection_success_fn = publisher_callback.on_lifecycle_connection_success
