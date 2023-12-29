@@ -1085,17 +1085,22 @@ class Mqtt5ClientTest(NativeResourceTest):
 
         # subscriber 2
         connect_subscriber2_options = mqtt5.ConnectPacket(client_id=client_id_subscriber2)
+        subscriber2_generic_callback = Mqtt5TestCallbacks()
 
-        connect_subscriber2_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
         subscriber2_options = mqtt5.ClientOptions(
             host_name=input_host_name,
             port=8883,
+            tls_ctx=io.ClientTlsContext(tls_ctx_options),
             connect_options=connect_subscriber2_options,
             #session_behavior=mqtt5.ClientSessionBehaviorType.CLEAN,
+            on_lifecycle_event_connection_success_fn=subscriber2_generic_callback.on_lifecycle_connection_success,
+            on_publish_callback_fn=self.subscriber2_callback,
+            on_lifecycle_event_stopped_fn=subscriber2_generic_callback.on_lifecycle_stopped,
+            on_lifecycle_event_attempting_connect_fn=subscriber2_generic_callback.on_lifecycle_attempting_connect
         )
-        subscriber2_options.on_publish_callback_fn = self.subscriber2_callback
-        subscriber2_callback = Mqtt5TestCallbacks()
-        subscriber2_options.on_lifecycle_connection_success_fn = subscriber2_callback.on_lifecycle_connection_success
+        #connect_subscriber2_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
+        #subscriber2_options.on_publish_callback_fn = self.subscriber2_callback
+        #subscriber2_options.on_lifecycle_connection_success_fn = subscriber2_generic_callback.on_lifecycle_connection_success
         #subscriber2_client = self._create_client(client_options=subscriber2_options, callbacks=subscriber2_callback)
         subscriber2_client = mqtt5.Client(client_options=subscriber2_options)
 
@@ -1119,7 +1124,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         subscriber1_generic_callback.future_connection_success.result(TIMEOUT)
 
         subscriber2_client.start()
-        subscriber2_callback.future_connection_success.result(TIMEOUT)
+        subscriber2_generic_callback.future_connection_success.result(TIMEOUT)
 
         publisher_client.start()
         publisher_callback.future_connection_success.result(TIMEOUT)
