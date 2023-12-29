@@ -1030,11 +1030,41 @@ class Mqtt5ClientTest(NativeResourceTest):
         sharedTopicfilter = "$share/crttest/test/MQTT5_Binding_Python_{uuid.uuid4()}"
 
 
+# ===================================
+        #tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(
+            #input_cert,
+            #input_key
+        #)
+
+        #client_options1 = mqtt5.ClientOptions(
+            #host_name=input_host_name,
+            #port=8883
+        #)
+        #client_options1.connect_options = mqtt5.ConnectPacket(client_id=client_id_publisher,
+                                                              #will_delay_interval_sec=0,
+                                                              #will=will_packet)
+       # client_options1.tls_ctx = io.ClientTlsContext(tls_ctx_options)
+       # callbacks1 = Mqtt5TestCallbacks()
+       # client1 = self._create_client(client_options=client_options1, callbacks=callbacks1)
+#
+#
+#       client_options.on_publish_callback_fn = callbacks.on_publish_received
+#       client_options.on_lifecycle_event_stopped_fn = callbacks.on_lifecycle_stopped
+#       client_options.on_lifecycle_event_attempting_connect_fn = callbacks.on_lifecycle_attempting_connect
+#       client_options.on_lifecycle_event_connection_success_fn = callbacks.on_lifecycle_connection_success
+#       client_options.on_lifecycle_event_connection_failure_fn = callbacks.on_lifecycle_connection_failure
+#       client_options.on_lifecycle_event_disconnection_fn = callbacks.on_lifecycle_disconnection
+#       client = mqtt5.Client(client_options)
+#
+#
+       # client1.start()
+       # callbacks1.future_connection_success.result(TIMEOUT)
+# ========================================
+
         tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(
             input_cert,
             input_key
         )
-
         # subscriber 1
         connect_subscriber1_options = mqtt5.ConnectPacket(
             keep_alive_interval_sec=10,
@@ -1045,7 +1075,6 @@ class Mqtt5ClientTest(NativeResourceTest):
             receive_maximum=1000,
             maximum_packet_size=10000,
         )
-
         connect_subscriber1_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
         subscriber1_options = mqtt5.ClientOptions(
             host_name=input_host_name,
@@ -1063,6 +1092,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             ack_timeout_sec=100)
         subscriber1_options.on_publish_callback_fn = self.subscriber1_callback
         subscriber1_callback = Mqtt5TestCallbacks()
+        subscriber1_options.on_lifecycle_connection_success_fn = subscriber1_callback.on_lifecycle_connection_success
         #subscriber1_client = self._create_client(client_options=subscriber1_options, callbacks=subscriber1_callback)
         subscriber1_client = mqtt5.Client(client_options=subscriber1_options)
 
@@ -1094,6 +1124,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             ack_timeout_sec=100)
         subscriber2_options.on_publish_callback_fn = self.subscriber2_callback
         subscriber2_callback = Mqtt5TestCallbacks()
+        subscriber2_options.on_lifecycle_connection_success_fn = subscriber2_callback.on_lifecycle_connection_success
         #subscriber2_client = self._create_client(client_options=subscriber2_options, callbacks=subscriber2_callback)
         subscriber2_client = mqtt5.Client(client_options=subscriber2_options)
 
@@ -1124,6 +1155,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             ack_timeout_sec=100)
         publisher_callback = Mqtt5TestCallbacks()
         #publisher_client = self._create_client(client_options=publisher_options, callbacks=publisher_callback)
+        publisher_options.on_lifecycle_connection_success_fn = publisher_callback.on_lifecycle_connection_success
         publisher_client = mqtt5.Client(client_options=publisher_options)
 
         print("Connecting all 3 clients\n")
