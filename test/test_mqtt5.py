@@ -171,7 +171,6 @@ class Mqtt5ClientTest(NativeResourceTest):
             receive_maximum=1000,
             maximum_packet_size=10000,
             will_delay_interval_sec=1000,
-            will=publish_packet,
             user_properties=user_properties
         )
         client_options = mqtt5.ClientOptions(
@@ -1007,6 +1006,168 @@ class Mqtt5ClientTest(NativeResourceTest):
 
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
+
+    total_callbacks = 0
+
+    def subscriber2_callback(self, publish_received_data: mqtt5.PublishReceivedData):
+        print("subscriber2 received")
+        total_callbacks = total_callbacks + 1
+
+    def subscriber1_callback(self, publish_received_data: mqtt5.PublishReceivedData):
+        print("subscriber1 received")
+        total_callbacks = total_callbacks + 1
+
+    def test_operation_shared_subscription(self):
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
+        input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
+        input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
+
+        client_id_subscriber1 = create_client_id()
+        client_id_subscriber2 = create_client_id()
+        client_id_publisher = create_client_id()
+
+        testTopic = "test/MQTT5_Binding_Python_{uuid.uuid4()}"
+        String sharedTopicfilter = "$share/crttest/test/MQTT5_Binding_Python_{uuid.uuid4()}"
+
+
+        tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(
+            input_cert,
+            input_key
+        )
+
+        # subscriber 1
+        connect_subscriber1_options = mqtt5.ConnectPacket(
+            keep_alive_interval_sec=10,
+            client_id=client_id_subscriber1,
+            session_expiry_interval_sec=100,
+            request_response_information=1,
+            request_problem_information=1,
+            receive_maximum=1000,
+            maximum_packet_size=10000,
+        )
+
+        connect_subscriber1_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
+        subscriber1_options = mqtt5.ClientOptions(
+            host_name=input_host_name,
+            port=8883,
+            connect_options=connect_subscriber1_options,
+            session_behavior=mqtt5.ClientSessionBehaviorType.CLEAN,
+            extended_validation_and_flow_control_options=mqtt5.ExtendedValidationAndFlowControlOptions.AWS_IOT_CORE_DEFAULTS,
+            offline_queue_behavior=mqtt5.ClientOperationQueueBehaviorType.FAIL_ALL_ON_DISCONNECT,
+            retry_jitter_mode=mqtt5.ExponentialBackoffJitterMode.DECORRELATED,
+            min_reconnect_delay_ms=100,
+            max_reconnect_delay_ms=50000,
+            min_connected_time_to_reset_reconnect_delay_ms=1000,
+            ping_timeout_ms=1000,
+            connack_timeout_ms=1000,
+            ack_timeout_sec=100)
+        subscriber1_options.on_publish_callback_fn = subscriber1_callback
+        subscriber1_callback = Mqtt5TestCallbacks()
+        subscriber1_client = self._create_client(client_options=subscriber1_options, callbacks=subscriber1_callback)
+
+
+        # subscriber 2
+        connect_subscriber2_options = mqtt5.ConnectPacket(
+            keep_alive_interval_sec=10,
+            client_id=client_id_subscriber1,
+            session_expiry_interval_sec=100,
+            request_response_information=1,
+            request_problem_information=1,
+            receive_maximum=1000,
+            maximum_packet_size=10000,
+        )
+
+        connect_subscriber2_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
+        subscriber2_options = mqtt5.ClientOptions(
+            host_name=input_host_name,
+            port=8883,
+            connect_options=connect_subscriber2_options,
+            session_behavior=mqtt5.ClientSessionBehaviorType.CLEAN,
+            extended_validation_and_flow_control_options=mqtt5.ExtendedValidationAndFlowControlOptions.AWS_IOT_CORE_DEFAULTS,
+            offline_queue_behavior=mqtt5.ClientOperationQueueBehaviorType.FAIL_ALL_ON_DISCONNECT,
+            retry_jitter_mode=mqtt5.ExponentialBackoffJitterMode.DECORRELATED,
+            min_reconnect_delay_ms=100,
+            max_reconnect_delay_ms=50000,
+            min_connected_time_to_reset_reconnect_delay_ms=1000,
+            ping_timeout_ms=1000,
+            connack_timeout_ms=1000,
+            ack_timeout_sec=100)
+        subscriber2_options.on_publish_callback_fn = subscriber2_callback
+        subscriber2_callback = Mqtt5TestCallbacks()
+        subscriber2_client = self._create_client(client_options=subscriber2_options, callbacks=subscriber2_callback)
+
+
+        # publisher
+        connect_publisher_options = mqtt5.ConnectPacket(
+            keep_alive_interval_sec=10,
+            client_id=client_id_subscriber1,
+            session_expiry_interval_sec=100,
+            request_response_information=1,
+            request_problem_information=1,
+            receive_maximum=1000,
+            maximum_packet_size=10000,
+        )
+        connect_publisher_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
+        publisher_options = mqtt5.ClientOptions(
+            host_name=input_host_name,
+            port=8883,
+            connect_options=connect_publisher_options,
+            session_behavior=mqtt5.ClientSessionBehaviorType.CLEAN,
+            extended_validation_and_flow_control_options=mqtt5.ExtendedValidationAndFlowControlOptions.AWS_IOT_CORE_DEFAULTS,
+            offline_queue_behavior=mqtt5.ClientOperationQueueBehaviorType.FAIL_ALL_ON_DISCONNECT,
+            retry_jitter_mode=mqtt5.ExponentialBackoffJitterMode.DECORRELATED,
+            min_reconnect_delay_ms=100,
+            max_reconnect_delay_ms=50000,
+            min_connected_time_to_reset_reconnect_delay_ms=1000,
+            ping_timeout_ms=1000,
+            connack_timeout_ms=1000,
+            ack_timeout_sec=100)
+        publisher_callback = Mqtt5TestCallbacks()
+        publisher_client = self._create_client(client_options=publisher_options, callbacks=publisher_callback)
+
+        print("Connecting all 3 clients\n")
+        subscriber1_client.start()
+        subscriber1_callback.future_connection_success.result(TIMEOUT)
+
+        subscriber2_client.start()
+        subscriber2_callback.future_connection_success.result(TIMEOUT)
+
+        publisher_client.start()
+        publisher_callback.future_connection_success.result(TIMEOUT)
+        print("All clients connected\n")
+
+
+        subscriptions = []
+        subscriptions.append(mqtt5.Subscription(topic_filter=sharedTopicfilter, qos=mqtt5.QoS.AT_LEAST_ONCE))
+
+        subscribe_packet = mqtt5.SubscribePacket(
+            subscriptions=subscriptions)
+        subscribe_future = subscriber1_client.subscribe(subscribe_packet=subscribe_packet)
+        suback_packet = subscribe_future.result(TIMEOUT)
+
+        subscribe_future = subscriber2_client.subscribe(subscribe_packet=subscribe_packet)
+        suback_packet = subscribe_future.result(TIMEOUT)
+
+        publishes = 10
+        for x in range(publishes):
+            packet = mqtt5.PublishPacket(
+                payload="{i}",
+                qos=mqtt5.QoS.AT_LEAST_ONCE,
+                topic=testTopic
+            )
+            publish_future = publisher_client.publish(publish_packet)
+            publish_future.result(TIMEOUT)
+
+
+        subscriber2_client.stop()
+        callbacks.future_stopped.result(TIMEOUT)
+        subscriber1_client.stop()
+        callbacks.future_stopped.result(TIMEOUT)
+        publisher_client.stop()
+        publisher_callback.future_stopped.result(TIMEOUT)
+
+
+
 
     def test_operation_will(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
