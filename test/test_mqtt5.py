@@ -1075,7 +1075,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             on_lifecycle_event_stopped_fn=subscriber1_generic_callback.on_lifecycle_stopped,
             on_lifecycle_event_attempting_connect_fn=subscriber1_generic_callback.on_lifecycle_attempting_connect,
             on_lifecycle_event_connection_success_fn=subscriber1_generic_callback.on_lifecycle_connection_success,
-            on_lifecycle_event_connection_success_fn=subscriber1_generic_callback.on_lifecycle_connection_failure,
+            on_lifecycle_event_connection_failure_fn=subscriber1_generic_callback.on_lifecycle_connection_failure
         )
         subscriber1_client = mqtt5.Client(client_options=subscriber1_options)
 
@@ -1092,7 +1092,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             on_lifecycle_event_stopped_fn=subscriber2_generic_callback.on_lifecycle_stopped,
             on_lifecycle_event_attempting_connect_fn=subscriber2_generic_callback.on_lifecycle_attempting_connect,
             on_lifecycle_event_connection_success_fn=subscriber2_generic_callback.on_lifecycle_connection_success,
-            on_lifecycle_event_connection_success_fn=subscriber2_generic_callback.on_lifecycle_connection_failure,
+            on_lifecycle_event_connection_failure_fn=subscriber2_generic_callback.on_lifecycle_connection_failure
         )
         subscriber2_client = mqtt5.Client(client_options=subscriber2_options)
 
@@ -1108,7 +1108,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             on_lifecycle_event_stopped_fn=publish_generic_callback.on_lifecycle_stopped,
             on_lifecycle_event_attempting_connect_fn=publish_generic_callback.on_lifecycle_attempting_connect,
             on_lifecycle_event_connection_success_fn=publish_generic_callback.on_lifecycle_connection_success,
-            on_lifecycle_event_connection_success_fn=publish_generic_callback.on_lifecycle_connection_failure,
+            on_lifecycle_event_connection_failure_fn=publish_generic_callback.on_lifecycle_connection_failure
         )
         publisher_client = mqtt5.Client(client_options=publisher_options)
 
