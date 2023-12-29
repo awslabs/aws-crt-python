@@ -1072,7 +1072,6 @@ class Mqtt5ClientTest(NativeResourceTest):
             request_problem_information=1,
             receive_maximum=1000,
             maximum_packet_size=10000,
-            tls_ctx=io.ClientTlsContext(tls_ctx_options)
         )
         subscriber1_generic_callback=Mqtt5TestCallbacks()
         subscriber1_options = mqtt5.ClientOptions(
@@ -1090,7 +1089,8 @@ class Mqtt5ClientTest(NativeResourceTest):
             connack_timeout_ms=1000,
             ack_timeout_sec=100,
             on_lifecycle_event_connection_success_fn=subscriber1_generic_callback.on_lifecycle_connection_success,
-            on_publish_callback_fn=self.subscriber1_callback
+            on_publish_callback_fn=self.subscriber1_callback,
+            tls_ctx=io.ClientTlsContext(tls_ctx_options)
         )
 
         #subscriber1_options.on_publish_callback_fn = self.subscriber1_callback
