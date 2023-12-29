@@ -86,6 +86,7 @@ class Mqtt5TestCallbacks():
         pass
 
     def on_lifecycle_connection_success(self, lifecycle_connection_success: mqtt5.LifecycleConnectSuccessData):
+        print("lifecylce connection success receved\n")
         self.negotiated_settings = lifecycle_connection_success.negotiated_settings
         self.connack_packet = lifecycle_connection_success.connack_packet
         if self.future_connection_success:
