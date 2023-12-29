@@ -1121,7 +1121,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         subscriber2_generic_callback.future_connection_success.result(TIMEOUT)
 
         publisher_client.start()
-        publisher_callback.future_connection_success.result(TIMEOUT)
+        publisher_generic_callback.future_connection_success.result(TIMEOUT)
         print("All clients connected\n")
 
 
@@ -1147,13 +1147,14 @@ class Mqtt5ClientTest(NativeResourceTest):
             publish_future.result(TIMEOUT)
 
 
-        subscriber2_client.stop()
-        callbacks.future_stopped.result(TIMEOUT)
         subscriber1_client.stop()
-        callbacks.future_stopped.result(TIMEOUT)
-        publisher_client.stop()
-        publisher_callback.future_stopped.result(TIMEOUT)
+        subscriber1_generic_callback.future_stopped.result(TIMEOUT)
 
+        subscriber2_client.stop()
+        subscriber2_generic_callback.future_stopped.result(TIMEOUT)
+
+        publisher_client.stop()
+        publisher_generic_callback.future_stopped.result(TIMEOUT)
 
 
 
