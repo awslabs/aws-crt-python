@@ -1063,8 +1063,8 @@ class Mqtt5ClientTest(NativeResourceTest):
             ack_timeout_sec=100)
         subscriber1_options.on_publish_callback_fn = subscriber1_callback
         subscriber1_callback = Mqtt5TestCallbacks()
-        subscriber1_client = self._create_client(client_options=subscriber1_options, callbacks=subscriber1_callback)
-
+        #subscriber1_client = self._create_client(client_options=subscriber1_options, callbacks=subscriber1_callback)
+        subscriber1_client = mqtt5.Client(client_options=subscriber1_options)
 
         # subscriber 2
         connect_subscriber2_options = mqtt5.ConnectPacket(
@@ -1094,8 +1094,8 @@ class Mqtt5ClientTest(NativeResourceTest):
             ack_timeout_sec=100)
         subscriber2_options.on_publish_callback_fn = subscriber2_callback
         subscriber2_callback = Mqtt5TestCallbacks()
-        subscriber2_client = self._create_client(client_options=subscriber2_options, callbacks=subscriber2_callback)
-
+        #subscriber2_client = self._create_client(client_options=subscriber2_options, callbacks=subscriber2_callback)
+        subscriber2_client = mqtt5.Client(client_options=subscriber2_options)
 
         # publisher
         connect_publisher_options = mqtt5.ConnectPacket(
@@ -1123,7 +1123,8 @@ class Mqtt5ClientTest(NativeResourceTest):
             connack_timeout_ms=1000,
             ack_timeout_sec=100)
         publisher_callback = Mqtt5TestCallbacks()
-        publisher_client = self._create_client(client_options=publisher_options, callbacks=publisher_callback)
+        #publisher_client = self._create_client(client_options=publisher_options, callbacks=publisher_callback)
+        publisher_client = mqtt5.Client(client_options=publisher_options)
 
         print("Connecting all 3 clients\n")
         subscriber1_client.start()
