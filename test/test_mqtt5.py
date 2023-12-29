@@ -1064,33 +1064,18 @@ class Mqtt5ClientTest(NativeResourceTest):
             input_key
         )
         # subscriber 1
-        connect_subscriber1_options = mqtt5.ConnectPacket(
-            client_id=client_id_subscriber1,
-            keep_alive_interval_sec=10,
-            session_expiry_interval_sec=100,
-            request_response_information=1,
-            request_problem_information=1,
-            receive_maximum=1000,
-            maximum_packet_size=10000,
-        )
+        connect_subscriber1_options = mqtt5.ConnectPacket(client_id=client_id_subscriber1)
         subscriber1_generic_callback=Mqtt5TestCallbacks()
         subscriber1_options = mqtt5.ClientOptions(
             host_name=input_host_name,
             port=8883,
+            tls_ctx=io.ClientTlsContext(tls_ctx_options),
             connect_options=connect_subscriber1_options,
-            session_behavior=mqtt5.ClientSessionBehaviorType.CLEAN,
-            extended_validation_and_flow_control_options=mqtt5.ExtendedValidationAndFlowControlOptions.AWS_IOT_CORE_DEFAULTS,
-            offline_queue_behavior=mqtt5.ClientOperationQueueBehaviorType.FAIL_ALL_ON_DISCONNECT,
-            retry_jitter_mode=mqtt5.ExponentialBackoffJitterMode.DECORRELATED,
-            min_reconnect_delay_ms=100,
-            max_reconnect_delay_ms=50000,
-            min_connected_time_to_reset_reconnect_delay_ms=1000,
-            ping_timeout_ms=1000,
-            connack_timeout_ms=1000,
-            ack_timeout_sec=100,
+        #   session_behavior=mqtt5.ClientSessionBehaviorType.CLEAN,
             on_lifecycle_event_connection_success_fn=subscriber1_generic_callback.on_lifecycle_connection_success,
             on_publish_callback_fn=self.subscriber1_callback,
-            tls_ctx=io.ClientTlsContext(tls_ctx_options)
+            on_lifecycle_event_stopped_fn=subscriber1_generic_callback.on_lifecycle_stopped,
+            on_lifecycle_event_attempting_connect_fn=generic_callback.on_lifecycle_attempting_connect
         )
 
         #subscriber1_options.on_publish_callback_fn = self.subscriber1_callback
@@ -1099,15 +1084,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         subscriber1_client = mqtt5.Client(client_options=subscriber1_options)
 
         # subscriber 2
-        connect_subscriber2_options = mqtt5.ConnectPacket(
-            keep_alive_interval_sec=10,
-            client_id=client_id_subscriber1,
-            session_expiry_interval_sec=100,
-            request_response_information=1,
-            request_problem_information=1,
-            receive_maximum=1000,
-            maximum_packet_size=10000,
-        )
+        connect_subscriber2_options = mqtt5.ConnectPacket(client_id=client_id_subscriber2)
 
         connect_subscriber2_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
         subscriber2_options = mqtt5.ClientOptions(
@@ -1131,15 +1108,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         subscriber2_client = mqtt5.Client(client_options=subscriber2_options)
 
         # publisher
-        connect_publisher_options = mqtt5.ConnectPacket(
-            keep_alive_interval_sec=10,
-            client_id=client_id_subscriber1,
-            session_expiry_interval_sec=100,
-            request_response_information=1,
-            request_problem_information=1,
-            receive_maximum=1000,
-            maximum_packet_size=10000,
-        )
+        connect_publisher_options = mqtt5.ConnectPacket(client_id=client_id_publisher)
         connect_publisher_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
         publisher_options = mqtt5.ClientOptions(
             host_name=input_host_name,
