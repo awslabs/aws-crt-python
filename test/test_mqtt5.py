@@ -1131,7 +1131,8 @@ class Mqtt5ClientTest(NativeResourceTest):
 
         print("Connecting all 3 clients\n")
         subscriber1_client.start()
-        subscriber1_callback.future_connection_success.result(TIMEOUT)
+        #subscriber1_callback.future_connection_success.result(TIMEOUT)
+        subscriber1_generic_callback.future_connection_success.result(TIMEOUT)
 
         subscriber2_client.start()
         subscriber2_callback.future_connection_success.result(TIMEOUT)
