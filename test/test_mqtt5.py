@@ -4,6 +4,7 @@
 from concurrent.futures import Future
 from awscrt import mqtt5, io, http, exceptions
 from test import NativeResourceTest
+from threading import Lock
 import os
 import unittest
 import uuid
