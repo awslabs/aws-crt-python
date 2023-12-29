@@ -1017,21 +1017,21 @@ class Mqtt5ClientTest(NativeResourceTest):
 
     def subscriber1_callback(self, publish_received_data: mqtt5.PublishReceivedData):
         print("subscriber1 received")
-        mutex.acquire()
-        sub1_callbacks = True
-        total_callbacks = total_callbacks + 1
-        if total_callbacks == 10:
-            all_packets_received.set_result()
-        mutex.release()
+        self.mutex.acquire()
+        self.sub1_callbacks = True
+        self.total_callbacks = total_callbacks + 1
+        if self.total_callbacks == 10:
+            self.all_packets_received.set_result()
+        self.mutex.release()
 
     def subscriber2_callback(self, publish_received_data: mqtt5.PublishReceivedData):
         print("subscriber2 received")
-        mutex.acquire()
-        sub2_callbacks = True
-        total_callbacks = total_callbacks + 1
-        if sub2_callback == 10:
-            all_packets_received.set_result()
-        mutex.release()
+        self.mutex.acquire()
+        self.sub2_callbacks = True
+        self.total_callbacks = total_callbacks + 1
+        if self.sub2_callback == 10:
+            self.all_packets_received.set_result()
+        self.mutex.release()
 
     def test_operation_shared_subscription(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
@@ -1132,7 +1132,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             publish_future = publisher_client.publish(packet)
             publish_future.result(TIMEOUT)
 
-        all_packets_received.future.result(TIMEOUT)
+        self.all_packets_received.future.result(TIMEOUT)
 
         self.assertEqual(sub1_callbacks , True)
         self.assertEqual(sub2_callbacks , True)
