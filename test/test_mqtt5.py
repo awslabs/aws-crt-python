@@ -1129,7 +1129,7 @@ class Mqtt5ClientTest(NativeResourceTest):
                 qos=mqtt5.QoS.AT_LEAST_ONCE,
                 topic=testTopic
             )
-            publish_future = publisher_client.publish(publish_packet)
+            publish_future = publisher_client.publish(packet)
             publish_future.result(TIMEOUT)
 
         all_packets_received.future.result(TIMEOUT)
