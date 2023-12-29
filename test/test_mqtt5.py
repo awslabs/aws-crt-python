@@ -1071,16 +1071,12 @@ class Mqtt5ClientTest(NativeResourceTest):
             port=8883,
             tls_ctx=io.ClientTlsContext(tls_ctx_options),
             connect_options=connect_subscriber1_options,
-        #   session_behavior=mqtt5.ClientSessionBehaviorType.CLEAN,
-            on_lifecycle_event_connection_success_fn=subscriber1_generic_callback.on_lifecycle_connection_success,
             on_publish_callback_fn=self.subscriber1_callback,
             on_lifecycle_event_stopped_fn=subscriber1_generic_callback.on_lifecycle_stopped,
-            on_lifecycle_event_attempting_connect_fn=subscriber1_generic_callback.on_lifecycle_attempting_connect
+            on_lifecycle_event_attempting_connect_fn=subscriber1_generic_callback.on_lifecycle_attempting_connect,
+            on_lifecycle_event_connection_success_fn=subscriber1_generic_callback.on_lifecycle_connection_success,
+            on_lifecycle_event_connection_success_fn=subscriber1_generic_callback.on_lifecycle_connection_failure,
         )
-
-        #subscriber1_options.on_publish_callback_fn = self.subscriber1_callback
-        #subscriber1_options.on_lifecycle_connection_success_fn = subscriber1_generic_callback.on_lifecycle_connection_success
-        #subscriber1_client = self._create_client(client_options=subscriber1_options, callbacks=subscriber1_callback)
         subscriber1_client = mqtt5.Client(client_options=subscriber1_options)
 
         # subscriber 2
@@ -1092,30 +1088,28 @@ class Mqtt5ClientTest(NativeResourceTest):
             port=8883,
             tls_ctx=io.ClientTlsContext(tls_ctx_options),
             connect_options=connect_subscriber2_options,
-            #session_behavior=mqtt5.ClientSessionBehaviorType.CLEAN,
-            on_lifecycle_event_connection_success_fn=subscriber2_generic_callback.on_lifecycle_connection_success,
             on_publish_callback_fn=self.subscriber2_callback,
             on_lifecycle_event_stopped_fn=subscriber2_generic_callback.on_lifecycle_stopped,
-            on_lifecycle_event_attempting_connect_fn=subscriber2_generic_callback.on_lifecycle_attempting_connect
+            on_lifecycle_event_attempting_connect_fn=subscriber2_generic_callback.on_lifecycle_attempting_connect,
+            on_lifecycle_event_connection_success_fn=subscriber2_generic_callback.on_lifecycle_connection_success,
+            on_lifecycle_event_connection_success_fn=subscriber2_generic_callback.on_lifecycle_connection_failure,
         )
-        #connect_subscriber2_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
-        #subscriber2_options.on_publish_callback_fn = self.subscriber2_callback
-        #subscriber2_options.on_lifecycle_connection_success_fn = subscriber2_generic_callback.on_lifecycle_connection_success
-        #subscriber2_client = self._create_client(client_options=subscriber2_options, callbacks=subscriber2_callback)
         subscriber2_client = mqtt5.Client(client_options=subscriber2_options)
 
         # publisher
         connect_publisher_options = mqtt5.ConnectPacket(client_id=client_id_publisher)
-        connect_publisher_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
+        publisher_generic_callback = Mqtt5TestCallbacks()
+
         publisher_options = mqtt5.ClientOptions(
             host_name=input_host_name,
             port=8883,
-            connect_options=connect_publisher_options,
-            #session_behavior=mqtt5.ClientSessionBehaviorType.CLEAN,
+            tls_ctx=io.ClientTlsContext(tls_ctx_options),
+            connect_options=connect_subscriber2_options,
+            on_lifecycle_event_stopped_fn=publish_generic_callback.on_lifecycle_stopped,
+            on_lifecycle_event_attempting_connect_fn=publish_generic_callback.on_lifecycle_attempting_connect,
+            on_lifecycle_event_connection_success_fn=publish_generic_callback.on_lifecycle_connection_success,
+            on_lifecycle_event_connection_success_fn=publish_generic_callback.on_lifecycle_connection_failure,
         )
-        publisher_callback = Mqtt5TestCallbacks()
-        #publisher_client = self._create_client(client_options=publisher_options, callbacks=publisher_callback)
-        publisher_options.on_lifecycle_connection_success_fn = publisher_callback.on_lifecycle_connection_success
         publisher_client = mqtt5.Client(client_options=publisher_options)
 
         print("Connecting all 3 clients\n")
