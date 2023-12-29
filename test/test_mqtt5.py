@@ -1075,7 +1075,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             on_lifecycle_event_connection_success_fn=subscriber1_generic_callback.on_lifecycle_connection_success,
             on_publish_callback_fn=self.subscriber1_callback,
             on_lifecycle_event_stopped_fn=subscriber1_generic_callback.on_lifecycle_stopped,
-            on_lifecycle_event_attempting_connect_fn=generic_callback.on_lifecycle_attempting_connect
+            on_lifecycle_event_attempting_connect_fn=subscriber1_generic_callback.on_lifecycle_attempting_connect
         )
 
         #subscriber1_options.on_publish_callback_fn = self.subscriber1_callback
