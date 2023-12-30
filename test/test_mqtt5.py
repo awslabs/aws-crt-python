@@ -1058,7 +1058,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             port=8883,
             tls_ctx=io.ClientTlsContext(tls_ctx_options),
             connect_options=connect_subscriber1_options,
-            on_publish_callback_fn=self.subscriber2_callback,
+            on_publish_callback_fn=self.subscriber1_callback,
             on_lifecycle_event_stopped_fn=subscriber1_generic_callback.on_lifecycle_stopped,
             on_lifecycle_event_attempting_connect_fn=subscriber1_generic_callback.on_lifecycle_attempting_connect,
             on_lifecycle_event_connection_success_fn=subscriber1_generic_callback.on_lifecycle_connection_success,
@@ -1069,13 +1069,12 @@ class Mqtt5ClientTest(NativeResourceTest):
         # subscriber 2
         connect_subscriber2_options = mqtt5.ConnectPacket(client_id=client_id_subscriber2)
         subscriber2_generic_callback = Mqtt5TestCallbacks()
-
         subscriber2_options = mqtt5.ClientOptions(
             host_name=input_host_name,
             port=8883,
             tls_ctx=io.ClientTlsContext(tls_ctx_options),
             connect_options=connect_subscriber2_options,
-            on_publish_callback_fn=self.subscriber1_callback,
+            on_publish_callback_fn=self.subscriber2_callback,
             on_lifecycle_event_stopped_fn=subscriber2_generic_callback.on_lifecycle_stopped,
             on_lifecycle_event_attempting_connect_fn=subscriber2_generic_callback.on_lifecycle_attempting_connect,
             on_lifecycle_event_connection_success_fn=subscriber2_generic_callback.on_lifecycle_connection_success,
@@ -1091,7 +1090,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             host_name=input_host_name,
             port=8883,
             tls_ctx=io.ClientTlsContext(tls_ctx_options),
-            connect_options=connect_subscriber2_options,
+            connect_options=connect_publisher_options,
             on_lifecycle_event_stopped_fn=publisher_generic_callback.on_lifecycle_stopped,
             on_lifecycle_event_attempting_connect_fn=publisher_generic_callback.on_lifecycle_attempting_connect,
             on_lifecycle_event_connection_success_fn=publisher_generic_callback.on_lifecycle_connection_success,
@@ -1110,6 +1109,14 @@ class Mqtt5ClientTest(NativeResourceTest):
         publisher_generic_callback.future_connection_success.result(TIMEOUT)
         print("All clients connected\n")
 
+        # Subscriber 1
+        subscriptions = []
+        subscriptions.append(mqtt5.Subscription(topic_filter=sharedTopicfilter, qos=mqtt5.QoS.AT_LEAST_ONCE))
+        subscribe_packet = mqtt5.SubscribePacket(
+            subscriptions=subscriptions)
+        subscribe_future = subscriber1_client.subscribe(subscribe_packet=subscribe_packet)
+        suback_packet1 = subscribe_future.result(TIMEOUT)
+        self.assertIsInstance(suback_packet1, mqtt5.SubackPacket)
 
         # Subscriber 2
         subscriptions2 = []
@@ -1119,15 +1126,6 @@ class Mqtt5ClientTest(NativeResourceTest):
         subscribe_future2 = subscriber2_client.subscribe(subscribe_packet=subscribe_packet2)
         suback_packet2 = subscribe_future2.result(TIMEOUT)
         self.assertIsInstance(suback_packet2, mqtt5.SubackPacket)
-
-        # Subscriber 1
-        subscriptions = []
-        subscriptions.append(mqtt5.Subscription(topic_filter=sharedTopicfilter, qos=mqtt5.QoS.AT_LEAST_ONCE))
-        subscribe_packet = mqtt5.SubscribePacket(
-            subscriptions=subscriptions)
-        subscribe_future = subscriber1_client.subscribe(subscribe_packet=subscribe_packet)
-        suback_packet1 = subscribe_future.result(TIMEOUT)
-        self.assertIsInstance(suback_packet1, mqtt5.SubackPacket)
 
         publishes = 10
         for x in range(publishes):
