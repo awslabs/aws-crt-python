@@ -1142,7 +1142,7 @@ class Mqtt5ClientTest(NativeResourceTest):
 
         self.assertEqual(self.sub1_callbacks , True)
         self.assertEqual(self.sub2_callbacks , True)
-        self.assertEqual(slef.total_callbacks , 10)
+        self.assertEqual(self.total_callbacks , 10)
 
         subscriber1_client.stop()
         subscriber1_generic_callback.future_stopped.result(TIMEOUT)
