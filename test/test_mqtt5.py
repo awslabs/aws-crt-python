@@ -1041,8 +1041,8 @@ class Mqtt5ClientTest(NativeResourceTest):
         client_id_subscriber2 = create_client_id()
         client_id_publisher = create_client_id()
 
-        testTopic = f"test/MQTT5_Binding_Python_{uuid.uuid4()}"
-        sharedTopicfilter = f"$share/crttest/test/MQTT5_Binding_Python_{uuid.uuid4()}"
+        testTopic = "test/MQTT5_Binding_Python_{uuid.uuid4()}"
+        sharedTopicfilter = "$share/crttest/test/MQTT5_Binding_Python_{uuid.uuid4()}"
 
         tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(
             input_cert,
@@ -1129,7 +1129,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         publishes = 10
         for x in range(0, publishes):
             packet = mqtt5.PublishPacket(
-                payload="{x}",
+                payload=f"{x}",
                 qos=mqtt5.QoS.AT_LEAST_ONCE,
                 topic=testTopic
             )
