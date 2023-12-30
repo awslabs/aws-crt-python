@@ -1128,7 +1128,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         self.assertIsInstance(suback_packet2, mqtt5.SubackPacket)
 
         publishes = 10
-        for x in range(publishes):
+        for x in range(0, publishes):
             packet = mqtt5.PublishPacket(
                 payload="{i}",
                 qos=mqtt5.QoS.AT_LEAST_ONCE,
@@ -1140,8 +1140,8 @@ class Mqtt5ClientTest(NativeResourceTest):
         self.all_packets_received.result(TIMEOUT)
 
         topic_filters = []
-        topic_filters.append(sharedTopicfilter)
-        unsubscribe_packet = mqtt5.UnsubscribePacket(topic_filters=sharedTopicfilter)
+        topic_filters.append(testTopic)
+        unsubscribe_packet = mqtt5.UnsubscribePacket(topic_filters=testTopic)
 
         unsubscribe_future = subscriber1_client.unsubscribe(unsubscribe_packet)
         unsuback_packet = unsubscribe_future.result(TIMEOUT)
