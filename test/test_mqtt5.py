@@ -1132,7 +1132,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             publish_future = publisher_client.publish(packet)
             publish_future.result(TIMEOUT)
 
-        self.all_packets_received.future.result(TIMEOUT)
+        self.all_packets_received.result(TIMEOUT)
 
         self.assertEqual(sub1_callbacks , True)
         self.assertEqual(sub2_callbacks , True)
