@@ -1019,7 +1019,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         print("subscriber1 received")
         self.mutex.acquire()
         self.sub1_callbacks = True
-        self.total_callbacks = total_callbacks + 1
+        self.total_callbacks = self.total_callbacks + 1
         if self.total_callbacks == 10:
             self.all_packets_received.set_result()
         self.mutex.release()
@@ -1028,7 +1028,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         print("subscriber2 received")
         self.mutex.acquire()
         self.sub2_callbacks = True
-        self.total_callbacks = total_callbacks + 1
+        self.total_callbacks = self.total_callbacks + 1
         if self.sub2_callback == 10:
             self.all_packets_received.set_result()
         self.mutex.release()
@@ -1134,9 +1134,9 @@ class Mqtt5ClientTest(NativeResourceTest):
 
         self.all_packets_received.result(TIMEOUT)
 
-        self.assertEqual(sub1_callbacks , True)
-        self.assertEqual(sub2_callbacks , True)
-        self.assertEqual(total_callbacks , 10)
+        self.assertEqual(self.sub1_callbacks , True)
+        self.assertEqual(self.sub2_callbacks , True)
+        self.assertEqual(slef.total_callbacks , 10)
 
         subscriber1_client.stop()
         subscriber1_generic_callback.future_stopped.result(TIMEOUT)
