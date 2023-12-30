@@ -1046,7 +1046,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         client_id_publisher = create_client_id()
 
         testTopic = "test/MQTT5_Binding_Python_" + client_id_publisher 
-        sharedTopicfilter = "test/MQTT5_Binding_Python_" + client_id_publisher  
+        sharedTopicfilter = "$share/crttest/test/MQTT5_Binding_Python_" + client_id_publisher  
         #sharedTopicfilter = f"$share/crttest/test/MQTT5_Binding_Python_{uuid.uuid4()}"
 
         tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(
