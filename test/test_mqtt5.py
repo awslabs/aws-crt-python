@@ -1129,7 +1129,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         publishes = 10
         for x in range(0, publishes):
             packet = mqtt5.PublishPacket(
-                payload=f"{i}",
+                payload=f"{x}",
                 qos=mqtt5.QoS.AT_LEAST_ONCE,
                 topic=testTopic
             )
