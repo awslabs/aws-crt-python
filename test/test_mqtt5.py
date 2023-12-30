@@ -1021,7 +1021,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         self.sub1_callbacks = True
         self.total_callbacks = self.total_callbacks + 1
         if self.total_callbacks == 10:
-            self.all_packets_received.set_result()
+            self.all_packets_received.set_result(None)
         self.mutex.release()
 
     def subscriber2_callback(self, publish_received_data: mqtt5.PublishReceivedData):
@@ -1030,7 +1030,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         self.sub2_callbacks = True
         self.total_callbacks = self.total_callbacks + 1
         if self.sub2_callback == 10:
-            self.all_packets_received.set_result()
+            self.all_packets_received.set_result(None)
         self.mutex.release()
 
     def test_operation_shared_subscription(self):
