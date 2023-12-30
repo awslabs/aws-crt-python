@@ -1110,14 +1110,6 @@ class Mqtt5ClientTest(NativeResourceTest):
         publisher_generic_callback.future_connection_success.result(TIMEOUT)
         print("All clients connected\n")
 
-        # Subscriber 1
-        subscriptions = []
-        subscriptions.append(mqtt5.Subscription(topic_filter=sharedTopicfilter, qos=mqtt5.QoS.AT_LEAST_ONCE))
-        subscribe_packet = mqtt5.SubscribePacket(
-            subscriptions=subscriptions)
-        subscribe_future = subscriber1_client.subscribe(subscribe_packet=subscribe_packet)
-        suback_packet1 = subscribe_future.result(TIMEOUT)
-        self.assertIsInstance(suback_packet1, mqtt5.SubackPacket)
 
         # Subscriber 2
         subscriptions2 = []
@@ -1127,6 +1119,15 @@ class Mqtt5ClientTest(NativeResourceTest):
         subscribe_future2 = subscriber2_client.subscribe(subscribe_packet=subscribe_packet2)
         suback_packet2 = subscribe_future2.result(TIMEOUT)
         self.assertIsInstance(suback_packet2, mqtt5.SubackPacket)
+
+        # Subscriber 1
+        subscriptions = []
+        subscriptions.append(mqtt5.Subscription(topic_filter=sharedTopicfilter, qos=mqtt5.QoS.AT_LEAST_ONCE))
+        subscribe_packet = mqtt5.SubscribePacket(
+            subscriptions=subscriptions)
+        subscribe_future = subscriber1_client.subscribe(subscribe_packet=subscribe_packet)
+        suback_packet1 = subscribe_future.result(TIMEOUT)
+        self.assertIsInstance(suback_packet1, mqtt5.SubackPacket)
 
         publishes = 10
         for x in range(publishes):
