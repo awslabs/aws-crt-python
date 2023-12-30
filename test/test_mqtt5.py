@@ -1012,11 +1012,10 @@ class Mqtt5ClientTest(NativeResourceTest):
     sub2_callbacks = False 
     total_callbacks = 0
     all_packets_received = Future()
-    mutex = Lock();
-
+    mutex = Lock()
 
     def subscriber1_callback(self, publish_received_data: mqtt5.PublishReceivedData):
-        print("subscriber1 received")
+        print(f"subscriber 1 received topic: {publish_received_data.topic}, packet: {publish_received_data.payload}")
         self.mutex.acquire()
         self.sub1_callbacks = True
         self.total_callbacks = self.total_callbacks + 1
@@ -1025,7 +1024,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         self.mutex.release()
 
     def subscriber2_callback(self, publish_received_data: mqtt5.PublishReceivedData):
-        print("subscriber2 received")
+        print(f"subscriber 2 received topic: {publish_received_data.topic}, packet: {publish_received_data.payload}")
         self.mutex.acquire()
         self.sub2_callbacks = True
         self.total_callbacks = self.total_callbacks + 1
@@ -1052,7 +1051,7 @@ class Mqtt5ClientTest(NativeResourceTest):
 
         # subscriber 1
         connect_subscriber1_options = mqtt5.ConnectPacket(client_id=client_id_subscriber1)
-        subscriber1_generic_callback=Mqtt5TestCallbacks()
+        subscriber1_generic_callback = Mqtt5TestCallbacks()
         subscriber1_options = mqtt5.ClientOptions(
             host_name=input_host_name,
             port=8883,
@@ -1151,9 +1150,9 @@ class Mqtt5ClientTest(NativeResourceTest):
         unsuback_packet = unsubscribe_future.result(TIMEOUT)
         self.assertIsInstance(unsuback_packet, mqtt5.UnsubackPacket)
 
-        self.assertEqual(self.sub1_callbacks , True)
-        self.assertEqual(self.sub2_callbacks , True)
-        self.assertEqual(self.total_callbacks , 10)
+        self.assertEqual(self.sub1_callbacks, True)
+        self.assertEqual(self.sub2_callbacks, True)
+        self.assertEqual(self.total_callbacks, 10)
 
         subscriber1_client.stop()
         subscriber1_generic_callback.future_stopped.result(TIMEOUT)
@@ -1163,8 +1162,6 @@ class Mqtt5ClientTest(NativeResourceTest):
 
         publisher_client.stop()
         publisher_generic_callback.future_stopped.result(TIMEOUT)
-
-
 
     def test_operation_will(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
