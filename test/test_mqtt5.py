@@ -1114,12 +1114,18 @@ class Mqtt5ClientTest(NativeResourceTest):
         subscriptions = []
         subscriptions.append(mqtt5.Subscription(topic_filter=sharedTopicfilter, qos=mqtt5.QoS.AT_LEAST_ONCE))
 
+        subscriptions2 = []
+        subscriptions2.append(mqtt5.Subscription(topic_filter=sharedTopicfilter, qos=mqtt5.QoS.AT_LEAST_ONCE))
+
         subscribe_packet = mqtt5.SubscribePacket(
             subscriptions=subscriptions)
+
+        subscribe_packet2 = mqtt5.SubscribePacket(
+            subscriptions=subscriptions2)
         subscribe_future = subscriber1_client.subscribe(subscribe_packet=subscribe_packet)
         suback_packet = subscribe_future.result(TIMEOUT)
 
-        subscribe_future = subscriber2_client.subscribe(subscribe_packet=subscribe_packet)
+        subscribe_future = subscriber2_client.subscribe(subscribe_packet=subscribe_packet2)
         suback_packet = subscribe_future.result(TIMEOUT)
 
         publishes = 10
