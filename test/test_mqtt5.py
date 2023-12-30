@@ -1029,7 +1029,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         self.mutex.acquire()
         self.sub2_callbacks = True
         self.total_callbacks = self.total_callbacks + 1
-        if self.sub2_callback == 10:
+        if self.total_callbacks == 10:
             self.all_packets_received.set_result(None)
         self.mutex.release()
 
