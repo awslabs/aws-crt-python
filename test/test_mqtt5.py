@@ -1139,6 +1139,18 @@ class Mqtt5ClientTest(NativeResourceTest):
 
         self.all_packets_received.result(TIMEOUT)
 
+        topic_filters = []
+        topic_filters.append(sharedTopicfilter)
+        unsubscribe_packet = mqtt5.UnsubscribePacket(topic_filters=sharedTopicfilter)
+
+        unsubscribe_future = subscriber1_client.unsubscribe(unsubscribe_packet)
+        unsuback_packet = unsubscribe_future.result(TIMEOUT)
+        self.assertIsInstance(unsuback_packet, mqtt5.UnsubackPacket)
+
+        unsubscribe_future = subscriber2_client.unsubscribe(unsubscribe_packet)
+        unsuback_packet = unsubscribe_future.result(TIMEOUT)
+        self.assertIsInstance(unsuback_packet, mqtt5.UnsubackPacket)
+
         self.assertEqual(self.sub1_callbacks , True)
         self.assertEqual(self.sub2_callbacks , True)
         self.assertEqual(self.total_callbacks , 10)
