@@ -1015,12 +1015,9 @@ class Mqtt5ClientTest(NativeResourceTest):
     mutex = Lock()
     received_subscriptions = [0] * 10
 
-
     def subscriber1_callback(self, publish_received_data: mqtt5.PublishReceivedData):
-        print(f"subscriber 1 received topic: {publish_received_data.publish_packet.topic}, packet: {publish_received_data.publish_packet.payload}")
         self.mutex.acquire()
         var = publish_received_data.publish_packet.payload
-        print(f" var is: {var}")
         self.received_subscriptions[int(var)] = 1
         self.sub1_callbacks = True
         self.total_callbacks = self.total_callbacks + 1
@@ -1029,10 +1026,8 @@ class Mqtt5ClientTest(NativeResourceTest):
         self.mutex.release()
 
     def subscriber2_callback(self, publish_received_data: mqtt5.PublishReceivedData):
-        print(f"subscriber 2 received topic: {publish_received_data.publish_packet.topic}, packet: {publish_received_data.publish_packet.payload}")
         self.mutex.acquire()
         var = publish_received_data.publish_packet.payload
-        print(f" var is: {var}")
         self.received_subscriptions[int(var)] = 1
         self.sub2_callbacks = True
         self.total_callbacks = self.total_callbacks + 1
