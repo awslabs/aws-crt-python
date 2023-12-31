@@ -1013,12 +1013,15 @@ class Mqtt5ClientTest(NativeResourceTest):
     total_callbacks = 0
     all_packets_received = Future()
     mutex = Lock()
+    received_subscriptions = [0] * 10
+
 
     def subscriber1_callback(self, publish_received_data: mqtt5.PublishReceivedData):
         print(f"subscriber 1 received topic: {publish_received_data.publish_packet.topic}, packet: {publish_received_data.publish_packet.payload}")
         self.mutex.acquire()
         var = publish_received_data.publish_packet.payload
         print(f" var is: {var}")
+        received_subscriptions[var] = 1
         self.sub1_callbacks = True
         self.total_callbacks = self.total_callbacks + 1
         if self.total_callbacks == 10:
@@ -1030,6 +1033,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         self.mutex.acquire()
         var = publish_received_data.publish_packet.payload
         print(f" var is: {var}")
+        received_subscriptions[var] = 1
         self.sub2_callbacks = True
         self.total_callbacks = self.total_callbacks + 1
         if self.total_callbacks == 10:
@@ -1045,9 +1049,8 @@ class Mqtt5ClientTest(NativeResourceTest):
         client_id_subscriber2 = create_client_id()
         client_id_publisher = create_client_id()
 
-        testTopic = "test/MQTT5_Binding_Python_" + client_id_publisher 
-        sharedTopicfilter = "$share/crttest/test/MQTT5_Binding_Python_" + client_id_publisher  
-        #sharedTopicfilter = f"$share/crttest/test/MQTT5_Binding_Python_{uuid.uuid4()}"
+        testTopic = "test/MQTT5_Binding_Python_" + client_id_publisher
+        sharedTopicfilter = "$share/crttest/test/MQTT5_Binding_Python_" + client_id_publisher
 
         tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(
             input_cert,
@@ -1158,6 +1161,9 @@ class Mqtt5ClientTest(NativeResourceTest):
         self.assertEqual(self.sub1_callbacks, True)
         self.assertEqual(self.sub2_callbacks, True)
         self.assertEqual(self.total_callbacks, 10)
+
+        for e in received_subscriptions:
+            self.assertEqual(e, 1)
 
         subscriber1_client.stop()
         subscriber1_generic_callback.future_stopped.result(TIMEOUT)
