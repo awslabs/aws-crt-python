@@ -1021,7 +1021,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         self.mutex.acquire()
         var = publish_received_data.publish_packet.payload
         print(f" var is: {var}")
-        self.received_subscriptions[var] = 1
+        self.received_subscriptions[int(var)] = 1
         self.sub1_callbacks = True
         self.total_callbacks = self.total_callbacks + 1
         if self.total_callbacks == 10:
@@ -1033,7 +1033,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         self.mutex.acquire()
         var = publish_received_data.publish_packet.payload
         print(f" var is: {var}")
-        self.received_subscriptions[var] = 1
+        self.received_subscriptions[int(var)] = 1
         self.sub2_callbacks = True
         self.total_callbacks = self.total_callbacks + 1
         if self.total_callbacks == 10:
