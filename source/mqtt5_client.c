@@ -811,7 +811,7 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
     PyObject *socket_options_py;
     PyObject *tls_ctx_py;
     PyObject *proxy_options_py;
-    uint16_t port;
+    uint32_t port;
 
     /* Connect Options */
     struct aws_byte_cursor client_id;          /* optional */
@@ -856,11 +856,11 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
 
     if (!PyArg_ParseTuple(
             args,
-            "Os#HOOOOz#Oz#z#OOOOOOOOOz*Oz#OOOz#z*z#OOOOOOOOOOOOO",
+            "Os#IOOOOz#Oz#z#OOOOOOOOOz*Oz#OOOz#z*z#OOOOOOOOOOOOO",
             /* O */ &self_py,
             /* s */ &host_name.ptr,
             /* # */ &host_name.len,
-            /* H */ &port,
+            /* I */ &port,
             /* O */ &bootstrap_py,
             /* O */ &socket_options_py,
             /* O */ &tls_ctx_py,

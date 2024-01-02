@@ -46,13 +46,13 @@ PyObject *aws_py_event_stream_rpc_client_connection_connect(PyObject *self, PyOb
     struct aws_allocator *alloc = aws_py_get_allocator();
 
     const char *host_name;
-    uint16_t port;
+    uint32_t port;
     PyObject *bootstrap_py;
     PyObject *socket_options_py;
     PyObject *tls_options_py;
     PyObject *connection_py;
     if (!PyArg_ParseTuple(
-            args, "sHOOOO", &host_name, &port, &bootstrap_py, &socket_options_py, &tls_options_py, &connection_py)) {
+            args, "sIOOOO", &host_name, &port, &bootstrap_py, &socket_options_py, &tls_options_py, &connection_py)) {
         return NULL;
     }
 
