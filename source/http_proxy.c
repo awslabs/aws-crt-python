@@ -27,7 +27,7 @@ bool aws_py_http_proxy_options_init(struct aws_http_proxy_options *proxy_options
         goto done;
     }
 
-    proxy_options->port = PyObject_GetAttrAsUint16(py_proxy_options, "HttpProxyOptions", "port");
+    proxy_options->port = PyObject_GetAttrAsUint32(py_proxy_options, "HttpProxyOptions", "port");
     if (PyErr_Occurred()) {
         goto done;
     }
