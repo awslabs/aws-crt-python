@@ -172,6 +172,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             receive_maximum=1000,
             maximum_packet_size=10000,
             will_delay_interval_sec=1000,
+            will=publish_packet,
             user_properties=user_properties
         )
         client_options = mqtt5.ClientOptions(
