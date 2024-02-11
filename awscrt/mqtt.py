@@ -228,7 +228,7 @@ class Connection(NativeResource):
             The `session_present` bool in the connection callback informs
             whether an existing session was successfully resumed.
             If an existing session is resumed, the server remembers previous subscriptions
-            and sends mesages (with QoS1 or higher) that were published while the client was offline.
+            and sends messages (with QoS1 or higher) that were published while the client was offline.
 
         on_connection_interrupted: Optional callback invoked whenever the MQTT connection is lost.
             The MQTT client will automatically attempt to reconnect.

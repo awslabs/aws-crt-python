@@ -91,7 +91,7 @@ else
 
     return 1
 fi
-# Set the certificate and key paths (absolute paths for best compatbility)
+# Set the certificate and key paths (absolute paths for best compatibility)
 export AWS_TEST_MQTT5_CERTIFICATE_FILE="${PWD}/crt_certificate.pem"
 export AWS_TEST_MQTT5_KEY_FILE="${PWD}/crt_privatekey.pem"
 

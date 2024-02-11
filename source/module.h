@@ -41,7 +41,7 @@ int PyObject_GetAttrAsIntEnum(PyObject *o, const char *class_name, const char *a
 
 /* Checks if the named attribute is None, converts it to the specified type, then stores
  * the value and returns a pointer to the stored value or NULL if it doesn't exist or fails.
- * If conversion cannot occur a python exception is set (check PyExc_Occured()) */
+ * If conversion cannot occur a python exception is set (check PyExc_Occurred()) */
 uint64_t *PyObject_GetAsOptionalUint64(
     PyObject *o,
     const char *class_name,
