@@ -2015,7 +2015,7 @@ class Client(NativeResource):
             protocol_operation_timeout_ms=self.adapter_options.ack_timeout_secs * 1000,
             socket_options=self.adapter_options.socket_options,
 
-            # For the arugments below, set it to `None` will directly use the options from mqtt5 client underlying.
+            # For the arguments below, set it to `None` will directly use the options from mqtt5 client underlying.
             will=None,
             username=None,
             password=None,

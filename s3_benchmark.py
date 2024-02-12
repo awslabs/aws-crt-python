@@ -130,7 +130,7 @@ def on_body(offset, chunk, **kwargs):
     #     if not os.path.exists(file_name):
     #         open(file_name, 'a').close()
     #     with open(file_name, 'rb+') as f:
-    #         # seems like the seek here may srew up the file.
+    #         # seems like the seek here may screw up the file.
     #         f.seek(offset)
     #         f.write(chunk)
 
