@@ -122,7 +122,7 @@ publish_results = publish_future.result(TIMEOUT)
 assert(publish_results['packet_id'] == publish_packet_id)
 
 # Receive Message
-print("Waiting to receive messsage")
+print("Waiting to receive message")
 assert(receive_event.wait(TIMEOUT))
 assert(receive_results['topic'] == TOPIC)
 assert(receive_results['payload'].decode() == MESSAGE)
