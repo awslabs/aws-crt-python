@@ -955,7 +955,8 @@ class ConnackPacket:
 
     Args:
         session_present (bool): True if the client rejoined an existing session on the server, false otherwise.
-        reason_code (ConnectReasonCode): Indicates either success or the reason for failure for the connection attempt. session_expiry_interval_sec (int): A time interval, in seconds, that the server will persist this connection's MQTT session state for.  If present, this value overrides any session expiry specified in the preceding CONNECT packet.
+        reason_code (ConnectReasonCode): Indicates either success or the reason for failure for the connection attempt.
+        session_expiry_interval_sec (int): A time interval, in seconds, that the server will persist this connection's MQTT session state for.  If present, this value overrides any session expiry specified in the preceding CONNECT packet.
         receive_maximum (int): The maximum amount of in-flight QoS 1 or 2 messages that the server is willing to handle at once. If omitted or None, the limit is based on the valid MQTT packet id space (65535).
         maximum_qos (QoS): The maximum message delivery quality of service that the server will allow on this connection.
         retain_available (bool): Indicates whether the server supports retained messages.  If None, retained messages are supported.
@@ -1233,10 +1234,10 @@ class OperationStatisticsData:
     """Dataclass containing some simple statistics about the current state of the client's queue of operations
 
     Args:
-        incomplete_operation_count (int): total number of operations submitted to the client that have not yet been completed.  Unacked operations are a subset of this.
-        incomplete_operation_size (int): total packet size of operations submitted to the client that have not yet been completed.  Unacked operations are a subset of this.
-        unacked_operation_count (int): total number of operations that have been sent to the server and are waiting for a corresponding ACK before they can be completed.
-        unacked_operation_size (int): total packet size of operations that have been sent to the server and are waiting for a corresponding ACK before they can be completed.
+        incomplete_operation_count (int): Total number of operations submitted to the client that have not yet been completed.  Unacked operations are a subset of this.
+        incomplete_operation_size (int): Total packet size of operations submitted to the client that have not yet been completed.  Unacked operations are a subset of this.
+        unacked_operation_count (int): Total number of operations that have been sent to the server and are waiting for a corresponding ACK before they can be completed.
+        unacked_operation_size (int): Total packet size of operations that have been sent to the server and are waiting for a corresponding ACK before they can be completed.
     """
     incomplete_operation_count: int = 0
     incomplete_operation_size: int = 0
@@ -1775,6 +1776,7 @@ class Client(NativeResource):
                                                  client_options.max_reconnect_delay_ms,
                                                  client_options.min_connected_time_to_reset_reconnect_delay_ms,
                                                  client_options.ping_timeout_ms,
+                                                 client_options.connack_timeout_ms,
                                                  client_options.ack_timeout_sec,
                                                  client_options.topic_aliasing_options,
                                                  websocket_is_none,
