@@ -90,7 +90,7 @@ class CrossProcessLockTest(NativeResourceTest):
             process = Process(target=cross_proc_task)
             process.start()
             process.join()
-            # aquiring this lock in a sub-process should fail since we
+            # acquiring this lock in a sub-process should fail since we
             # already hold the lock in this process.
             self.assertNotEqual(0, process.exitcode)
 

@@ -7,7 +7,7 @@ on:
       - 'docs'
 
 env:
-  BUILDER_VERSION: v0.9.47
+  BUILDER_VERSION: v0.9.56
   BUILDER_SOURCE: releases
   BUILDER_HOST: https://d19elf31gohf1l.cloudfront.net
   PACKAGE_NAME: aws-crt-python
@@ -191,17 +191,18 @@ jobs:
 
 
   openbsd:
-    runs-on: ubuntu-latest # macos would be faster. TODO: diagnose why some tests are failing
+    runs-on: ubuntu-22.04 # latest
     steps:
       # Cannot use builder to checkout as OpenBSD doesn't ship git in the base install
       - uses: actions/checkout@v3
         with:
           submodules: true
       - name: Build ${{ env.PACKAGE_NAME }} + consumers
-        uses: cross-platform-actions/action@v0.20.0
+        uses: cross-platform-actions/action@v0.23.0
         with:
           operating_system: openbsd
-          version: '7.2'
+          version: '7.4'
+          cpu_count: 4
           shell: bash
           environment_variables: AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION AWS_REGION
           run: |
@@ -211,16 +212,19 @@ jobs:
             ./builder build -p ${{ env.PACKAGE_NAME }}
 
   freebsd:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04 # latest
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: true
+
       - name: Build ${{ env.PACKAGE_NAME }} + consumers
-        uses: cross-platform-actions/action@v0.20.0
+        uses: cross-platform-actions/action@v0.23.0
         with:
           operating_system: freebsd
-          version: '13.2'
+          version: '14.0'
+          cpu_count: 4
+          shell: bash
           environment_variables: AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION AWS_REGION
           run: |
             sudo pkg install -y python3 py39-urllib3 py39-pip py39-awscli cmake
