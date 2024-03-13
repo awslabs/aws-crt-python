@@ -254,7 +254,119 @@ If you suspect the bug is in the external C code (i.e. [aws-c-http](https://gith
 and need to do interactive debugging, your best bet is cloning that external project,
 build it in Debug, and step through its tests.
 
+#### Debugging C with GDB under Linux
+
+**NOTE** This was tested on `Amazon Linux release 2 (Karoo)`.
+
+The Python bundled with the OS has predefined compilation flags that are not so great for debugging code
+(namely `-O2`, which you cannot lower because of another flag, `_FORTIFY_SOURCE=2`). There are various hacks
+to overridethese flags, but a more straightforward and not so time consuming solution is to compile Python from
+source.
+
+1. Install dependencies for Python modules.
+
+    ```sh
+    sudo yum install libuuid-devel openssl11-devel.x86_64 libffi-devel.x86_64
+    ```
+
+2. Build Python from source.
+
+    Get a Python release:
+
+    ```sh
+    mkdir dist
+    cd dist/
+    # As of this writing, that's the latest stable release
+    wget https://www.python.org/ftp/python/3.11.4/Python-3.11.4.tgz
+    tar -xf Python-3.11.4.tgz
+    cd Python-3.11.4/
+    ```
+
+    Configure and build:
+
+    ```sh
+    mkdir build
+    cd build/
+
+    # Redefine default compile flags.
+    export CONFIGURE_CFLAGS="-Wno-unused-result -Wsign-compare -g -Og -Wall"
+
+    # By defalt a directory where a newly compiled Python will be installed is `/usr/local/`.
+    # If you're installing python not in a docker container, it's better to use some custom designated directory.
+    ../configure --prefix=${HOME}/usr/local/ --with-pydebug
+    make -j4
+    make test  # optional step
+    make install
+    ```
+
+    There are a lot of differnt configuration options, they can be found [here](https://docs.python.org/3/using/configure.html).
+
+3. Use a newly installed Python.
+
+    Whichever directory was specified as the install prefix, it should be added to the PATH env var:
+
+    ```sh
+    export PATH=${HOME}/usr/local/bin:$PATH
+    ```
+
+    **NOTE** I wouldn't add this line to a shell init script (e.g., .bashrc or .zshrc), as a lot of things in Linux
+    depend on Python, and it hypothetically can mess things up. It's better to enable this custom Python in one
+    specific terminal whenever you need to dive into debugging.
+
+    Make sure that the correct Python binary is being used:
+
+    ```sh
+    which python3
+    ```
+
+    You can examine CFLAGS value using sysconfig:
+
+    ```python
+    import sysconfig
+    print(sysconfig.get_config_var('CFLAGS'))
+    ```
+
+After that, configure the project using a newly installed Python, and it'll be possible to debug C code.
+
+Example of a debugging session:
+
+```sh
+% gdb --args python3 -m unittest --failfast --verbose test.test_mqtt.MqttConnectionTest.test_connect_disconnect_with_callbacks_happy
+
+(gdb) b source/mqtt_client_connection.c:362
+Breakpoint 1 at 0x7fffef2852d2: file source/mqtt_client_connection.c, line 362.
+(gdb) r
+Starting program: /local/home/igorabd/projects/aws-crt-python/.venv/bin/python3 -m unittest --failfast --verbose test.test_mqtt.MqttConnectionTest.test_connect_disconnect_with_callbacks_happy
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib64/libthread_db.so.1".
+test_connect_disconnect_with_callbacks_happy (test.test_mqtt.MqttConnectionTest) ... [New Thread 0x7fffee698700 (LWP 8392)]
+
+Thread 5 "AwsEventLoop 4" hit Breakpoint 1, s_on_connect (connection=<optimized out>, error_code=0, return_code=AWS_MQTT_CONNECT_ACCEPTED, session_present=false, user_data=<optimized out>) at source/mqtt_client_connection.c:362
+362             if (error_code == AWS_ERROR_SUCCESS) {
+(gdb) n
+363                 PyObject *success_result = PyObject_CallMethod(
+(gdb) info locals
+success_result = <optimized out>
+py_connection = <optimized out>
+state = PyGILState_UNLOCKED
+self = 0x7fffee6a45f0
+(gdb) n
+365                 if (success_result) {
+(gdb) n
+374                     Py_DECREF(success_result);
+(gdb) c
+Continuing.
+...
+[Thread 0x7fffdebfd700 (LWP 8474) exited]
+ok
+
+----------------------------------------------------------------------
+Ran 1 test in 6.254s
+
+OK
+[Inferior 1 (process 8382) exited normally]
+```
+
 # TODO
 *   more about git submodules (latest-submodules.py and working from branches)
 *   more about logging. consider easy way to turn on logging in tests
-
