@@ -609,7 +609,7 @@ class UnsubackReasonCode(IntEnum):
     Returned when the client was not authorized to unsubscribe from that topic filter on the server.
     """
 
-    TOPIC_NAME_INVALID = 144
+    TOPIC_FILTER_INVALID = 143
     """
     Returned when the topic filter was correctly formed but is not allowed for the client on the server.
     """
