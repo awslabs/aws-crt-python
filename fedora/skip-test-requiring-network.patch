@@ -1,0 +1,12 @@
+diff --git a/test/test_http_client.py b/test/test_http_client.py
+index 5af87b6..dd2631a 100644
+--- a/test/test_http_client.py
++++ b/test/test_http_client.py
+@@ -347,6 +347,7 @@ class TestClient(NativeResourceTest):
+                                                      tls_connection_options=tls_conn_opt)
+         return connection_future.result(self.timeout)
+ 
++    @unittest.skip("Requires network")
+     def test_h2_client(self):
+         url = urlparse("https://d1cz66xoahf9cl.cloudfront.net/http_test_doc.txt")
+         connection = self._new_h2_client_connection(url)
