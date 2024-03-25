@@ -57,6 +57,7 @@ static const char *AWS_PYOBJECT_KEY_MAX_RECONNECT_DELAY_MS = "max_reconnect_dela
 static const char *AWS_PYOBJECT_KEY_MIN_CONNECTED_TIME_TO_RESET_RECONNECT_DELAY_MS =
     "min_connected_time_to_reset_reconnect_delay_ms";
 static const char *AWS_PYOBJECT_KEY_PING_TIMEOUT_MS = "ping_timeout_ms";
+static const char *AWS_PYOBJECT_KEY_CONNACK_TIMEOUT_MS = "connack_timeout_ms";
 static const char *AWS_PYOBJECT_KEY_ACK_TIMEOUT_SECONDS = "ack_timeout_seconds";
 
 #define KEEP_ALIVE_INTERVAL_SECONDS 1200
@@ -815,7 +816,7 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
 
     /* Connect Options */
     struct aws_byte_cursor client_id;          /* optional */
-    PyObject *keep_alive_interval_sec_py;      /* uint16_t */
+    PyObject *keep_alive_interval_sec_py;      /* optional uint16_t */
     struct aws_byte_cursor username;           /* optional */
     struct aws_byte_cursor password;           /* optional */
     PyObject *session_expiry_interval_sec_py;  /* optional uint32_t */
@@ -848,6 +849,7 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
     PyObject *max_reconnect_delay_ms_py;                         /* optional uint64_t */
     PyObject *min_connected_time_to_reset_reconnect_delay_ms_py; /* optional uint64_t */
     PyObject *ping_timeout_ms_py;                                /* optional uint32_t */
+    PyObject *connack_timeout_ms_py;                             /* optional uint32_t */
     PyObject *ack_timeout_seconds_py;                            /* optional uint32_t */
     PyObject *topic_aliasing_options_py;                         /* optional TopicAliasingOptions */
     /* Callbacks */
@@ -856,7 +858,7 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
 
     if (!PyArg_ParseTuple(
             args,
-            "Os#IOOOOz#Oz#z#OOOOOOOOOz*Oz#OOOz#z*z#OOOOOOOOOOOOO",
+            "Os#IOOOOz#Oz#z#OOOOOOOOOz*Oz#OOOz#z*z#OOOOOOOOOOOOOO",
             /* O */ &self_py,
             /* s */ &host_name.ptr,
             /* # */ &host_name.len,
@@ -906,6 +908,7 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
             /* O */ &max_reconnect_delay_ms_py,
             /* O */ &min_connected_time_to_reset_reconnect_delay_ms_py,
             /* O */ &ping_timeout_ms_py,
+            /* O */ &connack_timeout_ms_py,
             /* O */ &ack_timeout_seconds_py,
             /* O */ &topic_aliasing_options_py,
 
@@ -1074,6 +1077,18 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
             AWS_PYOBJECT_KEY_PING_TIMEOUT_MS,
             &ping_timeout_ms_tmp)) {
         client_options.ping_timeout_ms = ping_timeout_ms_tmp;
+    }
+    if (PyErr_Occurred()) {
+        goto done;
+    }
+
+    uint32_t connack_timeout_ms_tmp = 0;
+    if (PyObject_GetAsOptionalUint32(
+            connack_timeout_ms_py,
+            AWS_PYOBJECT_KEY_CLIENT_OPTIONS,
+            AWS_PYOBJECT_KEY_CONNACK_TIMEOUT_MS,
+            &connack_timeout_ms_tmp)) {
+        client_options.connack_timeout_ms = connack_timeout_ms_tmp;
     }
     if (PyErr_Occurred()) {
         goto done;
