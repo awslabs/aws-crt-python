@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "s3_client.h": "c",
+        "retry_strategy.h": "c",
+        "s3.h": "c"
+    }
+}
