@@ -122,30 +122,30 @@ class AwsCborDecoder(NativeResource):
     def consume_next_data_item(self):
         return _awscrt.cbor_decoder_consume_next_data_item(self._binding)
 
-    def get_next_unsigned_int(self) -> int:
-        return _awscrt.cbor_decoder_get_next_unsigned_int(self._binding)
+    def pop_next_unsigned_int(self) -> int:
+        return _awscrt.cbor_decoder_pop_next_unsigned_int(self._binding)
 
-    def get_next_negative_int(self) -> int:
-        val = _awscrt.cbor_decoder_get_next_negative_int(self._binding)
+    def pop_next_negative_int(self) -> int:
+        val = _awscrt.cbor_decoder_pop_next_negative_int(self._binding)
         return -1 - val
 
-    def get_next_double(self) -> float:
-        return _awscrt.cbor_decoder_get_next_double(self._binding)
+    def pop_next_double(self) -> float:
+        return _awscrt.cbor_decoder_pop_next_double(self._binding)
 
-    def get_next_bool(self) -> bool:
-        return _awscrt.cbor_decoder_get_next_bool(self._binding)
+    def pop_next_bool(self) -> bool:
+        return _awscrt.cbor_decoder_pop_next_bool(self._binding)
 
-    def get_next_bytes(self) -> bytes:
-        return _awscrt.cbor_decoder_get_next_bytes(self._binding)
+    def pop_next_bytes(self) -> bytes:
+        return _awscrt.cbor_decoder_pop_next_bytes(self._binding)
 
-    def get_next_str(self) -> str:
-        return _awscrt.cbor_decoder_get_next_str(self._binding)
+    def pop_next_str(self) -> str:
+        return _awscrt.cbor_decoder_pop_next_str(self._binding)
 
-    def get_next_array_start(self) -> int:
-        return _awscrt.cbor_decoder_get_next_array_start(self._binding)
+    def pop_next_array_start(self) -> int:
+        return _awscrt.cbor_decoder_pop_next_array_start(self._binding)
 
-    def get_next_map_start(self) -> int:
-        return _awscrt.cbor_decoder_get_next_map_start(self._binding)
+    def pop_next_map_start(self) -> int:
+        return _awscrt.cbor_decoder_pop_next_map_start(self._binding)
 
-    def get_next_tag_val(self) -> int:
-        return _awscrt.cbor_decoder_get_next_tag_val(self._binding)
+    def pop_next_tag_val(self) -> int:
+        return _awscrt.cbor_decoder_pop_next_tag_val(self._binding)

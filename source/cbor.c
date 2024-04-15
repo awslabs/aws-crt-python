@@ -250,55 +250,55 @@ PyObject *aws_py_cbor_decoder_consume_next_data_item(PyObject *self, PyObject *a
     Py_RETURN_NONE;
 }
 
-PyObject *aws_py_cbor_decoder_get_next_unsigned_int(PyObject *self, PyObject *args) {
+PyObject *aws_py_cbor_decoder_pop_next_unsigned_int(PyObject *self, PyObject *args) {
     uint64_t out_val;
     S_DECODER_METHOD_START(aws_cbor_decoder_pop_next_unsigned_val, out_val);
     return PyLong_FromUnsignedLongLong(out_val);
 }
 
-PyObject *aws_py_cbor_decoder_get_next_negative_int(PyObject *self, PyObject *args) {
+PyObject *aws_py_cbor_decoder_pop_next_negative_int(PyObject *self, PyObject *args) {
     uint64_t out_val;
     S_DECODER_METHOD_START(aws_cbor_decoder_pop_next_neg_val, out_val);
     return PyLong_FromUnsignedLongLong(out_val);
 }
 
-PyObject *aws_py_cbor_decoder_get_next_double(PyObject *self, PyObject *args) {
+PyObject *aws_py_cbor_decoder_pop_next_double(PyObject *self, PyObject *args) {
     double out_val;
     S_DECODER_METHOD_START(aws_cbor_decoder_pop_next_double_val, out_val);
     return PyFloat_FromDouble(out_val);
 }
 
-PyObject *aws_py_cbor_decoder_get_next_bool(PyObject *self, PyObject *args) {
+PyObject *aws_py_cbor_decoder_pop_next_bool(PyObject *self, PyObject *args) {
     bool out_val;
     S_DECODER_METHOD_START(aws_cbor_decoder_pop_next_boolean_val, out_val);
     return PyBool_FromLong(out_val);
 }
 
-PyObject *aws_py_cbor_decoder_get_next_bytes(PyObject *self, PyObject *args) {
+PyObject *aws_py_cbor_decoder_pop_next_bytes(PyObject *self, PyObject *args) {
     struct aws_byte_cursor out_val;
     S_DECODER_METHOD_START(aws_cbor_decoder_pop_next_bytes_val, out_val);
     return PyBytes_FromAwsByteCursor(&out_val);
 }
 
-PyObject *aws_py_cbor_decoder_get_next_str(PyObject *self, PyObject *args) {
+PyObject *aws_py_cbor_decoder_pop_next_str(PyObject *self, PyObject *args) {
     struct aws_byte_cursor out_val;
     S_DECODER_METHOD_START(aws_cbor_decoder_pop_next_str_val, out_val);
     return PyUnicode_FromAwsByteCursor(&out_val);
 }
 
-PyObject *aws_py_cbor_decoder_get_next_array_start(PyObject *self, PyObject *args) {
+PyObject *aws_py_cbor_decoder_pop_next_array_start(PyObject *self, PyObject *args) {
     uint64_t out_val;
     S_DECODER_METHOD_START(aws_cbor_decoder_pop_next_array_start, out_val);
     return PyLong_FromUnsignedLongLong(out_val);
 }
 
-PyObject *aws_py_cbor_decoder_get_next_map_start(PyObject *self, PyObject *args) {
+PyObject *aws_py_cbor_decoder_pop_next_map_start(PyObject *self, PyObject *args) {
     uint64_t out_val;
     S_DECODER_METHOD_START(aws_cbor_decoder_pop_next_map_start, out_val);
     return PyLong_FromUnsignedLongLong(out_val);
 }
 
-PyObject *aws_py_cbor_decoder_get_next_tag_val(PyObject *self, PyObject *args) {
+PyObject *aws_py_cbor_decoder_pop_next_tag_val(PyObject *self, PyObject *args) {
     uint64_t out_val;
     S_DECODER_METHOD_START(aws_cbor_decoder_pop_next_tag_val, out_val);
     return PyLong_FromUnsignedLongLong(out_val);

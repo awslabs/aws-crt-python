@@ -34,14 +34,14 @@ PyObject *aws_py_cbor_decoder_peek_type(PyObject *self, PyObject *args);
 PyObject *aws_py_cbor_decoder_get_remaining_bytes_len(PyObject *self, PyObject *args);
 PyObject *aws_py_cbor_decoder_consume_next_element(PyObject *self, PyObject *args);
 PyObject *aws_py_cbor_decoder_consume_next_data_item(PyObject *self, PyObject *args);
-PyObject *aws_py_cbor_decoder_get_next_unsigned_int(PyObject *self, PyObject *args);
-PyObject *aws_py_cbor_decoder_get_next_negative_int(PyObject *self, PyObject *args);
-PyObject *aws_py_cbor_decoder_get_next_double(PyObject *self, PyObject *args);
-PyObject *aws_py_cbor_decoder_get_next_bool(PyObject *self, PyObject *args);
-PyObject *aws_py_cbor_decoder_get_next_bytes(PyObject *self, PyObject *args);
-PyObject *aws_py_cbor_decoder_get_next_str(PyObject *self, PyObject *args);
-PyObject *aws_py_cbor_decoder_get_next_array_start(PyObject *self, PyObject *args);
-PyObject *aws_py_cbor_decoder_get_next_map_start(PyObject *self, PyObject *args);
-PyObject *aws_py_cbor_decoder_get_next_tag_val(PyObject *self, PyObject *args);
+PyObject *aws_py_cbor_decoder_pop_next_unsigned_int(PyObject *self, PyObject *args);
+PyObject *aws_py_cbor_decoder_pop_next_negative_int(PyObject *self, PyObject *args);
+PyObject *aws_py_cbor_decoder_pop_next_double(PyObject *self, PyObject *args);
+PyObject *aws_py_cbor_decoder_pop_next_bool(PyObject *self, PyObject *args);
+PyObject *aws_py_cbor_decoder_pop_next_bytes(PyObject *self, PyObject *args);
+PyObject *aws_py_cbor_decoder_pop_next_str(PyObject *self, PyObject *args);
+PyObject *aws_py_cbor_decoder_pop_next_array_start(PyObject *self, PyObject *args);
+PyObject *aws_py_cbor_decoder_pop_next_map_start(PyObject *self, PyObject *args);
+PyObject *aws_py_cbor_decoder_pop_next_tag_val(PyObject *self, PyObject *args);
 
 #endif /* AWS_CRT_PYTHON_CBOR_H */
