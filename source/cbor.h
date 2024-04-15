@@ -1,10 +1,10 @@
 #ifndef AWS_CRT_PYTHON_CBOR_H
-#    define AWS_CRT_PYTHON_CBOR_H
+#define AWS_CRT_PYTHON_CBOR_H
 /**
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  * SPDX-License-Identifier: Apache-2.0.
  */
-#    include "module.h"
+#include "module.h"
 
 /*******************************************************************************
  * ENCODE
@@ -13,17 +13,17 @@
 PyObject *aws_py_cbor_encoder_new(PyObject *self, PyObject *args);
 PyObject *aws_py_cbor_encoder_get_encoded_data(PyObject *self, PyObject *args);
 
-PyObject *aws_py_cbor_encoder_encode_unsigned_int(PyObject *self, PyObject *args);
-PyObject *aws_py_cbor_encoder_encode_negative_int(PyObject *self, PyObject *args);
-PyObject *aws_py_cbor_encoder_encode_float(PyObject *self, PyObject *args);
-PyObject *aws_py_cbor_encoder_encode_bytes(PyObject *self, PyObject *args);
-PyObject *aws_py_cbor_encoder_encode_str(PyObject *self, PyObject *args);
-PyObject *aws_py_cbor_encoder_encode_array_start(PyObject *self, PyObject *args);
-PyObject *aws_py_cbor_encoder_encode_map_start(PyObject *self, PyObject *args);
-PyObject *aws_py_cbor_encoder_encode_tag(PyObject *self, PyObject *args);
+PyObject *aws_py_cbor_encoder_write_unsigned_int(PyObject *self, PyObject *args);
+PyObject *aws_py_cbor_encoder_write_negative_int(PyObject *self, PyObject *args);
+PyObject *aws_py_cbor_encoder_write_float(PyObject *self, PyObject *args);
+PyObject *aws_py_cbor_encoder_write_bytes(PyObject *self, PyObject *args);
+PyObject *aws_py_cbor_encoder_write_str(PyObject *self, PyObject *args);
+PyObject *aws_py_cbor_encoder_write_array_start(PyObject *self, PyObject *args);
+PyObject *aws_py_cbor_encoder_write_map_start(PyObject *self, PyObject *args);
+PyObject *aws_py_cbor_encoder_write_tag(PyObject *self, PyObject *args);
 
 /* Encode the types without value needed. The arg is the type to encode. */
-PyObject *aws_py_cbor_encoder_encode_simple_types(PyObject *self, PyObject *args);
+PyObject *aws_py_cbor_encoder_write_simple_types(PyObject *self, PyObject *args);
 
 /*******************************************************************************
  * DECODE
@@ -45,4 +45,3 @@ PyObject *aws_py_cbor_decoder_get_next_map_start(PyObject *self, PyObject *args)
 PyObject *aws_py_cbor_decoder_get_next_tag_val(PyObject *self, PyObject *args);
 
 #endif /* AWS_CRT_PYTHON_CBOR_H */
-       // PyObject *aws_py_(PyObject *self, PyObject *args);
