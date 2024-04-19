@@ -69,8 +69,10 @@ PyObject *aws_py_cbor_encoder_write_unsigned_int(PyObject *self, PyObject *args)
     PyObject *pylong;
     S_ENCODER_METHOD_START("O", &pylong);
     uint64_t data = PyLong_AsUnsignedLongLong(pylong);
-    /* The python code has already checked the value */
-    AWS_ASSERT(!PyErr_Occurred());
+    if (PyErr_Occurred()) {
+        PyErr_SetString(PyExc_ValueError, "AwsCborEncoder.write_int is not a valid int to encode");
+        return NULL;
+    }
     aws_cbor_encoder_write_uint(encoder, data);
     Py_RETURN_NONE;
 }
@@ -79,8 +81,10 @@ PyObject *aws_py_cbor_encoder_write_negative_int(PyObject *self, PyObject *args)
     PyObject *pylong;
     S_ENCODER_METHOD_START("O", &pylong);
     uint64_t data = PyLong_AsUnsignedLongLong(pylong);
-    /* The python code has already checked the value */
-    AWS_ASSERT(!PyErr_Occurred());
+    if (PyErr_Occurred()) {
+        PyErr_SetString(PyExc_ValueError, "AwsCborEncoder.write_int is not a valid int to encode");
+        return NULL;
+    }
     aws_cbor_encoder_write_negint(encoder, data);
     Py_RETURN_NONE;
 }
@@ -91,7 +95,7 @@ PyObject *aws_py_cbor_encoder_write_float(PyObject *self, PyObject *args) {
     double data = PyFloat_AsDouble(pyfloat);
     /* Rely on the python convert to check the pyfloat is able to convert to double. */
     if (PyErr_Occurred()) {
-        PyErr_SetString(PyExc_ValueError, "AwsCborEncoder.add_float is not a valid double to encode");
+        PyErr_SetString(PyExc_ValueError, "AwsCborEncoder.write_float is not a valid double to encode");
         return NULL;
     }
     aws_cbor_encoder_write_double(encoder, data);
@@ -117,7 +121,10 @@ PyObject *aws_py_cbor_encoder_write_array_start(PyObject *self, PyObject *args) 
     S_ENCODER_METHOD_START("O", &pylong);
     uint64_t data = PyLong_AsUnsignedLongLong(pylong);
     /* The python code has already checked the value */
-    AWS_ASSERT(!PyErr_Occurred());
+    if (PyErr_Occurred()) {
+        PyErr_SetString(PyExc_ValueError, "AwsCborEncoder.write_array_start is not a valid int to encode");
+        return NULL;
+    }
     aws_cbor_encoder_write_array_start(encoder, data);
     Py_RETURN_NONE;
 }
@@ -127,7 +134,10 @@ PyObject *aws_py_cbor_encoder_write_map_start(PyObject *self, PyObject *args) {
     S_ENCODER_METHOD_START("O", &pylong);
     uint64_t data = PyLong_AsUnsignedLongLong(pylong);
     /* The python code has already checked the value */
-    AWS_ASSERT(!PyErr_Occurred());
+    if (PyErr_Occurred()) {
+        PyErr_SetString(PyExc_ValueError, "AwsCborEncoder.write_map_start is not a valid int to encode");
+        return NULL;
+    }
     aws_cbor_encoder_write_map_start(encoder, data);
     Py_RETURN_NONE;
 }
@@ -137,8 +147,18 @@ PyObject *aws_py_cbor_encoder_write_tag(PyObject *self, PyObject *args) {
     S_ENCODER_METHOD_START("O", &pylong);
     uint64_t data = PyLong_AsUnsignedLongLong(pylong);
     /* The python code has already checked the value */
-    AWS_ASSERT(!PyErr_Occurred());
+    if (PyErr_Occurred()) {
+        PyErr_SetString(PyExc_ValueError, "AwsCborEncoder.write_tag is not a valid int to encode");
+        return NULL;
+    }
     aws_cbor_encoder_write_tag(encoder, data);
+    Py_RETURN_NONE;
+}
+
+PyObject *aws_py_cbor_encoder_write_bool(PyObject *self, PyObject *args) {
+    int bool_val;
+    S_ENCODER_METHOD_START("p", &bool_val);
+    aws_cbor_encoder_write_bool(encoder, bool_val);
     Py_RETURN_NONE;
 }
 
@@ -146,7 +166,7 @@ PyObject *aws_py_cbor_encoder_write_simple_types(PyObject *self, PyObject *args)
     Py_ssize_t type_enum;
     S_ENCODER_METHOD_START("n", &type_enum);
     switch (type_enum) {
-        case 5:
+        case AWS_CBOR_TYPE_NULL:
             aws_cbor_encoder_write_null(encoder);
             break;
 
@@ -210,7 +230,7 @@ PyObject *aws_py_cbor_decoder_peek_type(PyObject *self, PyObject *args) {
     enum aws_cbor_element_type out_type;
     S_DECODER_METHOD_START(aws_cbor_decoder_peek_type, out_type);
     /* TODO: an convert from C type to the Python type */
-    Py_RETURN_NONE;
+    return PyLong_FromSize_t(out_type);
 }
 
 PyObject *aws_py_cbor_decoder_get_remaining_bytes_len(PyObject *self, PyObject *args) {

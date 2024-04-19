@@ -834,6 +834,7 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(cbor_encoder_write_array_start, METH_VARARGS),
     AWS_PY_METHOD_DEF(cbor_encoder_write_map_start, METH_VARARGS),
     AWS_PY_METHOD_DEF(cbor_encoder_write_tag, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_encoder_write_bool, METH_VARARGS),
     AWS_PY_METHOD_DEF(cbor_encoder_write_simple_types, METH_VARARGS),
 
     /* CBOR Decode */
