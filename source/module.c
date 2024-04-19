@@ -852,6 +852,7 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(cbor_decoder_pop_next_array_start, METH_VARARGS),
     AWS_PY_METHOD_DEF(cbor_decoder_pop_next_map_start, METH_VARARGS),
     AWS_PY_METHOD_DEF(cbor_decoder_pop_next_tag_val, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_decoder_pop_next_data_item, METH_VARARGS),
     {NULL, NULL, 0, NULL},
 };
 

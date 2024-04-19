@@ -212,7 +212,7 @@ PyObject *aws_py_cbor_decoder_new(PyObject *self, PyObject *args) {
     return py_capsule;
 }
 
-#define S_DECODER_METHOD_START(decoder_func, out_val)                                                                  \
+#define S_GET_DECODER()                                                                                                \
     (void)self;                                                                                                        \
     PyObject *py_capsule;                                                                                              \
     if (!PyArg_ParseTuple(args, "O", &py_capsule)) {                                                                   \
@@ -221,28 +221,40 @@ PyObject *aws_py_cbor_decoder_new(PyObject *self, PyObject *args) {
     struct aws_cbor_decoder *decoder = s_cbor_decoder_from_capsule(py_capsule);                                        \
     if (!decoder) {                                                                                                    \
         return NULL;                                                                                                   \
-    }                                                                                                                  \
+    }
+
+#define S_DECODER_METHOD_START(decoder_func, out_val)                                                                  \
+    S_GET_DECODER()                                                                                                    \
     if (decoder_func(decoder, &out_val)) {                                                                             \
         return PyErr_AwsLastError();                                                                                   \
+    }
+
+#define S_POP_NEXT_TO_PYOBJECT(ctype, field, py_conversion)                                                            \
+    static PyObject *s_cbor_decoder_pop_next_##field##_to_pyobject(struct aws_cbor_decoder *decoder) {                 \
+        ctype out_val;                                                                                                 \
+        if (aws_cbor_decoder_pop_next_##field(decoder, &out_val)) {                                                    \
+            return PyErr_AwsLastError();                                                                               \
+        }                                                                                                              \
+        return py_conversion(out_val);                                                                                 \
+    }
+
+#define S_POP_NEXT_TO_PYOBJECT_CURSOR(field, py_conversion)                                                            \
+    static PyObject *s_cbor_decoder_pop_next_##field##_to_pyobject(struct aws_cbor_decoder *decoder) {                 \
+        struct aws_byte_cursor out_val;                                                                                \
+        if (aws_cbor_decoder_pop_next_##field(decoder, &out_val)) {                                                    \
+            return PyErr_AwsLastError();                                                                               \
+        }                                                                                                              \
+        return py_conversion(&out_val);                                                                                \
     }
 
 PyObject *aws_py_cbor_decoder_peek_type(PyObject *self, PyObject *args) {
     enum aws_cbor_element_type out_type;
     S_DECODER_METHOD_START(aws_cbor_decoder_peek_type, out_type);
-    /* TODO: an convert from C type to the Python type */
     return PyLong_FromSize_t(out_type);
 }
 
 PyObject *aws_py_cbor_decoder_get_remaining_bytes_len(PyObject *self, PyObject *args) {
-    (void)self;
-    PyObject *py_capsule;
-    if (!PyArg_ParseTuple(args, "O", &py_capsule)) {
-        return NULL;
-    }
-    struct aws_cbor_decoder *decoder = s_cbor_decoder_from_capsule(py_capsule);
-    if (!decoder) {
-        return NULL;
-    }
+    S_GET_DECODER();
     size_t remaining_len = aws_cbor_decoder_get_remaining_length(decoder);
     return PyLong_FromSize_t(remaining_len);
 }
@@ -255,71 +267,148 @@ PyObject *aws_py_cbor_decoder_consume_next_element(PyObject *self, PyObject *arg
 }
 
 PyObject *aws_py_cbor_decoder_consume_next_data_item(PyObject *self, PyObject *args) {
-    (void)self;
-    PyObject *py_capsule;
-    if (!PyArg_ParseTuple(args, "O", &py_capsule)) {
-        return NULL;
-    }
-    struct aws_cbor_decoder *decoder = s_cbor_decoder_from_capsule(py_capsule);
-    if (!decoder) {
-        return NULL;
-    }
+    S_GET_DECODER();
     if (aws_cbor_decoder_consume_next_data_item(decoder)) {
         return PyErr_AwsLastError();
     }
     Py_RETURN_NONE;
 }
 
+// static PyObject *s_decode(struct aws_cbor_decoder *decoder) {}
+
+S_POP_NEXT_TO_PYOBJECT(uint64_t, unsigned_val, PyLong_FromUnsignedLongLong)
+S_POP_NEXT_TO_PYOBJECT(uint64_t, neg_val, PyLong_FromUnsignedLongLong)
+S_POP_NEXT_TO_PYOBJECT(double, double_val, PyFloat_FromDouble)
+S_POP_NEXT_TO_PYOBJECT(bool, boolean_val, PyBool_FromLong)
+S_POP_NEXT_TO_PYOBJECT_CURSOR(bytes_val, PyBytes_FromAwsByteCursor)
+S_POP_NEXT_TO_PYOBJECT_CURSOR(str_val, PyUnicode_FromAwsByteCursor)
+S_POP_NEXT_TO_PYOBJECT(uint64_t, array_start, PyLong_FromUnsignedLongLong)
+S_POP_NEXT_TO_PYOBJECT(uint64_t, map_start, PyLong_FromUnsignedLongLong)
+S_POP_NEXT_TO_PYOBJECT(uint64_t, tag_val, PyLong_FromUnsignedLongLong)
+
+/**
+ * Generic helper to convert a cbor encoded data to PyObject
+ */
+static PyObject *s_cbor_decoder_pop_next_data_item_to_pyobject(struct aws_cbor_decoder *decoder) {
+    enum aws_cbor_element_type out_type = 0;
+    if (aws_cbor_decoder_peek_type(decoder, &out_type)) {
+        return PyErr_AwsLastError();
+    }
+    switch (decoder->cached_context.type) {
+        case AWS_CBOR_TYPE_TAG:
+            /* Read the next data item */
+            /* TODO: error check for the tag content?? */
+            decoder->cached_context.type = AWS_CBOR_TYPE_MAX;
+            if (aws_cbor_decoder_consume_next_data_item(decoder)) {
+                return AWS_OP_ERR;
+            }
+            break;
+        case AWS_CBOR_TYPE_MAP_START: {
+            uint64_t num_map_item = decoder->cached_context.cbor_data.map_start;
+            /* Reset type */
+            decoder->cached_context.type = AWS_CBOR_TYPE_MAX;
+            for (uint64_t i = 0; i < num_map_item; i++) {
+                /* Key */
+                if (aws_cbor_decoder_consume_next_data_item(decoder)) {
+                    return AWS_OP_ERR;
+                }
+                /* Value */
+                if (aws_cbor_decoder_consume_next_data_item(decoder)) {
+                    return AWS_OP_ERR;
+                }
+            }
+            break;
+        }
+        case AWS_CBOR_TYPE_ARRAY_START: {
+            uint64_t num_array_item = decoder->cached_context.cbor_data.array_start;
+            /* Reset type */
+            decoder->cached_context.type = AWS_CBOR_TYPE_MAX;
+            for (uint64_t i = 0; i < num_array_item; i++) {
+                /* item */
+                if (aws_cbor_decoder_consume_next_data_item(decoder)) {
+                    return AWS_OP_ERR;
+                }
+            }
+            break;
+        }
+        case AWS_CBOR_TYPE_INF_BYTESTRING_START:
+        case AWS_CBOR_TYPE_INF_STRING_START:
+        case AWS_CBOR_TYPE_INF_ARRAY_START:
+        case AWS_CBOR_TYPE_INF_MAP_START: {
+            enum aws_cbor_element_type next_type;
+            /* Reset the cache for the tag val */
+            decoder->cached_context.type = AWS_CBOR_TYPE_MAX;
+            if (aws_cbor_decoder_peek_type(decoder, &next_type)) {
+                return AWS_OP_ERR;
+            }
+            while (next_type != AWS_CBOR_TYPE_BREAK) {
+                if (aws_cbor_decoder_consume_next_data_item(decoder)) {
+                    return AWS_OP_ERR;
+                }
+                if (aws_cbor_decoder_peek_type(decoder, &next_type)) {
+                    return AWS_OP_ERR;
+                }
+            }
+            break;
+        }
+
+        default:
+            break;
+    }
+
+    /* Done, just reset the cache */
+    decoder->cached_context.type = AWS_CBOR_TYPE_MAX;
+    return AWS_OP_SUCCESS;
+}
+
+/*********************************** BINDINGS ***********************************************/
+
 PyObject *aws_py_cbor_decoder_pop_next_unsigned_int(PyObject *self, PyObject *args) {
-    uint64_t out_val;
-    S_DECODER_METHOD_START(aws_cbor_decoder_pop_next_unsigned_val, out_val);
-    return PyLong_FromUnsignedLongLong(out_val);
+    S_GET_DECODER();
+    return s_cbor_decoder_pop_next_unsigned_val_to_pyobject(decoder);
 }
 
 PyObject *aws_py_cbor_decoder_pop_next_negative_int(PyObject *self, PyObject *args) {
-    uint64_t out_val;
-    S_DECODER_METHOD_START(aws_cbor_decoder_pop_next_neg_val, out_val);
-    return PyLong_FromUnsignedLongLong(out_val);
+    S_GET_DECODER();
+    return s_cbor_decoder_pop_next_neg_val_to_pyobject(decoder);
 }
 
 PyObject *aws_py_cbor_decoder_pop_next_double(PyObject *self, PyObject *args) {
-    double out_val;
-    S_DECODER_METHOD_START(aws_cbor_decoder_pop_next_double_val, out_val);
-    return PyFloat_FromDouble(out_val);
+    S_GET_DECODER();
+    return s_cbor_decoder_pop_next_double_val_to_pyobject(decoder);
 }
 
 PyObject *aws_py_cbor_decoder_pop_next_bool(PyObject *self, PyObject *args) {
-    bool out_val;
-    S_DECODER_METHOD_START(aws_cbor_decoder_pop_next_boolean_val, out_val);
-    return PyBool_FromLong(out_val);
+    S_GET_DECODER();
+    return s_cbor_decoder_pop_next_boolean_val_to_pyobject(decoder);
 }
 
 PyObject *aws_py_cbor_decoder_pop_next_bytes(PyObject *self, PyObject *args) {
-    struct aws_byte_cursor out_val;
-    S_DECODER_METHOD_START(aws_cbor_decoder_pop_next_bytes_val, out_val);
-    return PyBytes_FromAwsByteCursor(&out_val);
+    S_GET_DECODER();
+    return s_cbor_decoder_pop_next_bytes_val_to_pyobject(decoder);
 }
 
 PyObject *aws_py_cbor_decoder_pop_next_str(PyObject *self, PyObject *args) {
-    struct aws_byte_cursor out_val;
-    S_DECODER_METHOD_START(aws_cbor_decoder_pop_next_str_val, out_val);
-    return PyUnicode_FromAwsByteCursor(&out_val);
+    S_GET_DECODER();
+    return s_cbor_decoder_pop_next_str_val_to_pyobject(decoder);
 }
 
 PyObject *aws_py_cbor_decoder_pop_next_array_start(PyObject *self, PyObject *args) {
-    uint64_t out_val;
-    S_DECODER_METHOD_START(aws_cbor_decoder_pop_next_array_start, out_val);
-    return PyLong_FromUnsignedLongLong(out_val);
+    S_GET_DECODER();
+    return s_cbor_decoder_pop_next_array_start_to_pyobject(decoder);
 }
 
 PyObject *aws_py_cbor_decoder_pop_next_map_start(PyObject *self, PyObject *args) {
-    uint64_t out_val;
-    S_DECODER_METHOD_START(aws_cbor_decoder_pop_next_map_start, out_val);
-    return PyLong_FromUnsignedLongLong(out_val);
+    S_GET_DECODER();
+    return s_cbor_decoder_pop_next_map_start_to_pyobject(decoder);
 }
 
 PyObject *aws_py_cbor_decoder_pop_next_tag_val(PyObject *self, PyObject *args) {
-    uint64_t out_val;
-    S_DECODER_METHOD_START(aws_cbor_decoder_pop_next_tag_val, out_val);
-    return PyLong_FromUnsignedLongLong(out_val);
+    S_GET_DECODER();
+    return s_cbor_decoder_pop_next_tag_val_to_pyobject(decoder);
+}
+
+PyObject *aws_py_cbor_decoder_pop_next_data_item(PyObject *self, PyObject *args) {
+    S_GET_DECODER();
+    return s_cbor_decoder_pop_next_unsigned_val_to_pyobject(decoder);
 }
