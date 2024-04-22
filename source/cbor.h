@@ -26,6 +26,10 @@ PyObject *aws_py_cbor_encoder_write_bool(PyObject *self, PyObject *args);
 /* Encode the types without value needed. The arg is the type to encode. */
 PyObject *aws_py_cbor_encoder_write_simple_types(PyObject *self, PyObject *args);
 
+PyObject *aws_py_cbor_encoder_write_py_list(PyObject *self, PyObject *args);
+PyObject *aws_py_cbor_encoder_write_py_dict(PyObject *self, PyObject *args);
+PyObject *aws_py_cbor_encoder_write_data_item(PyObject *self, PyObject *args);
+
 /*******************************************************************************
  * DECODE
  ******************************************************************************/

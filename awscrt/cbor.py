@@ -44,7 +44,7 @@ class AwsCborEncoder(NativeResource):
 
     def __init__(self):
         super().__init__()
-        self._binding = _awscrt.cbor_encoder_new()
+        self._binding = _awscrt.cbor_encoder_new(self)
 
     def get_encoded_data(self) -> bytes:
         """Return the current encoded data as bytes
@@ -193,6 +193,24 @@ class AwsCborEncoder(NativeResource):
         for data_item in val:
             self.write_data_item(data_item)
 
+    def write_data_item_2(self, data_item: Any):
+        """Generic API to write any type of an data_item as cbor formatted.
+        TODO: timestamp <-> datetime?? Decimal fraction <-> decimal??
+
+        Args:
+            data_item (Any): any type of data_item. If the type is not supported to be converted to cbor format, ValueError will be raised.
+        """
+        return _awscrt.cbor_encoder_write_data_item(self._binding, data_item)
+
+    def print_key(self, key):
+        print(f"key: {key}")
+
+
+    def print_value(self, value):
+        print(f"value: {value}")
+
+    def print_length(self, value):
+        print(f"length: {value}")
 
 class AwsCborDecoder(NativeResource):
     """ Decoder for CBOR """
@@ -283,48 +301,48 @@ class AwsCborDecoder(NativeResource):
         return result
 
     def pop_next_list(self) -> list:
-        return _awscrt.cbor_decoder_pop_next_py_list(self._binding)
-        # type = _awscrt.cbor_decoder_peek_type(self._binding)
-        # return_val = []
-        # if type == AwsCborElementType.InfArray:
-        #     # Consume the inf_array
-        #     self.consume_next_element()
-        #     while type != AwsCborElementType.Break:
-        #         return_val.append(self.pop_next_data_item())
-        #         type = _awscrt.cbor_decoder_peek_type(self._binding)
-        #     # Consume the break
-        #     self.consume_next_element()
-        #     return return_val
-        # elif type == AwsCborElementType.ArrayStart:
-        #     number_elements = self.pop_next_array_start()
-        #     for i in range(number_elements):
-        #         return_val.append(self.pop_next_data_item())
-        #     return return_val
-        # else:
-        #     raise ValueError("the cbor src is not a list to decode")
+        # return _awscrt.cbor_decoder_pop_next_py_list(self._binding)
+        type = _awscrt.cbor_decoder_peek_type(self._binding)
+        return_val = []
+        if type == AwsCborElementType.InfArray:
+            # Consume the inf_array
+            self.consume_next_element()
+            while type != AwsCborElementType.Break:
+                return_val.append(self.pop_next_data_item())
+                type = _awscrt.cbor_decoder_peek_type(self._binding)
+            # Consume the break
+            self.consume_next_element()
+            return return_val
+        elif type == AwsCborElementType.ArrayStart:
+            number_elements = self.pop_next_array_start()
+            for i in range(number_elements):
+                return_val.append(self.pop_next_data_item())
+            return return_val
+        else:
+            raise ValueError("the cbor src is not a list to decode")
 
     def pop_next_map(self) -> dict:
-        return _awscrt.cbor_decoder_pop_next_py_dict(self._binding)
-        # type = _awscrt.cbor_decoder_peek_type(self._binding)
-        # return_val = {}
-        # if type == AwsCborElementType.InfMap:
-        #     # Consume the inf_map
-        #     self.consume_next_element()
-        #     while type != AwsCborElementType.Break:
-        #         return_val[self.pop_next_data_item()] = self.pop_next_data_item()
-        #         type = _awscrt.cbor_decoder_peek_type(self._binding)
-        #     # Consume the break
-        #     self.consume_next_element()
-        #     return return_val
-        # elif type == AwsCborElementType.MapStart:
-        #     number_elements = self.pop_next_map_start()
-        #     for i in range(number_elements):
-        #         key = self.pop_next_data_item()
-        #         value = self.pop_next_data_item()
-        #         return_val[key] = value
-        #     return return_val
-        # else:
-        #     raise ValueError("the cbor src is not a map to decode")
+        # return _awscrt.cbor_decoder_pop_next_py_dict(self._binding)
+        type = _awscrt.cbor_decoder_peek_type(self._binding)
+        return_val = {}
+        if type == AwsCborElementType.InfMap:
+            # Consume the inf_map
+            self.consume_next_element()
+            while type != AwsCborElementType.Break:
+                return_val[self.pop_next_data_item()] = self.pop_next_data_item()
+                type = _awscrt.cbor_decoder_peek_type(self._binding)
+            # Consume the break
+            self.consume_next_element()
+            return return_val
+        elif type == AwsCborElementType.MapStart:
+            number_elements = self.pop_next_map_start()
+            for i in range(number_elements):
+                key = self.pop_next_data_item()
+                value = self.pop_next_data_item()
+                return_val[key] = value
+            return return_val
+        else:
+            raise ValueError("the cbor src is not a map to decode")
 
     def pop_next_data_item(self) -> Any:
         # TODO: timestamp, decimal fraction

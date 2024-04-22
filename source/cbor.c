@@ -10,32 +10,55 @@
  * ENCODE
  ******************************************************************************/
 
+struct encoder_binding {
+    struct aws_cbor_encoder *native;
+
+    /* This reference is solely used for invoking callbacks,
+     * and is cleared after the final callback is invoked.
+     * If it were not cleared, circular references between the python object
+     * and its binding would prevent the GC from ever cleaning things up */
+    PyObject *self_py;
+};
+
 static const char *s_capsule_name_cbor_encoder = "aws_cbor_encoder";
 
 static struct aws_cbor_encoder *s_cbor_encoder_from_capsule(PyObject *py_capsule) {
-    return PyCapsule_GetPointer(py_capsule, s_capsule_name_cbor_encoder);
+    struct encoder_binding *binding = PyCapsule_GetPointer(py_capsule, s_capsule_name_cbor_encoder);
+    if (!binding) {
+        return NULL;
+    }
+    return binding->native;
 }
 
 /* Runs when GC destroys the capsule */
 static void s_cbor_encoder_capsule_destructor(PyObject *py_capsule) {
-    struct aws_cbor_encoder *encoder = s_cbor_encoder_from_capsule(py_capsule);
-    aws_cbor_encoder_release(encoder);
+    struct encoder_binding *binding = PyCapsule_GetPointer(py_capsule, s_capsule_name_cbor_encoder);
+    aws_cbor_encoder_release(binding->native);
+    aws_mem_release(aws_py_get_allocator(), binding);
 }
 
 PyObject *aws_py_cbor_encoder_new(PyObject *self, PyObject *args) {
     (void)self;
-    (void)args;
-
-    struct aws_cbor_encoder *encoder = aws_cbor_encoder_new(aws_py_get_allocator(), NULL);
-    AWS_ASSERT(encoder != NULL);
-    PyObject *py_capsule = PyCapsule_New(encoder, s_capsule_name_cbor_encoder, s_cbor_encoder_capsule_destructor);
-    if (!py_capsule) {
-        aws_cbor_encoder_release(encoder);
+    PyObject *py_self;
+    if (!PyArg_ParseTuple(args, "O", &py_self)) {
         return NULL;
     }
 
+    struct encoder_binding *binding = aws_mem_calloc(aws_py_get_allocator(), 1, sizeof(struct encoder_binding));
+    binding->native = aws_cbor_encoder_new(aws_py_get_allocator(), NULL);
+    AWS_ASSERT(encoder != NULL);
+    PyObject *py_capsule = PyCapsule_New(binding, s_capsule_name_cbor_encoder, s_cbor_encoder_capsule_destructor);
+    if (!py_capsule) {
+        aws_cbor_encoder_release(binding->native);
+        aws_mem_release(aws_py_get_allocator(), binding);
+        return NULL;
+    }
+
+    /* The binding and the py_object have the same life time */
+    binding->self_py = py_self;
     return py_capsule;
 }
+
 #define S_ENCODER_METHOD_START(FMT, ...)                                                                               \
     (void)self;                                                                                                        \
     PyObject *py_capsule;                                                                                              \
@@ -65,101 +88,79 @@ PyObject *aws_py_cbor_encoder_get_encoded_data(PyObject *self, PyObject *args) {
     return PyBytes_FromStringAndSize((const char *)encoded_data.ptr, encoded_data.len);
 }
 
+#define S_ENCODER_WRITE_PYOBJECT(ctype, py_conversion, field)                                                          \
+    static PyObject *s_cbor_encoder_write_pyobject_as_##field(struct aws_cbor_encoder *encoder, PyObject *py_object) { \
+        ctype data = py_conversion(py_object);                                                                         \
+        if (PyErr_Occurred()) {                                                                                        \
+            return NULL;                                                                                               \
+        }                                                                                                              \
+        aws_cbor_encoder_write_##field(encoder, data);                                                                 \
+        Py_RETURN_NONE;                                                                                                \
+    }
+
+S_ENCODER_WRITE_PYOBJECT(uint64_t, PyLong_AsUnsignedLongLong, uint)
+S_ENCODER_WRITE_PYOBJECT(uint64_t, PyLong_AsUnsignedLongLong, negint)
+S_ENCODER_WRITE_PYOBJECT(double, PyFloat_AsDouble, double)
+S_ENCODER_WRITE_PYOBJECT(struct aws_byte_cursor, aws_byte_cursor_from_pybytes, bytes)
+S_ENCODER_WRITE_PYOBJECT(struct aws_byte_cursor, aws_byte_cursor_from_pyunicode, string)
+S_ENCODER_WRITE_PYOBJECT(bool, PyObject_IsTrue, bool)
+
+S_ENCODER_WRITE_PYOBJECT(uint64_t, PyLong_AsUnsignedLongLong, array_start)
+S_ENCODER_WRITE_PYOBJECT(uint64_t, PyLong_AsUnsignedLongLong, map_start)
+S_ENCODER_WRITE_PYOBJECT(uint64_t, PyLong_AsUnsignedLongLong, tag)
+
 PyObject *aws_py_cbor_encoder_write_unsigned_int(PyObject *self, PyObject *args) {
     PyObject *pylong;
     S_ENCODER_METHOD_START("O", &pylong);
-    uint64_t data = PyLong_AsUnsignedLongLong(pylong);
-    if (PyErr_Occurred()) {
-        PyErr_SetString(PyExc_ValueError, "AwsCborEncoder.write_int is not a valid int to encode");
-        return NULL;
-    }
-    aws_cbor_encoder_write_uint(encoder, data);
-    Py_RETURN_NONE;
+    return s_cbor_encoder_write_pyobject_as_uint(encoder, pylong);
 }
 
 PyObject *aws_py_cbor_encoder_write_negative_int(PyObject *self, PyObject *args) {
     PyObject *pylong;
     S_ENCODER_METHOD_START("O", &pylong);
-    uint64_t data = PyLong_AsUnsignedLongLong(pylong);
-    if (PyErr_Occurred()) {
-        PyErr_SetString(PyExc_ValueError, "AwsCborEncoder.write_int is not a valid int to encode");
-        return NULL;
-    }
-    aws_cbor_encoder_write_negint(encoder, data);
-    Py_RETURN_NONE;
+    return s_cbor_encoder_write_pyobject_as_negint(encoder, pylong);
 }
 
 PyObject *aws_py_cbor_encoder_write_float(PyObject *self, PyObject *args) {
     PyObject *pyfloat;
     S_ENCODER_METHOD_START("O", &pyfloat);
-    double data = PyFloat_AsDouble(pyfloat);
-    /* Rely on the python convert to check the pyfloat is able to convert to double. */
-    if (PyErr_Occurred()) {
-        PyErr_SetString(PyExc_ValueError, "AwsCborEncoder.write_float is not a valid double to encode");
-        return NULL;
-    }
-    aws_cbor_encoder_write_double(encoder, data);
-    Py_RETURN_NONE;
+    return s_cbor_encoder_write_pyobject_as_double(encoder, pyfloat);
 }
 
 PyObject *aws_py_cbor_encoder_write_bytes(PyObject *self, PyObject *args) {
-    struct aws_byte_cursor bytes_data;
-    S_ENCODER_METHOD_START("y#", &bytes_data.ptr, &bytes_data.len);
-    aws_cbor_encoder_write_bytes(encoder, bytes_data);
-    Py_RETURN_NONE;
+    PyObject *py_bytes;
+    S_ENCODER_METHOD_START("O", &py_bytes);
+    return s_cbor_encoder_write_pyobject_as_bytes(encoder, py_bytes);
 }
 
 PyObject *aws_py_cbor_encoder_write_str(PyObject *self, PyObject *args) {
-    struct aws_byte_cursor str_data;
-    S_ENCODER_METHOD_START("s#", &str_data.ptr, &str_data.len);
-    aws_cbor_encoder_write_string(encoder, str_data);
-    Py_RETURN_NONE;
+    PyObject *py_str;
+    S_ENCODER_METHOD_START("O", &py_str);
+    return s_cbor_encoder_write_pyobject_as_string(encoder, py_str);
 }
 
 PyObject *aws_py_cbor_encoder_write_array_start(PyObject *self, PyObject *args) {
     PyObject *pylong;
     S_ENCODER_METHOD_START("O", &pylong);
-    uint64_t data = PyLong_AsUnsignedLongLong(pylong);
-    /* The python code has already checked the value */
-    if (PyErr_Occurred()) {
-        PyErr_SetString(PyExc_ValueError, "AwsCborEncoder.write_array_start is not a valid int to encode");
-        return NULL;
-    }
-    aws_cbor_encoder_write_array_start(encoder, data);
-    Py_RETURN_NONE;
+    return s_cbor_encoder_write_pyobject_as_array_start(encoder, pylong);
 }
 
 PyObject *aws_py_cbor_encoder_write_map_start(PyObject *self, PyObject *args) {
     PyObject *pylong;
     S_ENCODER_METHOD_START("O", &pylong);
-    uint64_t data = PyLong_AsUnsignedLongLong(pylong);
-    /* The python code has already checked the value */
-    if (PyErr_Occurred()) {
-        PyErr_SetString(PyExc_ValueError, "AwsCborEncoder.write_map_start is not a valid int to encode");
-        return NULL;
-    }
-    aws_cbor_encoder_write_map_start(encoder, data);
-    Py_RETURN_NONE;
+    return s_cbor_encoder_write_pyobject_as_map_start(encoder, pylong);
 }
 
 PyObject *aws_py_cbor_encoder_write_tag(PyObject *self, PyObject *args) {
     PyObject *pylong;
     S_ENCODER_METHOD_START("O", &pylong);
-    uint64_t data = PyLong_AsUnsignedLongLong(pylong);
-    /* The python code has already checked the value */
-    if (PyErr_Occurred()) {
-        PyErr_SetString(PyExc_ValueError, "AwsCborEncoder.write_tag is not a valid int to encode");
-        return NULL;
-    }
-    aws_cbor_encoder_write_tag(encoder, data);
-    Py_RETURN_NONE;
+    return s_cbor_encoder_write_pyobject_as_tag(encoder, pylong);
 }
 
 PyObject *aws_py_cbor_encoder_write_bool(PyObject *self, PyObject *args) {
-    int bool_val;
-    S_ENCODER_METHOD_START("p", &bool_val);
-    aws_cbor_encoder_write_bool(encoder, bool_val);
-    Py_RETURN_NONE;
+    PyObject *pybool;
+    S_ENCODER_METHOD_START("O", &pybool);
+    return s_cbor_encoder_write_pyobject_as_bool(encoder, pybool);
 }
 
 PyObject *aws_py_cbor_encoder_write_simple_types(PyObject *self, PyObject *args) {
@@ -172,9 +173,126 @@ PyObject *aws_py_cbor_encoder_write_simple_types(PyObject *self, PyObject *args)
 
         default:
             Py_RETURN_NONE;
-            break;
     }
     Py_RETURN_NONE;
+}
+
+static PyObject *s_cbor_encoder_write_pyobject(struct encoder_binding *encoder_binding, PyObject *py_object);
+
+static PyObject *s_cbor_encoder_write_pylong(struct encoder_binding *encoder_binding, PyObject *py_object) {
+    long val;
+    int overflow;
+
+    val = PyLong_AsLongAndOverflow(py_object, &overflow);
+    if (overflow == 0) {
+        /* No overflow, just call into C */
+        if (val >= 0) {
+            aws_cbor_encoder_write_uint(encoder_binding->native, (uint64_t)val);
+        } else {
+            aws_cbor_encoder_write_negint(encoder_binding->native, -1 - val);
+        }
+    } else {
+        /* TODO: handle it in C? */
+        return PyObject_CallMethod(encoder_binding->self_py, "write_int", "(O)", py_object);
+    }
+    Py_RETURN_NONE;
+}
+
+static PyObject *s_cbor_encoder_write_pylist(struct encoder_binding *encoder_binding, PyObject *py_list) {
+    Py_ssize_t size = PyList_Size(py_list);
+    aws_cbor_encoder_write_array_start(encoder_binding->native, (size_t)size);
+    for (Py_ssize_t i = 0; i < size; i++) {
+        PyObject *item = PyList_GetItem(py_list, i);
+        if (!item) {
+            return NULL;
+        }
+        s_cbor_encoder_write_pyobject(encoder_binding, item);
+    }
+    Py_RETURN_NONE;
+}
+
+static PyObject *s_cbor_encoder_write_pydict(struct encoder_binding *encoder_binding, PyObject *py_dict) {
+    Py_ssize_t size = PyDict_Size(py_dict);
+    aws_cbor_encoder_write_map_start(encoder_binding->native, (size_t)size);
+    PyObject *key = NULL;
+    PyObject *value = NULL;
+    Py_ssize_t pos = 0;
+
+    while (PyDict_Next(py_dict, &pos, &key, &value)) {
+        s_cbor_encoder_write_pyobject(encoder_binding, key);
+        s_cbor_encoder_write_pyobject(encoder_binding, value);
+    }
+    Py_RETURN_NONE;
+}
+
+static PyObject *s_cbor_encoder_write_pyobject(struct encoder_binding *encoder_binding, PyObject *py_object) {
+
+    if (PyLong_CheckExact(py_object)) {
+        /* Call to Python to write pylong, as it's too complicate */
+        return s_cbor_encoder_write_pylong(encoder_binding, py_object);
+    } else if (PyFloat_CheckExact(py_object)) {
+        return s_cbor_encoder_write_pyobject_as_double(encoder_binding->native, py_object);
+    } else if (PyBool_Check(py_object)) {
+        return s_cbor_encoder_write_pyobject_as_bool(encoder_binding->native, py_object);
+    } else if (PyBytes_CheckExact(py_object)) {
+        return s_cbor_encoder_write_pyobject_as_bytes(encoder_binding->native, py_object);
+    } else if (PyUnicode_CheckExact(py_object)) {
+        return s_cbor_encoder_write_pyobject_as_string(encoder_binding->native, py_object);
+    } else if (PyList_CheckExact(py_object)) {
+        /* Write py_list */
+        return s_cbor_encoder_write_pylist(encoder_binding, py_object);
+    } else if (PyDict_CheckExact(py_object)) {
+        /* Write py_dict */
+        return s_cbor_encoder_write_pydict(encoder_binding, py_object);
+    } else if (py_object == Py_None) {
+        aws_cbor_encoder_write_null(encoder_binding->native);
+    } else {
+        PyErr_Format(PyExc_ValueError, "Not supported type %R", (PyObject *)Py_TYPE(py_object));
+    }
+
+    Py_RETURN_NONE;
+}
+
+PyObject *aws_py_cbor_encoder_write_py_list(PyObject *self, PyObject *args) {
+    (void)self;
+    PyObject *py_object;
+    PyObject *py_capsule;
+    if (!PyArg_ParseTuple(args, "OO", &py_capsule, &py_object)) {
+        return NULL;
+    }
+    struct encoder_binding *binding = PyCapsule_GetPointer(py_capsule, s_capsule_name_cbor_encoder);
+    if (!binding) {
+        return NULL;
+    }
+    return s_cbor_encoder_write_pylist(binding, py_object);
+}
+
+PyObject *aws_py_cbor_encoder_write_py_dict(PyObject *self, PyObject *args) {
+    (void)self;
+    PyObject *py_object;
+    PyObject *py_capsule;
+    if (!PyArg_ParseTuple(args, "OO", &py_capsule, &py_object)) {
+        return NULL;
+    }
+    struct encoder_binding *binding = PyCapsule_GetPointer(py_capsule, s_capsule_name_cbor_encoder);
+    if (!binding) {
+        return NULL;
+    }
+    return s_cbor_encoder_write_pydict(binding, py_object);
+}
+
+PyObject *aws_py_cbor_encoder_write_data_item(PyObject *self, PyObject *args) {
+    (void)self;
+    PyObject *py_object;
+    PyObject *py_capsule;
+    if (!PyArg_ParseTuple(args, "OO", &py_capsule, &py_object)) {
+        return NULL;
+    }
+    struct encoder_binding *binding = PyCapsule_GetPointer(py_capsule, s_capsule_name_cbor_encoder);
+    if (!binding) {
+        return NULL;
+    }
+    return s_cbor_encoder_write_pyobject(binding, py_object);
 }
 
 /*******************************************************************************
@@ -262,7 +380,6 @@ PyObject *aws_py_cbor_decoder_get_remaining_bytes_len(PyObject *self, PyObject *
 PyObject *aws_py_cbor_decoder_consume_next_element(PyObject *self, PyObject *args) {
     enum aws_cbor_element_type out_type;
     S_DECODER_METHOD_START(aws_cbor_decoder_consume_next_element, out_type);
-    /* TODO: an convert from C type to the Python type */
     Py_RETURN_NONE;
 }
 
@@ -273,8 +390,6 @@ PyObject *aws_py_cbor_decoder_consume_next_data_item(PyObject *self, PyObject *a
     }
     Py_RETURN_NONE;
 }
-
-// static PyObject *s_decode(struct aws_cbor_decoder *decoder) {}
 
 S_POP_NEXT_TO_PYOBJECT(uint64_t, unsigned_val, PyLong_FromUnsignedLongLong)
 S_POP_NEXT_TO_PYOBJECT(uint64_t, neg_val, PyLong_FromUnsignedLongLong)
@@ -289,7 +404,7 @@ S_POP_NEXT_TO_PYOBJECT(uint64_t, tag_val, PyLong_FromUnsignedLongLong)
 static PyObject *s_cbor_decoder_pop_next_data_item_to_pyobject(struct aws_cbor_decoder *decoder);
 
 /**
- * Generic helper to convert next data item to py_list
+ * helper to convert next data item to py_list
  */
 static PyObject *s_cbor_decoder_pop_next_data_item_to_py_list(struct aws_cbor_decoder *decoder) {
     enum aws_cbor_element_type out_type = 0;
@@ -356,7 +471,7 @@ error:
 }
 
 /**
- * Generic helper to convert next data item to py_dict
+ * helper to convert next data item to py_dict
  */
 static PyObject *s_cbor_decoder_pop_next_data_item_to_py_dict(struct aws_cbor_decoder *decoder) {
     enum aws_cbor_element_type out_type = 0;

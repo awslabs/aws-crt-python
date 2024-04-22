@@ -44,11 +44,28 @@ class TestData:
 t = TestData.test_hash(100000)
 
 
+# print(t)
+
 print("cbor2 -- encode")
 run_start_ns = time.perf_counter_ns()
 cbor2_encoded = cbor2.dumps(t)
 run_secs = ns_to_secs(time.perf_counter_ns() - run_start_ns)
 print(f"encoded MB: {bytes_to_MiB(len(cbor2_encoded))}")
+print(f"time passed: {run_secs} secs")
+
+
+print("CRT -- encode 2")
+encoder_2 = AwsCborEncoder()
+
+run_start_ns = time.perf_counter_ns()
+try:
+    encoder_2.write_data_item_2(t)
+    encoded_2 = encoder_2.get_encoded_data()
+except Exception as e:
+    print(e)
+
+run_secs = ns_to_secs(time.perf_counter_ns() - run_start_ns)
+print(f"encoded MB: {bytes_to_MiB(len(encoded_2))}")
 print(f"time passed: {run_secs} secs")
 
 
@@ -62,7 +79,9 @@ run_secs = ns_to_secs(time.perf_counter_ns() - run_start_ns)
 print(f"encoded MB: {bytes_to_MiB(len(encoded))}")
 print(f"time passed: {run_secs} secs")
 
+
 print(cbor2_encoded == encoded)
+print(cbor2_encoded == encoded_2)
 
 print("cbor2 -- decode")
 run_start_ns = time.perf_counter_ns()
@@ -82,10 +101,13 @@ print(f"time passed: {run_secs} secs")
 print("CRT -- decode 2")
 run_start_ns = time.perf_counter_ns()
 decoder_2 = AwsCborDecoder(encoded)
-crt_decoded = decoder_2.pop_next_data_item_2()
+crt_decoded_2 = decoder_2.pop_next_data_item_2()
 
 run_secs = ns_to_secs(time.perf_counter_ns() - run_start_ns)
 print(f"time passed: {run_secs} secs")
 
 print(crt_decoded == t)
 print(crt_decoded == decoded)
+
+print(crt_decoded_2 == t)
+print(crt_decoded_2 == decoded)

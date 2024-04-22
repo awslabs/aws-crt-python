@@ -49,12 +49,18 @@ class TestCBOR(NativeResourceTest):
             b"test_more": another_map,
             2: {
                 2.3: ["a", "b", "c"]
-            }
+            },
+            "empty map": {},
+            "empty array": [],
+            "True": True,
+            "False": False,
         }
-        encoder.write_data_item(val_to_write)
+        encoder.write_data_item_2(val_to_write)
 
         decoder = AwsCborDecoder(encoder.get_encoded_data())
 
         # Temp val only for easier to debug.
         t = decoder.pop_next_data_item()
+        print(t)
+        print(val_to_write)
         self.assertEqual(val_to_write, t)
