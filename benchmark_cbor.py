@@ -54,20 +54,6 @@ print(f"encoded MB: {bytes_to_MiB(len(cbor2_encoded))}")
 print(f"time passed: {run_secs} secs")
 
 
-print("CRT -- encode 2")
-encoder_2 = AwsCborEncoder()
-
-run_start_ns = time.perf_counter_ns()
-try:
-    encoder_2.write_data_item_2(t)
-    encoded_2 = encoder_2.get_encoded_data()
-except Exception as e:
-    print(e)
-
-run_secs = ns_to_secs(time.perf_counter_ns() - run_start_ns)
-print(f"encoded MB: {bytes_to_MiB(len(encoded_2))}")
-print(f"time passed: {run_secs} secs")
-
 
 print("CRT -- encode")
 encoder = AwsCborEncoder()
@@ -77,6 +63,19 @@ encoder.write_data_item(t)
 encoded = encoder.get_encoded_data()
 run_secs = ns_to_secs(time.perf_counter_ns() - run_start_ns)
 print(f"encoded MB: {bytes_to_MiB(len(encoded))}")
+print(f"time passed: {run_secs} secs")
+
+
+print("CRT -- encode 2")
+encoder_2 = AwsCborEncoder()
+run_start_ns = time.perf_counter_ns()
+try:
+    encoder_2.write_data_item_2(t)
+    encoded_2 = encoder_2.get_encoded_data()
+except Exception as e:
+    print(e)
+run_secs = ns_to_secs(time.perf_counter_ns() - run_start_ns)
+print(f"encoded MB: {bytes_to_MiB(len(encoded_2))}")
 print(f"time passed: {run_secs} secs")
 
 

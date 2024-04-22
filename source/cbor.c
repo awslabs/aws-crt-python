@@ -13,10 +13,7 @@
 struct encoder_binding {
     struct aws_cbor_encoder *native;
 
-    /* This reference is solely used for invoking callbacks,
-     * and is cleared after the final callback is invoked.
-     * If it were not cleared, circular references between the python object
-     * and its binding would prevent the GC from ever cleaning things up */
+    /* Encoder has simple lifetime, no async/multi-thread allowed. */
     PyObject *self_py;
 };
 
@@ -227,6 +224,9 @@ static PyObject *s_cbor_encoder_write_pydict(struct encoder_binding *encoder_bin
 
 static PyObject *s_cbor_encoder_write_pyobject(struct encoder_binding *encoder_binding, PyObject *py_object) {
 
+    /**
+     * TODO: timestamp <-> datetime?? Decimal fraction <-> decimal??
+     */
     if (PyLong_CheckExact(py_object)) {
         /* Call to Python to write pylong, as it's too complicate */
         return s_cbor_encoder_write_pylong(encoder_binding, py_object);
@@ -599,7 +599,7 @@ static PyObject *s_cbor_decoder_pop_next_data_item_to_pyobject(struct aws_cbor_d
         case AWS_CBOR_TYPE_INF_BYTESTRING_START:
         case AWS_CBOR_TYPE_INF_STRING_START:
         case AWS_CBOR_TYPE_TAG:
-            /* TODO: handle those case */
+            /* TODO: handle those case. Give more detail of unhandled tags */
         default:
             aws_raise_error(AWS_ERROR_CBOR_UNEXPECTED_TYPE);
             return PyErr_AwsLastError();
