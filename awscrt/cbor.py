@@ -55,6 +55,7 @@ class AwsCborEncoder(NativeResource):
         return _awscrt.cbor_encoder_get_encoded_data(self._binding)
 
     def write_int(self, val: int):
+        # TODO: maybe not support bignum for now. Not needed?
         """Write an int as cbor formatted,
             val less than -2^64 will be encoded as Negative bignum for CBOR
             val between -2^64 to -1, inclusive, will be encode as negative integer for CBOR
@@ -156,46 +157,13 @@ class AwsCborEncoder(NativeResource):
     def write_bool(self, val: bool):
         return _awscrt.cbor_encoder_write_bool(self._binding, val)
 
-    def write_data_item(self, data_item: Any):
-        """Generic API to write any type of an data_item as cbor formatted.
-        TODO: timestamp <-> datetime?? Decimal fraction <-> decimal??
-
-        Args:
-            data_item (Any): any type of data_item. If the type is not supported to be converted to cbor format, ValueError will be raised.
-        """
-        if isinstance(data_item, str):
-            self.write_string(data_item)
-        elif isinstance(data_item, bytes):
-            self.write_bytes(data_item)
-        elif isinstance(data_item, int):
-            self.write_int(data_item)
-        elif isinstance(data_item, float):
-            self.write_float(data_item)
-        elif isinstance(data_item, dict):
-            self.write_dict(data_item)
-        elif isinstance(data_item, list):
-            self.write_list(data_item)
-        elif isinstance(data_item, bool):
-            self.write_bool(data_item)
-        elif data_item is None:
-            self.write_null()
-        else:
-            raise ValueError(f"not supported type for data_item: {data_item}")
-
     def write_list(self, val: list):
-        # return _awscrt.cbor_encoder_write_py_list(self._binding, val)
-        self.write_array_start(len(val))
-        for data_item in val:
-            self.write_data_item(data_item)
+        return _awscrt.cbor_encoder_write_py_list(self._binding, val)
 
     def write_dict(self, val: dict):
-        # return _awscrt.cbor_encoder_write_py_dict(self._binding, val)
-        self.write_map_start(len(val))
-        for key, value in val.items():
-            self.write_data_item(key)
-            self.write_data_item(value)
+        return _awscrt.cbor_encoder_write_py_dict(self._binding, val)
 
-    def write_data_item_2(self, data_item: Any):
+    def write_data_item(self, data_item: Any):
         """Generic API to write any type of an data_item as cbor formatted.
         TODO: timestamp <-> datetime?? Decimal fraction <-> decimal??
 
@@ -253,133 +221,11 @@ class AwsCborDecoder(NativeResource):
     def pop_next_tag_val(self) -> int:
         return _awscrt.cbor_decoder_pop_next_tag_val(self._binding)
 
-    def pop_next_numeric(self) -> Union[int, float]:
-        type = _awscrt.cbor_decoder_peek_type(self._binding)
-        if type == AwsCborElementType.UnsignedInt:
-            return self.pop_next_unsigned_int()
-        elif type == AwsCborElementType.NegativeInt:
-            return self.pop_next_negative_int()
-        elif type == AwsCborElementType.Float:
-            return self.pop_next_double()
-        # TODO: support bignum?
-        # TODO: Instead of ValueError, probably raise the same error from C with the same AWS_ERROR_CBOR_UNEXPECTED_TYPE
-        raise ValueError("the cbor src is not a numeric type to decode")
-
-    def pop_next_inf_bytes(self) -> bytes:
-        type = _awscrt.cbor_decoder_peek_type(self._binding)
-        if type != AwsCborElementType.InfBytes:
-            raise ValueError("the cbor src is not an indefinite bytes to decode")
-        result = b""
-        # Consume the inf_bytes
-        self.consume_next_element()
-        while type != AwsCborElementType.Break:
-            result += self.pop_next_bytes()
-            type = _awscrt.cbor_decoder_peek_type(self._binding)
-        # Consume the break
-        self.consume_next_element()
-        return result
-
-    def pop_next_inf_str(self) -> bytes:
-        type = _awscrt.cbor_decoder_peek_type(self._binding)
-        if type != AwsCborElementType.InfStr:
-            raise ValueError("the cbor src is not an indefinite string to decode")
-        result = ""
-        # Consume the inf_str
-        self.consume_next_element()
-        while type != AwsCborElementType.Break:
-            result += self.pop_next_str()
-            type = _awscrt.cbor_decoder_peek_type(self._binding)
-        # Consume the break
-        self.consume_next_element()
-        return result
-
     def pop_next_list(self) -> list:
-        # return _awscrt.cbor_decoder_pop_next_py_list(self._binding)
-        type = _awscrt.cbor_decoder_peek_type(self._binding)
-        return_val = []
-        if type == AwsCborElementType.InfArray:
-            # Consume the inf_array
-            self.consume_next_element()
-            while type != AwsCborElementType.Break:
-                return_val.append(self.pop_next_data_item())
-                type = _awscrt.cbor_decoder_peek_type(self._binding)
-            # Consume the break
-            self.consume_next_element()
-            return return_val
-        elif type == AwsCborElementType.ArrayStart:
-            number_elements = self.pop_next_array_start()
-            for i in range(number_elements):
-                return_val.append(self.pop_next_data_item())
-            return return_val
-        else:
-            raise ValueError("the cbor src is not a list to decode")
+        return _awscrt.cbor_decoder_pop_next_py_list(self._binding)
 
     def pop_next_map(self) -> dict:
-        # return _awscrt.cbor_decoder_pop_next_py_dict(self._binding)
-        type = _awscrt.cbor_decoder_peek_type(self._binding)
-        return_val = {}
-        if type == AwsCborElementType.InfMap:
-            # Consume the inf_map
-            self.consume_next_element()
-            while type != AwsCborElementType.Break:
-                return_val[self.pop_next_data_item()] = self.pop_next_data_item()
-                type = _awscrt.cbor_decoder_peek_type(self._binding)
-            # Consume the break
-            self.consume_next_element()
-            return return_val
-        elif type == AwsCborElementType.MapStart:
-            number_elements = self.pop_next_map_start()
-            for i in range(number_elements):
-                key = self.pop_next_data_item()
-                value = self.pop_next_data_item()
-                return_val[key] = value
-            return return_val
-        else:
-            raise ValueError("the cbor src is not a map to decode")
+        return _awscrt.cbor_decoder_pop_next_py_dict(self._binding)
 
     def pop_next_data_item(self) -> Any:
-        # TODO: timestamp, decimal fraction
-        # TODO: maybe wrote all those if elif in the binding level, so that we can use switch at least???
-        #   And possible to avoid some call cross language boundary???
-        # TODO: If it fails in the middle, with bunch of stuff already popped. Do we want a way to resume??
-        type = _awscrt.cbor_decoder_peek_type(self._binding)
-        if type == AwsCborElementType.UnsignedInt or \
-                type == AwsCborElementType.NegativeInt or \
-                type == AwsCborElementType.Float:
-            return self.pop_next_numeric()
-        elif type == AwsCborElementType.Bytes:
-            return self.pop_next_bytes()
-        elif type == AwsCborElementType.String:
-            return self.pop_next_str()
-        elif type == AwsCborElementType.Bool:
-            return self.pop_next_bool()
-        elif type == AwsCborElementType.Null or \
-                type == AwsCborElementType.Undefined:
-            # Treat both NULL and Undefined as None.
-            self.consume_next_element()
-            return None
-        elif type == AwsCborElementType.ArrayStart or \
-                type == AwsCborElementType.InfArray:
-            return self.pop_next_list()
-        elif type == AwsCborElementType.MapStart or \
-                type == AwsCborElementType.InfMap:
-            return self.pop_next_map()
-        elif type == AwsCborElementType.InfBytes:
-            return self.pop_next_inf_bytes()
-        elif type == AwsCborElementType.InfStr:
-            return self.pop_next_inf_str()
-        elif type == AwsCborElementType.Tag:
-            tag_val = self.pop_next_tag_val()
-            if tag_val == AwsCborTags.NegativeBigNum:
-                bytes_val = self.pop_next_bytes()
-                return -1 - int.from_bytes(bytes_val, "big")
-            elif tag_val == AwsCborTags.UnsignedBigNum:
-                bytes_val = self.pop_next_bytes()
-                return int.from_bytes(bytes_val, "big")
-            else:
-                raise ValueError(f"unsupported tag value: {tag_val}")
-        else:
-            raise ValueError(f"unsupported type: {type.name}")
-
-    def pop_next_data_item_2(self) -> Any:
         return _awscrt.cbor_decoder_pop_next_data_item(self._binding)

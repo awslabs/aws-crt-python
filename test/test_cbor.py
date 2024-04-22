@@ -30,7 +30,7 @@ class TestCBOR(NativeResourceTest):
             self.assertTrue(False)
 
         for val in val_to_write:
-            t = decoder.pop_next_numeric()
+            t = decoder.pop_next_data_item()
             self.assertEqual(t, val)
 
         self.assertEqual(decoder.get_remaining_bytes_len(), 0)
@@ -39,7 +39,7 @@ class TestCBOR(NativeResourceTest):
         encoder = AwsCborEncoder()
         numerics = [-100.12, 100.0, -100, 100, 2**64 - 1, -2**64, 18446744073709551616.0]
         another_map = {
-            # "bignum": 2**65,              TODO: big number are not supported from C impl yet.
+            # "bignum": 2**65,  # TODO: big number are not supported from C impl yet.
             # "negative bignum": -2**75,
             2**6: [1, 2, 3],
             -2**6: [1, ["2", b"3"], {"most complicated": numerics}, 2**6, -2**7]
@@ -57,10 +57,12 @@ class TestCBOR(NativeResourceTest):
             "empty str": "",
             "empty bytes": b"",
         }
-        encoder.write_data_item_2(val_to_write)
+        encoder.write_data_item(val_to_write)
 
         decoder = AwsCborDecoder(encoder.get_encoded_data())
 
         # Temp val only for easier to debug.
         t = decoder.pop_next_data_item()
         self.assertEqual(val_to_write, t)
+
+# TODO: More tests: inf str/bytes/array/map

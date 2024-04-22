@@ -642,7 +642,7 @@ static PyObject *s_cbor_decoder_pop_next_tag_to_pyobject(struct aws_cbor_decoder
         case AWS_CBOR_TAG_NEGATIVE_BIGNUM:
         case AWS_CBOR_TAG_DECIMAL_FRACTION:
         default:
-            PyErr_SetString(PyExc_ValueError, "Unsupported tag value: %" PRIu64 ".", out_tag_val);
+            PyErr_Format(PyExc_ValueError, "Unsupported tag value: %" PRIu64 ".", out_tag_val);
             return NULL;
     }
     Py_RETURN_NONE;
