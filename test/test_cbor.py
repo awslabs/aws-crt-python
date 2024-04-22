@@ -54,6 +54,8 @@ class TestCBOR(NativeResourceTest):
             "empty array": [],
             "True": True,
             "False": False,
+            "empty str": "",
+            "empty bytes": b"",
         }
         encoder.write_data_item_2(val_to_write)
 
@@ -61,6 +63,4 @@ class TestCBOR(NativeResourceTest):
 
         # Temp val only for easier to debug.
         t = decoder.pop_next_data_item()
-        print(t)
-        print(val_to_write)
         self.assertEqual(val_to_write, t)
