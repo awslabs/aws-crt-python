@@ -54,7 +54,6 @@ print(f"encoded MB: {bytes_to_MiB(len(cbor2_encoded))}")
 print(f"time passed: {run_secs} secs")
 
 
-
 print("CRT -- encode")
 encoder = AwsCborEncoder()
 
@@ -106,7 +105,4 @@ run_secs = ns_to_secs(time.perf_counter_ns() - run_start_ns)
 print(f"time passed: {run_secs} secs")
 
 print(crt_decoded == t)
-print(crt_decoded == decoded)
-
 print(crt_decoded_2 == t)
-print(crt_decoded_2 == decoded)

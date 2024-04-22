@@ -183,10 +183,17 @@ class AwsCborEncoder(NativeResource):
             raise ValueError(f"not supported type for data_item: {data_item}")
 
     def write_list(self, val: list):
-        return _awscrt.cbor_encoder_write_py_list(self._binding, val)
+        # return _awscrt.cbor_encoder_write_py_list(self._binding, val)
+        self.write_array_start(len(val))
+        for data_item in val:
+            self.write_data_item(data_item)
 
     def write_dict(self, val: dict):
-        return _awscrt.cbor_encoder_write_py_dict(self._binding, val)
+        # return _awscrt.cbor_encoder_write_py_dict(self._binding, val)
+        self.write_map_start(len(val))
+        for key, value in val.items():
+            self.write_data_item(key)
+            self.write_data_item(value)
 
     def write_data_item_2(self, data_item: Any):
         """Generic API to write any type of an data_item as cbor formatted.
@@ -196,6 +203,7 @@ class AwsCborEncoder(NativeResource):
             data_item (Any): any type of data_item. If the type is not supported to be converted to cbor format, ValueError will be raised.
         """
         return _awscrt.cbor_encoder_write_data_item(self._binding, data_item)
+
 
 class AwsCborDecoder(NativeResource):
     """ Decoder for CBOR """
