@@ -82,7 +82,7 @@ print(f"time passed: {run_secs} secs")
 print("CRT -- decode 2")
 run_start_ns = time.perf_counter_ns()
 decoder_2 = AwsCborDecoder(encoded)
-decoder_2.consume_next_data_item()
+crt_decoded = decoder_2.pop_next_data_item_2()
 
 run_secs = ns_to_secs(time.perf_counter_ns() - run_start_ns)
 print(f"time passed: {run_secs} secs")

@@ -286,6 +286,155 @@ S_POP_NEXT_TO_PYOBJECT(uint64_t, array_start, PyLong_FromUnsignedLongLong)
 S_POP_NEXT_TO_PYOBJECT(uint64_t, map_start, PyLong_FromUnsignedLongLong)
 S_POP_NEXT_TO_PYOBJECT(uint64_t, tag_val, PyLong_FromUnsignedLongLong)
 
+static PyObject *s_cbor_decoder_pop_next_data_item_to_pyobject(struct aws_cbor_decoder *decoder);
+
+/**
+ * Generic helper to convert next data item to py_list
+ */
+static PyObject *s_cbor_decoder_pop_next_data_item_to_py_list(struct aws_cbor_decoder *decoder) {
+    enum aws_cbor_element_type out_type = 0;
+    if (aws_cbor_decoder_peek_type(decoder, &out_type)) {
+        return PyErr_AwsLastError();
+    }
+    PyObject *array = NULL;
+    PyObject *item = NULL;
+    switch (out_type) {
+        case AWS_CBOR_TYPE_ARRAY_START: {
+            uint64_t num_array_item;
+            aws_cbor_decoder_pop_next_array_start(decoder, &num_array_item);
+            if (num_array_item > PY_SSIZE_T_MAX) {
+                PyErr_SetString(PyExc_OverflowError, "number of array is too large to fit.");
+                return NULL;
+            }
+            array = PyList_New((Py_ssize_t)num_array_item);
+            if (!array) {
+                return NULL;
+            }
+            for (size_t i = 0; i < num_array_item; ++i) {
+                item = s_cbor_decoder_pop_next_data_item_to_pyobject(decoder);
+                if (!item) {
+                    goto error;
+                }
+                PyList_SetItem(array, i, item); /* Steals reference to item */
+            }
+            return array;
+        }
+        case AWS_CBOR_TYPE_INF_ARRAY_START: {
+            array = PyList_New(0);
+            if (!array) {
+                return NULL;
+            }
+            /* Consume the inf array start */
+            aws_cbor_decoder_consume_next_element(decoder, NULL /*consumed_type*/);
+            aws_cbor_decoder_peek_type(decoder, &out_type);
+            while (out_type != AWS_CBOR_TYPE_BREAK) {
+                item = s_cbor_decoder_pop_next_data_item_to_pyobject(decoder);
+                if (!item) {
+                    goto error;
+                }
+                if (PyList_Append(array, item) == -1) {
+                    goto error;
+                }
+                /* Append will not steal the reference, deref here. */
+                Py_DECREF(item);
+                if (aws_cbor_decoder_peek_type(decoder, &out_type)) {
+                    PyErr_AwsLastError();
+                    goto error;
+                }
+            }
+            return array;
+        }
+        default:
+            aws_raise_error(AWS_ERROR_CBOR_UNEXPECTED_TYPE);
+            return PyErr_AwsLastError();
+    }
+error:
+    if (array) {
+        Py_DECREF(array);
+    }
+    return NULL;
+}
+
+/**
+ * Generic helper to convert next data item to py_dict
+ */
+static PyObject *s_cbor_decoder_pop_next_data_item_to_py_dict(struct aws_cbor_decoder *decoder) {
+    enum aws_cbor_element_type out_type = 0;
+    if (aws_cbor_decoder_peek_type(decoder, &out_type)) {
+        return PyErr_AwsLastError();
+    }
+    PyObject *dict = NULL;
+    PyObject *key = NULL;
+    PyObject *value = NULL;
+    switch (out_type) {
+        case AWS_CBOR_TYPE_MAP_START: {
+            uint64_t num_item;
+            aws_cbor_decoder_pop_next_map_start(decoder, &num_item);
+            if (num_item > PY_SSIZE_T_MAX) {
+                PyErr_SetString(PyExc_OverflowError, "number of dict is too large to fit.");
+                return NULL;
+            }
+            dict = PyDict_New();
+            if (!dict) {
+                return NULL;
+            }
+            for (size_t i = 0; i < num_item; ++i) {
+                key = s_cbor_decoder_pop_next_data_item_to_pyobject(decoder);
+                value = s_cbor_decoder_pop_next_data_item_to_pyobject(decoder);
+                if (!key || !value) {
+                    goto error;
+                }
+                if (PyDict_SetItem(dict, key, value) == -1) {
+                    goto error;
+                }
+                Py_DECREF(key);
+                Py_DECREF(value);
+            }
+            return dict;
+        }
+        case AWS_CBOR_TYPE_INF_MAP_START: {
+            dict = PyDict_New();
+            if (!dict) {
+                return NULL;
+            }
+            /* Consume the inf array start */
+            aws_cbor_decoder_consume_next_element(decoder, NULL /*consumed_type*/);
+            aws_cbor_decoder_peek_type(decoder, &out_type);
+            while (out_type != AWS_CBOR_TYPE_BREAK) {
+                key = s_cbor_decoder_pop_next_data_item_to_pyobject(decoder);
+                value = s_cbor_decoder_pop_next_data_item_to_pyobject(decoder);
+                if (!key || !value) {
+                    goto error;
+                }
+                if (PyDict_SetItem(dict, key, value) == -1) {
+                    goto error;
+                }
+                Py_DECREF(key);
+                Py_DECREF(value);
+                if (aws_cbor_decoder_peek_type(decoder, &out_type)) {
+                    PyErr_AwsLastError();
+                    goto error;
+                }
+            }
+            return dict;
+        }
+        default:
+            aws_raise_error(AWS_ERROR_CBOR_UNEXPECTED_TYPE);
+            return PyErr_AwsLastError();
+    }
+error:
+    if (dict) {
+        Py_DECREF(dict);
+    }
+    if (key) {
+        Py_DECREF(key);
+    }
+    if (value) {
+        Py_DECREF(value);
+    }
+    return NULL;
+}
+
 /**
  * Generic helper to convert a cbor encoded data to PyObject
  */
@@ -294,71 +443,53 @@ static PyObject *s_cbor_decoder_pop_next_data_item_to_pyobject(struct aws_cbor_d
     if (aws_cbor_decoder_peek_type(decoder, &out_type)) {
         return PyErr_AwsLastError();
     }
-    switch (decoder->cached_context.type) {
-        case AWS_CBOR_TYPE_TAG:
-            /* Read the next data item */
-            /* TODO: error check for the tag content?? */
-            decoder->cached_context.type = AWS_CBOR_TYPE_MAX;
-            if (aws_cbor_decoder_consume_next_data_item(decoder)) {
-                return AWS_OP_ERR;
+    switch (out_type) {
+        case AWS_CBOR_TYPE_UINT:
+            return s_cbor_decoder_pop_next_unsigned_val_to_pyobject(decoder);
+        case AWS_CBOR_TYPE_NEGINT: {
+            /* The value from native code is -1 - val. */
+            PyObject *minus_one = PyLong_FromLong(-1);
+            if (!minus_one) {
+                return NULL;
             }
-            break;
-        case AWS_CBOR_TYPE_MAP_START: {
-            uint64_t num_map_item = decoder->cached_context.cbor_data.map_start;
-            /* Reset type */
-            decoder->cached_context.type = AWS_CBOR_TYPE_MAX;
-            for (uint64_t i = 0; i < num_map_item; i++) {
-                /* Key */
-                if (aws_cbor_decoder_consume_next_data_item(decoder)) {
-                    return AWS_OP_ERR;
-                }
-                /* Value */
-                if (aws_cbor_decoder_consume_next_data_item(decoder)) {
-                    return AWS_OP_ERR;
-                }
+            PyObject *val = s_cbor_decoder_pop_next_neg_val_to_pyobject(decoder);
+            if (!val) {
+                Py_DECREF(minus_one);
+                return NULL;
             }
-            break;
+            /* Get  */
+            PyObject *ret_val = PyNumber_Subtract(minus_one, val);
+            Py_DECREF(minus_one);
+            Py_DECREF(val);
+            return ret_val;
         }
-        case AWS_CBOR_TYPE_ARRAY_START: {
-            uint64_t num_array_item = decoder->cached_context.cbor_data.array_start;
-            /* Reset type */
-            decoder->cached_context.type = AWS_CBOR_TYPE_MAX;
-            for (uint64_t i = 0; i < num_array_item; i++) {
-                /* item */
-                if (aws_cbor_decoder_consume_next_data_item(decoder)) {
-                    return AWS_OP_ERR;
-                }
-            }
-            break;
-        }
+        case AWS_CBOR_TYPE_DOUBLE:
+            return s_cbor_decoder_pop_next_double_val_to_pyobject(decoder);
+        case AWS_CBOR_TYPE_BYTESTRING:
+            return s_cbor_decoder_pop_next_bytes_val_to_pyobject(decoder);
+        case AWS_CBOR_TYPE_STRING:
+            return s_cbor_decoder_pop_next_str_val_to_pyobject(decoder);
+        case AWS_CBOR_TYPE_BOOL:
+            return s_cbor_decoder_pop_next_boolean_val_to_pyobject(decoder);
+        case AWS_CBOR_TYPE_NULL:
+        case AWS_CBOR_TYPE_UNDEFINE:
+            aws_cbor_decoder_consume_next_element(decoder, NULL);
+            Py_RETURN_NONE;
+        case AWS_CBOR_TYPE_MAP_START:
+        case AWS_CBOR_TYPE_INF_MAP_START:
+            return s_cbor_decoder_pop_next_data_item_to_py_dict(decoder);
+        case AWS_CBOR_TYPE_ARRAY_START:
+        case AWS_CBOR_TYPE_INF_ARRAY_START:
+            return s_cbor_decoder_pop_next_data_item_to_py_list(decoder);
         case AWS_CBOR_TYPE_INF_BYTESTRING_START:
         case AWS_CBOR_TYPE_INF_STRING_START:
-        case AWS_CBOR_TYPE_INF_ARRAY_START:
-        case AWS_CBOR_TYPE_INF_MAP_START: {
-            enum aws_cbor_element_type next_type;
-            /* Reset the cache for the tag val */
-            decoder->cached_context.type = AWS_CBOR_TYPE_MAX;
-            if (aws_cbor_decoder_peek_type(decoder, &next_type)) {
-                return AWS_OP_ERR;
-            }
-            while (next_type != AWS_CBOR_TYPE_BREAK) {
-                if (aws_cbor_decoder_consume_next_data_item(decoder)) {
-                    return AWS_OP_ERR;
-                }
-                if (aws_cbor_decoder_peek_type(decoder, &next_type)) {
-                    return AWS_OP_ERR;
-                }
-            }
-            break;
-        }
-
+        case AWS_CBOR_TYPE_TAG:
+            /* TODO: handle those case */
         default:
-            break;
+            aws_raise_error(AWS_ERROR_CBOR_UNEXPECTED_TYPE);
+            return PyErr_AwsLastError();
     }
-
-    /* Done, just reset the cache */
-    decoder->cached_context.type = AWS_CBOR_TYPE_MAX;
-    return AWS_OP_SUCCESS;
+    return NULL;
 }
 
 /*********************************** BINDINGS ***********************************************/
@@ -408,7 +539,17 @@ PyObject *aws_py_cbor_decoder_pop_next_tag_val(PyObject *self, PyObject *args) {
     return s_cbor_decoder_pop_next_tag_val_to_pyobject(decoder);
 }
 
+PyObject *aws_py_cbor_decoder_pop_next_py_list(PyObject *self, PyObject *args) {
+    S_GET_DECODER();
+    return s_cbor_decoder_pop_next_data_item_to_py_list(decoder);
+}
+
+PyObject *aws_py_cbor_decoder_pop_next_py_dict(PyObject *self, PyObject *args) {
+    S_GET_DECODER();
+    return s_cbor_decoder_pop_next_data_item_to_py_dict(decoder);
+}
+
 PyObject *aws_py_cbor_decoder_pop_next_data_item(PyObject *self, PyObject *args) {
     S_GET_DECODER();
-    return s_cbor_decoder_pop_next_unsigned_val_to_pyobject(decoder);
+    return s_cbor_decoder_pop_next_data_item_to_pyobject(decoder);
 }
