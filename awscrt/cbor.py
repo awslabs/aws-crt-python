@@ -14,7 +14,7 @@ class AwsCborElementType(IntEnum):
     NegativeInt = 1
     Float = 2
     Bytes = 3
-    String = 4
+    Text = 4
     ArrayStart = 5
     MapStart = 6
     Tag = 7
@@ -22,10 +22,10 @@ class AwsCborElementType(IntEnum):
     Null = 9
     Undefined = 10
     Break = 11
-    InfBytes = 12
-    InfStr = 13
-    InfArray = 14
-    InfMap = 15
+    IndefBytes = 12
+    IndefStr = 13
+    IndefArray = 14
+    IndefMap = 15
 
 
 class AwsCborTags(IntEnum):
@@ -108,13 +108,13 @@ class AwsCborEncoder(NativeResource):
         """
         return _awscrt.cbor_encoder_write_bytes(self._binding, val)
 
-    def write_string(self, val: str):
-        """Write string as cbor formatted
+    def write_text(self, val: str):
+        """Write text as cbor formatted
 
         Args:
             val (str): value to be encoded and written to the encoded data.
         """
-        return _awscrt.cbor_encoder_write_str(self._binding, val)
+        return _awscrt.cbor_encoder_write_text(self._binding, val)
 
     def write_array_start(self, number_entries: int):
         """Add a start of array element.
@@ -201,7 +201,7 @@ class AwsCborDecoder(NativeResource):
         return -1 - val
 
     def pop_next_double(self) -> float:
-        return _awscrt.cbor_decoder_pop_next_double(self._binding)
+        return _awscrt.cbor_decoder_pop_next_float(self._binding)
 
     def pop_next_bool(self) -> bool:
         return _awscrt.cbor_decoder_pop_next_bool(self._binding)
@@ -209,8 +209,8 @@ class AwsCborDecoder(NativeResource):
     def pop_next_bytes(self) -> bytes:
         return _awscrt.cbor_decoder_pop_next_bytes(self._binding)
 
-    def pop_next_str(self) -> str:
-        return _awscrt.cbor_decoder_pop_next_str(self._binding)
+    def pop_next_text(self) -> str:
+        return _awscrt.cbor_decoder_pop_next_text(self._binding)
 
     def pop_next_array_start(self) -> int:
         return _awscrt.cbor_decoder_pop_next_array_start(self._binding)
