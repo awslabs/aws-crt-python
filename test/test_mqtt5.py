@@ -1238,6 +1238,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         client_id = create_client_id()
         topic_filter = "test/MQTT5_Binding_Python_" + client_id
         payload = bytearray(os.urandom(256))
+        correlation_data = bytearray(os.urandom(64))
 
         client_options = mqtt5.ClientOptions(
             host_name=input_host_name,
@@ -1264,7 +1265,8 @@ class Mqtt5ClientTest(NativeResourceTest):
         publish_packet = mqtt5.PublishPacket(
             payload=payload,
             topic=topic_filter,
-            qos=mqtt5.QoS.AT_LEAST_ONCE)
+            qos=mqtt5.QoS.AT_LEAST_ONCE,
+            correlation_data=correlation_data)
 
         publish_future = client.publish(publish_packet=publish_packet)
         publish_completion_data = publish_future.result(TIMEOUT)
@@ -1274,6 +1276,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         received_publish = callbacks.future_publish_received.result(TIMEOUT)
         self.assertIsInstance(received_publish, mqtt5.PublishPacket)
         self.assertEqual(received_publish.payload, payload)
+        self.assertEqual(received_publish.correlation_data, correlation_data)
 
         topic_filters = []
         topic_filters.append(topic_filter)
