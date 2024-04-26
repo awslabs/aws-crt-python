@@ -1083,7 +1083,7 @@ class UnsubackPacket:
     Args:
         reason_string (str): Additional diagnostic information about the result of the UNSUBSCRIBE attempt.
         user_properties (Sequence[UserProperty]): List of MQTT5 user properties included with the packet.
-        reason_codes (Sequence[DisconnectReasonCode]): A list of reason codes indicating the result of unsubscribing from each individual topic filter entry in the associated UNSUBSCRIBE packet.
+        reason_codes (Sequence[UnsubackReasonCode]): A list of reason codes indicating the result of unsubscribing from each individual topic filter entry in the associated UNSUBSCRIBE packet.
 
     """
     reason_string: str = None
