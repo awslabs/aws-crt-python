@@ -1088,7 +1088,7 @@ class UnsubackPacket:
     """
     reason_string: str = None
     user_properties: 'Sequence[UserProperty]' = None
-    reason_codes: 'Sequence[DisconnectReasonCode]' = None
+    reason_codes: 'Sequence[UnsubackReasonCode]' = None
 
 
 @dataclass
