@@ -20,7 +20,7 @@ jobs:
 
       - name: Update docs branch
         run: |
-          python3 -m pip install sphinx
+          python3 -m pip install sphinx==7.2.6
           python3 -m pip install --verbose .
           ./scripts/make-docs.py
 
