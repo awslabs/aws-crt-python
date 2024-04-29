@@ -1396,8 +1396,9 @@ class _ClientCore:
 
         def _on_complete(f):
             error_code = 0
-            if isinstance(f, exceptions.AwsCrtError):
-                error_code = f.code
+            hs_exception = f.exception()
+            if isinstance(hs_exception, exceptions.AwsCrtError):
+                error_code = hs_exception.code
             _awscrt.mqtt5_ws_handshake_transform_complete(f.exception(), native_userdata, error_code)
 
         future = Future()
