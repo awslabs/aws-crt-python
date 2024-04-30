@@ -1292,7 +1292,6 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-
     def test_operation_publish_binary_correlation_data(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
@@ -1344,7 +1343,6 @@ class Mqtt5ClientTest(NativeResourceTest):
 
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
-
 
     def test_operation_publish_utf8_correlation_data(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
