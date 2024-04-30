@@ -1119,7 +1119,7 @@ class PublishPacket:
     topic_alias: int = None
     response_topic: str = None
     correlation_data: Any = None   # Outgoing publishes: may be a string or binary data.  Incoming publishes: a string if correlation data exists on the packet and is convertible to utf-8
-    correlation_data_bytes: Any = None # Incoming publishes only: binary data if correlation data exists on the packet
+    correlation_data_bytes: Any = None  # Incoming publishes only: binary data if correlation data exists on the packet
     subscription_identifiers: 'Sequence[int]' = None  # ignore attempts to set but provide in received packets
     content_type: str = None
     user_properties: 'Sequence[UserProperty]' = None
