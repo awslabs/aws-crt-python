@@ -1238,6 +1238,69 @@ class Mqtt5ClientTest(NativeResourceTest):
         client_id = create_client_id()
         topic_filter = "test/MQTT5_Binding_Python_" + client_id
         payload = bytearray(os.urandom(256))
+
+        client_options = mqtt5.ClientOptions(
+            host_name=input_host_name,
+            port=8883
+        )
+        tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(
+            input_cert,
+            input_key
+        )
+        client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
+        callbacks = Mqtt5TestCallbacks()
+        client = self._create_client(client_options=client_options, callbacks=callbacks)
+        client.start()
+        callbacks.future_connection_success.result(TIMEOUT)
+
+        subscriptions = []
+        subscriptions.append(mqtt5.Subscription(topic_filter=topic_filter, qos=mqtt5.QoS.AT_LEAST_ONCE))
+        subscribe_packet = mqtt5.SubscribePacket(
+            subscriptions=subscriptions)
+        subscribe_future = client.subscribe(subscribe_packet=subscribe_packet)
+        suback_packet = subscribe_future.result(TIMEOUT)
+        self.assertIsInstance(suback_packet, mqtt5.SubackPacket)
+
+        publish_packet = mqtt5.PublishPacket(
+            payload=payload,
+            topic=topic_filter,
+            qos=mqtt5.QoS.AT_LEAST_ONCE)
+
+        publish_future = client.publish(publish_packet=publish_packet)
+        publish_completion_data = publish_future.result(TIMEOUT)
+        puback_packet = publish_completion_data.puback
+        self.assertIsInstance(puback_packet, mqtt5.PubackPacket)
+
+        received_publish = callbacks.future_publish_received.result(TIMEOUT)
+        self.assertIsInstance(received_publish, mqtt5.PublishPacket)
+        self.assertEqual(received_publish.payload, payload)
+
+        topic_filters = []
+        topic_filters.append(topic_filter)
+        unsubscribe_packet = mqtt5.UnsubscribePacket(topic_filters=topic_filters)
+        unsubscribe_future = client.unsubscribe(unsubscribe_packet)
+        unsuback_packet = unsubscribe_future.result(TIMEOUT)
+        self.assertIsInstance(unsuback_packet, mqtt5.UnsubackPacket)
+
+        publish_future = client.publish(publish_packet=publish_packet)
+        publish_completion_data = publish_future.result(TIMEOUT)
+        puback_packet = publish_completion_data.puback
+        self.assertIsInstance(puback_packet, mqtt5.PubackPacket)
+
+        self.assertEqual(callbacks.on_publish_received_counter, 1)
+
+        client.stop()
+        callbacks.future_stopped.result(TIMEOUT)
+
+
+    def test_operation_publish_binary_correlation_data(self):
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
+        input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
+        input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
+
+        client_id = create_client_id()
+        topic_filter = "test/MQTT5_Binding_Python_" + client_id
+        payload = bytearray(os.urandom(256))
         correlation_data = bytearray(os.urandom(64))
 
         client_options = mqtt5.ClientOptions(
@@ -1276,21 +1339,61 @@ class Mqtt5ClientTest(NativeResourceTest):
         received_publish = callbacks.future_publish_received.result(TIMEOUT)
         self.assertIsInstance(received_publish, mqtt5.PublishPacket)
         self.assertEqual(received_publish.payload, payload)
-        self.assertEqual(received_publish.correlation_data, correlation_data)
+        self.assertIsNone(received_publish.correlation_data)
+        self.assertEqual(received_publish.correlation_data_bytes, correlation_data)
 
-        topic_filters = []
-        topic_filters.append(topic_filter)
-        unsubscribe_packet = mqtt5.UnsubscribePacket(topic_filters=topic_filters)
-        unsubscribe_future = client.unsubscribe(unsubscribe_packet)
-        unsuback_packet = unsubscribe_future.result(TIMEOUT)
-        self.assertIsInstance(unsuback_packet, mqtt5.UnsubackPacket)
+        client.stop()
+        callbacks.future_stopped.result(TIMEOUT)
+
+
+    def test_operation_publish_utf8_correlation_data(self):
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
+        input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
+        input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
+
+        client_id = create_client_id()
+        topic_filter = "test/MQTT5_Binding_Python_" + client_id
+        payload = bytearray(os.urandom(256))
+        correlation_data = "MyRequest"
+
+        client_options = mqtt5.ClientOptions(
+            host_name=input_host_name,
+            port=8883
+        )
+        tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(
+            input_cert,
+            input_key
+        )
+        client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
+        callbacks = Mqtt5TestCallbacks()
+        client = self._create_client(client_options=client_options, callbacks=callbacks)
+        client.start()
+        callbacks.future_connection_success.result(TIMEOUT)
+
+        subscriptions = []
+        subscriptions.append(mqtt5.Subscription(topic_filter=topic_filter, qos=mqtt5.QoS.AT_LEAST_ONCE))
+        subscribe_packet = mqtt5.SubscribePacket(
+            subscriptions=subscriptions)
+        subscribe_future = client.subscribe(subscribe_packet=subscribe_packet)
+        suback_packet = subscribe_future.result(TIMEOUT)
+        self.assertIsInstance(suback_packet, mqtt5.SubackPacket)
+
+        publish_packet = mqtt5.PublishPacket(
+            payload=payload,
+            topic=topic_filter,
+            qos=mqtt5.QoS.AT_LEAST_ONCE,
+            correlation_data=correlation_data)
 
         publish_future = client.publish(publish_packet=publish_packet)
         publish_completion_data = publish_future.result(TIMEOUT)
         puback_packet = publish_completion_data.puback
         self.assertIsInstance(puback_packet, mqtt5.PubackPacket)
 
-        self.assertEqual(callbacks.on_publish_received_counter, 1)
+        received_publish = callbacks.future_publish_received.result(TIMEOUT)
+        self.assertIsInstance(received_publish, mqtt5.PublishPacket)
+        self.assertEqual(received_publish.payload, payload)
+        self.assertEqual(received_publish.correlation_data, correlation_data)
+        self.assertEqual(received_publish.correlation_data_bytes, correlation_data.encode('utf-8'))
 
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
