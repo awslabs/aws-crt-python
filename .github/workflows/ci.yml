@@ -216,6 +216,7 @@ jobs:
           shutdown_vm: false
           run: |
             sudo pkg_add awscli py3-pip py3-urllib3
+            pkg_info
             python3 -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz', 'builder')"
             chmod a+x builder
             ./builder build -p ${{ env.PACKAGE_NAME }}
