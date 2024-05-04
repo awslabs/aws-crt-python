@@ -198,7 +198,7 @@ jobs:
             version: "7.5"
           - name: 7.4-amd64
             version: "7.4"
-    name: OpenBSD ${{ matrix.os.name }}
+    name: openbsd-${{ matrix.os.name }}
     runs-on: ubuntu-22.04 # latest
     steps:
       # Cannot use builder to checkout as OpenBSD doesn't ship git in the base install
@@ -216,8 +216,8 @@ jobs:
           shutdown_vm: false
           run: |
             sudo pkg_add awscli py3-pip py3-urllib3
-            pkg_info
             python3 -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz', 'builder')"
+            sudo rm -f /usr/local/lib/python3.10/EXTERNALLY-MANAGED
             chmod a+x builder
             ./builder build -p ${{ env.PACKAGE_NAME }}
 
