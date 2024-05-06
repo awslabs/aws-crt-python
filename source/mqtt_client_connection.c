@@ -615,13 +615,13 @@ PyObject *aws_py_mqtt_ws_handshake_transform_complete(PyObject *self, PyObject *
 
     PyObject *exception_py;
     PyObject *ws_transform_capsule;
-    if (!PyArg_ParseTuple(args, "OO", &exception_py, &ws_transform_capsule)) {
+    int error_code = AWS_ERROR_SUCCESS;
+    if (!PyArg_ParseTuple(args, "OOi", &exception_py, &ws_transform_capsule, &error_code)) {
         return NULL;
     }
 
-    int error_code = AWS_ERROR_SUCCESS;
-    if (exception_py != Py_None) {
-        /* TODO: Translate Python exception to aws error. In the meantime here's a catch-all. */
+    if (exception_py != Py_None && error_code == AWS_ERROR_SUCCESS) {
+        /* Fallback code for if the error source was outside the CRT native implementation */
         error_code = AWS_ERROR_HTTP_CALLBACK_FAILURE;
     }
 
