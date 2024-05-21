@@ -1118,8 +1118,9 @@ class PublishPacket:
     message_expiry_interval_sec: int = None
     topic_alias: int = None
     response_topic: str = None
-    correlation_data: Any = None   # Deprecated.  Incoming publishes: a string if correlation data exists on the packet and is convertible to utf-8
     correlation_data_bytes: 'Optional[bytes]' = None  # binary data if correlation data exists on the packet
+    # Deprecated.  Incoming publishes: a string if correlation data exists on the packet and is convertible to utf-8
+    correlation_data: Any = None   
     subscription_identifiers: 'Sequence[int]' = None  # ignore attempts to set but provide in received packets
     content_type: str = None
     user_properties: 'Sequence[UserProperty]' = None

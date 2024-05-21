@@ -1231,7 +1231,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         callbacks2.future_stopped.result(TIMEOUT)
 
     def do_will_correlation_data_test(self, outbound_correlation_data_bytes, outbound_correlation_data,
-                                 expected_correlation_data_bytes, expected_correlation_data):
+                                      expected_correlation_data_bytes, expected_correlation_data):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
         input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
