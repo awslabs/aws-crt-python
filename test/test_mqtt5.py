@@ -1230,6 +1230,98 @@ class Mqtt5ClientTest(NativeResourceTest):
         client2.stop()
         callbacks2.future_stopped.result(TIMEOUT)
 
+    def do_will_correlation_data_test(self, outbound_correlation_data_bytes, outbound_correlation_data,
+                                 expected_correlation_data_bytes, expected_correlation_data):
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
+        input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
+        input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
+
+        client_id_publisher = create_client_id()
+        topic_filter = "test/MQTT5_Binding_Python_" + client_id_publisher
+
+        payload = "TEST WILL"
+        payload_bytes = payload.encode("utf-8")
+
+        will_packet = mqtt5.PublishPacket(
+            payload="TEST WILL",
+            qos=mqtt5.QoS.AT_LEAST_ONCE,
+            topic=topic_filter,
+            correlation_data_bytes=outbound_correlation_data_bytes,
+            correlation_data=outbound_correlation_data
+        )
+
+        tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(
+            input_cert,
+            input_key
+        )
+
+        client_options1 = mqtt5.ClientOptions(
+            host_name=input_host_name,
+            port=8883
+        )
+        client_options1.connect_options = mqtt5.ConnectPacket(client_id=client_id_publisher,
+                                                              will_delay_interval_sec=0,
+                                                              will=will_packet)
+        client_options1.tls_ctx = io.ClientTlsContext(tls_ctx_options)
+        callbacks1 = Mqtt5TestCallbacks()
+        client1 = self._create_client(client_options=client_options1, callbacks=callbacks1)
+        client1.start()
+        callbacks1.future_connection_success.result(TIMEOUT)
+
+        client_options2 = mqtt5.ClientOptions(
+            host_name=input_host_name,
+            port=8883
+        )
+        client_options2.connect_options = mqtt5.ConnectPacket(client_id=create_client_id())
+        client_options2.tls_ctx = io.ClientTlsContext(tls_ctx_options)
+        callbacks2 = Mqtt5TestCallbacks()
+        client2 = self._create_client(client_options=client_options2, callbacks=callbacks2)
+        client2.start()
+        callbacks2.future_connection_success.result(TIMEOUT)
+
+        subscriptions = []
+        subscriptions.append(mqtt5.Subscription(topic_filter=topic_filter, qos=mqtt5.QoS.AT_LEAST_ONCE))
+        subscribe_packet = mqtt5.SubscribePacket(
+            subscriptions=subscriptions)
+        subscribe_future = client2.subscribe(subscribe_packet=subscribe_packet)
+        suback_packet = subscribe_future.result(TIMEOUT)
+        self.assertIsInstance(suback_packet, mqtt5.SubackPacket)
+
+        disconnect_packet = mqtt5.DisconnectPacket(reason_code=mqtt5.DisconnectReasonCode.DISCONNECT_WITH_WILL_MESSAGE)
+        client1.stop(disconnect_packet=disconnect_packet)
+        callbacks1.future_stopped.result(TIMEOUT)
+
+        received_will = callbacks2.future_publish_received.result(TIMEOUT)
+        self.assertIsInstance(received_will, mqtt5.PublishPacket)
+        self.assertEqual(received_will.payload, payload_bytes)
+        self.assertEqual(received_will.correlation_data_bytes, expected_correlation_data_bytes)
+        self.assertEqual(received_will.correlation_data, expected_correlation_data)
+
+        client2.stop()
+        callbacks2.future_stopped.result(TIMEOUT)
+
+    def test_will_correlation_data_bytes_binary(self):
+        correlation_data = bytearray(os.urandom(64))
+        self.do_will_correlation_data_test(correlation_data, None, correlation_data, None)
+
+    def test_will_correlation_data_bytes_string(self):
+        correlation_data = "CorrelationData"
+        correlation_data_as_bytes = correlation_data.encode('utf-8')
+        self.do_correlation_data_test(correlation_data, None, correlation_data_as_bytes, correlation_data)
+
+    def test_will_correlation_data_binary(self):
+        correlation_data = bytearray(os.urandom(64))
+        self.do_correlation_data_test(None, correlation_data, correlation_data, None)
+
+    def test_will_correlation_data_string(self):
+        correlation_data = "CorrelationData"
+        correlation_data_as_bytes = correlation_data.encode('utf-8')
+        self.do_correlation_data_test(None, correlation_data, correlation_data_as_bytes, correlation_data)
+
+    def test_will_correlation_data_bytes_binary_precedence(self):
+        correlation_data = bytearray(os.urandom(64))
+        self.do_correlation_data_test(correlation_data, "Ignored", correlation_data, None)
+
     def test_operation_binary_publish(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
@@ -1292,7 +1384,8 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    def test_operation_publish_binary_correlation_data(self):
+    def do_correlation_data_test(self, outbound_correlation_data_bytes, outbound_correlation_data,
+                                 expected_correlation_data_bytes, expected_correlation_data):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
         input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
@@ -1300,101 +1393,71 @@ class Mqtt5ClientTest(NativeResourceTest):
         client_id = create_client_id()
         topic_filter = "test/MQTT5_Binding_Python_" + client_id
         payload = bytearray(os.urandom(256))
+
+        client_options = mqtt5.ClientOptions(
+            host_name=input_host_name,
+            port=8883
+        )
+        tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(
+            input_cert,
+            input_key
+        )
+        client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
+        callbacks = Mqtt5TestCallbacks()
+        client = self._create_client(client_options=client_options, callbacks=callbacks)
+        client.start()
+        callbacks.future_connection_success.result(TIMEOUT)
+
+        subscriptions = []
+        subscriptions.append(mqtt5.Subscription(topic_filter=topic_filter, qos=mqtt5.QoS.AT_LEAST_ONCE))
+        subscribe_packet = mqtt5.SubscribePacket(
+            subscriptions=subscriptions)
+        subscribe_future = client.subscribe(subscribe_packet=subscribe_packet)
+        suback_packet = subscribe_future.result(TIMEOUT)
+        self.assertIsInstance(suback_packet, mqtt5.SubackPacket)
+
+        publish_packet = mqtt5.PublishPacket(
+            payload=payload,
+            topic=topic_filter,
+            qos=mqtt5.QoS.AT_LEAST_ONCE,
+            correlation_data_bytes=outbound_correlation_data_bytes,
+            correlation_data=outbound_correlation_data)
+
+        publish_future = client.publish(publish_packet=publish_packet)
+        publish_completion_data = publish_future.result(TIMEOUT)
+        puback_packet = publish_completion_data.puback
+        self.assertIsInstance(puback_packet, mqtt5.PubackPacket)
+
+        received_publish = callbacks.future_publish_received.result(TIMEOUT)
+        self.assertIsInstance(received_publish, mqtt5.PublishPacket)
+        self.assertEqual(received_publish.payload, payload)
+        self.assertEqual(received_publish.correlation_data_bytes, expected_correlation_data_bytes)
+        self.assertEqual(received_publish.correlation_data, expected_correlation_data)
+
+        client.stop()
+        callbacks.future_stopped.result(TIMEOUT)
+
+    def test_operation_publish_correlation_data_bytes_binary(self):
         correlation_data = bytearray(os.urandom(64))
+        self.do_correlation_data_test(correlation_data, None, correlation_data, None)
 
-        client_options = mqtt5.ClientOptions(
-            host_name=input_host_name,
-            port=8883
-        )
-        tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(
-            input_cert,
-            input_key
-        )
-        client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
-        callbacks = Mqtt5TestCallbacks()
-        client = self._create_client(client_options=client_options, callbacks=callbacks)
-        client.start()
-        callbacks.future_connection_success.result(TIMEOUT)
+    def test_operation_publish_correlation_data_bytes_string(self):
+        correlation_data = "CorrelationData"
+        correlation_data_as_bytes = correlation_data.encode('utf-8')
+        self.do_correlation_data_test(correlation_data, None, correlation_data_as_bytes, correlation_data)
 
-        subscriptions = []
-        subscriptions.append(mqtt5.Subscription(topic_filter=topic_filter, qos=mqtt5.QoS.AT_LEAST_ONCE))
-        subscribe_packet = mqtt5.SubscribePacket(
-            subscriptions=subscriptions)
-        subscribe_future = client.subscribe(subscribe_packet=subscribe_packet)
-        suback_packet = subscribe_future.result(TIMEOUT)
-        self.assertIsInstance(suback_packet, mqtt5.SubackPacket)
+    def test_operation_publish_correlation_data_binary(self):
+        correlation_data = bytearray(os.urandom(64))
+        self.do_correlation_data_test(None, correlation_data, correlation_data, None)
 
-        publish_packet = mqtt5.PublishPacket(
-            payload=payload,
-            topic=topic_filter,
-            qos=mqtt5.QoS.AT_LEAST_ONCE,
-            correlation_data=correlation_data)
+    def test_operation_publish_correlation_data_string(self):
+        correlation_data = "CorrelationData"
+        correlation_data_as_bytes = correlation_data.encode('utf-8')
+        self.do_correlation_data_test(None, correlation_data, correlation_data_as_bytes, correlation_data)
 
-        publish_future = client.publish(publish_packet=publish_packet)
-        publish_completion_data = publish_future.result(TIMEOUT)
-        puback_packet = publish_completion_data.puback
-        self.assertIsInstance(puback_packet, mqtt5.PubackPacket)
-
-        received_publish = callbacks.future_publish_received.result(TIMEOUT)
-        self.assertIsInstance(received_publish, mqtt5.PublishPacket)
-        self.assertEqual(received_publish.payload, payload)
-        self.assertIsNone(received_publish.correlation_data)
-        self.assertEqual(received_publish.correlation_data_bytes, correlation_data)
-
-        client.stop()
-        callbacks.future_stopped.result(TIMEOUT)
-
-    def test_operation_publish_utf8_correlation_data(self):
-        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
-        input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
-        input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
-
-        client_id = create_client_id()
-        topic_filter = "test/MQTT5_Binding_Python_" + client_id
-        payload = bytearray(os.urandom(256))
-        correlation_data = "MyRequest"
-
-        client_options = mqtt5.ClientOptions(
-            host_name=input_host_name,
-            port=8883
-        )
-        tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(
-            input_cert,
-            input_key
-        )
-        client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
-        callbacks = Mqtt5TestCallbacks()
-        client = self._create_client(client_options=client_options, callbacks=callbacks)
-        client.start()
-        callbacks.future_connection_success.result(TIMEOUT)
-
-        subscriptions = []
-        subscriptions.append(mqtt5.Subscription(topic_filter=topic_filter, qos=mqtt5.QoS.AT_LEAST_ONCE))
-        subscribe_packet = mqtt5.SubscribePacket(
-            subscriptions=subscriptions)
-        subscribe_future = client.subscribe(subscribe_packet=subscribe_packet)
-        suback_packet = subscribe_future.result(TIMEOUT)
-        self.assertIsInstance(suback_packet, mqtt5.SubackPacket)
-
-        publish_packet = mqtt5.PublishPacket(
-            payload=payload,
-            topic=topic_filter,
-            qos=mqtt5.QoS.AT_LEAST_ONCE,
-            correlation_data=correlation_data)
-
-        publish_future = client.publish(publish_packet=publish_packet)
-        publish_completion_data = publish_future.result(TIMEOUT)
-        puback_packet = publish_completion_data.puback
-        self.assertIsInstance(puback_packet, mqtt5.PubackPacket)
-
-        received_publish = callbacks.future_publish_received.result(TIMEOUT)
-        self.assertIsInstance(received_publish, mqtt5.PublishPacket)
-        self.assertEqual(received_publish.payload, payload)
-        self.assertEqual(received_publish.correlation_data, correlation_data)
-        self.assertEqual(received_publish.correlation_data_bytes, correlation_data.encode('utf-8'))
-
-        client.stop()
-        callbacks.future_stopped.result(TIMEOUT)
+    def test_operation_publish_correlation_data_bytes_binary_precedence(self):
+        correlation_data = bytearray(os.urandom(64))
+        self.do_correlation_data_test(correlation_data, "Ignored", correlation_data, None)
 
     # ==============================================================
     #             OPERATION ERROR TEST CASES

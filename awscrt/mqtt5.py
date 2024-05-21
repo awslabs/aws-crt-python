@@ -1104,8 +1104,8 @@ class PublishPacket:
         message_expiry_interval_sec (int): Sent publishes - indicates the maximum amount of time allowed to elapse for message delivery before the server should instead delete the message (relative to a recipient). Received publishes - indicates the remaining amount of time (from the server's perspective) before the message would have been deleted relative to the subscribing client. If left None, indicates no expiration timeout.
         topic_alias (int): An integer value that is used to identify the Topic instead of using the Topic Name.  On outbound publishes, this will only be used if the outbound topic aliasing behavior has been set to Manual.
         response_topic (str): Opaque topic string intended to assist with request/response implementations.  Not internally meaningful to MQTT5 or this client.
-        correlation_data (Any): Opaque binary data used to correlate between publish messages, as a potential method for request-response implementation.  Not internally meaningful to MQTT5.  For outbound publishes, this can be either a string or binary data.  For incoming publishes, this will be a utf8 string (if correlation data exists and it's convertible to utf-8) or None (either it didn't exist, or did but wasn't convertible)
-        correlation_data_bytes (Any): Opaque binary data used to correlate between publish messages, as a potential method for request-response implementation.  Not internally meaningful to MQTT5.  For outbound publishes, this field is ignored.  For incoming publishes, this will be binary data if correlation data is set, otherwise it will be None.
+        correlation_data (Any): Deprecated, use `correlation_data_bytes` instead.  Opaque binary data used to correlate between publish messages, as a potential method for request-response implementation.  Not internally meaningful to MQTT5.  For incoming publishes, this will be a utf8 string (if correlation data exists and it's convertible to utf-8) or None (either it didn't exist, or did but wasn't convertible)
+        correlation_data_bytes (Optional[bytes]): Opaque binary data used to correlate between publish messages, as a potential method for request-response implementation.  Not internally meaningful to MQTT5.  For outbound publishes, this field takes priority over `correlation_data`.  For incoming publishes, this will be binary data if correlation data is set, otherwise it will be None.
         subscription_identifiers (Sequence[int]): The subscription identifiers of all the subscriptions this message matched.
         content_type (str): Property specifying the content type of the payload.  Not internally meaningful to MQTT5.
         user_properties (Sequence[UserProperty]): List of MQTT5 user properties included with the packet.
@@ -1118,8 +1118,8 @@ class PublishPacket:
     message_expiry_interval_sec: int = None
     topic_alias: int = None
     response_topic: str = None
-    correlation_data: Any = None   # Outgoing publishes: may be a string or binary data.  Incoming publishes: a string if correlation data exists on the packet and is convertible to utf-8
-    correlation_data_bytes: 'Optional[bytes]' = None  # Incoming publishes only: binary data if correlation data exists on the packet
+    correlation_data: Any = None   # Deprecated.  Incoming publishes: a string if correlation data exists on the packet and is convertible to utf-8
+    correlation_data_bytes: 'Optional[bytes]' = None  # binary data if correlation data exists on the packet
     subscription_identifiers: 'Sequence[int]' = None  # ignore attempts to set but provide in received packets
     content_type: str = None
     user_properties: 'Sequence[UserProperty]' = None
@@ -1446,9 +1446,12 @@ class _ClientCore:
             publish_packet.topic_alias = topic_alias
         publish_packet.response_topic = response_topic
 
+        # hacky workaround to maintain behavioral backwards compatibility with deprecated parameter
         if correlation_data is not None:
+            # `correlation_data_bytes` always has the correlation data, as binary data
             publish_packet.correlation_data_bytes = correlation_data
             try:
+                # `correlation_data` contains the correlation data as a utf-8 string, if it can be converted
                 publish_packet.correlation_data = correlation_data.decode("utf-8")
             except Exception:
                 pass
@@ -1773,6 +1776,7 @@ class Client(NativeResource):
                                                  will.message_expiry_interval_sec,
                                                  will.topic_alias,
                                                  will.response_topic,
+                                                 will.correlation_data_bytes,
                                                  will.correlation_data,
                                                  will.content_type,
                                                  will.user_properties,
@@ -1870,6 +1874,7 @@ class Client(NativeResource):
                                      publish_packet.message_expiry_interval_sec,
                                      publish_packet.topic_alias,
                                      publish_packet.response_topic,
+                                     publish_packet.correlation_data_bytes,
                                      publish_packet.correlation_data,
                                      publish_packet.content_type,
                                      publish_packet.user_properties,
