@@ -836,7 +836,6 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
     PyObject *will_message_expiry_interval_seconds_py; /* optional uint32_t */
     PyObject *will_topic_alias_py;                     /* optional uint16_t */
     struct aws_byte_cursor will_response_topic;        /* optional */
-    Py_buffer will_correlation_data_bytes_stack;       /* optional */
     Py_buffer will_correlation_data_stack;             /* optional */
     struct aws_byte_cursor will_content_type;          /* optional */
     PyObject *will_user_properties_py;                 /* optional */
@@ -857,7 +856,7 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
 
     if (!PyArg_ParseTuple(
             args,
-            "Os#IOOOOz#Oz#z#OOOOOOOOOz*Oz#OOOz#z*z*z#OOOOOOOOOOOOO",
+            "Os#IOOOOz#Oz#z#OOOOOOOOOz*Oz#OOOz#z*z#OOOOOOOOOOOOO",
             /* O */ &self_py,
             /* s */ &host_name.ptr,
             /* # */ &host_name.len,
@@ -894,7 +893,6 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
             /* O */ &will_topic_alias_py,
             /* z */ &will_response_topic.ptr,
             /* # */ &will_response_topic.len,
-            /* z* */ &will_correlation_data_bytes_stack,
             /* z* */ &will_correlation_data_stack,
             /* z */ &will_content_type.ptr,
             /* # */ &will_content_type.len,
@@ -1242,14 +1240,7 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
             will.response_topic = &will_response_topic;
         }
 
-        /*
-         * Try correlation_data_bytes first, fall back to the deprecated correlation_data if nothing found.
-         */
-        if (will_correlation_data_bytes_stack.buf) {
-            will_correlation_data_tmp = aws_byte_cursor_from_array(
-                will_correlation_data_bytes_stack.buf, will_correlation_data_bytes_stack.len);
-            will.correlation_data = &will_correlation_data_tmp;
-        } else if (will_correlation_data_stack.buf) {
+        if (will_correlation_data_stack.buf) {
             will_correlation_data_tmp =
                 aws_byte_cursor_from_array(will_correlation_data_stack.buf, will_correlation_data_stack.len);
             will.correlation_data = &will_correlation_data_tmp;
@@ -1310,7 +1301,6 @@ done:
         aws_mem_release(aws_py_get_allocator(), will_user_properties_tmp);
     }
     PyBuffer_Release(&will_payload_stack);
-    PyBuffer_Release(&will_correlation_data_bytes_stack);
     PyBuffer_Release(&will_correlation_data_stack);
     if (success) {
         return capsule;
@@ -1538,7 +1528,6 @@ PyObject *aws_py_mqtt5_client_publish(PyObject *self, PyObject *args) {
     PyObject *message_expiry_interval_seconds_py; /* optional uint32_t */
     PyObject *topic_alias_py;                     /* optional uint16_t */
     struct aws_byte_cursor response_topic;        /* optional */
-    Py_buffer correlation_data_bytes_stack;       /* optional */
     Py_buffer correlation_data_stack;             /* optional */
     struct aws_byte_cursor content_type;          /* optional */
     PyObject *user_properties_py;                 /* optional */
@@ -1546,7 +1535,7 @@ PyObject *aws_py_mqtt5_client_publish(PyObject *self, PyObject *args) {
 
     if (!PyArg_ParseTuple(
             args,
-            "OOz*Oz#OOOz#z*z*z#OO",
+            "OOz*Oz#OOOz#z*z#OO",
             /* O */ &impl_capsule,
             /* O */ &qos_val_py,
             /* z* */ &payload_stack,
@@ -1558,7 +1547,6 @@ PyObject *aws_py_mqtt5_client_publish(PyObject *self, PyObject *args) {
             /* O */ &topic_alias_py,
             /* z */ &response_topic.ptr,
             /* # */ &response_topic.len,
-            /* z* */ &correlation_data_bytes_stack,
             /* z* */ &correlation_data_stack,
             /* z */ &content_type.ptr,
             /* # */ &content_type.len,
@@ -1625,11 +1613,7 @@ PyObject *aws_py_mqtt5_client_publish(PyObject *self, PyObject *args) {
     }
 
     struct aws_byte_cursor correlation_data_tmp;
-    if (correlation_data_bytes_stack.buf) {
-        correlation_data_tmp =
-            aws_byte_cursor_from_array(correlation_data_bytes_stack.buf, correlation_data_bytes_stack.len);
-        publish_view.correlation_data = &correlation_data_tmp;
-    } else if (correlation_data_stack.buf) {
+    if (correlation_data_stack.buf) {
         correlation_data_tmp = aws_byte_cursor_from_array(correlation_data_stack.buf, correlation_data_stack.len);
         publish_view.correlation_data = &correlation_data_tmp;
     }
@@ -1673,7 +1657,6 @@ done:
         aws_mem_release(aws_py_get_allocator(), user_properties_tmp);
     }
     PyBuffer_Release(&payload_stack);
-    PyBuffer_Release(&correlation_data_bytes_stack);
     PyBuffer_Release(&correlation_data_stack);
     if (success) {
         Py_RETURN_NONE;

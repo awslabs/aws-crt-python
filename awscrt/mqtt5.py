@@ -1106,7 +1106,7 @@ class PublishPacket:
         response_topic (str): Opaque topic string intended to assist with request/response implementations.  Not internally meaningful to MQTT5 or this client.
         correlation_data (Any): Deprecated, use `correlation_data_bytes` instead.  Opaque binary data used to correlate between publish messages, as a potential method for request-response implementation.  Not internally meaningful to MQTT5.  For incoming publishes, this will be a utf8 string (if correlation data exists and it's convertible to utf-8) or None (either it didn't exist, or did but wasn't convertible)
         correlation_data_bytes (Optional[bytes]): Opaque binary data used to correlate between publish messages, as a potential method for request-response implementation.  Not internally meaningful to MQTT5.  For outbound publishes, this field takes priority over `correlation_data`.  For incoming publishes, this will be binary data if correlation data is set, otherwise it will be None.
-        subscription_identifiers (Sequence[int]): The subscription identifiers of all the subscriptions this message matched.
+        subscription_identifiers (Sequence[int]): The subscription identifiers of all the subscriptions this message matched.  This field is ignored on outbound publishes (setting it is a protocol error).
         content_type (str): Property specifying the content type of the payload.  Not internally meaningful to MQTT5.
         user_properties (Sequence[UserProperty]): List of MQTT5 user properties included with the packet.
     """
@@ -1777,8 +1777,7 @@ class Client(NativeResource):
                                                  will.message_expiry_interval_sec,
                                                  will.topic_alias,
                                                  will.response_topic,
-                                                 will.correlation_data_bytes,
-                                                 will.correlation_data,
+                                                 will.correlation_data_bytes or will.correlation_data,
                                                  will.content_type,
                                                  will.user_properties,
                                                  client_options.session_behavior,
@@ -1875,8 +1874,7 @@ class Client(NativeResource):
                                      publish_packet.message_expiry_interval_sec,
                                      publish_packet.topic_alias,
                                      publish_packet.response_topic,
-                                     publish_packet.correlation_data_bytes,
-                                     publish_packet.correlation_data,
+                                     publish_packet.correlation_data_bytes or publish_packet.correlation_data,
                                      publish_packet.content_type,
                                      publish_packet.user_properties,
                                      puback)
