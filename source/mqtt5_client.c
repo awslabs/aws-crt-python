@@ -261,7 +261,7 @@ static void s_on_publish_received(const struct aws_mqtt5_packet_publish_view *pu
     result = PyObject_CallMethod(
         client->client_core,
         "_on_publish",
-        "(y#iOs#OiOIOHs#z#Os#O)",
+        "(y#iOs#OiOIOHs#y#Os#O)",
         /* y */ publish_packet->payload.ptr,
         /* # */ publish_packet->payload.len,
         /* i */ (int)publish_packet->qos,
@@ -277,7 +277,7 @@ static void s_on_publish_received(const struct aws_mqtt5_packet_publish_view *pu
         /* H */ (unsigned short)(publish_packet->topic_alias ? *publish_packet->topic_alias : 0),
         /* s */ publish_packet->response_topic ? publish_packet->response_topic->ptr : NULL,
         /* # */ publish_packet->response_topic ? publish_packet->response_topic->len : 0,
-        /* z */ publish_packet->correlation_data ? publish_packet->correlation_data->ptr : NULL,
+        /* y */ publish_packet->correlation_data ? publish_packet->correlation_data->ptr : NULL,
         /* # */ publish_packet->correlation_data ? publish_packet->correlation_data->len : 0,
         /* O */ subscription_identifier_count > 0 ? subscription_identifier_list : Py_None,
         /* s */ publish_packet->content_type ? publish_packet->content_type->ptr : NULL,
@@ -712,13 +712,13 @@ PyObject *aws_py_mqtt5_ws_handshake_transform_complete(PyObject *self, PyObject 
 
     PyObject *exception_py;
     PyObject *ws_transform_capsule;
-    if (!PyArg_ParseTuple(args, "OO", &exception_py, &ws_transform_capsule)) {
+    int error_code = AWS_ERROR_SUCCESS;
+    if (!PyArg_ParseTuple(args, "OOi", &exception_py, &ws_transform_capsule, &error_code)) {
         return NULL;
     }
 
-    int error_code = AWS_ERROR_SUCCESS;
-    if (exception_py != Py_None) {
-        /* TODO: Translate Python exception to aws error. In the meantime here's a catch-all. */
+    if (exception_py != Py_None && error_code == AWS_ERROR_SUCCESS) {
+        /* Fallback code for if the error source was outside the CRT native implementation */
         error_code = AWS_ERROR_HTTP_CALLBACK_FAILURE;
     }
 
