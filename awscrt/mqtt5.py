@@ -5,7 +5,7 @@ MQTT5
 
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
-from typing import Any, Callable
+from typing import Any, Callable, Union
 import _awscrt
 from concurrent.futures import Future
 from enum import IntEnum
@@ -1104,8 +1104,8 @@ class PublishPacket:
         message_expiry_interval_sec (int): Sent publishes - indicates the maximum amount of time allowed to elapse for message delivery before the server should instead delete the message (relative to a recipient). Received publishes - indicates the remaining amount of time (from the server's perspective) before the message would have been deleted relative to the subscribing client. If left None, indicates no expiration timeout.
         topic_alias (int): An integer value that is used to identify the Topic instead of using the Topic Name.  On outbound publishes, this will only be used if the outbound topic aliasing behavior has been set to Manual.
         response_topic (str): Opaque topic string intended to assist with request/response implementations.  Not internally meaningful to MQTT5 or this client.
-        correlation_data (Any): Deprecated, use `correlation_data_bytes` instead.  Opaque binary data used to correlate between publish messages, as a potential method for request-response implementation.  Not internally meaningful to MQTT5.  For incoming publishes, this will be a utf8 string (if correlation data exists and it's convertible to utf-8) or None (either it didn't exist, or did but wasn't convertible)
-        correlation_data_bytes (Optional[bytes]): Opaque binary data used to correlate between publish messages, as a potential method for request-response implementation.  Not internally meaningful to MQTT5.  For outbound publishes, this field takes priority over `correlation_data`.  For incoming publishes, this will be binary data if correlation data is set, otherwise it will be None.
+        correlation_data (Optional[Union[bytes, str]]): Deprecated, use `correlation_data_bytes` instead.  Opaque binary data used to correlate between publish messages, as a potential method for request-response implementation.  Not internally meaningful to MQTT5.  For incoming publishes, this will be a utf8 string (if correlation data exists and it's convertible to utf-8) or None (either it didn't exist, or did but wasn't convertible)
+        correlation_data_bytes (Optional[Union[bytes, str]]): Opaque binary data used to correlate between publish messages, as a potential method for request-response implementation.  Not internally meaningful to MQTT5.  For outbound publishes, this field takes priority over `correlation_data`.  For incoming publishes, this will be binary data if correlation data is set, otherwise it will be None.
         subscription_identifiers (Sequence[int]): The subscription identifiers of all the subscriptions this message matched.  This field is ignored on outbound publishes (setting it is a protocol error).
         content_type (str): Property specifying the content type of the payload.  Not internally meaningful to MQTT5.
         user_properties (Sequence[UserProperty]): List of MQTT5 user properties included with the packet.
@@ -1118,9 +1118,9 @@ class PublishPacket:
     message_expiry_interval_sec: int = None
     topic_alias: int = None
     response_topic: str = None
-    correlation_data_bytes: 'Optional[bytes]' = None  # binary data if correlation data exists on the packet
+    correlation_data_bytes: 'Optional[Union[bytes, str]]' = None  # binary data if correlation data exists on the packet
     # Deprecated.  Incoming publishes: a string if correlation data exists on the packet and is convertible to utf-8
-    correlation_data: Any = None
+    correlation_data: 'Optional[Union[bytes, str]]' = None
     subscription_identifiers: 'Sequence[int]' = None  # ignore attempts to set but provide in received packets
     content_type: str = None
     user_properties: 'Sequence[UserProperty]' = None
