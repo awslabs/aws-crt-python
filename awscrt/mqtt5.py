@@ -1394,11 +1394,15 @@ class _ClientCore:
 
     def _ws_handshake_transform(self, http_request_binding, http_headers_binding, native_userdata):
         if self._ws_handshake_transform_cb is None:
-            _awscrt.mqtt5_ws_handshake_transform_complete(None, native_userdata)
+            _awscrt.mqtt5_ws_handshake_transform_complete(None, native_userdata, 0)
             return
 
         def _on_complete(f):
-            _awscrt.mqtt5_ws_handshake_transform_complete(f.exception(), native_userdata)
+            error_code = 0
+            hs_exception = f.exception()
+            if isinstance(hs_exception, exceptions.AwsCrtError):
+                error_code = hs_exception.code
+            _awscrt.mqtt5_ws_handshake_transform_complete(f.exception(), native_userdata, error_code)
 
         future = Future()
         future.add_done_callback(_on_complete)
