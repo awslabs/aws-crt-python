@@ -9,7 +9,7 @@ on:
 
 jobs:
   update-docs-branch:
-    runs-on: ubuntu-20.04 # latest
+    runs-on: ubuntu-24.04 # latest
     permissions:
       contents: write # allow push
     steps:
@@ -20,7 +20,7 @@ jobs:
 
       - name: Update docs branch
         run: |
-          python3 -m pip install sphinx==7.2.6
+          python3 -m pip install -r requirements-dev.txt
           python3 -m pip install --verbose .
           ./scripts/make-docs.py
 
