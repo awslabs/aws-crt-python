@@ -9,7 +9,7 @@ on:
 
 jobs:
   update-docs-branch:
-    runs-on: ubuntu-24.04 # latest
+    runs-on: ubuntu-22.04 # latest
     permissions:
       contents: write # allow push
     steps:
