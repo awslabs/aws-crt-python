@@ -57,7 +57,7 @@ class TestClient(NativeResourceTest):
 
         self.server = HTTPServer((self.hostname, 0), TestRequestHandler)
         if secure:
-            context = ssl.SSLContext()
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
             context.load_cert_chain(certfile='test/resources/unittest.crt', keyfile="test/resources/unittest.key")
             self.server.socket = context.wrap_socket(self.server.socket, server_side=True)
         self.port = self.server.server_address[1]
