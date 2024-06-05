@@ -1,5 +1,5 @@
 autopep8 # for code formatting
 setuptools # for installing from source
-sphinx # for building docs
+sphinx>=7.2.6,<7.3; python_version >= '3.9' # for building docs
 websockets # for tests
 wheel # for building wheels
