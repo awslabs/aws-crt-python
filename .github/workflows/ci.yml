@@ -25,17 +25,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        openbsd-ver: ['7.4', '7.5']
+        # OpenBSD only supports the two most recent releases
+        version: ['7.4', '7.5']
     steps:
       # Cannot use builder to checkout as OpenBSD doesn't ship git in the base install
       - uses: actions/checkout@v3
         with:
           submodules: true
       - name: Build ${{ env.PACKAGE_NAME }} + consumers
-        uses: cross-platform-actions/action@v0.23.0
+        uses: cross-platform-actions/action@v0.24.0
         with:
           operating_system: openbsd
-          version: ${{ matrix.openbsd-ver }}
+          version: ${{ matrix.version }}
           cpu_count: 4
           shell: bash
           environment_variables: AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION AWS_REGION
