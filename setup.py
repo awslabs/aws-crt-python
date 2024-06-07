@@ -351,7 +351,6 @@ def awscrt_ext():
         if sys.platform.startswith('freebsd'):
             extra_link_args += ['-lexecinfo']
 
-
         # python usually adds -pthread automatically, but we've observed
         # rare cases where that didn't happen, so let's be explicit.
         extra_link_args += ['-pthread']

@@ -192,6 +192,9 @@ jobs:
 
   openbsd:
     runs-on: ubuntu-22.04 # latest
+    strategy:
+      matrix:
+        openbsd-ver: ['7.4', '7.5']
     steps:
       # Cannot use builder to checkout as OpenBSD doesn't ship git in the base install
       - uses: actions/checkout@v3
@@ -201,7 +204,7 @@ jobs:
         uses: cross-platform-actions/action@v0.23.0
         with:
           operating_system: openbsd
-          version: '7.4'
+          version: ${{ matrix.openbsd-ver }}
           cpu_count: 4
           shell: bash
           environment_variables: AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION AWS_REGION
