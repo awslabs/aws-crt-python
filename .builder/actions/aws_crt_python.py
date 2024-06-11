@@ -21,7 +21,7 @@ class AWSCrtPython(Builder.Action):
         # Otherwise, in places like ubuntu24.04, PEP 668 stops
         # you from globally installing/upgrading packages
         venv_dirpath = Path.cwd() / '.venv-builder'
-        env.shell.exec(self.python, '-m', 'venv', '--upgrade-deps', str(venv_dirpath), check=True)
+        env.shell.exec(self.python, '-m', 'venv', str(venv_dirpath), check=True)
         if sys.platform == 'win32':
             self.python = str(venv_dirpath / 'Scripts/python')
         else:
@@ -31,6 +31,7 @@ class AWSCrtPython(Builder.Action):
         env.shell.setenv('AWS_TEST_S3', '1')
 
         actions = [
+            [self.python, '-m', 'pip', 'install', '--upgrade', 'pip'],
             [self.python, '-m', 'pip', 'install', '--upgrade', '--requirement', 'requirements-dev.txt'],
             Builder.SetupCrossCICrtEnvironment(),
             [self.python, '-m', 'pip', 'install', '--verbose', '.'],
