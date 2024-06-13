@@ -179,10 +179,11 @@ the code is formatted correctly.
 
 `autopep8` is used for python code. You installed this earlier via `requirements-dev.txt`.
 
-For C code `clang-format` is used (specifically version 9).
-To install this on Mac using homebrew, run:
+For C code `clang-format` is used. You need to install an exact version (see `CLANG_FORMAT_VERSION=...` line at the top of [format-check.py](../../format-check.py)) via [pipx](https://github.com/pypa/pipx). Doing this on MacOS looks like:
 ```sh
-(.venv) $ brew install llvm@9
+(.venv) $ brew install pipx
+(.venv) $ pipx ensurepath
+(.venv) $ pipx install clang-format==<CLANG_FORMAT_VERSION from format-check.py>
 ```
 
 Use helper scripts to automatically format your code (or configure your IDE to do it):
