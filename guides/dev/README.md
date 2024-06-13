@@ -194,7 +194,7 @@ Use helper scripts to automatically format your code (or configure your IDE to d
 (.venv) $ python3 scripts/format-python.py
 
 # just format C files
-(.venv) $ python3 scripts/format-c.py
+(.venv) $ python3 format-check.py -i
 ```
 
 ## Using an IDE
