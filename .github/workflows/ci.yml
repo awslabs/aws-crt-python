@@ -158,7 +158,7 @@ jobs:
       - name: Assert libcrypto.so used
         run: |
           # assert it's linked against the system's libcrypto.so
-          AWSCRT_PATH=`./venv-builder/bin/python3 -c "import _awscrt; print(_awscrt.__file__)"`
+          AWSCRT_PATH=`.venv-builder/bin/python3 -c "import _awscrt; print(_awscrt.__file__)"`
           printf "AWSCRT_PATH: $AWSCRT_PATH\n"
 
           LINKED_AGAINST=`ldd $AWSCRT_PATH`
