@@ -18,7 +18,7 @@ class AWSCrtPython(Builder.Action):
             self.python = env.config['variables']['python']
 
         # Create a virtual environment and use that.
-        # Otherwise, in places like ubuntu24.04, PEP 668 stops
+        # Otherwise, in places like ubuntu 24.04, PEP 668 stops
         # you from globally installing/upgrading packages
         venv_dirpath = Path.cwd() / '.venv-builder'
         env.shell.exec(self.python, '-m', 'venv', str(venv_dirpath), check=True)
