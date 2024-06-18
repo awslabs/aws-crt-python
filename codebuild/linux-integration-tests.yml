@@ -4,7 +4,7 @@ version: 0.2
 env:
   shell: bash
   variables:
-    BUILDER_VERSION: v0.9.44
+    BUILDER_VERSION: v0.9.59
     BUILDER_SOURCE: releases
     BUILDER_HOST: https://d19elf31gohf1l.cloudfront.net
     PACKAGE_NAME: aws-crt-python
@@ -27,4 +27,3 @@ phases:
   post_build:
     commands:
       - echo Build completed on `date`
-
