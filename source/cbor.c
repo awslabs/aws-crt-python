@@ -307,7 +307,7 @@ static struct aws_cbor_decoder *s_cbor_decoder_from_capsule(PyObject *py_capsule
 /* Runs when GC destroys the capsule */
 static void s_cbor_decoder_capsule_destructor(PyObject *py_capsule) {
     struct aws_cbor_decoder *decoder = s_cbor_decoder_from_capsule(py_capsule);
-    aws_cbor_decoder_release(decoder);
+    aws_cbor_decoder_destroy(decoder);
 }
 
 PyObject *aws_py_cbor_decoder_new(PyObject *self, PyObject *args) {
@@ -319,11 +319,11 @@ PyObject *aws_py_cbor_decoder_new(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    struct aws_cbor_decoder *decoder = aws_cbor_decoder_new(aws_py_get_allocator(), &src);
+    struct aws_cbor_decoder *decoder = aws_cbor_decoder_new(aws_py_get_allocator(), src);
     AWS_ASSERT(decoder != NULL);
     PyObject *py_capsule = PyCapsule_New(decoder, s_capsule_name_cbor_decoder, s_cbor_decoder_capsule_destructor);
     if (!py_capsule) {
-        aws_cbor_decoder_release(decoder);
+        aws_cbor_decoder_destroy(decoder);
         return NULL;
     }
 
@@ -366,7 +366,7 @@ PyObject *aws_py_cbor_decoder_new(PyObject *self, PyObject *args) {
     }
 
 PyObject *aws_py_cbor_decoder_peek_type(PyObject *self, PyObject *args) {
-    enum aws_cbor_element_type out_type;
+    enum aws_cbor_type out_type;
     S_DECODER_METHOD_START(aws_cbor_decoder_peek_type, out_type);
     return PyLong_FromSize_t(out_type);
 }
@@ -378,14 +378,16 @@ PyObject *aws_py_cbor_decoder_get_remaining_bytes_len(PyObject *self, PyObject *
 }
 
 PyObject *aws_py_cbor_decoder_consume_next_element(PyObject *self, PyObject *args) {
-    enum aws_cbor_element_type out_type;
-    S_DECODER_METHOD_START(aws_cbor_decoder_consume_next_element, out_type);
+    S_GET_DECODER();
+    if (aws_cbor_decoder_consume_next_single_element(decoder)) {
+        return PyErr_AwsLastError();
+    }
     Py_RETURN_NONE;
 }
 
 PyObject *aws_py_cbor_decoder_consume_next_data_item(PyObject *self, PyObject *args) {
     S_GET_DECODER();
-    if (aws_cbor_decoder_consume_next_data_item(decoder)) {
+    if (aws_cbor_decoder_consume_next_whole_data_item(decoder)) {
         return PyErr_AwsLastError();
     }
     Py_RETURN_NONE;
@@ -407,7 +409,7 @@ static PyObject *s_cbor_decoder_pop_next_data_item_to_pyobject(struct aws_cbor_d
  * helper to convert next data item to py_list
  */
 static PyObject *s_cbor_decoder_pop_next_data_item_to_py_list(struct aws_cbor_decoder *decoder) {
-    enum aws_cbor_element_type out_type = AWS_CBOR_TYPE_MAX;
+    enum aws_cbor_type out_type = AWS_CBOR_TYPE_UNKNOWN;
     if (aws_cbor_decoder_peek_type(decoder, &out_type)) {
         return PyErr_AwsLastError();
     }
@@ -440,7 +442,7 @@ static PyObject *s_cbor_decoder_pop_next_data_item_to_py_list(struct aws_cbor_de
                 return NULL;
             }
             /* Consume the inf array start */
-            aws_cbor_decoder_consume_next_element(decoder, NULL /*consumed_type*/);
+            aws_cbor_decoder_consume_next_single_element(decoder);
             aws_cbor_decoder_peek_type(decoder, &out_type);
             while (out_type != AWS_CBOR_TYPE_BREAK) {
                 item = s_cbor_decoder_pop_next_data_item_to_pyobject(decoder);
@@ -474,7 +476,7 @@ error:
  * helper to convert next data item to py_dict
  */
 static PyObject *s_cbor_decoder_pop_next_data_item_to_py_dict(struct aws_cbor_decoder *decoder) {
-    enum aws_cbor_element_type out_type = AWS_CBOR_TYPE_MAX;
+    enum aws_cbor_type out_type = AWS_CBOR_TYPE_UNKNOWN;
     if (aws_cbor_decoder_peek_type(decoder, &out_type)) {
         return PyErr_AwsLastError();
     }
@@ -513,7 +515,7 @@ static PyObject *s_cbor_decoder_pop_next_data_item_to_py_dict(struct aws_cbor_de
                 return NULL;
             }
             /* Consume the inf array start */
-            aws_cbor_decoder_consume_next_element(decoder, NULL /*consumed_type*/);
+            aws_cbor_decoder_consume_next_single_element(decoder);
             aws_cbor_decoder_peek_type(decoder, &out_type);
             while (out_type != AWS_CBOR_TYPE_BREAK) {
                 key = s_cbor_decoder_pop_next_data_item_to_pyobject(decoder);
@@ -554,7 +556,7 @@ error:
  * helper to get the next inf byte
  */
 static PyObject *s_cbor_decoder_pop_next_inf_bytes_to_py_bytes(struct aws_cbor_decoder *decoder) {
-    enum aws_cbor_element_type out_type = AWS_CBOR_TYPE_MAX;
+    enum aws_cbor_type out_type = AWS_CBOR_TYPE_UNKNOWN;
     if (aws_cbor_decoder_peek_type(decoder, &out_type)) {
         return PyErr_AwsLastError();
     }
@@ -563,7 +565,7 @@ static PyObject *s_cbor_decoder_pop_next_inf_bytes_to_py_bytes(struct aws_cbor_d
         return PyErr_AwsLastError();
     }
     /* consume the bytes start element */
-    aws_cbor_decoder_consume_next_element(decoder, NULL);
+    aws_cbor_decoder_consume_next_single_element(decoder);
     if (aws_cbor_decoder_peek_type(decoder, &out_type)) {
         return PyErr_AwsLastError();
     }
@@ -591,7 +593,7 @@ static PyObject *s_cbor_decoder_pop_next_inf_bytes_to_py_bytes(struct aws_cbor_d
  * helper to get the next inf string
  */
 static PyObject *s_cbor_decoder_pop_next_inf_string_to_py_str(struct aws_cbor_decoder *decoder) {
-    enum aws_cbor_element_type out_type = AWS_CBOR_TYPE_MAX;
+    enum aws_cbor_type out_type = AWS_CBOR_TYPE_UNKNOWN;
     if (aws_cbor_decoder_peek_type(decoder, &out_type)) {
         return PyErr_AwsLastError();
     }
@@ -600,7 +602,7 @@ static PyObject *s_cbor_decoder_pop_next_inf_string_to_py_str(struct aws_cbor_de
         return PyErr_AwsLastError();
     }
     /* consume the bytes start element */
-    aws_cbor_decoder_consume_next_element(decoder, NULL);
+    aws_cbor_decoder_consume_next_single_element(decoder);
     if (aws_cbor_decoder_peek_type(decoder, &out_type)) {
         return PyErr_AwsLastError();
     }
@@ -652,7 +654,7 @@ static PyObject *s_cbor_decoder_pop_next_tag_to_pyobject(struct aws_cbor_decoder
  * Generic helper to convert a cbor encoded data to PyObject
  */
 static PyObject *s_cbor_decoder_pop_next_data_item_to_pyobject(struct aws_cbor_decoder *decoder) {
-    enum aws_cbor_element_type out_type = AWS_CBOR_TYPE_MAX;
+    enum aws_cbor_type out_type = AWS_CBOR_TYPE_UNKNOWN;
     if (aws_cbor_decoder_peek_type(decoder, &out_type)) {
         return PyErr_AwsLastError();
     }
@@ -685,8 +687,8 @@ static PyObject *s_cbor_decoder_pop_next_data_item_to_pyobject(struct aws_cbor_d
             return s_cbor_decoder_pop_next_boolean_val_to_pyobject(decoder);
         case AWS_CBOR_TYPE_NULL:
             /* fall through */
-        case AWS_CBOR_TYPE_UNDEFINE:
-            aws_cbor_decoder_consume_next_element(decoder, NULL);
+        case AWS_CBOR_TYPE_UNDEFINED:
+            aws_cbor_decoder_consume_next_single_element(decoder);
             Py_RETURN_NONE;
         case AWS_CBOR_TYPE_MAP_START:
             /* fall through */

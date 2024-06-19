@@ -8,35 +8,25 @@ from enum import IntEnum
 from typing import Union, Any
 
 
-class AwsCborElementType(IntEnum):
-    # Corresponding to `enum aws_cbor_element_type` in aws/common/cbor.h
-    UnsignedInt = 0
-    NegativeInt = 1
-    Float = 2
-    Bytes = 3
-    Text = 4
-    ArrayStart = 5
-    MapStart = 6
-    Tag = 7
-    Bool = 8
-    Null = 9
-    Undefined = 10
-    Break = 11
-    IndefBytes = 12
-    IndefStr = 13
-    IndefArray = 14
-    IndefMap = 15
-
-
-class AwsCborTags(IntEnum):
-    # Corresponding to `enum aws_cbor_tags` in aws/common/cbor.h
-    StandardTime = 0
-    EpochTime = 1
-    UnsignedBigNum = 2
-    NegativeBigNum = 3
-    DecimalFraction = 4
-    BigFloat = 5
-    Unclassified = 6
+class AwsCborType(IntEnum):
+    # Corresponding to `enum aws_cbor_type` in aws/common/cbor.h
+    Unknown = 0
+    UnsignedInt = 1
+    NegativeInt = 2
+    Float = 3
+    Bytes = 4
+    Text = 5
+    ArrayStart = 6
+    MapStart = 7
+    Tag = 8
+    Bool = 9
+    Null = 10
+    Undefined = 11
+    Break = 12
+    IndefBytes = 13
+    IndefStr = 14
+    IndefArray = 15
+    IndefMap = 16
 
 
 class AwsCborEncoder(NativeResource):
@@ -152,7 +142,7 @@ class AwsCborEncoder(NativeResource):
         return _awscrt.cbor_encoder_write_tag(self._binding, tag_number)
 
     def write_null(self):
-        return _awscrt.cbor_encoder_write_simple_types(self._binding, AwsCborElementType.Null)
+        return _awscrt.cbor_encoder_write_simple_types(self._binding, AwsCborType.Null)
 
     def write_bool(self, val: bool):
         return _awscrt.cbor_encoder_write_bool(self._binding, val)
@@ -181,8 +171,8 @@ class AwsCborDecoder(NativeResource):
         self._src = src
         self._binding = _awscrt.cbor_decoder_new(src)
 
-    def peek_next_type(self) -> AwsCborElementType:
-        return AwsCborElementType(_awscrt.cbor_decoder_peek_type(self._binding))
+    def peek_next_type(self) -> AwsCborType:
+        return AwsCborType(_awscrt.cbor_decoder_peek_type(self._binding))
 
     def get_remaining_bytes_len(self) -> int:
         return _awscrt.cbor_decoder_get_remaining_bytes_len(self._binding)
