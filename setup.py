@@ -334,16 +334,22 @@ def awscrt_ext():
 
         if using_system_libcrypto():
             libraries += ['crypto']
+        else:
+            # hide the symbols from libcrypto.a
+            # this prevents weird crashes if an application also ends up using
+            # libcrypto.so from the system's OpenSSL installation.
+            extra_link_args += ['-Wl,--exclude-libs,libcrypto.a']
+
+            # OpenBSD 7.4+ defaults to linking with --execute-only, which is bad for AWS-LC.
+            # See: https://github.com/aws/aws-lc/blob/4b07805bddc55f68e5ce8c42f215da51c7a4e099/CMakeLists.txt#L44-L53
+            # (If AWS-LC's CMakeLists.txt removes these lines in the future, we can remove this hack here as well)
+            if sys.platform.startswith('openbsd'):
+                extra_link_args += ['-Wl,--no-execute-only']
 
         # FreeBSD doesn't have execinfo as a part of libc like other Unix variant.
         # Passing linker flag to link execinfo properly
         if sys.platform.startswith('freebsd'):
             extra_link_args += ['-lexecinfo']
-
-        # hide the symbols from libcrypto.a
-        # this prevents weird crashes if an application also ends up using
-        # libcrypto.so from the system's OpenSSL installation.
-        extra_link_args += ['-Wl,--exclude-libs,libcrypto.a']
 
         # python usually adds -pthread automatically, but we've observed
         # rare cases where that didn't happen, so let's be explicit.

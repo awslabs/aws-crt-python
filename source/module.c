@@ -373,7 +373,8 @@ PyObject *PyErr_AwsLastError(void) {
 }
 
 #define AWS_DEFINE_ERROR_INFO_CRT(CODE, STR)                                                                           \
-    [(CODE)-AWS_ERROR_ENUM_BEGIN_RANGE(AWS_CRT_PYTHON_PACKAGE_ID)] = AWS_DEFINE_ERROR_INFO(CODE, STR, "aws-crt-python")
+    [(CODE) - AWS_ERROR_ENUM_BEGIN_RANGE(AWS_CRT_PYTHON_PACKAGE_ID)] =                                                 \
+        AWS_DEFINE_ERROR_INFO(CODE, STR, "aws-crt-python")
 
 /* clang-format off */
 static struct aws_error_info s_errors[] = {
@@ -664,8 +665,7 @@ static void s_install_crash_handler(void) {
  * Definitions
  ******************************************************************************/
 
-#define AWS_PY_METHOD_DEF(NAME, FLAGS)                                                                                 \
-    { #NAME, aws_py_##NAME, (FLAGS), NULL }
+#define AWS_PY_METHOD_DEF(NAME, FLAGS) {#NAME, aws_py_##NAME, (FLAGS), NULL}
 
 static PyMethodDef s_module_methods[] = {
     /* Common */
