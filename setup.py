@@ -41,8 +41,9 @@ def get_xcode_major_version():
         version_line = output.split('\n')[0]
         version = version_line.split(' ')[-1]
         return int(version.split('.')[0])
-    except:
+    except BaseException:
         return 0
+
 
 def run_cmd(args):
     print('>', subprocess.list2cmdline(args))
@@ -71,6 +72,7 @@ def determine_cross_compile_args():
     if (host_arch == 'AMD64' or host_arch == 'x86_64') and is_32bit() and sys.platform != 'win32':
         return ['-DCMAKE_C_FLAGS=-m32']
     return []
+
 
 def determine_generator_args():
     if sys.platform == 'win32':
