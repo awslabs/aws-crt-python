@@ -33,6 +33,17 @@ def is_development_mode():
     return 'develop' in sys.argv
 
 
+def get_xcode_major_version():
+    """Return major version of xcode present on the system"""
+    try:
+        output = subprocess.check_output(
+            ['xcodebuild', '-version'], text=True)
+        version_line = output.split('\n')[0]
+        version = version_line.split(' ')[-1]
+        return int(version.split('.')[0])
+    except:
+        return 0
+
 def run_cmd(args):
     print('>', subprocess.list2cmdline(args))
     subprocess.check_call(args)
@@ -60,7 +71,6 @@ def determine_cross_compile_args():
     if (host_arch == 'AMD64' or host_arch == 'x86_64') and is_32bit() and sys.platform != 'win32':
         return ['-DCMAKE_C_FLAGS=-m32']
     return []
-
 
 def determine_generator_args():
     if sys.platform == 'win32':
@@ -368,6 +378,17 @@ def awscrt_ext():
             if not is_macos_universal2():
                 if sys.platform == 'darwin':
                     extra_link_args += ['-Wl,-fatal_warnings']
+                    # xcode 15 introduced a new linker that generates a warning
+                    # when it sees duplicate libs or rpath during bundling.
+                    # pyenv installed from homebrew put duplicate rpath entries
+                    # into sysconfig, and setuptools happily passes them along
+                    # to xcode, resulting in a warning
+                    # (which is fatal in this branch).
+                    # ex. https://github.com/pyenv/pyenv/issues/2890
+                    # lets revert back to old linker on xcode >= 15 until one of
+                    # the involved parties fixes the issue.
+                    if get_xcode_major_version() >= 15:
+                        extra_link_args += ['-Wl,-ld_classic']
                 elif 'bsd' in sys.platform:
                     extra_link_args += ['-Wl,-fatal-warnings']
                 else:
