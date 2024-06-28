@@ -199,7 +199,7 @@ jobs:
         version: ['7.4', '7.5']
     steps:
       # Cannot use builder to checkout as OpenBSD doesn't ship git in the base install
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: true
       - name: Build ${{ env.PACKAGE_NAME }} + consumers
@@ -219,7 +219,7 @@ jobs:
   freebsd:
     runs-on: ubuntu-22.04 # latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: true
 
@@ -241,7 +241,7 @@ jobs:
   tests-ok-without-env-vars:
     runs-on: ubuntu-22.04 # latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: true
       - name: Run tests without env-vars or AWS creds
@@ -258,7 +258,7 @@ jobs:
   package-source:
     runs-on: ubuntu-22.04 # latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: true
       - name: Package source + install
@@ -272,7 +272,7 @@ jobs:
   check-docs:
     runs-on: ubuntu-22.04 # latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: true
       - name: Check docs
@@ -285,7 +285,7 @@ jobs:
     runs-on: ubuntu-22.04 # latest
     steps:
     - name: Checkout Source
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         submodules: true
         fetch-depth: 0
