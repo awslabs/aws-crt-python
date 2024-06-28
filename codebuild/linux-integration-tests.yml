@@ -4,7 +4,7 @@ version: 0.2
 env:
   shell: bash
   variables:
-    BUILDER_VERSION: v0.9.44
+    BUILDER_VERSION: v0.9.59
     BUILDER_SOURCE: releases
     BUILDER_HOST: https://d19elf31gohf1l.cloudfront.net
     PACKAGE_NAME: aws-crt-python
@@ -13,7 +13,7 @@ phases:
     commands:
       - add-apt-repository ppa:ubuntu-toolchain-r/test
       - apt-get update -y
-      - apt-get install gcc-7 cmake ninja-build python3 python3-pip -y
+      - apt-get install gcc-7 cmake ninja-build python3 python3-pip python3-venv -y
   pre_build:
     commands:
       - export CC=gcc-7
@@ -27,4 +27,3 @@ phases:
   post_build:
     commands:
       - echo Build completed on `date`
-
