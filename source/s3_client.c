@@ -245,22 +245,24 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
 
     struct aws_allocator *allocator = aws_py_get_allocator();
 
-    PyObject *bootstrap_py;              /* O */
-    PyObject *signing_config_py;         /* O */
-    PyObject *credential_provider_py;    /* O */
-    PyObject *tls_options_py;            /* O */
-    PyObject *on_shutdown_py;            /* O */
-    struct aws_byte_cursor region;       /* s# */
-    int tls_mode;                        /* i */
-    uint64_t part_size;                  /* K */
-    uint64_t multipart_upload_threshold; /* K */
-    double throughput_target_gbps;       /* d */
-    int enable_s3express;                /* p */
-    uint64_t mem_limit;                  /* K */
-    PyObject *py_core;                   /* O */
+    PyObject *bootstrap_py;               /* O */
+    PyObject *signing_config_py;          /* O */
+    PyObject *credential_provider_py;     /* O */
+    PyObject *tls_options_py;             /* O */
+    PyObject *on_shutdown_py;             /* O */
+    struct aws_byte_cursor region;        /* s# */
+    int tls_mode;                         /* i */
+    uint64_t part_size;                   /* K */
+    uint64_t multipart_upload_threshold;  /* K */
+    double throughput_target_gbps;        /* d */
+    int enable_s3express;                 /* p */
+    uint64_t mem_limit;                   /* K */
+    PyObject *py_core;                    /* O */
+    PyObject *network_interface_names_py; /* O */
+
     if (!PyArg_ParseTuple(
             args,
-            "OOOOOs#iKKdpKO",
+            "OOOOOs#iKKdpKOO",
             &bootstrap_py,
             &signing_config_py,
             &credential_provider_py,
@@ -274,7 +276,8 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
             &throughput_target_gbps,
             &enable_s3express,
             &mem_limit,
-            &py_core)) {
+            &py_core,
+            &network_interface_names_py)) {
         return NULL;
     }
 
@@ -319,6 +322,19 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
         signing_config = &default_signing_config;
     }
 
+    struct aws_byte_cursor *network_interface_names = NULL;
+    int num_network_interface_names = 0;
+
+    if (network_interface_names_py != Py_None) {
+        if (!PyList_Check(network_interface_names_py)) {
+            // waahm7: todo, correct way to raise errors?
+            PyErr_SetString(PyExc_TypeError, "Expected a list");
+            return NULL;
+        }
+        Py_ssize_t listSize = PyList_Size(network_interface_names_py);
+        num_network_interface_names = (size_t)listSize;
+    }
+
     struct s3_client_binding *s3_client = aws_mem_calloc(allocator, 1, sizeof(struct s3_client_binding));
 
     /* From hereon, we need to clean up if errors occur */
@@ -335,6 +351,14 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
 
     s3_client->py_core = py_core;
     Py_INCREF(s3_client->py_core);
+    if (num_network_interface_names > 0) {
+        network_interface_names =
+            aws_mem_calloc(allocator, num_network_interface_names, sizeof(struct aws_byte_cursor));
+        for (Py_ssize_t i = 0; i < num_network_interface_names; ++i) {
+            PyObject *strObj = PyList_GetItem(network_interface_names_py, i);
+            network_interface_names[i] = aws_byte_cursor_from_pyunicode(strObj);
+        }
+    }
 
     struct aws_s3_client_config s3_config = {
         .region = region,
@@ -349,9 +373,13 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
         .shutdown_callback = s_s3_client_shutdown,
         .shutdown_callback_user_data = s3_client,
         .enable_s3express = enable_s3express,
+        .network_interface_names_array = network_interface_names,
+        .num_network_interface_names = num_network_interface_names,
     };
 
     s3_client->native = aws_s3_client_new(allocator, &s3_config);
+    aws_mem_release(allocator, network_interface_names);
+
     if (s3_client->native == NULL) {
         PyErr_SetAwsLastError();
         goto error;

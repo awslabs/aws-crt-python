@@ -205,6 +205,9 @@ class S3Client(NativeResource):
             client can use for buffering data for requests.
             Default values scale with target throughput and are currently
             between 2GiB and 8GiB (may change in future)
+
+        network_interface_names: (Optional[list(str)])
+
     """
 
     __slots__ = ('shutdown_event', '_region')
@@ -222,13 +225,17 @@ class S3Client(NativeResource):
             multipart_upload_threshold=None,
             throughput_target_gbps=None,
             enable_s3express=False,
-            memory_limit=None):
+            memory_limit=None,
+            network_interface_names=None):
         assert isinstance(bootstrap, ClientBootstrap) or bootstrap is None
         assert isinstance(region, str)
         assert isinstance(signing_config, AwsSigningConfig) or signing_config is None
         assert isinstance(credential_provider, AwsCredentialsProvider) or credential_provider is None
         assert isinstance(tls_connection_options, TlsConnectionOptions) or tls_connection_options is None
         assert isinstance(part_size, int) or part_size is None
+        assert isinstance(network_interface_names, list) and all(isinstance(name, str)
+                                                                 for name in network_interface_names) or network_interface_names is None
+
         assert isinstance(
             throughput_target_gbps,
             int) or isinstance(
@@ -284,7 +291,8 @@ class S3Client(NativeResource):
             throughput_target_gbps,
             enable_s3express,
             memory_limit,
-            s3_client_core)
+            s3_client_core,
+            network_interface_names)
 
     def make_request(
             self,
@@ -302,8 +310,7 @@ class S3Client(NativeResource):
             on_headers=None,
             on_body=None,
             on_done=None,
-            on_progress=None,
-            network_interface_names=None):
+            on_progress=None):
         """Create the Request to the the S3 server,
         :attr:`~S3RequestType.GET_OBJECT`/:attr:`~S3RequestType.PUT_OBJECT` requests are split it into multi-part
         requests under the hood for acceleration.
@@ -450,8 +457,6 @@ class S3Client(NativeResource):
 
                     *   `**kwargs` (dict): Forward-compatibility kwargs.
 
-            network_interface_names: (Optional[list(str)])
-
         Returns:
             S3Request
         """
@@ -471,8 +476,7 @@ class S3Client(NativeResource):
             on_body=on_body,
             on_done=on_done,
             on_progress=on_progress,
-            region=self._region,
-            network_interface_names=network_interface_names)
+            region=self._region)
 
 
 class S3Request(NativeResource):
@@ -509,8 +513,7 @@ class S3Request(NativeResource):
             on_body=None,
             on_done=None,
             on_progress=None,
-            region=None,
-            network_interface_names=None):
+            region=None):
         assert isinstance(client, S3Client)
         assert isinstance(request, HttpRequest)
         assert callable(on_headers) or on_headers is None
@@ -518,7 +521,6 @@ class S3Request(NativeResource):
         assert callable(on_done) or on_done is None
         assert isinstance(part_size, int) or part_size is None
         assert isinstance(multipart_upload_threshold, int) or multipart_upload_threshold is None
-        assert isinstance(network_interface_names, list) and all(isinstance(name, str) for name in network_interface_names) or network_interface_names is None
 
         if type == S3RequestType.DEFAULT and not operation_name:
             raise ValueError("'operation_name' must be set when using S3RequestType.DEFAULT")
@@ -570,8 +572,7 @@ class S3Request(NativeResource):
             validate_response_checksum,
             part_size,
             multipart_upload_threshold,
-            s3_request_core,
-            network_interface_names)
+            s3_request_core)
 
     @property
     def finished_future(self):
