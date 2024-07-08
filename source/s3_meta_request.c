@@ -377,9 +377,11 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     uint64_t part_size;                                /* K */
     uint64_t multipart_upload_threshold;               /* K */
     PyObject *py_core;                                 /* O */
+    PyObject *network_interface_names_py;              /* O */
+
     if (!PyArg_ParseTuple(
             args,
-            "OOOizOOzzs#iipKKO",
+            "OOOizOOzzs#iipKKOO",
             &py_s3_request,
             &s3_client_py,
             &http_request_py,
@@ -396,7 +398,8 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
             &validate_response_checksum,
             &part_size,
             &multipart_upload_threshold,
-            &py_core)) {
+            &py_core,
+            &network_interface_names_py)) {
         return NULL;
     }
     struct aws_s3_client *s3_client = aws_py_get_s3_client(s3_client_py);
@@ -438,6 +441,19 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
         .validate_response_checksum = validate_response_checksum != 0,
     };
 
+    struct aws_byte_cursor *network_interface_names = NULL;
+    int num_network_interface_names = 0;
+
+    if (network_interface_names_py != Py_None) {
+        if (!PyList_Check(network_interface_names_py)) {
+            // waahm7: todo, correct way to raise errors?
+            PyErr_SetString(PyExc_TypeError, "Expected a list");
+            return NULL;
+        }
+        Py_ssize_t listSize = PyList_Size(listObj);
+        num_network_interface_names = (size_t)listSize;
+    }
+
     struct s3_meta_request_binding *meta_request = aws_mem_calloc(allocator, 1, sizeof(struct s3_meta_request_binding));
     if (!meta_request) {
         return PyErr_AwsLastError();
@@ -464,6 +480,15 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
         }
     }
 
+    if (num_network_interface_names > 0) {
+        network_interface_names =
+            aws_mem_calloc(allocator, num_network_interface_names, sizeof(struct aws_byte_cursor));
+        for (Py_ssize_t i = 0; i < listSize; ++i) {
+            PyObject *strObj = PyList_GetItem(listObj, i);
+            network_interface_names[i] = aws_byte_cursor_from_pyunicode(strObj);
+        }
+    }
+
     struct aws_s3_meta_request_options s3_meta_request_opt = {
         .type = type,
         .operation_name = aws_byte_cursor_from_c_str(operation_name),
@@ -479,12 +504,15 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
         .part_size = part_size,
         .multipart_upload_threshold = multipart_upload_threshold,
         .user_data = meta_request,
+        .network_interface_names = network_interface_names,
+        .num_network_interface_names = num_network_interface_names,
     };
 
     if (aws_high_res_clock_get_ticks(&meta_request->last_sampled_time)) {
         goto error;
     }
     meta_request->native = aws_s3_client_make_meta_request(s3_client, &s3_meta_request_opt);
+    aws_mem_cleanup(allocator, network_interface_names);
     if (meta_request->native == NULL) {
         PyErr_SetAwsLastError();
         goto error;

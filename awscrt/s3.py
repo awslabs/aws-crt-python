@@ -302,7 +302,8 @@ class S3Client(NativeResource):
             on_headers=None,
             on_body=None,
             on_done=None,
-            on_progress=None):
+            on_progress=None,
+            network_interface_names=None):
         """Create the Request to the the S3 server,
         :attr:`~S3RequestType.GET_OBJECT`/:attr:`~S3RequestType.PUT_OBJECT` requests are split it into multi-part
         requests under the hood for acceleration.
@@ -449,6 +450,8 @@ class S3Client(NativeResource):
 
                     *   `**kwargs` (dict): Forward-compatibility kwargs.
 
+            network_interface_names: (Optional[list(str)])
+
         Returns:
             S3Request
         """
@@ -468,7 +471,8 @@ class S3Client(NativeResource):
             on_body=on_body,
             on_done=on_done,
             on_progress=on_progress,
-            region=self._region)
+            region=self._region,
+            network_interface_names=network_interface_names)
 
 
 class S3Request(NativeResource):
@@ -505,7 +509,8 @@ class S3Request(NativeResource):
             on_body=None,
             on_done=None,
             on_progress=None,
-            region=None):
+            region=None,
+            network_interface_names=None):
         assert isinstance(client, S3Client)
         assert isinstance(request, HttpRequest)
         assert callable(on_headers) or on_headers is None
@@ -513,6 +518,7 @@ class S3Request(NativeResource):
         assert callable(on_done) or on_done is None
         assert isinstance(part_size, int) or part_size is None
         assert isinstance(multipart_upload_threshold, int) or multipart_upload_threshold is None
+        assert isinstance(network_interface_names, list) and all(isinstance(name, str) for name in network_interface_names) or network_interface_names is None
 
         if type == S3RequestType.DEFAULT and not operation_name:
             raise ValueError("'operation_name' must be set when using S3RequestType.DEFAULT")
@@ -564,7 +570,8 @@ class S3Request(NativeResource):
             validate_response_checksum,
             part_size,
             multipart_upload_threshold,
-            s3_request_core)
+            s3_request_core,
+            network_interface_names)
 
     @property
     def finished_future(self):
