@@ -357,7 +357,7 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
         for (Py_ssize_t i = 0; i < num_network_interface_names; ++i) {
             PyObject *strObj = PyList_GetItem(network_interface_names_py, i);
             network_interface_names[i] = aws_byte_cursor_from_pyunicode(strObj);
-            if(network_interface_names[i].ptr == NULL) {
+            if (network_interface_names[i].ptr == NULL) {
                 goto cleanup;
             }
         }
@@ -390,7 +390,7 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
 cleanup:
     aws_credentials_release(anonymous_credentials);
     aws_mem_release(allocator, network_interface_names);
-    if(result != AWS_OP_SUCCESS){
+    if (result != AWS_OP_SUCCESS) {
         Py_DECREF(capsule);
         return NULL;
     }
