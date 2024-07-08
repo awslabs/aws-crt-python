@@ -206,8 +206,12 @@ class S3Client(NativeResource):
             Default values scale with target throughput and are currently
             between 2GiB and 8GiB (may change in future)
 
-        network_interface_names: (Optional[list(str)])
-
+        network_interface_names: (Optional[list(str)]) A list of network interface names. The client will distribute the
+            connections across network interface names provided in this array. If any interface name is invalid, goes down,
+            or has any issues like network access, you will see connection failures.
+            This option is only supported on Linux, MacOS, and platforms that have either SO_BINDTODEVICE or IP_BOUND_IF. It
+            is not supported on Windows. `AWS_ERROR_PLATFORM_NOT_SUPPORTED` will be raised on unsupported platforms. On
+            Linux, SO_BINDTODEVICE is used and requires kernel version >= 5.7 or root privileges.
     """
 
     __slots__ = ('shutdown_event', '_region')

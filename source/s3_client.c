@@ -338,6 +338,7 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
 
     /* From hereon, we need to clean up if errors occur */
     int result = AWS_OP_ERR;
+
     PyObject *capsule = PyCapsule_New(s3_client, s_capsule_name_s3_client, s_s3_client_capsule_destructor);
     if (!capsule) {
         aws_credentials_release(anonymous_credentials);
@@ -385,6 +386,7 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
         goto cleanup;
     }
     result = AWS_OP_SUCCESS;
+
 cleanup:
     aws_credentials_release(anonymous_credentials);
     aws_mem_release(allocator, network_interface_names);
