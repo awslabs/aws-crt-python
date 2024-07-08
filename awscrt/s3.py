@@ -207,7 +207,7 @@ class S3Client(NativeResource):
             between 2GiB and 8GiB (may change in future)
 
         network_interface_names: (Optional[list(str)]) A list of network interface names. The client will distribute the
-            connections across network interface names provided in this array. If any interface name is invalid, goes down,
+            connections across network interfaces provided in this list. If any interface name is invalid, goes down,
             or has any issues like network access, you will see connection failures.
             This option is only supported on Linux, MacOS, and platforms that have either SO_BINDTODEVICE or IP_BOUND_IF. It
             is not supported on Windows. `AWS_ERROR_PLATFORM_NOT_SUPPORTED` will be raised on unsupported platforms. On
