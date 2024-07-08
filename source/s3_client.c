@@ -378,9 +378,7 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
     };
 
     s3_client->native = aws_s3_client_new(allocator, &s3_config);
-    if (network_interface_names) {
-        aws_mem_release(allocator, network_interface_names);
-    }
+    aws_mem_release(allocator, network_interface_names);
 
     if (s3_client->native == NULL) {
         PyErr_SetAwsLastError();

@@ -158,7 +158,8 @@ def s3_client_new(
         part_size=0,
         is_cancel_test=False,
         enable_s3express=False,
-        mem_limit=None):
+        mem_limit=None,
+        network_interface_names=None):
 
     if is_cancel_test:
         # for cancellation tests, make things slow, so it's less likely that
@@ -189,7 +190,8 @@ def s3_client_new(
         part_size=part_size,
         throughput_target_gbps=throughput_target_gbps,
         enable_s3express=enable_s3express,
-        memory_limit=mem_limit)
+        memory_limit=mem_limit,
+        network_interface_names=network_interface_names)
 
     return s3_client
 
@@ -219,6 +221,10 @@ class S3ClientTest(NativeResourceTest):
 
     def test_sanity_secure(self):
         s3_client = s3_client_new(True, self.region)
+        self.assertIsNotNone(s3_client)
+
+    def test_sanity_network_interface_names(self):
+        s3_client = s3_client_new(True, self.region, network_interface_names=["eth0", "eth1"])
         self.assertIsNotNone(s3_client)
 
     def test_wait_shutdown(self):
