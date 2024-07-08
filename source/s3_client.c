@@ -327,8 +327,7 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
 
     if (network_interface_names_py != Py_None) {
         if (!PyList_Check(network_interface_names_py)) {
-            // waahm7: todo, correct way to raise errors?
-            PyErr_SetString(PyExc_TypeError, "Expected a list");
+            PyErr_SetString(PyExc_TypeError, "Expected network_interface_names to be a list");
             return NULL;
         }
         Py_ssize_t listSize = PyList_Size(network_interface_names_py);
@@ -338,7 +337,7 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
     struct s3_client_binding *s3_client = aws_mem_calloc(allocator, 1, sizeof(struct s3_client_binding));
 
     /* From hereon, we need to clean up if errors occur */
-
+    int result = AWS_OP_ERR;
     PyObject *capsule = PyCapsule_New(s3_client, s_capsule_name_s3_client, s_s3_client_capsule_destructor);
     if (!capsule) {
         aws_credentials_release(anonymous_credentials);
@@ -357,6 +356,9 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
         for (Py_ssize_t i = 0; i < num_network_interface_names; ++i) {
             PyObject *strObj = PyList_GetItem(network_interface_names_py, i);
             network_interface_names[i] = aws_byte_cursor_from_pyunicode(strObj);
+            if(network_interface_names[i].ptr == NULL) {
+                goto cleanup;
+            }
         }
     }
 
@@ -378,17 +380,17 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
     };
 
     s3_client->native = aws_s3_client_new(allocator, &s3_config);
-    aws_mem_release(allocator, network_interface_names);
-
     if (s3_client->native == NULL) {
         PyErr_SetAwsLastError();
-        goto error;
+        goto cleanup;
     }
+    result = AWS_OP_SUCCESS;
+cleanup:
     aws_credentials_release(anonymous_credentials);
+    aws_mem_release(allocator, network_interface_names);
+    if(result != AWS_OP_SUCCESS){
+        Py_DECREF(capsule);
+        return NULL;
+    }
     return capsule;
-
-error:
-    aws_credentials_release(anonymous_credentials);
-    Py_DECREF(capsule);
-    return NULL;
 }
