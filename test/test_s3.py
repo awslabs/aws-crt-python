@@ -9,7 +9,6 @@ import tempfile
 import math
 import shutil
 import time
-from sys import stdout
 
 from test import NativeResourceTest
 from concurrent.futures import Future
@@ -18,9 +17,8 @@ from multiprocessing import Process
 from awscrt.http import HttpHeaders, HttpRequest
 from awscrt.s3 import S3Client, S3RequestType, create_default_s3_signing_config
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, \
-    TlsContextOptions, LogLevel
+    TlsContextOptions
 from awscrt.auth import AwsCredentials, AwsCredentialsProvider, AwsSignatureType, AwsSignedBodyHeaderType, AwsSignedBodyValue, AwsSigningAlgorithm, AwsSigningConfig
-from awscrt.io import init_logging
 
 from awscrt.s3 import (
     S3ChecksumAlgorithm,
@@ -229,7 +227,6 @@ class S3ClientTest(NativeResourceTest):
         self.assertIsNotNone(s3_client)
 
     def test_sanity_network_interface_names(self):
-        init_logging(LogLevel.Debug, "stdout")
         s3_client = s3_client_new(True, self.region, network_interface_names=["eth0", "eth1"])
         self.assertIsNotNone(s3_client)
 

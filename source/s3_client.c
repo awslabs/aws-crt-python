@@ -309,14 +309,14 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
     struct aws_credentials *anonymous_credentials = NULL;
     struct aws_byte_cursor *network_interface_names = NULL;
     int num_network_interface_names = 0;
-    PyObject *capsule = NULL; 
+    PyObject *capsule = NULL;
     /* From hereon, we need to clean up if errors occur */
     bool success = false;
 
     if (signing_config_py != Py_None) {
         signing_config = aws_py_get_signing_config(signing_config_py);
         if (!signing_config) {
-             goto cleanup;
+            goto cleanup;
         }
     } else if (credential_provider) {
         aws_s3_init_default_signing_config(&default_signing_config, region, credential_provider);
@@ -344,7 +344,7 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
 
     if (network_interface_names_py != Py_None) {
         if (!PySequence_Check(network_interface_names_py)) {
-            PyErr_SetString(PyExc_TypeError, "Expected network_interface_names to be a sequence");
+            PyErr_SetString(PyExc_TypeError, "Expected network_interface_names to be a sequence.");
             goto cleanup;
         }
         Py_ssize_t listSize = PySequence_Size(network_interface_names_py);
@@ -353,13 +353,13 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
             aws_mem_calloc(allocator, num_network_interface_names, sizeof(struct aws_byte_cursor));
         for (Py_ssize_t i = 0; i < num_network_interface_names; ++i) {
             PyObject *strObj = PySequence_GetItem(network_interface_names_py, i);
-            if(!strObj) {
-                PyErr_SetString(PyExc_TypeError, "Expected network_interface_names elements to be non-null");
+            if (!strObj) {
+                PyErr_SetString(PyExc_TypeError, "Expected network_interface_names elements to be non-null.");
                 goto cleanup;
             }
             network_interface_names[i] = aws_byte_cursor_from_pyunicode(strObj);
             if (network_interface_names[i].ptr == NULL) {
-                PyErr_SetString(PyExc_TypeError, "Expected all network_interface_names elements to be string");
+                PyErr_SetString(PyExc_TypeError, "Expected all network_interface_names elements to be strings.");
                 goto cleanup;
             }
         }
