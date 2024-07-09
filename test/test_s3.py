@@ -9,15 +9,13 @@ import tempfile
 import math
 import shutil
 import time
-
 from test import NativeResourceTest
 from concurrent.futures import Future
 from multiprocessing import Process
 
 from awscrt.http import HttpHeaders, HttpRequest
 from awscrt.s3 import S3Client, S3RequestType, create_default_s3_signing_config
-from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, \
-    TlsContextOptions
+from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions
 from awscrt.auth import AwsCredentials, AwsCredentialsProvider, AwsSignatureType, AwsSignedBodyHeaderType, AwsSignedBodyValue, AwsSigningAlgorithm, AwsSigningConfig
 
 from awscrt.s3 import (
