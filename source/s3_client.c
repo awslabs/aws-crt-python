@@ -351,10 +351,10 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
         if (list_size < 0) {
             goto cleanup;
         }
-        num_network_interface_names = (size_t)list_size;
+        num_network_interface_names = (size_t) list_size;
         network_interface_names =
             aws_mem_calloc(allocator, num_network_interface_names, sizeof(struct aws_byte_cursor));
-        for (Py_ssize_t i = 0; i < num_network_interface_names; ++i) {
+        for (size_t i = 0; i < num_network_interface_names; ++i) {
             PyObject *str_obj = PySequence_GetItem(network_interface_names_py, i); /* New reference */
             if (!str_obj) {
                 PyErr_SetString(PyExc_TypeError, "Expected network_interface_names elements to be non-null.");
