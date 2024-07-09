@@ -309,11 +309,14 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
     struct aws_credentials *anonymous_credentials = NULL;
     struct aws_byte_cursor *network_interface_names = NULL;
     int num_network_interface_names = 0;
+    PyObject *capsule = NULL; 
+    /* From hereon, we need to clean up if errors occur */
+    bool success = false;
 
     if (signing_config_py != Py_None) {
         signing_config = aws_py_get_signing_config(signing_config_py);
         if (!signing_config) {
-            return NULL;
+             goto cleanup;
         }
     } else if (credential_provider) {
         aws_s3_init_default_signing_config(&default_signing_config, region, credential_provider);
@@ -325,15 +328,11 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
         signing_config = &default_signing_config;
     }
 
-    /* From hereon, we need to clean up if errors occur */
-    bool success = false;
     struct s3_client_binding *s3_client = aws_mem_calloc(allocator, 1, sizeof(struct s3_client_binding));
 
-    PyObject *capsule = PyCapsule_New(s3_client, s_capsule_name_s3_client, s_s3_client_capsule_destructor);
+    capsule = PyCapsule_New(s3_client, s_capsule_name_s3_client, s_s3_client_capsule_destructor);
     if (!capsule) {
-        aws_credentials_release(anonymous_credentials);
-        aws_mem_release(allocator, s3_client);
-        return NULL;
+        goto cleanup;
     }
 
     s3_client->on_shutdown = on_shutdown_py;
@@ -388,7 +387,7 @@ cleanup:
     aws_credentials_release(anonymous_credentials);
     aws_mem_release(allocator, network_interface_names);
     if (!success) {
-        Py_DECREF(capsule);
+        Py_XDECREF(capsule);
         return NULL;
     }
     return capsule;
