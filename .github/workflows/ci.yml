@@ -227,7 +227,7 @@ jobs:
         uses: cross-platform-actions/action@v0.24.0
         with:
           operating_system: freebsd
-          version: '14.1'
+          version: '14.0'
           cpu_count: 4
           shell: bash
           environment_variables: AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION AWS_REGION
