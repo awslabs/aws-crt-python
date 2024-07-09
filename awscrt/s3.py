@@ -237,8 +237,6 @@ class S3Client(NativeResource):
         assert isinstance(credential_provider, AwsCredentialsProvider) or credential_provider is None
         assert isinstance(tls_connection_options, TlsConnectionOptions) or tls_connection_options is None
         assert isinstance(part_size, int) or part_size is None
-        assert isinstance(network_interface_names, list) and all(isinstance(name, str)
-                                                                 for name in network_interface_names) or network_interface_names is None
 
         assert isinstance(
             throughput_target_gbps,

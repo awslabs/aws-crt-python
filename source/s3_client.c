@@ -307,6 +307,9 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
 
     struct aws_signing_config_aws *signing_config = NULL;
     struct aws_credentials *anonymous_credentials = NULL;
+    struct aws_byte_cursor *network_interface_names = NULL;
+    int num_network_interface_names = 0;
+
     if (signing_config_py != Py_None) {
         signing_config = aws_py_get_signing_config(signing_config_py);
         if (!signing_config) {
@@ -322,22 +325,9 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
         signing_config = &default_signing_config;
     }
 
-    struct aws_byte_cursor *network_interface_names = NULL;
-    int num_network_interface_names = 0;
-
-    if (network_interface_names_py != Py_None) {
-        if (!PyList_Check(network_interface_names_py)) {
-            PyErr_SetString(PyExc_TypeError, "Expected network_interface_names to be a list");
-            return NULL;
-        }
-        Py_ssize_t listSize = PyList_Size(network_interface_names_py);
-        num_network_interface_names = (size_t)listSize;
-    }
-
-    struct s3_client_binding *s3_client = aws_mem_calloc(allocator, 1, sizeof(struct s3_client_binding));
-
     /* From hereon, we need to clean up if errors occur */
-    int result = AWS_OP_ERR;
+    bool success = false;
+    struct s3_client_binding *s3_client = aws_mem_calloc(allocator, 1, sizeof(struct s3_client_binding));
 
     PyObject *capsule = PyCapsule_New(s3_client, s_capsule_name_s3_client, s_s3_client_capsule_destructor);
     if (!capsule) {
@@ -351,7 +341,14 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
 
     s3_client->py_core = py_core;
     Py_INCREF(s3_client->py_core);
-    if (num_network_interface_names > 0) {
+
+    if (network_interface_names_py != Py_None) {
+        if (!PyList_Check(network_interface_names_py)) {
+            PyErr_SetString(PyExc_TypeError, "Expected network_interface_names to be a list");
+            goto cleanup;
+        }
+        Py_ssize_t listSize = PyList_Size(network_interface_names_py);
+        num_network_interface_names = (size_t)listSize;
         network_interface_names =
             aws_mem_calloc(allocator, num_network_interface_names, sizeof(struct aws_byte_cursor));
         for (Py_ssize_t i = 0; i < num_network_interface_names; ++i) {
@@ -385,12 +382,12 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
         PyErr_SetAwsLastError();
         goto cleanup;
     }
-    result = AWS_OP_SUCCESS;
+    success = true;
 
 cleanup:
     aws_credentials_release(anonymous_credentials);
     aws_mem_release(allocator, network_interface_names);
-    if (result != AWS_OP_SUCCESS) {
+    if (!success) {
         Py_DECREF(capsule);
         return NULL;
     }
