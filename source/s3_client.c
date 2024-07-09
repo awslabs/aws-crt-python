@@ -351,7 +351,7 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
         if (list_size < 0) {
             goto cleanup;
         }
-        num_network_interface_names = (size_t) list_size;
+        num_network_interface_names = (size_t)list_size;
         network_interface_names =
             aws_mem_calloc(allocator, num_network_interface_names, sizeof(struct aws_byte_cursor));
         for (size_t i = 0; i < num_network_interface_names; ++i) {
