@@ -232,7 +232,7 @@ jobs:
           shell: bash
           environment_variables: AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION AWS_REGION
           run: |
-            sudo pkg install -y python3 py39-urllib3 py39-pip py39-awscli cmake
+            sudo pkg install -y python3 py310-urllib3 py310-pip py310-awscli cmake
             python3 -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz', 'builder')"
             chmod a+x builder
             ./builder build -p ${{ env.PACKAGE_NAME }}
