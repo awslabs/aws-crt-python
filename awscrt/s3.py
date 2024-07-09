@@ -206,8 +206,8 @@ class S3Client(NativeResource):
             Default values scale with target throughput and are currently
             between 2GiB and 8GiB (may change in future)
 
-        network_interface_names: (Optional[list(str)]) A list of network interface names. The client will distribute the
-            connections across network interfaces provided in this list. If any interface name is invalid, goes down,
+        network_interface_names: (Optional[Sequence(str)]) A sequence of network interface names. The client will distribute the
+            connections across network interfaces provided. If any interface name is invalid, goes down,
             or has any issues like network access, you will see connection failures.
             This option is only supported on Linux, MacOS, and platforms that have either SO_BINDTODEVICE or IP_BOUND_IF. It
             is not supported on Windows. `AWS_ERROR_PLATFORM_NOT_SUPPORTED` will be raised on unsupported platforms. On
@@ -237,7 +237,6 @@ class S3Client(NativeResource):
         assert isinstance(credential_provider, AwsCredentialsProvider) or credential_provider is None
         assert isinstance(tls_connection_options, TlsConnectionOptions) or tls_connection_options is None
         assert isinstance(part_size, int) or part_size is None
-
         assert isinstance(
             throughput_target_gbps,
             int) or isinstance(
