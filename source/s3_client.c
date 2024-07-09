@@ -308,7 +308,7 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
     struct aws_signing_config_aws *signing_config = NULL;
     struct aws_credentials *anonymous_credentials = NULL;
     struct aws_byte_cursor *network_interface_names = NULL;
-    int num_network_interface_names = 0;
+    size_t num_network_interface_names = 0;
     PyObject *capsule = NULL;
     /* From hereon, we need to clean up if errors occur */
     bool success = false;
