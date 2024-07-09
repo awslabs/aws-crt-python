@@ -257,8 +257,8 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
     double throughput_target_gbps;        /* d */
     int enable_s3express;                 /* p */
     uint64_t mem_limit;                   /* K */
-    PyObject *py_core;                    /* O */
     PyObject *network_interface_names_py; /* O */
+    PyObject *py_core;                    /* O */
 
     if (!PyArg_ParseTuple(
             args,
@@ -276,8 +276,8 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
             &throughput_target_gbps,
             &enable_s3express,
             &mem_limit,
-            &py_core,
-            &network_interface_names_py)) {
+            &network_interface_names_py,
+            &py_core)) {
         return NULL;
     }
 

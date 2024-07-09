@@ -293,8 +293,8 @@ class S3Client(NativeResource):
             throughput_target_gbps,
             enable_s3express,
             memory_limit,
-            s3_client_core,
-            network_interface_names)
+            network_interface_names,
+            s3_client_core)
 
     def make_request(
             self,
