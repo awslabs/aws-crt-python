@@ -343,11 +343,11 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
     Py_INCREF(s3_client->py_core);
 
     if (network_interface_names_py != Py_None) {
-        if (!PySequence_Check(network_interface_names_py)) {
+        if (!PyList_Check(network_interface_names_py)) {
             PyErr_SetString(PyExc_TypeError, "Expected network_interface_names to be a sequence.");
             goto cleanup;
         }
-        Py_ssize_t list_size = PySequence_Size(network_interface_names_py);
+        Py_ssize_t list_size = PyList_Size(network_interface_names_py);
         if (list_size < 0) {
             goto cleanup;
         }
@@ -355,12 +355,11 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
         network_interface_names =
             aws_mem_calloc(allocator, num_network_interface_names, sizeof(struct aws_byte_cursor));
         for (size_t i = 0; i < num_network_interface_names; ++i) {
-            PyObject *str_obj = PySequence_GetItem(network_interface_names_py, i); /* New reference */
+            PyObject *str_obj = PyList_GetItem(network_interface_names_py, i); /* Borrowed reference */
             if (!str_obj) {
                 goto cleanup;
             }
             network_interface_names[i] = aws_byte_cursor_from_pyunicode(str_obj);
-            Py_DECREF(str_obj);
             if (network_interface_names[i].ptr == NULL) {
                 PyErr_SetString(PyExc_TypeError, "Expected all network_interface_names elements to be strings.");
                 goto cleanup;

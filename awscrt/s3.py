@@ -10,13 +10,12 @@ from concurrent.futures import Future
 from awscrt import NativeResource
 from awscrt.http import HttpRequest
 from awscrt.io import ClientBootstrap, TlsConnectionOptions
-from awscrt.auth import AwsCredentials, AwsCredentialsProvider, AwsSignatureType, AwsSignedBodyHeaderType, AwsSignedBodyValue, AwsSigningAlgorithm, AwsSigningConfig
 from awscrt.auth import AwsCredentialsProvider, AwsSignatureType, AwsSignedBodyHeaderType, AwsSignedBodyValue, \
     AwsSigningAlgorithm, AwsSigningConfig
 import awscrt.exceptions
 import threading
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Sequence
 from enum import IntEnum
 
 
@@ -230,7 +229,7 @@ class S3Client(NativeResource):
             throughput_target_gbps=None,
             enable_s3express=False,
             memory_limit=None,
-            network_interface_names=None):
+            network_interface_names: Optional[Sequence[str]] = None):
         assert isinstance(bootstrap, ClientBootstrap) or bootstrap is None
         assert isinstance(region, str)
         assert isinstance(signing_config, AwsSigningConfig) or signing_config is None
@@ -243,7 +242,7 @@ class S3Client(NativeResource):
             throughput_target_gbps,
             float) or throughput_target_gbps is None
         assert isinstance(enable_s3express, bool) or enable_s3express is None
-
+        assert isinstance(network_interface_names, Sequence) or network_interface_names is None
         if credential_provider and signing_config:
             raise ValueError("'credential_provider' has been deprecated in favor of 'signing_config'.  "
                              "Both parameters may not be set.")
@@ -278,6 +277,10 @@ class S3Client(NativeResource):
             throughput_target_gbps = 0
         if memory_limit is None:
             memory_limit = 0
+        if network_interface_names is not None:
+            # ensure this is a list, so it's simpler to process in C
+            if not isinstance(network_interface_names, list):
+                network_interface_names = list(network_interface_names)
 
         self._binding = _awscrt.s3_client_new(
             bootstrap,
