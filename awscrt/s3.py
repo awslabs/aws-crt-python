@@ -243,6 +243,7 @@ class S3Client(NativeResource):
             float) or throughput_target_gbps is None
         assert isinstance(enable_s3express, bool) or enable_s3express is None
         assert isinstance(network_interface_names, Sequence) or network_interface_names is None
+
         if credential_provider and signing_config:
             raise ValueError("'credential_provider' has been deprecated in favor of 'signing_config'.  "
                              "Both parameters may not be set.")
