@@ -205,7 +205,9 @@ class S3Client(NativeResource):
             Default values scale with target throughput and are currently
             between 2GiB and 8GiB (may change in future)
 
-        network_interface_names: (Optional[Sequence(str)]) A sequence of network interface names. The client will distribute the
+        network_interface_names: (Optional[Sequence(str)]) 
+            **THIS IS AN EXPERIMENTAL AND UNSTABLE API.**
+            A sequence of network interface names. The client will distribute the
             connections across network interfaces. If any interface name is invalid, goes down,
             or has any issues like network access, you will see connection failures.
             This option is only supported on Linux, MacOS, and platforms that have either SO_BINDTODEVICE or IP_BOUND_IF. It
