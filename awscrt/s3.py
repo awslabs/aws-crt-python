@@ -10,13 +10,12 @@ from concurrent.futures import Future
 from awscrt import NativeResource
 from awscrt.http import HttpRequest
 from awscrt.io import ClientBootstrap, TlsConnectionOptions
-from awscrt.auth import AwsCredentials, AwsCredentialsProvider, AwsSignatureType, AwsSignedBodyHeaderType, AwsSignedBodyValue, AwsSigningAlgorithm, AwsSigningConfig
 from awscrt.auth import AwsCredentialsProvider, AwsSignatureType, AwsSignedBodyHeaderType, AwsSignedBodyValue, \
     AwsSigningAlgorithm, AwsSigningConfig
 import awscrt.exceptions
 import threading
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Sequence
 from enum import IntEnum
 
 
@@ -205,6 +204,15 @@ class S3Client(NativeResource):
             client can use for buffering data for requests.
             Default values scale with target throughput and are currently
             between 2GiB and 8GiB (may change in future)
+
+        network_interface_names: (Optional[Sequence(str)]) 
+            **THIS IS AN EXPERIMENTAL AND UNSTABLE API.**
+            A sequence of network interface names. The client will distribute the
+            connections across network interfaces. If any interface name is invalid, goes down,
+            or has any issues like network access, you will see connection failures.
+            This option is only supported on Linux, MacOS, and platforms that have either SO_BINDTODEVICE or IP_BOUND_IF. It
+            is not supported on Windows. `AWS_ERROR_PLATFORM_NOT_SUPPORTED` will be raised on unsupported platforms. On
+            Linux, SO_BINDTODEVICE is used and requires kernel version >= 5.7 or root privileges.
     """
 
     __slots__ = ('shutdown_event', '_region')
@@ -222,7 +230,8 @@ class S3Client(NativeResource):
             multipart_upload_threshold=None,
             throughput_target_gbps=None,
             enable_s3express=False,
-            memory_limit=None):
+            memory_limit=None,
+            network_interface_names: Optional[Sequence[str]] = None):
         assert isinstance(bootstrap, ClientBootstrap) or bootstrap is None
         assert isinstance(region, str)
         assert isinstance(signing_config, AwsSigningConfig) or signing_config is None
@@ -235,6 +244,7 @@ class S3Client(NativeResource):
             throughput_target_gbps,
             float) or throughput_target_gbps is None
         assert isinstance(enable_s3express, bool) or enable_s3express is None
+        assert isinstance(network_interface_names, Sequence) or network_interface_names is None
 
         if credential_provider and signing_config:
             raise ValueError("'credential_provider' has been deprecated in favor of 'signing_config'.  "
@@ -270,6 +280,10 @@ class S3Client(NativeResource):
             throughput_target_gbps = 0
         if memory_limit is None:
             memory_limit = 0
+        if network_interface_names is not None:
+            # ensure this is a list, so it's simpler to process in C
+            if not isinstance(network_interface_names, list):
+                network_interface_names = list(network_interface_names)
 
         self._binding = _awscrt.s3_client_new(
             bootstrap,
@@ -284,6 +298,7 @@ class S3Client(NativeResource):
             throughput_target_gbps,
             enable_s3express,
             memory_limit,
+            network_interface_names,
             s3_client_core)
 
     def make_request(
