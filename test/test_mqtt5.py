@@ -424,7 +424,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    # TODO test_websocket_connect_sigv4 against IoT Core
+    #  test_websocket_connect_sigv4 against IoT Core : tested in the SDK
 
     def test_websocket_connect_http_proxy_tls(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_WS_MQTT_TLS_HOST")
@@ -590,7 +590,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    # TODO test_websocket_handshake_failure
+    # test_websocket_handshake_failure : tested in the SDK
 
     def test_double_client_id_failure(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_HOST")
