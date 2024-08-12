@@ -32,22 +32,25 @@ if(UNIX AND NOT APPLE)
     option(USE_OPENSSL "Set this if you want to use your system's OpenSSL compatible libcrypto" OFF)
 
     if(NOT USE_OPENSSL)
+        include(AwsPrebuildDependency)
+
+        set(AWSLC_CMAKE_ARGUMENTS
+            -DDISABLE_GO=ON  # Build without using Go, we don't want the extra dependency
+            -DDISABLE_PERL=ON  # Build without using Perl, we don't want the extra dependency
+            -DBUILD_LIBSSL=OFF  # Don't need libssl, only need libcrypto
+            -DBUILD_TESTING=OFF
+        )
+
         if(CMAKE_C_COMPILER_ID MATCHES "GNU" AND CMAKE_C_COMPILER_VERSION VERSION_LESS "5.0")
-            set(AWSLC_MY_ASSEMBLER_IS_TOO_OLD_FOR_512AVX ON CACHE BOOL "Disable AVX512 on old GCC that not supports it")
-        else()
-            set(AWSLC_MY_ASSEMBLER_IS_TOO_OLD_FOR_512AVX OFF CACHE BOOL "Disable AVX512 on old GCC that not supports it")
+            # Disable AVX512 on old GCC that not supports it.
+            list(APPEND AWSLC_CMAKE_ARGUMENTS -DMY_ASSEMBLER_IS_TOO_OLD_FOR_512AVX=ON)
         endif()
 
         # s2n-tls uses libcrypto during its configuration, so we need to prebuild aws-lc.
         prebuild_dependency(
             DEPENDENCY_NAME AWSLC
-            SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/crt/aws-lc
-            CMAKE_ARGUMENTS
-                -DDISABLE_GO=ON
-                -DDISABLE_PERL=ON
-                -DBUILD_LIBSSL=OFF
-                -DBUILD_TESTING=OFF
-                -DMY_ASSEMBLER_IS_TOO_OLD_FOR_512AVX=${AWSLC_MY_ASSEMBLER_IS_TOO_OLD_FOR_512AVX}
+            SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/aws-lc
+            CMAKE_ARGUMENTS ${AWSLC_CMAKE_ARGUMENTS}
         )
     endif()
 
