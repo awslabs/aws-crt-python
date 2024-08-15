@@ -484,10 +484,13 @@ class TestClient(NativeResourceTest):
             # wait for shutdown...
             handler.shutdown_future.result(TIMEOUT)
 
+            # Change in this PR in aws-c-io https://github.com/awslabs/aws-c-io/pull/650
+            # along with this PR in aws-c-http https://github.com/awslabs/aws-c-http/pull/474
+            # allows a window update during shutdown.
             # shouldn't be able to send frame after websocket closes
-            with self.assertRaises(Exception) as raises:
-                handler.websocket.send_frame(Opcode.TEXT, "asdf")
-            self.assertIn("AWS_ERROR_HTTP_WEBSOCKET_CLOSE_FRAME_SENT", str(raises.exception))
+            # with self.assertRaises(Exception) as raises:
+            #     handler.websocket.send_frame(Opcode.TEXT, "asdf")
+            # self.assertIn("AWS_ERROR_HTTP_WEBSOCKET_CLOSE_FRAME_SENT", str(raises.exception))
 
             self.assertIsNone(handler.exception)
 
