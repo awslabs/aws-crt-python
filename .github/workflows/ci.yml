@@ -7,7 +7,7 @@ on:
       - 'docs'
 
 env:
-  BUILDER_VERSION: v0.9.62
+  BUILDER_VERSION: v0.9.63
   BUILDER_SOURCE: releases
   BUILDER_HOST: https://d19elf31gohf1l.cloudfront.net
   PACKAGE_NAME: aws-crt-python
@@ -53,6 +53,7 @@ jobs:
           - cp310-cp310
           - cp311-cp311
           - cp312-cp312
+          - cp313-cp313
     steps:
     # Only aarch64 needs this, but it doesn't hurt anything
     - name: Install qemu/docker
@@ -78,6 +79,7 @@ jobs:
           - cp310-cp310
           - cp311-cp311
           - cp312-cp312
+          - cp313-cp313
     steps:
     # Only aarch64 needs this, but it doesn't hurt anything
     - name: Install qemu/docker
