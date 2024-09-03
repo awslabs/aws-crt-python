@@ -42,6 +42,8 @@ if(UNIX AND NOT APPLE)
         if(CMAKE_SYSTEM_PROCESSOR_LOWER MATCHES "x86|i386|i686")
             set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse2")
         endif()
+        message(STATUS "XXXXXXXXX CMAKE_C_FLAGS: ${CMAKE_C_FLAGS}")
+
 
         add_subdirectory(aws-lc)
     endif()
