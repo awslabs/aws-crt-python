@@ -41,12 +41,11 @@ if(UNIX AND NOT APPLE)
         endif()
 
         string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" CMAKE_SYSTEM_PROCESSOR_LOWER)
-
-        if(CMAKE_SYSTEM_PROCESSOR_LOWER MATCHES "x86_64|amd64" AND CMAKE_SIZEOF_VOID_P EQUAL 4 OR CMAKE_SYSTEM_PROCESSOR_LOWER MATCHES "x86|i386|i686")
+        if(CMAKE_SYSTEM_PROCESSOR_LOWER MATCHES "x86_64|amd64|x86|i386|i686" AND CMAKE_SIZEOF_VOID_P EQUAL 4)
+            # Add -msse2 for x86 because of https://github.com/aws/aws-lc/commit/6fe8dcbe96e580ea85233fdb98a142e42951b70b
             set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse2")
         endif()
 
-        message(STATUS "XXXXXXXXX CMAKE_C_FLAGS: ${CMAKE_C_FLAGS}")
         add_subdirectory(aws-lc)
     endif()
 
