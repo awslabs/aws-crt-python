@@ -39,9 +39,11 @@ if(UNIX AND NOT APPLE)
         if(CMAKE_C_COMPILER_ID MATCHES "GNU" AND CMAKE_C_COMPILER_VERSION VERSION_LESS "5.0")
             set(MY_ASSEMBLER_IS_TOO_OLD_FOR_512AVX ON CACHE BOOL "Disable AVX512 on old GCC that not supports it")
         endif()
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse2")
-
+        if(CMAKE_C_COMPILER_ID MATCHES "GNU" AND CMAKE_SYSTEM_PROCESSOR MATCHES "x86|X86|i386|i686")
+            set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse2")
+        endif()
         message(STATUS "XXXXXXXXX CMAKE_C_FLAGS: ${CMAKE_C_FLAGS}")
+        message(STATUS "XXXXXXXXX CMAKE_SYSTEM_PROCESSOR: ${CMAKE_SYSTEM_PROCESSOR}")
 
 
         add_subdirectory(aws-lc)
