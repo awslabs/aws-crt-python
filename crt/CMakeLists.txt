@@ -42,7 +42,10 @@ if(UNIX AND NOT APPLE)
 
         string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" CMAKE_SYSTEM_PROCESSOR_LOWER)
         if(CMAKE_SYSTEM_PROCESSOR_LOWER MATCHES "x86_64|amd64|x86|i386|i686" AND CMAKE_SIZEOF_VOID_P EQUAL 4)
-            # Add -msse2 for x86 because of https://github.com/aws/aws-lc/commit/6fe8dcbe96e580ea85233fdb98a142e42951b70b
+            # Add -msse2 for x86-32bit because of https://github.com/aws/aws-lc/commit/6fe8dcbe96e580ea85233fdb98a142e42951b70b
+            # In some cases such as when building in Docker, where the host-level architecture is 64-bit
+            # but the Docker image should result in building for a 32-bit architecture. So that when ARCH
+            # is originally detected as 64-bit,perform an additional check to determine whether to build as 32-bit or 64-bit.
             set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse2")
         endif()
 
