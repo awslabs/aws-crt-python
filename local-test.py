@@ -35,7 +35,7 @@ def presign_post_request(
         headers={
             "Host": "example.amazonaws.com",
             'Content-Type': 'application/json',
-            "x-amz-content-sha256": "UNSIGNED-PAYLOAD",
+            "x-amz-content-sha256": "IT DOES'T MATTER",
             'Content-Length': '123',
         }
     )
@@ -51,7 +51,7 @@ def presign_post_request(
 
 
 # Example usage
-service_name = 'vpc-lattice-svcs'
+service_name = 'vpc-lattice-svcs'  # notes: you have to set service name to vpc-lattice-svcs.
 region_name = 'us-west-2'
 endpoint = 'https://example.amazonaws.com/'
 request_parameters = '{\
