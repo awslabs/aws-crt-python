@@ -467,7 +467,6 @@ class TestClient(NativeResourceTest):
             self.assertIsNone(handler.exception)
 
     def test_send_frame_exceptions(self):
-        init_logging(LogLevel.Trace, 'stderr')
         with WebSocketServer(self.host, self.port) as server:
             handler = ClientHandler()
             handler.connect_sync(self.host, self.port)
