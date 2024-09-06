@@ -507,7 +507,7 @@ class AwsSignedBodyHeaderType(IntEnum):
     """Do not add a header."""
 
     X_AMZ_CONTENT_SHA_256 = 1
-    """Add the "x-amz-content-sha-256" header with the canonical request's signed body value"""
+    """Add the "x-amz-content-sha256" header with the canonical request's signed body value"""
 
 
 class AwsSigningConfig(NativeResource):
