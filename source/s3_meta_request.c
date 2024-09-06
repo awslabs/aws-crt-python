@@ -24,12 +24,6 @@ struct s3_meta_request_binding {
     /* Reference to python object that reference to other related python object to keep it alive */
     PyObject *py_core;
 
-    /**
-     * file path if set, it handles file operation from C land to reduce the cost
-     * passing chunks from C into python. One for recv/writing, the other for send/reading
-     **/
-    FILE *recv_file;
-
     /* Batch up the transferred size in one sec. */
     uint64_t size_transferred;
     /* The time stamp when the progress reported */
@@ -42,9 +36,6 @@ struct aws_s3_meta_request *aws_py_get_s3_meta_request(PyObject *meta_request) {
 }
 
 static void s_destroy(struct s3_meta_request_binding *meta_request) {
-    if (meta_request->recv_file) {
-        fclose(meta_request->recv_file);
-    }
     Py_XDECREF(meta_request->py_core);
     aws_mem_release(aws_py_get_allocator(), meta_request);
 }
@@ -148,22 +139,6 @@ static int s_s3_request_on_body(
     void *user_data) {
     (void)meta_request;
     struct s3_meta_request_binding *request_binding = user_data;
-
-    if (request_binding->recv_file) {
-        /* The callback will be invoked with the right order, so we don't need to seek first. */
-        if (fwrite((void *)body->ptr, body->len, 1, request_binding->recv_file) < 1) {
-            int errno_value = ferror(request_binding->recv_file) ? errno : 0; /* Always cache errno  */
-            aws_translate_and_raise_io_error_or(errno_value, AWS_ERROR_FILE_WRITE_FAILURE);
-            AWS_LOGF_ERROR(
-                AWS_LS_S3_META_REQUEST,
-                "id=%p Failed writing to file. errno:%d. aws-error:%s",
-                (void *)meta_request,
-                errno_value,
-                aws_error_name(aws_last_error()));
-            return AWS_OP_ERR;
-        }
-        return AWS_OP_SUCCESS;
-    }
     bool error = true;
     /*************** GIL ACQUIRE ***************/
     PyGILState_STATE state;
@@ -201,25 +176,6 @@ static void s_s3_request_on_finish(
     struct s3_meta_request_binding *request_binding = user_data;
 
     int error_code = meta_request_result->error_code;
-
-    if (request_binding->recv_file) {
-        if (fclose(request_binding->recv_file) != 0) {
-            /* Failed to close file, so we can't guarantee it flushed to disk.
-             * If the meta-request's error_code was 0, change it to failure */
-            if (error_code == 0) {
-                int errno_value = errno; /* Always cache errno before potential side-effect */
-                aws_translate_and_raise_io_error_or(errno_value, AWS_ERROR_FILE_WRITE_FAILURE);
-                error_code = aws_last_error();
-                AWS_LOGF_ERROR(
-                    AWS_LS_S3_META_REQUEST,
-                    "id=%p Failed closing file. errno:%d. aws-error:%s",
-                    (void *)meta_request,
-                    errno_value,
-                    aws_error_name(error_code));
-            }
-        }
-        request_binding->recv_file = NULL;
-    }
     /*************** GIL ACQUIRE ***************/
     PyGILState_STATE state;
     if (aws_py_gilstate_ensure(&state)) {
@@ -455,15 +411,6 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     meta_request->py_core = py_core;
     Py_INCREF(meta_request->py_core);
 
-    if (recv_filepath) {
-        meta_request->recv_file = aws_fopen(recv_filepath, "wb");
-        if (!meta_request->recv_file) {
-            aws_translate_and_raise_io_error(errno);
-            PyErr_SetAwsLastError();
-            goto error;
-        }
-    }
-
     struct aws_s3_meta_request_options s3_meta_request_opt = {
         .type = type,
         .operation_name = aws_byte_cursor_from_c_str(operation_name),
@@ -471,6 +418,7 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
         .signing_config = signing_config,
         .checksum_config = &checksum_config,
         .send_filepath = aws_byte_cursor_from_c_str(send_filepath),
+        .recv_filepath = aws_byte_cursor_from_c_str(recv_filepath),
         .headers_callback = s_s3_request_on_headers,
         .body_callback = s_s3_request_on_body,
         .finish_callback = s_s3_request_on_finish,
