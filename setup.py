@@ -138,6 +138,9 @@ def using_system_libs():
     """If true, don't build any dependencies. Use the libs that are already on the system."""
     return os.getenv('AWS_CRT_BUILD_USE_SYSTEM_LIBS') == '1'
 
+def using_shared_libs():
+    """If true, the shared libs are used instead of the static ones, which is the default. Has no effect on Windows and Darwin."""
+    return os.getenv('AWS_CRT_BUILD_USE_SHARED_LIBS') == '1'
 
 def using_system_libcrypto():
     """If true, don't build AWS-LC. Use the libcrypto that's already on the system."""
@@ -337,15 +340,18 @@ def awscrt_ext():
         extra_link_args += ['-framework', 'Security']
 
     else:  # unix
-        # linker will prefer shared libraries over static if it can find both.
-        # force linker to choose static variant by using using
-        # "-l:libaws-c-common.a" syntax instead of just "-laws-c-common".
+        # Linker will prefer shared libraries over static if it can find both.
+        # This forces linker to choose static variant by using
+        # "-l:libaws-c-common.a" syntax instead of just "-laws-c-common",
+        # unless user has explicitely opted out from this by setting 
+        # `AWS_CRT_BUILD_USE_SHARED_LIBS` to `1`.
         #
         # This helps AWS developers creating Lambda applications from Brazil.
         # In Brazil, both shared and static libs are available.
         # But Lambda requires all shared libs to be explicitly packaged up.
         # So it's simpler to link them in statically and have less runtime dependencies.
-        libraries = [':lib{}.a'.format(x) for x in libraries]
+        if not using_shared_libs():
+            libraries = [':lib{}.a'.format(x) for x in libraries]
 
         # OpenBSD doesn't have librt; functions are found in libc instead.
         if not sys.platform.startswith('openbsd'):
