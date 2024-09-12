@@ -7,7 +7,7 @@
 
 #include "aws/checksums/crc.h"
 #include "aws/common/byte_buf.h"
-PyObject *checksums_crc_common(PyObject *args, uint32_t (*checksum_fn)(const uint8_t *, int, uint32_t)) {
+PyObject *checksums_crc32_common(PyObject *args, uint32_t (*checksum_fn)(const uint8_t *, int, uint32_t)) {
     Py_buffer input;
     PyObject *py_previousCrc;
     PyObject *py_result = NULL;
@@ -39,14 +39,7 @@ PyObject *checksums_crc_common(PyObject *args, uint32_t (*checksum_fn)(const uin
 
         /* clang-format off */
         Py_BEGIN_ALLOW_THREADS
-            /* Avoid truncation of length for very large buffers. crc() takes
-               length as an int, which may be narrower than Py_ssize_t. */
-            while ((size_t)len > INT_MAX) {
-                val = checksum_fn(buf, INT_MAX, val);
-                buf += (size_t)INT_MAX;
-                len -= (size_t)INT_MAX;
-            }
-            val = checksum_fn(buf, (int)len, val);
+            val = checksum_fn(buf, (size_t)len, val);
         Py_END_ALLOW_THREADS
         /* clang-format on */
     } else {
@@ -62,10 +55,51 @@ done:
 
 PyObject *aws_py_checksums_crc32(PyObject *self, PyObject *args) {
     (void)self;
-    return checksums_crc_common(args, aws_checksums_crc32);
+    return checksums_crc_common(args, aws_checksums_crc32_ex);
 }
 
 PyObject *aws_py_checksums_crc32c(PyObject *self, PyObject *args) {
     (void)self;
-    return checksums_crc_common(args, aws_checksums_crc32c);
+    return checksums_crc_common(args, aws_checksums_crc32c_ex);
+}
+
+PyObject *aws_py_checksums_crc64nvme(PyObject *self, PyObject *args) {
+    Py_buffer input;
+    PyObject *py_previousCrc64;
+    PyObject *py_result = NULL;
+
+    if (!PyArg_ParseTuple(args, "s*O", &input, &py_previousCrc)) {
+        return NULL;
+    }
+
+    /* Note: PyArg_ParseTuple() doesn't do overflow checking on unsigned values
+     * so use PyLong_AsUnsignedLongLong() to get the value of the previousCrc arg */
+    uin64_t previousCrc = PyLong_AsUnsignedLongLong(py_previousCrc);
+
+    if (previousCrc == (uint64_t)-1 && PyErr_Occurred()) {
+        goto done;
+    }
+
+    if (!PyBuffer_IsContiguous(&input, 'C')) {
+        PyErr_SetString(PyExc_ValueError, "input must be contiguous buffer");
+        goto done;
+    }
+
+    /* Releasing the GIL for very small buffers is inefficient
+       and may lower performance */
+    if (input.len > 1024 * 5) {
+        /* clang-format off */
+        Py_BEGIN_ALLOW_THREADS
+            previousCrc = aws_checksums_crc64nvme_ex(input.buf, (size_t)input.len, previousCrc);
+        Py_END_ALLOW_THREADS
+        /* clang-format on */
+    } else {
+        previousCrc = aws_checksums_crc64nvme_ex(input.buf, (size_t)input.len, previousCrc);
+    }
+    py_result = PyLong_FromUnsignedLongLong(previousCrc);
+done:
+    if (input.obj) {
+        PyBuffer_Release(&input);
+    }
+    return py_result;
 }
