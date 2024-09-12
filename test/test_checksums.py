@@ -135,7 +135,7 @@ class TestChecksums(NativeResourceTest):
         except BaseException:
             raise unittest.SkipTest('Machine cant allocate giant buffer for giant buffer test')
         val = checksums.crc64nvme(huge_buffer)
-        self.assertEqual(0x572a7c8a, val)
+        self.assertEqual(0x2645c28052b1fbb0, val)
 
 
 if __name__ == '__main__':
