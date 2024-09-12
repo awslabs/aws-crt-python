@@ -136,12 +136,18 @@ def get_cmake_path():
 
 def using_system_libs():
     """If true, don't build any dependencies. Use the libs that are already on the system."""
-    return os.getenv('AWS_CRT_BUILD_USE_SYSTEM_LIBS') == '1'
+    return (os.getenv('AWS_CRT_BUILD_USE_SYSTEM_LIBS') == '1'
+            or not os.path.exists(os.path.join(PROJECT_DIR, 'crt', 'aws-c-common', 'CMakeLists.txt')))
 
 
 def using_system_libcrypto():
     """If true, don't build AWS-LC. Use the libcrypto that's already on the system."""
     return using_system_libs() or os.getenv('AWS_CRT_BUILD_USE_SYSTEM_LIBCRYPTO') == '1'
+
+
+def forcing_static_libs():
+    """If true, force libs to be linked statically."""
+    return os.getenv('AWS_CRT_BUILD_FORCE_STATIC_LIBS') == '1'
 
 
 class AwsLib:
@@ -152,12 +158,11 @@ class AwsLib:
 
 
 # The extension depends on these libs.
-# They're built along with the extension.
+# They're built along with the extension (unless using_system_libs() is True)
 AWS_LIBS = []
 if sys.platform != 'darwin' and sys.platform != 'win32':
-    if not using_system_libcrypto():
-        # aws-lc produces libcrypto.a
-        AWS_LIBS.append(AwsLib('aws-lc', libname='crypto'))
+    # aws-lc produces libcrypto.a
+    AWS_LIBS.append(AwsLib('aws-lc', libname='crypto'))
     AWS_LIBS.append(AwsLib('s2n'))
 AWS_LIBS.append(AwsLib('aws-c-common'))
 AWS_LIBS.append(AwsLib('aws-c-sdkutils'))
@@ -292,9 +297,7 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
 
     def run(self):
         if using_system_libs():
-            print("Skip building dependencies, using system libs.")
-        elif not os.path.exists(os.path.join(PROJECT_DIR, 'crt', 'aws-c-common', 'CMakeLists.txt')):
-            print("Skip building dependencies, source not found.")
+            print("Skip building dependencies")
         else:
             self._build_dependencies()
 
@@ -337,38 +340,40 @@ def awscrt_ext():
         extra_link_args += ['-framework', 'Security']
 
     else:  # unix
-        # linker will prefer shared libraries over static if it can find both.
-        # force linker to choose static variant by using using
-        # "-l:libaws-c-common.a" syntax instead of just "-laws-c-common".
-        #
-        # This helps AWS developers creating Lambda applications from Brazil.
-        # In Brazil, both shared and static libs are available.
-        # But Lambda requires all shared libs to be explicitly packaged up.
-        # So it's simpler to link them in statically and have less runtime dependencies.
-        libraries = [':lib{}.a'.format(x) for x in libraries]
+        if forcing_static_libs():
+            # linker will prefer shared libraries over static if it can find both.
+            # force linker to choose static variant by using
+            # "-l:libaws-c-common.a" syntax instead of just "-laws-c-common".
+            #
+            # This helps AWS developers creating Lambda applications from Brazil.
+            # In Brazil, both shared and static libs are available.
+            # But Lambda requires all shared libs to be explicitly packaged up.
+            # So it's simpler to link them in statically and have less runtime dependencies.
+            #
+            # Don't apply this trick to dependencies that are always on the OS (e.g. librt)
+            libraries = [':lib{}.a'.format(x) for x in libraries]
 
         # OpenBSD doesn't have librt; functions are found in libc instead.
         if not sys.platform.startswith('openbsd'):
             libraries += ['rt']
 
-        if using_system_libcrypto():
-            libraries += ['crypto']
-        else:
-            # hide the symbols from libcrypto.a
-            # this prevents weird crashes if an application also ends up using
-            # libcrypto.so from the system's OpenSSL installation.
-            extra_link_args += ['-Wl,--exclude-libs,libcrypto.a']
+        # hide the symbols from libcrypto.a
+        # this prevents weird crashes if an application also ends up using
+        # libcrypto.so from the system's OpenSSL installation.
+        # Do this even if using system libcrypto, since it could still be a static lib.
+        extra_link_args += ['-Wl,--exclude-libs,libcrypto.a']
 
-            # OpenBSD 7.4+ defaults to linking with --execute-only, which is bad for AWS-LC.
-            # See: https://github.com/aws/aws-lc/blob/4b07805bddc55f68e5ce8c42f215da51c7a4e099/CMakeLists.txt#L44-L53
-            # (If AWS-LC's CMakeLists.txt removes these lines in the future, we can remove this hack here as well)
-            if sys.platform.startswith('openbsd'):
+        # OpenBSD 7.4+ defaults to linking with --execute-only, which is bad for AWS-LC.
+        # See: https://github.com/aws/aws-lc/blob/4b07805bddc55f68e5ce8c42f215da51c7a4e099/CMakeLists.txt#L44-L53
+        # (If AWS-LC's CMakeLists.txt removes these lines in the future, we can remove this hack here as well)
+        if sys.platform.startswith('openbsd'):
+            if not using_system_libcrypto():
                 extra_link_args += ['-Wl,--no-execute-only']
 
         # FreeBSD doesn't have execinfo as a part of libc like other Unix variant.
         # Passing linker flag to link execinfo properly
         if sys.platform.startswith('freebsd'):
-            extra_link_args += ['-lexecinfo']
+            libraries += ['execinfo']
 
         # python usually adds -pthread automatically, but we've observed
         # rare cases where that didn't happen, so let's be explicit.
