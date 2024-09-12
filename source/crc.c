@@ -55,26 +55,27 @@ done:
 
 PyObject *aws_py_checksums_crc32(PyObject *self, PyObject *args) {
     (void)self;
-    return checksums_crc_common(args, aws_checksums_crc32_ex);
+    return checksums_crc32_common(args, aws_checksums_crc32_ex);
 }
 
 PyObject *aws_py_checksums_crc32c(PyObject *self, PyObject *args) {
     (void)self;
-    return checksums_crc_common(args, aws_checksums_crc32c_ex);
+    return checksums_crc32_common(args, aws_checksums_crc32c_ex);
 }
 
 PyObject *aws_py_checksums_crc64nvme(PyObject *self, PyObject *args) {
+    (void)self;
     Py_buffer input;
     PyObject *py_previousCrc64;
     PyObject *py_result = NULL;
 
-    if (!PyArg_ParseTuple(args, "s*O", &input, &py_previousCrc)) {
+    if (!PyArg_ParseTuple(args, "s*O", &input, &py_previousCrc64)) {
         return NULL;
     }
 
     /* Note: PyArg_ParseTuple() doesn't do overflow checking on unsigned values
      * so use PyLong_AsUnsignedLongLong() to get the value of the previousCrc arg */
-    uin64_t previousCrc = PyLong_AsUnsignedLongLong(py_previousCrc);
+    uin64_t previousCrc = PyLong_AsUnsignedLongLong(py_previousCrc64);
 
     if (previousCrc == (uint64_t)-1 && PyErr_Occurred()) {
         goto done;
