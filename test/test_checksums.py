@@ -123,7 +123,7 @@ class TestChecksums(NativeResourceTest):
         # stress test gil optimization for 32 bit architecture which cannot handle huge buffer
         large_buffer = bytes(25 * 2**20)
         val = checksums.crc64nvme(large_buffer)
-        self.assertEqual(0xfb5b991d, val)
+        self.assertEqual(0x5b6f5045463ca45e, val)
 
     def test_crc64nvme_huge_buffer(self):
         if sys.platform.startswith('freebsd'):
