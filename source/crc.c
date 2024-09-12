@@ -7,7 +7,7 @@
 
 #include "aws/checksums/crc.h"
 #include "aws/common/byte_buf.h"
-PyObject *checksums_crc32_common(PyObject *args, uint32_t (*checksum_fn)(const uint8_t *, int, uint32_t)) {
+PyObject *checksums_crc32_common(PyObject *args, uint32_t (*checksum_fn)(const uint8_t *, size_t, uint32_t)) {
     Py_buffer input;
     PyObject *py_previousCrc;
     PyObject *py_result = NULL;
@@ -43,7 +43,7 @@ PyObject *checksums_crc32_common(PyObject *args, uint32_t (*checksum_fn)(const u
         Py_END_ALLOW_THREADS
         /* clang-format on */
     } else {
-        val = checksum_fn(input.buf, (int)input.len, val);
+        val = checksum_fn(input.buf, (size_t)input.len, val);
     }
     py_result = PyLong_FromUnsignedLong(val);
 done:
@@ -75,7 +75,7 @@ PyObject *aws_py_checksums_crc64nvme(PyObject *self, PyObject *args) {
 
     /* Note: PyArg_ParseTuple() doesn't do overflow checking on unsigned values
      * so use PyLong_AsUnsignedLongLong() to get the value of the previousCrc arg */
-    uin64_t previousCrc = PyLong_AsUnsignedLongLong(py_previousCrc64);
+    uint64_t previousCrc = PyLong_AsUnsignedLongLong(py_previousCrc64);
 
     if (previousCrc == (uint64_t)-1 && PyErr_Occurred()) {
         goto done;
