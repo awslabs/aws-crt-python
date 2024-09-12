@@ -97,26 +97,26 @@ class TestChecksums(NativeResourceTest):
 
     def test_crc64nvme_zeros_one_shot(self):
         output = checksums.crc64nvme(bytes(32))
-        expected = 0xCF3473434D4ECF3B
+        expected = 0xcf3473434d4ecf3b
         self.assertEqual(expected, output)
 
     def test_crc64nvme_zeros_iterated(self):
         output = 0
         for i in range(32):
             output = checksums.crc64nvme(bytes(1), output)
-        expected = 0xCF3473434D4ECF3B
+        expected = 0xcf3473434d4ecf3b
         self.assertEqual(expected, output)
 
     def test_crc64nvme_values_one_shot(self):
         output = checksums.crc64nvme(''.join(chr(i) for i in range(32)))
-        expected = 0x7fffffffffffffff
+        expected = 0xb9f0b46aac3b555f
         self.assertEqual(expected, output)
 
     def test_crc64nvme_values_iterated(self):
         output = 0
         for i in range(32):
             output = checksums.crc64nvme(chr(i), output)
-        expected = 0x7fffffffffffffff
+        expected = 0xb9f0b46aac3b555f
         self.assertEqual(expected, output)
 
     def test_crc64nvme_large_buffer(self):
