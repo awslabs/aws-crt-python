@@ -22,6 +22,7 @@ def crc32c(input: bytes, previous_crc32c: int = 0) -> int:
     """
     return _awscrt.checksums_crc32c(input, previous_crc32c)
 
+
 def crc64nvme(input: bytes, previous_crc64nvme: int = 0) -> int:
     """
     Perform a CRC64 NVME computation.
