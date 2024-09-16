@@ -95,6 +95,48 @@ class TestChecksums(NativeResourceTest):
         val = checksums.crc32c(huge_buffer)
         self.assertEqual(0x572a7c8a, val)
 
+    def test_crc64nvme_zeros_one_shot(self):
+        output = checksums.crc64nvme(bytes(32))
+        expected = 0xcf3473434d4ecf3b
+        self.assertEqual(expected, output)
+
+    def test_crc64nvme_zeros_iterated(self):
+        output = 0
+        for i in range(32):
+            output = checksums.crc64nvme(bytes(1), output)
+        expected = 0xcf3473434d4ecf3b
+        self.assertEqual(expected, output)
+
+    def test_crc64nvme_values_one_shot(self):
+        output = checksums.crc64nvme(''.join(chr(i) for i in range(32)))
+        expected = 0xb9d9d4a8492cbd7f
+        self.assertEqual(expected, output)
+
+    def test_crc64nvme_values_iterated(self):
+        output = 0
+        for i in range(32):
+            output = checksums.crc64nvme(chr(i), output)
+        expected = 0xb9d9d4a8492cbd7f
+        self.assertEqual(expected, output)
+
+    def test_crc64nvme_large_buffer(self):
+        # stress test gil optimization for 32 bit architecture which cannot handle huge buffer
+        large_buffer = bytes(25 * 2**20)
+        val = checksums.crc64nvme(large_buffer)
+        self.assertEqual(0x5b6f5045463ca45e, val)
+
+    def test_crc64nvme_huge_buffer(self):
+        if sys.platform.startswith('freebsd'):
+            # Skip this test for freebsd, as it simply crashes instead of raising exception in this case
+            raise unittest.SkipTest('Skip this test for freebsd')
+        try:
+            INT_MAX = 2**32 - 1
+            huge_buffer = bytes(INT_MAX + 5)
+        except BaseException:
+            raise unittest.SkipTest('Machine cant allocate giant buffer for giant buffer test')
+        val = checksums.crc64nvme(huge_buffer)
+        self.assertEqual(0x2645c28052b1fbb0, val)
+
 
 if __name__ == '__main__':
     unittest.main()

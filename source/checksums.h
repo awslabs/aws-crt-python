@@ -8,5 +8,6 @@
 
 PyObject *aws_py_checksums_crc32(PyObject *self, PyObject *args);
 PyObject *aws_py_checksums_crc32c(PyObject *self, PyObject *args);
+PyObject *aws_py_checksums_crc64nvme(PyObject *self, PyObject *args);
 
 #endif /* AWS_CRT_PYTHON_CHECKSUMS_H */
