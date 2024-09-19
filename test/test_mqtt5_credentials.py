@@ -197,7 +197,6 @@ class MqttConnectionTest(NativeResourceTest):
             input_role_secret_access_key,
             input_role_session_token
         )
-        credentials = auth.AwsCredentialsProvider.new_default_chain()
 
         def sign_function(transform_args, **kwargs):
             signing_config = auth.AwsSigningConfig(
