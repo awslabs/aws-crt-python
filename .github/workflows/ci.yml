@@ -15,6 +15,7 @@ env:
   RUN: ${{ github.run_id }}-${{ github.run_number }}
   CRT_CI_ROLE: ${{ secrets.CRT_CI_ROLE_ARN }} 
   AWS_REGION: us-east-1
+  AWS_DEFAULT_REGION: us-east-1
 
 jobs:
   manylinux1:
@@ -187,10 +188,6 @@ jobs:
         with:
           role-to-assume: ${{ env.CRT_CI_ROLE }}
           aws-region: ${{ env.AWS_REGION }}
-      - name: tests
-        run: |
-          aws sts get-caller-identity
-          aws --region us-east-1 secretsmanager get-secret-value --secret-id unit-test/endpoint
       - name: Build ${{ env.PACKAGE_NAME }}
         run: |
           aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
