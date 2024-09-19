@@ -134,8 +134,14 @@ def get_cmake_path():
     raise Exception("CMake must be installed to build from source.")
 
 
+def using_system_libs():
+    """If true, don't build any dependencies. Use the libs that are already on the system."""
+    return os.getenv('AWS_CRT_BUILD_USE_SYSTEM_LIBS') == '1'
+
+
 def using_system_libcrypto():
-    return os.getenv('AWS_CRT_BUILD_USE_SYSTEM_LIBCRYPTO') == '1'
+    """If true, don't build AWS-LC. Use the libcrypto that's already on the system."""
+    return using_system_libs() or os.getenv('AWS_CRT_BUILD_USE_SYSTEM_LIBCRYPTO') == '1'
 
 
 class AwsLib:
@@ -223,7 +229,10 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
         ]
         run_cmd(build_cmd)
 
-    def _build_dependencies(self, build_dir, install_path):
+    def _build_dependencies(self):
+        build_dir = os.path.join(self.build_temp, 'deps')
+        install_path = os.path.join(self.build_temp, 'deps', 'install')
+
         if is_macos_universal2() and not is_development_mode():
             # create macOS universal binary by compiling for x86_64 and arm64,
             # each in its own subfolder, and then creating a universal binary
@@ -266,30 +275,28 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
             # normal build for a single architecture
             self._build_dependencies_impl(build_dir, install_path)
 
-    def run(self):
-        # build dependencies
-        dep_build_dir = os.path.join(self.build_temp, 'deps')
-        dep_install_path = os.path.join(self.build_temp, 'deps', 'install')
-
-        if os.path.exists(os.path.join(PROJECT_DIR, 'crt', 'aws-c-common', 'CMakeLists.txt')):
-            self._build_dependencies(dep_build_dir, dep_install_path)
-        else:
-            print("Skip building dependencies, source not found.")
-
         # update paths so awscrt_ext can access dependencies.
         # add to the front of any list so that our dependencies are preferred
         # over anything that might already be on the system (i.e. libcrypto.a)
 
-        self.include_dirs.insert(0, os.path.join(dep_install_path, 'include'))
+        self.include_dirs.insert(0, os.path.join(install_path, 'include'))
 
         # some platforms (ex: fedora) use /lib64 instead of just /lib
         lib_dir = 'lib'
-        if is_64bit() and os.path.exists(os.path.join(dep_install_path, 'lib64')):
+        if is_64bit() and os.path.exists(os.path.join(install_path, 'lib64')):
             lib_dir = 'lib64'
-        if is_32bit() and os.path.exists(os.path.join(dep_install_path, 'lib32')):
+        if is_32bit() and os.path.exists(os.path.join(install_path, 'lib32')):
             lib_dir = 'lib32'
 
-        self.library_dirs.insert(0, os.path.join(dep_install_path, lib_dir))
+        self.library_dirs.insert(0, os.path.join(install_path, lib_dir))
+
+    def run(self):
+        if using_system_libs():
+            print("Skip building dependencies, using system libs.")
+        elif not os.path.exists(os.path.join(PROJECT_DIR, 'crt', 'aws-c-common', 'CMakeLists.txt')):
+            print("Skip building dependencies, source not found.")
+        else:
+            self._build_dependencies()
 
         # continue with normal build_ext.run()
         super().run()
