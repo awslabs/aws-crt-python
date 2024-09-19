@@ -22,7 +22,7 @@ auditwheel repair --plat musllinux_1_1_x86_64 dist/awscrt-*cp311*.whl
 # Don't need to build wheels for Python 3.12 and later.
 # The 3.11 wheel uses the stable ABI, so it works with newer versions too.
 
-# We are using the 3.13 stable ABI from 3.13 onwards because of deprecated functions.
+# We are using the Python 3.13 stable ABI from Python 3.13 onwards because of deprecated functions.
 /opt/python/cp313-cp313/bin/python setup.py sdist bdist_wheel
 auditwheel repair --plat musllinux_1_1_x86_64 dist/awscrt-*cp313*.whl
 

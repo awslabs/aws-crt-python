@@ -337,7 +337,7 @@ jobs:
           version: '14.0'
           cpu_count: 4
           shell: bash
-          environment_variables: AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION AWS_REGION
+          environment_variables: AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN AWS_DEFAULT_REGION 
           run: |
             sudo pkg install -y python3 devel/py-pip net/py-urllib3 devel/py-awscli cmake
             python3 -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz', 'builder')"
