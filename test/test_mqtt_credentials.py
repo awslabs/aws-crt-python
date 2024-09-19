@@ -266,10 +266,10 @@ class MqttConnectionTest(NativeResourceTest):
         connection.disconnect().result(TIMEOUT)
 
     def test_mqtt311_ws_cred_environment(self):
-        self._test_mqtt311_ws_cred_environment(use_default_chain = False);
+        self._test_mqtt311_ws_cred_environment(use_default_chain=False)
 
     def test_mqtt311_ws_cred_default(self):
-        self._test_mqtt311_ws_cred_environment(use_default_chain = True);
+        self._test_mqtt311_ws_cred_environment(use_default_chain=True)
 
     def _test_mqtt311_ws_cred_environment(self, use_default_chain):
         input_access_key = _get_env_variable("AWS_TEST_MQTT311_ROLE_CREDENTIAL_ACCESS_KEY")
