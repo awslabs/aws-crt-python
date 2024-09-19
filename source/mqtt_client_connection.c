@@ -160,6 +160,7 @@ static void s_on_connection_success(
             PyErr_WriteUnraisable(PyErr_Occurred());
         }
     }
+    goto on_done; /* fixes unused label waring */
 on_done:
 #if PY_VERSION_HEX >= 0x030D0000
     Py_XDECREF(self);
@@ -200,6 +201,7 @@ static void s_on_connection_failure(struct aws_mqtt_client_connection *connectio
         }
     }
 
+    goto on_done; /* fixes unused label waring */
 on_done:
 #if PY_VERSION_HEX >= 0x030D0000
     Py_XDECREF(self);
@@ -241,6 +243,7 @@ static void s_on_connection_interrupted(struct aws_mqtt_client_connection *conne
         }
     }
 
+    goto on_done; /* fixes unused label waring */
 on_done:
 #if PY_VERSION_HEX >= 0x030D0000
     Py_XDECREF(self);
@@ -288,6 +291,7 @@ static void s_on_connection_resumed(
             PyErr_WriteUnraisable(PyErr_Occurred());
         }
     }
+    goto on_done; /* fixes unused label waring */
 on_done:
 #if PY_VERSION_HEX >= 0x030D0000
     Py_XDECREF(self);
@@ -332,6 +336,7 @@ static void s_on_connection_closed(
         }
     }
 
+    goto on_done; /* fixes unused label waring */
 on_done:
 #if PY_VERSION_HEX >= 0x030D0000
     Py_XDECREF(self);
