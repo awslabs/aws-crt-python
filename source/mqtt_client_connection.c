@@ -148,7 +148,7 @@ static void s_on_connection_success(
     }
 #else
     /* PyWeakref_GetObject is deprecated since python 3.13 */
-    PyWeakref_GetObject(py_connection->self_proxy); /* borrowed reference */
+    self = PyWeakref_GetObject(py_connection->self_proxy); /* borrowed reference */
 #endif
 
     if (self != Py_None) {
@@ -189,7 +189,7 @@ static void s_on_connection_failure(struct aws_mqtt_client_connection *connectio
     }
 #else
     /* PyWeakref_GetObject is deprecated since python 3.13 */
-    PyWeakref_GetObject(py_connection->self_proxy); /* borrowed reference */
+    self = PyWeakref_GetObject(py_connection->self_proxy); /* borrowed reference */
 #endif
 
     if (self != Py_None) {
@@ -231,7 +231,7 @@ static void s_on_connection_interrupted(struct aws_mqtt_client_connection *conne
     }
 #else
     /* PyWeakref_GetObject is deprecated since python 3.13 */
-    PyWeakref_GetObject(py_connection->self_proxy); /* borrowed reference */
+    self = PyWeakref_GetObject(py_connection->self_proxy); /* borrowed reference */
 #endif
 
     if (self != Py_None) {
@@ -279,7 +279,7 @@ static void s_on_connection_resumed(
     }
 #else
     /* PyWeakref_GetObject is deprecated since python 3.13 */
-    PyWeakref_GetObject(py_connection->self_proxy); /* borrowed reference */
+    self = PyWeakref_GetObject(py_connection->self_proxy); /* borrowed reference */
 #endif
 
     if (self != Py_None) {
@@ -324,7 +324,7 @@ static void s_on_connection_closed(
     }
 #else
     /* PyWeakref_GetObject is deprecated since python 3.13 */
-    PyWeakref_GetObject(py_connection->self_proxy); /* borrowed reference */
+    self = PyWeakref_GetObject(py_connection->self_proxy); /* borrowed reference */
 #endif
 
     if (self != Py_None) {
@@ -616,7 +616,7 @@ static void s_ws_handshake_transform(
     }
 #else
     /* PyWeakref_GetObject is deprecated since python 3.13 */
-    PyWeakref_GetObject(connection_binding->self_proxy); /* borrowed reference */
+    connection_py = PyWeakref_GetObject(connection_binding->self_proxy); /* borrowed reference */
 #endif
 
     if (connection_py == Py_None) {
