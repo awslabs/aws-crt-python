@@ -204,10 +204,10 @@ static void s_on_stream_complete(struct aws_http_stream *native_stream, int erro
 
     /* DECREF python self, we don't need to force it to stay alive any longer. */
     PyObject *self = Py_None;
-#if PY_VERSION_HEX >= 0x030D0000 /* Check if Python version is 3.13 or higher */
-    int result_getref = PyWeakref_GetRef(stream->self_proxy, &self);/* strong reference */
+#if PY_VERSION_HEX >= 0x030D0000                                     /* Check if Python version is 3.13 or higher */
+    int result_getref = PyWeakref_GetRef(stream->self_proxy, &self); /* strong reference */
     /* Ignore error, stream is already complete */
-    (void) result_getref;
+    (void)result_getref;
 #else
     /* PyWeakref_GetObject is deprecated since python 3.13 */
     self = PyWeakref_GetObject(stream->self_proxy); /* borrowed reference */

@@ -403,10 +403,10 @@ def awscrt_ext():
                 else:
                     extra_link_args += ['-Wl,--fatal-warnings']
 
-    if sys.version_info >= (3,13):
+    if sys.version_info >= (3, 13):
         define_macros.append(('Py_LIMITED_API', '0x030D0000'))
         py_limited_api = True
-    elif sys.version_info >= (3,11):
+    elif sys.version_info >= (3, 11):
         define_macros.append(('Py_LIMITED_API', '0x030B0000'))
         py_limited_api = True
 
