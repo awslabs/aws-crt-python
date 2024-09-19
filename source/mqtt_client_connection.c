@@ -141,7 +141,7 @@ static void s_on_connection_success(
     }
 
     PyObject *self = Py_None;
-#if PY_VERSION_HEX >= 0x030D0000                                  // Check if Python version is 3.13 or higher
+#if PY_VERSION_HEX >= 0x030D0000                                  /* Check if Python version is 3.13 or higher */
     if (PyWeakref_GetRef(py_connection->self_proxy, &self) < 0) { /* strong reference */
         PyErr_WriteUnraisable(PyErr_Occurred());
         goto on_done;
@@ -180,8 +180,8 @@ static void s_on_connection_failure(struct aws_mqtt_client_connection *connectio
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
-    PyObject *self = Py_None; 
-#if PY_VERSION_HEX >= 0x030D0000                                  // Check if Python version is 3.13 or higher
+    PyObject *self = Py_None;
+#if PY_VERSION_HEX >= 0x030D0000                                  /* Check if Python version is 3.13 or higher */
     if (PyWeakref_GetRef(py_connection->self_proxy, &self) < 0) { /* strong reference */
         PyErr_WriteUnraisable(PyErr_Occurred());
         goto on_done;
@@ -222,7 +222,7 @@ static void s_on_connection_interrupted(struct aws_mqtt_client_connection *conne
 
     /* Ensure that python class is still alive */
     PyObject *self = Py_None;
-#if PY_VERSION_HEX >= 0x030D0000                                  // Check if Python version is 3.13 or higher
+#if PY_VERSION_HEX >= 0x030D0000                                  /* Check if Python version is 3.13 or higher */
     if (PyWeakref_GetRef(py_connection->self_proxy, &self) < 0) { /* strong reference */
         PyErr_WriteUnraisable(PyErr_Occurred());
         goto on_done;
@@ -268,8 +268,8 @@ static void s_on_connection_resumed(
     }
 
     /* Ensure that python class is still alive */
-    PyObject *self = Py_None; 
-#if PY_VERSION_HEX >= 0x030D0000                                  // Check if Python version is 3.13 or higher
+    PyObject *self = Py_None;
+#if PY_VERSION_HEX >= 0x030D0000                                  /* Check if Python version is 3.13 or higher */
     if (PyWeakref_GetRef(py_connection->self_proxy, &self) < 0) { /* strong reference */
         PyErr_WriteUnraisable(PyErr_Occurred());
         goto on_done;
@@ -312,8 +312,8 @@ static void s_on_connection_closed(
 
     struct mqtt_connection_binding *py_connection = userdata;
     /* Ensure that python class is still alive */
-    PyObject *self = Py_None; 
-#if PY_VERSION_HEX >= 0x030D0000                                  // Check if Python version is 3.13 or higher
+    PyObject *self = Py_None;
+#if PY_VERSION_HEX >= 0x030D0000                                  /* Check if Python version is 3.13 or higher */
     if (PyWeakref_GetRef(py_connection->self_proxy, &self) < 0) { /* strong reference */
         PyErr_WriteUnraisable(PyErr_Occurred());
         goto on_done;
@@ -331,7 +331,6 @@ static void s_on_connection_closed(
             PyErr_WriteUnraisable(PyErr_Occurred());
         }
     }
-
 
 on_done:
 #if PY_VERSION_HEX >= 0x030D0000
@@ -604,8 +603,8 @@ static void s_ws_handshake_transform(
     }
 
     /* Ensure python mqtt connection object is still alive */
-    PyObject *connection_py = Py_None; 
-#if PY_VERSION_HEX >= 0x030D0000                                  // Check if Python version is 3.13 or higher
+    PyObject *connection_py = Py_None;
+#if PY_VERSION_HEX >= 0x030D0000 /* Check if Python version is 3.13 or higher */
     if (PyWeakref_GetRef(connection_binding->self_proxy, &connection_py) < 0) { /* strong reference */
         aws_raise_error(AWS_ERROR_INVALID_STATE);
         goto done;
@@ -675,7 +674,6 @@ done:;
 #if PY_VERSION_HEX >= 0x030D0000
     Py_XDECREF(connection_py);
 #endif
-
 
     if (ws_transform_capsule) {
         Py_DECREF(ws_transform_capsule);

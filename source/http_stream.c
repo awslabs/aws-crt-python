@@ -203,7 +203,18 @@ static void s_on_stream_complete(struct aws_http_stream *native_stream, int erro
     }
 
     /* DECREF python self, we don't need to force it to stay alive any longer. */
-    Py_XDECREF(stream->self_proxy);
+    PyObject *self = Py_None;
+#if PY_VERSION_HEX >= 0x030D0000 /* Check if Python version is 3.13 or higher */
+    /* Ignore error, stream is already complete */
+    PyWeakref_GetRef(stream->self_proxy, &self) < 0);/* strong reference */
+#else
+    /* PyWeakref_GetObject is deprecated since python 3.13 */
+    PyWeakref_GetObject(stream->self_proxy); /* borrowed reference */
+#endif
+    Py_XDECREF(self);
+#if PY_VERSION_HEX >= 0x030D0000 /* Check if Python version is 3.13 or higher */
+    Py_XDECREF(self);
+#endif
 
     PyGILState_Release(state);
     /*************** GIL RELEASE ***************/
