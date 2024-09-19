@@ -13,9 +13,8 @@ env:
   PACKAGE_NAME: aws-crt-python
   LINUX_BASE_IMAGE: ubuntu-18-x64
   RUN: ${{ github.run_id }}-${{ github.run_number }}
-  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+  CRT_CI_ROLE: arn:aws:iam::123124136734:role/CRT_CI_Role
+  AWS_DEFAULT_REGION: us-east-1
   AWS_REGION: us-east-1
 
 jobs:
@@ -142,6 +141,11 @@ jobs:
           - gcc-8
     steps:
       # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
+    - name: configure AWS credentials (containers)
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ env.CRT_CI_ROLE }}
+        aws-region: ${{ env.AWS_DEFAULT_REGION }}
       - name: Build ${{ env.PACKAGE_NAME }}
         run: |
           aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
