@@ -182,15 +182,15 @@ jobs:
       id-token: write # This is required for requesting the JWT
     steps:
       # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
-      - name: tests
-        run: |
-          aws sts get-caller-identity
-          aws --region us-east-1 secretsmanager get-secret-value --secret-id unit-test/endpoint
       - name: configure AWS credentials (containers)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.CRT_CI_ROLE }}
           aws-region: ${{ env.AWS_REGION }}
+      - name: tests
+        run: |
+          aws sts get-caller-identity
+          aws --region us-east-1 secretsmanager get-secret-value --secret-id unit-test/endpoint
       - name: Build ${{ env.PACKAGE_NAME }}
         run: |
           aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
