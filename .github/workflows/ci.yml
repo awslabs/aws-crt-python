@@ -308,7 +308,7 @@ jobs:
           version: ${{ matrix.version }}
           cpu_count: 4
           shell: bash
-          environment_variables: AWS_DEFAULT_REGION
+          environment_variables: AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN AWS_DEFAULT_REGION 
           run: |
             sudo pkg_add awscli py3-pip py3-urllib3
             python3 -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz', 'builder')"
