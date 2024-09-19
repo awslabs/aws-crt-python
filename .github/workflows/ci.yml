@@ -7,8 +7,8 @@ on:
       - 'docs'
 
 env:
-  BUILDER_VERSION: v0.9.66
-  BUILDER_SOURCE: releases
+  BUILDER_VERSION: test-creds
+  BUILDER_SOURCE: channels
   BUILDER_HOST: https://d19elf31gohf1l.cloudfront.net
   PACKAGE_NAME: aws-crt-python
   LINUX_BASE_IMAGE: ubuntu-18-x64
@@ -188,6 +188,9 @@ jobs:
         with:
           role-to-assume: ${{ env.CRT_CI_ROLE }}
           aws-region: ${{ env.AWS_REGION }}
+      - name: Caller Identity
+        run: |
+          aws sts get-caller-identity
       - name: Build ${{ env.PACKAGE_NAME }}
         run: |
           aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
