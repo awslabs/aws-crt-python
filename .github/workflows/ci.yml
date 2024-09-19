@@ -115,8 +115,6 @@ jobs:
           - fedora-34-x64
           - opensuse-leap
           - rhel8-x64
-    permissions:
-      id-token: write # This is required for requesting the JWT
     steps:
         # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
     - name: Build ${{ env.PACKAGE_NAME }}
@@ -140,6 +138,8 @@ jobs:
           - gcc-6
           - gcc-7
           - gcc-8
+    permissions:
+      id-token: write # This is required for requesting the JWT
     steps:
       # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
       - name: configure AWS credentials (containers)
