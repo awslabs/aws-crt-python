@@ -404,6 +404,7 @@ def awscrt_ext():
                     extra_link_args += ['-Wl,--fatal-warnings']
 
     if sys.version_info >= (3, 13):
+        # 3.13 deprecates PyWeakref_GetObject(), adds alternative
         define_macros.append(('Py_LIMITED_API', '0x030D0000'))
         py_limited_api = True
     elif sys.version_info >= (3, 11):
