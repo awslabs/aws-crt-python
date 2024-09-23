@@ -409,6 +409,7 @@ def awscrt_ext():
         define_macros.append(('Py_LIMITED_API', '0x030D0000'))
         py_limited_api = True
     elif sys.version_info >= (3, 11):
+        # 3.11 is the first stable ABI that has everything we need
         define_macros.append(('Py_LIMITED_API', '0x030B0000'))
         py_limited_api = True
 
