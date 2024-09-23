@@ -403,6 +403,7 @@ def awscrt_ext():
                 else:
                     extra_link_args += ['-Wl,--fatal-warnings']
 
+    # prefer building with stable ABI, so a wheel can work with multiple major versions
     if sys.version_info >= (3, 13):
         # 3.13 deprecates PyWeakref_GetObject(), adds alternative
         define_macros.append(('Py_LIMITED_API', '0x030D0000'))
