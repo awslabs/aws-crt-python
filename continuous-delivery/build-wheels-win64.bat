@@ -6,7 +6,7 @@
 "C:\Program Files\Python310\python.exe" setup.py sdist bdist_wheel || goto error
 "C:\Program Files\Python311\python.exe" setup.py sdist bdist_wheel || goto error
 
-:: Don't need to build wheels for Python 3.12 and later.
+:: Don't need to build wheels for Python 3.12.
 :: The 3.11 wheel uses the stable ABI, so it works with newer versions too.
 
 :: We are using the 3.13 stable ABI from 3.13 onwards because of deprecated functions.
