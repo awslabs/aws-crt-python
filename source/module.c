@@ -518,7 +518,7 @@ PyObject *aws_py_memory_view_from_byte_buffer(struct aws_byte_buf *buf) {
 
 PyObject *aws_py_weakref_get_ref(PyObject *object) {
     PyObject *self = Py_None;
-#if PY_VERSION_HEX >= 0x030D0000 /* Check if Python version is 3.13 or higher */
+#if PY_VERSION_HEX >= 0x030D0000               /* Check if Python version is 3.13 or higher */
     if (PyWeakref_GetRef(object, &self) < 0) { /* strong reference */
         return Py_None;
     }
@@ -530,6 +530,7 @@ PyObject *aws_py_weakref_get_ref(PyObject *object) {
 }
 
 PyObject *aws_py_weakref_release_ref(PyObject *object) {
+    (void)object;
     /* Python versions before 3.13 returns a borrowed reference */
 #if PY_VERSION_HEX >= 0x030D0000
     Py_XDECREF(object);
