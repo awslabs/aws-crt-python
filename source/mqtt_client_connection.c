@@ -151,7 +151,7 @@ static void s_on_connection_success(
         }
     }
 
-    aws_py_weakref_release_ref(self);
+    Py_XDECREF(self);
     PyGILState_Release(state);
 }
 
@@ -178,7 +178,7 @@ static void s_on_connection_failure(struct aws_mqtt_client_connection *connectio
         }
     }
 
-    aws_py_weakref_release_ref(self);
+    Py_XDECREF(self);
     PyGILState_Release(state);
 }
 
@@ -206,7 +206,7 @@ static void s_on_connection_interrupted(struct aws_mqtt_client_connection *conne
         }
     }
 
-    aws_py_weakref_release_ref(self);
+    Py_XDECREF(self);
     PyGILState_Release(state);
 }
 
@@ -240,7 +240,7 @@ static void s_on_connection_resumed(
             PyErr_WriteUnraisable(PyErr_Occurred());
         }
     }
-    aws_py_weakref_release_ref(self);
+    Py_XDECREF(self);
     PyGILState_Release(state);
 }
 
@@ -271,7 +271,7 @@ static void s_on_connection_closed(
         }
     }
 
-    aws_py_weakref_release_ref(self);
+    Py_XDECREF(self);
     PyGILState_Release(state);
 }
 
@@ -598,7 +598,7 @@ static void s_ws_handshake_transform(
 done:;
     /* Save off error code, so it doesn't got stomped before we pass it to callback*/
     int error_code = aws_last_error();
-    aws_py_weakref_release_ref(connection_py);
+    Py_XDECREF(connection_py);
 
     if (ws_transform_capsule) {
         Py_DECREF(ws_transform_capsule);

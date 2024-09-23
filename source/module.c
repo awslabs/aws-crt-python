@@ -525,16 +525,9 @@ PyObject *aws_py_weakref_get_ref(PyObject *object) {
 #else
     /* PyWeakref_GetObject is deprecated since python 3.13 */
     self = PyWeakref_GetObject(object); /* borrowed reference */
+    Py_XINCREF(self);
 #endif
     return self;
-}
-
-void aws_py_weakref_release_ref(PyObject *object) {
-    (void)object;
-    /* Python versions before 3.13 returns a borrowed reference */
-#if PY_VERSION_HEX >= 0x030D0000
-    Py_XDECREF(object);
-#endif
 }
 
 int aws_py_gilstate_ensure(PyGILState_STATE *out_state) {
