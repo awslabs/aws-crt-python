@@ -529,7 +529,7 @@ PyObject *aws_py_weakref_get_ref(PyObject *object) {
     return self;
 }
 
-PyObject *aws_py_weakref_release_ref(PyObject *object) {
+void aws_py_weakref_release_ref(PyObject *object) {
     (void)object;
     /* Python versions before 3.13 returns a borrowed reference */
 #if PY_VERSION_HEX >= 0x030D0000
