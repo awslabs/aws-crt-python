@@ -516,6 +516,26 @@ PyObject *aws_py_memory_view_from_byte_buffer(struct aws_byte_buf *buf) {
     return PyMemoryView_FromMemory(mem_start, mem_size, PyBUF_WRITE);
 }
 
+PyObject *aws_py_weakref_get_ref(PyObject *object) {
+    PyObject *self = Py_None;
+#if PY_VERSION_HEX >= 0x030D0000 /* Check if Python version is 3.13 or higher */
+    if (PyWeakref_GetRef(object, &self) < 0) { /* strong reference */
+        return Py_None;
+    }
+#else
+    /* PyWeakref_GetObject is deprecated since python 3.13 */
+    self = PyWeakref_GetObject(object); /* borrowed reference */
+#endif
+    return self;
+}
+
+PyObject *aws_py_weakref_release_ref(PyObject *object) {
+    /* Python versions before 3.13 returns a borrowed reference */
+#if PY_VERSION_HEX >= 0x030D0000
+    Py_XDECREF(object);
+#endif
+}
+
 int aws_py_gilstate_ensure(PyGILState_STATE *out_state) {
     if (AWS_LIKELY(Py_IsInitialized())) {
         *out_state = PyGILState_Ensure();

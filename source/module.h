@@ -106,6 +106,11 @@ PyObject *aws_py_get_error_message(PyObject *self, PyObject *args);
 /* Create a write-only memoryview from the remaining free space in an aws_byte_buf */
 PyObject *aws_py_memory_view_from_byte_buffer(struct aws_byte_buf *buf);
 
+/* Python 3.13+ changed the function to get a reference from WeakRef. This function is an abstraction over two different methods since we support Python versions before 3.13. */
+PyObject *aws_py_weakref_get_ref(PyObject *object);
+/* Release the weakwef provided by the `aws_py_weakref_get_ref`. */
+PyObject *aws_py_weakref_release_ref(PyObject *object);
+
 /* Allocator that calls into PyObject_[Malloc|Free|Realloc] */
 struct aws_allocator *aws_py_get_allocator(void);
 

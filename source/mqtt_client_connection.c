@@ -140,17 +140,7 @@ static void s_on_connection_success(
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
-    PyObject *self = Py_None;
-#if PY_VERSION_HEX >= 0x030D0000                                  /* Check if Python version is 3.13 or higher */
-    if (PyWeakref_GetRef(py_connection->self_proxy, &self) < 0) { /* strong reference */
-        PyErr_WriteUnraisable(PyErr_Occurred());
-        goto on_done;
-    }
-#else
-    /* PyWeakref_GetObject is deprecated since python 3.13 */
-    self = PyWeakref_GetObject(py_connection->self_proxy); /* borrowed reference */
-#endif
-
+    PyObject *self = aws_py_weakref_get_ref(py_connection->self_proxy);
     if (self != Py_None) {
         PyObject *success_result =
             PyObject_CallMethod(self, "_on_connection_success", "(iN)", return_code, PyBool_FromLong(session_present));
@@ -160,11 +150,8 @@ static void s_on_connection_success(
             PyErr_WriteUnraisable(PyErr_Occurred());
         }
     }
-    goto on_done; /* fixes unused label waring */
-on_done:
-#if PY_VERSION_HEX >= 0x030D0000
-    Py_XDECREF(self);
-#endif
+
+    aws_py_weakref_release_ref(self);
     PyGILState_Release(state);
 }
 
@@ -181,17 +168,7 @@ static void s_on_connection_failure(struct aws_mqtt_client_connection *connectio
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
-    PyObject *self = Py_None;
-#if PY_VERSION_HEX >= 0x030D0000                                  /* Check if Python version is 3.13 or higher */
-    if (PyWeakref_GetRef(py_connection->self_proxy, &self) < 0) { /* strong reference */
-        PyErr_WriteUnraisable(PyErr_Occurred());
-        goto on_done;
-    }
-#else
-    /* PyWeakref_GetObject is deprecated since python 3.13 */
-    self = PyWeakref_GetObject(py_connection->self_proxy); /* borrowed reference */
-#endif
-
+    PyObject *self = aws_py_weakref_get_ref(py_connection->self_proxy);
     if (self != Py_None) {
         PyObject *success_result = PyObject_CallMethod(self, "_on_connection_failure", "(i)", error_code);
         if (success_result) {
@@ -201,11 +178,7 @@ static void s_on_connection_failure(struct aws_mqtt_client_connection *connectio
         }
     }
 
-    goto on_done; /* fixes unused label waring */
-on_done:
-#if PY_VERSION_HEX >= 0x030D0000
-    Py_XDECREF(self);
-#endif
+    aws_py_weakref_release_ref(self);
     PyGILState_Release(state);
 }
 
@@ -223,17 +196,7 @@ static void s_on_connection_interrupted(struct aws_mqtt_client_connection *conne
     }
 
     /* Ensure that python class is still alive */
-    PyObject *self = Py_None;
-#if PY_VERSION_HEX >= 0x030D0000                                  /* Check if Python version is 3.13 or higher */
-    if (PyWeakref_GetRef(py_connection->self_proxy, &self) < 0) { /* strong reference */
-        PyErr_WriteUnraisable(PyErr_Occurred());
-        goto on_done;
-    }
-#else
-    /* PyWeakref_GetObject is deprecated since python 3.13 */
-    self = PyWeakref_GetObject(py_connection->self_proxy); /* borrowed reference */
-#endif
-
+    PyObject *self = aws_py_weakref_get_ref(py_connection->self_proxy);
     if (self != Py_None) {
         PyObject *result = PyObject_CallMethod(self, "_on_connection_interrupted", "(i)", error_code);
         if (result) {
@@ -243,11 +206,7 @@ static void s_on_connection_interrupted(struct aws_mqtt_client_connection *conne
         }
     }
 
-    goto on_done; /* fixes unused label waring */
-on_done:
-#if PY_VERSION_HEX >= 0x030D0000
-    Py_XDECREF(self);
-#endif
+    aws_py_weakref_release_ref(self);
     PyGILState_Release(state);
 }
 
@@ -271,17 +230,7 @@ static void s_on_connection_resumed(
     }
 
     /* Ensure that python class is still alive */
-    PyObject *self = Py_None;
-#if PY_VERSION_HEX >= 0x030D0000                                  /* Check if Python version is 3.13 or higher */
-    if (PyWeakref_GetRef(py_connection->self_proxy, &self) < 0) { /* strong reference */
-        PyErr_WriteUnraisable(PyErr_Occurred());
-        goto on_done;
-    }
-#else
-    /* PyWeakref_GetObject is deprecated since python 3.13 */
-    self = PyWeakref_GetObject(py_connection->self_proxy); /* borrowed reference */
-#endif
-
+    PyObject *self = aws_py_weakref_get_ref(py_connection->self_proxy);
     if (self != Py_None) {
         PyObject *result =
             PyObject_CallMethod(self, "_on_connection_resumed", "(iN)", return_code, PyBool_FromLong(session_present));
@@ -291,11 +240,7 @@ static void s_on_connection_resumed(
             PyErr_WriteUnraisable(PyErr_Occurred());
         }
     }
-    goto on_done; /* fixes unused label waring */
-on_done:
-#if PY_VERSION_HEX >= 0x030D0000
-    Py_XDECREF(self);
-#endif
+    aws_py_weakref_release_ref(self);
     PyGILState_Release(state);
 }
 
@@ -316,17 +261,7 @@ static void s_on_connection_closed(
 
     struct mqtt_connection_binding *py_connection = userdata;
     /* Ensure that python class is still alive */
-    PyObject *self = Py_None;
-#if PY_VERSION_HEX >= 0x030D0000                                  /* Check if Python version is 3.13 or higher */
-    if (PyWeakref_GetRef(py_connection->self_proxy, &self) < 0) { /* strong reference */
-        PyErr_WriteUnraisable(PyErr_Occurred());
-        goto on_done;
-    }
-#else
-    /* PyWeakref_GetObject is deprecated since python 3.13 */
-    self = PyWeakref_GetObject(py_connection->self_proxy); /* borrowed reference */
-#endif
-
+    PyObject *self = aws_py_weakref_get_ref(py_connection->self_proxy);
     if (self != Py_None) {
         PyObject *result = PyObject_CallMethod(self, "_on_connection_closed", "()");
         if (result) {
@@ -336,11 +271,7 @@ static void s_on_connection_closed(
         }
     }
 
-    goto on_done; /* fixes unused label waring */
-on_done:
-#if PY_VERSION_HEX >= 0x030D0000
-    Py_XDECREF(self);
-#endif
+    aws_py_weakref_release_ref(self);
     PyGILState_Release(state);
 }
 
@@ -608,17 +539,8 @@ static void s_ws_handshake_transform(
     }
 
     /* Ensure python mqtt connection object is still alive */
-    PyObject *connection_py = Py_None;
-#if PY_VERSION_HEX >= 0x030D0000 /* Check if Python version is 3.13 or higher */
-    if (PyWeakref_GetRef(connection_binding->self_proxy, &connection_py) < 0) { /* strong reference */
-        aws_raise_error(AWS_ERROR_INVALID_STATE);
-        goto done;
-    }
-#else
-    /* PyWeakref_GetObject is deprecated since python 3.13 */
-    connection_py = PyWeakref_GetObject(connection_binding->self_proxy); /* borrowed reference */
-#endif
 
+    PyObject *connection_py = aws_py_weakref_get_ref(connection_binding->self_proxy);
     if (connection_py == Py_None) {
         aws_raise_error(AWS_ERROR_INVALID_STATE);
         goto done;
@@ -676,9 +598,7 @@ static void s_ws_handshake_transform(
 done:;
     /* Save off error code, so it doesn't got stomped before we pass it to callback*/
     int error_code = aws_last_error();
-#if PY_VERSION_HEX >= 0x030D0000
-    Py_XDECREF(connection_py);
-#endif
+    aws_py_weakref_release_ref(connection_py);
 
     if (ws_transform_capsule) {
         Py_DECREF(ws_transform_capsule);
