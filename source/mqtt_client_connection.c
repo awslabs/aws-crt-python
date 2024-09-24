@@ -140,8 +140,8 @@ static void s_on_connection_success(
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
-    PyObject *self = aws_py_weakref_get_ref(py_connection->self_proxy);
-    if (self != Py_None) {
+    PyObject *self = aws_py_weakref_get_ref(py_connection->self_proxy); /* new reference */
+    if (self != NULL) {
         PyObject *success_result =
             PyObject_CallMethod(self, "_on_connection_success", "(iN)", return_code, PyBool_FromLong(session_present));
         if (success_result) {
@@ -149,9 +149,9 @@ static void s_on_connection_success(
         } else {
             PyErr_WriteUnraisable(PyErr_Occurred());
         }
+        Py_DECREF(self);
     }
 
-    Py_XDECREF(self);
     PyGILState_Release(state);
 }
 
@@ -168,17 +168,17 @@ static void s_on_connection_failure(struct aws_mqtt_client_connection *connectio
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
-    PyObject *self = aws_py_weakref_get_ref(py_connection->self_proxy);
-    if (self != Py_None) {
+    PyObject *self = aws_py_weakref_get_ref(py_connection->self_proxy); /* new reference */
+    if (self != NULL) {
         PyObject *success_result = PyObject_CallMethod(self, "_on_connection_failure", "(i)", error_code);
         if (success_result) {
             Py_DECREF(success_result);
         } else {
             PyErr_WriteUnraisable(PyErr_Occurred());
         }
+        Py_DECREF(self);
     }
 
-    Py_XDECREF(self);
     PyGILState_Release(state);
 }
 
@@ -196,17 +196,17 @@ static void s_on_connection_interrupted(struct aws_mqtt_client_connection *conne
     }
 
     /* Ensure that python class is still alive */
-    PyObject *self = aws_py_weakref_get_ref(py_connection->self_proxy);
-    if (self != Py_None) {
+    PyObject *self = aws_py_weakref_get_ref(py_connection->self_proxy); /* new reference */
+    if (self != NULL) {
         PyObject *result = PyObject_CallMethod(self, "_on_connection_interrupted", "(i)", error_code);
         if (result) {
             Py_DECREF(result);
         } else {
             PyErr_WriteUnraisable(PyErr_Occurred());
         }
+        Py_DECREF(self);
     }
 
-    Py_XDECREF(self);
     PyGILState_Release(state);
 }
 
@@ -230,8 +230,8 @@ static void s_on_connection_resumed(
     }
 
     /* Ensure that python class is still alive */
-    PyObject *self = aws_py_weakref_get_ref(py_connection->self_proxy);
-    if (self != Py_None) {
+    PyObject *self = aws_py_weakref_get_ref(py_connection->self_proxy); /* new reference */
+    if (self != NULL) {
         PyObject *result =
             PyObject_CallMethod(self, "_on_connection_resumed", "(iN)", return_code, PyBool_FromLong(session_present));
         if (result) {
@@ -239,8 +239,9 @@ static void s_on_connection_resumed(
         } else {
             PyErr_WriteUnraisable(PyErr_Occurred());
         }
+        Py_DECREF(self);
     }
-    Py_XDECREF(self);
+
     PyGILState_Release(state);
 }
 
@@ -261,17 +262,17 @@ static void s_on_connection_closed(
 
     struct mqtt_connection_binding *py_connection = userdata;
     /* Ensure that python class is still alive */
-    PyObject *self = aws_py_weakref_get_ref(py_connection->self_proxy);
-    if (self != Py_None) {
+    PyObject *self = aws_py_weakref_get_ref(py_connection->self_proxy); /* new reference */
+    if (self != NULL) {
         PyObject *result = PyObject_CallMethod(self, "_on_connection_closed", "()");
         if (result) {
             Py_DECREF(result);
         } else {
             PyErr_WriteUnraisable(PyErr_Occurred());
         }
+        Py_DECREF(self);
     }
 
-    Py_XDECREF(self);
     PyGILState_Release(state);
 }
 
@@ -540,8 +541,8 @@ static void s_ws_handshake_transform(
 
     /* Ensure python mqtt connection object is still alive */
 
-    PyObject *connection_py = aws_py_weakref_get_ref(connection_binding->self_proxy);
-    if (connection_py == Py_None) {
+    PyObject *connection_py = aws_py_weakref_get_ref(connection_binding->self_proxy); /* new reference */
+    if (connection_py == NULL) {
         aws_raise_error(AWS_ERROR_INVALID_STATE);
         goto done;
     }

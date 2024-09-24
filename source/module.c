@@ -516,18 +516,37 @@ PyObject *aws_py_memory_view_from_byte_buffer(struct aws_byte_buf *buf) {
     return PyMemoryView_FromMemory(mem_start, mem_size, PyBUF_WRITE);
 }
 
-PyObject *aws_py_weakref_get_ref(PyObject *object) {
-    PyObject *self = Py_None;
-#if PY_VERSION_HEX >= 0x030D0000               /* Check if Python version is 3.13 or higher */
-    if (PyWeakref_GetRef(object, &self) < 0) { /* strong reference */
-        return Py_None;
+PyObject *aws_py_weakref_get_ref(PyObject *ref) {
+    /* If Python >= 3.13 */
+#if PY_VERSION_HEX >= 0x030D0000
+    /* Use PyWeakref_GetRef() (new in Python 3.13), which gets you:
+    /* a new strong reference,
+     * or NULL because ref is dead,
+     * or -1 because you called it wrong */
+    PyObject *obj = NULL;
+    if (PyWeakref_GetRef(ref, &obj) == -1) {
+        PyErr_WriteUnraisable(PyErr_Occurred());
+        AWS_FATAL_ASSERT(0 && "expected a weakref");
     }
+    return obj;
+
 #else
-    /* PyWeakref_GetObject is deprecated since python 3.13 */
-    self = PyWeakref_GetObject(object); /* borrowed reference */
-    Py_XINCREF(self);
+    /* Use PyWeakref_GetObject() (deprecated as of Python 3.13), which gets you:
+     * a borrowed reference,
+     * or Py_None because ref is dead,
+     * or NULL because you called it wrong */
+    PyObject *obj = PyWeakref_GetObject(ref); /* borrowed reference */
+    if (obj == NULL) {
+        PyErr_WriteUnraisable(PyErr_Occurred());
+        AWS_FATAL_ASSERT(0 && "expected a weakref");
+    } else if (obj == Py_None) {
+        return NULL;
+    } else {
+        /* Be like PyWeakref_GetRef() and make it new strong reference */
+        Py_INCREF(obj);
+        return obj;
+    }
 #endif
-    return self;
 }
 
 int aws_py_gilstate_ensure(PyGILState_STATE *out_state) {
