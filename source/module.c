@@ -526,7 +526,7 @@ PyObject *aws_py_weakref_get_ref(PyObject *ref) {
     PyObject *obj = NULL;
     if (PyWeakref_GetRef(ref, &obj) == -1) {
         PyErr_WriteUnraisable(PyErr_Occurred());
-        AWS_FATAL_ASSERT(0 && "expected a weakref");
+        AWS_ASSERT(0 && "expected a weakref");
     }
     return obj;
 
@@ -538,14 +538,14 @@ PyObject *aws_py_weakref_get_ref(PyObject *ref) {
     PyObject *obj = PyWeakref_GetObject(ref); /* borrowed reference */
     if (obj == NULL) {
         PyErr_WriteUnraisable(PyErr_Occurred());
-        AWS_FATAL_ASSERT(0 && "expected a weakref");
+        AWS_ASSERT(0 && "expected a weakref");
     } else if (obj == Py_None) {
-        return NULL;
+        obj = NULL;
     } else {
         /* Be like PyWeakref_GetRef() and make it new strong reference */
         Py_INCREF(obj);
-        return obj;
     }
+    return obj;
 #endif
 }
 

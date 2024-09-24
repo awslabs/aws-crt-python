@@ -113,16 +113,17 @@ PyObject *aws_py_memory_view_from_byte_buffer(struct aws_byte_buf *buf);
  * Given a weak reference, returns a NEW strong reference to the referenced object,
  * or NULL if the reference is dead (this function NEVER raises a python exception or AWS Error).
  *
+ * You MUST NOT call this if ref came from a user, or ref is NULL.
+ *
  * This is a simplified version of PyWeakref_GetRef() / PyWeakref_GetObject().
  * Simpler because:
  * - Python 3.13 adds PyWeakref_GetRef() and deprecates PyWeakref_GetObject().
  *   This function calls the appropriate one.
  *
- * - This will AWS_FATAL_ASSERT if ref is not a weak reference,
- *   So you only need to handle 2 outcomes instead of 3
- *   (the 3rd being a Python exception for calling it incorrectly).
- *   But this means it's only safe to call if we created the ref ourselves.
- *   Do not call if ref could have come from the user.
+ * - This functions has 2 outcomes instead of 3:
+ *   The 3rd being a Python exception for calling it incorrectly.
+ *   If that happens, this function calls PyErr_WriteUnraisable() to clear the exception,
+ *   which is what you would have done anyway.
  */
 PyObject *aws_py_weakref_get_ref(PyObject *ref);
 
