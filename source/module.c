@@ -520,7 +520,7 @@ PyObject *aws_py_weakref_get_ref(PyObject *ref) {
     /* If Python >= 3.13 */
 #if PY_VERSION_HEX >= 0x030D0000
     /* Use PyWeakref_GetRef() (new in Python 3.13), which gets you:
-    /* a new strong reference,
+     * a new strong reference,
      * or NULL because ref is dead,
      * or -1 because you called it wrong */
     PyObject *obj = NULL;
