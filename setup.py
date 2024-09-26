@@ -76,7 +76,7 @@ def determine_generator_args():
     if sys.platform == 'win32':
         try:
             # See which compiler python picks
-            from setuptools._distutils import ccompiler  # We use ccompiler on windows to determine the msvc version
+            import distutils.ccompiler
             compiler = ccompiler.new_compiler()
             compiler.initialize()
 
@@ -325,7 +325,10 @@ def awscrt_ext():
     libraries.reverse()
 
     if sys.platform == 'win32':
-        from setuptools._distutils import ccompiler  # We use ccompiler on windows to determine the msvc version
+        # distutils is deprecated in Python 3.10 and removed in 3.12. However, it still works because Python defines a compatibility interface as long as setuptools is installed.
+        # We don't have an official alternative for distutils.ccompiler as of September 2024. See: https://github.com/pypa/setuptools/pull/3445
+        # Once that issue is resolved, we can migrate to the official solution. For now, restrict distutils to Windows only, where it's needed.
+        import distutils.ccompiler
         # the windows apis being used under the hood. Since we're static linking we have to follow the entire chain down
         libraries += ['Secur32', 'Crypt32', 'Advapi32', 'NCrypt', 'BCrypt', 'Kernel32', 'Ws2_32', 'Shlwapi']
         # Ensure that debug info is in the obj files, and that it is linked into the .pyd so that
