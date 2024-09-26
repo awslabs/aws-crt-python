@@ -14,6 +14,7 @@ import sys
 import sysconfig
 from wheel.bdist_wheel import bdist_wheel
 
+
 def is_64bit():
     return sys.maxsize > 2 ** 32
 
@@ -324,7 +325,6 @@ def awscrt_ext():
     libraries.reverse()
 
     if sys.platform == 'win32':
-        from setuptools._distutils import ccompiler # We use ccompiler on windows to determine the msvc version
         # the windows apis being used under the hood. Since we're static linking we have to follow the entire chain down
         libraries += ['Secur32', 'Crypt32', 'Advapi32', 'NCrypt', 'BCrypt', 'Kernel32', 'Ws2_32', 'Shlwapi']
         # Ensure that debug info is in the obj files, and that it is linked into the .pyd so that
