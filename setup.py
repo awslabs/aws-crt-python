@@ -1,8 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
-
 import codecs
-import distutils.ccompiler
 import glob
 import os
 import os.path
@@ -15,7 +13,6 @@ import subprocess
 import sys
 import sysconfig
 from wheel.bdist_wheel import bdist_wheel
-
 
 def is_64bit():
     return sys.maxsize > 2 ** 32
@@ -78,7 +75,7 @@ def determine_generator_args():
     if sys.platform == 'win32':
         try:
             # See which compiler python picks
-            compiler = distutils.ccompiler.new_compiler()
+            compiler = ccompiler.new_compiler()
             compiler.initialize()
 
             # Look at compiler path to divine the Visual Studio version.
@@ -326,6 +323,7 @@ def awscrt_ext():
     libraries.reverse()
 
     if sys.platform == 'win32':
+        from setuptools._distutils import ccompiler # We use ccompiler on windows to determine the msvc version
         # the windows apis being used under the hood. Since we're static linking we have to follow the entire chain down
         libraries += ['Secur32', 'Crypt32', 'Advapi32', 'NCrypt', 'BCrypt', 'Kernel32', 'Ws2_32', 'Shlwapi']
         # Ensure that debug info is in the obj files, and that it is linked into the .pyd so that
@@ -374,7 +372,7 @@ def awscrt_ext():
         # rare cases where that didn't happen, so let's be explicit.
         extra_link_args += ['-pthread']
 
-    if distutils.ccompiler.get_default_compiler() != 'msvc':
+    if sys.platform != 'win32' or ccompiler.get_default_compiler() != 'msvc':
         extra_compile_args += ['-Wno-strict-aliasing', '-std=gnu99']
 
         # treat warnings as errors in development mode
