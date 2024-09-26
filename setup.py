@@ -77,7 +77,7 @@ def determine_generator_args():
         try:
             # See which compiler python picks
             import distutils.ccompiler
-            compiler = ccompiler.new_compiler()
+            compiler = distutils.ccompiler.new_compiler()
             compiler.initialize()
 
             # Look at compiler path to divine the Visual Studio version.
@@ -377,7 +377,7 @@ def awscrt_ext():
         # rare cases where that didn't happen, so let's be explicit.
         extra_link_args += ['-pthread']
 
-    if sys.platform != 'win32' or ccompiler.get_default_compiler() != 'msvc':
+    if sys.platform != 'win32' or distutils.ccompiler.get_default_compiler() != 'msvc':
         extra_compile_args += ['-Wno-strict-aliasing', '-std=gnu99']
 
         # treat warnings as errors in development mode
