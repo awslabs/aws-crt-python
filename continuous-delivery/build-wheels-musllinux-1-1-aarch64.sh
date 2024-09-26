@@ -4,9 +4,6 @@ set -ex
 
 /opt/python/cp39-cp39/bin/python ./continuous-delivery/update-version.py
 
-/opt/python/cp37-cp37m/bin/python setup.py sdist bdist_wheel
-auditwheel repair --plat musllinux_1_1_aarch64 dist/awscrt-*cp37*.whl
-
 /opt/python/cp38-cp38/bin/python setup.py sdist bdist_wheel
 auditwheel repair --plat musllinux_1_1_aarch64 dist/awscrt-*cp38*.whl
 
