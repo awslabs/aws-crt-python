@@ -75,6 +75,7 @@ def determine_generator_args():
     if sys.platform == 'win32':
         try:
             # See which compiler python picks
+            from setuptools._distutils import ccompiler  # We use ccompiler on windows to determine the msvc version
             compiler = ccompiler.new_compiler()
             compiler.initialize()
 
