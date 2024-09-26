@@ -75,7 +75,9 @@ def determine_generator_args():
     if sys.platform == 'win32':
         try:
             # See which compiler python picks
-            compiler = setuptools._distutils.ccompiler.new_compiler()
+            from setuptools._distutils import ccompiler  # We use ccompiler on windows to determine the msvc version
+            compiler = ccompiler.new_compiler()
+            compiler.initialize()
 
             # Look at compiler path to divine the Visual Studio version.
             # This technique may not work with customized VS install paths.
@@ -322,6 +324,7 @@ def awscrt_ext():
     libraries.reverse()
 
     if sys.platform == 'win32':
+        from setuptools._distutils import ccompiler # We use ccompiler on windows to determine the msvc version
         # the windows apis being used under the hood. Since we're static linking we have to follow the entire chain down
         libraries += ['Secur32', 'Crypt32', 'Advapi32', 'NCrypt', 'BCrypt', 'Kernel32', 'Ws2_32', 'Shlwapi']
         # Ensure that debug info is in the obj files, and that it is linked into the .pyd so that
@@ -370,7 +373,7 @@ def awscrt_ext():
         # rare cases where that didn't happen, so let's be explicit.
         extra_link_args += ['-pthread']
 
-    if sys.platform != 'win32' or setuptools._distutils.ccompiler.get_default_compiler() != 'msvc':
+    if sys.platform != 'win32' or ccompiler.get_default_compiler() != 'msvc':
         extra_compile_args += ['-Wno-strict-aliasing', '-std=gnu99']
 
         # treat warnings as errors in development mode
