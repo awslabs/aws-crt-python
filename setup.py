@@ -304,11 +304,10 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
 class bdist_wheel_abi3(bdist_wheel):
     def get_tag(self):
         python, abi, plat = super().get_tag()
+        # on CPython, our wheels are abi3 and compatible back to 3.11
         if python.startswith("cp") and sys.version_info >= (3, 13):
-            # on CPython, our wheels are abi3 and compatible back to 3.11
             return "cp313", "abi3", plat
         elif python.startswith("cp") and sys.version_info >= (3, 11):
-            # on CPython, our wheels are abi3 and compatible back to 3.11
             return "cp311", "abi3", plat
 
         return python, abi, plat
