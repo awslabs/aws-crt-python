@@ -20,6 +20,10 @@ auditwheel repair --plat musllinux_1_1_x86_64 dist/awscrt-*cp311*.whl
 # The 3.11 wheel uses the stable ABI, so it works with newer versions too.
 
 # We are using the Python 3.13 stable ABI from Python 3.13 onwards because of deprecated functions.
+# Manylinux images don't contain setuptools from Python 3.13, so we need to install it.
+# Install in a custom location due to access issues.
+/opt/python/cp313-cp313/bin/python -m pip install --target ./local -r requirements-dev.txt
+export PYTHONPATH=./local:$PYTHONPATH
 /opt/python/cp313-cp313/bin/python setup.py sdist bdist_wheel
 auditwheel repair --plat musllinux_1_1_x86_64 dist/awscrt-*cp313*.whl
 
