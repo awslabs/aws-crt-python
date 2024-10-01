@@ -26,7 +26,6 @@ jobs:
           - x64
           - x86
         python:
-          - cp37-cp37m
           - cp38-cp38
           - cp39-cp39
     permissions:
@@ -52,7 +51,6 @@ jobs:
           - x86
           - aarch64
         python:
-          - cp37-cp37m
           - cp38-cp38
           - cp39-cp39
           - cp310-cp310
@@ -85,7 +83,6 @@ jobs:
           - x64
           - aarch64
         python:
-          - cp37-cp37m
           - cp38-cp38
           - cp39-cp39
           - cp310-cp310

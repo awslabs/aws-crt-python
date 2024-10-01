@@ -5,7 +5,6 @@ set -ex
 
 /Library/Frameworks/Python.framework/Versions/3.9/bin/python3 ./continuous-delivery/update-version.py
 
-/Library/Frameworks/Python.framework/Versions/3.7/bin/python3 setup.py sdist bdist_wheel
 /Library/Frameworks/Python.framework/Versions/3.8/bin/python3 setup.py sdist bdist_wheel
 /Library/Frameworks/Python.framework/Versions/3.9/bin/python3 setup.py sdist bdist_wheel
 /Library/Frameworks/Python.framework/Versions/3.10/bin/python3 setup.py sdist bdist_wheel
