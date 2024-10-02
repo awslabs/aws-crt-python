@@ -13,7 +13,7 @@ This library is licensed under the Apache 2.0 License.
 
 ## Minimum Requirements:
 
-*   Python 3.7+
+*   Python 3.8+
 
 ## Installation
 
