@@ -466,7 +466,7 @@ setuptools.setup(
         "Operating System :: Unix",
         "Operating System :: MacOS",
     ],
-    python_requires='>=3.7',
+    python_requires='>=3.8',
     ext_modules=[awscrt_ext()],
     cmdclass={'build_ext': awscrt_build_ext, "bdist_wheel": bdist_wheel_abi3},
     test_suite='test',
