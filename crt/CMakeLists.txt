@@ -55,7 +55,13 @@ if(UNIX AND NOT APPLE)
     endif()
 
     set(UNSAFE_TREAT_WARNINGS_AS_ERRORS OFF CACHE BOOL "")
-    add_subdirectory(s2n)
+    # s2n-tls must be prebuilt, or the paths to its <s2n/unstable/*.h> headers is different
+    aws_prebuild_dependency(
+        DEPENDENCY_NAME S2N
+        SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/s2n
+        CMAKE_ARGUMENTS
+            -DUNSAFE_TREAT_WARNINGS_AS_ERRORS=OFF
+    )
 endif()
 
 add_subdirectory(aws-c-common)
