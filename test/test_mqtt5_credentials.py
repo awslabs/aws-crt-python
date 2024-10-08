@@ -197,40 +197,6 @@ class MqttConnectionTest(NativeResourceTest):
             input_role_secret_access_key,
             input_role_session_token
         )
-        credentials = auth.AwsCredentialsProvider.new_default_chain()
-
-        def sign_function(transform_args, **kwargs):
-            signing_config = auth.AwsSigningConfig(
-                algorithm=auth.AwsSigningAlgorithm.V4,
-                signature_type=auth.AwsSignatureType.HTTP_REQUEST_QUERY_PARAMS,
-                credentials_provider=credentials,
-                region=input_region,
-                service="iotdevicegateway",
-                omit_session_token=True
-            )
-            signing_future = auth.aws_sign_request(
-                http_request=transform_args.http_request,
-                signing_config=signing_config)
-            signing_future.add_done_callback(lambda x: transform_args.set_done(x.exception()))
-        client_options.websocket_handshake_transform = sign_function
-        client_options.tls_ctx = io.ClientTlsContext(io.TlsContextOptions())
-
-        callbacks = Mqtt5TestCallbacks()
-        client = self._create_client(client_options=client_options, callbacks=callbacks)
-        client.start()
-        callbacks.future_connection_success.result(TIMEOUT)
-        client.stop()
-        callbacks.future_stopped.result(TIMEOUT)
-
-    def test_mqtt5_ws_cred_default(self):
-        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
-        input_region = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_REGION")
-
-        client_options = mqtt5.ClientOptions(
-            host_name=input_host_name,
-            port=443
-        )
-        credentials = auth.AwsCredentialsProvider.new_default_chain()
 
         def sign_function(transform_args, **kwargs):
             signing_config = auth.AwsSigningConfig(
@@ -380,6 +346,12 @@ class MqttConnectionTest(NativeResourceTest):
         callbacks.future_stopped.result(TIMEOUT)
 
     def test_mqtt5_ws_cred_environment(self):
+        self._test_mqtt5_ws_cred_environment(use_default_chain=False)
+
+    def test_mqtt5_ws_cred_default_chain(self):
+        self._test_mqtt5_ws_cred_environment(use_default_chain=True)
+
+    def _test_mqtt5_ws_cred_environment(self, use_default_chain):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_access_key = _get_env_variable("AWS_TEST_MQTT5_ROLE_CREDENTIAL_ACCESS_KEY")
         input_secret_access_key = _get_env_variable("AWS_TEST_MQTT5_ROLE_CREDENTIAL_SECRET_ACCESS_KEY")
@@ -399,7 +371,10 @@ class MqttConnectionTest(NativeResourceTest):
         os.environ["AWS_SECRET_ACCESS_KEY"] = input_secret_access_key
         os.environ["AWS_SESSION_TOKEN"] = input_session_token
         # This should load the environment variables we just set
-        credentials = auth.AwsCredentialsProvider.new_environment()
+        if use_default_chain:
+            credentials = auth.AwsCredentialsProvider.new_default_chain()
+        else:
+            credentials = auth.AwsCredentialsProvider.new_environment()
 
         def sign_function(transform_args, **kwargs):
             signing_config = auth.AwsSigningConfig(

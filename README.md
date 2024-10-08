@@ -13,7 +13,7 @@ This library is licensed under the Apache 2.0 License.
 
 ## Minimum Requirements:
 
-*   Python 3.7+
+*   Python 3.8+
 
 ## Installation
 
@@ -45,10 +45,10 @@ To simplify installation, aws-crt-python has its own copy of libcrypto.
 This lets you install a wheel from PyPI without having OpenSSL installed.
 Unix wheels on PyPI come with libcrypto statically compiled in.
 Code to build libcrypto comes from [AWS-LC](https://github.com/aws/aws-lc).
-AWS-LC's code is included in the PyPI source package, 
+AWS-LC's code is included in the PyPI source package,
 and the git repository includes it as a submodule.
 
-If you need aws-crt-python to use the libcrypto included on your system, 
+If you need aws-crt-python to use the libcrypto included on your system,
 set environment variable `AWS_CRT_BUILD_USE_SYSTEM_LIBCRYPTO=1` while building from source:
 
 ```sh
@@ -58,6 +58,19 @@ AWS_CRT_BUILD_USE_SYSTEM_LIBCRYPTO=1 python3 -m pip install --no-binary :all: --
 
 You can ignore all this on Windows and Apple platforms, where aws-crt-python
 uses the OS's default libraries for TLS and cryptography math.
+
+### AWS_CRT_BUILD_USE_SYSTEM_LIBS ###
+
+aws-crt-python depends on several C libraries that make up the AWS Common Runtime (libaws-c-common, libaws-c-s3, etc).
+By default, these libraries are built along with aws-crt-python and statically compiled in
+(their source code is under [crt/](crt/)).
+
+To skip building these dependencies, because they're already available on your system,
+set environment variable `AWS_CRT_BUILD_USE_SYSTEM_LIBS=1` while building from source:
+
+```sh
+AWS_CRT_BUILD_USE_SYSTEM_LIBS=1 python3 -m pip install .
+```
 
 ## Mac-Only TLS Behavior
 

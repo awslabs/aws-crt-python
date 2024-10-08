@@ -1,8 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
-
 import codecs
-import distutils.ccompiler
 import glob
 import os
 import os.path
@@ -15,6 +13,12 @@ import subprocess
 import sys
 import sysconfig
 from wheel.bdist_wheel import bdist_wheel
+if sys.platform == 'win32':
+    # distutils is deprecated in Python 3.10 and removed in 3.12. However, it still works because Python defines a compatibility interface as long as setuptools is installed.
+    # We don't have an official alternative for distutils.ccompiler as of September 2024. See: https://github.com/pypa/setuptools/issues/2806
+    # Once that issue is resolved, we can migrate to the official solution.
+    # For now, restrict distutils to Windows only, where it's needed.
+    import distutils.ccompiler
 
 
 def is_64bit():
@@ -134,8 +138,14 @@ def get_cmake_path():
     raise Exception("CMake must be installed to build from source.")
 
 
+def using_system_libs():
+    """If true, don't build any dependencies. Use the libs that are already on the system."""
+    return os.getenv('AWS_CRT_BUILD_USE_SYSTEM_LIBS') == '1'
+
+
 def using_system_libcrypto():
-    return os.getenv('AWS_CRT_BUILD_USE_SYSTEM_LIBCRYPTO') == '1'
+    """If true, don't build AWS-LC. Use the libcrypto that's already on the system."""
+    return using_system_libs() or os.getenv('AWS_CRT_BUILD_USE_SYSTEM_LIBCRYPTO') == '1'
 
 
 class AwsLib:
@@ -223,7 +233,10 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
         ]
         run_cmd(build_cmd)
 
-    def _build_dependencies(self, build_dir, install_path):
+    def _build_dependencies(self):
+        build_dir = os.path.join(self.build_temp, 'deps')
+        install_path = os.path.join(self.build_temp, 'deps', 'install')
+
         if is_macos_universal2() and not is_development_mode():
             # create macOS universal binary by compiling for x86_64 and arm64,
             # each in its own subfolder, and then creating a universal binary
@@ -266,30 +279,28 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
             # normal build for a single architecture
             self._build_dependencies_impl(build_dir, install_path)
 
-    def run(self):
-        # build dependencies
-        dep_build_dir = os.path.join(self.build_temp, 'deps')
-        dep_install_path = os.path.join(self.build_temp, 'deps', 'install')
-
-        if os.path.exists(os.path.join(PROJECT_DIR, 'crt', 'aws-c-common', 'CMakeLists.txt')):
-            self._build_dependencies(dep_build_dir, dep_install_path)
-        else:
-            print("Skip building dependencies, source not found.")
-
         # update paths so awscrt_ext can access dependencies.
         # add to the front of any list so that our dependencies are preferred
         # over anything that might already be on the system (i.e. libcrypto.a)
 
-        self.include_dirs.insert(0, os.path.join(dep_install_path, 'include'))
+        self.include_dirs.insert(0, os.path.join(install_path, 'include'))
 
         # some platforms (ex: fedora) use /lib64 instead of just /lib
         lib_dir = 'lib'
-        if is_64bit() and os.path.exists(os.path.join(dep_install_path, 'lib64')):
+        if is_64bit() and os.path.exists(os.path.join(install_path, 'lib64')):
             lib_dir = 'lib64'
-        if is_32bit() and os.path.exists(os.path.join(dep_install_path, 'lib32')):
+        if is_32bit() and os.path.exists(os.path.join(install_path, 'lib32')):
             lib_dir = 'lib32'
 
-        self.library_dirs.insert(0, os.path.join(dep_install_path, lib_dir))
+        self.library_dirs.insert(0, os.path.join(install_path, lib_dir))
+
+    def run(self):
+        if using_system_libs():
+            print("Skip building dependencies, using system libs.")
+        elif not os.path.exists(os.path.join(PROJECT_DIR, 'crt', 'aws-c-common', 'CMakeLists.txt')):
+            print("Skip building dependencies, source not found.")
+        else:
+            self._build_dependencies()
 
         # continue with normal build_ext.run()
         super().run()
@@ -298,8 +309,12 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
 class bdist_wheel_abi3(bdist_wheel):
     def get_tag(self):
         python, abi, plat = super().get_tag()
-        if python.startswith("cp") and sys.version_info >= (3, 11):
-            # on CPython, our wheels are abi3 and compatible back to 3.11
+        # on CPython, our wheels are abi3 and compatible back to 3.11
+        if python.startswith("cp") and sys.version_info >= (3, 13):
+            # 3.13 deprecates PyWeakref_GetObject(), adds alternative
+            return "cp313", "abi3", plat
+        elif python.startswith("cp") and sys.version_info >= (3, 11):
+            # 3.11 is the first stable ABI that has everything we need
             return "cp311", "abi3", plat
 
         return python, abi, plat
@@ -367,7 +382,7 @@ def awscrt_ext():
         # rare cases where that didn't happen, so let's be explicit.
         extra_link_args += ['-pthread']
 
-    if distutils.ccompiler.get_default_compiler() != 'msvc':
+    if sys.platform != 'win32' or distutils.ccompiler.get_default_compiler() != 'msvc':
         extra_compile_args += ['-Wno-strict-aliasing', '-std=gnu99']
 
         # treat warnings as errors in development mode
@@ -396,7 +411,13 @@ def awscrt_ext():
                 else:
                     extra_link_args += ['-Wl,--fatal-warnings']
 
-    if sys.version_info >= (3, 11):
+    # prefer building with stable ABI, so a wheel can work with multiple major versions
+    if sys.version_info >= (3, 13):
+        # 3.13 deprecates PyWeakref_GetObject(), adds alternative
+        define_macros.append(('Py_LIMITED_API', '0x030D0000'))
+        py_limited_api = True
+    elif sys.version_info >= (3, 11):
+        # 3.11 is the first stable ABI that has everything we need
         define_macros.append(('Py_LIMITED_API', '0x030B0000'))
         py_limited_api = True
 
@@ -445,7 +466,7 @@ setuptools.setup(
         "Operating System :: Unix",
         "Operating System :: MacOS",
     ],
-    python_requires='>=3.7',
+    python_requires='>=3.8',
     ext_modules=[awscrt_ext()],
     cmdclass={'build_ext': awscrt_build_ext, "bdist_wheel": bdist_wheel_abi3},
     test_suite='test',

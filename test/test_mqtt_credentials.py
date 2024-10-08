@@ -136,40 +136,6 @@ class MqttConnectionTest(NativeResourceTest):
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
-    def test_mqtt311_ws_cred_default(self):
-        input_host_name = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
-        input_region = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_REGION")
-
-        credentials = auth.AwsCredentialsProvider.new_default_chain()
-
-        def sign_function(transform_args, **kwargs):
-            signing_config = auth.AwsSigningConfig(
-                algorithm=auth.AwsSigningAlgorithm.V4,
-                signature_type=auth.AwsSignatureType.HTTP_REQUEST_QUERY_PARAMS,
-                credentials_provider=credentials,
-                region=input_region,
-                service="iotdevicegateway",
-                omit_session_token=True
-            )
-            signing_future = auth.aws_sign_request(
-                http_request=transform_args.http_request,
-                signing_config=signing_config)
-            signing_future.add_done_callback(lambda x: transform_args.set_done(x.exception()))
-
-        elg = EventLoopGroup()
-        resolver = DefaultHostResolver(elg)
-        bootstrap = ClientBootstrap(elg, resolver)
-        client = Client(bootstrap, ClientTlsContext(TlsContextOptions()))
-        connection = Connection(
-            client=client,
-            client_id=create_client_id(),
-            host_name=input_host_name,
-            port=int(443),
-            use_websockets=True,
-            websocket_handshake_transform=sign_function)
-        connection.connect().result(TIMEOUT)
-        connection.disconnect().result(TIMEOUT)
-
     def test_mqtt311_ws_cred_cognito(self):
         input_cognito_endpoint = _get_env_variable("AWS_TEST_MQTT311_COGNITO_ENDPOINT")
         input_cognito_identity = _get_env_variable("AWS_TEST_MQTT311_COGNITO_IDENTITY")
@@ -300,6 +266,12 @@ class MqttConnectionTest(NativeResourceTest):
         connection.disconnect().result(TIMEOUT)
 
     def test_mqtt311_ws_cred_environment(self):
+        self._test_mqtt311_ws_cred_environment(use_default_chain=False)
+
+    def test_mqtt311_ws_cred_default(self):
+        self._test_mqtt311_ws_cred_environment(use_default_chain=True)
+
+    def _test_mqtt311_ws_cred_environment(self, use_default_chain):
         input_access_key = _get_env_variable("AWS_TEST_MQTT311_ROLE_CREDENTIAL_ACCESS_KEY")
         input_secret_access_key = _get_env_variable("AWS_TEST_MQTT311_ROLE_CREDENTIAL_SECRET_ACCESS_KEY")
         input_session_token = _get_env_variable("AWS_TEST_MQTT311_ROLE_CREDENTIAL_SESSION_TOKEN")
@@ -314,8 +286,11 @@ class MqttConnectionTest(NativeResourceTest):
         os.environ["AWS_ACCESS_KEY_ID"] = input_access_key
         os.environ["AWS_SECRET_ACCESS_KEY"] = input_secret_access_key
         os.environ["AWS_SESSION_TOKEN"] = input_session_token
-        # This should load the environment variables we just set
-        credentials = auth.AwsCredentialsProvider.new_environment()
+        if use_default_chain:
+            credentials = auth.AwsCredentialsProvider.new_default_chain()
+        else:
+            # This should load the environment variables we just set
+            credentials = auth.AwsCredentialsProvider.new_environment()
         signing_config = auth.AwsSigningConfig(
             algorithm=auth.AwsSigningAlgorithm.V4,
             signature_type=auth.AwsSignatureType.HTTP_REQUEST_QUERY_PARAMS,

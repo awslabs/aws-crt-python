@@ -516,6 +516,39 @@ PyObject *aws_py_memory_view_from_byte_buffer(struct aws_byte_buf *buf) {
     return PyMemoryView_FromMemory(mem_start, mem_size, PyBUF_WRITE);
 }
 
+PyObject *aws_py_weakref_get_ref(PyObject *ref) {
+    /* If Python >= 3.13 */
+#if PY_VERSION_HEX >= 0x030D0000
+    /* Use PyWeakref_GetRef() (new in Python 3.13), which gets you:
+     * a new strong reference,
+     * or NULL because ref is dead,
+     * or -1 because you called it wrong */
+    PyObject *obj = NULL;
+    if (PyWeakref_GetRef(ref, &obj) == -1) {
+        PyErr_WriteUnraisable(PyErr_Occurred());
+        AWS_ASSERT(0 && "expected a weakref");
+    }
+    return obj;
+
+#else
+    /* Use PyWeakref_GetObject() (deprecated as of Python 3.13), which gets you:
+     * a borrowed reference,
+     * or Py_None because ref is dead,
+     * or NULL because you called it wrong */
+    PyObject *obj = PyWeakref_GetObject(ref); /* borrowed reference */
+    if (obj == NULL) {
+        PyErr_WriteUnraisable(PyErr_Occurred());
+        AWS_ASSERT(0 && "expected a weakref");
+    } else if (obj == Py_None) {
+        obj = NULL;
+    } else {
+        /* Be like PyWeakref_GetRef() and make it new strong reference */
+        Py_INCREF(obj);
+    }
+    return obj;
+#endif
+}
+
 int aws_py_gilstate_ensure(PyGILState_STATE *out_state) {
     if (AWS_LIKELY(Py_IsInitialized())) {
         *out_state = PyGILState_Ensure();
@@ -730,6 +763,7 @@ static PyMethodDef s_module_methods[] = {
     /* Checksum primitives */
     AWS_PY_METHOD_DEF(checksums_crc32, METH_VARARGS),
     AWS_PY_METHOD_DEF(checksums_crc32c, METH_VARARGS),
+    AWS_PY_METHOD_DEF(checksums_crc64nvme, METH_VARARGS),
 
     /* HTTP */
     AWS_PY_METHOD_DEF(http_connection_close, METH_VARARGS),
