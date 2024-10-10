@@ -54,7 +54,6 @@ if(UNIX AND NOT APPLE)
         )
     endif()
 
-    set(UNSAFE_TREAT_WARNINGS_AS_ERRORS OFF CACHE BOOL "")
     # prebuild s2n-tls.
     aws_prebuild_dependency(
         DEPENDENCY_NAME S2N
