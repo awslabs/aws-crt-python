@@ -30,9 +30,9 @@ include(CTest)
 # (On Windows and Apple we use the default OS libraries)
 if(UNIX AND NOT APPLE)
     option(USE_OPENSSL "Set this if you want to use your system's OpenSSL compatible libcrypto" OFF)
+    include(AwsPrebuildDependency)
 
     if(NOT USE_OPENSSL)
-        include(AwsPrebuildDependency)
 
         set(AWSLC_CMAKE_ARGUMENTS
             -DDISABLE_GO=ON  # Build without using Go, we don't want the extra dependency
@@ -55,7 +55,7 @@ if(UNIX AND NOT APPLE)
     endif()
 
     set(UNSAFE_TREAT_WARNINGS_AS_ERRORS OFF CACHE BOOL "")
-    # s2n-tls must be prebuilt, or the paths to its <s2n/unstable/*.h> headers is different
+    # prebuild s2n-tls.
     aws_prebuild_dependency(
         DEPENDENCY_NAME S2N
         SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/s2n
