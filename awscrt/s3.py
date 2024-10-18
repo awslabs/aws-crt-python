@@ -10,6 +10,7 @@ from concurrent.futures import Future
 from awscrt import NativeResource
 from awscrt.http import HttpRequest
 from awscrt.io import ClientBootstrap, TlsConnectionOptions
+from awscrt.auth import AwsCredentials, AwsCredentialsProvider, AwsSignatureType, AwsSignedBodyHeaderType, AwsSignedBodyValue, AwsSigningAlgorithm, AwsSigningConfig
 from awscrt.auth import AwsCredentialsProvider, AwsSignatureType, AwsSignedBodyHeaderType, AwsSignedBodyValue, \
     AwsSigningAlgorithm, AwsSigningConfig
 import awscrt.exceptions
