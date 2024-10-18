@@ -1,6 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.9)
 
 # This CMakeLists.txt exists so we can build all the C libraries we depend on
 # simultaneously. This is much faster than building dependencies one at a time.
