@@ -222,6 +222,7 @@ class S3ClientTest(NativeResourceTest):
         self.assertIsNotNone(s3_client)
 
     def test_sanity_network_interface_names(self):
+        # This is just a sanity test to ensure that we are passing the parameter correctly.
         with self.assertRaises(Exception):
             s3_client_new(True, self.region, network_interface_names=("eth0", "invalid-network-interface"))
 
