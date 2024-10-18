@@ -221,6 +221,10 @@ class S3ClientTest(NativeResourceTest):
         s3_client = s3_client_new(True, self.region)
         self.assertIsNotNone(s3_client)
 
+    def test_sanity_network_interface_names(self):
+        s3_client = s3_client_new(True, self.region, network_interface_names=("eth0", "invalid-network-interface"))
+        self.assertIsNone(s3_client)
+
     def test_wait_shutdown(self):
         s3_client = s3_client_new(False, self.region)
         self.assertIsNotNone(s3_client)
