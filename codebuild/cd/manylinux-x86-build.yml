@@ -8,7 +8,7 @@ phases:
     commands:
       - export CC=gcc
       - cd aws-crt-python
-      - /opt/python/cp37-cp37m/bin/python ./continuous-delivery/update-version.py
+      - /opt/python/cp38-cp38m/bin/python ./continuous-delivery/update-version.py
   build:
     commands:
       - echo Build started on `date`
