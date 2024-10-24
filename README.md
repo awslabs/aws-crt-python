@@ -72,6 +72,8 @@ set environment variable `AWS_CRT_BUILD_USE_SYSTEM_LIBS=1` while building from s
 AWS_CRT_BUILD_USE_SYSTEM_LIBS=1 python3 -m pip install .
 ```
 
+If these dependencies are available as both static and shared libs, you can force the static ones to be used by setting: `AWS_CRT_BUILD_FORCE_STATIC_LIBS=1`
+
 ## Mac-Only TLS Behavior
 
 Please note that on Mac, once a private key is used with a certificate, that certificate-key pair is imported into the Mac Keychain. All subsequent uses of that certificate will use the stored private key and ignore anything passed in programmatically. Beginning in v0.6.2, when a stored private key from the Keychain is used, the following will be logged at the "info" log level:
