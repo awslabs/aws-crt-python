@@ -203,7 +203,10 @@ static void s_on_stream_complete(struct aws_http_stream *native_stream, int erro
     }
 
     /* DECREF python self, we don't need to force it to stay alive any longer. */
-    Py_DECREF(PyWeakref_GetObject(stream->self_proxy));
+    PyObject *self = aws_py_weakref_get_ref(stream->self_proxy);
+    /* DECREF twice because `aws_py_weakref_get_ref` returns a strong reference */
+    Py_XDECREF(self);
+    Py_XDECREF(self);
 
     PyGILState_Release(state);
     /*************** GIL RELEASE ***************/

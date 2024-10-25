@@ -1,6 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.9)
 
 # This CMakeLists.txt exists so we can build all the C libraries we depend on
 # simultaneously. This is much faster than building dependencies one at a time.
@@ -30,21 +30,38 @@ include(CTest)
 # (On Windows and Apple we use the default OS libraries)
 if(UNIX AND NOT APPLE)
     option(USE_OPENSSL "Set this if you want to use your system's OpenSSL compatible libcrypto" OFF)
+    include(AwsPrebuildDependency)
 
     if(NOT USE_OPENSSL)
-        set(DISABLE_GO ON CACHE BOOL "Build without using Go, we don't want the extra dependency")
-        set(BUILD_LIBSSL OFF CACHE BOOL "Don't need libssl, only need libcrypto")
 
-        set(DISABLE_PERL ON CACHE BOOL "Build without using Perl, we don't want the extra dependency")
+        set(AWSLC_CMAKE_ARGUMENTS
+            -DDISABLE_GO=ON  # Build without using Go, we don't want the extra dependency
+            -DDISABLE_PERL=ON  # Build without using Perl, we don't want the extra dependency
+            -DBUILD_LIBSSL=OFF  # Don't need libssl, only need libcrypto
+            -DBUILD_TESTING=OFF
+        )
+
         if(CMAKE_C_COMPILER_ID MATCHES "GNU" AND CMAKE_C_COMPILER_VERSION VERSION_LESS "5.0")
-            set(MY_ASSEMBLER_IS_TOO_OLD_FOR_512AVX ON CACHE BOOL "Disable AVX512 on old GCC that not supports it")
+            # Disable AVX512 on old GCC that not supports it.
+            list(APPEND AWSLC_CMAKE_ARGUMENTS -DMY_ASSEMBLER_IS_TOO_OLD_FOR_512AVX=ON)
         endif()
 
-        add_subdirectory(aws-lc)
+        # s2n-tls uses libcrypto during its configuration, so we need to prebuild aws-lc.
+        aws_prebuild_dependency(
+            DEPENDENCY_NAME AWSLC
+            SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/aws-lc
+            CMAKE_ARGUMENTS ${AWSLC_CMAKE_ARGUMENTS}
+        )
     endif()
 
-    set(UNSAFE_TREAT_WARNINGS_AS_ERRORS OFF CACHE BOOL "")
-    add_subdirectory(s2n)
+    # prebuild s2n-tls.
+    aws_prebuild_dependency(
+        DEPENDENCY_NAME S2N
+        SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/s2n
+        CMAKE_ARGUMENTS
+            -DUNSAFE_TREAT_WARNINGS_AS_ERRORS=OFF
+            -DBUILD_TESTING=OFF
+    )
 endif()
 
 add_subdirectory(aws-c-common)

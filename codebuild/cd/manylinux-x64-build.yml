@@ -8,12 +8,10 @@ phases:
     commands:
       - export CC=gcc
       - cd aws-crt-python
-      - /opt/python/cp37-cp37m/bin/python ./continuous-delivery/update-version.py
+      - /opt/python/cp38-cp38/bin/python ./continuous-delivery/update-version.py
   build:
     commands:
       - echo Build started on `date`
-      - /opt/python/cp37-cp37m/bin/python setup.py sdist bdist_wheel
-      - auditwheel repair --plat manylinux1_x86_64 dist/awscrt-*cp37-cp37m-linux_x86_64.whl
       - /opt/python/cp38-cp38/bin/python setup.py sdist bdist_wheel
       - auditwheel repair --plat manylinux1_x86_64 dist/awscrt-*cp38-cp38-linux_x86_64.whl
       - /opt/python/cp39-cp39/bin/python setup.py sdist bdist_wheel
