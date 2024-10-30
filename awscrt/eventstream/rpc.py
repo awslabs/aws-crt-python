@@ -11,7 +11,7 @@ from awscrt import NativeResource
 import awscrt.exceptions
 from awscrt.eventstream import Header
 from awscrt.io import ClientBootstrap, SocketOptions, TlsConnectionOptions
-from collections.abc import ByteString, Callable
+from collections.abc import Callable, Union
 from concurrent.futures import Future
 from enum import IntEnum
 from functools import partial
@@ -381,7 +381,7 @@ class ClientConnection(NativeResource):
             self,
             *,
             headers: Optional[Sequence[Header]] = None,
-            payload: Optional[ByteString] = None,
+            payload: Optional[Union[bytes, bytearray]] = None,
             message_type: MessageType,
             flags: Optional[int] = None,
             on_flush: Callable = None) -> 'concurrent.futures.Future':
@@ -483,7 +483,7 @@ class ClientContinuation(NativeResource):
             *,
             operation: str,
             headers: Sequence[Header] = None,
-            payload: ByteString = None,
+            payload: Union[bytes, bytearray] = None,
             message_type: MessageType,
             flags: int = None,
             on_flush: Callable = None):
@@ -553,7 +553,7 @@ class ClientContinuation(NativeResource):
             self,
             *,
             headers: Sequence[Header] = None,
-            payload: ByteString = None,
+            payload: Union[bytes, bytearray] = None,
             message_type: MessageType,
             flags: int = None,
             on_flush: Callable = None) -> 'concurrent.futures.Future':
