@@ -11,11 +11,11 @@ from awscrt import NativeResource
 import awscrt.exceptions
 from awscrt.eventstream import Header
 from awscrt.io import ClientBootstrap, SocketOptions, TlsConnectionOptions
-from collections.abc import Callable, Union
+from collections.abc import Callable
 from concurrent.futures import Future
 from enum import IntEnum
 from functools import partial
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Union
 
 __all__ = [
     'MessageType',
