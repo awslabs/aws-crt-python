@@ -91,7 +91,12 @@ class RSASignatureAlgorithm(IntEnum):
     PKCSv1.5 padding with sha256 hash function
     """
 
-    PSS_SHA256 = 1
+    PKCS1_5_SHA1 = 1
+    """
+    PKCSv1.5 padding with sha1 hash function
+    """
+
+    PSS_SHA256 = 2
     """
     PSS padding with sha256 hash function
     """
@@ -117,6 +122,24 @@ class RSA(NativeResource):
         Raises ValueError if pem does not have public key object.
         """
         return RSA(binding=_awscrt.rsa_public_key_from_pem_data(pem_data))
+    
+    @staticmethod
+    def new_private_key_from_der_data(pem_data: Union[str, bytes, bytearray, memoryview]) -> 'RSA':
+        """
+        Creates a new instance of private RSA key pair from der data.
+        Expects key in PKCS1 format.
+        Raises ValueError if pem does not have private key object.
+        """
+        return RSA(binding=_awscrt.rsa_private_key_from_der_data(pem_data))
+
+    @staticmethod
+    def new_public_key_from_der_data(pem_data: Union[str, bytes, bytearray, memoryview]) -> 'RSA':
+        """
+        Creates a new instance of public RSA key pair from der data.
+        Expects key in PKCS1 format.
+        Raises ValueError if pem does not have public key object.
+        """
+        return RSA(binding=_awscrt.rsa_public_key_from_der_data(pem_data))
 
     def encrypt(self, encryption_algorithm: RSAEncryptionAlgorithm,
                 plaintext: Union[bytes, bytearray, memoryview]) -> bytes:

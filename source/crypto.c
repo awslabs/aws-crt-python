@@ -350,6 +350,31 @@ on_done:
     return capsule;
 }
 
+PyObject *aws_py_rsa_private_key_from_der_data(PyObject *self, PyObject *args) {
+    (void)self;
+
+    struct aws_byte_cursor der_data_cur;
+    if (!PyArg_ParseTuple(args, "s#", &pem_data_cur.ptr, &pem_data_cur.len)) {
+        return NULL;
+    }
+
+    struct aws_rsa_key_pair *key_pair =
+        aws_rsa_key_pair_new_from_private_key_pkcs1(allocator, &der_data_cur);
+
+    if (key_pair == NULL) {
+        PyErr_AwsLastError();
+        goto on_done;
+    }
+
+    capsule = PyCapsule_New(key_pair, s_capsule_name_rsa, s_rsa_destructor);
+
+    if (capsule == NULL) {
+        aws_rsa_key_pair_release(key_pair);
+    }
+
+    return capsule;
+}
+
 PyObject *aws_py_rsa_encrypt(PyObject *self, PyObject *args) {
     (void)self;
 
