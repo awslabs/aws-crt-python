@@ -134,13 +134,12 @@ class TestCredentials(NativeResourceTest):
                 pt_pub = rsa.decrypt(p, ct_pub)
                 self.assertEqual(test_pt, pt_pub)
 
-    def test_rsa_signing_roundtrip(self):
+    def test_rsa_signing_roundtrip_sha256(self):
         h = Hash.sha256_new()
         h.update(b'totally original test string')
         digest = h.digest()
 
         param_list = [RSASignatureAlgorithm.PKCS1_5_SHA256,
-                      RSASignatureAlgorithm.PKCS1_5_SHA1,
                       RSASignatureAlgorithm.PSS_SHA256]
 
         for p in param_list:
@@ -151,6 +150,18 @@ class TestCredentials(NativeResourceTest):
 
                 rsa_pub = RSA.new_public_key_from_pem_data(RSA_PUBLIC_KEY_PEM)
                 self.assertTrue(rsa_pub.verify(p, digest, signature))
+
+    def test_rsa_signing_roundtrip_sha256(self):
+        h = Hash.sha1new()
+        h.update(b'totally original test string')
+        digest = h.digest()
+
+        rsa = RSA.new_private_key_from_pem_data(RSA_PRIVATE_KEY_PEM)
+        signature = rsa.sign(RSASignatureAlgorithm.PKCS1_5_SHA1, digest)
+        self.assertTrue(rsa.verify(RSASignatureAlgorithm.PKCS1_5_SHA1, digest, signature))
+
+        rsa_pub = RSA.new_public_key_from_pem_data(RSA_PUBLIC_KEY_PEM)
+        self.assertTrue(rsa_pub.verify(RSASignatureAlgorithm.PKCS1_5_SHA1, digest, signature))
 
     def test_rsa_load_error(self):
         with self.assertRaises(ValueError):
