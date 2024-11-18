@@ -360,8 +360,7 @@ PyObject *aws_py_rsa_private_key_from_der_data(PyObject *self, PyObject *args) {
 
     PyObject *capsule = NULL;
     struct aws_allocator *allocator = aws_py_get_allocator();
-    struct aws_rsa_key_pair *key_pair =
-        aws_rsa_key_pair_new_from_private_key_pkcs1(allocator, der_data_cur);
+    struct aws_rsa_key_pair *key_pair = aws_rsa_key_pair_new_from_private_key_pkcs1(allocator, der_data_cur);
 
     if (key_pair == NULL) {
         PyErr_AwsLastError();
