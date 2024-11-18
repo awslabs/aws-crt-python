@@ -141,6 +141,7 @@ class RSA(NativeResource):
         """
         return RSA(binding=_awscrt.rsa_public_key_from_der_data(pem_data))
 
+    
     def encrypt(self, encryption_algorithm: RSAEncryptionAlgorithm,
                 plaintext: Union[bytes, bytearray, memoryview]) -> bytes:
         """
