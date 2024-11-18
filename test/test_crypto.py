@@ -140,6 +140,7 @@ class TestCredentials(NativeResourceTest):
         digest = h.digest()
 
         param_list = [RSASignatureAlgorithm.PKCS1_5_SHA256,
+                      RSASignatureAlgorithm.PKCS1_5_SHA1,
                       RSASignatureAlgorithm.PSS_SHA256]
 
         for p in param_list:
@@ -148,7 +149,7 @@ class TestCredentials(NativeResourceTest):
                 signature = rsa.sign(p, digest)
                 self.assertTrue(rsa.verify(p, digest, signature))
 
-                rsa_pub = RSA.new_private_key_from_pem_data(RSA_PRIVATE_KEY_PEM)
+                rsa_pub = RSA.new_public_key_from_pem_data(RSA_PUBLIC_KEY_PEM)
                 self.assertTrue(rsa_pub.verify(p, digest, signature))
 
     def test_rsa_load_error(self):
