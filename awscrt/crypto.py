@@ -122,7 +122,7 @@ class RSA(NativeResource):
         Raises ValueError if pem does not have public key object.
         """
         return RSA(binding=_awscrt.rsa_public_key_from_pem_data(pem_data))
-    
+
     @staticmethod
     def new_private_key_from_der_data(pem_data: Union[str, bytes, bytearray, memoryview]) -> 'RSA':
         """
@@ -141,7 +141,6 @@ class RSA(NativeResource):
         """
         return RSA(binding=_awscrt.rsa_public_key_from_der_data(pem_data))
 
-    
     def encrypt(self, encryption_algorithm: RSAEncryptionAlgorithm,
                 plaintext: Union[bytes, bytearray, memoryview]) -> bytes:
         """
