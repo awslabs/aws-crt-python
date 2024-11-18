@@ -374,6 +374,7 @@ PyObject *aws_py_rsa_private_key_from_der_data(PyObject *self, PyObject *args) {
         aws_rsa_key_pair_release(key_pair);
     }
 
+on_done:
     return capsule;
 }
 
