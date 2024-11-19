@@ -82,6 +82,7 @@ RSA_PRIVATE_KEY_DER = (
     '59309stR/bAhMzxOx31777XEPO1md854iXXr0XDMQlwCYkWyWb6hp4JlsqFBPMjn'
     'nGXWA0Gp6UWgpg4Hvjdsu+0FQ3AhDMBKZZ8fBFb4EW+HRQIHPnbH')
 
+
 class TestCredentials(NativeResourceTest):
 
     def test_sha256_empty(self):
