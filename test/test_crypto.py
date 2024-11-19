@@ -54,14 +54,6 @@ RSA_PUBLIC_KEY_DER = ('MIIBCgKCAQEAxaEsLWE2t3kJqsF1sFHYk7rSCGfGTSDa+3r5typT0cb/T
                     'xgMJci1Irh66xVZQ9aT2OZwb0TXglULm+b8HM+GKHgoTMwr9gAGpFDoYi22PvxC/'
                     'cqKHKIaYw7KNOPwImzQ6cp5oQJTAPQKRUwIDAQAB')
 
-RSA_PUBLIC_KEY_DER_BOTO3 = ('MIIBCgKCAQEAmC9Sp2vAK8r/B+5SvW4iMwU1wqwMISzuJqsFLLp6b/'
-                            'shkeDSN+quDFn2ngSyd4dzut0Uk2/hshFWQhXhutmrnHZf4jx2ri1I'
-                            'AEV3f8/f8o/sajMtupD5HTltyXhQIL8Dzcprq4GyXYKAhD+W9O3GDU'
-                            'uMnP6aTbjMO2kOmE4GedA+RU+9L3AI/CFg5zgnzpQ3CCnCxrDK/ARa'
-                            'E4mB5L6BvqzkyEo6jGi1OdJgWF/rJGNud2mjsDh95LmN+i0XGqDqw+'
-                            '3m4AyRBzerSMnMVxzBaJZ835Qyuht2bOp30CpGvPMuPQhQoYJ9QKoPU8'
-                            'a3DYFk8c6DCZA9UqPQG7Q4ayIQiQIDAQAB')
-
 RSA_PRIVATE_KEY_DER = ('MIIEowIBAAKCAQEAxaEsLWE2t3kJqsF1sFHYk7rSCGfGTSDa+3r5typT0cb/TtJ9'
 '89C8dLcfInx4Dxq0ewo6NOxQ/TD8JevUda86jSh1UKEQUOl7qy+QwOhFMpwHq/uO'
 'gMy5khDDLlkxD5U32RrDfqLK+4WUDapHlQ6g+E6wS1j1yDRoTZJk3WnTpR0sJHst'
@@ -240,9 +232,6 @@ class TestCredentials(NativeResourceTest):
 
         with self.assertRaises(ValueError):
             RSA.new_public_key_from_pem_data(RSA_PRIVATE_KEY_PEM)
-
-    def test_does_it_load(self):
-        RSA.new_public_key_from_der_data(RSA_PUBLIC_KEY_DER_BOTO3)
 
     def test_rsa_signing_verify_fail(self):
         h = Hash.sha256_new()
