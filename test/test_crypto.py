@@ -230,8 +230,8 @@ class TestCredentials(NativeResourceTest):
                 signature = rsa.sign(p, digest)
                 self.assertTrue(rsa.verify(p, digest, signature))
 
-                decoded_private_key = base64.b64decode(RSA_PUBLIC_KEY_DER)
-                rsa_pub = RSA.new_public_key_from_der_data(decoded_private_key)
+                private_key_der_bytes = base64.b64decode(RSA_PUBLIC_KEY_DER_BASE64)
+                rsa_pub = RSA.new_public_key_from_der_data(private_key_der_bytes)
                 self.assertTrue(rsa_pub.verify(p, digest, signature))
 
     def test_rsa_load_error(self):
