@@ -247,7 +247,7 @@ class TestCredentials(NativeResourceTest):
             RSA.new_public_key_from_pem_data(RSA_PRIVATE_KEY_PEM)
 
     def test_does_it_load(self):
-        RSA.new_private_key_from_der_data(RSA_PUBLIC_KEY_DER_BOTO3)
+        RSA.new_public_key_from_der_data(RSA_PUBLIC_KEY_DER_BOTO3)
 
     def test_rsa_signing_verify_fail(self):
         h = Hash.sha256_new()
