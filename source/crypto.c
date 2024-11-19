@@ -366,7 +366,7 @@ PyObject *aws_py_rsa_private_key_from_der_data(PyObject *self, PyObject *args) {
     AWS_ZERO_STRUCT(decoded_buffer);
 
     size_t decoded_len = 0;
-    if (aws_base64_compute_decoded_len(&byte_cur, &decoded_len)) {
+    if (aws_base64_compute_decoded_len(&der_data_cur, &decoded_len)) {
         PyErr_AwsLastError();
         goto on_done;
     }
@@ -374,7 +374,7 @@ PyObject *aws_py_rsa_private_key_from_der_data(PyObject *self, PyObject *args) {
     struct aws_byte_buf decoded_buffer;
     aws_byte_buf_init(&decoded_buffer, allocator, decoded_len);
 
-    if (aws_base64_decode(&byte_cur, &decoded_buffer)) {
+    if (aws_base64_decode(&der_data_cur, &decoded_buffer)) {
         PyErr_AwsLastError();
         goto on_done;
     }
@@ -414,7 +414,7 @@ PyObject *aws_py_rsa_public_key_from_der_data(PyObject *self, PyObject *args) {
     AWS_ZERO_STRUCT(decoded_buffer);
 
     size_t decoded_len = 0;
-    if (aws_base64_compute_decoded_len(&byte_cur, &decoded_len)) {
+    if (aws_base64_compute_decoded_len(&der_data_cur, &decoded_len)) {
         PyErr_AwsLastError();
         goto on_done;
     }
@@ -422,7 +422,7 @@ PyObject *aws_py_rsa_public_key_from_der_data(PyObject *self, PyObject *args) {
     struct aws_byte_buf decoded_buffer;
     aws_byte_buf_init(&decoded_buffer, allocator, decoded_len);
 
-    if (aws_base64_decode(&byte_cur, &decoded_buffer)) {
+    if (aws_base64_decode(&der_data_cur, &decoded_buffer)) {
         PyErr_AwsLastError();
         goto on_done;
     }
