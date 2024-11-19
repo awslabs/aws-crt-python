@@ -367,14 +367,17 @@ PyObject *aws_py_rsa_private_key_from_der_data(PyObject *self, PyObject *args) {
 
     size_t decoded_len = 0;
     if (aws_base64_compute_decoded_len(&der_data_cur, &decoded_len)) {
-        PyErr_AwsLastError();
+        //PyErr_AwsLastError();
+        //PyErr_SetString(PyExc_ValueError, "Invalid len");
+        PyErr_Format(PyExc_ValueError, "Invalid len %zu", der_data_cur.len);
         goto on_done;
     }
 
     aws_byte_buf_init(&decoded_buffer, allocator, decoded_len);
 
     if (aws_base64_decode(&der_data_cur, &decoded_buffer)) {
-        PyErr_AwsLastError();
+        //PyErr_AwsLastError();
+        PyErr_Format(PyExc_ValueError, "Invalid len %zu", decoded_len);
         goto on_done;
     }
 
