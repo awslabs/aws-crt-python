@@ -124,7 +124,7 @@ class RSA(NativeResource):
         return RSA(binding=_awscrt.rsa_public_key_from_pem_data(pem_data))
 
     @staticmethod
-    def new_private_key_from_der_data(der_data: Union[str, bytes, bytearray, memoryview]) -> 'RSA':
+    def new_private_key_from_der_data(der_data: Union[bytes, bytearray, memoryview]) -> 'RSA':
         """
         Creates a new instance of private RSA key pair from der data.
         Expects key in PKCS1 format.
@@ -133,7 +133,7 @@ class RSA(NativeResource):
         return RSA(binding=_awscrt.rsa_private_key_from_der_data(der_data))
 
     @staticmethod
-    def new_public_key_from_der_data(der_data: Union[str, bytes, bytearray, memoryview]) -> 'RSA':
+    def new_public_key_from_der_data(der_data: Union[bytes, bytearray, memoryview]) -> 'RSA':
         """
         Creates a new instance of public RSA key pair from der data.
         Expects key in PKCS1 format.

@@ -355,32 +355,14 @@ PyObject *aws_py_rsa_private_key_from_der_data(PyObject *self, PyObject *args) {
     (void)self;
 
     struct aws_byte_cursor der_data_cur;
-    if (!PyArg_ParseTuple(args, "s#", &der_data_cur.ptr, &der_data_cur.len)) {
+    if (!PyArg_ParseTuple(args, "y#", &der_data_cur.ptr, &der_data_cur.len)) {
         return NULL;
     }
 
     PyObject *capsule = NULL;
     struct aws_allocator *allocator = aws_py_get_allocator();
 
-    struct aws_byte_buf decoded_buffer;
-    AWS_ZERO_STRUCT(decoded_buffer);
-
-    size_t decoded_len = 0;
-    if (aws_base64_compute_decoded_len(&der_data_cur, &decoded_len)) {
-        PyErr_AwsLastError();
-        goto on_done;
-    }
-
-    aws_byte_buf_init(&decoded_buffer, allocator, decoded_len);
-
-    if (aws_base64_decode(&der_data_cur, &decoded_buffer)) {
-        PyErr_AwsLastError();
-        goto on_done;
-    }
-
-    struct aws_byte_cursor raw_der = aws_byte_cursor_from_buf(&decoded_buffer);
-
-    struct aws_rsa_key_pair *key_pair = aws_rsa_key_pair_new_from_private_key_pkcs1(allocator, raw_der);
+    struct aws_rsa_key_pair *key_pair = aws_rsa_key_pair_new_from_private_key_pkcs1(allocator, der_data_cur);
 
     if (key_pair == NULL) {
         PyErr_AwsLastError();
@@ -394,7 +376,6 @@ PyObject *aws_py_rsa_private_key_from_der_data(PyObject *self, PyObject *args) {
     }
 
 on_done:
-    aws_byte_buf_clean_up_secure(&decoded_buffer);
     return capsule;
 }
 
@@ -402,32 +383,14 @@ PyObject *aws_py_rsa_public_key_from_der_data(PyObject *self, PyObject *args) {
     (void)self;
 
     struct aws_byte_cursor der_data_cur;
-    if (!PyArg_ParseTuple(args, "s#", &der_data_cur.ptr, &der_data_cur.len)) {
+    if (!PyArg_ParseTuple(args, "y#", &der_data_cur.ptr, &der_data_cur.len)) {
         return NULL;
     }
 
     PyObject *capsule = NULL;
     struct aws_allocator *allocator = aws_py_get_allocator();
 
-    struct aws_byte_buf decoded_buffer;
-    AWS_ZERO_STRUCT(decoded_buffer);
-
-    size_t decoded_len = 0;
-    if (aws_base64_compute_decoded_len(&der_data_cur, &decoded_len)) {
-        PyErr_AwsLastError();
-        goto on_done;
-    }
-
-    aws_byte_buf_init(&decoded_buffer, allocator, decoded_len);
-
-    if (aws_base64_decode(&der_data_cur, &decoded_buffer)) {
-        PyErr_AwsLastError();
-        goto on_done;
-    }
-
-    struct aws_byte_cursor raw_der = aws_byte_cursor_from_buf(&decoded_buffer);
-
-    struct aws_rsa_key_pair *key_pair = aws_rsa_key_pair_new_from_public_key_pkcs1(allocator, raw_der);
+    struct aws_rsa_key_pair *key_pair = aws_rsa_key_pair_new_from_public_key_pkcs1(allocator, der_data_cur);
 
     if (key_pair == NULL) {
         PyErr_AwsLastError();
@@ -441,7 +404,6 @@ PyObject *aws_py_rsa_public_key_from_der_data(PyObject *self, PyObject *args) {
     }
 
 on_done:
-    aws_byte_buf_clean_up_secure(&decoded_buffer);
     return capsule;
 }
 
