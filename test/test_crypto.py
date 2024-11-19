@@ -178,8 +178,8 @@ class TestCredentials(NativeResourceTest):
         for p in param_list:
             with self.subTest(msg="RSA Encryption Roundtrip using algo p", p=p):
                 test_pt = b'totally original test string'
-                decoded_private_key = base64.b64decode(RSA_PRIVATE_KEY_DER)
-                rsa = RSA.new_private_key_from_der_data(decoded_private_key)
+                private_key_der_bytes = base64.b64decode(RSA_PRIVATE_KEY_DER_BASE64)
+                rsa = RSA.new_private_key_from_der_data(private_key_der_bytes)
                 ct = rsa.encrypt(p, test_pt)
                 pt = rsa.decrypt(p, ct)
                 self.assertEqual(test_pt, pt)
