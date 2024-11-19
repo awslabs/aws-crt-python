@@ -182,7 +182,7 @@ class TestCredentials(NativeResourceTest):
 
         for p in param_list:
             with self.subTest(msg="RSA Signing Roundtrip using algo p", p=p):
-                if (p ==RSASignatureAlgorithm.PKCS1_5_SHA1):
+                if (p == RSASignatureAlgorithm.PKCS1_5_SHA1):
                     h = Hash.sha1_new()
                 else:
                     h = Hash.sha256_new()
@@ -195,7 +195,6 @@ class TestCredentials(NativeResourceTest):
 
                 rsa_pub = RSA.new_public_key_from_pem_data(RSA_PUBLIC_KEY_PEM)
                 self.assertTrue(rsa_pub.verify(p, digest, signature))
-
     
     def test_rsa_signing_roundtrip_der(self):
         param_list = [RSASignatureAlgorithm.PKCS1_5_SHA256,
@@ -204,7 +203,7 @@ class TestCredentials(NativeResourceTest):
 
         for p in param_list:
             with self.subTest(msg="RSA Signing Roundtrip using algo p", p=p):
-                if (p ==RSASignatureAlgorithm.PKCS1_5_SHA1):
+                if (p == RSASignatureAlgorithm.PKCS1_5_SHA1):
                     h = Hash.sha1_new()
                 else:
                     h = Hash.sha256_new()
