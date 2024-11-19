@@ -417,7 +417,8 @@ PyObject *aws_py_rsa_public_key_from_der_data(PyObject *self, PyObject *args) {
 
     size_t decoded_len = 0;
     if (aws_base64_compute_decoded_len(&der_data_cur, &decoded_len)) {
-        PyErr_AwsLastError();
+        //PyErr_AwsLastError();
+        PyErr_Format(PyExc_ValueError, "Invalid len %zu", der_data_cur.len);
         goto on_done;
     }
 
@@ -433,7 +434,8 @@ PyObject *aws_py_rsa_public_key_from_der_data(PyObject *self, PyObject *args) {
     struct aws_rsa_key_pair *key_pair = aws_rsa_key_pair_new_from_public_key_pkcs1(allocator, raw_der);
 
     if (key_pair == NULL) {
-        PyErr_AwsLastError();
+        //PyErr_AwsLastError();
+        PyErr_Format(PyExc_ValueError, "Invalid len decoded %zu", decoded_len);
         goto on_done;
     }
 
