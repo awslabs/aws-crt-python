@@ -8,6 +8,7 @@
 #include "aws/cal/hash.h"
 #include "aws/cal/hmac.h"
 #include "aws/cal/rsa.h"
+#include "aws/common/encoding.h"
 #include "aws/io/pem.h"
 
 const char *s_capsule_name_hash = "aws_hash";
