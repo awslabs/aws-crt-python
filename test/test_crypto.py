@@ -47,6 +47,29 @@ cqKHKIaYw7KNOPwImzQ6cp5oQJTAPQKRUwIDAQAB
 -----END RSA PUBLIC KEY-----
 """
 
+RSA_PUBLIC_KEY_DER = """
+MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCa4qvcJ1F3zQJgFfhTigEDklWS
+R5wkl0DtzDbDDl7B1fyWYujFLKKrPSgIfmAgcxYpQ60cmsgxU7y1OFzkjE2vZdR9
+D5XzcpaSAjYwpzlLbIcy/9gRpo4IuSpFgfvJkN67ddI3s+1FbTxxSbb6PcLYyhhk
+Uv0/PolsTw3MXBANawIDAQAB
+"""
+
+RSA_PRIVATE_KEY_DER = """
+MIICXQIBAAKBgQCa4qvcJ1F3zQJgFfhTigEDklWSR5wkl0DtzDbDDl7B1fyWYujF
+LKKrPSgIfmAgcxYpQ60cmsgxU7y1OFzkjE2vZdR9D5XzcpaSAjYwpzlLbIcy/9gR
+po4IuSpFgfvJkN67ddI3s+1FbTxxSbb6PcLYyhhkUv0/PolsTw3MXBANawIDAQAB
+AoGAe8Pfkud0SSfv2voTWiXv03vOlzpTwkV/I8ZIiCtmervUwBM/b7fQMMeIwujB
+RYzRS54BqdbhW9FO/PyR9itLMzN/2bNLgDnyb73VYDoVSUOI4zWtbOYBKVbHAhVn
+aWXrDOq49ROE8HQr2qyL2jiBhfydgQNaqUPTDFksmEAl4jECQQD69sN+3/1XHb0i
+YOrJq0Ho4QDsO1sR/KJitYog+W3/ZCQbW7Lkcbb+fvn6sWUGHv5gjoErq9OAu/ld
+7I/CPtoZAkEAnf5W1rOlh6JV4eo76RMCaExFI3jM38pKBQOEfrfp1Br8JK04iN1q
+ynHbrNPQuhGB0H7WJDIql2wZzRLHmTmcIwJBAOxhu3fowHXqw/f6s4tqrLUOIdFg
+gwIpJEa3Wbh/WDVC/KNsNs7nsQZ7UTfpGQ+v58fI0i/xM1FBPLtUE4BRtRkCQEBi
+TFsUPGmIgv0caiuyHnIIWsh4yuyL0Bw48b5+DiDsmkIMARTtPj6fpYjJjK62wbMI
+bRW1B9xLJjyG4aYUbwcCQQDWt9D2XJ8JOI559nC7mlEFj+b3eqmsdZ4Hh4ZM7L9f
+eUtcfUR6xVEZS5aaNrzKLo4/WXySOvS2OHVO1Kx1CGlC
+"""
+
 
 class TestCredentials(NativeResourceTest):
 
@@ -134,16 +157,38 @@ class TestCredentials(NativeResourceTest):
                 pt_pub = rsa.decrypt(p, ct_pub)
                 self.assertEqual(test_pt, pt_pub)
 
-    def test_rsa_signing_roundtrip_sha256(self):
-        h = Hash.sha256_new()
-        h.update(b'totally original test string')
-        digest = h.digest()
+    def test_rsa_encryption_roundtrip_der(self):
+        param_list = [RSAEncryptionAlgorithm.PKCS1_5,
+                      RSAEncryptionAlgorithm.OAEP_SHA256,
+                      RSAEncryptionAlgorithm.OAEP_SHA512]
 
+        for p in param_list:
+            with self.subTest(msg="RSA Encryption Roundtrip using algo p", p=p):
+                test_pt = b'totally original test string'
+                rsa = RSA.new_private_key_from_pem_data(RSA_PRIVATE_KEY_DER)
+                ct = rsa.encrypt(p, test_pt)
+                pt = rsa.decrypt(p, ct)
+                self.assertEqual(test_pt, pt)
+
+                rsa_pub = RSA.new_public_key_from_pem_data(RSA_PUBLIC_KEY_DER)
+                ct_pub = rsa_pub.encrypt(p, test_pt)
+                pt_pub = rsa.decrypt(p, ct_pub)
+                self.assertEqual(test_pt, pt_pub)
+
+    def test_rsa_signing_roundtrip(self):
         param_list = [RSASignatureAlgorithm.PKCS1_5_SHA256,
-                      RSASignatureAlgorithm.PSS_SHA256]
+                      RSASignatureAlgorithm.PSS_SHA256,
+                      RSASignatureAlgorithm.PKCS1_5_SHA1]
 
         for p in param_list:
             with self.subTest(msg="RSA Signing Roundtrip using algo p", p=p):
+                if (p ==RSASignatureAlgorithm.PKCS1_5_SHA1):
+                    h = Hash.sha1_new()
+                else:
+                    h = Hash.sha256_new()
+                h.update(b'totally original test string')
+                digest = h.digest()
+
                 rsa = RSA.new_private_key_from_pem_data(RSA_PRIVATE_KEY_PEM)
                 signature = rsa.sign(p, digest)
                 self.assertTrue(rsa.verify(p, digest, signature))
@@ -151,17 +196,27 @@ class TestCredentials(NativeResourceTest):
                 rsa_pub = RSA.new_public_key_from_pem_data(RSA_PUBLIC_KEY_PEM)
                 self.assertTrue(rsa_pub.verify(p, digest, signature))
 
-    def test_rsa_signing_roundtrip_sha256(self):
-        h = Hash.sha1new()
-        h.update(b'totally original test string')
-        digest = h.digest()
+    
+    def test_rsa_signing_roundtrip_der(self):
+        param_list = [RSASignatureAlgorithm.PKCS1_5_SHA256,
+                      RSASignatureAlgorithm.PSS_SHA256,
+                      RSASignatureAlgorithm.PKCS1_5_SHA1]
 
-        rsa = RSA.new_private_key_from_pem_data(RSA_PRIVATE_KEY_PEM)
-        signature = rsa.sign(RSASignatureAlgorithm.PKCS1_5_SHA1, digest)
-        self.assertTrue(rsa.verify(RSASignatureAlgorithm.PKCS1_5_SHA1, digest, signature))
+        for p in param_list:
+            with self.subTest(msg="RSA Signing Roundtrip using algo p", p=p):
+                if (p ==RSASignatureAlgorithm.PKCS1_5_SHA1):
+                    h = Hash.sha1_new()
+                else:
+                    h = Hash.sha256_new()
+                h.update(b'totally original test string')
+                digest = h.digest()
 
-        rsa_pub = RSA.new_public_key_from_pem_data(RSA_PUBLIC_KEY_PEM)
-        self.assertTrue(rsa_pub.verify(RSASignatureAlgorithm.PKCS1_5_SHA1, digest, signature))
+                rsa = RSA.new_private_key_from_pem_data(RSA_PRIVATE_KEY_DER)
+                signature = rsa.sign(p, digest)
+                self.assertTrue(rsa.verify(p, digest, signature))
+
+                rsa_pub = RSA.new_public_key_from_pem_data(RSA_PUBLIC_KEY_DER)
+                self.assertTrue(rsa_pub.verify(p, digest, signature))
 
     def test_rsa_load_error(self):
         with self.assertRaises(ValueError):
