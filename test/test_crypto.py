@@ -225,8 +225,8 @@ class TestCredentials(NativeResourceTest):
                 h.update(b'totally original test string')
                 digest = h.digest()
 
-                decoded_private_key = base64.b64decode(RSA_PRIVATE_KEY_DER)
-                rsa = RSA.new_private_key_from_der_data(decoded_private_key)
+                private_key_der_bytes = base64.b64decode(RSA_PRIVATE_KEY_DER_BASE64)
+                rsa = RSA.new_private_key_from_der_data(private_key_der_bytes)
                 signature = rsa.sign(p, digest)
                 self.assertTrue(rsa.verify(p, digest, signature))
 
