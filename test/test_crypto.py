@@ -184,7 +184,7 @@ class TestCredentials(NativeResourceTest):
                 pt = rsa.decrypt(p, ct)
                 self.assertEqual(test_pt, pt)
 
-                decoded_public_key = base64.b64decode(RSA_PUBLIC_KEY_DER)
+                public_key_der_bytes = base64.b64decode(RSA_PUBLIC_KEY_DER_BASE64)
                 rsa_pub = RSA.new_public_key_from_der_data(decoded_public_key)
                 ct_pub = rsa_pub.encrypt(p, test_pt)
                 pt_pub = rsa.decrypt(p, ct_pub)
