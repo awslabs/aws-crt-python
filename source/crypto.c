@@ -377,7 +377,7 @@ PyObject *aws_py_rsa_private_key_from_der_data(PyObject *self, PyObject *args) {
 
     if (aws_base64_decode(&der_data_cur, &decoded_buffer)) {
         //PyErr_AwsLastError();
-        PyErr_Format(PyExc_ValueError, "Invalid len %zu", decoded_len);
+        PyErr_Format(PyExc_ValueError, "Invalid len decoded %zu", decoded_len);
         goto on_done;
     }
 
