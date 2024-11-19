@@ -185,7 +185,7 @@ class TestCredentials(NativeResourceTest):
                 self.assertEqual(test_pt, pt)
 
                 public_key_der_bytes = base64.b64decode(RSA_PUBLIC_KEY_DER_BASE64)
-                rsa_pub = RSA.new_public_key_from_der_data(decoded_public_key)
+                rsa_pub = RSA.new_public_key_from_der_data(public_key_der_bytes)
                 ct_pub = rsa_pub.encrypt(p, test_pt)
                 pt_pub = rsa.decrypt(p, ct_pub)
                 self.assertEqual(test_pt, pt_pub)
@@ -230,8 +230,8 @@ class TestCredentials(NativeResourceTest):
                 signature = rsa.sign(p, digest)
                 self.assertTrue(rsa.verify(p, digest, signature))
 
-                private_key_der_bytes = base64.b64decode(RSA_PUBLIC_KEY_DER_BASE64)
-                rsa_pub = RSA.new_public_key_from_der_data(private_key_der_bytes)
+                public_key_der_bytes = base64.b64decode(RSA_PUBLIC_KEY_DER_BASE64)
+                rsa_pub = RSA.new_public_key_from_der_data(public_key_der_bytes)
                 self.assertTrue(rsa_pub.verify(p, digest, signature))
 
     def test_rsa_load_error(self):
