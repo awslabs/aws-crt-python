@@ -165,12 +165,12 @@ class TestCredentials(NativeResourceTest):
         for p in param_list:
             with self.subTest(msg="RSA Encryption Roundtrip using algo p", p=p):
                 test_pt = b'totally original test string'
-                rsa = RSA.new_private_key_from_pem_data(RSA_PRIVATE_KEY_DER)
+                rsa = RSA.new_private_key_from_der_data(RSA_PRIVATE_KEY_DER)
                 ct = rsa.encrypt(p, test_pt)
                 pt = rsa.decrypt(p, ct)
                 self.assertEqual(test_pt, pt)
 
-                rsa_pub = RSA.new_public_key_from_pem_data(RSA_PUBLIC_KEY_DER)
+                rsa_pub = RSA.new_public_key_from_der_data(RSA_PUBLIC_KEY_DER)
                 ct_pub = rsa_pub.encrypt(p, test_pt)
                 pt_pub = rsa.decrypt(p, ct_pub)
                 self.assertEqual(test_pt, pt_pub)
@@ -211,11 +211,11 @@ class TestCredentials(NativeResourceTest):
                 h.update(b'totally original test string')
                 digest = h.digest()
 
-                rsa = RSA.new_private_key_from_pem_data(RSA_PRIVATE_KEY_DER)
+                rsa = RSA.new_private_key_from_der_data(RSA_PRIVATE_KEY_DER)
                 signature = rsa.sign(p, digest)
                 self.assertTrue(rsa.verify(p, digest, signature))
 
-                rsa_pub = RSA.new_public_key_from_pem_data(RSA_PUBLIC_KEY_DER)
+                rsa_pub = RSA.new_public_key_from_der_data(RSA_PUBLIC_KEY_DER)
                 self.assertTrue(rsa_pub.verify(p, digest, signature))
 
     def test_rsa_load_error(self):
