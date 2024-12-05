@@ -755,6 +755,8 @@ static PyMethodDef s_module_methods[] = {
     /* RSA crypto primitives */
     AWS_PY_METHOD_DEF(rsa_private_key_from_pem_data, METH_VARARGS),
     AWS_PY_METHOD_DEF(rsa_public_key_from_pem_data, METH_VARARGS),
+    AWS_PY_METHOD_DEF(rsa_private_key_from_der_data, METH_VARARGS),
+    AWS_PY_METHOD_DEF(rsa_public_key_from_der_data, METH_VARARGS),
     AWS_PY_METHOD_DEF(rsa_encrypt, METH_VARARGS),
     AWS_PY_METHOD_DEF(rsa_decrypt, METH_VARARGS),
     AWS_PY_METHOD_DEF(rsa_sign, METH_VARARGS),
