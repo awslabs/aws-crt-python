@@ -599,8 +599,6 @@ class S3RequestTest(NativeResourceTest):
             algo=S3ChecksumAlgorithm.CRC32,
             mpu=True,
             provide_full_object_checksum=False):
-        self.region = "us-east-2"
-        self.bucket_name = "aws-c-s3-test-bucket-730026"
         if not mpu:
             # increase the part size for the client to use single part upload
             self.part_size = 20 * MB
