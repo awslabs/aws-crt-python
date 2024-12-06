@@ -603,7 +603,6 @@ class S3RequestTest(NativeResourceTest):
             # increase the part size for the client to use single part upload
             self.part_size = 20 * MB
 
-        # awscrt.io.init_logging(awscrt.io.LogLevel.Trace, "trace.log")
         put_body_stream = open(self.temp_put_obj_file_path, "rb")
         content_length = os.stat(self.temp_put_obj_file_path).st_size
         # construct different path to prevent race condition between tests
