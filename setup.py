@@ -68,7 +68,7 @@ def is_macos_universal2():
         return False
 
     cflags = sysconfig.get_config_var('CFLAGS')
-    return '-arch x86_64' in cflags and '-arch x86_64' in cflags
+    return '-arch x86_64' in cflags and '-arch arm64' in cflags
 
 
 def determine_cross_compile_args():
