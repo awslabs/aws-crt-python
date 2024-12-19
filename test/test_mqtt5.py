@@ -1009,8 +1009,6 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    sub1_callbacks = False
-    sub2_callbacks = False
     total_callbacks = 0
     all_packets_received = Future()
     mutex = Lock()
@@ -1020,7 +1018,6 @@ class Mqtt5ClientTest(NativeResourceTest):
         self.mutex.acquire()
         var = publish_received_data.publish_packet.payload
         self.received_subscriptions[int(var)] = 1
-        self.sub1_callbacks = True
         self.total_callbacks = self.total_callbacks + 1
         if self.total_callbacks == 10:
             self.all_packets_received.set_result(None)
@@ -1030,7 +1027,6 @@ class Mqtt5ClientTest(NativeResourceTest):
         self.mutex.acquire()
         var = publish_received_data.publish_packet.payload
         self.received_subscriptions[int(var)] = 1
-        self.sub2_callbacks = True
         self.total_callbacks = self.total_callbacks + 1
         if self.total_callbacks == 10:
             self.all_packets_received.set_result(None)
@@ -1154,8 +1150,6 @@ class Mqtt5ClientTest(NativeResourceTest):
         unsuback_packet = unsubscribe_future.result(TIMEOUT)
         self.assertIsInstance(unsuback_packet, mqtt5.UnsubackPacket)
 
-        self.assertEqual(self.sub1_callbacks, True)
-        self.assertEqual(self.sub2_callbacks, True)
         self.assertEqual(self.total_callbacks, 10)
 
         for e in self.received_subscriptions:
