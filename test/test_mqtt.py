@@ -216,7 +216,7 @@ class MqttConnectionTest(NativeResourceTest):
             try:
                 disconnecter.connect().result(TIMEOUT)
                 continue_connecting = False
-            except:
+            except BaseException:
                 pass
 
         # Receive message
