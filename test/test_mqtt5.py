@@ -1215,6 +1215,9 @@ class Mqtt5ClientTest(NativeResourceTest):
         suback_packet = subscribe_future.result(TIMEOUT)
         self.assertIsInstance(suback_packet, mqtt5.SubackPacket)
 
+        # wait a few seconds to minimize chance of eventual consistency race condition between subscribe and publish
+        time.sleep(2)
+
         disconnect_packet = mqtt5.DisconnectPacket(reason_code=mqtt5.DisconnectReasonCode.DISCONNECT_WITH_WILL_MESSAGE)
         client1.stop(disconnect_packet=disconnect_packet)
         callbacks1.future_stopped.result(TIMEOUT)

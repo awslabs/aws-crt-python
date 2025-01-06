@@ -208,7 +208,16 @@ class MqttConnectionTest(NativeResourceTest):
             ping_timeout_ms=10000,
             keep_alive_secs=30
         )
-        disconnecter.connect().result(TIMEOUT)
+
+        # A race condition exists in IoT Core where the interrupter may get refused rather than the existing
+        # connection getting dropped.  Loop until we successfully connect.
+        continue_connecting = True
+        while continue_connecting:
+            try:
+                disconnecter.connect().result(TIMEOUT)
+                continue_connecting = False
+            except:
+                pass
 
         # Receive message
         rcv = received.result(TIMEOUT)
