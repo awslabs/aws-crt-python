@@ -245,22 +245,24 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
 
     struct aws_allocator *allocator = aws_py_get_allocator();
 
-    PyObject *bootstrap_py;              /* O */
-    PyObject *signing_config_py;         /* O */
-    PyObject *credential_provider_py;    /* O */
-    PyObject *tls_options_py;            /* O */
-    PyObject *on_shutdown_py;            /* O */
-    struct aws_byte_cursor region;       /* s# */
-    int tls_mode;                        /* i */
-    uint64_t part_size;                  /* K */
-    uint64_t multipart_upload_threshold; /* K */
-    double throughput_target_gbps;       /* d */
-    int enable_s3express;                /* p */
-    uint64_t mem_limit;                  /* K */
-    PyObject *py_core;                   /* O */
+    PyObject *bootstrap_py;               /* O */
+    PyObject *signing_config_py;          /* O */
+    PyObject *credential_provider_py;     /* O */
+    PyObject *tls_options_py;             /* O */
+    PyObject *on_shutdown_py;             /* O */
+    struct aws_byte_cursor region;        /* s# */
+    int tls_mode;                         /* i */
+    uint64_t part_size;                   /* K */
+    uint64_t multipart_upload_threshold;  /* K */
+    double throughput_target_gbps;        /* d */
+    int enable_s3express;                 /* p */
+    uint64_t mem_limit;                   /* K */
+    PyObject *network_interface_names_py; /* O */
+    PyObject *py_core;                    /* O */
+
     if (!PyArg_ParseTuple(
             args,
-            "OOOOOs#iKKdpKO",
+            "OOOOOs#iKKdpKOO",
             &bootstrap_py,
             &signing_config_py,
             &credential_provider_py,
@@ -274,6 +276,7 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
             &throughput_target_gbps,
             &enable_s3express,
             &mem_limit,
+            &network_interface_names_py,
             &py_core)) {
         return NULL;
     }
@@ -304,10 +307,16 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
 
     struct aws_signing_config_aws *signing_config = NULL;
     struct aws_credentials *anonymous_credentials = NULL;
+    struct aws_byte_cursor *network_interface_names = NULL;
+    size_t num_network_interface_names = 0;
+    PyObject *capsule = NULL;
+    /* From hereon, we need to clean up if errors occur */
+    bool success = false;
+
     if (signing_config_py != Py_None) {
         signing_config = aws_py_get_signing_config(signing_config_py);
         if (!signing_config) {
-            return NULL;
+            goto cleanup;
         }
     } else if (credential_provider) {
         aws_s3_init_default_signing_config(&default_signing_config, region, credential_provider);
@@ -321,13 +330,10 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
 
     struct s3_client_binding *s3_client = aws_mem_calloc(allocator, 1, sizeof(struct s3_client_binding));
 
-    /* From hereon, we need to clean up if errors occur */
-
-    PyObject *capsule = PyCapsule_New(s3_client, s_capsule_name_s3_client, s_s3_client_capsule_destructor);
+    capsule = PyCapsule_New(s3_client, s_capsule_name_s3_client, s_s3_client_capsule_destructor);
     if (!capsule) {
-        aws_credentials_release(anonymous_credentials);
         aws_mem_release(allocator, s3_client);
-        return NULL;
+        goto cleanup;
     }
 
     s3_client->on_shutdown = on_shutdown_py;
@@ -335,6 +341,31 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
 
     s3_client->py_core = py_core;
     Py_INCREF(s3_client->py_core);
+
+    if (network_interface_names_py != Py_None) {
+        if (!PyList_Check(network_interface_names_py)) {
+            PyErr_SetString(PyExc_TypeError, "Expected network_interface_names to be a sequence.");
+            goto cleanup;
+        }
+        Py_ssize_t list_size = PyList_Size(network_interface_names_py);
+        if (list_size < 0) {
+            goto cleanup;
+        }
+        num_network_interface_names = (size_t)list_size;
+        network_interface_names =
+            aws_mem_calloc(allocator, num_network_interface_names, sizeof(struct aws_byte_cursor));
+        for (size_t i = 0; i < num_network_interface_names; ++i) {
+            PyObject *str_obj = PyList_GetItem(network_interface_names_py, i); /* Borrowed reference */
+            if (!str_obj) {
+                goto cleanup;
+            }
+            network_interface_names[i] = aws_byte_cursor_from_pyunicode(str_obj);
+            if (network_interface_names[i].ptr == NULL) {
+                PyErr_SetString(PyExc_TypeError, "Expected all network_interface_names elements to be strings.");
+                goto cleanup;
+            }
+        }
+    }
 
     struct aws_s3_client_config s3_config = {
         .region = region,
@@ -349,18 +380,23 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
         .shutdown_callback = s_s3_client_shutdown,
         .shutdown_callback_user_data = s3_client,
         .enable_s3express = enable_s3express,
+        .network_interface_names_array = network_interface_names,
+        .num_network_interface_names = num_network_interface_names,
     };
 
     s3_client->native = aws_s3_client_new(allocator, &s3_config);
     if (s3_client->native == NULL) {
         PyErr_SetAwsLastError();
-        goto error;
+        goto cleanup;
     }
-    aws_credentials_release(anonymous_credentials);
-    return capsule;
+    success = true;
 
-error:
+cleanup:
     aws_credentials_release(anonymous_credentials);
-    Py_DECREF(capsule);
-    return NULL;
+    aws_mem_release(allocator, network_interface_names);
+    if (!success) {
+        Py_XDECREF(capsule);
+        return NULL;
+    }
+    return capsule;
 }

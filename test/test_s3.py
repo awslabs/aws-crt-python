@@ -14,9 +14,7 @@ from concurrent.futures import Future
 from multiprocessing import Process
 
 from awscrt.http import HttpHeaders, HttpRequest
-from awscrt.s3 import S3Client, S3RequestType, create_default_s3_signing_config
-from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions
-from awscrt.auth import AwsCredentials, AwsCredentialsProvider, AwsSignatureType, AwsSignedBodyHeaderType, AwsSignedBodyValue, AwsSigningAlgorithm, AwsSigningConfig
+from awscrt.auth import AwsCredentials
 from awscrt.s3 import (
     S3ChecksumAlgorithm,
     S3ChecksumConfig,
@@ -158,7 +156,8 @@ def s3_client_new(
         part_size=0,
         is_cancel_test=False,
         enable_s3express=False,
-        mem_limit=None):
+        mem_limit=None,
+        network_interface_names=None):
 
     if is_cancel_test:
         # for cancellation tests, make things slow, so it's less likely that
@@ -189,7 +188,8 @@ def s3_client_new(
         part_size=part_size,
         throughput_target_gbps=throughput_target_gbps,
         enable_s3express=enable_s3express,
-        memory_limit=mem_limit)
+        memory_limit=mem_limit,
+        network_interface_names=network_interface_names)
 
     return s3_client
 
@@ -221,6 +221,11 @@ class S3ClientTest(NativeResourceTest):
         s3_client = s3_client_new(True, self.region)
         self.assertIsNotNone(s3_client)
 
+    def test_sanity_network_interface_names(self):
+        # This is just a sanity test to ensure that we are passing the parameter correctly.
+        with self.assertRaises(Exception):
+            s3_client_new(True, self.region, network_interface_names=("eth0", "invalid-network-interface"))
+
     def test_wait_shutdown(self):
         s3_client = s3_client_new(False, self.region)
         self.assertIsNotNone(s3_client)
@@ -248,6 +253,7 @@ class S3RequestTest(NativeResourceTest):
         self.num_threads = 0
         self.special_path = "put_object_test_10MB@$%.txt"
         self.non_ascii_file_name = "ÉxÅmple.txt"
+        self.part_size = 5 * MB
 
         self.response_headers = None
         self.response_status_code = None
@@ -358,13 +364,12 @@ class S3RequestTest(NativeResourceTest):
             request_type,
             exception_name=None,
             enable_s3express=False,
-            region="us-west-2",
             mem_limit=None,
             **kwargs):
         s3_client = s3_client_new(
             False,
-            region,
-            5 * MB,
+            self.region,
+            self.part_size,
             enable_s3express=enable_s3express,
             mem_limit=mem_limit)
         signing_config = None
@@ -387,8 +392,14 @@ class S3RequestTest(NativeResourceTest):
         self.assertTrue(shutdown_event.wait(self.timeout))
 
         if exception_name is None:
-            finished_future.result()
-            self._validate_successful_response(request_type is S3RequestType.PUT_OBJECT)
+            try:
+                finished_future.result()
+                self._validate_successful_response(request_type is S3RequestType.PUT_OBJECT)
+            except S3ResponseError as e:
+                print(e.status_code)
+                print(e.headers)
+                print(e.body)
+                raise e
         else:
             e = finished_future.exception()
             self.assertEqual(e.name, exception_name)
@@ -431,14 +442,16 @@ class S3RequestTest(NativeResourceTest):
         put_body_stream.close()
 
     def test_get_object_s3express(self):
+        self.region = "us-east-1"
         request = self._get_object_request("/crt-download-10MB", enable_s3express=True)
-        self._test_s3_put_get_object(request, S3RequestType.GET_OBJECT, enable_s3express=True, region="us-east-1")
+        self._test_s3_put_get_object(request, S3RequestType.GET_OBJECT, enable_s3express=True)
 
     def test_put_object_s3express(self):
+        self.region = "us-east-1"
         put_body_stream = open(self.temp_put_obj_file_path, "rb")
         content_length = os.stat(self.temp_put_obj_file_path).st_size
         request = self._put_object_request(put_body_stream, content_length, enable_s3express=True)
-        self._test_s3_put_get_object(request, S3RequestType.PUT_OBJECT, enable_s3express=True, region="us-east-1")
+        self._test_s3_put_get_object(request, S3RequestType.PUT_OBJECT, enable_s3express=True)
         put_body_stream.close()
 
     def test_put_object_multiple_times(self):
@@ -581,28 +594,45 @@ class S3RequestTest(NativeResourceTest):
             "the transferred length reported does not match body we sent")
         self._validate_successful_response(request_type is S3RequestType.PUT_OBJECT)
 
-    def test_put_get_with_checksum(self):
-        put_body = b'hello world'
-        put_body_stream = BytesIO(put_body)
-        content_length = len(put_body)
-        path = '/hello-world.txt'
+    def _round_trip_with_checksums_helper(
+            self,
+            algo=S3ChecksumAlgorithm.CRC32,
+            mpu=True,
+            provide_full_object_checksum=False):
+        if not mpu:
+            # increase the part size for the client to use single part upload
+            self.part_size = 20 * MB
 
-        # calculate expected CRC32 header value:
-        # a string containing the url-safe-base64-encoding of a big-endian-32-bit-CRC
-        crc32_int = zlib.crc32(put_body)
-        crc32_big_endian = crc32_int.to_bytes(4, 'big')
-        crc32_base64_bytes = base64.urlsafe_b64encode(crc32_big_endian)
-        crc32_base64_str = crc32_base64_bytes.decode()
+        put_body_stream = open(self.temp_put_obj_file_path, "rb")
+        content_length = os.stat(self.temp_put_obj_file_path).st_size
+        # construct different path to prevent race condition between tests
+        path = '/hello-world-' + algo.name
+        if mpu:
+            path += "-mpu"
+        if provide_full_object_checksum:
+            path += "-full-object"
+
+        if algo == S3ChecksumAlgorithm.CRC32:
+            checksum_header_name = 'x-amz-checksum-crc32'
+            checksum_str = 'a9ccsg=='
+        elif algo == S3ChecksumAlgorithm.CRC64NVME:
+            checksum_header_name = 'x-amz-checksum-crc64nvme'
+            checksum_str = 'tPMvgM0jSDQ='
+        else:
+            raise Exception("Checksum algo not supported by test helper")
 
         # upload, with client adding checksum
         upload_request = self._put_object_request(put_body_stream, content_length, path=path)
         upload_checksum_config = S3ChecksumConfig(
-            algorithm=S3ChecksumAlgorithm.CRC32,
+            algorithm=algo,
             location=S3ChecksumLocation.TRAILER)
+        if provide_full_object_checksum:
+            upload_request.headers.add(checksum_header_name, checksum_str)
+            # checksum will be provided from the header, don't set the checksum configs
+            upload_checksum_config = None
+
         self._test_s3_put_get_object(upload_request, S3RequestType.PUT_OBJECT,
                                      checksum_config=upload_checksum_config)
-        self.assertEqual(HttpHeaders(self.response_headers).get('x-amz-checksum-crc32'),
-                         crc32_base64_str)
 
         # download, with client validating checksum
         download_request = self._get_object_request(path)
@@ -610,9 +640,31 @@ class S3RequestTest(NativeResourceTest):
         self._test_s3_put_get_object(download_request, S3RequestType.GET_OBJECT,
                                      checksum_config=download_checksum_config)
         self.assertTrue(self.done_did_validate_checksum)
-        self.assertEqual(self.done_checksum_validation_algorithm, S3ChecksumAlgorithm.CRC32)
-        self.assertEqual(HttpHeaders(self.response_headers).get('x-amz-checksum-crc32'),
-                         crc32_base64_str)
+        self.assertEqual(self.done_checksum_validation_algorithm, algo)
+        self.assertEqual(HttpHeaders(self.response_headers).get(checksum_header_name),
+                         checksum_str)
+        put_body_stream.close()
+
+    def test_round_trip_with_trailing_checksum(self):
+        self._round_trip_with_checksums_helper(S3ChecksumAlgorithm.CRC32, mpu=False)
+
+    def test_round_trip_with_full_object_checksum_mpu(self):
+        self._round_trip_with_checksums_helper(
+            S3ChecksumAlgorithm.CRC64NVME,
+            mpu=True,
+            provide_full_object_checksum=True)
+
+    def test_round_trip_with_full_object_checksum_single_part(self):
+        self._round_trip_with_checksums_helper(
+            S3ChecksumAlgorithm.CRC64NVME,
+            mpu=False,
+            provide_full_object_checksum=True)
+
+    def test_round_trip_with_full_object_checksum_mpu_crc32(self):
+        self._round_trip_with_checksums_helper(S3ChecksumAlgorithm.CRC32, mpu=True, provide_full_object_checksum=True)
+
+    def test_round_trip_with_full_object_checksum_single_part_crc32(self):
+        self._round_trip_with_checksums_helper(S3ChecksumAlgorithm.CRC32, mpu=False, provide_full_object_checksum=True)
 
     def _on_progress_cancel_after_first_chunk(self, progress):
         self.transferred_len += progress

@@ -5,9 +5,8 @@ event-stream library for `awscrt`.
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 
-from collections.abc import ByteString
 from enum import IntEnum
-from typing import Any
+from typing import Any, Union
 from uuid import UUID
 
 __all__ = ['HeaderType', 'Header']
@@ -135,7 +134,7 @@ class Header:
         return cls(name, value, HeaderType.INT64)
 
     @classmethod
-    def from_byte_buf(cls, name: str, value: ByteString) -> 'Header':
+    def from_byte_buf(cls, name: str, value: Union[bytes, bytearray]) -> 'Header':
         """Create a Header of type :attr:`~HeaderType.BYTE_BUF`
 
         The value must be a bytes-like object"""
@@ -246,7 +245,7 @@ class Header:
         Raises an exception if type is not :attr:`~HeaderType.INT64`"""
         return self._value_as(HeaderType.INT64)
 
-    def value_as_byte_buf(self) -> ByteString:
+    def value_as_byte_buf(self) -> Union[bytes, bytearray]:
         """Return value of bytes
 
         Raises an exception if type is not :attr:`~HeaderType.BYTE_BUF`"""

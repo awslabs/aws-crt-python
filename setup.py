@@ -1,8 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
-
 import codecs
-import distutils.ccompiler
 import glob
 import os
 import os.path
@@ -15,6 +13,12 @@ import subprocess
 import sys
 import sysconfig
 from wheel.bdist_wheel import bdist_wheel
+if sys.platform == 'win32':
+    # distutils is deprecated in Python 3.10 and removed in 3.12. However, it still works because Python defines a compatibility interface as long as setuptools is installed.
+    # We don't have an official alternative for distutils.ccompiler as of September 2024. See: https://github.com/pypa/setuptools/issues/2806
+    # Once that issue is resolved, we can migrate to the official solution.
+    # For now, restrict distutils to Windows only, where it's needed.
+    import distutils.ccompiler
 
 
 def is_64bit():
@@ -31,6 +35,18 @@ def is_development_mode():
     These builds can take shortcuts to encourage faster iteration,
     and turn on more warnings as errors to encourage correct code."""
     return 'develop' in sys.argv
+
+
+def get_xcode_major_version():
+    """Return major version of xcode present on the system"""
+    try:
+        output = subprocess.check_output(
+            ['xcodebuild', '-version'], text=True)
+        version_line = output.split('\n')[0]
+        version = version_line.split(' ')[-1]
+        return int(version.split('.')[0])
+    except BaseException:
+        return 0
 
 
 def run_cmd(args):
@@ -52,7 +68,7 @@ def is_macos_universal2():
         return False
 
     cflags = sysconfig.get_config_var('CFLAGS')
-    return '-arch x86_64' in cflags and '-arch x86_64' in cflags
+    return '-arch x86_64' in cflags and '-arch arm64' in cflags
 
 
 def determine_cross_compile_args():
@@ -122,8 +138,20 @@ def get_cmake_path():
     raise Exception("CMake must be installed to build from source.")
 
 
+def using_system_libs():
+    """If true, don't build any dependencies. Use the libs that are already on the system."""
+    return (os.getenv('AWS_CRT_BUILD_USE_SYSTEM_LIBS') == '1'
+            or not os.path.exists(os.path.join(PROJECT_DIR, 'crt', 'aws-c-common', 'CMakeLists.txt')))
+
+
 def using_system_libcrypto():
-    return os.getenv('AWS_CRT_BUILD_USE_SYSTEM_LIBCRYPTO') == '1'
+    """If true, don't build AWS-LC. Use the libcrypto that's already on the system."""
+    return using_system_libs() or os.getenv('AWS_CRT_BUILD_USE_SYSTEM_LIBCRYPTO') == '1'
+
+
+def forcing_static_libs():
+    """If true, force libs to be linked statically."""
+    return os.getenv('AWS_CRT_BUILD_FORCE_STATIC_LIBS') == '1'
 
 
 class AwsLib:
@@ -134,12 +162,11 @@ class AwsLib:
 
 
 # The extension depends on these libs.
-# They're built along with the extension.
+# They're built along with the extension (unless using_system_libs() is True)
 AWS_LIBS = []
 if sys.platform != 'darwin' and sys.platform != 'win32':
-    if not using_system_libcrypto():
-        # aws-lc produces libcrypto.a
-        AWS_LIBS.append(AwsLib('aws-lc', libname='crypto'))
+    # aws-lc produces libcrypto.a
+    AWS_LIBS.append(AwsLib('aws-lc', libname='crypto'))
     AWS_LIBS.append(AwsLib('s2n'))
 AWS_LIBS.append(AwsLib('aws-c-common'))
 AWS_LIBS.append(AwsLib('aws-c-sdkutils'))
@@ -211,7 +238,10 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
         ]
         run_cmd(build_cmd)
 
-    def _build_dependencies(self, build_dir, install_path):
+    def _build_dependencies(self):
+        build_dir = os.path.join(self.build_temp, 'deps')
+        install_path = os.path.join(self.build_temp, 'deps', 'install')
+
         if is_macos_universal2() and not is_development_mode():
             # create macOS universal binary by compiling for x86_64 and arm64,
             # each in its own subfolder, and then creating a universal binary
@@ -254,30 +284,26 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
             # normal build for a single architecture
             self._build_dependencies_impl(build_dir, install_path)
 
-    def run(self):
-        # build dependencies
-        dep_build_dir = os.path.join(self.build_temp, 'deps')
-        dep_install_path = os.path.join(self.build_temp, 'deps', 'install')
-
-        if os.path.exists(os.path.join(PROJECT_DIR, 'crt', 'aws-c-common', 'CMakeLists.txt')):
-            self._build_dependencies(dep_build_dir, dep_install_path)
-        else:
-            print("Skip building dependencies, source not found.")
-
         # update paths so awscrt_ext can access dependencies.
         # add to the front of any list so that our dependencies are preferred
         # over anything that might already be on the system (i.e. libcrypto.a)
 
-        self.include_dirs.insert(0, os.path.join(dep_install_path, 'include'))
+        self.include_dirs.insert(0, os.path.join(install_path, 'include'))
 
         # some platforms (ex: fedora) use /lib64 instead of just /lib
         lib_dir = 'lib'
-        if is_64bit() and os.path.exists(os.path.join(dep_install_path, 'lib64')):
+        if is_64bit() and os.path.exists(os.path.join(install_path, 'lib64')):
             lib_dir = 'lib64'
-        if is_32bit() and os.path.exists(os.path.join(dep_install_path, 'lib32')):
+        if is_32bit() and os.path.exists(os.path.join(install_path, 'lib32')):
             lib_dir = 'lib32'
 
-        self.library_dirs.insert(0, os.path.join(dep_install_path, lib_dir))
+        self.library_dirs.insert(0, os.path.join(install_path, lib_dir))
+
+    def run(self):
+        if using_system_libs():
+            print("Skip building dependencies")
+        else:
+            self._build_dependencies()
 
         # continue with normal build_ext.run()
         super().run()
@@ -286,8 +312,12 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
 class bdist_wheel_abi3(bdist_wheel):
     def get_tag(self):
         python, abi, plat = super().get_tag()
-        if python.startswith("cp") and sys.version_info >= (3, 11):
-            # on CPython, our wheels are abi3 and compatible back to 3.11
+        # on CPython, our wheels are abi3 and compatible back to 3.11
+        if python.startswith("cp") and sys.version_info >= (3, 13):
+            # 3.13 deprecates PyWeakref_GetObject(), adds alternative
+            return "cp313", "abi3", plat
+        elif python.startswith("cp") and sys.version_info >= (3, 11):
+            # 3.11 is the first stable ABI that has everything we need
             return "cp311", "abi3", plat
 
         return python, abi, plat
@@ -318,44 +348,46 @@ def awscrt_ext():
         extra_link_args += ['-framework', 'Security']
 
     else:  # unix
-        # linker will prefer shared libraries over static if it can find both.
-        # force linker to choose static variant by using using
-        # "-l:libaws-c-common.a" syntax instead of just "-laws-c-common".
-        #
-        # This helps AWS developers creating Lambda applications from Brazil.
-        # In Brazil, both shared and static libs are available.
-        # But Lambda requires all shared libs to be explicitly packaged up.
-        # So it's simpler to link them in statically and have less runtime dependencies.
-        libraries = [':lib{}.a'.format(x) for x in libraries]
+        if forcing_static_libs():
+            # linker will prefer shared libraries over static if it can find both.
+            # force linker to choose static variant by using
+            # "-l:libaws-c-common.a" syntax instead of just "-laws-c-common".
+            #
+            # This helps AWS developers creating Lambda applications from Brazil.
+            # In Brazil, both shared and static libs are available.
+            # But Lambda requires all shared libs to be explicitly packaged up.
+            # So it's simpler to link them in statically and have less runtime dependencies.
+            #
+            # Don't apply this trick to dependencies that are always on the OS (e.g. librt)
+            libraries = [':lib{}.a'.format(x) for x in libraries]
 
         # OpenBSD doesn't have librt; functions are found in libc instead.
         if not sys.platform.startswith('openbsd'):
             libraries += ['rt']
 
-        if using_system_libcrypto():
-            libraries += ['crypto']
-        else:
-            # hide the symbols from libcrypto.a
-            # this prevents weird crashes if an application also ends up using
-            # libcrypto.so from the system's OpenSSL installation.
-            extra_link_args += ['-Wl,--exclude-libs,libcrypto.a']
+        # hide the symbols from libcrypto.a
+        # this prevents weird crashes if an application also ends up using
+        # libcrypto.so from the system's OpenSSL installation.
+        # Do this even if using system libcrypto, since it could still be a static lib.
+        extra_link_args += ['-Wl,--exclude-libs,libcrypto.a']
 
-            # OpenBSD 7.4+ defaults to linking with --execute-only, which is bad for AWS-LC.
-            # See: https://github.com/aws/aws-lc/blob/4b07805bddc55f68e5ce8c42f215da51c7a4e099/CMakeLists.txt#L44-L53
-            # (If AWS-LC's CMakeLists.txt removes these lines in the future, we can remove this hack here as well)
-            if sys.platform.startswith('openbsd'):
+        # OpenBSD 7.4+ defaults to linking with --execute-only, which is bad for AWS-LC.
+        # See: https://github.com/aws/aws-lc/blob/4b07805bddc55f68e5ce8c42f215da51c7a4e099/CMakeLists.txt#L44-L53
+        # (If AWS-LC's CMakeLists.txt removes these lines in the future, we can remove this hack here as well)
+        if sys.platform.startswith('openbsd'):
+            if not using_system_libcrypto():
                 extra_link_args += ['-Wl,--no-execute-only']
 
         # FreeBSD doesn't have execinfo as a part of libc like other Unix variant.
         # Passing linker flag to link execinfo properly
         if sys.platform.startswith('freebsd'):
-            extra_link_args += ['-lexecinfo']
+            libraries += ['execinfo']
 
         # python usually adds -pthread automatically, but we've observed
         # rare cases where that didn't happen, so let's be explicit.
         extra_link_args += ['-pthread']
 
-    if distutils.ccompiler.get_default_compiler() != 'msvc':
+    if sys.platform != 'win32' or distutils.ccompiler.get_default_compiler() != 'msvc':
         extra_compile_args += ['-Wno-strict-aliasing', '-std=gnu99']
 
         # treat warnings as errors in development mode
@@ -368,12 +400,29 @@ def awscrt_ext():
             if not is_macos_universal2():
                 if sys.platform == 'darwin':
                     extra_link_args += ['-Wl,-fatal_warnings']
+                    # xcode 15 introduced a new linker that generates a warning
+                    # when it sees duplicate libs or rpath during bundling.
+                    # pyenv installed from homebrew put duplicate rpath entries
+                    # into sysconfig, and setuptools happily passes them along
+                    # to xcode, resulting in a warning
+                    # (which is fatal in this branch).
+                    # ex. https://github.com/pyenv/pyenv/issues/2890
+                    # lets revert back to old linker on xcode >= 15 until one of
+                    # the involved parties fixes the issue.
+                    if get_xcode_major_version() >= 15:
+                        extra_link_args += ['-Wl,-ld_classic']
                 elif 'bsd' in sys.platform:
                     extra_link_args += ['-Wl,-fatal-warnings']
                 else:
                     extra_link_args += ['-Wl,--fatal-warnings']
 
-    if sys.version_info >= (3, 11):
+    # prefer building with stable ABI, so a wheel can work with multiple major versions
+    if sys.version_info >= (3, 13):
+        # 3.13 deprecates PyWeakref_GetObject(), adds alternative
+        define_macros.append(('Py_LIMITED_API', '0x030D0000'))
+        py_limited_api = True
+    elif sys.version_info >= (3, 11):
+        # 3.11 is the first stable ABI that has everything we need
         define_macros.append(('Py_LIMITED_API', '0x030B0000'))
         py_limited_api = True
 
@@ -422,7 +471,7 @@ setuptools.setup(
         "Operating System :: Unix",
         "Operating System :: MacOS",
     ],
-    python_requires='>=3.7',
+    python_requires='>=3.8',
     ext_modules=[awscrt_ext()],
     cmdclass={'build_ext': awscrt_build_ext, "bdist_wheel": bdist_wheel_abi3},
     test_suite='test',
