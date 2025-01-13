@@ -167,7 +167,7 @@ class TestCBOR(NativeResourceTest):
                 # Decode the CBOR data - should raise an exception
                 decoder = AwsCborDecoder(bytes_input)
 
-                with self.assertRaises((RuntimeError, ValueError, AssertionError)):
+                with self.assertRaises(RuntimeError):
                     type = decoder.peek_next_type()
                     if type == AwsCborType.Tag:
                         tag_id = decoder.pop_next_tag_val()

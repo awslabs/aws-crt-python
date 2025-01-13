@@ -172,6 +172,8 @@ class AwsCborDecoder(NativeResource):
         self._binding = _awscrt.cbor_decoder_new(src)
 
     def peek_next_type(self) -> AwsCborType:
+        """Return the AwsCborType of the next data item in the cbor formatted data
+        """
         return AwsCborType(_awscrt.cbor_decoder_peek_type(self._binding))
 
     def get_remaining_bytes_len(self) -> int:
@@ -218,4 +220,7 @@ class AwsCborDecoder(NativeResource):
         return _awscrt.cbor_decoder_pop_next_py_dict(self._binding)
 
     def pop_next_data_item(self) -> Any:
+        """Generic API to decode cbor formatted data to a python object.
+        TODO: tags are NOT supported yet.
+        """
         return _awscrt.cbor_decoder_pop_next_data_item(self._binding)
