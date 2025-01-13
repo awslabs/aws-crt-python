@@ -3,6 +3,9 @@
 
 from test import NativeResourceTest
 from awscrt.cbor import *
+import json
+import struct
+import os
 
 
 class TestCBOR(NativeResourceTest):
@@ -65,4 +68,109 @@ class TestCBOR(NativeResourceTest):
         t = decoder.pop_next_data_item()
         self.assertEqual(val_to_write, t)
 
-# TODO: More tests: inf str/bytes/array/map
+    def _ieee754_bits_to_float(self, bits):
+        return struct.unpack('>f', struct.pack('>I', bits))[0]
+
+    def _ieee754_bits_to_double(self, bits):
+        return struct.unpack('>d', struct.pack('>Q', bits))[0]
+
+    def _convert_expect(self, expect):
+        if isinstance(expect, dict):
+            if 'uint' in expect:
+                return expect['uint']
+            elif 'negint' in expect:
+                return expect['negint']
+            elif 'bool' in expect:
+                return expect['bool']
+            elif 'float32' in expect:
+                return self._ieee754_bits_to_float(expect['float32'])
+            elif 'float64' in expect:
+                return self._ieee754_bits_to_double(expect['float64'])
+            elif 'null' in expect:
+                return None
+            elif 'bytestring' in expect:
+                return bytes(expect['bytestring'])
+            elif 'string' in expect:
+                return expect['string']
+            elif 'list' in expect:
+                return [self._convert_expect(item) for item in expect['list']]
+            elif 'map' in expect:
+                return {k: self._convert_expect(v) for k, v in expect['map'].items()}
+        return expect
+
+    def test_cbor_decode_success(self):
+        """Test CBOR decoding using test cases from JSON file"""
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        test_file = os.path.join(current_dir, 'resources', 'decode-success-tests.json')
+        with open(test_file, 'r') as f:
+            test_cases = json.load(f)
+
+        for case in test_cases:
+            description = case.get("description", "No description")
+            input_hex = case.get("input")
+            expected = self._convert_expect(case.get("expect"))
+
+            with self.subTest(description=description):
+                # Convert hex input to bytes
+                try:
+                    bytes_input = bytes.fromhex(input_hex)
+                except ValueError as e:
+                    self.fail(f"Failed to convert hex input: {e}")
+
+                # Decode the CBOR data
+                try:
+                    decoder = AwsCborDecoder(bytes_input)
+                    type = decoder.peek_next_type()
+                    if type == AwsCborType.Tag:
+                        # TODO: we don't support parse the tag to python type yet.
+                        # hard code the tag cases to the expected format.
+                        tag_id = decoder.pop_next_tag_val()
+                        tag_data = decoder.pop_next_data_item()
+                        decoded_data = {
+                            "tag": {
+                                "id": tag_id,
+                                "value": {
+                                    "uint": tag_data
+                                }
+                            }
+                        }
+                    else:
+                        decoded_data = decoder.pop_next_data_item()
+
+                    self.assertEqual(
+                        decoded_data,
+                        expected,
+                        f"Failed case '{description}'\nDecoded: {decoded_data}\nExpected: {expected}"
+                    )
+                except Exception as e:
+                    self.fail(f"Failed to decode CBOR data: {e}")
+
+    def test_cbor_decode_errors(self):
+        """Test CBOR decoding error cases from JSON file"""
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        test_file = os.path.join(current_dir, 'resources', 'decode-error-tests.json')
+
+        with open(test_file, 'r') as f:
+            test_cases = json.load(f)
+
+        for case in test_cases:
+            description = case.get("description", "No description")
+            input_hex = case.get("input")
+
+            with self.subTest(description=description):
+                # Convert hex input to bytes
+                try:
+                    bytes_input = bytes.fromhex(input_hex)
+                except ValueError as e:
+                    self.fail(f"Failed to convert hex input: {e}")
+
+                # Decode the CBOR data - should raise an exception
+                decoder = AwsCborDecoder(bytes_input)
+
+                with self.assertRaises((RuntimeError, ValueError, AssertionError)):
+                    type = decoder.peek_next_type()
+                    if type == AwsCborType.Tag:
+                        tag_id = decoder.pop_next_tag_val()
+                        tag_data = decoder.pop_next_data_item()
+                    else:
+                        decoded_data = decoder.pop_next_data_item()
