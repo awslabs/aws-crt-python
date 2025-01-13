@@ -41,7 +41,7 @@ jobs:
           aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
           ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-manylinux1-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }} --python /opt/python/${{ matrix.python }}/bin/python
 
-  manylinux2014-x86:
+  manylinux2014:
     runs-on: ubuntu-20.04 # latest
     strategy:
       fail-fast: false
@@ -94,7 +94,7 @@ jobs:
           aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
           ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-manylinux2014-aarch64 build -p ${{ env.PACKAGE_NAME }} --python /opt/python/${{ matrix.python }}/bin/python
 
-  musllinux-1-1-x64:
+  musllinux-1-1:
     runs-on: ubuntu-22.04 # latest
     strategy:
       fail-fast: false
