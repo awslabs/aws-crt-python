@@ -349,7 +349,7 @@ def awscrt_ext():
         extra_compile_args += ['/Z7']
         extra_link_args += ['/DEBUG']
         # Target Win10 to enable Windows 10 specific features (we need it for TLS 1.3)
-        define_macros.append(('_WIN32_WINNT', '0x0A00'))
+        # define_macros.append(('_WIN32_WINNT', '0x0A00'))
 
     elif sys.platform == 'darwin':
         extra_link_args += ['-framework', 'Security']
