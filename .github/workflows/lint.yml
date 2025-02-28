@@ -20,7 +20,7 @@ jobs:
         ./format-check.py
 
   autopep8:
-    runs-on: ubuntu-20.04 # latest
+    runs-on: ubuntu-24.04 # latest
 
     steps:
     - name: Checkout Source
