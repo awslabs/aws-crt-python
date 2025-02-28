@@ -18,7 +18,7 @@ env:
 
 jobs:
   manylinux1:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -108,7 +108,7 @@ jobs:
           ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-musllinux-1-1-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }} --python /opt/python/${{ matrix.python }}/bin/python
 
   raspberry:
-    runs-on: ubuntu-20.04 # latest
+    runs-on: ubuntu-24.04 # latest
     strategy:
       fail-fast: false
       matrix:
@@ -125,7 +125,7 @@ jobs:
 
       # set arm arch
       - name: Install qemu/docker
-        run: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+        run: docker run --privileged --rm tonistiigi/binfmt --install all
 
       - name: Build ${{ env.PACKAGE_NAME }}
         run: |
@@ -155,7 +155,7 @@ jobs:
           ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }}
 
   linux-compiler-compat:
-    runs-on: ubuntu-22.04 # latest
+    runs-on: ubuntu-24.04 # latest
     strategy:
       matrix:
         compiler:
@@ -268,7 +268,7 @@ jobs:
 
 
   openbsd:
-    runs-on: ubuntu-22.04 # latest
+    runs-on: ubuntu-24.04 # latest
     strategy:
       fail-fast: false
       matrix:
@@ -301,7 +301,7 @@ jobs:
             ./builder build -p ${{ env.PACKAGE_NAME }}
 
   freebsd:
-    runs-on: ubuntu-22.04 # latest
+    runs-on: ubuntu-24.04 # latest
     permissions:
       id-token: write # This is required for requesting the JWT
     steps:
@@ -330,7 +330,7 @@ jobs:
 
   # check that tests requiring custom env-vars or AWS credentials are simply skipped
   tests-ok-without-creds:
-    runs-on: ubuntu-22.04 # latest
+    runs-on: ubuntu-24.04 # latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -342,7 +342,7 @@ jobs:
           python3 -m unittest discover --failfast --verbose
 
   package-source:
-    runs-on: ubuntu-22.04 # latest
+    runs-on: ubuntu-24.04 # latest
     permissions:
       id-token: write # This is required for requesting the JWT
     steps:
@@ -363,7 +363,7 @@ jobs:
 
   # check that docs can still build
   check-docs:
-    runs-on: ubuntu-22.04 # latest
+    runs-on: ubuntu-24.04 # latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -375,7 +375,7 @@ jobs:
           ./scripts/make-docs.py
 
   check-submodules:
-    runs-on: ubuntu-22.04 # latest
+    runs-on: ubuntu-24.04 # latest
     steps:
     - name: Checkout Source
       uses: actions/checkout@v4
