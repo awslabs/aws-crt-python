@@ -125,7 +125,7 @@ jobs:
 
       # set arm arch
       - name: Install qemu/docker
-        run: docker run --privileged --rm tonistiigi/binfmt --install armv7
+        run: docker run --privileged --rm tonistiigi/binfmt --install linux/arm/v7
 
       - name: Build ${{ env.PACKAGE_NAME }}
         run: |
