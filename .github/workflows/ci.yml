@@ -125,7 +125,7 @@ jobs:
 
       # set arm arch
       - name: Install qemu/docker
-        run: docker run --privileged --rm tonistiigi/binfmt --install arm/v7
+        run: docker run --privileged --rm tonistiigi/binfmt --install armv7
 
       - name: Build ${{ env.PACKAGE_NAME }}
         run: |
@@ -201,7 +201,7 @@ jobs:
         run: |
           python3 -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder')"
           chmod a+x builder
-          ./builder build -p ${{ env.PACKAGE_NAME }} --python=python3.11
+          ./builder build -p ${{ env.PACKAGE_NAME }} --python=python3.12
       - name: Assert libcrypto.so used
         run: |
           # assert it's linked against the system's libcrypto.so
