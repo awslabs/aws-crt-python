@@ -67,7 +67,7 @@ jobs:
           aws-region: ${{ env.AWS_DEFAULT_REGION }}
       # Only aarch64 needs this, but it doesn't hurt anything
       - name: Install qemu/docker
-        run: docker run --privileged --rm tonistiigi/binfmt --install all
+        run: docker run --privileged --rm tonistiigi/binfmt --install aarch64
 
       - name: Build ${{ env.PACKAGE_NAME }}
         run: |
@@ -100,7 +100,7 @@ jobs:
 
       # Only aarch64 needs this, but it doesn't hurt anything
       - name: Install qemu/docker
-        run: docker run --privileged --rm tonistiigi/binfmt --install all
+        run: docker run --privileged --rm tonistiigi/binfmt --install aarch64
 
       - name: Build ${{ env.PACKAGE_NAME }}
         run: |
@@ -133,7 +133,7 @@ jobs:
           ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }}
 
   linux-compat:
-    runs-on: ubuntu-22.04 # latest
+    runs-on: ubuntu-24.04 # latest
     strategy:
       matrix:
         image:
