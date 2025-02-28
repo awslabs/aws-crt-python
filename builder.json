@@ -27,17 +27,5 @@
         "aws-crt-python"
     ],
     "upstream": [],
-    "downstream": [],
-
-    "variants": {
-        "current_python": {
-            "hosts": {
-                "ubuntu": {
-                    "!variables": {
-                        "python": "python3.11"
-                    }
-                }
-            }
-        }
-    }
+    "downstream": []
 }
