@@ -363,7 +363,7 @@ jobs:
 
   # check that docs can still build
   check-docs:
-    runs-on: ubuntu-24.04 # latest
+    runs-on: ubuntu-22.04 # latest
     steps:
       - uses: actions/checkout@v4
         with:
