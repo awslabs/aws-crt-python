@@ -562,6 +562,7 @@ on_done:
 }
 
 PyObject *aws_py_ed25519_export_public(PyObject *self, PyObject *args) {
+    (void)self;
     PyObject *ed25519_capsule = NULL;
     int export_format = 0;
 
@@ -589,6 +590,7 @@ PyObject *aws_py_ed25519_export_public(PyObject *self, PyObject *args) {
 }
 
 PyObject *aws_py_ed25519_export_private(PyObject *self, PyObject *args) {
+    (void)self;
     PyObject *ed25519_capsule = NULL;
     int export_format = 0;
 
