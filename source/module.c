@@ -762,6 +762,11 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(rsa_sign, METH_VARARGS),
     AWS_PY_METHOD_DEF(rsa_verify, METH_VARARGS),
 
+    /* ED25519 crypto primitives */
+    AWS_PY_METHOD_DEF(ed25519_new_generate, METH_NOARGS),
+    AWS_PY_METHOD_DEF(ed25519_export_public, METH_VARARGS),
+    AWS_PY_METHOD_DEF(ed25519_export_private, METH_VARARGS),
+
     /* Checksum primitives */
     AWS_PY_METHOD_DEF(checksums_crc32, METH_VARARGS),
     AWS_PY_METHOD_DEF(checksums_crc32c, METH_VARARGS),

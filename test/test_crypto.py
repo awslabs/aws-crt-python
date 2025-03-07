@@ -3,7 +3,7 @@
 
 
 from test import NativeResourceTest
-from awscrt.crypto import Hash, RSA, RSAEncryptionAlgorithm, RSASignatureAlgorithm
+from awscrt.crypto import Hash, RSA, RSAEncryptionAlgorithm, RSASignatureAlgorithm, ED25519, ED25519ExportFormat
 import base64
 import unittest
 
@@ -254,6 +254,15 @@ class TestCredentials(NativeResourceTest):
         signature = rsa.sign(RSASignatureAlgorithm.PKCS1_5_SHA256, digest)
         self.assertFalse(rsa.verify(RSASignatureAlgorithm.PKCS1_5_SHA256, digest2, signature))
         self.assertFalse(rsa.verify(RSASignatureAlgorithm.PKCS1_5_SHA256, digest, b'bad signature'))
+
+    def test_rsa_signing_verify_fail(self):
+        key = ED25519.new_generate()
+
+        self.assertEqual(32, len(key.export_public(ED25519ExportFormat.RAW)))
+        self.assertEqual(32, len(key.export_private(ED25519ExportFormat.RAW)))
+
+        self.assertEqual(68, len(key.export_public(ED25519ExportFormat.OPENSSH_B64)))
+        self.assertEqual(312, len(key.export_private(ED25519ExportFormat.OPENSSH_B64)))
 
 
 if __name__ == '__main__':
