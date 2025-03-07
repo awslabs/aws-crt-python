@@ -15,6 +15,7 @@
 const char *s_capsule_name_hash = "aws_hash";
 const char *s_capsule_name_hmac = "aws_hmac";
 const char *s_capsule_name_rsa = "aws_rsa";
+const char *s_capsule_name_ed25519 = "aws_ed25519";
 
 static void s_hash_destructor(PyObject *hash_capsule) {
     assert(PyCapsule_CheckExact(hash_capsule));
