@@ -207,4 +207,4 @@ class ED25519(NativeResource):
         """
         Exports public part of the key in specified format.
         """
-        return _awscrt.ed25519_export_public(self._binding, export_format)
+        return _awscrt.ed25519_export_private(self._binding, export_format)

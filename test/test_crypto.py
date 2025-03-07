@@ -255,7 +255,7 @@ class TestCredentials(NativeResourceTest):
         self.assertFalse(rsa.verify(RSASignatureAlgorithm.PKCS1_5_SHA256, digest2, signature))
         self.assertFalse(rsa.verify(RSASignatureAlgorithm.PKCS1_5_SHA256, digest, b'bad signature'))
 
-    def test_ed25519_signing_verify_fail(self):
+    def test_ed25519_keygen(self):
         key = ED25519.new_generate()
 
         self.assertEqual(32, len(key.export_public(ED25519ExportFormat.RAW)))
