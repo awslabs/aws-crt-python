@@ -539,6 +539,7 @@ static void s_ed25519_destructor(PyObject *ed25519_capsule) {
 
 PyObject *aws_py_ed25519_new_generate(PyObject *self, PyObject *args) {
     (void)self;
+    (void)args;
 
     PyObject *capsule = NULL;
     struct aws_allocator *allocator = aws_py_get_allocator();
