@@ -391,11 +391,12 @@ def awscrt_ext():
             # Don't apply this trick to dependencies that are always on the OS (e.g. librt)
             libraries = [':lib{}.a'.format(x) for x in libraries]
 
-        # hide the symbols from libcrypto.a
-        # this prevents weird crashes if an application also ends up using
-        # libcrypto.so from the system's OpenSSL installation.
-        # Do this even if using system libcrypto, since it could still be a static lib.
-        extra_link_args += ['-Wl,--exclude-libs,libcrypto.a']
+        if sys.platform != 'win32':
+            # hide the symbols from libcrypto.a
+            # this prevents weird crashes if an application also ends up using
+            # libcrypto.so from the system's OpenSSL installation.
+            # Do this even if using system libcrypto, since it could still be a static lib.
+            extra_link_args += ['-Wl,--exclude-libs,libcrypto.a']
 
     if sys.platform != 'win32' or distutils.ccompiler.get_default_compiler() != 'msvc':
         extra_compile_args += ['-Wno-strict-aliasing', '-std=gnu99']
