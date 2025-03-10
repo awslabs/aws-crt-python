@@ -340,7 +340,7 @@ def awscrt_ext():
     define_macros = []
     py_limited_api = False
 
-    libraries = [x.libname for x in AWS _LIBS]
+    libraries = [x.libname for x in AWS_LIBS]
 
     # libraries must be passed to the linker with upstream dependencies listed last.
     libraries.reverse()
