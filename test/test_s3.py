@@ -116,7 +116,7 @@ class CrossProcessLockTest(NativeResourceTest):
         # the first forked process release the forked lock.
         # when the process forked, the child process also has the lock and it could release the lock before
         # the parent process. Make sure when this happens, the lock is still held by the parent process.
-        release_process = Process(target=self.release_lock_task)
+        release_process = Process(target=release_lock_task)
         release_process.start()
         release_process.join()
 
