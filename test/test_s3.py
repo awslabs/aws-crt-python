@@ -202,22 +202,16 @@ def s3_client_new(
         num_threads = None
         throughput_target_gbps = None
 
-    print(f"s3_client_new 1: {os.getpid()}")
     event_loop_group = EventLoopGroup(num_threads)
-    print(f"s3_client_new 2: {os.getpid()}")
     host_resolver = DefaultHostResolver(event_loop_group)
-    print(f"s3_client_new 3: {os.getpid()}")
     bootstrap = ClientBootstrap(event_loop_group, host_resolver)
-    print(f"s3_client_new 4: {os.getpid()}")
     credential_provider = AwsCredentialsProvider.new_default_chain(bootstrap)
-    print(f"s3_client_new 5: {os.getpid()}")
     signing_config = create_default_s3_signing_config(region=region, credential_provider=credential_provider)
     tls_option = None
     if secure:
         opt = TlsContextOptions()
         ctx = ClientTlsContext(opt)
         tls_option = TlsConnectionOptions(ctx)
-    print(f"s3_client_new 3: {os.getpid()}")
     s3_client = S3Client(
         bootstrap=bootstrap,
         region=region,
@@ -228,7 +222,6 @@ def s3_client_new(
         enable_s3express=enable_s3express,
         memory_limit=mem_limit,
         network_interface_names=network_interface_names)
-    print(f"s3_client_new 4: {os.getpid()}")
     return s3_client
 
 
@@ -657,7 +650,6 @@ class S3RequestTest(NativeResourceTest):
             self.upload_with_global_client()
             global CRT_S3_CLIENT
             del CRT_S3_CLIENT
-            print(f"Succeess")
             exit(0)
         except Exception as e:
             print(f"fork_s3_client error: {e}")
