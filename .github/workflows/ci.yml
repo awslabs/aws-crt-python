@@ -223,6 +223,7 @@ jobs:
     permissions:
       id-token: write # This is required for requesting the JWT
     steps:
+      - uses: ilammy/setup-nasm@v1
       - name: configure AWS credentials (containers)
         uses: aws-actions/configure-aws-credentials@v4
         with:
