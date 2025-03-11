@@ -28,7 +28,7 @@ include(CTest)
 
 # On Unix we use S2N for TLS and AWS-LC crypto.
 # (On Windows and Apple we use the default OS libraries)
-if(UNIX AND NOT APPLE)
+if ((UNIX AND NOT APPLE) OR AWS_USE_LIBCRYPTO_TO_SUPPORT_ED25519_EVERYWHERE)
     option(USE_OPENSSL "Set this if you want to use your system's OpenSSL compatible libcrypto" OFF)
     include(AwsPrebuildDependency)
 
@@ -54,6 +54,10 @@ if(UNIX AND NOT APPLE)
         )
     endif()
 
+
+endif()
+
+if(UNIX AND NOT APPLE)
     # prebuild s2n-tls.
     aws_prebuild_dependency(
         DEPENDENCY_NAME S2N

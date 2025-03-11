@@ -170,9 +170,9 @@ class AwsLib:
 # They're built along with the extension (unless using_system_libs() is True)
 AWS_LIBS = []
 
-if not disable_libcrypto_use_for_ed25519_everywhere() or (sys.platform != 'darwin' and sys.platform != 'win32'):
+#if not disable_libcrypto_use_for_ed25519_everywhere() or (sys.platform != 'darwin' and sys.platform != 'win32'):
     # aws-lc produces libcrypto.a
-    AWS_LIBS.append(AwsLib('aws-lc', libname='crypto'))
+AWS_LIBS.append(AwsLib('aws-lc', libname='crypto'))
 
 if sys.platform != 'darwin' and sys.platform != 'win32':
     AWS_LIBS.append(AwsLib('s2n'))
@@ -225,6 +225,9 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
 
         if using_system_libcrypto():
             cmake_args.append('-DUSE_OPENSSL=ON')
+
+        if not disable_libcrypto_use_for_ed25519_everywhere():
+            cmake_args.append('-DAWS_USE_LIBCRYPTO_TO_SUPPORT_ED25519_EVERYWHERE=ON')
 
         if sys.platform == 'darwin':
             # build lib with same MACOSX_DEPLOYMENT_TARGET that python will ultimately
@@ -377,6 +380,12 @@ def awscrt_ext():
         # rare cases where that didn't happen, so let's be explicit.
         extra_link_args += ['-pthread']
 
+        # hide the symbols from libcrypto.a
+        # this prevents weird crashes if an application also ends up using
+        # libcrypto.so from the system's OpenSSL installation.
+        # Do this even if using system libcrypto, since it could still be a static lib.
+        extra_link_args += ['-Wl,--exclude-libs,libcrypto.a']
+
     if not disable_libcrypto_use_for_ed25519_everywhere() or (sys.platform != 'darwin' and sys.platform != 'win32'):
         if forcing_static_libs():
             # linker will prefer shared libraries over static if it can find both.
@@ -390,13 +399,6 @@ def awscrt_ext():
             #
             # Don't apply this trick to dependencies that are always on the OS (e.g. librt)
             libraries = [':lib{}.a'.format(x) for x in libraries]
-
-        if sys.platform != 'win32':
-            # hide the symbols from libcrypto.a
-            # this prevents weird crashes if an application also ends up using
-            # libcrypto.so from the system's OpenSSL installation.
-            # Do this even if using system libcrypto, since it could still be a static lib.
-            extra_link_args += ['-Wl,--exclude-libs,libcrypto.a']
 
     if sys.platform != 'win32' or distutils.ccompiler.get_default_compiler() != 'msvc':
         extra_compile_args += ['-Wno-strict-aliasing', '-std=gnu99']
