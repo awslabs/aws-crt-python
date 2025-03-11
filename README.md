@@ -45,15 +45,16 @@ To simplify installation, aws-crt-python has its own copy of libcrypto.
 This lets you install a wheel from PyPI without having OpenSSL installed.
 Unix wheels on PyPI come with libcrypto statically compiled in.
 Code to build libcrypto comes from [AWS-LC](https://github.com/aws/aws-lc).
-AWS-LC's code is included in the PyPI source package,
+AWS-LC's code is included in the PyPI source package, 
 and the git repository includes it as a submodule.
 
-If you need aws-crt-python to use the libcrypto included on your system,
+If you need aws-crt-python to use the libcrypto included on your system, 
 set environment variable `AWS_CRT_BUILD_USE_SYSTEM_LIBCRYPTO=1` while building from source:
 
 ```sh
 AWS_CRT_BUILD_USE_SYSTEM_LIBCRYPTO=1 python3 -m pip install --no-binary :all: --verbose awscrt
 ```
+
 ( `--no-binary :all:` ensures you do not use the precompiled wheel from PyPI)
 
 You can ignore all this on Windows and Apple platforms, where aws-crt-python
@@ -65,7 +66,7 @@ aws-crt-python depends on several C libraries that make up the AWS Common Runtim
 By default, these libraries are built along with aws-crt-python and statically compiled in
 (their source code is under [crt/](crt/)).
 
-To skip building these dependencies, because they're already available on your system,
+To skip building these dependencies, because they're already available on your system, 
 set environment variable `AWS_CRT_BUILD_USE_SYSTEM_LIBS=1` while building from source:
 
 ```sh
@@ -83,4 +84,22 @@ static: certificate has an existing certificate-key pair that was previously imp
 ```
 
 ## Crash Handler
-You can enable the crash handler by setting the environment variable `AWS_CRT_CRASH_HANDLER=1`. This will print the callstack to `stderr` in the event of a fatal error.
+
+You can enable the crash handler by setting the environment variable `AWS_CRT_CRASH_HANDLER=1` . This will print the callstack to `stderr` in the event of a fatal error.
+
+## Fork caveat
+
+CRT is a multi-threading, is not safe to fork on the multi-thread process.
+Fork is NOT supported with CRT resources running.
+Fork and multiprocessing is not recommended to be use with CRT. Since CRT uses background threads, it can utilize the resources efficiently with on process.
+
+But, as the CRT user and you **really** know what you are doing, there are some workarounds for some use case.
+
+The major issue for fork is the forked process will only have the thread invokes the fork. All other threads will be gone from the child process.
+To workaround this:
+1. Release all CRT resources with background threads. Everything depends on `io.EventLoopGroup`, and the `io.EventLoopGroup` object itself, will needs to be released before fork
+2. Wait for all threads to join before fork. `common.join_all_native_threads()` is a helper to track all the threads created by CRT will be joined from the main thread.
+
+Specifically, refer to `test.test_s3.py.S3RequestTest.test_fork_workaround` for an example of the workaround.
+
+More caveat: MacOS system libraries may start threads. You may see random crashes even if all CRT threads joined before fork on Mac. Try not using fork on MacOS, it's not a default for python since 3.8, [here](https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods).
