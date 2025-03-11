@@ -12,6 +12,7 @@ from test import NativeResourceTest
 from concurrent.futures import Future
 from multiprocessing import Process
 import multiprocessing as mp
+import sys
 
 from awscrt.http import HttpHeaders, HttpRequest
 from awscrt.auth import AwsCredentials
@@ -105,6 +106,7 @@ class CrossProcessLockTest(NativeResourceTest):
         unlocked_process.join()
         self.assertEqual(0, unlocked_process.exitcode)
 
+    @unittest.skipIf(sys.platform.startswith('win'), "Windows doesn't support fork")
     def test_fork_shares_lock(self):
         # Mimic the use case from boto3 where a global lock used and the workaround with fork.
         global CRT_S3_PROCESS_LOCK
