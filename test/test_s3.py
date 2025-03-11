@@ -1,7 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 
-import base64
 from io import BytesIO
 import unittest
 import os
@@ -13,6 +12,7 @@ from test import NativeResourceTest
 from concurrent.futures import Future
 from multiprocessing import Process
 import multiprocessing as mp
+import gc
 
 from awscrt.http import HttpHeaders, HttpRequest
 from awscrt.auth import AwsCredentials
@@ -43,7 +43,6 @@ from awscrt.auth import (
     AwsSigningAlgorithm,
     AwsSigningConfig,
 )
-import zlib
 
 MB = 1024 ** 2
 GB = 1024 ** 3
@@ -61,12 +60,10 @@ class CrossProcessLockTest(NativeResourceTest):
         except RuntimeError as e:
             exit(-1)
 
-    def release_lock_task(self, lock):
-        try:
-            lock.release()
-            exit(0)
-        except RuntimeError as e:
-            exit(-1)
+    def release_lock_task(self):
+        global CRT_S3_PROCESS_LOCK
+        CRT_S3_PROCESS_LOCK = None
+        exit(0)
 
     def setUp(self):
         self.cross_process_lock_name = "instance_lock_test"
@@ -106,21 +103,27 @@ class CrossProcessLockTest(NativeResourceTest):
         self.assertEqual(0, unlocked_process.exitcode)
 
     def test_fork_shares_lock(self):
-        with CrossProcessLock(self.cross_process_lock_name) as lock:
-            mp.set_start_method('fork', force=True)
-            # the first forked process release the forked lock.
-            release_process = Process(target=self.release_lock_task, args=(lock,))
-            release_process.start()
-            release_process.join()
+        # Mimic the use case from boto3 where a global lock used and the workaround with fork.
+        global CRT_S3_PROCESS_LOCK
+        CRT_S3_PROCESS_LOCK = CrossProcessLock(self.cross_process_lock_name)
+        CRT_S3_PROCESS_LOCK.acquire()
+        mp.set_start_method('fork', force=True)
+        # the first forked process release the forked lock.
+        # when the process forked, the child process also has the lock and it could release the lock before
+        # the parent process. Make sure when this happens, the lock is still held by the parent process.
+        release_process = Process(target=self.release_lock_task)
+        release_process.start()
+        release_process.join()
 
-            # create another process try to acquire the lock, it should fail as the
-            # lock should still be held with the parent process.
-            process = Process(target=self.cross_proc_task)
-            process.start()
-            process.join()
-            # acquiring this lock in a sub-process should fail since we
-            # already hold the lock in this process.
-            self.assertNotEqual(0, process.exitcode)
+        # create another process try to acquire the lock, it should fail as the
+        # lock should still be held with the main process.
+        process = Process(target=self.cross_proc_task)
+        process.start()
+        process.join()
+        # acquiring this lock in a sub-process should fail since we
+        # already hold the lock in this process.
+        self.assertNotEqual(0, process.exitcode)
+        del CRT_S3_PROCESS_LOCK
 
 
 class FileCreator(object):
