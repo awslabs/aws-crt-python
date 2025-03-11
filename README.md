@@ -93,13 +93,13 @@ CRT is a multi-threading, is not safe to fork on the multi-thread process.
 Fork is NOT supported with CRT resources running.
 Fork and multiprocessing is not recommended to be use with CRT. Since CRT uses background threads, it can utilize the resources efficiently with on process.
 
-But, as the CRT user and you **really** know what you are doing, there are some workarounds for some use case.
+But, as the CRT user and you **really** handles threads carefully enough, you could make it work.
 
 The major issue for fork is the forked process will only have the thread invokes the fork. All other threads will be gone from the child process.
 To workaround this:
-1. Release all CRT resources with background threads. Everything depends on `io.EventLoopGroup`, and the `io.EventLoopGroup` object itself, will needs to be released before fork
+1. Release all CRT resources with background threads. Everything depends on `io.EventLoopGroup`, and the `io.EventLoopGroup` object itself, will needs to be cleaned up before fork
 2. Wait for all threads to join before fork. `common.join_all_native_threads()` is a helper to track all the threads created by CRT will be joined from the main thread.
 
 Specifically, refer to `test.test_s3.py.S3RequestTest.test_fork_workaround` for an example of the workaround.
 
-More caveat: MacOS system libraries may start threads. You may see random crashes even if all CRT threads joined before fork on Mac. Try not using fork on MacOS, it's not a default for python since 3.8, [here](https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods).
+More caveat: MacOS system libraries may start threads. You may see random crashes even if all CRT threads joined before fork on Mac. Try not using fork on MacOS, it's not a default for python since 3.8, more context can be found [here](https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods).
