@@ -12,7 +12,6 @@ from test import NativeResourceTest
 from concurrent.futures import Future
 from multiprocessing import Process
 import multiprocessing as mp
-import gc
 
 from awscrt.http import HttpHeaders, HttpRequest
 from awscrt.auth import AwsCredentials
@@ -48,25 +47,29 @@ MB = 1024 ** 2
 GB = 1024 ** 3
 S3EXPRESS_ENDPOINT = "crts-east1--use1-az4--x-s3.s3express-use1-az4.us-east-1.amazonaws.com"
 
+cross_process_lock_name = "instance_lock_test"
+
+
+def cross_proc_task():
+    try:
+        lock = CrossProcessLock(cross_process_lock_name)
+        lock.acquire()
+        lock.release()
+        exit(0)
+    except RuntimeError as e:
+        exit(-1)
+
+
+def release_lock_task():
+    # remove the global lock
+    global CRT_S3_PROCESS_LOCK
+    CRT_S3_PROCESS_LOCK = None
+    exit(0)
+
 
 class CrossProcessLockTest(NativeResourceTest):
 
-    def cross_proc_task(self):
-        try:
-            lock = CrossProcessLock(self.cross_process_lock_name)
-            lock.acquire()
-            lock.release()
-            exit(0)
-        except RuntimeError as e:
-            exit(-1)
-
-    def release_lock_task(self):
-        global CRT_S3_PROCESS_LOCK
-        CRT_S3_PROCESS_LOCK = None
-        exit(0)
-
     def setUp(self):
-        self.cross_process_lock_name = "instance_lock_test"
         self.nonce = time.time()
         super().setUp()
 
@@ -88,8 +91,8 @@ class CrossProcessLockTest(NativeResourceTest):
         lock_after_with_same_nonce.release()
 
     def test_cross_proc(self):
-        with CrossProcessLock(self.cross_process_lock_name) as lock:
-            process = Process(target=self.cross_proc_task)
+        with CrossProcessLock(cross_process_lock_name) as lock:
+            process = Process(target=cross_proc_task)
             process.start()
             process.join()
             # acquiring this lock in a sub-process should fail since we
@@ -97,7 +100,7 @@ class CrossProcessLockTest(NativeResourceTest):
             self.assertNotEqual(0, process.exitcode)
         # now that we've released the lock above, the same sub-process path
         # should now succeed.
-        unlocked_process = Process(target=self.cross_proc_task)
+        unlocked_process = Process(target=cross_proc_task)
         unlocked_process.start()
         unlocked_process.join()
         self.assertEqual(0, unlocked_process.exitcode)
@@ -105,7 +108,7 @@ class CrossProcessLockTest(NativeResourceTest):
     def test_fork_shares_lock(self):
         # Mimic the use case from boto3 where a global lock used and the workaround with fork.
         global CRT_S3_PROCESS_LOCK
-        CRT_S3_PROCESS_LOCK = CrossProcessLock(self.cross_process_lock_name)
+        CRT_S3_PROCESS_LOCK = CrossProcessLock(cross_process_lock_name)
         CRT_S3_PROCESS_LOCK.acquire()
         mp.set_start_method('fork', force=True)
         # the first forked process release the forked lock.
@@ -117,7 +120,7 @@ class CrossProcessLockTest(NativeResourceTest):
 
         # create another process try to acquire the lock, it should fail as the
         # lock should still be held with the main process.
-        process = Process(target=self.cross_proc_task)
+        process = Process(target=cross_proc_task)
         process.start()
         process.join()
         # acquiring this lock in a sub-process should fail since we
