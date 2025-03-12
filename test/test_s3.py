@@ -110,7 +110,7 @@ class CrossProcessLockTest(NativeResourceTest):
 
     @unittest.skipIf(sys.platform.startswith('win'), "Windows doesn't support fork")
     def test_fork_shares_lock(self):
-        # Mimic the use case from boto3 where a global lock used and the workaround with fork.
+        # mock the use case from boto3 where a global lock used and the workaround with fork.
         global CRT_S3_PROCESS_LOCK
         CRT_S3_PROCESS_LOCK = CrossProcessLock(cross_process_lock_name)
         CRT_S3_PROCESS_LOCK.acquire()
@@ -677,7 +677,7 @@ class S3RequestTest(NativeResourceTest):
         global CRT_S3_CLIENT
         CRT_S3_CLIENT = s3_client_new(False, self.region, 5 * MB)
         self.upload_with_global_client()
-        # mimic the boto3 use case where a global client is used and the
+        # mock the boto3 use case where a global client is used and the
         # workaround for fork is to release the client from the fork handler.
         os.register_at_fork(before=self.before_fork)
 
