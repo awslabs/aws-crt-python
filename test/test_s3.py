@@ -672,7 +672,7 @@ class S3RequestTest(NativeResourceTest):
             exit(-1)
 
     @unittest.skipIf(sys.platform.startswith('win') or sys.platform == 'darwin',
-                     "Test skipped on Windows and macOS. Windows doesn't support fork. macOS has background threads crashes the fork.")
+                     "Test skipped on Windows and macOS. Windows doesn't support fork. macOS has background threads crashes the forked process.")
     def test_fork_workaround(self):
         global CRT_S3_CLIENT
         CRT_S3_CLIENT = s3_client_new(False, self.region, 5 * MB)
