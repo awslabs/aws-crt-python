@@ -40,7 +40,7 @@ if ((UNIX AND NOT APPLE) OR AWS_USE_LIBCRYPTO_TO_SUPPORT_ED25519_EVERYWHERE)
             -DBUILD_LIBSSL=OFF  # Don't need libssl, only need libcrypto
             -DBUILD_TESTING=OFF
             -DOPENSSL_SMALL=1
-            -DCMAKE_C_FLAGS="-DOPENSSL_NO_ASM"
+            -DCMAKE_C_FLAGS="-Dflto"
         )
 
         if(CMAKE_C_COMPILER_ID MATCHES "GNU" AND CMAKE_C_COMPILER_VERSION VERSION_LESS "5.0")
