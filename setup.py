@@ -228,6 +228,7 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
 
         if not disable_libcrypto_use_for_ed25519_everywhere():
             cmake_args.append('-DAWS_USE_LIBCRYPTO_TO_SUPPORT_ED25519_EVERYWHERE=ON')
+            cmake_args.append('-DOPENSSL_SMALL=1')
 
         if sys.platform == 'darwin':
             # build lib with same MACOSX_DEPLOYMENT_TARGET that python will ultimately
