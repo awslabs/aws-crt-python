@@ -666,9 +666,10 @@ class S3RequestTest(NativeResourceTest):
                 CRT_S3_CLIENT = None
                 gc.collect()
                 self.assertTrue(shutdown_event.wait(self.timeout))
-                join_all_native_threads(timeout_sec=0.1)
+                self.assertTrue(join_all_native_threads(timeout_sec=0.1))
         except Exception as e:
             print(f"before_fork error: {e}")
+            # fail hard
             exit(-1)
 
     @unittest.skipIf(sys.platform.startswith('win') or sys.platform == 'darwin',
