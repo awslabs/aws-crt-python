@@ -22,7 +22,7 @@
 #include <aws/common/environment.h>
 #include <aws/common/system_info.h>
 #include <aws/event-stream/event_stream.h>
- #include <aws/http/http.h>
+#include <aws/http/http.h>
 #include <aws/io/io.h>
 #include <aws/io/logging.h>
 #include <aws/io/tls_channel_handler.h>
