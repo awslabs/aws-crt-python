@@ -370,6 +370,7 @@ jobs:
           submodules: true
       - name: Check docs
         run: |
+          python3 -m pip install --upgrade pip
           python3 -m pip install --verbose ".[dev]"
           ./scripts/make-docs.py
 
