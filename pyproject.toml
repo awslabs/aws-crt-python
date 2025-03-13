@@ -1,0 +1,38 @@
+[build-system]
+requires = [
+  "setuptools",
+  "wheel", # used by our setup.py
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "awscrt"
+license = {text = "Apache-2.0", files = ["LICENSE"]}
+authors = [{name = "Amazon Web Services, Inc", email = "aws-sdk-common-runtime@amazon.com"}]
+description = "A common runtime for AWS Python projects"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Operating System :: Microsoft :: Windows",
+  "Operating System :: POSIX",
+  "Operating System :: Unix",
+  "Operating System :: MacOS",
+]
+dynamic = [
+  "version",
+]
+
+[project.urls]
+github = "https://github.com/awslabs/aws-crt-python"
+documentation = "https://awslabs.github.io/aws-crt-python"
+issues = "https://github.com/awslabs/aws-crt-python/issues"
+releasenotes = "https://github.com/awslabs/aws-crt-python/releases"
+
+[project.optional-dependencies]
+dev = [
+  "autopep8", # for code formatting
+  "build", # for building wheels
+  "sphinx>=7.2.6,<7.3; python_version >= '3.9'", # for building docs
+  "websockets", # for tests
+]

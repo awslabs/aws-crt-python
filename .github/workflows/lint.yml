@@ -7,28 +7,16 @@ on:
       - 'docs'
 
 jobs:
-  clang-format:
-
-    runs-on: ubuntu-24.04 # latest
-
-    steps:
-    - name: Checkout Sources
-      uses: actions/checkout@v4
-
-    - name: clang-format lint
-      run: |
-        ./format-check.py
-
-  autopep8:
+  lint:
     runs-on: ubuntu-24.04 # latest
 
     steps:
     - name: Checkout Source
       uses: actions/checkout@v4
 
-    - name: Build and Test
+    - name: Format and Check Diff
       run: |
-        python3 -m pip install --upgrade setuptools
-        python3 -m pip install --upgrade wheel
         python3 -m pip install --upgrade autopep8
-        python3 -m autopep8 --exit-code --diff --recursive awscrt test .builder setup.py
+        python3 scripts/format-all.py
+        git diff
+        git diff --quiet
