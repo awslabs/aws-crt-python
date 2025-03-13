@@ -46,14 +46,17 @@ PyObject *aws_py_thread_join_all_managed(PyObject *self, PyObject *args) {
         }
     }
     aws_thread_set_managed_join_timeout_ns(timeout_ns);
-    // /* clang-format off */
-    // Py_BEGIN_ALLOW_THREADS
+    int res = AWS_OP_SUCCESS;
+    /* clang-format off */
+    Py_BEGIN_ALLOW_THREADS
     /* Drop GIL to allow other threads callback into python to finish joining. */
-    if (aws_thread_join_all_managed()) {
+    res = aws_thread_join_all_managed();
+    Py_END_ALLOW_THREADS
+
+    if(res == AWS_OP_SUCCESS) {
+        Py_RETURN_TRUE;
+    } else {
         Py_RETURN_FALSE;
     }
-    // Py_END_ALLOW_THREADS
-
-    Py_RETURN_TRUE;
     /* clang-format on */
 }
