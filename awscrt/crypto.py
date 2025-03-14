@@ -172,6 +172,7 @@ class RSA(NativeResource):
         """
         return _awscrt.rsa_verify(self._binding, signature_algorithm, digest, signature)
 
+
 class ED25519ExportFormat(IntEnum):
     """ED25519 Export format"""
 
@@ -182,8 +183,9 @@ class ED25519ExportFormat(IntEnum):
 
     OPENSSH_B64 = 1
     """
-    Base64 encoded OpenSSH format as defined in RFC 8709. 
+    Base64 encoded OpenSSH format as defined in RFC 8709.
     """
+
 
 class ED25519(NativeResource):
     def __init__(self, binding):
@@ -196,13 +198,13 @@ class ED25519(NativeResource):
         Generates a new instance of ED25159 key pair.
         """
         return ED25519(binding=_awscrt.ed25519_new_generate())
-    
+
     def export_public(self, export_format: ED25519ExportFormat) -> bytes:
         """
         Exports public part of the key in specified format.
         """
         return _awscrt.ed25519_export_public(self._binding, export_format)
-    
+
     def export_private(self, export_format: ED25519ExportFormat) -> bytes:
         """
         Exports public part of the key in specified format.

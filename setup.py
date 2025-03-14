@@ -170,8 +170,8 @@ class AwsLib:
 # They're built along with the extension (unless using_system_libs() is True)
 AWS_LIBS = []
 
-#if not disable_libcrypto_use_for_ed25519_everywhere() or (sys.platform != 'darwin' and sys.platform != 'win32'):
-    # aws-lc produces libcrypto.a
+# if not disable_libcrypto_use_for_ed25519_everywhere() or (sys.platform != 'darwin' and sys.platform != 'win32'):
+# aws-lc produces libcrypto.a
 AWS_LIBS.append(AwsLib('aws-lc', libname='crypto'))
 
 if sys.platform != 'darwin' and sys.platform != 'win32':
