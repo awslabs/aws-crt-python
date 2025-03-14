@@ -1,6 +1,5 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
-import codecs
 import glob
 import os
 import os.path
@@ -29,8 +28,9 @@ def is_32bit():
     return is_64bit() == False
 
 
+# TODO: Fix this. Since adding pyproject.toml, it always returns False
 def is_development_mode():
-    """Return whether we're building in development mode.
+    """Return whether we're building in Development Mode (a.k.a. “Editable Installs”).
     https://setuptools.pypa.io/en/latest/userguide/development_mode.html
     These builds can take shortcuts to encourage faster iteration,
     and turn on more warnings as errors to encourage correct code."""
@@ -452,12 +452,6 @@ def awscrt_ext():
     )
 
 
-def _load_readme():
-    readme_path = os.path.join(PROJECT_DIR, 'README.md')
-    with codecs.open(readme_path, 'r', 'utf-8') as f:
-        return f.read()
-
-
 def _load_version():
     init_path = os.path.join(PROJECT_DIR, 'awscrt', '__init__.py')
     with open(init_path) as fp:
@@ -465,27 +459,9 @@ def _load_version():
 
 
 setuptools.setup(
-    name="awscrt",
     version=_load_version(),
-    license="Apache 2.0",
-    author="Amazon Web Services, Inc",
-    author_email="aws-sdk-common-runtime@amazon.com",
-    description="A common runtime for AWS Python projects",
-    long_description=_load_readme(),
-    long_description_content_type='text/markdown',
-    url="https://github.com/awslabs/aws-crt-python",
     # Note: find_packages() without extra args will end up installing test/
     packages=setuptools.find_packages(include=['awscrt*']),
-    classifiers=[
-        "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: Apache Software License",
-        "Operating System :: Microsoft :: Windows",
-        "Operating System :: POSIX",
-        "Operating System :: Unix",
-        "Operating System :: MacOS",
-    ],
-    python_requires='>=3.8',
     ext_modules=[awscrt_ext()],
     cmdclass={'build_ext': awscrt_build_ext, "bdist_wheel": bdist_wheel_abi3},
-    test_suite='test',
 )

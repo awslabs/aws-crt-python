@@ -19,7 +19,7 @@ from time import sleep, time
 from typing import Optional
 
 # using a 3rdparty websocket library for the server
-import websockets.server as websockets_server_3rdparty
+import websockets.asyncio.server as websockets_server_3rdparty
 
 TIMEOUT = 10.0  # seconds
 
@@ -159,7 +159,7 @@ class WebSocketServer:
             # wait for the signal that we should stop
             await self._server_stop_event.wait()
 
-    async def _run_connection(self, server_connection: websockets_server_3rdparty.WebSocketServerProtocol):
+    async def _run_connection(self, server_connection: websockets_server_3rdparty.ServerConnection):
         # this coroutine runs once for each connection to the server
         # when this coroutine exits, the connection gets shut down
         self._current_connection = server_connection
