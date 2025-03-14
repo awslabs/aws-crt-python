@@ -363,13 +363,14 @@ jobs:
 
   # check that docs can still build
   check-docs:
-    runs-on: ubuntu-22.04 # latest
+    runs-on: ubuntu-22.04 #  getting errors from sphinx using ubuntu-24.04, so stuck on 22.04 till we diagnose it
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: true
       - name: Check docs
         run: |
+          python3 -m pip install --upgrade pip
           python3 -m pip install --verbose ".[dev]"
           ./scripts/make-docs.py
 
