@@ -30,6 +30,7 @@ enum aws_crt_python_errors {
 /* AWS Specific Helpers */
 PyObject *PyUnicode_FromAwsByteCursor(const struct aws_byte_cursor *cursor);
 PyObject *PyUnicode_FromAwsString(const struct aws_string *aws_str);
+PyObject *PyBytes_FromAwsByteCursor(const struct aws_byte_cursor *cursor);
 
 /* Return the named attribute, converted to the specified type.
  * If conversion cannot occur a python exception is set (check PyExc_Occurred()) */
