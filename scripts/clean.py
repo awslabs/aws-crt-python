@@ -8,7 +8,7 @@ import utils
 NONRECURSIVE_PATTERNS = [
     'build/',
     '_awscrt*.*',  # compiled _awscrt shared lib
-    'awscrt.egg-info/',
+    '*.egg-info/',
     'dist/',
     'wheelhouse/',
     'docsrc/build/',

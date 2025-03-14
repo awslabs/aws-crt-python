@@ -1,6 +1,0 @@
-autopep8 # for code formatting
-setuptools # for installing from source
-packaging # for setuptools, which will fail otherwise with system installed one
-sphinx>=7.2.6,<7.3; python_version >= '3.9' # for building docs
-websockets # for tests
-wheel # for building wheels
