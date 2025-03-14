@@ -300,8 +300,6 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
         self.library_dirs.insert(0, os.path.join(install_path, lib_dir))
 
     def run(self):
-        print(f"GRAEBM running awscrt_build_ext.run() - self.inplace: {self.inplace}")
-        return
         if using_system_libs():
             print("Skip building dependencies")
         else:
@@ -326,7 +324,6 @@ class bdist_wheel_abi3(bdist_wheel):
 
 
 def awscrt_ext():
-    print(f"GRAEBM running awscrt_ext()")
     # fetch the CFLAGS/LDFLAGS from env
     extra_compile_args = os.environ.get('CFLAGS', '').split()
     extra_link_args = os.environ.get('LDFLAGS', '').split()
