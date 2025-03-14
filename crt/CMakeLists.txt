@@ -40,8 +40,15 @@ if ((UNIX AND NOT APPLE) OR AWS_USE_LIBCRYPTO_TO_SUPPORT_ED25519_EVERYWHERE)
             -DBUILD_LIBSSL=OFF  # Don't need libssl, only need libcrypto
             -DBUILD_TESTING=OFF
             -DOPENSSL_SMALL=1
-            -DCMAKE_C_FLAGS="-Dflto"
         )
+
+        if (APPLE OR WIN32)
+            # Libcrypto implementations typically have several chunky pregenerated tables that add a lot
+            # to artifact size. We dont really need them for ed25519 case on win/mac, so favor 
+            # smaller binary over perf here.
+            # In future if there is more usage of lc on win/mac consider removing this
+            list(APPEND AWSLC_CMAKE_ARGUMENTS -DOPENSSL_SMALL=1)
+        endif()
 
         if(CMAKE_C_COMPILER_ID MATCHES "GNU" AND CMAKE_C_COMPILER_VERSION VERSION_LESS "5.0")
             # Disable AVX512 on old GCC that not supports it.

@@ -5,10 +5,10 @@
 
 #include "crypto.h"
 
+#include "aws/cal/ed25519.h"
 #include "aws/cal/hash.h"
 #include "aws/cal/hmac.h"
 #include "aws/cal/rsa.h"
-#include "aws/cal/ed25519.h"
 #include "aws/common/encoding.h"
 #include "aws/io/pem.h"
 
