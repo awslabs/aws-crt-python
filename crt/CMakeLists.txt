@@ -26,6 +26,8 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON CACHE BOOL "")
 set(BUILD_TESTING OFF CACHE BOOL "")
 include(CTest)
 
+option(AWS_USE_LIBCRYPTO_TO_SUPPORT_ED25519_EVERYWHERE "Set this if you want to use libcrypto to support ed25519 on Window/Apple" ON)
+
 # On Unix we use S2N for TLS and AWS-LC crypto.
 # (On Windows and Apple we use the default OS libraries)
 if ((UNIX AND NOT APPLE) OR AWS_USE_LIBCRYPTO_TO_SUPPORT_ED25519_EVERYWHERE)
@@ -39,7 +41,6 @@ if ((UNIX AND NOT APPLE) OR AWS_USE_LIBCRYPTO_TO_SUPPORT_ED25519_EVERYWHERE)
             -DDISABLE_PERL=ON  # Build without using Perl, we don't want the extra dependency
             -DBUILD_LIBSSL=OFF  # Don't need libssl, only need libcrypto
             -DBUILD_TESTING=OFF
-            -DOPENSSL_SMALL=1
         )
 
         if (APPLE OR WIN32)

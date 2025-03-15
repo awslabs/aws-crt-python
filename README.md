@@ -56,7 +56,7 @@ AWS_CRT_BUILD_USE_SYSTEM_LIBCRYPTO=1 python3 -m pip install --no-binary :all: --
 ```
 ( `--no-binary :all:` ensures you do not use the precompiled wheel from PyPI)
 
-In addition, aws-crt-python also exposes a number of cryptographic primitives. 
+aws-crt-python also exposes a number of cryptographic primitives. 
 On Unix, those depend on libcrypto as described above.
 On Apple and Windows OS level crypto libraries are used whenever possible.
 One exception to above statement is that for ED25519 keygen on Windows and Apple, 

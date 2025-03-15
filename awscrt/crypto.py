@@ -199,13 +199,13 @@ class ED25519(NativeResource):
         """
         return ED25519(binding=_awscrt.ed25519_new_generate())
 
-    def export_public(self, export_format: ED25519ExportFormat) -> bytes:
+    def export_public_key(self, export_format: ED25519ExportFormat) -> bytes:
         """
         Exports public part of the key in specified format.
         """
         return _awscrt.ed25519_export_public(self._binding, export_format)
 
-    def export_private(self, export_format: ED25519ExportFormat) -> bytes:
+    def export_private_key(self, export_format: ED25519ExportFormat) -> bytes:
         """
         Exports public part of the key in specified format.
         """

@@ -258,11 +258,11 @@ class TestCredentials(NativeResourceTest):
     def test_ed25519_keygen(self):
         key = ED25519.new_generate()
 
-        self.assertEqual(32, len(key.export_public(ED25519ExportFormat.RAW)))
-        self.assertEqual(32, len(key.export_private(ED25519ExportFormat.RAW)))
+        self.assertEqual(32, len(key.export_public_key(ED25519ExportFormat.RAW)))
+        self.assertEqual(32, len(key.export_private_key(ED25519ExportFormat.RAW)))
 
-        self.assertEqual(68, len(key.export_public(ED25519ExportFormat.OPENSSH_B64)))
-        self.assertEqual(312, len(key.export_private(ED25519ExportFormat.OPENSSH_B64)))
+        self.assertEqual(68, len(key.export_public_key(ED25519ExportFormat.OPENSSH_B64)))
+        self.assertEqual(312, len(key.export_private_key(ED25519ExportFormat.OPENSSH_B64)))
 
 
 if __name__ == '__main__':

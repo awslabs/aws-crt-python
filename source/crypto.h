@@ -43,7 +43,7 @@ PyObject *aws_py_rsa_sign(PyObject *self, PyObject *args);
 PyObject *aws_py_rsa_verify(PyObject *self, PyObject *args);
 
 PyObject *aws_py_ed25519_new_generate(PyObject *self, PyObject *args);
-PyObject *aws_py_ed25519_export_public(PyObject *self, PyObject *args);
-PyObject *aws_py_ed25519_export_private(PyObject *self, PyObject *args);
+PyObject *aws_py_ed25519_export_public_key(PyObject *self, PyObject *args);
+PyObject *aws_py_ed25519_export_private_key(PyObject *self, PyObject *args);
 
 #endif /* AWS_CRT_PYTHON_CRYPTO_H */
