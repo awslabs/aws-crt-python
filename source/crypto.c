@@ -590,7 +590,7 @@ PyObject *aws_py_ed25519_export_public_key(PyObject *self, PyObject *args) {
     return ret;
 }
 
-PyObject *aws_py_ed25519_export_privat_key(PyObject *self, PyObject *args) {
+PyObject *aws_py_ed25519_export_private_key(PyObject *self, PyObject *args) {
     (void)self;
     PyObject *ed25519_capsule = NULL;
     int export_format = 0;
