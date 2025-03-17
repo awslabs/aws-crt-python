@@ -670,7 +670,9 @@ class S3RequestTest(NativeResourceTest):
         except Exception as e:
             print(f"before_fork error: {e}")
             # fail hard
-            exit(-1)
+            sys.stdout.flush()
+            sys.stderr.flush()
+            os._exit(-1)
 
     @unittest.skipIf(sys.platform.startswith('win') or sys.platform == 'darwin',
                      "Test skipped on Windows and macOS. Windows doesn't support fork. macOS has background threads crashes the forked process.")
