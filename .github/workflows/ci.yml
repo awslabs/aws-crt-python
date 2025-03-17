@@ -70,7 +70,7 @@ jobs:
           ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-manylinux2014-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }} --python /opt/python/${{ matrix.python }}/bin/python
 
   manylinux2014-arm64:
-    runs-on: codebuild-aws-crt-python-arm64-${{ github.run_id }}-${{ github.run_attempt }}-arm-3.0-large
+    runs-on: ubuntu-24.04-arm
     strategy:
       fail-fast: false
       matrix:
