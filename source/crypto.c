@@ -5,6 +5,7 @@
 
 #include "crypto.h"
 
+#include "aws/cal/ed25519.h"
 #include "aws/cal/hash.h"
 #include "aws/cal/hmac.h"
 #include "aws/cal/rsa.h"
@@ -14,6 +15,7 @@
 const char *s_capsule_name_hash = "aws_hash";
 const char *s_capsule_name_hmac = "aws_hmac";
 const char *s_capsule_name_rsa = "aws_rsa";
+const char *s_capsule_name_ed25519 = "aws_ed25519";
 
 static void s_hash_destructor(PyObject *hash_capsule) {
     assert(PyCapsule_CheckExact(hash_capsule));
@@ -527,4 +529,91 @@ PyObject *aws_py_rsa_verify(PyObject *self, PyObject *args) {
     }
 
     Py_RETURN_TRUE;
+}
+
+static void s_ed25519_destructor(PyObject *ed25519_capsule) {
+    struct aws_ed25519_key_pair *key_pair = PyCapsule_GetPointer(ed25519_capsule, s_capsule_name_ed25519);
+    assert(key_pair);
+
+    aws_ed25519_key_pair_release(key_pair);
+}
+
+PyObject *aws_py_ed25519_new_generate(PyObject *self, PyObject *args) {
+    (void)self;
+    (void)args;
+
+    PyObject *capsule = NULL;
+    struct aws_allocator *allocator = aws_py_get_allocator();
+
+    struct aws_ed25519_key_pair *key_pair = aws_ed25519_key_pair_new_generate(allocator);
+
+    if (key_pair == NULL) {
+        PyErr_AwsLastError();
+        goto on_done;
+    }
+
+    capsule = PyCapsule_New(key_pair, s_capsule_name_ed25519, s_ed25519_destructor);
+
+    if (capsule == NULL) {
+        aws_ed25519_key_pair_release(key_pair);
+    }
+
+on_done:
+    return capsule;
+}
+
+PyObject *aws_py_ed25519_export_public_key(PyObject *self, PyObject *args) {
+    (void)self;
+    PyObject *ed25519_capsule = NULL;
+    int export_format = 0;
+
+    if (!PyArg_ParseTuple(args, "Oi", &ed25519_capsule, &export_format)) {
+        return NULL;
+    }
+
+    struct aws_ed25519_key_pair *ed25519 = PyCapsule_GetPointer(ed25519_capsule, s_capsule_name_ed25519);
+    if (ed25519 == NULL) {
+        return NULL;
+    }
+
+    struct aws_allocator *allocator = aws_py_get_allocator();
+    struct aws_byte_buf result_buf;
+    aws_byte_buf_init(&result_buf, allocator, aws_ed25519_key_pair_get_public_key_size(export_format));
+
+    if (aws_ed25519_key_pair_get_public_key(ed25519, export_format, &result_buf)) {
+        aws_byte_buf_clean_up_secure(&result_buf);
+        return PyErr_AwsLastError();
+    }
+
+    PyObject *ret = PyBytes_FromStringAndSize((const char *)result_buf.buffer, result_buf.len);
+    aws_byte_buf_clean_up_secure(&result_buf);
+    return ret;
+}
+
+PyObject *aws_py_ed25519_export_private_key(PyObject *self, PyObject *args) {
+    (void)self;
+    PyObject *ed25519_capsule = NULL;
+    int export_format = 0;
+
+    if (!PyArg_ParseTuple(args, "Oi", &ed25519_capsule, &export_format)) {
+        return NULL;
+    }
+
+    struct aws_ed25519_key_pair *ed25519 = PyCapsule_GetPointer(ed25519_capsule, s_capsule_name_ed25519);
+    if (ed25519 == NULL) {
+        return NULL;
+    }
+
+    struct aws_allocator *allocator = aws_py_get_allocator();
+    struct aws_byte_buf result_buf;
+    aws_byte_buf_init(&result_buf, allocator, aws_ed25519_key_pair_get_private_key_size(export_format));
+
+    if (aws_ed25519_key_pair_get_private_key(ed25519, export_format, &result_buf)) {
+        aws_byte_buf_clean_up_secure(&result_buf);
+        return PyErr_AwsLastError();
+    }
+
+    PyObject *ret = PyBytes_FromStringAndSize((const char *)result_buf.buffer, result_buf.len);
+    aws_byte_buf_clean_up_secure(&result_buf);
+    return ret;
 }

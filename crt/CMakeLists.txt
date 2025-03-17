@@ -26,9 +26,11 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON CACHE BOOL "")
 set(BUILD_TESTING OFF CACHE BOOL "")
 include(CTest)
 
+option(AWS_USE_LIBCRYPTO_TO_SUPPORT_ED25519_EVERYWHERE "Set this if you want to use libcrypto to support ed25519 on Window/Apple" ON)
+
 # On Unix we use S2N for TLS and AWS-LC crypto.
 # (On Windows and Apple we use the default OS libraries)
-if(UNIX AND NOT APPLE)
+if ((UNIX AND NOT APPLE) OR AWS_USE_LIBCRYPTO_TO_SUPPORT_ED25519_EVERYWHERE)
     option(USE_OPENSSL "Set this if you want to use your system's OpenSSL compatible libcrypto" OFF)
     include(AwsPrebuildDependency)
 
@@ -40,6 +42,14 @@ if(UNIX AND NOT APPLE)
             -DBUILD_LIBSSL=OFF  # Don't need libssl, only need libcrypto
             -DBUILD_TESTING=OFF
         )
+
+        if (APPLE OR WIN32)
+            # Libcrypto implementations typically have several chunky pregenerated tables that add a lot
+            # to artifact size. We dont really need them for ed25519 case on win/mac, so favor 
+            # smaller binary over perf here.
+            # In future if there is more usage of lc on win/mac consider removing this
+            list(APPEND AWSLC_CMAKE_ARGUMENTS -DOPENSSL_SMALL=1)
+        endif()
 
         if(CMAKE_C_COMPILER_ID MATCHES "GNU" AND CMAKE_C_COMPILER_VERSION VERSION_LESS "5.0")
             # Disable AVX512 on old GCC that not supports it.
@@ -54,6 +64,10 @@ if(UNIX AND NOT APPLE)
         )
     endif()
 
+
+endif()
+
+if(UNIX AND NOT APPLE)
     # prebuild s2n-tls.
     aws_prebuild_dependency(
         DEPENDENCY_NAME S2N

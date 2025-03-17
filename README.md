@@ -34,7 +34,7 @@ python3 -m pip install .
 
 To use from your Python application, declare `awscrt` as a dependency.
 
-### OpenSSL and LibCrypto (Unix only)
+### OpenSSL and LibCrypto
 
 aws-crt-python does not use OpenSSL for TLS.
 On Apple and Windows devices, the OS's default TLS library is used.
@@ -56,8 +56,19 @@ AWS_CRT_BUILD_USE_SYSTEM_LIBCRYPTO=1 python3 -m pip install --no-binary :all: --
 ```
 ( `--no-binary :all:` ensures you do not use the precompiled wheel from PyPI)
 
-You can ignore all this on Windows and Apple platforms, where aws-crt-python
-uses the OS's default libraries for TLS and cryptography math.
+aws-crt-python also exposes a number of cryptographic primitives. 
+On Unix, those depend on libcrypto as described above.
+On Apple and Windows OS level crypto libraries are used whenever possible.
+One exception to above statement is that for ED25519 keygen on Windows and Apple, 
+libcrypto is used as no viable OS level alternative exists. In that case Unix level notes
+about libcrypto apply to Apple and Windows as well. Libcrypto usage for ED25519 support is 
+enabled on Windows and Apple by default and can be disabled by setting environment variable
+`AWS_CRT_BUILD_DISABLE_LIBCRYPTO_USE_FOR_ED25519_EVERYWHERE` as follows:
+(Note: ED25519 keygen functions will start returning not supported error in this case)
+```sh
+AWS_CRT_BUILD_DISABLE_LIBCRYPTO_USE_FOR_ED25519_EVERYWHERE=1 python3 -m pip install --no-binary :all: --verbose awscrt
+```
+( `--no-binary :all:` ensures you do not use the precompiled wheel from PyPI)
 
 ### AWS_CRT_BUILD_USE_SYSTEM_LIBS ###
 
