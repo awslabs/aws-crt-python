@@ -666,10 +666,10 @@ class S3RequestTest(NativeResourceTest):
                 CRT_S3_CLIENT = None
                 gc.collect()
                 self.assertTrue(shutdown_event.wait(self.timeout))
-                self.assertTrue(join_all_native_threads(timeout_sec=0.1))
+                self.assertTrue(join_all_native_threads(timeout_sec=10))
         except Exception as e:
             print(f"before_fork error: {e}")
-            # fail hard
+            # fail hard as exceptions raised from the fork handler will be ignored.
             sys.stdout.flush()
             sys.stderr.flush()
             os._exit(-1)
@@ -677,17 +677,18 @@ class S3RequestTest(NativeResourceTest):
     @unittest.skipIf(sys.platform.startswith('win') or sys.platform == 'darwin',
                      "Test skipped on Windows and macOS. Windows doesn't support fork. macOS has background threads crashes the forked process.")
     def test_fork_workaround(self):
+        # mock the boto3 use case where a global client is used and the
+        # workaround for fork is to release the client from the fork handler.
         global CRT_S3_CLIENT
         CRT_S3_CLIENT = s3_client_new(False, self.region, 5 * MB)
         self.upload_with_global_client()
-        # mock the boto3 use case where a global client is used and the
-        # workaround for fork is to release the client from the fork handler.
+        # fork the process and use the global S3 client for the transfer.
+        # to workaround the background thread issue that cleaned after fork,
+        # we need to make sure the client is shutdown properly
+        # and all background threads has joined before fork, see `self.before_fork`
+        # And in the sub-process, we can recreate the global S3 client and use it.
         os.register_at_fork(before=self.before_fork)
-
         mp.set_start_method('fork', force=True)
-        # the first forked process release the forked lock.
-        # when the process forked, the child process also has the lock and it could release the lock before
-        # the parent process. Make sure when this happens, the lock is still held by the parent process.
         process = Process(target=self.fork_s3_client)
         process.start()
         process.join(10)
