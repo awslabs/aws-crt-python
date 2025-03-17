@@ -31,10 +31,10 @@ class AWSCrtPython(Builder.Action):
         env.shell.setenv('AWS_TEST_S3', '1')
 
         actions = [
+            [self.python, '--version'],
             [self.python, '-m', 'pip', 'install', '--upgrade', 'pip'],
-            [self.python, '-m', 'pip', 'install', '--upgrade', '--requirement', 'requirements-dev.txt'],
             Builder.SetupCrossCICrtEnvironment(),
-            [self.python, '-m', 'pip', 'install', '--verbose', '.'],
+            [self.python, '-m', 'pip', 'install', '--verbose', '.[dev]'],
             # "--failfast" because, given how our leak-detection in tests currently works,
             # once one test fails all the rest usually fail too.
             [self.python, '-m', 'unittest', 'discover', '--verbose', '--failfast'],

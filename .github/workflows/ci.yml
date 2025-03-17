@@ -372,8 +372,7 @@ jobs:
           submodules: true
       - name: Run tests
         run: |
-          python3 -m pip install --upgrade --requirement requirements-dev.txt
-          python3 -m pip install . --verbose
+          python3 -m pip install ".[dev]" --verbose
           python3 -m unittest discover --failfast --verbose
 
   package-source:
@@ -391,22 +390,23 @@ jobs:
           submodules: true
       - name: Package source + install
         run: |
-          python3 setup.py sdist
+          python3 -m pip install build
+          python3 -m build --sdist
           cd dist
           python3 -m pip install -v awscrt-1.0.0.dev0.tar.gz
           python3 -c "import awscrt.io"
 
   # check that docs can still build
   check-docs:
-    runs-on: ubuntu-22.04 # latest
+    runs-on: ubuntu-22.04 #  getting errors from sphinx using ubuntu-24.04, so stuck on 22.04 till we diagnose it
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: true
       - name: Check docs
         run: |
-          python3 -m pip install -r requirements-dev.txt
-          python3 -m pip install --verbose .
+          python3 -m pip install --upgrade pip
+          python3 -m pip install --verbose ".[dev]"
           ./scripts/make-docs.py
 
   check-submodules:
