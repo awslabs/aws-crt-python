@@ -368,9 +368,9 @@ class TestClient(NativeResourceTest):
 
         self.assertEqual(None, connection.close().exception(self.timeout))
 
-    @unittest.skipIf(not TlsCipherPref.PQ_TLSv1_0_2021_05.is_supported(), "Cipher pref not supported")
-    def test_connect_pq_tlsv1_0_2021_05(self):
-        self._test_connect(secure=True, cipher_pref=TlsCipherPref.PQ_TLSv1_0_2021_05)
+    @unittest.skipIf(not TlsCipherPref.PQ_DEFAULT.is_supported(), "Cipher pref not supported")
+    def test_connect_pq_default(self):
+        self._test_connect(secure=True, cipher_pref=TlsCipherPref.PQ_DEFAULT)
 
 
 if __name__ == '__main__':
