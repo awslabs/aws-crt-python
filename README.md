@@ -32,7 +32,7 @@ git submodule update --init
 python3 -m pip install .
 ```
 
-To use from your Python application, declare `awscrt` as a dependency.
+See [Advanced Build Options](#advanced-build-options) for more info about building from source.
 
 ## Fork and Multiprocessing
 
