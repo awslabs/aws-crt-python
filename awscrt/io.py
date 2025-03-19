@@ -274,6 +274,9 @@ class TlsCipherPref(IntEnum):
        introduce minor changes that could cause the final Kyber standard to differ from the Kyber Round 3 implementation
        available in this preference list."""
 
+    PQ_DEFAULT = 8  # :
+    """Recommended default policy with post-quantum algorithm support. This policy may change over time."""
+
     def is_supported(self):
         """Return whether this Cipher Preference is available in the underlying platform's TLS implementation"""
         return _awscrt.is_tls_cipher_supported(self.value)

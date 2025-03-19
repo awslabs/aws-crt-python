@@ -258,6 +258,7 @@ jobs:
     permissions:
       id-token: write # This is required for requesting the JWT
     steps:
+      - uses: ilammy/setup-nasm@v1
       - name: configure AWS credentials (containers)
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -267,7 +268,6 @@ jobs:
         run: |
           python -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder.pyz')"
           python builder.pyz build -p ${{ env.PACKAGE_NAME }} --python "C:\\hostedtoolcache\\windows\\Python\\3.8.10\\${{ matrix.arch }}\\python.exe"
-
 
   macos:
     runs-on: macos-14 # latest
