@@ -3,6 +3,7 @@ Private utilities for testing
 """
 import _awscrt
 from awscrt import NativeResource
+from awscrt.common import join_all_native_threads
 import gc
 import inspect
 import os
@@ -45,23 +46,6 @@ def dump_native_memory():
     *   `AWS_CRT_MEMORY_TRACING=2`: Capture callstacks for each allocation
     """
     return _awscrt.native_memory_dump()
-
-
-def join_all_native_threads(*, timeout_sec: float = -1.0) -> bool:
-    """
-    Waits for all native threads to complete their join call.
-
-    This can only be safely called from the main thread.
-    This call may be required for native memory usage to reach zero.
-
-    Args:
-        timeout_sec (float): Number of seconds to wait before a timeout exception is raised.
-            By default the wait is unbounded.
-
-    Returns:
-        bool: Returns whether threads could be joined before the timeout.
-    """
-    return _awscrt.thread_join_all_managed(timeout_sec)
 
 
 def check_for_leaks(*, timeout_sec=10.0):
