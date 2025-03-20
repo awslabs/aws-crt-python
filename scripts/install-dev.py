@@ -3,4 +3,4 @@ import utils
 
 utils.chdir_project_root()
 
-utils.run('python3 -m pip install --verbose --editable .')
+utils.run('python3 -m pip install --verbose --editable ".[dev]"')

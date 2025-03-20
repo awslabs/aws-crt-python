@@ -42,6 +42,7 @@ class CrossProcessLock(NativeResource):
 
     def __enter__(self):
         self.acquire()
+        return self
 
     def release(self):
         _awscrt.s3_cross_process_lock_release(self._binding)

@@ -7,7 +7,7 @@ on:
       - 'docs'
 
 env:
-  BUILDER_VERSION: v0.9.74
+  BUILDER_VERSION: v0.9.67
   BUILDER_SOURCE: releases
   BUILDER_HOST: https://d19elf31gohf1l.cloudfront.net
   PACKAGE_NAME: aws-crt-python
@@ -18,7 +18,7 @@ env:
 
 jobs:
   manylinux1:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -42,14 +42,13 @@ jobs:
           ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-manylinux1-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }} --python /opt/python/${{ matrix.python }}/bin/python
 
   manylinux2014:
-    runs-on: ubuntu-22.04 # latest
+    runs-on: ubuntu-24.04 # latest
     strategy:
       fail-fast: false
       matrix:
         image:
           - x64
           - x86
-          - aarch64
         python:
           - cp38-cp38
           - cp39-cp39
@@ -65,23 +64,16 @@ jobs:
         with:
           role-to-assume: ${{ env.CRT_CI_ROLE }}
           aws-region: ${{ env.AWS_DEFAULT_REGION }}
-      # Only aarch64 needs this, but it doesn't hurt anything
-      - name: Install qemu/docker
-        run: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-
       - name: Build ${{ env.PACKAGE_NAME }}
         run: |
           aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
           ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-manylinux2014-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }} --python /opt/python/${{ matrix.python }}/bin/python
 
-  musllinux-1-1:
-    runs-on: ubuntu-22.04 # latest
+  manylinux2014-arm64:
+    runs-on: ubuntu-24.04-arm
     strategy:
       fail-fast: false
       matrix:
-        image:
-          - x64
-          - aarch64
         python:
           - cp38-cp38
           - cp39-cp39
@@ -97,18 +89,65 @@ jobs:
         with:
           role-to-assume: ${{ env.CRT_CI_ROLE }}
           aws-region: ${{ env.AWS_DEFAULT_REGION }}
+      - name: Build ${{ env.PACKAGE_NAME }}
+        run: |
+          aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
+          ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-manylinux2014-aarch64 build -p ${{ env.PACKAGE_NAME }} --python /opt/python/${{ matrix.python }}/bin/python
 
-      # Only aarch64 needs this, but it doesn't hurt anything
-      - name: Install qemu/docker
-        run: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-
+  musllinux-1-1:
+    runs-on: ubuntu-24.04 # latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - x64
+        python:
+          - cp38-cp38
+          - cp39-cp39
+          - cp310-cp310
+          - cp311-cp311
+          - cp312-cp312
+          - cp313-cp313
+    permissions:
+      id-token: write # This is required for requesting the JWT
+    steps:
+      - name: configure AWS credentials (containers)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.CRT_CI_ROLE }}
+          aws-region: ${{ env.AWS_DEFAULT_REGION }}
       - name: Build ${{ env.PACKAGE_NAME }}
         run: |
           aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
           ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-musllinux-1-1-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }} --python /opt/python/${{ matrix.python }}/bin/python
 
+  musllinux-1-1-arm64:
+    runs-on: ubuntu-24.04-arm
+    strategy:
+      fail-fast: false
+      matrix:
+        python:
+          - cp38-cp38
+          - cp39-cp39
+          - cp310-cp310
+          - cp311-cp311
+          - cp312-cp312
+          - cp313-cp313
+    permissions:
+      id-token: write # This is required for requesting the JWT
+    steps:
+      - name: configure AWS credentials (containers)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.CRT_CI_ROLE }}
+          aws-region: ${{ env.AWS_DEFAULT_REGION }}
+      - name: Build ${{ env.PACKAGE_NAME }}
+        run: |
+          aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
+          ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-musllinux-1-1-aarch64 build -p ${{ env.PACKAGE_NAME }} --python /opt/python/${{ matrix.python }}/bin/python
+
   raspberry:
-    runs-on: ubuntu-20.04 # latest
+    runs-on: ubuntu-24.04-arm
     strategy:
       fail-fast: false
       matrix:
@@ -123,20 +162,17 @@ jobs:
           role-to-assume: ${{ env.CRT_CI_ROLE }}
           aws-region: ${{ env.AWS_DEFAULT_REGION }}
 
-      # set arm arch
-      - name: Install qemu/docker
-        run: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-
       - name: Build ${{ env.PACKAGE_NAME }}
         run: |
           aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
           ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }}
 
   linux-compat:
-    runs-on: ubuntu-22.04 # latest
+    runs-on: ubuntu-24.04 # latest
     strategy:
       matrix:
         image:
+          - al2-x64
           - fedora-34-x64
           - opensuse-leap
           - rhel8-x64
@@ -154,7 +190,7 @@ jobs:
           ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }}
 
   linux-compiler-compat:
-    runs-on: ubuntu-22.04 # latest
+    runs-on: ubuntu-24.04 # latest
     strategy:
       matrix:
         compiler:
@@ -185,7 +221,7 @@ jobs:
           ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-${{ env.LINUX_BASE_IMAGE }} build -p ${{ env.PACKAGE_NAME }} --compiler=${{ matrix.compiler }}
 
   use-system-libcrypto:
-    runs-on: ubuntu-20.04 # latest
+    runs-on: ubuntu-24.04 # latest
     permissions:
       id-token: write # This is required for requesting the JWT
     steps:
@@ -200,7 +236,7 @@ jobs:
         run: |
           python3 -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder')"
           chmod a+x builder
-          ./builder build -p ${{ env.PACKAGE_NAME }}
+          ./builder build -p ${{ env.PACKAGE_NAME }} --python=python3.12
       - name: Assert libcrypto.so used
         run: |
           # assert it's linked against the system's libcrypto.so
@@ -222,6 +258,7 @@ jobs:
     permissions:
       id-token: write # This is required for requesting the JWT
     steps:
+      - uses: ilammy/setup-nasm@v1
       - name: configure AWS credentials (containers)
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -231,7 +268,6 @@ jobs:
         run: |
           python -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder.pyz')"
           python builder.pyz build -p ${{ env.PACKAGE_NAME }} --python "C:\\hostedtoolcache\\windows\\Python\\3.8.10\\${{ matrix.arch }}\\python.exe"
-
 
   macos:
     runs-on: macos-14 # latest
@@ -267,7 +303,7 @@ jobs:
 
 
   openbsd:
-    runs-on: ubuntu-22.04 # latest
+    runs-on: ubuntu-24.04 # latest
     strategy:
       fail-fast: false
       matrix:
@@ -300,7 +336,7 @@ jobs:
             ./builder build -p ${{ env.PACKAGE_NAME }}
 
   freebsd:
-    runs-on: ubuntu-22.04 # latest
+    runs-on: ubuntu-24.04 # latest
     permissions:
       id-token: write # This is required for requesting the JWT
     steps:
@@ -329,19 +365,18 @@ jobs:
 
   # check that tests requiring custom env-vars or AWS credentials are simply skipped
   tests-ok-without-creds:
-    runs-on: ubuntu-22.04 # latest
+    runs-on: ubuntu-24.04 # latest
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: true
       - name: Run tests
         run: |
-          python3 -m pip install --upgrade --requirement requirements-dev.txt
-          python3 -m pip install . --verbose
+          python3 -m pip install ".[dev]" --verbose
           python3 -m unittest discover --failfast --verbose
 
   package-source:
-    runs-on: ubuntu-22.04 # latest
+    runs-on: ubuntu-24.04 # latest
     permissions:
       id-token: write # This is required for requesting the JWT
     steps:
@@ -355,26 +390,27 @@ jobs:
           submodules: true
       - name: Package source + install
         run: |
-          python3 setup.py sdist
+          python3 -m pip install build
+          python3 -m build --sdist
           cd dist
           python3 -m pip install -v awscrt-1.0.0.dev0.tar.gz
           python3 -c "import awscrt.io"
 
   # check that docs can still build
   check-docs:
-    runs-on: ubuntu-22.04 # latest
+    runs-on: ubuntu-22.04 #  getting errors from sphinx using ubuntu-24.04, so stuck on 22.04 till we diagnose it
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: true
       - name: Check docs
         run: |
-          python3 -m pip install -r requirements-dev.txt
-          python3 -m pip install --verbose .
+          python3 -m pip install --upgrade pip
+          python3 -m pip install --verbose ".[dev]"
           ./scripts/make-docs.py
 
   check-submodules:
-    runs-on: ubuntu-22.04 # latest
+    runs-on: ubuntu-24.04 # latest
     steps:
     - name: Checkout Source
       uses: actions/checkout@v4

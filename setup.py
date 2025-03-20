@@ -1,6 +1,5 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
-import codecs
 import glob
 import os
 import os.path
@@ -29,8 +28,9 @@ def is_32bit():
     return is_64bit() == False
 
 
+# TODO: Fix this. Since adding pyproject.toml, it always returns False
 def is_development_mode():
-    """Return whether we're building in development mode.
+    """Return whether we're building in Development Mode (a.k.a. “Editable Installs”).
     https://setuptools.pypa.io/en/latest/userguide/development_mode.html
     These builds can take shortcuts to encourage faster iteration,
     and turn on more warnings as errors to encourage correct code."""
@@ -154,6 +154,11 @@ def forcing_static_libs():
     return os.getenv('AWS_CRT_BUILD_FORCE_STATIC_LIBS') == '1'
 
 
+def disable_libcrypto_use_for_ed25519_everywhere():
+    """If true, libcrypto is not used on mac/win to support ed25519 and apis instead return not supported."""
+    return os.getenv('AWS_CRT_BUILD_DISABLE_LIBCRYPTO_USE_FOR_ED25519_EVERYWHERE') == '1'
+
+
 class AwsLib:
     def __init__(self, name, extra_cmake_args=[], libname=None):
         self.name = name
@@ -164,10 +169,14 @@ class AwsLib:
 # The extension depends on these libs.
 # They're built along with the extension (unless using_system_libs() is True)
 AWS_LIBS = []
-if sys.platform != 'darwin' and sys.platform != 'win32':
+
+if not disable_libcrypto_use_for_ed25519_everywhere() or (sys.platform != 'darwin' and sys.platform != 'win32'):
     # aws-lc produces libcrypto.a
     AWS_LIBS.append(AwsLib('aws-lc', libname='crypto'))
+
+if sys.platform != 'darwin' and sys.platform != 'win32':
     AWS_LIBS.append(AwsLib('s2n'))
+
 AWS_LIBS.append(AwsLib('aws-c-common'))
 AWS_LIBS.append(AwsLib('aws-c-sdkutils'))
 AWS_LIBS.append(AwsLib('aws-c-cal'))
@@ -223,6 +232,9 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
 
         if using_system_libcrypto():
             cmake_args.append('-DUSE_OPENSSL=ON')
+
+        if not disable_libcrypto_use_for_ed25519_everywhere():
+            cmake_args.append('-DAWS_USE_LIBCRYPTO_TO_SUPPORT_ED25519_EVERYWHERE=ON')
 
         if sys.platform == 'darwin':
             # build lib with same MACOSX_DEPLOYMENT_TARGET that python will ultimately
@@ -355,28 +367,9 @@ def awscrt_ext():
         extra_link_args += ['-framework', 'Security']
 
     else:  # unix
-        if forcing_static_libs():
-            # linker will prefer shared libraries over static if it can find both.
-            # force linker to choose static variant by using
-            # "-l:libaws-c-common.a" syntax instead of just "-laws-c-common".
-            #
-            # This helps AWS developers creating Lambda applications from Brazil.
-            # In Brazil, both shared and static libs are available.
-            # But Lambda requires all shared libs to be explicitly packaged up.
-            # So it's simpler to link them in statically and have less runtime dependencies.
-            #
-            # Don't apply this trick to dependencies that are always on the OS (e.g. librt)
-            libraries = [':lib{}.a'.format(x) for x in libraries]
-
         # OpenBSD doesn't have librt; functions are found in libc instead.
         if not sys.platform.startswith('openbsd'):
             libraries += ['rt']
-
-        # hide the symbols from libcrypto.a
-        # this prevents weird crashes if an application also ends up using
-        # libcrypto.so from the system's OpenSSL installation.
-        # Do this even if using system libcrypto, since it could still be a static lib.
-        extra_link_args += ['-Wl,--exclude-libs,libcrypto.a']
 
         # OpenBSD 7.4+ defaults to linking with --execute-only, which is bad for AWS-LC.
         # See: https://github.com/aws/aws-lc/blob/4b07805bddc55f68e5ce8c42f215da51c7a4e099/CMakeLists.txt#L44-L53
@@ -393,6 +386,26 @@ def awscrt_ext():
         # python usually adds -pthread automatically, but we've observed
         # rare cases where that didn't happen, so let's be explicit.
         extra_link_args += ['-pthread']
+
+        # hide the symbols from libcrypto.a
+        # this prevents weird crashes if an application also ends up using
+        # libcrypto.so from the system's OpenSSL installation.
+        # Do this even if using system libcrypto, since it could still be a static lib.
+        extra_link_args += ['-Wl,--exclude-libs,libcrypto.a']
+
+    if not disable_libcrypto_use_for_ed25519_everywhere() or (sys.platform != 'darwin' and sys.platform != 'win32'):
+        if forcing_static_libs():
+            # linker will prefer shared libraries over static if it can find both.
+            # force linker to choose static variant by using
+            # "-l:libaws-c-common.a" syntax instead of just "-laws-c-common".
+            #
+            # This helps AWS developers creating Lambda applications from Brazil.
+            # In Brazil, both shared and static libs are available.
+            # But Lambda requires all shared libs to be explicitly packaged up.
+            # So it's simpler to link them in statically and have less runtime dependencies.
+            #
+            # Don't apply this trick to dependencies that are always on the OS (e.g. librt)
+            libraries = [':lib{}.a'.format(x) for x in libraries]
 
     if sys.platform != 'win32' or distutils.ccompiler.get_default_compiler() != 'msvc':
         extra_compile_args += ['-Wno-strict-aliasing', '-std=gnu99']
@@ -446,12 +459,6 @@ def awscrt_ext():
     )
 
 
-def _load_readme():
-    readme_path = os.path.join(PROJECT_DIR, 'README.md')
-    with codecs.open(readme_path, 'r', 'utf-8') as f:
-        return f.read()
-
-
 def _load_version():
     init_path = os.path.join(PROJECT_DIR, 'awscrt', '__init__.py')
     with open(init_path) as fp:
@@ -459,27 +466,9 @@ def _load_version():
 
 
 setuptools.setup(
-    name="awscrt",
     version=_load_version(),
-    license="Apache 2.0",
-    author="Amazon Web Services, Inc",
-    author_email="aws-sdk-common-runtime@amazon.com",
-    description="A common runtime for AWS Python projects",
-    long_description=_load_readme(),
-    long_description_content_type='text/markdown',
-    url="https://github.com/awslabs/aws-crt-python",
     # Note: find_packages() without extra args will end up installing test/
     packages=setuptools.find_packages(include=['awscrt*']),
-    classifiers=[
-        "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: Apache Software License",
-        "Operating System :: Microsoft :: Windows",
-        "Operating System :: POSIX",
-        "Operating System :: Unix",
-        "Operating System :: MacOS",
-    ],
-    python_requires='>=3.8',
     ext_modules=[awscrt_ext()],
     cmdclass={'build_ext': awscrt_build_ext, "bdist_wheel": bdist_wheel_abi3},
-    test_suite='test',
 )

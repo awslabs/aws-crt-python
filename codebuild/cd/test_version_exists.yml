@@ -5,9 +5,6 @@ version: 0.2
 phases:
   install:
     commands:
-      - sudo apt-get update -y
-      - sudo apt-get install python3 python3-pip -y
-      - pip3 install --upgrade setuptools
   pre_build:
     commands:
   build:
