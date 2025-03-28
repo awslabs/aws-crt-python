@@ -180,10 +180,12 @@ static void s_cleanup_subscription_topic_filters(struct aws_array_list *subscrip
     aws_array_list_clean_up(subscription_topic_filters);
 }
 
-static bool s_init_subscription_topic_filters(struct aws_array_list *subscription_topic_filters, PyObject *subscription_topic_filters_py) {
+static bool s_init_subscription_topic_filters(
+    struct aws_array_list *subscription_topic_filters,
+    PyObject *subscription_topic_filters_py) {
     AWS_ZERO_STRUCT(*subscription_topic_filters);
 
-     if (!PySequence_Check(subscription_topic_filters_py)) {
+    if (!PySequence_Check(subscription_topic_filters_py)) {
         PyErr_Format(PyExc_TypeError, "subscription_topic_filters must be a sequence type");
         return false;
     }
@@ -195,7 +197,8 @@ static bool s_init_subscription_topic_filters(struct aws_array_list *subscriptio
 
     bool success = false;
     struct aws_allocator *allocator = aws_py_get_allocator();
-    aws_array_list_init_dynamic(subscription_topic_filters, allocator, (size_t)filter_count, sizeof(struct aws_byte_buf));
+    aws_array_list_init_dynamic(
+        subscription_topic_filters, allocator, (size_t)filter_count, sizeof(struct aws_byte_buf));
 
     for (size_t i = 0; i < (size_t)filter_count; ++i) {
         PyObject *entry_py = PySequence_GetItem(subscription_topic_filters_py, i);
@@ -215,7 +218,7 @@ static bool s_init_subscription_topic_filters(struct aws_array_list *subscriptio
 
     success = true;
 
-  done:
+done:
 
     if (!success) {
         s_cleanup_subscription_topic_filters(subscription_topic_filters);
@@ -246,7 +249,7 @@ static void s_cleanup_response_paths(struct aws_array_list *response_paths) {
 static bool s_init_response_paths(struct aws_array_list *response_paths, PyObject *response_paths_py) {
     AWS_ZERO_STRUCT(*response_paths);
 
-     if (!PySequence_Check(response_paths_py)) {
+    if (!PySequence_Check(response_paths_py)) {
         PyErr_Format(PyExc_TypeError, "response_paths must be a sequence type");
         return false;
     }
@@ -258,7 +261,8 @@ static bool s_init_response_paths(struct aws_array_list *response_paths, PyObjec
 
     bool success = false;
     struct aws_allocator *allocator = aws_py_get_allocator();
-    aws_array_list_init_dynamic(response_paths, allocator, (size_t)path_count, sizeof(struct aws_request_response_path));
+    aws_array_list_init_dynamic(
+        response_paths, allocator, (size_t)path_count, sizeof(struct aws_request_response_path));
 
     for (size_t i = 0; i < (size_t)path_count; ++i) {
         PyObject *entry_py = PySequence_GetItem(subscription_topic_filters_py, i);
@@ -268,15 +272,18 @@ static bool s_init_response_paths(struct aws_array_list *response_paths, PyObjec
 
         bool should_continue = true;
         PyObject *topic_py = PyObject_GetAttrString(entry_py, AWS_PYOBJECT_KEY_TOPIC);
-        PyObject *correlation_token_json_path_py = PyObject_GetAttrString(entry_py, AWS_PYOBJECT_KEY_CORRELATION_TOKEN_JSON_PATH);
+        PyObject *correlation_token_json_path_py =
+            PyObject_GetAttrString(entry_py, AWS_PYOBJECT_KEY_CORRELATION_TOKEN_JSON_PATH);
 
         if (topic_py != NULL && correlation_token_json_path_py != NULL) {
             struct aws_byte_cursor topic_cursor = aws_byte_cursor_from_pyunicode(topic_py);
-            struct aws_byte_cursor correlation_token_json_path_cursor = aws_byte_cursor_from_pyunicode(correlation_token_json_path_py);
+            struct aws_byte_cursor correlation_token_json_path_cursor =
+                aws_byte_cursor_from_pyunicode(correlation_token_json_path_py);
 
             struct aws_request_response_path response_path;
             aws_byte_buf_init_copy_from_cursor(&response_path.topic, allocator, topic_cursor);
-            aws_byte_buf_init_copy_from_cursor(&response_path.correlation_token_json_path, allocator, correlation_token_json_path_cursor);
+            aws_byte_buf_init_copy_from_cursor(
+                &response_path.correlation_token_json_path, allocator, correlation_token_json_path_cursor);
 
             aws_array_list_push_back(response_paths, &response_path);
         } else {
@@ -295,7 +302,7 @@ static bool s_init_response_paths(struct aws_array_list *response_paths, PyObjec
 
     success = true;
 
-  done:
+done:
 
     if (!success) {
         s_cleanup_response_paths(response_paths);
@@ -309,8 +316,10 @@ struct aws_mqtt_make_request_binding {
     PyObject *on_request_complete_callback;
 };
 
-static struct aws_mqtt_make_request_binding *s_aws_mqtt_make_request_binding_new(PyObject *on_request_complete_callable_py) {
-    struct aws_mqtt_make_request_binding *binding = aws_mem_calloc(aws_py_get_allocator(), 1, sizeof(struct aws_mqtt_make_request_binding));
+static struct aws_mqtt_make_request_binding *s_aws_mqtt_make_request_binding_new(
+    PyObject *on_request_complete_callable_py) {
+    struct aws_mqtt_make_request_binding *binding =
+        aws_mem_calloc(aws_py_get_allocator(), 1, sizeof(struct aws_mqtt_make_request_binding));
 
     binding->on_request_complete_callback = on_request_complete_callable_py;
     Py_XINCREF(binding->on_request_complete_callback);
@@ -328,7 +337,10 @@ static void s_aws_mqtt_make_request_binding_destroy(struct aws_mqtt_make_request
     aws_mem_release(aws_py_get_allocator(), binding);
 }
 
-static void s_complete_mqtt_request(struct aws_mqtt_make_request_binding *request_binding, int error_code, const struct aws_byte_cursor *response_topic,
+static void s_complete_mqtt_request(
+    struct aws_mqtt_make_request_binding *request_binding,
+    int error_code,
+    const struct aws_byte_cursor *response_topic,
     const struct aws_byte_cursor *payload) {
 
     PyGILState_STATE state;
@@ -336,7 +348,7 @@ static void s_complete_mqtt_request(struct aws_mqtt_make_request_binding *reques
         return;
     }
 
-   PyObject *result = PyObject_CallFunction(
+    PyObject *result = PyObject_CallFunction(
         request_binding->on_request_complete_callback,
         "(is#y#)",
         /* i */ (int)error_code,
@@ -394,13 +406,15 @@ PyObject *aws_py_mqtt_request_response_client_make_request(PyObject *self, PyObj
         return NULL;
     }
 
-    struct mqtt_request_response_client_binding *client_binding = PyCapsule_GetPointer(client_capsule_py, s_capsule_name_mqtt_request_response_client);
+    struct mqtt_request_response_client_binding *client_binding =
+        PyCapsule_GetPointer(client_capsule_py, s_capsule_name_mqtt_request_response_client);
     if (!client_binding) {
         return NULL;
     }
 
     PyObject *result_py = NULL;
-    struct aws_mqtt_make_request_binding *request_binding = s_aws_mqtt_make_request_binding_new(on_request_complete_callable_py);
+    struct aws_mqtt_make_request_binding *request_binding =
+        s_aws_mqtt_make_request_binding_new(on_request_complete_callable_py);
 
     struct aws_array_list subscription_topic_filters; // array_list<aws_byte_buf>
     AWS_ZERO_STRUCT(subscription_topic_filters);
@@ -432,7 +446,8 @@ PyObject *aws_py_mqtt_request_response_client_make_request(PyObject *self, PyObj
         aws_array_list_get_at(&response_paths, &response_path, i);
 
         response_path_values[i].topic = aws_byte_cursor_from_buf(&response_path.topic);
-        response_path_values[i].correlation_token_json_path = aws_byte_cursor_from_buf(&response_path.correlation_token_json_path);
+        response_path_values[i].correlation_token_json_path =
+            aws_byte_cursor_from_buf(&response_path.correlation_token_json_path);
     }
 
     struct aws_mqtt_request_operation_options request_options = {
