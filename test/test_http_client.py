@@ -13,7 +13,10 @@ from test import NativeResourceTest
 import threading
 import unittest
 from urllib.parse import urlparse
-import awscrt.io
+import subprocess
+import sys
+import socket
+import time
 
 
 class Response:
@@ -394,15 +397,89 @@ class TestClient(NativeResourceTest):
 
         self.assertEqual(None, connection.close().exception(self.timeout))
 
-    @unittest.skipUnless(os.environ.get('AWS_TEST_LOCALHOST'), 'set env var to run test: AWS_TEST_LOCALHOST')
+    @unittest.skipIf(not TlsCipherPref.PQ_DEFAULT.is_supported(), "Cipher pref not supported")
+    def test_connect_pq_default(self):
+        self._test_connect(secure=True, cipher_pref=TlsCipherPref.PQ_DEFAULT)
+
+
+@unittest.skipUnless(os.environ.get('AWS_TEST_LOCALHOST'), 'set env var to run test: AWS_TEST_LOCALHOST')
+class TestClientMockServer(NativeResourceTest):
+
+    timeout = 5  # seconds
+    p_server = None
+    mock_server_url = None
+
+    def setUp(self):
+        super().setUp()
+        # Start the mock server from the aws-c-http.
+        server_path = os.path.join(
+            os.path.dirname(__file__),
+            '..',
+            'crt',
+            'aws-c-http',
+            'tests',
+            'py_localhost',
+            'server.py')
+        python_path = sys.executable
+        self.mock_server_url = urlparse("https://localhost:3443/upload_test")
+        self.p_server = subprocess.Popen([python_path, server_path])
+        # Wait for server to be ready
+        self._wait_for_server_ready()
+
+    def _wait_for_server_ready(self):
+        """Wait until server is accepting connections."""
+        max_attempts = 20
+
+        for attempt in range(max_attempts):
+            try:
+                with socket.create_connection((self.mock_server_url.hostname, self.mock_server_url.port), timeout=1):
+                    return  # Server is ready
+            except (ConnectionRefusedError, socket.timeout):
+                time.sleep(0.5)
+
+        # If we get here, server failed to start
+        stdout, stderr = self.p_server.communicate(timeout=0.5)
+        raise RuntimeError(f"Server failed to start after {max_attempts} attempts.\n"
+                           f"STDOUT: {stdout.decode()}\nSTDERR: {stderr.decode()}")
+
+    def tearDown(self):
+        self.p_server.terminate()
+        try:
+            self.p_server.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            self.p_server.kill()
+        super().tearDown()
+
+    def _new_mock_connection(self):
+
+        event_loop_group = EventLoopGroup()
+        host_resolver = DefaultHostResolver(event_loop_group)
+        bootstrap = ClientBootstrap(event_loop_group, host_resolver)
+
+        port = self.mock_server_url.port
+        # only test https
+        if port is None:
+            port = 443
+        tls_ctx_options = TlsContextOptions()
+        tls_ctx_options.verify_peer = False  # allow localhost
+        tls_ctx = ClientTlsContext(tls_ctx_options)
+        tls_conn_opt = tls_ctx.new_connection_options()
+        tls_conn_opt.set_server_name(self.mock_server_url.hostname)
+        tls_conn_opt.set_alpn_list(["h2"])
+
+        connection_future = Http2ClientConnection.new(host_name=self.mock_server_url.hostname,
+                                                      port=port,
+                                                      bootstrap=bootstrap,
+                                                      tls_connection_options=tls_conn_opt)
+        return connection_future.result(self.timeout)
+
     def test_h2_mock_server_manual_write(self):
-        url = urlparse("https://localhost:3443/upload_test")
-        connection = self._new_h2_client_connection(url)
+        connection = self._new_mock_connection()
         # check we set an h2 connection
         self.assertEqual(connection.version, HttpVersion.Http2)
 
-        request = HttpRequest('POST', url.path)
-        request.headers.add('host', url.hostname)
+        request = HttpRequest('POST', self.mock_server_url.path)
+        request.headers.add('host', self.mock_server_url.hostname)
         response = Response()
         stream = connection.request(request, response.on_response, response.on_body, manual_write=True)
         stream.activate()
@@ -422,68 +499,76 @@ class TestClient(NativeResourceTest):
         self.assertEqual(200, response.status_code)
         self.assertEqual(200, stream_completion_result)
         print(response.body)
-        # self.assertEqual(14428801, len(response.body))
 
         self.assertEqual(None, connection.close().exception(self.timeout))
 
     class DelayStream:
-        def __init__(self):
+        def __init__(self, bad_read=False):
             self._read = False
+            self.bad_read = bad_read
 
-        def read(self, len):
+        def read(self, _len):
+            if self.bad_read:
+                # simulate a bad read that raises an exception
+                # this will cause the stream to fail
+                raise RuntimeError("bad read exception")
             if self._read:
+                # return empty as EOS
                 return b''
             else:
                 self._read = True
-                # return b'hello'
-                raise RuntimeError("test exception")
+                return b'hello'
 
-    # @unittest.skipUnless(os.environ.get('AWS_TEST_LOCALHOST'), 'set env var to run test: AWS_TEST_LOCALHOST')
-    def test_h2_mock_server_manual_write_data_lifetime(self):
-        # awscrt.io.init_logging(awscrt.io.LogLevel.Trace, "stderr")
-        url = urlparse("https://localhost:3443/upload_test")
-        connection = self._new_h2_client_connection(url)
+    def test_h2_mock_server_manual_write_read_exception(self):
+        connection = self._new_mock_connection()
         # check we set an h2 connection
         self.assertEqual(connection.version, HttpVersion.Http2)
 
-        request = HttpRequest('POST', url.path)
-        request.headers.add('host', url.hostname)
+        request = HttpRequest('POST', self.mock_server_url.path)
+        request.headers.add('host', self.mock_server_url.hostname)
         response = Response()
         stream = connection.request(request, response.on_response, response.on_body, manual_write=True)
         stream.activate()
         exception = None
-        data = self.DelayStream()
+        data = self.DelayStream(bad_read=True)
         try:
             f = stream.write_data(data, False)
             f.result(self.timeout)
         except Exception as e:
+            # future will raise the exception from the write_data call.
             exception = e
-            print(e)
-        print(f"#######{exception}#########")
-        # try:
-        #     # If the stream is not configured to allow manual writes, this should throw an exception directly
-        #     data = self.DelayStream()
-        #     f = stream.write_data(data, False)
-        #     # del data
-        #     # release data to make sure the write still works
-        #     f.result(self.timeout)
-        #     stream.write_data(BytesIO(b'hello'), True)
-        # except Exception as e:
-        #     exception = e
-        #     print(e)
-        # print(f"#######{exception}#########")
-        # self.assertIsNotNone(exception)
-        # stream_completion_exception = stream.completion_future.exception()
-        # print(stream_completion_exception)
-        # # check result
-        # self.assertEqual(14428801, len(response.body))
-
+        self.assertIsNotNone(exception)
+        # stream will complete with another exception.
+        stream_completion_exception = stream.completion_future.exception()
+        self.assertIsNotNone(stream_completion_exception)
         self.assertEqual(None, connection.close().exception(self.timeout))
-        print("end")
 
-    @unittest.skipIf(not TlsCipherPref.PQ_DEFAULT.is_supported(), "Cipher pref not supported")
-    def test_connect_pq_default(self):
-        self._test_connect(secure=True, cipher_pref=TlsCipherPref.PQ_DEFAULT)
+    def test_h2_mock_server_manual_write_lifetime(self):
+        connection = self._new_mock_connection()
+        # check we set an h2 connection
+        self.assertEqual(connection.version, HttpVersion.Http2)
+
+        request = HttpRequest('POST', self.mock_server_url.path)
+        request.headers.add('host', self.mock_server_url.hostname)
+        response = Response()
+        stream = connection.request(request, response.on_response, response.on_body, manual_write=True)
+        stream.activate()
+        exception = None
+        data = self.DelayStream(bad_read=False)
+        try:
+            f = stream.write_data(data, False)
+            # make sure when the python object was dropped, things are still ok
+            del data
+            f.result(self.timeout)
+            f = stream.write_data(None, True)
+            f.result(self.timeout)
+        except Exception as e:
+            # future will raise the exception from the write_data call.
+            exception = e
+        self.assertIsNone(exception)
+        # stream will complete with another exception.
+        stream.completion_future.result()
+        self.assertEqual(None, connection.close().exception(self.timeout))
 
 
 if __name__ == '__main__':

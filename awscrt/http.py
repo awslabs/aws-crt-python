@@ -382,7 +382,6 @@ class Http2ClientStream(HttpClientStream):
             body_stream = InputStream.wrap(data_stream)
         else:
             body_stream = None
-        del data_stream
 
         def on_write_complete(error_code):
             if error_code:
