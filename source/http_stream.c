@@ -350,7 +350,6 @@ static void s_on_http2_write_data_complete(struct aws_http_stream *stream, int e
 
 PyObject *aws_py_http2_client_stream_write_data(PyObject *self, PyObject *args) {
     (void)self;
-    struct aws_allocator *allocator = aws_py_get_allocator();
 
     PyObject *py_stream = NULL;
     PyObject *py_body_stream = NULL;
