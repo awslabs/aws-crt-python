@@ -85,14 +85,9 @@ class MqttRequestResponseClientTest(NativeResourceTest):
 
         callbacks.future_connection_success.result(TIMEOUT)
 
-        rr_client_options = mqtt_request_response.RequestResponseClientOptions(2, 2)
-        rr_client_options.operation_timeout_in_seconds = 30
+        return protocol_client, callbacks
 
-        rr_client = mqtt_request_response.Client(protocol_client, rr_client_options)
-
-        return rr_client, protocol_client, callbacks
-
-    def _shutdown5(self, rr_client, protocol_client, callbacks):
+    def _shutdown5(self, protocol_client, callbacks):
 
         protocol_client.stop()
         callbacks.future_stopped.result(TIMEOUT)
@@ -122,30 +117,70 @@ class MqttRequestResponseClientTest(NativeResourceTest):
         )
         protocol_client.connect().result(TIMEOUT)
 
+        return protocol_client
+
+    def _shutdown311(self, protocol_client):
+        protocol_client.disconnect().result(TIMEOUT)
+
+    def _create_rr_client(self, protocol_client):
         rr_client_options = mqtt_request_response.RequestResponseClientOptions(2, 2)
         rr_client_options.operation_timeout_in_seconds = 30
 
         rr_client = mqtt_request_response.Client(protocol_client, rr_client_options)
 
-        return rr_client, protocol_client
+        return rr_client
 
-    def _shutdown311(self, rr_client, protocol_client):
-        protocol_client.disconnect().result(TIMEOUT)
+    def _create_rr_client_failure_invalid_config(self, protocol_client, max_request_response_subscriptions, max_streaming_subscriptions, operation_timeout_seconds):
+        rr_client_options = mqtt_request_response.RequestResponseClientOptions(max_request_response_subscriptions, max_streaming_subscriptions)
+        rr_client_options.operation_timeout_in_seconds = operation_timeout_seconds
 
+        rr_client = mqtt_request_response.Client(protocol_client, rr_client_options)
+
+        return rr_client
 
     # ==============================================================
     #             CREATION TEST CASES
     # ==============================================================
 
     def test_client_creation_success5(self):
-        (rr_client, protocol_client, callbacks) = self._create_client5()
+        (protocol_client, callbacks) = self._create_client5()
+        rr_client = self._create_rr_client(protocol_client)
 
-        self._shutdown5(rr_client, protocol_client, callbacks)
+        self._shutdown5(protocol_client, callbacks)
 
     def test_client_creation_success311(self):
-        (rr_client, protocol_client) = self._create_client311()
+        protocol_client = self._create_client311()
+        rr_client = self._create_rr_client(protocol_client)
 
-        self._shutdown311(rr_client, protocol_client)
+        self._shutdown311(protocol_client)
+
+    def test_client_creation_failure_zero_request_response_subscriptions(self):
+        (protocol_client, callbacks) = self._create_client5()
+
+        self.assertRaises(Exception, self._create_rr_client_failure_invalid_config, protocol_client, 0, 2, 30)
+
+        self._shutdown5(protocol_client, callbacks)
+
+    def test_client_creation_failure_negative_request_response_subscriptions(self):
+        (protocol_client, callbacks) = self._create_client5()
+
+        self.assertRaises(Exception, self._create_rr_client_failure_invalid_config, protocol_client, -1, 2, 30)
+
+        self._shutdown5(protocol_client, callbacks)
+
+    def test_client_creation_failure_negative_streaming_subscriptions(self):
+        (protocol_client, callbacks) = self._create_client5()
+
+        self.assertRaises(Exception, self._create_rr_client_failure_invalid_config, protocol_client, 2, -2, 30)
+
+        self._shutdown5(protocol_client, callbacks)
+
+    def test_client_creation_failure_negative_operation_timeout(self):
+        (protocol_client, callbacks) = self._create_client5()
+
+        self.assertRaises(Exception, self._create_rr_client_failure_invalid_config, protocol_client, 2, 2, -30)
+
+        self._shutdown5(protocol_client, callbacks)
 
 
 if __name__ == 'main':
