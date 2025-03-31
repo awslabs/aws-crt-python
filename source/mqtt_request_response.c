@@ -2,10 +2,12 @@
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  * SPDX-License-Identifier: Apache-2.0.
  */
-#include "mqtt_request_response_client.h"
+#include "mqtt_request_response.h"
 
 #include "mqtt5_client.h"
 #include "mqtt_client_connection.h"
+
+#include "aws/mqtt/request-response/request_response_client.h"
 
 static const char *s_capsule_name_mqtt_request_response_client = "aws_mqtt_request_response_client";
 
@@ -265,7 +267,7 @@ static bool s_init_response_paths(struct aws_array_list *response_paths, PyObjec
         response_paths, allocator, (size_t)path_count, sizeof(struct aws_request_response_path));
 
     for (size_t i = 0; i < (size_t)path_count; ++i) {
-        PyObject *entry_py = PySequence_GetItem(subscription_topic_filters_py, i);
+        PyObject *entry_py = PySequence_GetItem(response_paths_py, i);
         if (entry_py == NULL) {
             goto done;
         }
@@ -351,7 +353,7 @@ static void s_complete_mqtt_request(
     PyObject *result = PyObject_CallFunction(
         request_binding->on_request_complete_callback,
         "(is#y#)",
-        /* i */ (int)error_code,
+        /* i */ error_code,
         /* s */ response_topic ? response_topic->ptr : NULL,
         /* # */ response_topic ? response_topic->len : 0,
         /* y */ payload ? payload->ptr : NULL,
@@ -359,8 +361,6 @@ static void s_complete_mqtt_request(
     if (!result) {
         PyErr_WriteUnraisable(PyErr_Occurred());
     }
-
-done:
 
     Py_XDECREF(result);
     PyGILState_Release(state);
@@ -422,54 +422,45 @@ PyObject *aws_py_mqtt_request_response_client_make_request(PyObject *self, PyObj
     struct aws_array_list response_paths; // array_list<aws_request_response_path>
     AWS_ZERO_STRUCT(response_paths);
 
-    if (!s_init_subscription_topic_filters(&subscription_topic_filters, subscription_topic_filters_py)) {
-        goto done;
+    if (s_init_subscription_topic_filters(&subscription_topic_filters, subscription_topic_filters_py) && s_init_response_paths(&response_paths, response_paths_py)) {
+        size_t subscription_count = aws_array_list_length(&subscription_topic_filters);
+        struct aws_byte_cursor subscription_topic_filter_cursors[subscription_count];
+        for (size_t i = 0; i < subscription_count; ++i) {
+            struct aws_byte_buf topic_filter;
+            aws_array_list_get_at(&subscription_topic_filters, &topic_filter, i);
+
+            subscription_topic_filter_cursors[i] = aws_byte_cursor_from_buf(&topic_filter);
+        }
+
+        size_t response_path_count = aws_array_list_length(&response_paths);
+        struct aws_mqtt_request_operation_response_path response_path_values[response_path_count];
+        for (size_t i = 0; i < subscription_count; ++i) {
+            struct aws_request_response_path response_path;
+            aws_array_list_get_at(&response_paths, &response_path, i);
+
+            response_path_values[i].topic = aws_byte_cursor_from_buf(&response_path.topic);
+            response_path_values[i].correlation_token_json_path =
+                aws_byte_cursor_from_buf(&response_path.correlation_token_json_path);
+        }
+
+        struct aws_mqtt_request_operation_options request_options = {
+            .subscription_topic_filters = subscription_topic_filter_cursors,
+            .subscription_topic_filter_count = subscription_count,
+            .response_paths = response_path_values,
+            .response_path_count = response_path_count,
+            .publish_topic = publish_topic,
+            .serialized_request = payload,
+            .correlation_token = correlation_token,
+            .completion_callback = s_on_mqtt_request_complete,
+            .user_data = request_binding,
+        };
+
+        if (aws_mqtt_request_response_client_submit_request(client_binding->native, &request_options)) {
+            s_complete_mqtt_request(request_binding, aws_last_error(), NULL, NULL);
+        } else {
+            result_py = Py_None;
+        }
     }
-
-    if (!s_init_response_paths(&response_paths, response_paths_py)) {
-        goto done;
-    }
-
-    size_t subscription_count = aws_array_list_length(&subscription_topic_filters);
-    struct aws_byte_cursor subscription_topic_filter_cursors[subscription_count];
-    for (size_t i = 0; i < subscription_count; ++i) {
-        struct aws_byte_buf topic_filter;
-        aws_array_list_get_at(&subscription_topic_filters, &topic_filter, i);
-
-        subscription_topic_filter_cursors[i] = aws_byte_cursor_from_buf(&topic_filter);
-    }
-
-    size_t response_path_count = aws_array_list_length(&response_paths);
-    struct aws_mqtt_request_operation_response_path response_path_values[response_path_count];
-    for (size_t i = 0; i < subscription_count; ++i) {
-        struct aws_request_response_path response_path;
-        aws_array_list_get_at(&response_paths, &response_path, i);
-
-        response_path_values[i].topic = aws_byte_cursor_from_buf(&response_path.topic);
-        response_path_values[i].correlation_token_json_path =
-            aws_byte_cursor_from_buf(&response_path.correlation_token_json_path);
-    }
-
-    struct aws_mqtt_request_operation_options request_options = {
-        .subscription_topic_filters = subscription_topic_filter_cursors,
-        .subscription_topic_filter_count = subscription_count,
-        .response_paths = response_path_values,
-        .response_path_count = response_path_count,
-        .publish_topic = publish_topic,
-        .serialized_request = payload,
-        .correlation_token = correlation_token,
-        .completion_callback = s_on_mqtt_request_complete,
-        .user_data = request_binding,
-    };
-
-    if (aws_mqtt_request_response_client_submit_request(client_binding->native, &request_options)) {
-        s_complete_mqtt_request(request_binding, aws_last_error(), NULL, NULL);
-        goto done;
-    }
-
-    result_py = Py_None;
-
-done:
 
     s_cleanup_subscription_topic_filters(&subscription_topic_filters);
     s_cleanup_response_paths(&response_paths);
