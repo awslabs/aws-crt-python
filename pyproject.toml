@@ -35,5 +35,5 @@ dev = [
   "build>=1.2.2", # for building wheels
   "sphinx>=7.2.6,<7.3; python_version >= '3.9'", # for building docs
   "websockets>=13.1", # for tests
-  "h2>=4.2", # for tests
+  "h2", # for tests
 ]
