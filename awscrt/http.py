@@ -131,7 +131,6 @@ class HttpClientConnection(HttpConnectionBase):
             socket_options=None,
             tls_connection_options=None,
             proxy_options=None,
-            http2settings=None,
             expected_version=None):
         """
         Initialize the generic part of the HttpClientConnection class.
@@ -260,7 +259,7 @@ class Http2ClientConnection(HttpClientConnection):
             bootstrap=None,
             socket_options=None,
             tls_connection_options=None,
-            proxy_options=None, settings=None):
+            proxy_options=None):
         return HttpClientConnection._generic_new(
             cls,
             host_name,
@@ -268,8 +267,7 @@ class Http2ClientConnection(HttpClientConnection):
             bootstrap,
             socket_options,
             tls_connection_options,
-            proxy_options,
-            settings)
+            proxy_options)
 
     def request(self, request, on_response=None, on_body=None, manual_write=False):
         return Http2ClientStream(self, request, on_response, on_body, manual_write)
