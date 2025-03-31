@@ -364,7 +364,6 @@ class TestClient(NativeResourceTest):
         response = Response()
         stream = connection.request(request, response.on_response, response.on_body)
         stream.activate()
-        stream.write_data(BytesIO(b'hello'), False)
 
         # wait for stream to complete (use long timeout, it's a big file)
         stream_completion_result = stream.completion_future.result(80)
