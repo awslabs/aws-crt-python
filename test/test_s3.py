@@ -691,7 +691,7 @@ class S3RequestTest(NativeResourceTest):
         mp.set_start_method('fork', force=True)
         process = Process(target=self.fork_s3_client)
         process.start()
-        process.join(10)
+        process.join()
         self.assertEqual(0, process.exitcode)
         self.upload_with_global_client()
         del CRT_S3_CLIENT
