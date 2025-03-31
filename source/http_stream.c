@@ -359,17 +359,17 @@ PyObject *aws_py_http2_client_stream_write_data(PyObject *self, PyObject *args) 
         return NULL;
     }
 
-    struct aws_http_stream *native_stream = aws_py_get_http_stream(py_stream);
-    if (!native_stream) {
+    struct aws_http_stream *http_stream = aws_py_get_http_stream(py_stream);
+    if (!http_stream) {
         return NULL;
     }
 
-    struct aws_input_stream *stream = NULL;
+    struct aws_input_stream *body_stream = NULL;
     // Write an empty stream is allowed.
     if (py_body_stream != Py_None) {
         /* The py_body_stream has the same lifetime as the C stream, no need to keep it alive from this binding. */
-        stream = aws_py_get_input_stream(py_body_stream);
-        if (!stream) {
+        body_stream = aws_py_get_input_stream(py_body_stream);
+        if (!body_stream) {
             return PyErr_AwsLastError();
         }
     }
@@ -378,13 +378,13 @@ PyObject *aws_py_http2_client_stream_write_data(PyObject *self, PyObject *args) 
     Py_INCREF(py_on_write_complete);
 
     struct aws_http2_stream_write_data_options write_options = {
-        .data = stream,
+        .data = body_stream,
         .end_stream = end_stream,
         .on_complete = s_on_http2_write_data_complete,
         .user_data = py_on_write_complete,
     };
 
-    int error = aws_http2_stream_write_data(native_stream, &write_options);
+    int error = aws_http2_stream_write_data(http_stream, &write_options);
     if (error) {
         Py_DECREF(py_on_write_complete);
         return PyErr_AwsLastError();
