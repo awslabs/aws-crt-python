@@ -28,6 +28,8 @@ static void s_mqtt_request_response_python_client_destructor(PyObject *client_ca
     assert(client_binding);
 
     client_binding->native = aws_mqtt_request_response_client_release(client_binding->native);
+
+    aws_mem_release(aws_py_get_allocator(), client_binding);
 }
 
 /*
