@@ -1,5 +1,5 @@
 version: 0.2
-# this image assumes Ubuntu
+# this image assumes base Codebuild Ubuntu image
 phases:
   install:
     commands:
