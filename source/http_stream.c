@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0.
  */
 #include "http.h"
+#include "io.h"
 
 #include <aws/http/request_response.h>
 
@@ -235,7 +236,8 @@ PyObject *aws_py_http_client_stream_new(PyObject *self, PyObject *args) {
     PyObject *py_stream = NULL;
     PyObject *py_connection = NULL;
     PyObject *py_request = NULL;
-    if (!PyArg_ParseTuple(args, "OOO", &py_stream, &py_connection, &py_request)) {
+    int h2_manual_write = 0;
+    if (!PyArg_ParseTuple(args, "OOOp", &py_stream, &py_connection, &py_request, &h2_manual_write)) {
         return NULL;
     }
 
@@ -244,6 +246,8 @@ PyObject *aws_py_http_client_stream_new(PyObject *self, PyObject *args) {
         return NULL;
     }
 
+    printf("aws_py_http_client_stream_new: py_request %p\n", py_request);
+    printf("aws_py_http_client_stream_new: h2_manual_write %d\n", h2_manual_write);
     struct aws_http_message *native_request = aws_py_get_http_message(py_request);
     if (!native_request) {
         return NULL;
@@ -282,6 +286,7 @@ PyObject *aws_py_http_client_stream_new(PyObject *self, PyObject *args) {
         .on_response_body = s_on_incoming_body,
         .on_complete = s_on_stream_complete,
         .user_data = stream,
+        .http2_use_manual_data_writes = h2_manual_write,
     };
 
     stream->native = aws_http_connection_make_request(native_connection, &request_options);
@@ -321,5 +326,90 @@ PyObject *aws_py_http_client_stream_activate(PyObject *self, PyObject *args) {
     /* Force python self to stay alive until on_complete callback */
     Py_INCREF(py_stream);
 
+    Py_RETURN_NONE;
+}
+struct http2_write_data_binding {
+    PyObject *body_stream;
+    PyObject *on_write_complete;
+};
+
+static void s_clean_up_write_data_binding(struct http2_write_data_binding *binding) {
+    struct aws_allocator *allocator = aws_py_get_allocator();
+    printf("s_clean_up_write_data_binding\n");
+    Py_CLEAR(binding->on_write_complete);
+    if (binding->body_stream) {
+        printf("s_clean_up_write_data_binding: body_stream %p\n", binding->body_stream);
+        // Py_DECREF(binding->body_stream);
+    }
+    aws_mem_release(allocator, binding);
+}
+
+static void s_on_http2_write_data_complete(struct aws_http_stream *stream, int error_code, void *user_data) {
+    (void)stream;
+    struct http2_write_data_binding *binding = (struct http2_write_data_binding *)user_data;
+    AWS_FATAL_ASSERT(binding->on_write_complete);
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
+
+    /* Invoke on_setup, then clear our reference to it */
+    PyObject *result = PyObject_CallFunction(binding->on_write_complete, "(i)", error_code);
+    if (result) {
+        Py_DECREF(result);
+    } else {
+        /* Callback might fail during application shutdown */
+        PyErr_WriteUnraisable(PyErr_Occurred());
+    }
+    s_clean_up_write_data_binding(binding);
+    PyGILState_Release(state);
+}
+
+PyObject *aws_py_http2_client_stream_write_data(PyObject *self, PyObject *args) {
+    (void)self;
+    struct aws_allocator *allocator = aws_py_get_allocator();
+
+    PyObject *py_stream = NULL;
+    PyObject *py_body_stream = NULL;
+    int end_stream = false;
+    PyObject *py_on_write_complete = NULL;
+    if (!PyArg_ParseTuple(args, "OOpO", &py_stream, &py_body_stream, &end_stream, &py_on_write_complete)) {
+        return NULL;
+    }
+
+    struct aws_http_stream *native_stream = aws_py_get_http_stream(py_stream);
+    if (!native_stream) {
+        return NULL;
+    }
+
+    struct aws_input_stream *stream = NULL;
+    // Write an empty stream is allowed.
+    if (py_body_stream != Py_None) {
+        stream = aws_py_get_input_stream(py_body_stream);
+        if (!stream) {
+            return PyErr_AwsLastError();
+        }
+    }
+
+    struct http2_write_data_binding *binding = aws_mem_calloc(allocator, 1, sizeof(struct http2_write_data_binding));
+    if (stream) {
+        binding->body_stream = py_body_stream;
+        // Py_INCREF(binding->body_stream);
+    }
+    binding->on_write_complete = py_on_write_complete;
+    Py_INCREF(binding->on_write_complete);
+
+    struct aws_http2_stream_write_data_options write_options = {
+        .data = stream,
+        .end_stream = end_stream,
+        .on_complete = s_on_http2_write_data_complete,
+        .user_data = binding,
+    };
+
+    int error = aws_http2_stream_write_data(native_stream, &write_options);
+    if (error) {
+        s_clean_up_write_data_binding(binding);
+        return PyErr_AwsLastError();
+    }
     Py_RETURN_NONE;
 }

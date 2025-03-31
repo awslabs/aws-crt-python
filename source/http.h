@@ -37,8 +37,9 @@ PyObject *aws_py_http_connection_is_open(PyObject *self, PyObject *args);
 PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args);
 
 PyObject *aws_py_http_client_stream_new(PyObject *self, PyObject *args);
-
 PyObject *aws_py_http_client_stream_activate(PyObject *self, PyObject *args);
+
+PyObject *aws_py_http2_client_stream_write_data(PyObject *self, PyObject *args);
 
 /* Create capsule around new request-style aws_http_message struct */
 PyObject *aws_py_http_message_new_request(PyObject *self, PyObject *args);
