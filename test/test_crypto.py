@@ -273,7 +273,6 @@ class TestCredentials(NativeResourceTest):
                 signature = rsa.sign(p, digest)
                 self.assertTrue(rsa.verify(p, digest, signature))
 
-
     def test_rsa_signing_roundtrip_der(self):
         param_list = [RSASignatureAlgorithm.PKCS1_5_SHA256,
                       RSASignatureAlgorithm.PSS_SHA256,
