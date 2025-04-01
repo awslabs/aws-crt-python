@@ -287,8 +287,11 @@ PyObject *aws_py_rsa_private_key_from_pem_data(PyObject *self, PyObject *args) {
     struct aws_pem_object *found_pem_object = s_find_pem_object(&pem_list, AWS_PEM_TYPE_PRIVATE_RSA_PKCS1);
 
     if (found_pem_object == NULL) {
-        PyErr_SetString(PyExc_ValueError, "RSA private key not found in PEM.");
-        goto on_done;
+        found_pem_object = s_find_pem_object(&pem_list, AWS_PEM_TYPE_PRIVATE_PKCS8);
+        if (found_pem_object == NULL) {
+            PyErr_SetString(PyExc_ValueError, "RSA private key not found in PEM.");
+            goto on_done;
+        }
     }
 
     struct aws_rsa_key_pair *key_pair =
