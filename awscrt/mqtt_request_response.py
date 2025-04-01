@@ -187,7 +187,7 @@ class Client(NativeResource):
                 response = Response(topic=topic, payload=payload)
                 future.set_result(response)
 
-        _awscrt.mqtt_request_response_client_make_request(self,
+        _awscrt.mqtt_request_response_client_make_request(self._binding,
                                                           options.subscription_topic_filters,
                                                           options.response_paths,
                                                           options.publish_topic,

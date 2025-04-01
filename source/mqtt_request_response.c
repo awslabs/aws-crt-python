@@ -347,11 +347,6 @@ static void s_complete_mqtt_request(
     const struct aws_byte_cursor *response_topic,
     const struct aws_byte_cursor *payload) {
 
-    PyGILState_STATE state;
-    if (aws_py_gilstate_ensure(&state)) {
-        return;
-    }
-
     PyObject *result = PyObject_CallFunction(
         request_binding->on_request_complete_callback,
         "(is#y#)",
@@ -365,7 +360,6 @@ static void s_complete_mqtt_request(
     }
 
     Py_XDECREF(result);
-    PyGILState_Release(state);
 }
 
 static void s_on_mqtt_request_complete(
@@ -376,9 +370,16 @@ static void s_on_mqtt_request_complete(
 
     struct aws_mqtt_make_request_binding *request_binding = user_data;
 
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return;
+    }
+
     s_complete_mqtt_request(request_binding, error_code, response_topic, payload);
 
     s_aws_mqtt_make_request_binding_destroy(request_binding);
+
+    PyGILState_Release(state);
 }
 
 PyObject *aws_py_mqtt_request_response_client_make_request(PyObject *self, PyObject *args) {
@@ -424,7 +425,8 @@ PyObject *aws_py_mqtt_request_response_client_make_request(PyObject *self, PyObj
     struct aws_array_list response_paths; // array_list<aws_request_response_path>
     AWS_ZERO_STRUCT(response_paths);
 
-    if (s_init_subscription_topic_filters(&subscription_topic_filters, subscription_topic_filters_py) && s_init_response_paths(&response_paths, response_paths_py)) {
+    if (s_init_subscription_topic_filters(&subscription_topic_filters, subscription_topic_filters_py) &&
+        s_init_response_paths(&response_paths, response_paths_py)) {
         size_t subscription_count = aws_array_list_length(&subscription_topic_filters);
         struct aws_byte_cursor subscription_topic_filter_cursors[subscription_count];
         for (size_t i = 0; i < subscription_count; ++i) {
@@ -436,7 +438,7 @@ PyObject *aws_py_mqtt_request_response_client_make_request(PyObject *self, PyObj
 
         size_t response_path_count = aws_array_list_length(&response_paths);
         struct aws_mqtt_request_operation_response_path response_path_values[response_path_count];
-        for (size_t i = 0; i < subscription_count; ++i) {
+        for (size_t i = 0; i < response_path_count; ++i) {
             struct aws_request_response_path response_path;
             aws_array_list_get_at(&response_paths, &response_path, i);
 

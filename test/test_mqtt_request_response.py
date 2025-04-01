@@ -138,6 +138,30 @@ class MqttRequestResponseClientTest(NativeResourceTest):
 
         return rr_client
 
+    def _create_get_shadow_request(self, thing_name, use_correlation_token):
+        topic_prefix = f"$aws/things/{thing_name}/shadow/get"
+
+        request_options = mqtt_request_response.RequestResponseOperationOptions(
+            subscription_topic_filters=[f"{topic_prefix}/+"],
+            response_paths=[
+                mqtt_request_response.ResponsePath(topic=f"{topic_prefix}/accepted"),
+                mqtt_request_response.ResponsePath(topic=f"{topic_prefix}/rejected")
+            ],
+            publish_topic = topic_prefix,
+            payload="{}".encode()
+        )
+
+        if use_correlation_token:
+            correlation_token = f"{uuid.uuid4()}"
+            request_options.response_paths[0].correlation_token_json_path = "clientToken"
+            request_options.response_paths[1].correlation_token_json_path = "clientToken"
+            request_options.payload = f'{{"clientToken":"{correlation_token}"}}'.encode()
+            request_options.correlation_token = correlation_token
+
+        return request_options
+
+
+
     # ==============================================================
     #             CREATION TEST CASES
     # ==============================================================
@@ -183,5 +207,22 @@ class MqttRequestResponseClientTest(NativeResourceTest):
         self._shutdown5(protocol_client, callbacks)
 
 
+    def test_get_shadow_failure_no_such_shadow5(self):
+        (protocol_client, callbacks) = self._create_client5()
+        rr_client = self._create_rr_client(protocol_client)
+
+        thing_name = f"tn-{uuid.uuid4()}"
+        request_options = self._create_get_shadow_request(thing_name, True)
+
+        response = rr_client.make_request(request_options)
+        result = response.result()
+
+        print("result={}".format(result))
+
+        self._shutdown5(protocol_client, callbacks)
+
+
 if __name__ == 'main':
     unittest.main()
+
+
