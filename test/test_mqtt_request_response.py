@@ -214,10 +214,25 @@ class MqttRequestResponseClientTest(NativeResourceTest):
         thing_name = f"tn-{uuid.uuid4()}"
         request_options = self._create_get_shadow_request(thing_name, True)
 
-        response = rr_client.make_request(request_options)
-        result = response.result()
+        request_future = rr_client.make_request(request_options)
+        response = request_future.result()
 
-        print("result={}".format(result))
+        self.assertEqual(request_options.response_paths[1].topic, response.topic, "Expected response to come in on rejected topic")
+        payload = str(response.payload)
+
+        self.assertIn("No shadow exists with name", payload)
+
+        self._shutdown5(protocol_client, callbacks)
+
+    def test_get_shadow_failure_no_response_paths5(self):
+        (protocol_client, callbacks) = self._create_client5()
+        rr_client = self._create_rr_client(protocol_client)
+
+        thing_name = f"tn-{uuid.uuid4()}"
+        request_options = self._create_get_shadow_request(thing_name, True)
+        request_options.response_paths = []
+
+        self.assertRaises(TypeError, lambda: rr_client.make_request(request_options))
 
         self._shutdown5(protocol_client, callbacks)
 

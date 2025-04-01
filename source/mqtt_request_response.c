@@ -196,6 +196,7 @@ static bool s_init_subscription_topic_filters(
 
     Py_ssize_t filter_count = PySequence_Size(subscription_topic_filters_py);
     if (filter_count <= 0) {
+        PyErr_Format(PyExc_TypeError, "subscription_topic_filters must have at least one element");
         return false;
     }
 
@@ -260,6 +261,7 @@ static bool s_init_response_paths(struct aws_array_list *response_paths, PyObjec
 
     Py_ssize_t path_count = PySequence_Size(response_paths_py);
     if (path_count <= 0) {
+        PyErr_Format(PyExc_TypeError, "response_paths must have at least one element");
         return false;
     }
 
@@ -341,11 +343,18 @@ static void s_aws_mqtt_make_request_binding_destroy(struct aws_mqtt_make_request
     aws_mem_release(aws_py_get_allocator(), binding);
 }
 
-static void s_complete_mqtt_request(
-    struct aws_mqtt_make_request_binding *request_binding,
-    int error_code,
+static void s_on_mqtt_request_complete(
     const struct aws_byte_cursor *response_topic,
-    const struct aws_byte_cursor *payload) {
+    const struct aws_byte_cursor *payload,
+    int error_code,
+    void *user_data) {
+
+    struct aws_mqtt_make_request_binding *request_binding = user_data;
+
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return;
+    }
 
     PyObject *result = PyObject_CallFunction(
         request_binding->on_request_complete_callback,
@@ -360,22 +369,6 @@ static void s_complete_mqtt_request(
     }
 
     Py_XDECREF(result);
-}
-
-static void s_on_mqtt_request_complete(
-    const struct aws_byte_cursor *response_topic,
-    const struct aws_byte_cursor *payload,
-    int error_code,
-    void *user_data) {
-
-    struct aws_mqtt_make_request_binding *request_binding = user_data;
-
-    PyGILState_STATE state;
-    if (aws_py_gilstate_ensure(&state)) {
-        return;
-    }
-
-    s_complete_mqtt_request(request_binding, error_code, response_topic, payload);
 
     s_aws_mqtt_make_request_binding_destroy(request_binding);
 
@@ -415,18 +408,22 @@ PyObject *aws_py_mqtt_request_response_client_make_request(PyObject *self, PyObj
         return NULL;
     }
 
-    PyObject *result_py = NULL;
-    struct aws_mqtt_make_request_binding *request_binding =
-        s_aws_mqtt_make_request_binding_new(on_request_complete_callable_py);
+    PyObject *result = NULL;
 
     struct aws_array_list subscription_topic_filters; // array_list<aws_byte_buf>
     AWS_ZERO_STRUCT(subscription_topic_filters);
+    if (!s_init_subscription_topic_filters(&subscription_topic_filters, subscription_topic_filters_py)) {
+        goto done;
+    }
 
     struct aws_array_list response_paths; // array_list<aws_request_response_path>
     AWS_ZERO_STRUCT(response_paths);
+    if (!s_init_response_paths(&response_paths, response_paths_py)) {
+        goto done;
+    }
 
-    if (s_init_subscription_topic_filters(&subscription_topic_filters, subscription_topic_filters_py) &&
-        s_init_response_paths(&response_paths, response_paths_py)) {
+    {
+        result = Py_None;
         size_t subscription_count = aws_array_list_length(&subscription_topic_filters);
         struct aws_byte_cursor subscription_topic_filter_cursors[subscription_count];
         for (size_t i = 0; i < subscription_count; ++i) {
@@ -447,6 +444,9 @@ PyObject *aws_py_mqtt_request_response_client_make_request(PyObject *self, PyObj
                 aws_byte_cursor_from_buf(&response_path.correlation_token_json_path);
         }
 
+        struct aws_mqtt_make_request_binding *request_binding =
+            s_aws_mqtt_make_request_binding_new(on_request_complete_callable_py);
+
         struct aws_mqtt_request_operation_options request_options = {
             .subscription_topic_filters = subscription_topic_filter_cursors,
             .subscription_topic_filter_count = subscription_count,
@@ -460,19 +460,16 @@ PyObject *aws_py_mqtt_request_response_client_make_request(PyObject *self, PyObj
         };
 
         if (aws_mqtt_request_response_client_submit_request(client_binding->native, &request_options)) {
-            s_complete_mqtt_request(request_binding, aws_last_error(), NULL, NULL);
-        } else {
-            result_py = Py_None;
+            s_on_mqtt_request_complete(NULL, NULL, aws_last_error(), request_binding);
         }
     }
 
+done:
+
     s_cleanup_subscription_topic_filters(&subscription_topic_filters);
     s_cleanup_response_paths(&response_paths);
-    if (result_py == NULL) {
-        s_aws_mqtt_make_request_binding_destroy(request_binding);
-    }
 
-    return result_py;
+    return result;
 }
 
 struct aws_mqtt_request_response_client *aws_py_get_mqtt_request_response_client(
