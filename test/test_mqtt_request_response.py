@@ -67,6 +67,12 @@ def _missing_response_path_topic(options):
 def _type_mismatch_response_path_topic(options):
     options.response_paths[0].topic = 57.3
 
+def _type_mismatch_response_path_correlation_token_json_path(options):
+    options.response_paths[0].correlation_token_json_path = []
+
+def _type_mismatch_response_paths(options):
+    options.response_paths = "hello"
+
 class MqttRequestResponseClientTest(NativeResourceTest):
 
     def _create_client5(self):
@@ -342,8 +348,17 @@ class MqttRequestResponseClientTest(NativeResourceTest):
     def test_get_shadow_failure_response_path_topic_type_mismatch311(self):
         self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(protocol_client, lambda options: _type_mismatch_response_path_topic(options)))
 
-    # Type mismatch correlation token json path
-    # Type mismatch response paths
+    def test_get_shadow_failure_response_path_correlation_token_json_path_type_mismatch5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(protocol_client, lambda options: _type_mismatch_response_path_correlation_token_json_path(options)))
+
+    def test_get_shadow_failure_response_path_correlation_token_json_path_type_mismatch311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(protocol_client, lambda options: _type_mismatch_response_path_correlation_token_json_path(options)))
+
+    def test_get_shadow_failure_response_paths_type_mismatch5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(protocol_client, lambda options: _type_mismatch_response_paths(options)))
+
+    def test_get_shadow_failure_response_paths_type_mismatch311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(protocol_client, lambda options: _type_mismatch_response_paths(options)))
 
     # Bad subscription topic filter
     # Type mismatch subscription entry
