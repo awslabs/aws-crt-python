@@ -11,6 +11,7 @@ from typing import Callable, Union
 from awscrt import NativeResource, mqtt5, mqtt, exceptions
 from concurrent.futures import Future
 import _awscrt
+import collections.abc
 
 class SubscriptionStatusEventType(IntEnum):
     """
@@ -98,6 +99,9 @@ class ResponsePath:
     topic: str
     correlation_token_json_path: 'Optional[str]' = None
 
+    def validate(self):
+        assert isinstance(self.topic, str)
+        assert isinstance(self.correlation_token_json_path, str) or self.correlation_token_json_path is None
 
 @dataclass
 class RequestResponseOperationOptions:
@@ -117,6 +121,18 @@ class RequestResponseOperationOptions:
     payload: bytes
     correlation_token: 'Optional[str]' = None
 
+    def validate(self):
+        assert isinstance(self.subscription_topic_filters, collections.abc.Sequence)
+        for topic_filter in self.subscription_topic_filters:
+            assert isinstance(topic_filter, str)
+
+        assert isinstance(self.response_paths, collections.abc.Sequence)
+        for response_path in self.response_paths:
+            response_path.validate()
+
+        assert isinstance(self.publish_topic, str)
+        assert isinstance(self.payload, bytes)
+        assert isinstance(self.correlation_token, str) or self.correlation_token is None
 
 @dataclass
 class StreamingOperationOptions:
@@ -143,6 +159,10 @@ class RequestResponseClientOptions:
     max_streaming_subscriptions: int
     operation_timeout_in_seconds: 'Optional[int]' = 60
 
+    def validate(self):
+        assert isinstance(self.max_request_response_subscriptions, int)
+        assert isinstance(self.max_streaming_subscriptions, int)
+        assert isinstance(self.operation_timeout_in_seconds, int)
 
 
 class Client(NativeResource):
@@ -163,9 +183,7 @@ class Client(NativeResource):
 
         assert isinstance(protocol_client, mqtt5.Client) or isinstance(protocol_client, mqtt.Connection)
         assert isinstance(client_options, RequestResponseClientOptions)
-        assert isinstance(client_options.max_request_response_subscriptions, int)
-        assert isinstance(client_options.max_streaming_subscriptions, int)
-        assert isinstance(client_options.operation_timeout_in_seconds, int) or client_options.operation_timeout_in_seconds is None
+        #client_options.validate()
 
         super().__init__()
 
@@ -176,7 +194,7 @@ class Client(NativeResource):
 
 
     def make_request(self, options: RequestResponseOperationOptions):
-        # We don't stringently check options and its fields as they are populated by logic under our control
+        #options.validate()
 
         future = Future()
 

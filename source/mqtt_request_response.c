@@ -15,8 +15,6 @@ static const char *AWS_PYOBJECT_KEY_REQUEST_RESPONSE_CLIENT_OPTIONS = "RequestRe
 static const char *AWS_PYOBJECT_KEY_MAX_REQUEST_RESPONSE_SUBSCRIPTIONS = "max_request_response_subscriptions";
 static const char *AWS_PYOBJECT_KEY_MAX_STREAMING_SUBSCRIPTIONS = "max_streaming_subscriptions";
 static const char *AWS_PYOBJECT_KEY_OPERATION_TIMEOUT_IN_SECONDS = "operation_timeout_in_seconds";
-static const char *AWS_PYOBJECT_KEY_TOPIC = "topic";
-static const char *AWS_PYOBJECT_KEY_CORRELATION_TOKEN_JSON_PATH = "correlation_token_json_path";
 
 struct mqtt_request_response_client_binding {
     struct aws_mqtt_request_response_client *native;
@@ -172,6 +170,11 @@ PyObject *aws_py_mqtt_request_response_client_new_from_311(PyObject *self, PyObj
     return capsule;
 }
 
+/*************************************************************************************************/
+
+static const char *AWS_PYOBJECT_KEY_TOPIC = "topic";
+static const char *AWS_PYOBJECT_KEY_CORRELATION_TOKEN_JSON_PATH = "correlation_token_json_path";
+
 static void s_cleanup_subscription_topic_filters(struct aws_array_list *subscription_topic_filters) {
     size_t filter_count = aws_array_list_length(subscription_topic_filters);
     for (size_t i = 0; i < filter_count; ++i) {
@@ -219,6 +222,10 @@ static bool s_init_subscription_topic_filters(
         aws_array_list_push_back(subscription_topic_filters, &topic_filter);
 
         Py_XDECREF(entry_py);
+
+        if (PyErr_Occurred()) {
+            goto done;
+        }
     }
 
     success = true;
@@ -276,15 +283,15 @@ static bool s_init_response_paths(struct aws_array_list *response_paths, PyObjec
             goto done;
         }
 
-        bool should_continue = true;
         PyObject *topic_py = PyObject_GetAttrString(entry_py, AWS_PYOBJECT_KEY_TOPIC);
-        PyObject *correlation_token_json_path_py =
-            PyObject_GetAttrString(entry_py, AWS_PYOBJECT_KEY_CORRELATION_TOKEN_JSON_PATH);
-
+        PyObject *correlation_token_json_path_py = PyObject_GetAttrString(entry_py, AWS_PYOBJECT_KEY_CORRELATION_TOKEN_JSON_PATH);
         if (topic_py != NULL && correlation_token_json_path_py != NULL) {
             struct aws_byte_cursor topic_cursor = aws_byte_cursor_from_pyunicode(topic_py);
-            struct aws_byte_cursor correlation_token_json_path_cursor =
-                aws_byte_cursor_from_pyunicode(correlation_token_json_path_py);
+            struct aws_byte_cursor correlation_token_json_path_cursor;
+            AWS_ZERO_STRUCT(correlation_token_json_path_cursor);
+            if (correlation_token_json_path_py != Py_None) {
+                correlation_token_json_path_cursor = aws_byte_cursor_from_pyunicode(correlation_token_json_path_py);
+            }
 
             struct aws_request_response_path response_path;
             aws_byte_buf_init_copy_from_cursor(&response_path.topic, allocator, topic_cursor);
@@ -292,16 +299,14 @@ static bool s_init_response_paths(struct aws_array_list *response_paths, PyObjec
                 &response_path.correlation_token_json_path, allocator, correlation_token_json_path_cursor);
 
             aws_array_list_push_back(response_paths, &response_path);
-        } else {
-            PyErr_Format(PyExc_AttributeError, "invalid response path");
-            should_continue = false;
         }
 
         Py_XDECREF(topic_py);
         Py_XDECREF(correlation_token_json_path_py);
         Py_XDECREF(entry_py);
 
-        if (!should_continue) {
+        if (PyErr_Occurred()) {
+            PyErr_Format(PyExc_TypeError, "invalid response path");
             goto done;
         }
     }
@@ -412,13 +417,12 @@ PyObject *aws_py_mqtt_request_response_client_make_request(PyObject *self, PyObj
 
     struct aws_array_list subscription_topic_filters; // array_list<aws_byte_buf>
     AWS_ZERO_STRUCT(subscription_topic_filters);
-    if (!s_init_subscription_topic_filters(&subscription_topic_filters, subscription_topic_filters_py)) {
-        goto done;
-    }
 
     struct aws_array_list response_paths; // array_list<aws_request_response_path>
     AWS_ZERO_STRUCT(response_paths);
-    if (!s_init_response_paths(&response_paths, response_paths_py)) {
+
+    if (!s_init_subscription_topic_filters(&subscription_topic_filters, subscription_topic_filters_py) ||
+        !s_init_response_paths(&response_paths, response_paths_py)) {
         goto done;
     }
 

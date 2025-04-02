@@ -126,6 +126,11 @@ uint32_t PyObject_GetAttrAsUint32(PyObject *o, const char *class_name, const cha
         return result;
     }
 
+    if (attr == Py_None) {
+        PyErr_Format(PyExc_AttributeError, "'%s.%s' required integral attribute is None", class_name, attr_name);
+        return result;
+    }
+
     PyObject_GetAsOptionalUint32(attr, class_name, attr_name, &result);
 
     Py_DECREF(attr);

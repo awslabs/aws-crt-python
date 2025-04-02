@@ -52,6 +52,21 @@ class MqttRequestResponse5TestCallbacks():
     def on_lifecycle_disconnection(self, lifecycle_disconnect_data: mqtt5.LifecycleDisconnectData):
         pass
 
+def _empty_response_paths(options):
+    options.response_paths = []
+
+def _invalidate_response_path_topic(options):
+    options.response_paths[0].topic = "a/#/b"
+
+def _none_response_path_topic(options):
+    options.response_paths[0].topic = None
+
+def _missing_response_path_topic(options):
+    del options.response_paths[0].topic
+
+def _type_mismatch_response_path_topic(options):
+    options.response_paths[0].topic = 57.3
+
 class MqttRequestResponseClientTest(NativeResourceTest):
 
     def _create_client5(self):
@@ -130,6 +145,20 @@ class MqttRequestResponseClientTest(NativeResourceTest):
 
         return rr_client
 
+    def _do_mqtt5_test(self, test_callable):
+        (protocol_client, callbacks) = self._create_client5()
+
+        test_callable(protocol_client)
+
+        self._shutdown5(protocol_client, callbacks)
+
+    def _do_mqtt311_test(self, test_callable):
+        protocol_client = self._create_client311()
+
+        test_callable(protocol_client)
+
+        self._shutdown311(protocol_client)
+
     def _create_get_shadow_request(self, thing_name, use_correlation_token):
         topic_prefix = f"$aws/things/{thing_name}/shadow/get"
 
@@ -152,160 +181,191 @@ class MqttRequestResponseClientTest(NativeResourceTest):
 
         return request_options
 
-
-
-    # ==============================================================
-    #             CREATION TEST CASES
-    # ==============================================================
-
-    def test_client_creation_success5(self):
-        (protocol_client, callbacks) = self._create_client5()
-        rr_client = self._create_rr_client(protocol_client, 2, 2, 30)
-
-        self._shutdown5(protocol_client, callbacks)
-
-    def test_client_creation_success311(self):
-        protocol_client = self._create_client311()
-        rr_client = self._create_rr_client(protocol_client, 2, 2, 30)
-
-        self._shutdown311(protocol_client)
-
-    def test_client_creation_success_no_timeout5(self):
-        (protocol_client, callbacks) = self._create_client5()
-        rr_client = self._create_rr_client(protocol_client, 2, 2, None)
-
-        self._shutdown5(protocol_client, callbacks)
-
-    def test_client_creation_success_no_timeout311(self):
-        protocol_client = self._create_client311()
-        rr_client = self._create_rr_client(protocol_client, 2, 2, None)
-
-        self._shutdown311(protocol_client)
-
-    def test_client_creation_failure_no_protocol_client(self):
-        self.assertRaises(Exception, self._create_rr_client, None, 2, 2, 30)
-
-
-    def test_client_creation_failure_zero_request_response_subscriptions5(self):
-        (protocol_client, callbacks) = self._create_client5()
-
-        self.assertRaises(Exception, self._create_rr_client, protocol_client, 0, 2, 30)
-
-        self._shutdown5(protocol_client, callbacks)
-
-    def test_client_creation_failure_zero_request_response_subscriptions311(self):
-        (protocol_client) = self._create_client311()
-
-        self.assertRaises(Exception, self._create_rr_client, protocol_client, 0, 2, 30)
-
-        self._shutdown311(protocol_client)
-
-    def test_client_creation_failure_negative_request_response_subscriptions5(self):
-        (protocol_client, callbacks) = self._create_client5()
-
-        self.assertRaises(Exception, self._create_rr_client, protocol_client, -2, 2, 30)
-
-        self._shutdown5(protocol_client, callbacks)
-
-    def test_client_creation_failure_negative_request_response_subscriptions311(self):
-        (protocol_client) = self._create_client311()
-
-        self.assertRaises(Exception, self._create_rr_client, protocol_client, -2, 2, 30)
-
-        self._shutdown311(protocol_client)
-
-    def test_client_creation_failure_no_request_response_subscriptions5(self):
-        (protocol_client, callbacks) = self._create_client5()
-
-        self.assertRaises(Exception, self._create_rr_client, protocol_client, None, 2, 30)
-
-        self._shutdown5(protocol_client, callbacks)
-
-    def test_client_creation_failure_no_request_response_subscriptions311(self):
-        (protocol_client) = self._create_client311()
-
-        self.assertRaises(Exception, self._create_rr_client, protocol_client, None, 2, 30)
-
-        self._shutdown311(protocol_client)
-
-    def test_client_creation_failure_negative_streaming_subscriptions5(self):
-        (protocol_client, callbacks) = self._create_client5()
-
-        self.assertRaises(Exception, self._create_rr_client, protocol_client, 2, -2, 30)
-
-        self._shutdown5(protocol_client, callbacks)
-
-    def test_client_creation_failure_negative_streaming_subscriptions311(self):
-        (protocol_client) = self._create_client311()
-
-        self.assertRaises(Exception, self._create_rr_client, protocol_client, 2, -2, 30)
-
-        self._shutdown311(protocol_client)
-
-    def test_client_creation_failure_no_streaming_subscriptions5(self):
-        (protocol_client, callbacks) = self._create_client5()
-
-        self.assertRaises(Exception, self._create_rr_client, protocol_client, 2, None, 30)
-
-        self._shutdown5(protocol_client, callbacks)
-
-    def test_client_creation_failure_no_streaming_subscriptions311(self):
-        protocol_client = self._create_client311()
-
-        self.assertRaises(Exception, self._create_rr_client, protocol_client, 2, None, 30)
-
-        self._shutdown311(protocol_client)
-
-    def test_client_creation_failure_negative_operation_timeout5(self):
-        (protocol_client, callbacks) = self._create_client5()
-
-        self.assertRaises(Exception, self._create_rr_client, protocol_client, 2, 2, -30)
-
-        self._shutdown5(protocol_client, callbacks)
-
-    def test_client_creation_failure_negative_operation_timeout311(self):
-        protocol_client = self._create_client311()
-
-        self.assertRaises(Exception, self._create_rr_client, protocol_client, 2, 2, -30)
-
-        self._shutdown311(protocol_client)
-
-
-    # ==============================================================
-    #             make_request TEST CASES
-    # ==============================================================
-
-    def test_get_shadow_failure_no_such_shadow5(self):
-        (protocol_client, callbacks) = self._create_client5()
+    def _do_get_shadow_success_no_such_shadow_test(self, protocol_client, use_correlation_token):
         rr_client = self._create_rr_client(protocol_client, 2, 2, 30)
 
         thing_name = f"tn-{uuid.uuid4()}"
-        request_options = self._create_get_shadow_request(thing_name, True)
+        request_options = self._create_get_shadow_request(thing_name, use_correlation_token)
 
         request_future = rr_client.make_request(request_options)
         response = request_future.result()
 
-        self.assertEqual(request_options.response_paths[1].topic, response.topic, "Expected response to come in on rejected topic")
+        self.assertEqual(request_options.response_paths[1].topic, response.topic,
+                         "Expected response to come in on rejected topic")
         payload = str(response.payload)
 
         self.assertIn("No shadow exists with name", payload)
 
-        self._shutdown5(protocol_client, callbacks)
-
-    def test_get_shadow_failure_no_response_paths5(self):
-        (protocol_client, callbacks) = self._create_client5()
+    def _do_get_shadow_failure_test(self, protocol_client, options_transform):
         rr_client = self._create_rr_client(protocol_client, 2, 2, 30)
 
         thing_name = f"tn-{uuid.uuid4()}"
         request_options = self._create_get_shadow_request(thing_name, True)
-        request_options.response_paths = []
+        options_transform(request_options)
 
-        self.assertRaises(TypeError, lambda: rr_client.make_request(request_options))
+        self.assertRaises(Exception, lambda: rr_client.make_request(request_options))
 
-        self._shutdown5(protocol_client, callbacks)
+    def _do_get_shadow_future_failure_test(self, protocol_client, options_transform):
+        rr_client = self._create_rr_client(protocol_client, 2, 2, 30)
 
+        thing_name = f"tn-{uuid.uuid4()}"
+        request_options = self._create_get_shadow_request(thing_name, True)
+        options_transform(request_options)
+
+        response_future = rr_client.make_request(request_options)
+
+        self.assertRaises(Exception, lambda: response_future.result())
+
+    # ==============================================================
+    #             CREATION SUCCESS TEST CASES
+    # ==============================================================
+
+    def test_client_creation_success5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._create_rr_client(protocol_client, 2, 2, 30))
+
+    def test_client_creation_success311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._create_rr_client(protocol_client, 2, 2, 30))
+
+    # ==============================================================
+    #             CREATION FAILURE TEST CASES
+    # ==============================================================
+
+    def test_client_creation_failure_no_protocol_client(self):
+        self.assertRaises(Exception, self._create_rr_client, None, 2, 2, 30)
+
+    def test_client_creation_failure_zero_request_response_subscriptions5(self):
+        self._do_mqtt5_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, 0, 2, 30))
+
+    def test_client_creation_failure_zero_request_response_subscriptions311(self):
+        self._do_mqtt311_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, 0, 2, 30))
+
+    def test_client_creation_failure_negative_request_response_subscriptions5(self):
+        self._do_mqtt5_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, -2, 2, 30))
+
+    def test_client_creation_failure_negative_request_response_subscriptions311(self):
+        self._do_mqtt311_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, -2, 2, 30))
+
+    def test_client_creation_failure_no_request_response_subscriptions5(self):
+        self._do_mqtt5_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, None, 2, 30))
+
+    def test_client_creation_failure_no_request_response_subscriptions311(self):
+        self._do_mqtt311_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, None, 2, 30))
+
+    def test_client_creation_failure_request_response_subscriptions_type_mismatch5(self):
+        self._do_mqtt5_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, "None", 2, 30))
+
+    def test_client_creation_failure_request_response_subscriptions_type_mismatch311(self):
+        self._do_mqtt311_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, "None", 2, 30))
+
+    def test_client_creation_failure_negative_streaming_subscriptions5(self):
+        self._do_mqtt5_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, 2, -2, 30))
+
+    def test_client_creation_failure_negative_streaming_subscriptions311(self):
+        self._do_mqtt311_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, 2, -2, 30))
+
+    def test_client_creation_failure_no_streaming_subscriptions5(self):
+        self._do_mqtt5_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, 2, None, 30))
+
+    def test_client_creation_failure_no_streaming_subscriptions311(self):
+        self._do_mqtt311_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, 2, None, 30))
+
+    def test_client_creation_failure_streaming_subscriptions_type_mismatch5(self):
+        self._do_mqtt5_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, 2, [], 30))
+
+    def test_client_creation_failure_streaming_subscriptions_type_mismatch311(self):
+        self._do_mqtt311_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, 2, {}, 30))
+
+    def test_client_creation_failure_negative_operation_timeout5(self):
+        self._do_mqtt5_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, 2, 2, -30))
+
+    def test_client_creation_failure_negative_operation_timeout311(self):
+        self._do_mqtt311_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, 2, 2, -30))
+
+    def test_client_creation_failure_no_operation_timeout5(self):
+        self._do_mqtt5_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, 2, 2, None))
+
+    def test_client_creation_failure_no_operation_timeout311(self):
+        self._do_mqtt311_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, 2, 2, None))
+    def test_client_creation_failure_operation_timeout_invalid5(self):
+        self._do_mqtt5_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, 2, 2, 523.56))
+
+    def test_client_creation_failure_operation_timeout_invalid311(self):
+        self._do_mqtt311_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, 2, 2, 777777777777777777777777777777777777))
+
+    # ==============================================================
+    #             make_request SUCCESS TEST CASES
+    # ==============================================================
+
+    def test_get_shadow_success_no_such_shadow5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_success_no_such_shadow_test(protocol_client, True))
+
+    def test_get_shadow_success_no_such_shadow311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_success_no_such_shadow_test(protocol_client, True))
+
+    def test_get_shadow_success_no_such_shadow_no_correlation_token5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_success_no_such_shadow_test(protocol_client, False))
+
+    def test_get_shadow_success_no_such_shadow_no_correlation_token311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_success_no_such_shadow_test(protocol_client, False))
+
+    # ==============================================================
+    #             make_request FAILURE TEST CASES
+    # ==============================================================
+
+    def test_get_shadow_failure_no_response_paths5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(protocol_client, lambda options: _empty_response_paths(options)))
+
+    def test_get_shadow_failure_no_response_paths311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(protocol_client, lambda options: _empty_response_paths(options)))
+
+    def test_get_shadow_failure_invalid_response_path_topic5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_future_failure_test(protocol_client, lambda options: _invalidate_response_path_topic(options)))
+
+    def test_get_shadow_failure_invalid_response_path_topic311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_future_failure_test(protocol_client, lambda options: _invalidate_response_path_topic(options)))
+
+    def test_get_shadow_failure_none_response_path_topic5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(protocol_client, lambda options: _none_response_path_topic(options)))
+
+    def test_get_shadow_failure_none_response_path_topic311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(protocol_client, lambda options: _none_response_path_topic(options)))
+
+    def test_get_shadow_failure_missing_response_path_topic5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(protocol_client, lambda options: _missing_response_path_topic(options)))
+
+    def test_get_shadow_failure_missing_response_path_topic311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(protocol_client, lambda options: _missing_response_path_topic(options)))
+
+    def test_get_shadow_failure_response_path_topic_type_mismatch5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(protocol_client, lambda options: _type_mismatch_response_path_topic(options)))
+
+    def test_get_shadow_failure_response_path_topic_type_mismatch311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(protocol_client, lambda options: _type_mismatch_response_path_topic(options)))
+
+    # Type mismatch correlation token json path
+    # Type mismatch response paths
+
+    # Bad subscription topic filter
+    # Type mismatch subscription entry
+    # Type mismatch subscriptions
+
+    def test_get_shadow_failure_empty_subscriptions5(self):
+        def _empty_response_paths(options):
+            options.subscription_topic_filters = []
+
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(protocol_client, lambda options: _empty_response_paths(options)))
+
+    def test_get_shadow_failure_empty_subscriptions311(self):
+        def _empty_response_paths(options):
+            options.subscription_topic_filters = []
+
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(protocol_client, lambda options: _empty_response_paths(options)))
+
+    # None publish topic
+    # Bad publish topic
+    # Type mismatch publish topic
+
+    # Correlation token type mismatch
 
 if __name__ == 'main':
     unittest.main()
-
-
