@@ -15,6 +15,7 @@ env:
   RUN: ${{ github.run_id }}-${{ github.run_number }}
   CRT_CI_ROLE: ${{ secrets.CRT_CI_ROLE_ARN }}
   AWS_DEFAULT_REGION: us-east-1
+  MACOS_DEPLOYMENT_TARGET: 10.15
 
 jobs:
   manylinux1:
