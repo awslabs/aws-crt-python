@@ -15,7 +15,7 @@ from wheel.bdist_wheel import bdist_wheel
 
 # Override the default MACOSX_DEPLOYMENT_TARGET for the build. If not set, it will use the
 # default value from python sysconfig.get_config_var('MACOSX_DEPLOYMENT_TARGET').
-MACOS_DEPLOYMENT_TARGET_OVERRIDE=10.15
+MACOS_DEPLOYMENT_TARGET_OVERRIDE = 10.15
 
 if sys.platform == 'win32':
     # distutils is deprecated in Python 3.10 and removed in 3.12. However, it still works because Python defines a compatibility interface as long as setuptools is installed.
