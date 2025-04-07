@@ -6,6 +6,7 @@ from awscrt import io, mqtt5, mqtt_request_response, mqtt
 
 from concurrent.futures import Future
 import os
+import time
 import unittest
 import uuid
 
@@ -211,10 +212,7 @@ class MqttRequestResponseClientTest(NativeResourceTest):
 
         return request_options
 
-    def _do_get_shadow_success_no_such_shadow_test(self, protocol_client, use_correlation_token):
-        rr_client = self._create_rr_client(protocol_client, 2, 2, 30)
-
-        thing_name = f"tn-{uuid.uuid4()}"
+    def _do_get_shadow_success_no_such_shadow(self, rr_client, thing_name, use_correlation_token):
         request_options = self._create_get_shadow_request(thing_name, use_correlation_token)
 
         request_future = rr_client.make_request(request_options)
@@ -225,6 +223,109 @@ class MqttRequestResponseClientTest(NativeResourceTest):
         payload = str(response.payload)
 
         self.assertIn("No shadow exists with name", payload)
+
+    def _do_get_shadow_success_no_such_shadow_test(self, protocol_client, use_correlation_token):
+        rr_client = self._create_rr_client(protocol_client, 2, 2, 30)
+
+        thing_name = f"tn-{uuid.uuid4()}"
+        self._do_get_shadow_success_no_such_shadow(rr_client, thing_name, use_correlation_token)
+
+
+    def _do_get_shadow_success(self, rr_client, thing_name, use_correlation_token):
+        request_options = self._create_get_shadow_request(thing_name, use_correlation_token)
+
+        request_future = rr_client.make_request(request_options)
+        response = request_future.result()
+
+        self.assertEqual(request_options.response_paths[0].topic, response.topic,
+                         "Expected response to come in on accepted topic")
+
+        payload = str(response.payload)
+        self.assertIn("magic", payload)
+
+    def _do_update_shadow_success(self, rr_client, thing_name, use_correlation_token):
+        topic_prefix = f"$aws/things/{thing_name}/shadow/update"
+
+        request_options = mqtt_request_response.RequestResponseOperationOptions(
+            subscription_topic_filters=[f"{topic_prefix}/accepted", f"{topic_prefix}/rejected"],
+            response_paths=[
+                mqtt_request_response.ResponsePath(topic=f"{topic_prefix}/accepted"),
+                mqtt_request_response.ResponsePath(topic=f"{topic_prefix}/rejected")
+            ],
+            publish_topic = topic_prefix,
+            payload="".encode()
+        )
+
+        desired_state = f'{{"magic":"value"}}'
+
+        if use_correlation_token:
+            correlation_token = f"{uuid.uuid4()}"
+            request_options.response_paths[0].correlation_token_json_path = "clientToken"
+            request_options.response_paths[1].correlation_token_json_path = "clientToken"
+            request_options.payload = f'{{"clientToken":"{correlation_token}","state":{{"desired":{desired_state}}}}}'.encode()
+            request_options.correlation_token = correlation_token
+        else:
+            request_options.payload = f'{{"state":{{"desired":{desired_state}}}}}'.encode()
+
+        request_future = rr_client.make_request(request_options)
+        response = request_future.result()
+
+        self.assertEqual(request_options.response_paths[0].topic, response.topic,
+                         "Expected response to come in on accepted topic")
+
+        payload = str(response.payload)
+        self.assertIn("magic", payload)
+
+    def _do_delete_shadow_success(self, rr_client, thing_name, use_correlation_token):
+        topic_prefix = f"$aws/things/{thing_name}/shadow/delete"
+
+        request_options = mqtt_request_response.RequestResponseOperationOptions(
+            subscription_topic_filters=[f"{topic_prefix}/+"],
+            response_paths=[
+                mqtt_request_response.ResponsePath(topic=f"{topic_prefix}/accepted"),
+                mqtt_request_response.ResponsePath(topic=f"{topic_prefix}/rejected")
+            ],
+            publish_topic = topic_prefix,
+            payload="{}".encode()
+        )
+
+        if use_correlation_token:
+            correlation_token = f"{uuid.uuid4()}"
+            request_options.response_paths[0].correlation_token_json_path = "clientToken"
+            request_options.response_paths[1].correlation_token_json_path = "clientToken"
+            request_options.payload = f'{{"clientToken":"{correlation_token}"}}'.encode()
+            request_options.correlation_token = correlation_token
+
+        request_future = rr_client.make_request(request_options)
+        response = request_future.result()
+
+        self.assertEqual(request_options.response_paths[0].topic, response.topic,
+                         "Expected response to come in on accepted topic")
+
+        payload = str(response.payload)
+        self.assertIn("version", payload)
+
+    def _do_update_delete_shadow_success_test(self, protocol_client, use_correlation_token):
+        rr_client = self._create_rr_client(protocol_client, 2, 2, 30)
+
+        # get should return non-existence
+        thing_name = f"tn-{uuid.uuid4()}"
+
+        try:
+            self._do_get_shadow_success_no_such_shadow(rr_client, thing_name, use_correlation_token)
+
+            # update shadow to create
+            self._do_update_shadow_success(rr_client, thing_name, use_correlation_token)
+
+            # eventual consistency worries
+            time.sleep(2)
+
+            # get should now return the shadow state
+            self._do_get_shadow_success(rr_client, thing_name, use_correlation_token)
+        finally:
+            # delete shadow
+            self._do_delete_shadow_success(rr_client, thing_name, use_correlation_token)
+
 
     def _do_get_shadow_failure_test(self, protocol_client, options_transform):
         rr_client = self._create_rr_client(protocol_client, 2, 2, 30)
@@ -337,6 +438,18 @@ class MqttRequestResponseClientTest(NativeResourceTest):
 
     def test_get_shadow_success_no_such_shadow_no_correlation_token311(self):
         self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_success_no_such_shadow_test(protocol_client, False))
+
+    def test_update_delete_shadow_success5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_update_delete_shadow_success_test(protocol_client, True))
+
+    def test_update_delete_shadow_success311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_update_delete_shadow_success_test(protocol_client, True))
+
+    def test_update_delete_shadow_success_no_correlation_token5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_update_delete_shadow_success_test(protocol_client, False))
+
+    def test_update_delete_shadow_success_no_correlation_token311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_update_delete_shadow_success_test(protocol_client, False))
 
     # ==============================================================
     #             make_request FAILURE TEST CASES
