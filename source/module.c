@@ -146,11 +146,6 @@ uint16_t PyObject_GetAttrAsUint16(PyObject *o, const char *class_name, const cha
         return result;
     }
 
-    if (attr == Py_None) {
-        PyErr_Format(PyExc_AttributeError, "'%s.%s' required integral attribute is None", class_name, attr_name);
-        return result;
-    }
-
     PyObject_GetAsOptionalUint16(attr, class_name, attr_name, &result);
 
     Py_DECREF(attr);
@@ -163,11 +158,6 @@ uint8_t PyObject_GetAttrAsUint8(PyObject *o, const char *class_name, const char 
     PyObject *attr = PyObject_GetAttrString(o, attr_name);
     if (!attr) {
         PyErr_Format(PyExc_AttributeError, "'%s.%s' attribute not found", class_name, attr_name);
-        return result;
-    }
-
-    if (attr == Py_None) {
-        PyErr_Format(PyExc_AttributeError, "'%s.%s' required integral attribute is None", class_name, attr_name);
         return result;
     }
 
@@ -761,6 +751,7 @@ static PyMethodDef s_module_methods[] = {
     /* MQTT Request Response Client */
     AWS_PY_METHOD_DEF(mqtt_request_response_client_new_from_5, METH_VARARGS),
     AWS_PY_METHOD_DEF(mqtt_request_response_client_new_from_311, METH_VARARGS),
+    AWS_PY_METHOD_DEF(mqtt_request_response_client_make_request, METH_VARARGS),
 
     /* Cryptographic primitives */
     AWS_PY_METHOD_DEF(md5_new, METH_NOARGS),
