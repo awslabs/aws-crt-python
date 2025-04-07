@@ -11,7 +11,13 @@ import shutil
 import subprocess
 import sys
 import sysconfig
+from packaging import version
 from wheel.bdist_wheel import bdist_wheel
+
+# The MACOSX_DEPLOYMENT_TARGET for the library. If not set, it will use the
+# default value from python sysconfig.get_config_var('MACOSX_DEPLOYMENT_TARGET').
+MACOS_DEPLOYMENT_TARGET_OVERRIDE = "10.15"
+
 if sys.platform == 'win32':
     # distutils is deprecated in Python 3.10 and removed in 3.12. However, it still works because Python defines a compatibility interface as long as setuptools is installed.
     # We don't have an official alternative for distutils.ccompiler as of September 2024. See: https://github.com/pypa/setuptools/issues/2806
@@ -231,13 +237,15 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
             cmake_args.append('-DAWS_USE_LIBCRYPTO_TO_SUPPORT_ED25519_EVERYWHERE=ON')
 
         if sys.platform == 'darwin':
-            # build lib with same MACOSX_DEPLOYMENT_TARGET that python will ultimately
-            # use to link everything together, otherwise there will be linker warnings.
-            # macosx_target_ver = sysconfig.get_config_var('MACOSX_DEPLOYMENT_TARGET')
-            macosx_target_ver = "10.15"
-            os.environ['MACOSX_DEPLOYMENT_TARGET'] = "10.15"
-            if macosx_target_ver and 'MACOSX_DEPLOYMENT_TARGET' not in os.environ:
-                cmake_args.append(f'-DCMAKE_OSX_DEPLOYMENT_TARGET={macosx_target_ver}')
+            # get Python's MACOSX_DEPLOYMENT_TARGET version
+            macosx_target_ver = sysconfig.get_config_var('MACOSX_DEPLOYMENT_TARGET')
+            # If MACOS_DEPLOYMENT_TARGET_OVERRIDE is set to a later version than python distribution,
+            # override MACOSX_DEPLOYMENT_TARGET.
+            if macosx_target_ver is None or version.parse(
+                    MACOS_DEPLOYMENT_TARGET_OVERRIDE) > version.parse(macosx_target_ver):
+                macosx_target_ver = MACOS_DEPLOYMENT_TARGET_OVERRIDE
+                os.environ['MACOSX_DEPLOYMENT_TARGET'] = macosx_target_ver
+            cmake_args.append(f'-DCMAKE_OSX_DEPLOYMENT_TARGET={macosx_target_ver}')
 
             if osx_arch:
                 cmake_args.append(f'-DCMAKE_OSX_ARCHITECTURES={osx_arch}')

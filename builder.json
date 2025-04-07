@@ -4,8 +4,7 @@
         "-DS2N_NO_PQ_ASM=ON"
     ],
     "env": {
-        "AWS_CRT_BUILD_WARNINGS_ARE_ERRORS": "1",
-        "MACOS_DEPLOYMENT_TARGET": "10.15"
+        "AWS_CRT_BUILD_WARNINGS_ARE_ERRORS": "1"
     },
     "hosts": {
         "manylinux": {

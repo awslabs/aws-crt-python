@@ -29,7 +29,6 @@ class AWSCrtPython(Builder.Action):
 
         # Enable S3 tests
         env.shell.setenv('AWS_TEST_S3', '1')
-        env.shell.setenv('MACOS_DEPLOYMENT_TARGET', '10.15')
 
         actions = [
             [self.python, '--version'],
