@@ -50,7 +50,7 @@ class Client(NativeResource):
 
         assert isinstance(protocol_client, mqtt5.Client) or isinstance(protocol_client, mqtt.Connection)
         assert isinstance(client_options, RequestResponseClientOptions)
-        # client_options.validate()
+        client_options.validate()
 
         super().__init__()
 
