@@ -310,7 +310,7 @@ class MqttRequestResponseClientTest(NativeResourceTest):
 
     def test_client_creation_failure_operation_timeout_invalid5(self):
         self._do_mqtt5_test(lambda protocol_client: self.assertRaises(
-            Exception, self._create_rr_client, protocol_client, 2, 2, 523.56))
+            Exception, self._create_rr_client, protocol_client, 2, 2, ["uffdah"]))
 
     def test_client_creation_failure_operation_timeout_invalid311(self):
         self._do_mqtt311_test(
