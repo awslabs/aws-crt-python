@@ -429,8 +429,10 @@ PyObject *aws_py_mqtt_request_response_client_make_request(PyObject *self, PyObj
 
     {
         result = Py_None;
+
         size_t subscription_count = aws_array_list_length(&subscription_topic_filters);
-        struct aws_byte_cursor subscription_topic_filter_cursors[subscription_count];
+        AWS_VARIABLE_LENGTH_ARRAY(struct aws_byte_cursor, subscription_topic_filter_cursors, subscription_count);
+
         for (size_t i = 0; i < subscription_count; ++i) {
             struct aws_byte_buf topic_filter;
             aws_array_list_get_at(&subscription_topic_filters, &topic_filter, i);
@@ -439,7 +441,9 @@ PyObject *aws_py_mqtt_request_response_client_make_request(PyObject *self, PyObj
         }
 
         size_t response_path_count = aws_array_list_length(&response_paths);
-        struct aws_mqtt_request_operation_response_path response_path_values[response_path_count];
+        AWS_VARIABLE_LENGTH_ARRAY(
+            struct aws_mqtt_request_operation_response_path, response_path_values, response_path_count);
+
         for (size_t i = 0; i < response_path_count; ++i) {
             struct aws_request_response_path response_path;
             aws_array_list_get_at(&response_paths, &response_path, i);
