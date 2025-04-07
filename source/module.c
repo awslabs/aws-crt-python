@@ -125,6 +125,11 @@ uint32_t PyObject_GetAttrAsUint32(PyObject *o, const char *class_name, const cha
         return result;
     }
 
+    if (attr == Py_None) {
+        PyErr_Format(PyExc_AttributeError, "'%s.%s' required integral attribute is None", class_name, attr_name);
+        return result;
+    }
+
     PyObject_GetAsOptionalUint32(attr, class_name, attr_name, &result);
 
     Py_DECREF(attr);
@@ -140,6 +145,11 @@ uint16_t PyObject_GetAttrAsUint16(PyObject *o, const char *class_name, const cha
         return result;
     }
 
+    if (attr == Py_None) {
+        PyErr_Format(PyExc_AttributeError, "'%s.%s' required integral attribute is None", class_name, attr_name);
+        return result;
+    }
+
     PyObject_GetAsOptionalUint16(attr, class_name, attr_name, &result);
 
     Py_DECREF(attr);
@@ -152,6 +162,11 @@ uint8_t PyObject_GetAttrAsUint8(PyObject *o, const char *class_name, const char 
     PyObject *attr = PyObject_GetAttrString(o, attr_name);
     if (!attr) {
         PyErr_Format(PyExc_AttributeError, "'%s.%s' attribute not found", class_name, attr_name);
+        return result;
+    }
+
+    if (attr == Py_None) {
+        PyErr_Format(PyExc_AttributeError, "'%s.%s' required integral attribute is None", class_name, attr_name);
         return result;
     }
 
