@@ -73,6 +73,30 @@ def _type_mismatch_response_path_correlation_token_json_path(options):
 def _type_mismatch_response_paths(options):
     options.response_paths = "hello"
 
+def _invalidate_subscription_topic_filter(options):
+    options.subscription_topic_filters[0] = "a/#/c"
+
+def _type_mismatch_subscription_topic_filter(options):
+    options.subscription_topic_filters[0] = [ "thirty", 30 ]
+
+def _type_mismatch_subscriptions(options):
+    options.subscription_topic_filters = 50
+
+def _empty_subscription_topic_filters(options):
+    options.subscription_topic_filters = []
+
+def _none_publish_topic(options):
+    options.publish_topic = None
+
+def _bad_publish_topic(options):
+    options.publish_topic = "#/b/c"
+
+def _type_mismatch_publish_topic(options):
+    options.publish_topic = [["oof"]]
+
+def _type_mismatch_correlation_token(options):
+    options.correlation_token = [-1]
+
 class MqttRequestResponseClientTest(NativeResourceTest):
 
     def _create_client5(self):
@@ -360,27 +384,53 @@ class MqttRequestResponseClientTest(NativeResourceTest):
     def test_get_shadow_failure_response_paths_type_mismatch311(self):
         self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(protocol_client, lambda options: _type_mismatch_response_paths(options)))
 
-    # Bad subscription topic filter
-    # Type mismatch subscription entry
-    # Type mismatch subscriptions
+    def test_get_shadow_failure_invalid_subscription_topic5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_future_failure_test(protocol_client, lambda options: _invalidate_subscription_topic_filter(options)))
+
+    def test_get_shadow_failure_invalid_subscription_topic311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_future_failure_test(protocol_client, lambda options: _invalidate_subscription_topic_filter(options)))
+
+    def test_get_shadow_failure_subscription_topic_type_mismatch5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(protocol_client, lambda options: _type_mismatch_subscription_topic_filter(options)))
+
+    def test_get_shadow_failure_subscription_topic_type_mismatch311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(protocol_client, lambda options: _type_mismatch_subscription_topic_filter(options)))
+
+    def test_get_shadow_failure_subscriptions_type_mismatch5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(protocol_client, lambda options: _type_mismatch_subscriptions(options)))
+
+    def test_get_shadow_failure_subscriptions_type_mismatch311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(protocol_client, lambda options: _type_mismatch_subscriptions(options)))
 
     def test_get_shadow_failure_empty_subscriptions5(self):
-        def _empty_response_paths(options):
-            options.subscription_topic_filters = []
-
-        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(protocol_client, lambda options: _empty_response_paths(options)))
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(protocol_client, lambda options: _empty_subscription_topic_filters(options)))
 
     def test_get_shadow_failure_empty_subscriptions311(self):
-        def _empty_response_paths(options):
-            options.subscription_topic_filters = []
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(protocol_client, lambda options: _empty_subscription_topic_filters(options)))
 
-        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(protocol_client, lambda options: _empty_response_paths(options)))
+    def test_get_shadow_failure_none_publish_topic5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(protocol_client, lambda options: _none_publish_topic(options)))
 
-    # None publish topic
-    # Bad publish topic
-    # Type mismatch publish topic
+    def test_get_shadow_failure_none_publish_topic311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(protocol_client, lambda options: _none_publish_topic(options)))
 
-    # Correlation token type mismatch
+    def test_get_shadow_failure_bad_publish_topic5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_future_failure_test(protocol_client, lambda options: _bad_publish_topic(options)))
+
+    def test_get_shadow_failure_bad_publish_topic311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_future_failure_test(protocol_client, lambda options: _bad_publish_topic(options)))
+
+    def test_get_shadow_failure_publish_topic_type_mismatch5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(protocol_client, lambda options: _type_mismatch_publish_topic(options)))
+
+    def test_get_shadow_failure_publish_topic_type_mismatch311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(protocol_client, lambda options: _type_mismatch_publish_topic(options)))
+
+    def test_get_shadow_failure_correlation_token_type_mismatch5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(protocol_client, lambda options: _type_mismatch_correlation_token(options)))
+
+    def test_get_shadow_failure_correlation_token_type_mismatch311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(protocol_client, lambda options: _type_mismatch_correlation_token(options)))
 
 if __name__ == 'main':
     unittest.main()
