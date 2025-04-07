@@ -5,72 +5,12 @@ MQTT Request Response module
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 
-from enum import IntEnum
 from dataclasses import dataclass
-from typing import Callable, Union
+from typing import Union
 from awscrt import NativeResource, mqtt5, mqtt, exceptions
 from concurrent.futures import Future
 import _awscrt
 import collections.abc
-
-
-class SubscriptionStatusEventType(IntEnum):
-    """
-    The type of change to the state of a streaming operation subscription
-    """
-
-    SUBSCRIPTION_ESTABLISHED = 0
-    """
-    The streaming operation is successfully subscribed to its topic (filter)
-    """
-
-    SUBSCRIPTION_LOST = 1
-    """
-    The streaming operation has temporarily lost its subscription to its topic (filter)
-    """
-
-    SUBSCRIPTION_HALTED = 2
-    """
-    The streaming operation has entered a terminal state where it has given up trying to subscribe
-    to its topic (filter).  This is always due to user error (bad topic filter or IoT Core permission policy).
-    """
-
-
-@dataclass
-class SubscriptionStatusEvent:
-    """
-    An event that describes a change in subscription status for a streaming operation.
-
-    Args:
-        type (SubscriptionStatusEventType):  The type of status change represented by the event
-        error (Exception):  Describes an underlying reason for the event.  Only set for SubscriptionLost and SubscriptionHalted.
-    """
-    type: SubscriptionStatusEventType = None
-    error: Exception = None
-
-
-@dataclass
-class IncomingPublishEvent:
-    """
-    An event that describes an incoming message on a streaming operation.
-
-    Args:
-        topic (str):  MQTT Topic that the response was received on.
-        payload (Optional[bytes]):  The payload of the incoming message.
-    """
-    topic: str
-    payload: 'Optional[bytes]' = None
-
-
-"""
-Signature for a handler that listens to subscription status events.
-"""
-SubscriptionStatusListener = Callable[[SubscriptionStatusEvent], None]
-
-"""
-Signature for a handler that listens to incoming publish events.
-"""
-IncomingPublishListener = Callable[[IncomingPublishEvent], None]
 
 
 @dataclass
