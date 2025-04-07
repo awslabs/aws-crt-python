@@ -283,10 +283,10 @@ class MqttRequestResponseClientTest(NativeResourceTest):
 
         if use_correlation_token:
             correlation_token = f"{uuid.uuid4()}"
+            payload = f'{{"clientToken": "{correlation_token}","state": {{"desired": {desired_state}}}}}'
             request_options.response_paths[0].correlation_token_json_path = "clientToken"
             request_options.response_paths[1].correlation_token_json_path = "clientToken"
-            request_options.payload = (f'{{clientToken": "{correlation_token}",'
-                                       f'"state": {{"desired": {desired_state}}}}}').encode()
+            request_options.payload = payload.encode()
             request_options.correlation_token = correlation_token
         else:
             request_options.payload = f'{{"state":{{"desired":{desired_state}}}}}'.encode()
