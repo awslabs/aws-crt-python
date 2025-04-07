@@ -10,6 +10,7 @@ from typing import Callable, Union
 from awscrt import NativeResource, mqtt5, mqtt
 import _awscrt
 
+
 @dataclass
 class RequestResponseClientOptions:
     """
@@ -44,11 +45,12 @@ class Client(NativeResource):
 
     """
 
-    def __init__(self, protocol_client: Union[mqtt5.Client, mqtt.Connection], client_options: RequestResponseClientOptions):
+    def __init__(self, protocol_client: Union[mqtt5.Client, mqtt.Connection],
+                 client_options: RequestResponseClientOptions):
 
         assert isinstance(protocol_client, mqtt5.Client) or isinstance(protocol_client, mqtt.Connection)
         assert isinstance(client_options, RequestResponseClientOptions)
-        #client_options.validate()
+        # client_options.validate()
 
         super().__init__()
 
@@ -56,5 +58,3 @@ class Client(NativeResource):
             self._binding = _awscrt.mqtt_request_response_client_new_from_5(protocol_client, client_options)
         else:
             self._binding = _awscrt.mqtt_request_response_client_new_from_311(protocol_client, client_options)
-
-

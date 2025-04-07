@@ -11,14 +11,17 @@ import uuid
 
 TIMEOUT = 30.0
 
+
 def create_client_id():
     return f"aws-crt-python-unit-test-{uuid.uuid4()}"
+
 
 def _get_env_variable(env_name):
     env_data = os.environ.get(env_name)
     if not env_data:
         raise unittest.SkipTest(f"test requires env var: {env_name}")
     return env_data
+
 
 class MqttRequestResponse5TestCallbacks():
     def __init__(self):
@@ -52,50 +55,66 @@ class MqttRequestResponse5TestCallbacks():
     def on_lifecycle_disconnection(self, lifecycle_disconnect_data: mqtt5.LifecycleDisconnectData):
         pass
 
+
 def _empty_response_paths(options):
     options.response_paths = []
+
 
 def _invalidate_response_path_topic(options):
     options.response_paths[0].topic = "a/#/b"
 
+
 def _none_response_path_topic(options):
     options.response_paths[0].topic = None
+
 
 def _missing_response_path_topic(options):
     del options.response_paths[0].topic
 
+
 def _type_mismatch_response_path_topic(options):
     options.response_paths[0].topic = 57.3
+
 
 def _type_mismatch_response_path_correlation_token_json_path(options):
     options.response_paths[0].correlation_token_json_path = []
 
+
 def _type_mismatch_response_paths(options):
     options.response_paths = "hello"
+
 
 def _invalidate_subscription_topic_filter(options):
     options.subscription_topic_filters[0] = "a/#/c"
 
+
 def _type_mismatch_subscription_topic_filter(options):
-    options.subscription_topic_filters[0] = [ "thirty", 30 ]
+    options.subscription_topic_filters[0] = ["thirty", 30]
+
 
 def _type_mismatch_subscriptions(options):
     options.subscription_topic_filters = 50
 
+
 def _empty_subscription_topic_filters(options):
     options.subscription_topic_filters = []
+
 
 def _none_publish_topic(options):
     options.publish_topic = None
 
+
 def _bad_publish_topic(options):
     options.publish_topic = "#/b/c"
+
 
 def _type_mismatch_publish_topic(options):
     options.publish_topic = [["oof"]]
 
+
 def _type_mismatch_correlation_token(options):
     options.correlation_token = [-1]
+
 
 class MqttRequestResponseClientTest(NativeResourceTest):
 
@@ -137,7 +156,6 @@ class MqttRequestResponseClientTest(NativeResourceTest):
         protocol_client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-
     def _create_client311(self):
 
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
@@ -167,8 +185,14 @@ class MqttRequestResponseClientTest(NativeResourceTest):
     def _shutdown311(self, protocol_client):
         protocol_client.disconnect().result(TIMEOUT)
 
-    def _create_rr_client(self, protocol_client, max_request_response_subscriptions, max_streaming_subscriptions, operation_timeout_seconds):
-        rr_client_options = mqtt_request_response.RequestResponseClientOptions(max_request_response_subscriptions, max_streaming_subscriptions)
+    def _create_rr_client(
+            self,
+            protocol_client,
+            max_request_response_subscriptions,
+            max_streaming_subscriptions,
+            operation_timeout_seconds):
+        rr_client_options = mqtt_request_response.RequestResponseClientOptions(
+            max_request_response_subscriptions, max_streaming_subscriptions)
         rr_client_options.operation_timeout_in_seconds = operation_timeout_seconds
 
         rr_client = mqtt_request_response.Client(protocol_client, rr_client_options)
@@ -207,63 +231,96 @@ class MqttRequestResponseClientTest(NativeResourceTest):
         self.assertRaises(Exception, self._create_rr_client, None, 2, 2, 30)
 
     def test_client_creation_failure_zero_request_response_subscriptions5(self):
-        self._do_mqtt5_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, 0, 2, 30))
+        self._do_mqtt5_test(lambda protocol_client: self.assertRaises(
+            Exception, self._create_rr_client, protocol_client, 0, 2, 30))
 
     def test_client_creation_failure_zero_request_response_subscriptions311(self):
-        self._do_mqtt311_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, 0, 2, 30))
+        self._do_mqtt311_test(lambda protocol_client: self.assertRaises(
+            Exception, self._create_rr_client, protocol_client, 0, 2, 30))
 
     def test_client_creation_failure_negative_request_response_subscriptions5(self):
-        self._do_mqtt5_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, -2, 2, 30))
+        self._do_mqtt5_test(lambda protocol_client: self.assertRaises(
+            Exception, self._create_rr_client, protocol_client, -2, 2, 30))
 
     def test_client_creation_failure_negative_request_response_subscriptions311(self):
-        self._do_mqtt311_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, -2, 2, 30))
+        self._do_mqtt311_test(lambda protocol_client: self.assertRaises(
+            Exception, self._create_rr_client, protocol_client, -2, 2, 30))
 
     def test_client_creation_failure_no_request_response_subscriptions5(self):
-        self._do_mqtt5_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, None, 2, 30))
+        self._do_mqtt5_test(lambda protocol_client: self.assertRaises(
+            Exception, self._create_rr_client, protocol_client, None, 2, 30))
 
     def test_client_creation_failure_no_request_response_subscriptions311(self):
-        self._do_mqtt311_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, None, 2, 30))
+        self._do_mqtt311_test(lambda protocol_client: self.assertRaises(
+            Exception, self._create_rr_client, protocol_client, None, 2, 30))
 
     def test_client_creation_failure_request_response_subscriptions_type_mismatch5(self):
-        self._do_mqtt5_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, "None", 2, 30))
+        self._do_mqtt5_test(
+            lambda protocol_client: self.assertRaises(
+                Exception,
+                self._create_rr_client,
+                protocol_client,
+                "None",
+                2,
+                30))
 
     def test_client_creation_failure_request_response_subscriptions_type_mismatch311(self):
-        self._do_mqtt311_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, "None", 2, 30))
+        self._do_mqtt311_test(lambda protocol_client: self.assertRaises(
+            Exception, self._create_rr_client, protocol_client, "None", 2, 30))
 
     def test_client_creation_failure_negative_streaming_subscriptions5(self):
-        self._do_mqtt5_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, 2, -2, 30))
+        self._do_mqtt5_test(lambda protocol_client: self.assertRaises(
+            Exception, self._create_rr_client, protocol_client, 2, -2, 30))
 
     def test_client_creation_failure_negative_streaming_subscriptions311(self):
-        self._do_mqtt311_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, 2, -2, 30))
+        self._do_mqtt311_test(lambda protocol_client: self.assertRaises(
+            Exception, self._create_rr_client, protocol_client, 2, -2, 30))
 
     def test_client_creation_failure_no_streaming_subscriptions5(self):
-        self._do_mqtt5_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, 2, None, 30))
+        self._do_mqtt5_test(lambda protocol_client: self.assertRaises(
+            Exception, self._create_rr_client, protocol_client, 2, None, 30))
 
     def test_client_creation_failure_no_streaming_subscriptions311(self):
-        self._do_mqtt311_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, 2, None, 30))
+        self._do_mqtt311_test(lambda protocol_client: self.assertRaises(
+            Exception, self._create_rr_client, protocol_client, 2, None, 30))
 
     def test_client_creation_failure_streaming_subscriptions_type_mismatch5(self):
-        self._do_mqtt5_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, 2, [], 30))
+        self._do_mqtt5_test(lambda protocol_client: self.assertRaises(
+            Exception, self._create_rr_client, protocol_client, 2, [], 30))
 
     def test_client_creation_failure_streaming_subscriptions_type_mismatch311(self):
-        self._do_mqtt311_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, 2, {}, 30))
+        self._do_mqtt311_test(lambda protocol_client: self.assertRaises(
+            Exception, self._create_rr_client, protocol_client, 2, {}, 30))
 
     def test_client_creation_failure_negative_operation_timeout5(self):
-        self._do_mqtt5_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, 2, 2, -30))
+        self._do_mqtt5_test(lambda protocol_client: self.assertRaises(
+            Exception, self._create_rr_client, protocol_client, 2, 2, -30))
 
     def test_client_creation_failure_negative_operation_timeout311(self):
-        self._do_mqtt311_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, 2, 2, -30))
+        self._do_mqtt311_test(lambda protocol_client: self.assertRaises(
+            Exception, self._create_rr_client, protocol_client, 2, 2, -30))
 
     def test_client_creation_failure_no_operation_timeout5(self):
-        self._do_mqtt5_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, 2, 2, None))
+        self._do_mqtt5_test(lambda protocol_client: self.assertRaises(
+            Exception, self._create_rr_client, protocol_client, 2, 2, None))
 
     def test_client_creation_failure_no_operation_timeout311(self):
-        self._do_mqtt311_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, 2, 2, None))
+        self._do_mqtt311_test(lambda protocol_client: self.assertRaises(
+            Exception, self._create_rr_client, protocol_client, 2, 2, None))
+
     def test_client_creation_failure_operation_timeout_invalid5(self):
-        self._do_mqtt5_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, 2, 2, 523.56))
+        self._do_mqtt5_test(lambda protocol_client: self.assertRaises(
+            Exception, self._create_rr_client, protocol_client, 2, 2, 523.56))
 
     def test_client_creation_failure_operation_timeout_invalid311(self):
-        self._do_mqtt311_test(lambda protocol_client: self.assertRaises(Exception, self._create_rr_client, protocol_client, 2, 2, 777777777777777777777777777777777777))
+        self._do_mqtt311_test(
+            lambda protocol_client: self.assertRaises(
+                Exception,
+                self._create_rr_client,
+                protocol_client,
+                2,
+                2,
+                777777777777777777777777777777777777))
 
 
 if __name__ == 'main':
