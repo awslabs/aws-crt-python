@@ -12,7 +12,6 @@ import subprocess
 import sys
 import sysconfig
 from wheel.bdist_wheel import bdist_wheel
-
 if sys.platform == 'win32':
     # distutils is deprecated in Python 3.10 and removed in 3.12. However, it still works because Python defines a compatibility interface as long as setuptools is installed.
     # We don't have an official alternative for distutils.ccompiler as of September 2024. See: https://github.com/pypa/setuptools/issues/2806
@@ -234,10 +233,11 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
         if sys.platform == 'darwin':
             # build lib with same MACOSX_DEPLOYMENT_TARGET that python will ultimately
             # use to link everything together, otherwise there will be linker warnings.
-            os.environ.setdefault("MACOSX_DEPLOYMENT_TARGET", "10.15")
             # macosx_target_ver = sysconfig.get_config_var('MACOSX_DEPLOYMENT_TARGET')
-            # if macosx_target_ver and 'MACOSX_DEPLOYMENT_TARGET' not in os.environ:
-            cmake_args.append(f'-DCMAKE_OSX_DEPLOYMENT_TARGET=10.15')
+            macosx_target_ver = "10.15"
+            os.environ['MACOSX_DEPLOYMENT_TARGET'] = "10.15"
+            if macosx_target_ver and 'MACOSX_DEPLOYMENT_TARGET' not in os.environ:
+                cmake_args.append(f'-DCMAKE_OSX_DEPLOYMENT_TARGET={macosx_target_ver}')
 
             if osx_arch:
                 cmake_args.append(f'-DCMAKE_OSX_ARCHITECTURES={osx_arch}')
