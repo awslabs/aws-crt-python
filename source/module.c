@@ -186,6 +186,11 @@ bool PyObject_GetAttrAsBool(PyObject *o, const char *class_name, const char *att
         return result;
     }
 
+    if (attr == Py_None) {
+        PyErr_Format(PyExc_AttributeError, "'%s.%s' required boolean attribute is None", class_name, attr_name);
+        return result;
+    }
+
     int val = PyObject_IsTrue(attr);
     if (val == -1) {
         PyErr_Format(PyExc_TypeError, "Cannot convert %s.%s to bool", class_name, attr_name);
@@ -204,6 +209,12 @@ int PyObject_GetAttrAsIntEnum(PyObject *o, const char *class_name, const char *a
     PyObject *attr = PyObject_GetAttrString(o, attr_name);
     if (!attr) {
         PyErr_Format(PyExc_AttributeError, "'%s.%s' attribute not found", class_name, attr_name);
+        return result;
+    }
+
+    if (attr == Py_None) {
+        PyErr_Format(
+            PyExc_AttributeError, "'%s.%s' required integral enumeration attribute is None", class_name, attr_name);
         return result;
     }
 
