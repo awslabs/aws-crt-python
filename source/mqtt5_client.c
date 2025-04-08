@@ -1888,7 +1888,9 @@ PyObject *aws_py_mqtt5_client_subscribe(PyObject *self, PyObject *args) {
     Py_INCREF(metadata->callback);
 
     struct aws_mqtt5_subscribe_completion_options subscribe_completion_options = {
-        .completion_callback = &s_on_subscribe_complete_fn, .completion_user_data = metadata};
+        .completion_callback = &s_on_subscribe_complete_fn,
+        .completion_user_data = metadata,
+    };
 
     if (aws_mqtt5_client_subscribe(client->native, &subscribe_view, &subscribe_completion_options)) {
         PyErr_SetAwsLastError();

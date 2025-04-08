@@ -14,6 +14,7 @@
 #include "mqtt5_client.h"
 #include "mqtt_client.h"
 #include "mqtt_client_connection.h"
+#include "mqtt_request_response.h"
 #include "s3.h"
 #include "websocket.h"
 
@@ -122,6 +123,11 @@ uint32_t PyObject_GetAttrAsUint32(PyObject *o, const char *class_name, const cha
     PyObject *attr = PyObject_GetAttrString(o, attr_name);
     if (!attr) {
         PyErr_Format(PyExc_AttributeError, "'%s.%s' attribute not found", class_name, attr_name);
+        return result;
+    }
+
+    if (attr == Py_None) {
+        PyErr_Format(PyExc_AttributeError, "'%s.%s' required integral attribute is None", class_name, attr_name);
         return result;
     }
 
@@ -741,6 +747,11 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(mqtt5_client_unsubscribe, METH_VARARGS),
     AWS_PY_METHOD_DEF(mqtt5_client_get_stats, METH_VARARGS),
     AWS_PY_METHOD_DEF(mqtt5_ws_handshake_transform_complete, METH_VARARGS),
+
+    /* MQTT Request Response Client */
+    AWS_PY_METHOD_DEF(mqtt_request_response_client_new_from_5, METH_VARARGS),
+    AWS_PY_METHOD_DEF(mqtt_request_response_client_new_from_311, METH_VARARGS),
+    AWS_PY_METHOD_DEF(mqtt_request_response_client_make_request, METH_VARARGS),
 
     /* Cryptographic primitives */
     AWS_PY_METHOD_DEF(md5_new, METH_NOARGS),
