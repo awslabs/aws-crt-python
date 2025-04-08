@@ -11,12 +11,7 @@ import shutil
 import subprocess
 import sys
 import sysconfig
-from packaging import version
 from wheel.bdist_wheel import bdist_wheel
-
-# The MACOSX_DEPLOYMENT_TARGET for the library. If not set, it will use the
-# default value from python sysconfig.get_config_var('MACOSX_DEPLOYMENT_TARGET').
-MACOS_DEPLOYMENT_TARGET_OVERRIDE = "10.15"
 
 if sys.platform == 'win32':
     # distutils is deprecated in Python 3.10 and removed in 3.12. However, it still works because Python defines a compatibility interface as long as setuptools is installed.
@@ -24,6 +19,15 @@ if sys.platform == 'win32':
     # Once that issue is resolved, we can migrate to the official solution.
     # For now, restrict distutils to Windows only, where it's needed.
     import distutils.ccompiler
+
+# The minimum MACOSX_DEPLOYMENT_TARGET required for the library. If not
+# set, the library will use the default value from python
+# sysconfig.get_config_var('MACOSX_DEPLOYMENT_TARGET').
+MACOS_DEPLOYMENT_TARGET_MIN = "10.15"
+
+
+def parse_version(version_string):
+    return tuple(int(x) for x in version_string.split("."))
 
 
 def is_64bit():
@@ -239,11 +243,11 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
         if sys.platform == 'darwin':
             # get Python's MACOSX_DEPLOYMENT_TARGET version
             macosx_target_ver = sysconfig.get_config_var('MACOSX_DEPLOYMENT_TARGET')
-            # If MACOS_DEPLOYMENT_TARGET_OVERRIDE is set to a later version than python distribution,
+            # If MACOS_DEPLOYMENT_TARGET_MIN is set to a later version than python distribution,
             # override MACOSX_DEPLOYMENT_TARGET.
-            if macosx_target_ver is None or version.parse(
-                    MACOS_DEPLOYMENT_TARGET_OVERRIDE) > version.parse(macosx_target_ver):
-                macosx_target_ver = MACOS_DEPLOYMENT_TARGET_OVERRIDE
+            if macosx_target_ver is None or parse_version(
+                    MACOS_DEPLOYMENT_TARGET_MIN) > parse_version(macosx_target_ver):
+                macosx_target_ver = MACOS_DEPLOYMENT_TARGET_MIN
                 os.environ['MACOSX_DEPLOYMENT_TARGET'] = macosx_target_ver
             cmake_args.append(f'-DCMAKE_OSX_DEPLOYMENT_TARGET={macosx_target_ver}')
 
