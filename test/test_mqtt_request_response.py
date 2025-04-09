@@ -6,6 +6,7 @@ from awscrt import io, mqtt5, mqtt_request_response, mqtt
 
 from concurrent.futures import Future
 import os
+import time
 import unittest
 import uuid
 
@@ -213,6 +214,162 @@ class MqttRequestResponseClientTest(NativeResourceTest):
 
         self._shutdown311(protocol_client)
 
+    def _create_get_shadow_request(self, thing_name, use_correlation_token):
+        topic_prefix = f"$aws/things/{thing_name}/shadow/get"
+
+        request_options = mqtt_request_response.RequestResponseOperationOptions(
+            subscription_topic_filters=[f"{topic_prefix}/+"],
+            response_paths=[
+                mqtt_request_response.ResponsePath(topic=f"{topic_prefix}/accepted"),
+                mqtt_request_response.ResponsePath(topic=f"{topic_prefix}/rejected")
+            ],
+            publish_topic=topic_prefix,
+            payload="{}".encode()
+        )
+
+        if use_correlation_token:
+            correlation_token = f"{uuid.uuid4()}"
+            request_options.response_paths[0].correlation_token_json_path = "clientToken"
+            request_options.response_paths[1].correlation_token_json_path = "clientToken"
+            request_options.payload = f'{{"clientToken":"{correlation_token}"}}'.encode()
+            request_options.correlation_token = correlation_token
+
+        return request_options
+
+    def _do_get_shadow_success_no_such_shadow(self, rr_client, thing_name, use_correlation_token):
+        request_options = self._create_get_shadow_request(thing_name, use_correlation_token)
+
+        request_future = rr_client.make_request(request_options)
+        response = request_future.result()
+
+        self.assertEqual(request_options.response_paths[1].topic, response.topic,
+                         "Expected response to come in on rejected topic")
+        payload = str(response.payload)
+
+        self.assertIn("No shadow exists with name", payload)
+
+    def _do_get_shadow_success_no_such_shadow_test(self, protocol_client, use_correlation_token):
+        rr_client = self._create_rr_client(protocol_client, 2, 2, 30)
+
+        thing_name = f"tn-{uuid.uuid4()}"
+        self._do_get_shadow_success_no_such_shadow(rr_client, thing_name, use_correlation_token)
+
+    def _do_get_shadow_success(self, rr_client, thing_name, use_correlation_token):
+        request_options = self._create_get_shadow_request(thing_name, use_correlation_token)
+
+        request_future = rr_client.make_request(request_options)
+        response = request_future.result()
+
+        self.assertEqual(request_options.response_paths[0].topic, response.topic,
+                         "Expected response to come in on accepted topic")
+
+        payload = str(response.payload)
+        self.assertIn("magic", payload)
+
+    def _do_update_shadow_success(self, rr_client, thing_name, use_correlation_token):
+        topic_prefix = f"$aws/things/{thing_name}/shadow/update"
+
+        request_options = mqtt_request_response.RequestResponseOperationOptions(
+            subscription_topic_filters=[f"{topic_prefix}/accepted", f"{topic_prefix}/rejected"],
+            response_paths=[
+                mqtt_request_response.ResponsePath(topic=f"{topic_prefix}/accepted"),
+                mqtt_request_response.ResponsePath(topic=f"{topic_prefix}/rejected")
+            ],
+            publish_topic=topic_prefix,
+            payload="".encode()
+        )
+
+        desired_state = f'{{"magic":"value"}}'
+
+        if use_correlation_token:
+            correlation_token = f"{uuid.uuid4()}"
+            payload = f'{{"clientToken": "{correlation_token}","state": {{"desired": {desired_state}}}}}'
+            request_options.response_paths[0].correlation_token_json_path = "clientToken"
+            request_options.response_paths[1].correlation_token_json_path = "clientToken"
+            request_options.payload = payload.encode()
+            request_options.correlation_token = correlation_token
+        else:
+            request_options.payload = f'{{"state":{{"desired":{desired_state}}}}}'.encode()
+
+        request_future = rr_client.make_request(request_options)
+        response = request_future.result()
+
+        self.assertEqual(request_options.response_paths[0].topic, response.topic,
+                         "Expected response to come in on accepted topic")
+
+        payload = str(response.payload)
+        self.assertIn("magic", payload)
+
+    def _do_delete_shadow_success(self, rr_client, thing_name, use_correlation_token):
+        topic_prefix = f"$aws/things/{thing_name}/shadow/delete"
+
+        request_options = mqtt_request_response.RequestResponseOperationOptions(
+            subscription_topic_filters=[f"{topic_prefix}/+"],
+            response_paths=[
+                mqtt_request_response.ResponsePath(topic=f"{topic_prefix}/accepted"),
+                mqtt_request_response.ResponsePath(topic=f"{topic_prefix}/rejected")
+            ],
+            publish_topic=topic_prefix,
+            payload="{}".encode()
+        )
+
+        if use_correlation_token:
+            correlation_token = f"{uuid.uuid4()}"
+            request_options.response_paths[0].correlation_token_json_path = "clientToken"
+            request_options.response_paths[1].correlation_token_json_path = "clientToken"
+            request_options.payload = f'{{"clientToken":"{correlation_token}"}}'.encode()
+            request_options.correlation_token = correlation_token
+
+        request_future = rr_client.make_request(request_options)
+        response = request_future.result()
+
+        self.assertEqual(request_options.response_paths[0].topic, response.topic,
+                         "Expected response to come in on accepted topic")
+
+        payload = str(response.payload)
+        self.assertIn("version", payload)
+
+    def _do_update_delete_shadow_success_test(self, protocol_client, use_correlation_token):
+        rr_client = self._create_rr_client(protocol_client, 2, 2, 30)
+
+        # get should return non-existence
+        thing_name = f"tn-{uuid.uuid4()}"
+
+        try:
+            self._do_get_shadow_success_no_such_shadow(rr_client, thing_name, use_correlation_token)
+
+            # update shadow to create
+            self._do_update_shadow_success(rr_client, thing_name, use_correlation_token)
+
+            # eventual consistency worries
+            time.sleep(2)
+
+            # get should now return the shadow state
+            self._do_get_shadow_success(rr_client, thing_name, use_correlation_token)
+        finally:
+            # delete shadow
+            self._do_delete_shadow_success(rr_client, thing_name, use_correlation_token)
+
+    def _do_get_shadow_failure_test(self, protocol_client, options_transform):
+        rr_client = self._create_rr_client(protocol_client, 2, 2, 30)
+
+        thing_name = f"tn-{uuid.uuid4()}"
+        request_options = self._create_get_shadow_request(thing_name, True)
+        options_transform(request_options)
+
+        self.assertRaises(Exception, lambda: rr_client.make_request(request_options))
+
+    def _do_get_shadow_future_failure_test(self, protocol_client, options_transform):
+        rr_client = self._create_rr_client(protocol_client, 2, 2, 30)
+
+        thing_name = f"tn-{uuid.uuid4()}"
+        request_options = self._create_get_shadow_request(thing_name, True)
+        options_transform(request_options)
+
+        response_future = rr_client.make_request(request_options)
+
+        self.assertRaises(Exception, lambda: response_future.result())
+
     # ==============================================================
     #             CREATION SUCCESS TEST CASES
     # ==============================================================
@@ -321,6 +478,170 @@ class MqttRequestResponseClientTest(NativeResourceTest):
                 2,
                 2,
                 777777777777777777777777777777777777))
+
+    # ==============================================================
+    #             make_request SUCCESS TEST CASES
+    # ==============================================================
+
+    def test_get_shadow_success_no_such_shadow5(self):
+        self._do_mqtt5_test(
+            lambda protocol_client: self._do_get_shadow_success_no_such_shadow_test(
+                protocol_client, True))
+
+    def test_get_shadow_success_no_such_shadow311(self):
+        self._do_mqtt311_test(
+            lambda protocol_client: self._do_get_shadow_success_no_such_shadow_test(
+                protocol_client, True))
+
+    def test_get_shadow_success_no_such_shadow_no_correlation_token5(self):
+        self._do_mqtt5_test(
+            lambda protocol_client: self._do_get_shadow_success_no_such_shadow_test(
+                protocol_client, False))
+
+    def test_get_shadow_success_no_such_shadow_no_correlation_token311(self):
+        self._do_mqtt311_test(
+            lambda protocol_client: self._do_get_shadow_success_no_such_shadow_test(
+                protocol_client, False))
+
+    def test_update_delete_shadow_success5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_update_delete_shadow_success_test(protocol_client, True))
+
+    def test_update_delete_shadow_success311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_update_delete_shadow_success_test(protocol_client, True))
+
+    def test_update_delete_shadow_success_no_correlation_token5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_update_delete_shadow_success_test(protocol_client, False))
+
+    def test_update_delete_shadow_success_no_correlation_token311(self):
+        self._do_mqtt311_test(
+            lambda protocol_client: self._do_update_delete_shadow_success_test(
+                protocol_client, False))
+
+    # ==============================================================
+    #             make_request FAILURE TEST CASES
+    # ==============================================================
+
+    def test_get_shadow_failure_no_response_paths5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(
+            protocol_client, lambda options: _empty_response_paths(options)))
+
+    def test_get_shadow_failure_no_response_paths311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(
+            protocol_client, lambda options: _empty_response_paths(options)))
+
+    def test_get_shadow_failure_invalid_response_path_topic5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_future_failure_test(
+            protocol_client, lambda options: _invalidate_response_path_topic(options)))
+
+    def test_get_shadow_failure_invalid_response_path_topic311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_future_failure_test(
+            protocol_client, lambda options: _invalidate_response_path_topic(options)))
+
+    def test_get_shadow_failure_none_response_path_topic5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(
+            protocol_client, lambda options: _none_response_path_topic(options)))
+
+    def test_get_shadow_failure_none_response_path_topic311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(
+            protocol_client, lambda options: _none_response_path_topic(options)))
+
+    def test_get_shadow_failure_missing_response_path_topic5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(
+            protocol_client, lambda options: _missing_response_path_topic(options)))
+
+    def test_get_shadow_failure_missing_response_path_topic311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(
+            protocol_client, lambda options: _missing_response_path_topic(options)))
+
+    def test_get_shadow_failure_response_path_topic_type_mismatch5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(
+            protocol_client, lambda options: _type_mismatch_response_path_topic(options)))
+
+    def test_get_shadow_failure_response_path_topic_type_mismatch311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(
+            protocol_client, lambda options: _type_mismatch_response_path_topic(options)))
+
+    def test_get_shadow_failure_response_path_correlation_token_json_path_type_mismatch5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(
+            protocol_client, lambda options: _type_mismatch_response_path_correlation_token_json_path(options)))
+
+    def test_get_shadow_failure_response_path_correlation_token_json_path_type_mismatch311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(
+            protocol_client, lambda options: _type_mismatch_response_path_correlation_token_json_path(options)))
+
+    def test_get_shadow_failure_response_paths_type_mismatch5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(
+            protocol_client, lambda options: _type_mismatch_response_paths(options)))
+
+    def test_get_shadow_failure_response_paths_type_mismatch311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(
+            protocol_client, lambda options: _type_mismatch_response_paths(options)))
+
+    def test_get_shadow_failure_invalid_subscription_topic5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_future_failure_test(
+            protocol_client, lambda options: _invalidate_subscription_topic_filter(options)))
+
+    def test_get_shadow_failure_invalid_subscription_topic311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_future_failure_test(
+            protocol_client, lambda options: _invalidate_subscription_topic_filter(options)))
+
+    def test_get_shadow_failure_subscription_topic_type_mismatch5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(
+            protocol_client, lambda options: _type_mismatch_subscription_topic_filter(options)))
+
+    def test_get_shadow_failure_subscription_topic_type_mismatch311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(
+            protocol_client, lambda options: _type_mismatch_subscription_topic_filter(options)))
+
+    def test_get_shadow_failure_subscriptions_type_mismatch5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(
+            protocol_client, lambda options: _type_mismatch_subscriptions(options)))
+
+    def test_get_shadow_failure_subscriptions_type_mismatch311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(
+            protocol_client, lambda options: _type_mismatch_subscriptions(options)))
+
+    def test_get_shadow_failure_empty_subscriptions5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(
+            protocol_client, lambda options: _empty_subscription_topic_filters(options)))
+
+    def test_get_shadow_failure_empty_subscriptions311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(
+            protocol_client, lambda options: _empty_subscription_topic_filters(options)))
+
+    def test_get_shadow_failure_none_publish_topic5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(
+            protocol_client, lambda options: _none_publish_topic(options)))
+
+    def test_get_shadow_failure_none_publish_topic311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(
+            protocol_client, lambda options: _none_publish_topic(options)))
+
+    def test_get_shadow_failure_bad_publish_topic5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_future_failure_test(
+            protocol_client, lambda options: _bad_publish_topic(options)))
+
+    def test_get_shadow_failure_bad_publish_topic311(self):
+        self._do_mqtt311_test(
+            lambda protocol_client: self._do_get_shadow_future_failure_test(
+                protocol_client,
+                lambda options: _bad_publish_topic(options)))
+
+    def test_get_shadow_failure_publish_topic_type_mismatch5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(
+            protocol_client, lambda options: _type_mismatch_publish_topic(options)))
+
+    def test_get_shadow_failure_publish_topic_type_mismatch311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(
+            protocol_client, lambda options: _type_mismatch_publish_topic(options)))
+
+    def test_get_shadow_failure_correlation_token_type_mismatch5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(
+            protocol_client, lambda options: _type_mismatch_correlation_token(options)))
+
+    def test_get_shadow_failure_correlation_token_type_mismatch311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(
+            protocol_client, lambda options: _type_mismatch_correlation_token(options)))
 
 
 if __name__ == 'main':
