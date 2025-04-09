@@ -128,10 +128,12 @@ uint32_t PyObject_GetAttrAsUint32(PyObject *o, const char *class_name, const cha
 
     if (attr == Py_None) {
         PyErr_Format(PyExc_AttributeError, "'%s.%s' required integral attribute is None", class_name, attr_name);
-        return result;
+        goto done;
     }
 
     PyObject_GetAsOptionalUint32(attr, class_name, attr_name, &result);
+
+done:
 
     Py_DECREF(attr);
     return result;
@@ -148,10 +150,12 @@ uint16_t PyObject_GetAttrAsUint16(PyObject *o, const char *class_name, const cha
 
     if (attr == Py_None) {
         PyErr_Format(PyExc_AttributeError, "'%s.%s' required integral attribute is None", class_name, attr_name);
-        return result;
+        goto done;
     }
 
     PyObject_GetAsOptionalUint16(attr, class_name, attr_name, &result);
+
+done:
 
     Py_DECREF(attr);
     return result;
@@ -168,10 +172,12 @@ uint8_t PyObject_GetAttrAsUint8(PyObject *o, const char *class_name, const char 
 
     if (attr == Py_None) {
         PyErr_Format(PyExc_AttributeError, "'%s.%s' required integral attribute is None", class_name, attr_name);
-        return result;
+        goto done;
     }
 
     PyObject_GetAsOptionalUint8(attr, class_name, attr_name, &result);
+
+done:
 
     Py_DECREF(attr);
     return result;
@@ -188,7 +194,7 @@ bool PyObject_GetAttrAsBool(PyObject *o, const char *class_name, const char *att
 
     if (attr == Py_None) {
         PyErr_Format(PyExc_AttributeError, "'%s.%s' required boolean attribute is None", class_name, attr_name);
-        return result;
+        goto done;
     }
 
     int val = PyObject_IsTrue(attr);
@@ -215,10 +221,12 @@ int PyObject_GetAttrAsIntEnum(PyObject *o, const char *class_name, const char *a
     if (attr == Py_None) {
         PyErr_Format(
             PyExc_AttributeError, "'%s.%s' required integral enumeration attribute is None", class_name, attr_name);
-        return result;
+        goto done;
     }
 
     PyObject_GetAsOptionalIntEnum(attr, class_name, attr_name, &result);
+
+done:
 
     Py_DECREF(attr);
     return result;
