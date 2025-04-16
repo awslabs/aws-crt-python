@@ -10,8 +10,9 @@
 #include "aws/mqtt/request-response/request_response_client.h"
 
 static const char *s_capsule_name_mqtt_request_response_client = "aws_mqtt_request_response_client";
+static const char *s_capsule_name_mqtt_streaming_operation = "aws_mqtt_streaming_operation";
 
-static const char *AWS_PYOBJECT_KEY_REQUEST_RESPONSE_CLIENT_OPTIONS = "RequestResponseClientOptions";
+static const char *AWS_PYOBJECT_KEY_REQUEST_RESPONSE_CLIENT_OPTIONS = "ClientOptions";
 static const char *AWS_PYOBJECT_KEY_MAX_REQUEST_RESPONSE_SUBSCRIPTIONS = "max_request_response_subscriptions";
 static const char *AWS_PYOBJECT_KEY_MAX_STREAMING_SUBSCRIPTIONS = "max_streaming_subscriptions";
 static const char *AWS_PYOBJECT_KEY_OPERATION_TIMEOUT_IN_SECONDS = "operation_timeout_in_seconds";
@@ -481,6 +482,179 @@ done:
     return result;
 }
 
+/***************************************************************************************/
+
+struct mqtt_streaming_operation_binding {
+    struct aws_mqtt_rr_client_operation *native;
+    PyObject *subscription_status_changed_callable;
+    PyObject *incoming_publish_callable;
+};
+
+static struct mqtt_streaming_operation_binding *s_mqtt_streaming_operation_binding_new(
+    PyObject *subscription_status_changed_callable_py,
+    PyObject *incoming_publish_callable_py) {
+    struct mqtt_streaming_operation_binding *binding =
+        aws_mem_calloc(aws_py_get_allocator(), 1, sizeof(struct mqtt_streaming_operation_binding));
+
+    binding->subscription_status_changed_callable = subscription_status_changed_callable_py;
+    Py_XINCREF(binding->subscription_status_changed_callable);
+
+    binding->incoming_publish_callable = incoming_publish_callable_py;
+    Py_XINCREF(binding->incoming_publish_callable);
+
+    return binding;
+}
+
+static void s_mqtt_streaming_operation_binding_on_terminated(void *user_data) {
+    struct mqtt_streaming_operation_binding *stream_binding = user_data;
+
+    Py_XDECREF(stream_binding->subscription_status_changed_callable);
+    Py_XDECREF(stream_binding->incoming_publish_callable);
+
+    aws_mem_release(aws_py_get_allocator(), stream_binding);
+}
+
+static void s_mqtt_streaming_operation_binding_destructor(PyObject *stream_capsule) {
+    struct mqtt_streaming_operation_binding *stream_binding =
+        PyCapsule_GetPointer(stream_capsule, s_capsule_name_mqtt_streaming_operation);
+    assert(stream_binding);
+
+    stream_binding->native = aws_mqtt_rr_client_operation_release(stream_binding->native);
+}
+
+static void s_aws_mqtt_streaming_operation_subscription_status_callback_python(
+    enum aws_rr_streaming_subscription_event_type status,
+    int error_code,
+    void *user_data) {
+
+    struct mqtt_streaming_operation_binding *stream_binding = user_data;
+
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return;
+    }
+
+    PyObject *result = PyObject_CallFunction(
+        stream_binding->subscription_status_changed_callable,
+        "(ii)",
+        /* i */ (int)status,
+        /* i */ error_code);
+    if (!result) {
+        PyErr_WriteUnraisable(PyErr_Occurred());
+    }
+
+    Py_XDECREF(result);
+
+    PyGILState_Release(state);
+}
+
+static void s_aws_mqtt_streaming_operation_incoming_publish_callback_python(
+    struct aws_byte_cursor payload,
+    struct aws_byte_cursor topic,
+    void *user_data) {
+
+    struct mqtt_streaming_operation_binding *stream_binding = user_data;
+
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return;
+    }
+
+    PyObject *result = PyObject_CallFunction(
+        stream_binding->incoming_publish_callable,
+        "(s#y#)",
+        /* s */ topic.ptr,
+        /* # */ topic.len,
+        /* y */ payload.ptr,
+        /* # */ payload.len);
+    if (!result) {
+        PyErr_WriteUnraisable(PyErr_Occurred());
+    }
+
+    Py_XDECREF(result);
+
+    PyGILState_Release(state);
+}
+
+PyObject *aws_py_mqtt_request_response_client_create_stream(PyObject *self, PyObject *args) {
+    (void)self;
+
+    PyObject *client_capsule_py;
+    struct aws_byte_cursor subscription_topic_filter;
+    PyObject *subscription_status_changed_callable_py;
+    PyObject *incoming_publish_callable_py;
+
+    if (!PyArg_ParseTuple(
+            args,
+            "Os#OO",
+            /* O */ &client_capsule_py,
+            /* s */ &subscription_topic_filter.ptr,
+            /* # */ &subscription_topic_filter.len,
+            /* O */ &subscription_status_changed_callable_py,
+            /* O */ &incoming_publish_callable_py)) {
+        return NULL;
+    }
+
+    struct mqtt_request_response_client_binding *client_binding =
+        PyCapsule_GetPointer(client_capsule_py, s_capsule_name_mqtt_request_response_client);
+    if (!client_binding) {
+        return NULL;
+    }
+
+    struct mqtt_streaming_operation_binding *stream_binding =
+        s_mqtt_streaming_operation_binding_new(subscription_status_changed_callable_py, incoming_publish_callable_py);
+
+    struct aws_mqtt_streaming_operation_options stream_options = {
+        .topic_filter = subscription_topic_filter,
+        .subscription_status_callback = s_aws_mqtt_streaming_operation_subscription_status_callback_python,
+        .incoming_publish_callback = s_aws_mqtt_streaming_operation_incoming_publish_callback_python,
+        .terminated_callback = s_mqtt_streaming_operation_binding_on_terminated,
+        .user_data = stream_binding,
+    };
+    stream_binding->native =
+        aws_mqtt_request_response_client_create_streaming_operation(client_binding->native, &stream_options);
+    if (stream_binding->native == NULL) {
+        PyErr_SetAwsLastError();
+        s_mqtt_streaming_operation_binding_on_terminated(stream_binding);
+        return NULL;
+    }
+
+    PyObject *capsule = PyCapsule_New(
+        stream_binding, s_capsule_name_mqtt_streaming_operation, s_mqtt_streaming_operation_binding_destructor);
+    if (!capsule) {
+        stream_binding->native = aws_mqtt_rr_client_operation_release(stream_binding->native);
+        return NULL;
+    }
+
+    return capsule;
+}
+
+PyObject *aws_py_mqtt_streaming_operation_open(PyObject *self, PyObject *args) {
+    (void)self;
+
+    PyObject *stream_capsule_py;
+
+    if (!PyArg_ParseTuple(
+            args,
+            "O",
+            /* O */ &stream_capsule_py)) {
+        return NULL;
+    }
+
+    struct mqtt_streaming_operation_binding *stream_binding =
+        PyCapsule_GetPointer(stream_capsule_py, s_capsule_name_mqtt_streaming_operation);
+    if (!stream_binding) {
+        return NULL;
+    }
+
+    if (aws_mqtt_rr_client_operation_activate(stream_binding->native)) {
+        PyErr_SetAwsLastError();
+        return NULL;
+    }
+
+    return Py_None;
+}
+
 struct aws_mqtt_request_response_client *aws_py_get_mqtt_request_response_client(
     PyObject *mqtt_request_response_client) {
     AWS_PY_RETURN_NATIVE_FROM_BINDING(
@@ -488,4 +662,13 @@ struct aws_mqtt_request_response_client *aws_py_get_mqtt_request_response_client
         s_capsule_name_mqtt_request_response_client,
         "Client",
         mqtt_request_response_client_binding);
+}
+
+struct aws_mqtt_rr_client_operation *aws_py_get_mqtt_streaming_operation(PyObject *mqtt_streaming_operation) {
+
+    AWS_PY_RETURN_NATIVE_FROM_BINDING(
+        mqtt_streaming_operation,
+        s_capsule_name_mqtt_streaming_operation,
+        "StreamingOperation",
+        mqtt_streaming_operation_binding);
 }

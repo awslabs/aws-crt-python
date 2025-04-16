@@ -192,7 +192,7 @@ class MqttRequestResponseClientTest(NativeResourceTest):
             max_request_response_subscriptions,
             max_streaming_subscriptions,
             operation_timeout_seconds):
-        rr_client_options = mqtt_request_response.RequestResponseClientOptions(
+        rr_client_options = mqtt_request_response.ClientOptions(
             max_request_response_subscriptions, max_streaming_subscriptions)
         rr_client_options.operation_timeout_in_seconds = operation_timeout_seconds
 
@@ -217,7 +217,7 @@ class MqttRequestResponseClientTest(NativeResourceTest):
     def _create_get_shadow_request(self, thing_name, use_correlation_token):
         topic_prefix = f"$aws/things/{thing_name}/shadow/get"
 
-        request_options = mqtt_request_response.RequestResponseOperationOptions(
+        request_options = mqtt_request_response.RequestOptions(
             subscription_topic_filters=[f"{topic_prefix}/+"],
             response_paths=[
                 mqtt_request_response.ResponsePath(topic=f"{topic_prefix}/accepted"),
@@ -269,7 +269,7 @@ class MqttRequestResponseClientTest(NativeResourceTest):
     def _do_update_shadow_success(self, rr_client, thing_name, use_correlation_token):
         topic_prefix = f"$aws/things/{thing_name}/shadow/update"
 
-        request_options = mqtt_request_response.RequestResponseOperationOptions(
+        request_options = mqtt_request_response.RequestOptions(
             subscription_topic_filters=[f"{topic_prefix}/accepted", f"{topic_prefix}/rejected"],
             response_paths=[
                 mqtt_request_response.ResponsePath(topic=f"{topic_prefix}/accepted"),
@@ -303,7 +303,7 @@ class MqttRequestResponseClientTest(NativeResourceTest):
     def _do_delete_shadow_success(self, rr_client, thing_name, use_correlation_token):
         topic_prefix = f"$aws/things/{thing_name}/shadow/delete"
 
-        request_options = mqtt_request_response.RequestResponseOperationOptions(
+        request_options = mqtt_request_response.RequestOptions(
             subscription_topic_filters=[f"{topic_prefix}/+"],
             response_paths=[
                 mqtt_request_response.ResponsePath(topic=f"{topic_prefix}/accepted"),
