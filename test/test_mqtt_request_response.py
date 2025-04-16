@@ -1,6 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
-
+from awscrt.mqtt_request_response import StreamingOperationOptions
 from test import NativeResourceTest
 from awscrt import io, mqtt5, mqtt_request_response, mqtt
 
@@ -112,10 +112,20 @@ def _bad_publish_topic(options):
 def _type_mismatch_publish_topic(options):
     options.publish_topic = [["oof"]]
 
-
 def _type_mismatch_correlation_token(options):
     options.correlation_token = [-1]
 
+def _subscription_topic_filter_none(options):
+    options.subscription_topic_filter = None
+
+def _type_mismatch_stream_subscription_topic_filter(options):
+    options.subscription_topic_filter = 6
+
+def _type_mismatch_subscription_status_listener(options):
+    options.subscription_status_listener = "string"
+
+def _type_mismatch_incoming_publish_listener(options):
+    options.incoming_publish_listener = "string"
 
 class MqttRequestResponseClientTest(NativeResourceTest):
 
@@ -350,6 +360,44 @@ class MqttRequestResponseClientTest(NativeResourceTest):
             # delete shadow
             self._do_delete_shadow_success(rr_client, thing_name, use_correlation_token)
 
+    def _do_stream_success_test(self, protocol_client):
+        rr_client = self._create_rr_client(protocol_client, 2, 2, 30)
+
+        thing_name = f"tn-{uuid.uuid4()}"
+        topic = f"not/a/valid/topic/{thing_name}"
+        payload = b'hello'
+
+        subscribed_future = Future()
+        publish_received_future = Future()
+
+        def on_subscription_status_changed(event):
+            if event.type == mqtt_request_response.SubscriptionStatusEventType.SUBSCRIPTION_ESTABLISHED:
+                subscribed_future.set_result(True)
+
+
+        def on_incoming_publish(event):
+            if event.topic == topic and event.payload == payload:
+                publish_received_future.set_result(True);
+
+        stream_options = StreamingOperationOptions(topic, on_subscription_status_changed, on_incoming_publish)
+        stream = rr_client.create_stream(stream_options)
+
+        stream.open()
+
+        assert subscribed_future.result(30)
+
+        if isinstance(protocol_client, mqtt5.Client):
+            publish = mqtt5.PublishPacket(
+                payload=payload,
+                qos=mqtt5.QoS.AT_LEAST_ONCE,
+                topic=topic
+            )
+            protocol_client.publish(publish)
+        else:
+            protocol_client.publish(topic, payload, mqtt.QoS.AT_LEAST_ONCE)
+
+        assert publish_received_future.result(30)
+
     def _do_get_shadow_failure_test(self, protocol_client, options_transform):
         rr_client = self._create_rr_client(protocol_client, 2, 2, 30)
 
@@ -369,6 +417,15 @@ class MqttRequestResponseClientTest(NativeResourceTest):
         response_future = rr_client.make_request(request_options)
 
         self.assertRaises(Exception, lambda: response_future.result())
+
+    def _do_create_stream_failure_test(self, protocol_client, options_transform):
+        rr_client = self._create_rr_client(protocol_client, 2, 2, 30)
+
+        thing_name = f"tn-{uuid.uuid4()}"
+        stream_options = mqtt_request_response.StreamingOperationOptions(f"not/a/real/thing/{thing_name}")
+        options_transform(stream_options)
+
+        self.assertRaises(Exception, lambda: rr_client.create_stream(stream_options))
 
     # ==============================================================
     #             CREATION SUCCESS TEST CASES
@@ -643,6 +700,44 @@ class MqttRequestResponseClientTest(NativeResourceTest):
         self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(
             protocol_client, lambda options: _type_mismatch_correlation_token(options)))
 
+    # ==============================================================
+    #             streaming operation SUCCESS TEST CASES
+    # ==============================================================
+
+    # ==============================================================
+    #             create_stream FAILURE TEST CASES
+    # ==============================================================
+    def test_create_stream_failure_subscription_topic_filter_none5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_create_stream_failure_test(
+            protocol_client, lambda options: _subscription_topic_filter_none(options)))
+
+    def test_create_stream_failure_subscription_topic_filter_none311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_create_stream_failure_test(
+            protocol_client, lambda options: _subscription_topic_filter_none(options)))
+
+    def test_create_stream_failure_subscription_topic_filter_type_mismatch5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_create_stream_failure_test(
+            protocol_client, lambda options: _type_mismatch_stream_subscription_topic_filter(options)))
+
+    def test_create_stream_failure_subscription_topic_filter_type_mismatch311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_create_stream_failure_test(
+            protocol_client, lambda options: _type_mismatch_stream_subscription_topic_filter(options)))
+
+    def test_create_stream_failure_subscription_status_listener_type_mismatch5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_create_stream_failure_test(
+            protocol_client, lambda options: _type_mismatch_subscription_status_listener(options)))
+
+    def test_create_stream_failure_subscription_status_listener_type_mismatch311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_create_stream_failure_test(
+            protocol_client, lambda options: _type_mismatch_subscription_status_listener(options)))
+
+    def test_create_stream_failure_incoming_publish_listener_type_mismatch5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_create_stream_failure_test(
+            protocol_client, lambda options: _type_mismatch_incoming_publish_listener(options)))
+
+    def test_create_stream_failure_incoming_publish_listener_type_mismatch311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_create_stream_failure_test(
+            protocol_client, lambda options: _type_mismatch_incoming_publish_listener(options)))
 
 if __name__ == 'main':
     unittest.main()

@@ -82,13 +82,16 @@ class StreamingOperationOptions:
         incoming_publish_listener (IncomingPublishListener): function object to invoke when a publish packet arrives that matches the subscription topic filter
     """
     subscription_topic_filter: str
-    subscription_status_listener: SubscriptionStatusListener
-    incoming_publish_listener: IncomingPublishListener
+    subscription_status_listener: 'Optional[SubscriptionStatusListener]' = None
+    incoming_publish_listener: 'Optional[IncomingPublishListener]' = None
 
     def validate(self):
+        """
+        Stringently type-checks an instance's field values.
+        """
         assert isinstance(self.subscription_topic_filter, str)
-        assert callable(self.subscription_status_listener)
-        assert callable(self.incoming_publish_listener)
+        assert callable(self.subscription_status_listener) or self.subscription_status_listener is None
+        assert callable(self.incoming_publish_listener) or self.incoming_publish_listener is None
 
 
 @dataclass
@@ -119,6 +122,9 @@ class ResponsePath:
     correlation_token_json_path: 'Optional[str]' = None
 
     def validate(self):
+        """
+        Stringently type-checks an instance's field values.
+        """
         assert isinstance(self.topic, str)
         assert isinstance(self.correlation_token_json_path, str) or self.correlation_token_json_path is None
 
@@ -142,6 +148,9 @@ class RequestOptions:
     correlation_token: 'Optional[str]' = None
 
     def validate(self):
+        """
+        Stringently type-checks an instance's field values.
+        """
         assert isinstance(self.subscription_topic_filters, collections.abc.Sequence)
         for topic_filter in self.subscription_topic_filters:
             assert isinstance(topic_filter, str)
@@ -170,6 +179,9 @@ class ClientOptions:
     operation_timeout_in_seconds: 'Optional[int]' = 60
 
     def validate(self):
+        """
+        Stringently type-checks an instance's field values.
+        """
         assert isinstance(self.max_request_response_subscriptions, int)
         assert isinstance(self.max_streaming_subscriptions, int)
         assert isinstance(self.operation_timeout_in_seconds, int)
@@ -204,6 +216,16 @@ class Client(NativeResource):
             self._binding = _awscrt.mqtt_request_response_client_new_from_311(protocol_client, client_options)
 
     def make_request(self, options: RequestOptions):
+        """
+        Initiate an MQTT-based request-response async workflow
+
+        Args:
+            options (RequestOptions): Configuration options for the request to perform
+
+        Returns:
+            concurrent.futures.Future: A Future whose result will contain the topic and payload of a response
+            to the request. The future will contain an exception if the request fails.
+        """
         options.validate()
 
         future = Future()
@@ -226,17 +248,30 @@ class Client(NativeResource):
         return future
 
     def create_stream(self, options: StreamingOperationOptions):
+        """
+        Creates a new streaming operation
+
+        Args:
+            options (StreamingOperationOptions): Configuration options for the streaming operation
+
+        Returns:
+            StreamingOperation: a new streaming operation.  Opening the operation triggers the client to maintain
+            an MQTT subscription for relevant events.  Matching publishes and subscription status changes are
+            communicated by invoking configuration-controlled callbacks.
+        """
         options.validate()
 
         def on_subscription_status_event(event_type, error_code):
-            event = SubscriptionStatusEvent(event_type)
-            if error_code != 0:
-                event.error = exceptions.from_code(error_code)
-            options.subscription_status_listener(event)
+            if options.subscription_status_listener is not None:
+                event = SubscriptionStatusEvent(event_type)
+                if error_code != 0:
+                    event.error = exceptions.from_code(error_code)
+                options.subscription_status_listener(event)
 
         def on_incoming_publish_event(topic, payload):
-            event = IncomingPublishEvent(topic, payload)
-            options.incoming_publish_listener(event)
+            if options.incoming_publish_listener is not None:
+                event = IncomingPublishEvent(topic, payload)
+                options.incoming_publish_listener(event)
 
         stream_binding = _awscrt.mqtt_request_response_client_create_stream(self._binding, options.subscription_topic_filter, on_subscription_status_event, on_incoming_publish_event)
 
@@ -244,11 +279,17 @@ class Client(NativeResource):
 
 
 class StreamingOperation(NativeResource):
-
+    """
+    An operation that represents a stream of events broadcast to an MQTT topic
+    """
     def __init__(self, binding):
         super().__init__()
 
         self._binding = binding
 
     def open(self):
+        """
+        Triggers the streaming operation to maintain an MQTT subscription for relevant events.  Until a stream is
+        opened, no events can be received.
+        """
         _awscrt.mqtt_streaming_operation_open(self._binding)
