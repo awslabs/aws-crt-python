@@ -431,7 +431,7 @@ class TestClientMockServer(NativeResourceTest):
 
         for attempt in range(max_attempts):
             try:
-                with socket.create_connection((self.mock_server_url.hostname, self.mock_server_url.port), timeout=1):
+                with socket.create_connection(("127.0.0.1", self.mock_server_url.port), timeout=1):
                     return  # Server is ready
             except (ConnectionRefusedError, socket.timeout):
                 time.sleep(0.5)
