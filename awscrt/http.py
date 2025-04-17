@@ -113,7 +113,6 @@ class HttpClientConnection(HttpConnectionBase):
             Otherwise, it will contain an exception.
         """
         return HttpClientConnection._generic_new(
-            cls,
             host_name,
             port,
             bootstrap,
@@ -121,10 +120,8 @@ class HttpClientConnection(HttpConnectionBase):
             tls_connection_options,
             proxy_options)
 
-    @classmethod
+    @staticmethod
     def _generic_new(
-            _cls,
-            expected_cls,
             host_name,
             port,
             bootstrap=None,
@@ -149,28 +146,34 @@ class HttpClientConnection(HttpConnectionBase):
 
             if not bootstrap:
                 bootstrap = ClientBootstrap.get_or_create_static_default()
-
-            connection = expected_cls()
-            connection._host_name = host_name
-            connection._port = port
+            shutdown_future = None
 
             def on_connection_setup(binding, error_code, http_version):
-                if error_code == 0:
-                    connection._binding = binding
-                    connection._version = HttpVersion(http_version)
-                    if expected_version and expected_version != connection._version:
-                        # unexpected protocol version
-                        # TODO: what the error code for this?
-                        future.set_exception(awscrt.exceptions.from_code(1))
-                    future.set_result(connection)
-                else:
+                if expected_version and expected_version != http_version:
+                    # unexpected protocol version
+                    # AWS_ERROR_HTTP_UNSUPPORTED_PROTOCOL
+                    future.set_exception(awscrt.exceptions.from_code(2060))
+                    return
+                if error_code != 0:
                     future.set_exception(awscrt.exceptions.from_code(error_code))
+                    return
+                if http_version == HttpVersion.Http2:
+                    connection = Http2ClientConnection()
+                else:
+                    connection = HttpClientConnection()
+                connection._host_name = host_name
+                connection._port = port
 
-            # on_shutdown MUST NOT reference the connection itself, just the shutdown_future within it.
-            # Otherwise we create a circular reference that prevents the connection from getting GC'd.
-            shutdown_future = connection.shutdown_future
+                connection._binding = binding
+                connection._version = HttpVersion(http_version)
+                nonlocal shutdown_future
+                shutdown_future = connection.shutdown_future
+                future.set_result(connection)
 
             def on_shutdown(error_code):
+                if shutdown_future is None:
+                    # connection failed, ignore shutdown
+                    return
                 if error_code:
                     shutdown_future.set_exception(awscrt.exceptions.from_code(error_code))
                 else:
@@ -261,13 +264,13 @@ class Http2ClientConnection(HttpClientConnection):
             tls_connection_options=None,
             proxy_options=None):
         return HttpClientConnection._generic_new(
-            cls,
             host_name,
             port,
             bootstrap,
             socket_options,
             tls_connection_options,
-            proxy_options)
+            proxy_options,
+            HttpVersion.Http2)
 
     def request(self, request, on_response=None, on_body=None, manual_write=False):
         return Http2ClientStream(self, request, on_response, on_body, manual_write)
@@ -376,10 +379,7 @@ class Http2ClientStream(HttpClientStream):
 
     def write_data(self, data_stream, end_stream=False):
         future = Future()
-        if data_stream is not None:
-            body_stream = InputStream.wrap(data_stream)
-        else:
-            body_stream = None
+        body_stream = InputStream.wrap(data_stream, allow_none=True)
 
         def on_write_complete(error_code):
             if error_code:

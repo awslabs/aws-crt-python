@@ -537,9 +537,11 @@ class TestClientMockServer(NativeResourceTest):
             # future will raise the exception from the write_data call.
             exception = e
         self.assertIsNotNone(exception)
-        # stream will complete with another exception.
+        # stream will complete with same exception.
         stream_completion_exception = stream.completion_future.exception()
         self.assertIsNotNone(stream_completion_exception)
+        # assert that the exception is the same as the one we got from write_data.
+        self.assertEqual(str(exception), str(stream_completion_exception))
         self.assertEqual(None, connection.close().exception(self.timeout))
 
     def test_h2_mock_server_manual_write_lifetime(self):
