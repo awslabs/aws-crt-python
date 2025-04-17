@@ -119,13 +119,20 @@ PyObject *PyUnicode_FromAwsString(const struct aws_string *aws_str) {
 uint32_t PyObject_GetAttrAsUint32(PyObject *o, const char *class_name, const char *attr_name) {
     uint32_t result = UINT32_MAX;
 
-    PyObject *attr = PyObject_GetAttrString(o, attr_name);
+    PyObject *attr = PyObject_GetAttrString(o, attr_name); /* new reference */
     if (!attr) {
         PyErr_Format(PyExc_AttributeError, "'%s.%s' attribute not found", class_name, attr_name);
         return result;
     }
 
+    if (attr == Py_None) {
+        PyErr_Format(PyExc_AttributeError, "'%s.%s' required integral attribute is None", class_name, attr_name);
+        goto done;
+    }
+
     PyObject_GetAsOptionalUint32(attr, class_name, attr_name, &result);
+
+done:
 
     Py_DECREF(attr);
     return result;
@@ -134,13 +141,20 @@ uint32_t PyObject_GetAttrAsUint32(PyObject *o, const char *class_name, const cha
 uint16_t PyObject_GetAttrAsUint16(PyObject *o, const char *class_name, const char *attr_name) {
     uint16_t result = UINT16_MAX;
 
-    PyObject *attr = PyObject_GetAttrString(o, attr_name);
+    PyObject *attr = PyObject_GetAttrString(o, attr_name); /* new reference */
     if (!attr) {
         PyErr_Format(PyExc_AttributeError, "'%s.%s' attribute not found", class_name, attr_name);
         return result;
     }
 
+    if (attr == Py_None) {
+        PyErr_Format(PyExc_AttributeError, "'%s.%s' required integral attribute is None", class_name, attr_name);
+        goto done;
+    }
+
     PyObject_GetAsOptionalUint16(attr, class_name, attr_name, &result);
+
+done:
 
     Py_DECREF(attr);
     return result;
@@ -149,13 +163,20 @@ uint16_t PyObject_GetAttrAsUint16(PyObject *o, const char *class_name, const cha
 uint8_t PyObject_GetAttrAsUint8(PyObject *o, const char *class_name, const char *attr_name) {
     uint8_t result = UINT8_MAX;
 
-    PyObject *attr = PyObject_GetAttrString(o, attr_name);
+    PyObject *attr = PyObject_GetAttrString(o, attr_name); /* new reference */
     if (!attr) {
         PyErr_Format(PyExc_AttributeError, "'%s.%s' attribute not found", class_name, attr_name);
         return result;
     }
 
+    if (attr == Py_None) {
+        PyErr_Format(PyExc_AttributeError, "'%s.%s' required integral attribute is None", class_name, attr_name);
+        goto done;
+    }
+
     PyObject_GetAsOptionalUint8(attr, class_name, attr_name, &result);
+
+done:
 
     Py_DECREF(attr);
     return result;
@@ -164,10 +185,15 @@ uint8_t PyObject_GetAttrAsUint8(PyObject *o, const char *class_name, const char 
 bool PyObject_GetAttrAsBool(PyObject *o, const char *class_name, const char *attr_name) {
     bool result = false;
 
-    PyObject *attr = PyObject_GetAttrString(o, attr_name);
+    PyObject *attr = PyObject_GetAttrString(o, attr_name); /* new reference */
     if (!attr) {
         PyErr_Format(PyExc_AttributeError, "'%s.%s' attribute not found", class_name, attr_name);
         return result;
+    }
+
+    if (attr == Py_None) {
+        PyErr_Format(PyExc_AttributeError, "'%s.%s' required boolean attribute is None", class_name, attr_name);
+        goto done;
     }
 
     int val = PyObject_IsTrue(attr);
@@ -185,13 +211,21 @@ done:
 int PyObject_GetAttrAsIntEnum(PyObject *o, const char *class_name, const char *attr_name) {
     int result = -1;
 
-    PyObject *attr = PyObject_GetAttrString(o, attr_name);
+    PyObject *attr = PyObject_GetAttrString(o, attr_name); /* new reference */
     if (!attr) {
         PyErr_Format(PyExc_AttributeError, "'%s.%s' attribute not found", class_name, attr_name);
         return result;
     }
 
+    if (attr == Py_None) {
+        PyErr_Format(
+            PyExc_AttributeError, "'%s.%s' required integral enumeration attribute is None", class_name, attr_name);
+        goto done;
+    }
+
     PyObject_GetAsOptionalIntEnum(attr, class_name, attr_name, &result);
+
+done:
 
     Py_DECREF(attr);
     return result;
