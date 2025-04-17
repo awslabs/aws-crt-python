@@ -21,7 +21,7 @@ phases:
       - ls -la dist/
       - cd aws-crt-python
       - python3 continuous-delivery/pull-pypirc.py prod
-      - python3 -m twine upload -r pypi ../dist/*
+      - python3 -m twine upload --repository pypi --verbose ../dist/*
   post_build:
     commands:
       - echo Build completed on `date`

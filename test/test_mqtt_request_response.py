@@ -116,7 +116,6 @@ def _type_mismatch_publish_topic(options):
 def _type_mismatch_correlation_token(options):
     options.correlation_token = [-1]
 
-
 def _subscription_topic_filter_none(options):
     options.subscription_topic_filter = None
 

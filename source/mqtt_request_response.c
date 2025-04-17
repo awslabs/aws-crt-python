@@ -13,6 +13,7 @@ static const char *s_capsule_name_mqtt_request_response_client = "aws_mqtt_reque
 static const char *s_capsule_name_mqtt_streaming_operation = "aws_mqtt_streaming_operation";
 
 static const char *AWS_PYOBJECT_KEY_REQUEST_RESPONSE_CLIENT_OPTIONS = "ClientOptions";
+
 static const char *AWS_PYOBJECT_KEY_MAX_REQUEST_RESPONSE_SUBSCRIPTIONS = "max_request_response_subscriptions";
 static const char *AWS_PYOBJECT_KEY_MAX_STREAMING_SUBSCRIPTIONS = "max_streaming_subscriptions";
 static const char *AWS_PYOBJECT_KEY_OPERATION_TIMEOUT_IN_SECONDS = "operation_timeout_in_seconds";
