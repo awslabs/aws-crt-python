@@ -13,6 +13,7 @@ from concurrent.futures import Future
 import _awscrt
 import collections.abc
 
+
 class SubscriptionStatusEventType(IntEnum):
     """
     The type of change to the state of a streaming operation subscription
@@ -70,6 +71,7 @@ SubscriptionStatusListener = Callable[[SubscriptionStatusEvent], None]
 Signature for a handler that listens to incoming publish events.
 """
 IncomingPublishListener = Callable[[IncomingPublishEvent], None]
+
 
 @dataclass
 class StreamingOperationOptions:
@@ -273,7 +275,8 @@ class Client(NativeResource):
                 event = IncomingPublishEvent(topic, payload)
                 options.incoming_publish_listener(event)
 
-        stream_binding = _awscrt.mqtt_request_response_client_create_stream(self._binding, options.subscription_topic_filter, on_subscription_status_event, on_incoming_publish_event)
+        stream_binding = _awscrt.mqtt_request_response_client_create_stream(
+            self._binding, options.subscription_topic_filter, on_subscription_status_event, on_incoming_publish_event)
 
         return StreamingOperation(stream_binding)
 
@@ -282,6 +285,7 @@ class StreamingOperation(NativeResource):
     """
     An operation that represents a stream of events broadcast to an MQTT topic
     """
+
     def __init__(self, binding):
         super().__init__()
 

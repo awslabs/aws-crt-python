@@ -112,20 +112,26 @@ def _bad_publish_topic(options):
 def _type_mismatch_publish_topic(options):
     options.publish_topic = [["oof"]]
 
+
 def _type_mismatch_correlation_token(options):
     options.correlation_token = [-1]
+
 
 def _subscription_topic_filter_none(options):
     options.subscription_topic_filter = None
 
+
 def _type_mismatch_stream_subscription_topic_filter(options):
     options.subscription_topic_filter = 6
+
 
 def _type_mismatch_subscription_status_listener(options):
     options.subscription_status_listener = "string"
 
+
 def _type_mismatch_incoming_publish_listener(options):
     options.incoming_publish_listener = "string"
+
 
 class MqttRequestResponseClientTest(NativeResourceTest):
 
@@ -374,10 +380,9 @@ class MqttRequestResponseClientTest(NativeResourceTest):
             if event.type == mqtt_request_response.SubscriptionStatusEventType.SUBSCRIPTION_ESTABLISHED:
                 subscribed_future.set_result(True)
 
-
         def on_incoming_publish(event):
             if event.topic == topic and event.payload == payload:
-                publish_received_future.set_result(True);
+                publish_received_future.set_result(True)
 
         stream_options = StreamingOperationOptions(topic, on_subscription_status_changed, on_incoming_publish)
         stream = rr_client.create_stream(stream_options)
@@ -704,6 +709,12 @@ class MqttRequestResponseClientTest(NativeResourceTest):
     #             streaming operation SUCCESS TEST CASES
     # ==============================================================
 
+    def test_streaming_operation_success5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_stream_success_test(protocol_client))
+
+    def test_streaming_operation_success311(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_stream_success_test(protocol_client))
+
     # ==============================================================
     #             create_stream FAILURE TEST CASES
     # ==============================================================
@@ -738,6 +749,7 @@ class MqttRequestResponseClientTest(NativeResourceTest):
     def test_create_stream_failure_incoming_publish_listener_type_mismatch311(self):
         self._do_mqtt311_test(lambda protocol_client: self._do_create_stream_failure_test(
             protocol_client, lambda options: _type_mismatch_incoming_publish_listener(options)))
+
 
 if __name__ == 'main':
     unittest.main()

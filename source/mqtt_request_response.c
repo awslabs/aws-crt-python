@@ -508,8 +508,13 @@ static struct mqtt_streaming_operation_binding *s_mqtt_streaming_operation_bindi
 static void s_mqtt_streaming_operation_binding_on_terminated(void *user_data) {
     struct mqtt_streaming_operation_binding *stream_binding = user_data;
 
-    Py_XDECREF(stream_binding->subscription_status_changed_callable);
-    Py_XDECREF(stream_binding->incoming_publish_callable);
+    PyGILState_STATE state;
+    if (!aws_py_gilstate_ensure(&state)) {
+        Py_XDECREF(stream_binding->subscription_status_changed_callable);
+        Py_XDECREF(stream_binding->incoming_publish_callable);
+
+        PyGILState_Release(state);
+    }
 
     aws_mem_release(aws_py_get_allocator(), stream_binding);
 }
