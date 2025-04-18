@@ -112,6 +112,26 @@ class HttpClientConnection(HttpConnectionBase):
             If successful, the Future will contain a new :class:`HttpClientConnection`.
             Otherwise, it will contain an exception.
         """
+        return HttpClientConnection._generic_new(
+            host_name,
+            port,
+            bootstrap,
+            socket_options,
+            tls_connection_options,
+            proxy_options)
+
+    @staticmethod
+    def _generic_new(
+            host_name,
+            port,
+            bootstrap=None,
+            socket_options=None,
+            tls_connection_options=None,
+            proxy_options=None,
+            expected_version=None):
+        """
+        Initialize the generic part of the HttpClientConnection class.
+        """
         assert isinstance(bootstrap, ClientBootstrap) or bootstrap is None
         assert isinstance(host_name, str)
         assert isinstance(port, int)
@@ -126,24 +146,34 @@ class HttpClientConnection(HttpConnectionBase):
 
             if not bootstrap:
                 bootstrap = ClientBootstrap.get_or_create_static_default()
-
-            connection = cls()
-            connection._host_name = host_name
-            connection._port = port
+            shutdown_future = None
 
             def on_connection_setup(binding, error_code, http_version):
-                if error_code == 0:
-                    connection._binding = binding
-                    connection._version = HttpVersion(http_version)
-                    future.set_result(connection)
-                else:
+                if expected_version and expected_version != http_version:
+                    # unexpected protocol version
+                    # AWS_ERROR_HTTP_UNSUPPORTED_PROTOCOL
+                    future.set_exception(awscrt.exceptions.from_code(2060))
+                    return
+                if error_code != 0:
                     future.set_exception(awscrt.exceptions.from_code(error_code))
+                    return
+                if http_version == HttpVersion.Http2:
+                    connection = Http2ClientConnection()
+                else:
+                    connection = HttpClientConnection()
+                connection._host_name = host_name
+                connection._port = port
 
-            # on_shutdown MUST NOT reference the connection itself, just the shutdown_future within it.
-            # Otherwise we create a circular reference that prevents the connection from getting GC'd.
-            shutdown_future = connection.shutdown_future
+                connection._binding = binding
+                connection._version = HttpVersion(http_version)
+                nonlocal shutdown_future
+                shutdown_future = connection.shutdown_future
+                future.set_result(connection)
 
             def on_shutdown(error_code):
+                if shutdown_future is None:
+                    # connection failed, ignore shutdown
+                    return
                 if error_code:
                     shutdown_future.set_exception(awscrt.exceptions.from_code(error_code))
                 else:
@@ -219,6 +249,33 @@ class HttpClientConnection(HttpConnectionBase):
         return HttpClientStream(self, request, on_response, on_body)
 
 
+class Http2ClientConnection(HttpClientConnection):
+    """
+    HTTP/2 client connection.
+
+    This class extends HttpClientConnection with HTTP/2 specific functionality.
+    """
+    @classmethod
+    def new(cls,
+            host_name,
+            port,
+            bootstrap=None,
+            socket_options=None,
+            tls_connection_options=None,
+            proxy_options=None):
+        return HttpClientConnection._generic_new(
+            host_name,
+            port,
+            bootstrap,
+            socket_options,
+            tls_connection_options,
+            proxy_options,
+            HttpVersion.Http2)
+
+    def request(self, request, on_response=None, on_body=None, manual_write=False):
+        return Http2ClientStream(self, request, on_response, on_body, manual_write)
+
+
 class HttpStreamBase(NativeResource):
     """Base for HTTP stream classes"""
     __slots__ = ('_connection', '_completion_future', '_on_body_cb')
@@ -258,9 +315,12 @@ class HttpClientStream(HttpStreamBase):
             completes. If the exchange fails to complete, the Future will
             contain an exception indicating why it failed.
     """
-    __slots__ = ('_response_status_code', '_on_response_cb', '_on_body_cb', '_request')
+    __slots__ = ('_response_status_code', '_on_response_cb', '_on_body_cb', '_request', '_version')
 
     def __init__(self, connection, request, on_response=None, on_body=None):
+        self._generic_init(connection, request, on_response, on_body)
+
+    def _generic_init(self, connection, request, on_response=None, on_body=None, http2_manual_write=False):
         assert isinstance(connection, HttpClientConnection)
         assert isinstance(request, HttpRequest)
         assert callable(on_response) or on_response is None
@@ -273,8 +333,14 @@ class HttpClientStream(HttpStreamBase):
 
         # keep HttpRequest alive until stream completes
         self._request = request
+        self._version = connection.version
 
-        self._binding = _awscrt.http_client_stream_new(self, connection, request)
+        self._binding = _awscrt.http_client_stream_new(self, connection, request, http2_manual_write)
+
+    @property
+    def version(self):
+        """HttpVersion: Protocol used by this stream"""
+        return self._version
 
     @property
     def response_status_code(self):
@@ -305,6 +371,24 @@ class HttpClientStream(HttpStreamBase):
             self._completion_future.set_result(self._response_status_code)
         else:
             self._completion_future.set_exception(awscrt.exceptions.from_code(error_code))
+
+
+class Http2ClientStream(HttpClientStream):
+    def __init__(self, connection, request, on_response=None, on_body=None, manual_write=False):
+        super()._generic_init(connection, request, on_response, on_body, manual_write)
+
+    def write_data(self, data_stream, end_stream=False):
+        future = Future()
+        body_stream = InputStream.wrap(data_stream, allow_none=True)
+
+        def on_write_complete(error_code):
+            if error_code:
+                future.set_exception(awscrt.exceptions.from_code(error_code))
+            else:
+                future.set_result(None)
+
+        _awscrt.http2_client_stream_write_data(self, body_stream, end_stream, on_write_complete)
+        return future
 
 
 class HttpMessageBase(NativeResource):
