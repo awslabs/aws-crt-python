@@ -23,6 +23,63 @@ class HttpVersion(IntEnum):
     Http2 = 3  #: HTTP/2
 
 
+class Http2SettingsID(IntEnum):
+    """HTTP/2 Predefined settings(RFC-9113 6.5.2)."""
+    HEADER_TABLE_SIZE = 1
+    ENABLE_PUSH = 2
+    MAX_CONCURRENT_STREAMS = 3
+    INITIAL_WINDOW_SIZE = 4
+    MAX_FRAME_SIZE = 5
+    MAX_HEADER_LIST_SIZE = 6
+
+
+class Http2Setting:
+    """HTTP/2 Setting.
+    Settings are very complicated in HTTP/2.
+    Each end has its own settings, and the local settings cannot be applied
+    until the remote end acknowledges it.
+    Each end can change its settings at any time, while the order of the settings
+    changed may also result in different behavior.
+
+    Each setting has its boundary and initial values defined in RFC-9113 6.5.2:
+    Initial values are listed below, while the range can be found in VALID_RANGES:
+    HEADER_TABLE_SIZE: 4096
+    ENABLE_PUSH: 1
+    MAX_CONCURRENT_STREAMS: 2^32-1
+    INITIAL_WINDOW_SIZE: 2^16-1
+    MAX_FRAME_SIZE: 2^14
+    MAX_HEADER_LIST_SIZE: 2^32-1
+
+    Args:
+        id (Http2SettingsID): Setting ID.
+        value (int): Setting value.
+    """
+    VALID_RANGES = {
+        Http2SettingsID.HEADER_TABLE_SIZE: (0, 2**32 - 1),
+        Http2SettingsID.ENABLE_PUSH: (0, 1),
+        Http2SettingsID.MAX_CONCURRENT_STREAMS: (0, 2**32 - 1),
+        Http2SettingsID.INITIAL_WINDOW_SIZE: (0, 2**31 - 1),
+        Http2SettingsID.MAX_FRAME_SIZE: (2**14, 2**24 - 1),
+        Http2SettingsID.MAX_HEADER_LIST_SIZE: (0, 2**32 - 1),
+    }
+
+    def __init__(self, id, value):
+        assert isinstance(id, Http2SettingsID)
+        assert isinstance(value, int)
+        self.id = id
+
+        # Verify value is within allowed range for the given setting
+        self._validate_setting_value(id, value)
+        self.value = value
+
+    def _validate_setting_value(self, id, value):
+        """Validate that setting value is within its allowed range according to RFC-9113 6.5.2."""
+        min_value, max_value = self.VALID_RANGES[id]
+        if not min_value <= value <= max_value:
+            setting_name = id.name
+            raise ValueError(f"{setting_name} must be between {min_value} and {max_value}, got {value}")
+
+
 class HttpConnectionBase(NativeResource):
     """Base for HTTP connection classes."""
 
@@ -254,6 +311,12 @@ class Http2ClientConnection(HttpClientConnection):
     HTTP/2 client connection.
 
     This class extends HttpClientConnection with HTTP/2 specific functionality.
+
+    on_remote_settings_changed: Optional callback invoked once the remote peer changes its settings.
+        And the settings are acknowledged by the local connection.
+        The function should take the following arguments and return nothing:
+
+            *   `settings` (List[Http2Setting]): List of settings that were changed.
     """
     @classmethod
     def new(cls,
@@ -262,7 +325,14 @@ class Http2ClientConnection(HttpClientConnection):
             bootstrap=None,
             socket_options=None,
             tls_connection_options=None,
-            proxy_options=None):
+            proxy_options=None,
+            initial_settings=None,
+            on_remote_settings_changed=None):
+
+        def _on_remote_settings_changed(settings: list):
+            if on_remote_settings_changed:
+                on_remote_settings_changed(settings)
+
         return HttpClientConnection._generic_new(
             host_name,
             port,
