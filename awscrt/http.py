@@ -28,12 +28,8 @@ class HttpConnectionBase(NativeResource):
 
     __slots__ = ('_shutdown_future', '_version')
 
-    def __init__(self, core=None):
+    def __init__(self):
         super().__init__()
-        if core is None:
-            self._core = _HttpClientConnectionCore()
-        else:
-            self._core = core
 
         self._shutdown_future = Future()
 
@@ -44,7 +40,7 @@ class HttpConnectionBase(NativeResource):
         Future will contain a result of None, or an exception indicating why shutdown occurred.
         Note that the connection may have been garbage-collected before this future completes.
         """
-        return self._core.shutdown_future
+        return self._shutdown_future
 
     @property
     def version(self):
@@ -153,8 +149,8 @@ class HttpClientConnection(HttpConnectionBase):
                 bootstrap = ClientBootstrap.get_or_create_static_default()
 
             connection_core = _HttpClientConnectionCore(
-                host_name=host_name,
-                port=port,
+                host_name,
+                port,
                 bootstrap=bootstrap,
                 tls_connection_options=tls_connection_options,
                 connect_future=future,
@@ -733,6 +729,8 @@ class _HttpClientConnectionCore:
         connection._version = HttpVersion(http_version)
         self._shutdown_future = connection.shutdown_future
         self._connect_future.set_result(connection)
+        # release reference to the future, as it points to connection which creates a cycle reference.
+        self._connect_future = None
 
     def _on_shutdown(self, error_code):
         if self._shutdown_future is None:
