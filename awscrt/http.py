@@ -28,8 +28,12 @@ class HttpConnectionBase(NativeResource):
 
     __slots__ = ('_shutdown_future', '_version')
 
-    def __init__(self):
+    def __init__(self, core=None):
         super().__init__()
+        if core is None:
+            self._core = _HttpClientConnectionCore()
+        else:
+            self._core = core
 
         self._shutdown_future = Future()
 
@@ -40,7 +44,7 @@ class HttpConnectionBase(NativeResource):
         Future will contain a result of None, or an exception indicating why shutdown occurred.
         Note that the connection may have been garbage-collected before this future completes.
         """
-        return self._shutdown_future
+        return self._core.shutdown_future
 
     @property
     def version(self):
@@ -140,54 +144,30 @@ class HttpClientConnection(HttpConnectionBase):
         assert isinstance(proxy_options, HttpProxyOptions) or proxy_options is None
 
         future = Future()
+
         try:
             if not socket_options:
                 socket_options = SocketOptions()
 
             if not bootstrap:
                 bootstrap = ClientBootstrap.get_or_create_static_default()
-            shutdown_future = None
 
-            def on_connection_setup(binding, error_code, http_version):
-                if expected_version and expected_version != http_version:
-                    # unexpected protocol version
-                    # AWS_ERROR_HTTP_UNSUPPORTED_PROTOCOL
-                    future.set_exception(awscrt.exceptions.from_code(2060))
-                    return
-                if error_code != 0:
-                    future.set_exception(awscrt.exceptions.from_code(error_code))
-                    return
-                if http_version == HttpVersion.Http2:
-                    connection = Http2ClientConnection()
-                else:
-                    connection = HttpClientConnection()
-                connection._host_name = host_name
-                connection._port = port
-
-                connection._binding = binding
-                connection._version = HttpVersion(http_version)
-                nonlocal shutdown_future
-                shutdown_future = connection.shutdown_future
-                future.set_result(connection)
-
-            def on_shutdown(error_code):
-                if shutdown_future is None:
-                    # connection failed, ignore shutdown
-                    return
-                if error_code:
-                    shutdown_future.set_exception(awscrt.exceptions.from_code(error_code))
-                else:
-                    shutdown_future.set_result(None)
+            connection_core = _HttpClientConnectionCore(
+                host_name=host_name,
+                port=port,
+                bootstrap=bootstrap,
+                tls_connection_options=tls_connection_options,
+                connect_future=future,
+                expected_version=expected_version)
 
             _awscrt.http_client_connection_new(
                 bootstrap,
-                on_connection_setup,
-                on_shutdown,
                 host_name,
                 port,
                 socket_options,
                 tls_connection_options,
-                proxy_options)
+                proxy_options,
+                connection_core)
 
         except Exception as e:
             future.set_exception(e)
@@ -709,3 +689,56 @@ class HttpProxyOptions:
         self.auth_username = auth_username
         self.auth_password = auth_password
         self.connection_type = connection_type
+
+
+class _HttpClientConnectionCore:
+    '''
+    Private class to keep all the related Python object alive until C land clean up for HttpClientConnection
+    '''
+
+    def __init__(
+            self,
+            host_name,
+            port,
+            bootstrap=None,
+            tls_connection_options=None,
+            connect_future=None,
+            expected_version=None):
+        self._shutdown_future = None
+        self._host_name = host_name
+        self._port = port
+        self._bootstrap = bootstrap
+        self._tls_connection_options = tls_connection_options
+        self._connect_future = connect_future
+        self._expected_version = expected_version
+
+    def _on_connection_setup(self, binding, error_code, http_version):
+        if self._expected_version and self._expected_version != http_version:
+            # unexpected protocol version
+            # AWS_ERROR_HTTP_UNSUPPORTED_PROTOCOL
+            self._connect_future.set_exception(awscrt.exceptions.from_code(2060))
+            return
+        if error_code != 0:
+            self._connect_future.set_exception(awscrt.exceptions.from_code(error_code))
+            return
+        if http_version == HttpVersion.Http2:
+            connection = Http2ClientConnection()
+        else:
+            connection = HttpClientConnection()
+
+        connection._host_name = self._host_name
+        connection._port = self._port
+
+        connection._binding = binding
+        connection._version = HttpVersion(http_version)
+        self._shutdown_future = connection.shutdown_future
+        self._connect_future.set_result(connection)
+
+    def _on_shutdown(self, error_code):
+        if self._shutdown_future is None:
+            # connection failed, ignore shutdown
+            return
+        if error_code:
+            self._shutdown_future.set_exception(awscrt.exceptions.from_code(error_code))
+        else:
+            self._shutdown_future.set_result(None)

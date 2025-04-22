@@ -22,26 +22,15 @@ static const char *s_capsule_name_http_connection = "aws_http_connection";
  */
 struct http_connection_binding {
     struct aws_http_connection *native;
+    /* Reference to python object that reference to other related python object to keep it alive */
+    PyObject *py_core;
 
     bool release_called;
     bool shutdown_called;
-
-    /* Setup callback, reference cleared after invoking */
-    PyObject *on_setup;
-
-    /* Shutdown callback, reference cleared after setting result */
-    PyObject *on_shutdown;
-
-    /* Dependencies that must outlive this */
-    PyObject *bootstrap;
-    PyObject *tls_ctx;
 };
 
 static void s_connection_destroy(struct http_connection_binding *connection) {
-    Py_XDECREF(connection->on_setup);
-    Py_XDECREF(connection->on_shutdown);
-    Py_XDECREF(connection->bootstrap);
-    Py_XDECREF(connection->tls_ctx);
+    Py_XDECREF(connection->py_core);
 
     aws_mem_release(aws_py_get_allocator(), connection);
 }
@@ -84,14 +73,14 @@ static void s_on_connection_shutdown(struct aws_http_connection *native_connecti
     bool destroy_after_shutdown = connection->release_called;
 
     /* Invoke on_shutdown, then clear our reference to it */
-    PyObject *result = PyObject_CallFunction(connection->on_shutdown, "(i)", error_code);
+    PyObject *result = PyObject_CallMethod(connection->py_core, "_on_shutdown", "(i)", error_code);
+
     if (result) {
         Py_DECREF(result);
     } else {
         /* Callback might fail during application shutdown */
         PyErr_WriteUnraisable(PyErr_Occurred());
     }
-    Py_CLEAR(connection->on_shutdown);
 
     if (destroy_after_shutdown) {
         s_connection_destroy(connection);
@@ -107,7 +96,6 @@ static void s_on_client_connection_setup(
 
     struct http_connection_binding *connection = user_data;
     AWS_FATAL_ASSERT((native_connection != NULL) ^ error_code);
-    AWS_FATAL_ASSERT(connection->on_setup);
 
     connection->native = native_connection;
 
@@ -126,9 +114,8 @@ static void s_on_client_connection_setup(
         http_version = aws_http_connection_get_version(native_connection);
     }
 
-    /* Invoke on_setup, then clear our reference to it */
-    PyObject *result =
-        PyObject_CallFunction(connection->on_setup, "(Oii)", capsule ? capsule : Py_None, error_code, http_version);
+    PyObject *result = PyObject_CallMethod(
+        connection->py_core, "_on_connection_setup", "(Oii)", capsule ? capsule : Py_None, error_code, http_version);
 
     if (result) {
         Py_DECREF(result);
@@ -136,8 +123,6 @@ static void s_on_client_connection_setup(
         /* Callback might fail during application shutdown */
         PyErr_WriteUnraisable(PyErr_Occurred());
     }
-
-    Py_CLEAR(connection->on_setup);
 
     if (native_connection) {
         /* Connection exists, but failed to create capsule. Release connection, which eventually destroys binding */
@@ -159,27 +144,25 @@ PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args) {
     struct aws_allocator *allocator = aws_py_get_allocator();
 
     PyObject *bootstrap_py;
-    PyObject *on_connection_setup_py;
-    PyObject *on_shutdown_py;
     const char *host_name;
     Py_ssize_t host_name_len;
     uint32_t port_number;
     PyObject *socket_options_py;
     PyObject *tls_options_py;
     PyObject *proxy_options_py;
+    PyObject *py_core;
 
     if (!PyArg_ParseTuple(
             args,
-            "OOOs#IOOO",
+            "Os#IOOOO",
             &bootstrap_py,
-            &on_connection_setup_py,
-            &on_shutdown_py,
             &host_name,
             &host_name_len,
             &port_number,
             &socket_options_py,
             &tls_options_py,
-            &proxy_options_py)) {
+            &proxy_options_py,
+            &py_core)) {
         return NULL;
     }
 
@@ -199,12 +182,6 @@ PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args) {
     if (tls_options_py != Py_None) {
         tls_options = aws_py_get_tls_connection_options(tls_options_py);
         if (!tls_options) {
-            goto error;
-        }
-
-        connection->tls_ctx = PyObject_GetAttrString(tls_options_py, "tls_ctx"); /* Creates new reference */
-        if (!connection->tls_ctx || connection->tls_ctx == Py_None) {
-            PyErr_SetString(PyExc_TypeError, "tls_connection_options.tls_ctx is invalid");
             goto error;
         }
     }
@@ -239,12 +216,8 @@ PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args) {
         .on_shutdown = s_on_connection_shutdown,
     };
 
-    connection->on_setup = on_connection_setup_py;
-    Py_INCREF(connection->on_setup);
-    connection->on_shutdown = on_shutdown_py;
-    Py_INCREF(connection->on_shutdown);
-    connection->bootstrap = bootstrap_py;
-    Py_INCREF(connection->bootstrap);
+    connection->py_core = py_core;
+    Py_INCREF(connection->py_core);
 
     if (aws_http_client_connect(&http_options)) {
         PyErr_SetAwsLastError();
