@@ -138,6 +138,84 @@ static void s_on_client_connection_setup(
     PyGILState_Release(state);
 }
 
+/* Function to convert Python list of Http2Setting to C array of aws_http2_setting */
+static int s_convert_http2_settings(
+    PyObject *initial_settings_py,
+    struct aws_allocator *allocator,
+    struct aws_http2_setting **out_settings,
+    size_t *out_size) {
+    Py_ssize_t py_list_size = PyList_Size(initial_settings_py);
+    if (py_list_size == 0) {
+        *out_size = 0;
+        *out_settings = NULL;
+        return AWS_OP_SUCCESS;
+    }
+
+    *out_settings = aws_mem_calloc(allocator, py_list_size, sizeof(struct aws_http2_setting));
+
+    for (Py_ssize_t i = 0; i < py_list_size; i++) {
+        PyObject *setting_py = PyList_GetItem(initial_settings_py, i);
+
+        /* Get id attribute */
+        enum aws_http2_settings_id id = PyObject_GetAttrAsIntEnum(setting_py, "Http2Setting", "id");
+        if (PyErr_Occurred()) {
+            goto error;
+        }
+
+        /* Get value attribute */
+        uint32_t value = PyObject_GetAttrAsUint32(setting_py, "Http2Setting", "value");
+        if (PyErr_Occurred()) {
+            goto error;
+        }
+        (*out_settings)[i].id = id;
+        (*out_settings)[i].value = value;
+    }
+
+    *out_size = (size_t)py_list_size;
+    return AWS_OP_SUCCESS;
+error:
+    *out_size = 0;
+    aws_mem_release(allocator, out_settings);
+    *out_settings = NULL;
+    return AWS_OP_ERR;
+}
+
+static void s_http2_on_remote_settings_change(
+    struct aws_http_connection *http2_connection,
+    const struct aws_http2_setting *settings_array,
+    size_t num_settings,
+    void *user_data) {
+    struct http_connection_binding *connection = user_data;
+
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
+    // Create a new list to hold tuples
+    PyObject *py_settings_list = PyList_New(num_settings);
+    if (!py_settings_list) {
+        PyErr_WriteUnraisable(PyErr_Occurred());
+        return;
+    }
+    for (size_t i = 0; i < num_settings; i++) {
+        PyObject *tuple = Py_BuildValue("(iI)", settings_array[i].id, settings_array[i].value);
+        if (!tuple) {
+            PyErr_WriteUnraisable(PyErr_Occurred());
+            goto done;
+        }
+        PyList_SetItem(py_settings_list, i, tuple); /* steals reference to tuple */
+    }
+    PyObject *result = PyObject_CallMethod(connection->py_core, "_on_remote_settings_changed", "(O)", py_settings_list);
+    if (!result) {
+        PyErr_WriteUnraisable(PyErr_Occurred());
+        goto done;
+    }
+    Py_DECREF(result);
+done:
+    Py_XDECREF(py_settings_list);
+    PyGILState_Release(state);
+}
+
 PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args) {
     (void)self;
 
@@ -150,11 +228,14 @@ PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args) {
     PyObject *socket_options_py;
     PyObject *tls_options_py;
     PyObject *proxy_options_py;
+    PyObject *initial_settings_py;
+    PyObject *on_remote_settings_changed_py;
     PyObject *py_core;
+    bool success = false;
 
     if (!PyArg_ParseTuple(
             args,
-            "Os#IOOOO",
+            "Os#IOOOOOO",
             &bootstrap_py,
             &host_name,
             &host_name_len,
@@ -162,6 +243,8 @@ PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args) {
             &socket_options_py,
             &tls_options_py,
             &proxy_options_py,
+            &initial_settings_py,
+            &on_remote_settings_changed_py,
             &py_core)) {
         return NULL;
     }
@@ -172,23 +255,34 @@ PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args) {
     }
 
     struct http_connection_binding *connection = aws_mem_calloc(allocator, 1, sizeof(struct http_connection_binding));
-    if (!connection) {
-        return PyErr_AwsLastError();
-    }
-
     /* From hereon, we need to clean up if errors occur */
+    struct aws_http2_setting *http2_settings = NULL;
+    size_t http2_settings_count = 0;
+    struct aws_http2_connection_options http2_options = {0};
 
     struct aws_tls_connection_options *tls_options = NULL;
     if (tls_options_py != Py_None) {
         tls_options = aws_py_get_tls_connection_options(tls_options_py);
         if (!tls_options) {
-            goto error;
+            goto done;
         }
     }
 
     struct aws_socket_options socket_options;
     if (!aws_py_socket_options_init(&socket_options, socket_options_py)) {
-        goto error;
+        goto done;
+    }
+
+    if (initial_settings_py != Py_None) {
+        /* Get the array from the pylist */
+        if (s_convert_http2_settings(initial_settings_py, allocator, &http2_settings, &http2_settings_count)) {
+            goto done;
+        }
+        http2_options.initial_settings_array = http2_settings;
+        http2_options.num_initial_settings = http2_settings_count;
+    }
+    if (on_remote_settings_changed_py != Py_None) {
+        http2_options.on_remote_settings_change = s_http2_on_remote_settings_change;
     }
 
     /* proxy options are optional */
@@ -197,7 +291,7 @@ PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args) {
     if (proxy_options_py != Py_None) {
         proxy_options = &proxy_options_storage;
         if (!aws_py_http_proxy_options_init(proxy_options, proxy_options_py)) {
-            goto error;
+            goto done;
         }
     }
 
@@ -214,6 +308,7 @@ PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args) {
         .socket_options = &socket_options,
         .on_setup = s_on_client_connection_setup,
         .on_shutdown = s_on_connection_shutdown,
+        .http2_options = &http2_options,
     };
 
     connection->py_core = py_core;
@@ -221,14 +316,19 @@ PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args) {
 
     if (aws_http_client_connect(&http_options)) {
         PyErr_SetAwsLastError();
-        goto error;
+        goto done;
     }
+    success = true;
 
+done:
+    if (http2_settings) {
+        aws_mem_release(allocator, http2_settings);
+    }
+    if (!success) {
+        s_connection_destroy(connection);
+        return NULL;
+    }
     Py_RETURN_NONE;
-
-error:
-    s_connection_destroy(connection);
-    return NULL;
 }
 
 PyObject *aws_py_http_connection_close(PyObject *self, PyObject *args) {

@@ -13,6 +13,7 @@ from awscrt import NativeResource
 import awscrt.exceptions
 from awscrt.io import ClientBootstrap, InputStream, TlsConnectionOptions, SocketOptions
 from enum import IntEnum
+from typing import List, Tuple, Dict, Optional, Union, Iterator, Callable, Any
 
 
 class HttpVersion(IntEnum):
@@ -23,7 +24,7 @@ class HttpVersion(IntEnum):
     Http2 = 3  #: HTTP/2
 
 
-class Http2SettingsID(IntEnum):
+class Http2SettingID(IntEnum):
     """HTTP/2 Predefined settings(RFC-9113 6.5.2)."""
     HEADER_TABLE_SIZE = 1
     ENABLE_PUSH = 2
@@ -51,20 +52,20 @@ class Http2Setting:
     MAX_HEADER_LIST_SIZE: 2^32-1
 
     Args:
-        id (Http2SettingsID): Setting ID.
+        id (Http2SettingID): Setting ID.
         value (int): Setting value.
     """
-    VALID_RANGES = {
-        Http2SettingsID.HEADER_TABLE_SIZE: (0, 2**32 - 1),
-        Http2SettingsID.ENABLE_PUSH: (0, 1),
-        Http2SettingsID.MAX_CONCURRENT_STREAMS: (0, 2**32 - 1),
-        Http2SettingsID.INITIAL_WINDOW_SIZE: (0, 2**31 - 1),
-        Http2SettingsID.MAX_FRAME_SIZE: (2**14, 2**24 - 1),
-        Http2SettingsID.MAX_HEADER_LIST_SIZE: (0, 2**32 - 1),
+    VALID_RANGES: Dict[Http2SettingID, Tuple[int, int]] = {
+        Http2SettingID.HEADER_TABLE_SIZE: (0, 2**32 - 1),
+        Http2SettingID.ENABLE_PUSH: (0, 1),
+        Http2SettingID.MAX_CONCURRENT_STREAMS: (0, 2**32 - 1),
+        Http2SettingID.INITIAL_WINDOW_SIZE: (0, 2**31 - 1),
+        Http2SettingID.MAX_FRAME_SIZE: (2**14, 2**24 - 1),
+        Http2SettingID.MAX_HEADER_LIST_SIZE: (0, 2**32 - 1),
     }
 
-    def __init__(self, id, value):
-        assert isinstance(id, Http2SettingsID)
+    def __init__(self, id: Http2SettingID, value: int) -> None:
+        assert isinstance(id, Http2SettingID)
         assert isinstance(value, int)
         self.id = id
 
@@ -72,7 +73,7 @@ class Http2Setting:
         self._validate_setting_value(id, value)
         self.value = value
 
-    def _validate_setting_value(self, id, value):
+    def _validate_setting_value(self, id: Http2SettingID, value: int) -> None:
         """Validate that setting value is within its allowed range according to RFC-9113 6.5.2."""
         min_value, max_value = self.VALID_RANGES[id]
         if not min_value <= value <= max_value:
@@ -85,13 +86,12 @@ class HttpConnectionBase(NativeResource):
 
     __slots__ = ('_shutdown_future', '_version')
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
-
         self._shutdown_future = Future()
 
     @property
-    def shutdown_future(self):
+    def shutdown_future(self) -> Future:
         """
         concurrent.futures.Future: Completes when this connection has finished shutting down.
         Future will contain a result of None, or an exception indicating why shutdown occurred.
@@ -100,11 +100,11 @@ class HttpConnectionBase(NativeResource):
         return self._shutdown_future
 
     @property
-    def version(self):
+    def version(self) -> HttpVersion:
         """HttpVersion: Protocol used by this connection"""
         return self._version
 
-    def close(self):
+    def close(self) -> Future:
         """Close the connection.
 
         Shutdown is asynchronous. This call has no effect if the connection is already
@@ -117,7 +117,7 @@ class HttpConnectionBase(NativeResource):
         _awscrt.http_connection_close(self._binding)
         return self.shutdown_future
 
-    def is_open(self):
+    def is_open(self) -> bool:
         """
         Returns:
             bool: True if this connection is open and usable, False otherwise.
@@ -137,12 +137,12 @@ class HttpClientConnection(HttpConnectionBase):
 
     @classmethod
     def new(cls,
-            host_name,
-            port,
-            bootstrap=None,
-            socket_options=None,
-            tls_connection_options=None,
-            proxy_options=None):
+            host_name: str,
+            port: int,
+            bootstrap: Optional[ClientBootstrap] = None,
+            socket_options: Optional[SocketOptions] = None,
+            tls_connection_options: Optional[TlsConnectionOptions] = None,
+            proxy_options: Optional['HttpProxyOptions'] = None) -> Future:
         """
         Asynchronously establish a new HttpClientConnection.
 
@@ -179,13 +179,15 @@ class HttpClientConnection(HttpConnectionBase):
 
     @staticmethod
     def _generic_new(
-            host_name,
-            port,
-            bootstrap=None,
-            socket_options=None,
-            tls_connection_options=None,
-            proxy_options=None,
-            expected_version=None):
+            host_name: str,
+            port: int,
+            bootstrap: Optional[ClientBootstrap] = None,
+            socket_options: Optional[SocketOptions] = None,
+            tls_connection_options: Optional[TlsConnectionOptions] = None,
+            proxy_options: Optional['HttpProxyOptions'] = None,
+            expected_version: Optional[HttpVersion] = None,
+            initial_settings: Optional[List[Http2Setting]] = None,
+            on_remote_settings_changed: Optional[Callable[[List[Http2Setting]], None]] = None) -> Future:
         """
         Initialize the generic part of the HttpClientConnection class.
         """
@@ -211,7 +213,8 @@ class HttpClientConnection(HttpConnectionBase):
                 bootstrap=bootstrap,
                 tls_connection_options=tls_connection_options,
                 connect_future=future,
-                expected_version=expected_version)
+                expected_version=expected_version,
+                on_remote_settings_changed=on_remote_settings_changed)
 
             _awscrt.http_client_connection_new(
                 bootstrap,
@@ -220,6 +223,8 @@ class HttpClientConnection(HttpConnectionBase):
                 socket_options,
                 tls_connection_options,
                 proxy_options,
+                initial_settings,
+                on_remote_settings_changed,
                 connection_core)
 
         except Exception as e:
@@ -228,16 +233,19 @@ class HttpClientConnection(HttpConnectionBase):
         return future
 
     @property
-    def host_name(self):
+    def host_name(self) -> str:
         """Remote hostname"""
         return self._host_name
 
     @property
-    def port(self):
+    def port(self) -> int:
         """Remote port"""
         return self._port
 
-    def request(self, request, on_response=None, on_body=None):
+    def request(self,
+                request: 'HttpRequest',
+                on_response: Optional[Callable[..., None]] = None,
+                on_body: Optional[Callable[..., None]] = None) -> 'HttpClientStream':
         """Create :class:`HttpClientStream` to carry out the request/response exchange.
 
         NOTE: The HTTP stream sends no data until :meth:`HttpClientStream.activate()`
@@ -283,32 +291,32 @@ class HttpClientConnection(HttpConnectionBase):
 
 
 class Http2ClientConnection(HttpClientConnection):
-    """
-    HTTP/2 client connection.
 
-    This class extends HttpClientConnection with HTTP/2 specific functionality.
-
-    on_remote_settings_changed: Optional callback invoked once the remote peer changes its settings.
-        And the settings are acknowledged by the local connection.
-        The function should take the following arguments and return nothing:
-
-            *   `settings` (List[Http2Setting]): List of settings that were changed.
-    """
     @classmethod
     def new(cls,
-            host_name,
-            port,
-            bootstrap=None,
-            socket_options=None,
-            tls_connection_options=None,
-            proxy_options=None,
-            initial_settings=None,
-            on_remote_settings_changed=None):
+            host_name: str,
+            port: int,
+            bootstrap: Optional[ClientBootstrap] = None,
+            socket_options: Optional[SocketOptions] = None,
+            tls_connection_options: Optional[TlsConnectionOptions] = None,
+            proxy_options: Optional['HttpProxyOptions'] = None,
+            initial_settings: Optional[List[Http2Setting]] = None,
+            on_remote_settings_changed: Optional[Callable[[List[Http2Setting]], None]] = None) -> Future:
+        """
+        Asynchronously establish an HTTP/2 client connection.
+        Notes: to set up the connection, the server must support HTTP/2 and TlsConnectionOptions
 
-        def _on_remote_settings_changed(settings: list):
-            if on_remote_settings_changed:
-                on_remote_settings_changed(settings)
+        This class extends HttpClientConnection with HTTP/2 specific functionality.
 
+        HTTP/2 specific args:
+            initial_settings (List[Http2Setting]): The initial settings to change for the connection.
+
+            on_remote_settings_changed: Optional callback invoked once the remote peer changes its settings.
+                And the settings are acknowledged by the local connection.
+                The function should take the following arguments and return nothing:
+
+                    *   `settings` (List[Http2Setting]): List of settings that were changed.
+        """
         return HttpClientConnection._generic_new(
             host_name,
             port,
@@ -316,9 +324,15 @@ class Http2ClientConnection(HttpClientConnection):
             socket_options,
             tls_connection_options,
             proxy_options,
-            HttpVersion.Http2)
+            HttpVersion.Http2,
+            initial_settings,
+            on_remote_settings_changed)
 
-    def request(self, request, on_response=None, on_body=None, manual_write=False):
+    def request(self,
+                request: 'HttpRequest',
+                on_response: Optional[Callable[..., None]] = None,
+                on_body: Optional[Callable[..., None]] = None,
+                manual_write: bool = False) -> 'Http2ClientStream':
         return Http2ClientStream(self, request, on_response, on_body, manual_write)
 
 
@@ -326,21 +340,21 @@ class HttpStreamBase(NativeResource):
     """Base for HTTP stream classes"""
     __slots__ = ('_connection', '_completion_future', '_on_body_cb')
 
-    def __init__(self, connection, on_body=None):
+    def __init__(self, connection: HttpConnectionBase, on_body: Optional[Callable[..., None]] = None) -> None:
         super().__init__()
-        self._connection = connection
-        self._completion_future = Future()
-        self._on_body_cb = on_body
+        self._connection: HttpConnectionBase = connection
+        self._completion_future: Future = Future()
+        self._on_body_cb: Optional[Callable[..., None]] = on_body
 
     @property
-    def connection(self):
+    def connection(self) -> HttpConnectionBase:
         return self._connection
 
     @property
-    def completion_future(self):
+    def completion_future(self) -> Future:
         return self._completion_future
 
-    def _on_body(self, chunk):
+    def _on_body(self, chunk: bytes) -> None:
         if self._on_body_cb:
             self._on_body_cb(http_stream=self, chunk=chunk)
 
@@ -363,10 +377,19 @@ class HttpClientStream(HttpStreamBase):
     """
     __slots__ = ('_response_status_code', '_on_response_cb', '_on_body_cb', '_request', '_version')
 
-    def __init__(self, connection, request, on_response=None, on_body=None):
+    def __init__(self,
+                 connection: HttpClientConnection,
+                 request: 'HttpRequest',
+                 on_response: Optional[Callable[..., None]] = None,
+                 on_body: Optional[Callable[..., None]] = None) -> None:
         self._generic_init(connection, request, on_response, on_body)
 
-    def _generic_init(self, connection, request, on_response=None, on_body=None, http2_manual_write=False):
+    def _generic_init(self,
+                      connection: HttpClientConnection,
+                      request: 'HttpRequest',
+                      on_response: Optional[Callable[..., None]] = None,
+                      on_body: Optional[Callable[..., None]] = None,
+                      http2_manual_write: bool = False) -> None:
         assert isinstance(connection, HttpClientConnection)
         assert isinstance(request, HttpRequest)
         assert callable(on_response) or on_response is None
@@ -374,28 +397,28 @@ class HttpClientStream(HttpStreamBase):
 
         super().__init__(connection, on_body)
 
-        self._on_response_cb = on_response
-        self._response_status_code = None
+        self._on_response_cb: Optional[Callable[..., None]] = on_response
+        self._response_status_code: Optional[int] = None
 
         # keep HttpRequest alive until stream completes
-        self._request = request
-        self._version = connection.version
+        self._request: 'HttpRequest' = request
+        self._version: HttpVersion = connection.version
 
         self._binding = _awscrt.http_client_stream_new(self, connection, request, http2_manual_write)
 
     @property
-    def version(self):
+    def version(self) -> HttpVersion:
         """HttpVersion: Protocol used by this stream"""
         return self._version
 
     @property
-    def response_status_code(self):
+    def response_status_code(self) -> Optional[int]:
         """int: The response status code.
 
         This is None until a response arrives."""
         return self._response_status_code
 
-    def activate(self):
+    def activate(self) -> None:
         """Begin sending the request.
 
         The HTTP stream does nothing until this is called. Call activate() when you
@@ -403,15 +426,15 @@ class HttpClientStream(HttpStreamBase):
         """
         _awscrt.http_client_stream_activate(self)
 
-    def _on_response(self, status_code, name_value_pairs):
+    def _on_response(self, status_code: int, name_value_pairs: List[Tuple[str, str]]) -> None:
         self._response_status_code = status_code
 
         if self._on_response_cb:
             self._on_response_cb(http_stream=self, status_code=status_code, headers=name_value_pairs)
 
-    def _on_complete(self, error_code):
+    def _on_complete(self, error_code: int) -> None:
         # done with HttpRequest, drop reference
-        self._request = None
+        self._request = None  # type: ignore
 
         if error_code == 0:
             self._completion_future.set_result(self._response_status_code)
@@ -420,14 +443,21 @@ class HttpClientStream(HttpStreamBase):
 
 
 class Http2ClientStream(HttpClientStream):
-    def __init__(self, connection, request, on_response=None, on_body=None, manual_write=False):
+    def __init__(self,
+                 connection: HttpClientConnection,
+                 request: 'HttpRequest',
+                 on_response: Optional[Callable[..., None]] = None,
+                 on_body: Optional[Callable[..., None]] = None,
+                 manual_write: bool = False) -> None:
         super()._generic_init(connection, request, on_response, on_body, manual_write)
 
-    def write_data(self, data_stream, end_stream=False):
-        future = Future()
-        body_stream = InputStream.wrap(data_stream, allow_none=True)
+    def write_data(self,
+                   data_stream: Union[InputStream, Any],
+                   end_stream: bool = False) -> Future:
+        future: Future = Future()
+        body_stream: InputStream = InputStream.wrap(data_stream, allow_none=True)
 
-        def on_write_complete(error_code):
+        def on_write_complete(error_code: int) -> None:
             if error_code:
                 future.set_exception(awscrt.exceptions.from_code(error_code))
             else:
@@ -443,28 +473,29 @@ class HttpMessageBase(NativeResource):
     """
     __slots__ = ('_headers', '_body_stream')
 
-    def __init__(self, binding, headers, body_stream=None):
+    def __init__(self, binding: Any, headers: 'HttpHeaders',
+                 body_stream: Optional[Union[InputStream, Any]] = None) -> None:
         assert isinstance(headers, HttpHeaders)
 
         super().__init__()
         self._binding = binding
-        self._headers = headers
-        self._body_stream = None
+        self._headers: HttpHeaders = headers
+        self._body_stream: Optional[InputStream] = None
 
         if body_stream:
             self.body_stream = body_stream
 
     @property
-    def headers(self):
+    def headers(self) -> 'HttpHeaders':
         """HttpHeaders: Headers to send."""
         return self._headers
 
     @property
-    def body_stream(self):
+    def body_stream(self) -> Optional[InputStream]:
         return self._body_stream
 
     @body_stream.setter
-    def body_stream(self, stream):
+    def body_stream(self, stream: Union[InputStream, Any]) -> None:
         self._body_stream = InputStream.wrap(stream)
         _awscrt.http_message_set_body_stream(self._binding, self._body_stream)
 
@@ -485,7 +516,11 @@ class HttpRequest(HttpMessageBase):
 
     __slots__ = ()
 
-    def __init__(self, method='GET', path='/', headers=None, body_stream=None):
+    def __init__(self,
+                 method: str = 'GET',
+                 path: str = '/',
+                 headers: Optional['HttpHeaders'] = None,
+                 body_stream: Optional[Union[InputStream, Any]] = None) -> None:
         assert isinstance(headers, HttpHeaders) or headers is None
 
         if headers is None:
@@ -497,7 +532,7 @@ class HttpRequest(HttpMessageBase):
         self.path = path
 
     @classmethod
-    def _from_bindings(cls, request_binding, headers_binding):
+    def _from_bindings(cls, request_binding: Any, headers_binding: Any) -> 'HttpRequest':
         """Construct HttpRequest and its HttpHeaders from pre-existing native objects"""
 
         # avoid class's default constructor
@@ -508,21 +543,21 @@ class HttpRequest(HttpMessageBase):
         return request
 
     @property
-    def method(self):
+    def method(self) -> str:
         """str: HTTP request method (verb)."""
         return _awscrt.http_message_get_request_method(self._binding)
 
     @method.setter
-    def method(self, method):
+    def method(self, method: str) -> None:
         _awscrt.http_message_set_request_method(self._binding, method)
 
     @property
-    def path(self):
+    def path(self) -> str:
         """str: HTTP path-and-query value."""
         return _awscrt.http_message_get_request_path(self._binding)
 
     @path.setter
-    def path(self, path):
+    def path(self, path: str) -> None:
         return _awscrt.http_message_set_request_path(self._binding, path)
 
 
@@ -541,21 +576,21 @@ class HttpHeaders(NativeResource):
 
     __slots__ = ()
 
-    def __init__(self, name_value_pairs=None):
+    def __init__(self, name_value_pairs: Optional[List[Tuple[str, str]]] = None) -> None:
         super().__init__()
         self._binding = _awscrt.http_headers_new()
         if name_value_pairs:
             self.add_pairs(name_value_pairs)
 
     @classmethod
-    def _from_binding(cls, binding):
+    def _from_binding(cls, binding: Any) -> 'HttpHeaders':
         """Construct from a pre-existing native object"""
         headers = cls.__new__(cls)  # avoid class's default constructor
         super(cls, headers).__init__()  # just invoke parent class's __init__()
         headers._binding = binding
         return headers
 
-    def add(self, name, value):
+    def add(self, name: str, value: str) -> None:
         """
         Add a name-value pair.
 
@@ -567,7 +602,7 @@ class HttpHeaders(NativeResource):
         assert isinstance(value, str)
         _awscrt.http_headers_add(self._binding, name, value)
 
-    def add_pairs(self, name_value_pairs):
+    def add_pairs(self, name_value_pairs: List[Tuple[str, str]]) -> None:
         """
         Add list of (name,value) pairs.
 
@@ -576,7 +611,7 @@ class HttpHeaders(NativeResource):
         """
         _awscrt.http_headers_add_pairs(self._binding, name_value_pairs)
 
-    def set(self, name, value):
+    def set(self, name: str, value: str) -> None:
         """
         Set a name-value pair, any existing values for the name are removed.
 
@@ -588,7 +623,7 @@ class HttpHeaders(NativeResource):
         assert isinstance(value, str)
         _awscrt.http_headers_set(self._binding, name, value)
 
-    def get_values(self, name):
+    def get_values(self, name: str) -> Iterator[str]:
         """
         Return an iterator over the values for this name.
 
@@ -596,7 +631,7 @@ class HttpHeaders(NativeResource):
             name (str): Name.
 
         Returns:
-            Iterator[Tuple[str, str]]:
+            Iterator[str]: Iterator over values for this header name
         """
         assert isinstance(name, str)
         name = name.lower()
@@ -605,7 +640,7 @@ class HttpHeaders(NativeResource):
             if name_i.lower() == name:
                 yield value_i
 
-    def get(self, name, default=None):
+    def get(self, name: str, default: Optional[str] = None) -> Optional[str]:
         """
         Get the first value for this name, ignoring any additional values.
         Returns `default` if no values exist.
@@ -615,12 +650,12 @@ class HttpHeaders(NativeResource):
             default (Optional[str]): If `name` not found, this value is returned.
                 Defaults to None.
         Returns:
-            str:
+            Optional[str]: Header value or default
         """
         assert isinstance(name, str)
         return _awscrt.http_headers_get(self._binding, name, default)
 
-    def remove(self, name):
+    def remove(self, name: str) -> None:
         """
         Remove all values for this name.
         Raises a KeyError if name not found.
@@ -631,7 +666,7 @@ class HttpHeaders(NativeResource):
         assert isinstance(name, str)
         _awscrt.http_headers_remove(self._binding, name)
 
-    def remove_value(self, name, value):
+    def remove_value(self, name: str, value: str) -> None:
         """
         Remove a specific value for this name.
         Raises a ValueError if value not found.
@@ -644,20 +679,20 @@ class HttpHeaders(NativeResource):
         assert isinstance(value, str)
         _awscrt.http_headers_remove_value(self._binding, name, value)
 
-    def clear(self):
+    def clear(self) -> None:
         """
         Clear all headers.
         """
         _awscrt.http_headers_clear(self._binding)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Tuple[str, str]]:
         """
         Iterate over all (name,value) pairs.
         """
         for i in range(_awscrt.http_headers_count(self._binding)):
             yield _awscrt.http_headers_get_index(self._binding, i)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.__class__.__name__ + "(" + str([pair for pair in self]) + ")"
 
 
@@ -741,20 +776,20 @@ class HttpProxyOptions:
     """
 
     def __init__(self,
-                 host_name,
-                 port,
-                 tls_connection_options=None,
-                 auth_type=HttpProxyAuthenticationType.Nothing,
-                 auth_username=None,
-                 auth_password=None,
-                 connection_type=HttpProxyConnectionType.Legacy):
-        self.host_name = host_name
-        self.port = port
-        self.tls_connection_options = tls_connection_options
-        self.auth_type = auth_type
-        self.auth_username = auth_username
-        self.auth_password = auth_password
-        self.connection_type = connection_type
+                 host_name: str,
+                 port: int,
+                 tls_connection_options: Optional[TlsConnectionOptions] = None,
+                 auth_type: HttpProxyAuthenticationType = HttpProxyAuthenticationType.Nothing,
+                 auth_username: Optional[str] = None,
+                 auth_password: Optional[str] = None,
+                 connection_type: HttpProxyConnectionType = HttpProxyConnectionType.Legacy) -> None:
+        self.host_name: str = host_name
+        self.port: int = port
+        self.tls_connection_options: Optional[TlsConnectionOptions] = tls_connection_options
+        self.auth_type: HttpProxyAuthenticationType = auth_type
+        self.auth_username: Optional[str] = auth_username
+        self.auth_password: Optional[str] = auth_password
+        self.connection_type: HttpProxyConnectionType = connection_type
 
 
 class _HttpClientConnectionCore:
@@ -764,12 +799,13 @@ class _HttpClientConnectionCore:
 
     def __init__(
             self,
-            host_name,
-            port,
-            bootstrap=None,
-            tls_connection_options=None,
-            connect_future=None,
-            expected_version=None):
+            host_name: str,
+            port: int,
+            bootstrap: Optional[ClientBootstrap] = None,
+            tls_connection_options: Optional[TlsConnectionOptions] = None,
+            connect_future: Optional[Future] = None,
+            expected_version: Optional[HttpVersion] = None,
+            on_remote_settings_changed: Optional[Callable[[List[Http2Setting]], None]] = None) -> None:
         self._shutdown_future = None
         self._host_name = host_name
         self._port = port
@@ -777,8 +813,12 @@ class _HttpClientConnectionCore:
         self._tls_connection_options = tls_connection_options
         self._connect_future = connect_future
         self._expected_version = expected_version
+        self._on_remote_settings_changed_from_user = on_remote_settings_changed
 
-    def _on_connection_setup(self, binding, error_code, http_version):
+    def _on_connection_setup(self, binding: Any, error_code: int, http_version: HttpVersion) -> None:
+        if self._connect_future is None:
+            return
+
         if self._expected_version and self._expected_version != http_version:
             # unexpected protocol version
             # AWS_ERROR_HTTP_UNSUPPORTED_PROTOCOL
@@ -802,7 +842,7 @@ class _HttpClientConnectionCore:
         # release reference to the future, as it points to connection which creates a cycle reference.
         self._connect_future = None
 
-    def _on_shutdown(self, error_code):
+    def _on_shutdown(self, error_code: int) -> None:
         if self._shutdown_future is None:
             # connection failed, ignore shutdown
             return
@@ -810,3 +850,9 @@ class _HttpClientConnectionCore:
             self._shutdown_future.set_exception(awscrt.exceptions.from_code(error_code))
         else:
             self._shutdown_future.set_result(None)
+
+    def _on_remote_settings_changed(self, native_settings: List[Tuple[int, int]]) -> None:
+        if self._on_remote_settings_changed_from_user:
+            # convert the list of tuple to list of Http2Setting
+            settings = [Http2Setting(Http2SettingID(id), value) for id, value in native_settings]
+            self._on_remote_settings_changed_from_user(settings)
