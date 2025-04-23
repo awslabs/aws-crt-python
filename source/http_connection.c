@@ -185,6 +185,7 @@ static void s_http2_on_remote_settings_change(
     const struct aws_http2_setting *settings_array,
     size_t num_settings,
     void *user_data) {
+    (void)http2_connection;
     struct http_connection_binding *connection = user_data;
 
     PyGILState_STATE state;
