@@ -713,7 +713,7 @@ class MqttRequestResponseClientTest(NativeResourceTest):
         self._do_mqtt5_test(lambda protocol_client: self._do_stream_success_test(protocol_client))
 
     def test_streaming_operation_success311(self):
-        self._do_mqtt5_test(lambda protocol_client: self._do_stream_success_test(protocol_client))
+        self._do_mqtt311_test(lambda protocol_client: self._do_stream_success_test(protocol_client))
 
     # ==============================================================
     #             create_stream FAILURE TEST CASES

@@ -5,13 +5,13 @@ MQTT Request Response module
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 
+from collections.abc import Sequence
 from enum import IntEnum
 from dataclasses import dataclass
-from typing import Callable, Union
+from typing import Callable, Union, Optional
 from awscrt import NativeResource, mqtt5, mqtt, exceptions
 from concurrent.futures import Future
 import _awscrt
-import collections.abc
 
 
 class SubscriptionStatusEventType(IntEnum):
