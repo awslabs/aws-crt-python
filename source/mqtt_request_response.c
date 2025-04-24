@@ -416,8 +416,6 @@ PyObject *aws_py_mqtt_request_response_client_make_request(PyObject *self, PyObj
         return NULL;
     }
 
-    PyObject *result = NULL;
-
     struct aws_array_list subscription_topic_filters; // array_list<aws_byte_buf>
     AWS_ZERO_STRUCT(subscription_topic_filters);
 
