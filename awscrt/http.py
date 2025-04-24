@@ -80,6 +80,9 @@ class Http2Setting:
             setting_name = id.name
             raise ValueError(f"{setting_name} must be between {min_value} and {max_value}, got {value}")
 
+    def __str__(self) -> str:
+        return self.__class__.__name__ + f"({self.id.name}={self.value})"
+
 
 class HttpConnectionBase(NativeResource):
     """Base for HTTP connection classes."""

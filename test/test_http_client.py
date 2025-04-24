@@ -454,7 +454,7 @@ class TestClientMockServer(NativeResourceTest):
         # ENABLE_PUSH = 0
         # MAX_CONCURRENT_STREAMS = 100
         # MAX_HEADER_LIST_SIZE = 2**16
-        # using h2@4.2.0, code can be found in
+        # using h2@4.1.0, code can be found in
         # https://github.com/python-hyper/h2/blob/191ac06e0949fcfe3367b06eeb101a5a1a335964/src/h2/connection.py#L340-L359
         # Check the settings here
         self.assertEqual(len(settings), 3)
