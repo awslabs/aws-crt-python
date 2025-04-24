@@ -153,11 +153,11 @@ class RequestOptions:
         """
         Stringently type-checks an instance's field values.
         """
-        assert isinstance(self.subscription_topic_filters, collections.abc.Sequence)
+        assert isinstance(self.subscription_topic_filters, Sequence)
         for topic_filter in self.subscription_topic_filters:
             assert isinstance(topic_filter, str)
 
-        assert isinstance(self.response_paths, collections.abc.Sequence)
+        assert isinstance(self.response_paths, Sequence)
         for response_path in self.response_paths:
             response_path.validate()
 
