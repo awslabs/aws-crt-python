@@ -553,6 +553,8 @@ static void s_aws_mqtt_streaming_operation_incoming_publish_callback_python(
     const struct aws_mqtt_rr_incoming_publish_event *publish_event,
     void *user_data) {
 
+    AWS_FATAL_ASSERT(publish_event != NULL);
+
     struct mqtt_streaming_operation_binding *stream_binding = user_data;
 
     PyGILState_STATE state;
