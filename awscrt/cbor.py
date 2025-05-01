@@ -45,7 +45,6 @@ class AwsCborEncoder(NativeResource):
         return _awscrt.cbor_encoder_get_encoded_data(self._binding)
 
     def write_int(self, val: int):
-        # TODO: maybe not support bignum for now. Not needed?
         """Write an int as cbor formatted,
             val less than -2^64 will be encoded as Negative bignum for CBOR
             val between -2^64 to -1, inclusive, will be encode as negative integer for CBOR
@@ -60,19 +59,6 @@ class AwsCborEncoder(NativeResource):
         if val < 0:
             # For negative value, the value to encode is -1 - val.
             val_to_encode = -1 - val
-        bit_len = val_to_encode.bit_length()
-        if bit_len > 64:
-            # Bignum
-            bytes_len = bit_len // 8
-            if bit_len % 8 > 0:
-                bytes_len += 1
-            bytes_val = val_to_encode.to_bytes(bytes_len, "big")
-            if val < 0:
-                self.write_tag(AwsCborTags.NegativeBigNum)  # tag for negative bignum
-            else:
-                self.write_tag(AwsCborTags.UnsignedBigNum)  # tag for unsigned bignum
-            return self.write_bytes(bytes_val)
-
         if val >= 0:
             return _awscrt.cbor_encoder_write_unsigned_int(self._binding, val_to_encode)
         else:
@@ -108,7 +94,7 @@ class AwsCborEncoder(NativeResource):
 
     def write_array_start(self, number_entries: int):
         """Add a start of array element.
-            A legistic with the `number_entries`
+            A logistic with the `number_entries`
             for the cbor data items to be included in the array.
             `number_entries` should 0 to 2^64 inclusive.
             Otherwise, overflow will be raised.
