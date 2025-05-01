@@ -72,7 +72,6 @@ class AwsCborEncoder(NativeResource):
         Args:
             val (float): value to be encoded and written to the encoded data.
         """
-        assert isinstance(val, float)
         # Floating point numbers are usually implemented using double in C
         return _awscrt.cbor_encoder_write_float(self._binding, val)
 
