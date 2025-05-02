@@ -79,7 +79,6 @@ if(UNIX AND NOT APPLE)
         CMAKE_ARGUMENTS
             -DUNSAFE_TREAT_WARNINGS_AS_ERRORS=OFF
             -DBUILD_TESTING=OFF
-            -DCMAKE_BUILD_TYPE=Release # Don't include debug symbols in the library
     )
 endif()
 
