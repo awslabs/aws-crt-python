@@ -45,6 +45,7 @@ if ((UNIX AND NOT APPLE) OR AWS_USE_LIBCRYPTO_TO_SUPPORT_ED25519_EVERYWHERE)
             -DDISABLE_PERL=ON  # Build without using Perl, we don't want the extra dependency
             -DBUILD_LIBSSL=OFF  # Don't need libssl, only need libcrypto
             -DBUILD_TESTING=OFF
+            -DCMAKE_BUILD_TYPE=Release # Don't include debug symbols in the library
         )
 
         if (APPLE OR WIN32)
@@ -79,6 +80,8 @@ if(UNIX AND NOT APPLE)
         CMAKE_ARGUMENTS
             -DUNSAFE_TREAT_WARNINGS_AS_ERRORS=OFF
             -DBUILD_TESTING=OFF
+            -DS2N_LTO=ON
+            -DCMAKE_BUILD_TYPE=Release # Don't include debug symbols in the library
     )
 endif()
 
