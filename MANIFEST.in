@@ -21,7 +21,7 @@ global-exclude crt/aws-lc/**/crypto_test_data*
 global-include crt/aws-lc/**/trampoline-*
 global-exclude README*
 prune crt/**/AWSCRTAndroidTestRunner
-prune crt/aws-c-auth/tests/
+prune crt/aws-c-auth/tests
 prune crt/aws-c-cal/tests
 prune crt/aws-c-common/tests
 prune crt/aws-c-compression/tests
@@ -34,7 +34,7 @@ prune crt/aws-c-s3/benchmarks
 prune crt/s2n/tests
 # s2n's cmake relies on a some files under test/ for compile time feature tests
 graft crt/s2n/tests/features
-prune crt/s2n/compliance/specs/
+prune crt/s2n/compliance/specs
 exclude crt/aws-lc/**/*test*.go
 exclude crt/aws-lc/**/*test*.json
 exclude crt/aws-lc/**/*test*.py
