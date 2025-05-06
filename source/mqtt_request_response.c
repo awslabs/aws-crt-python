@@ -352,8 +352,7 @@ static void s_aws_mqtt_make_request_binding_destroy(struct aws_mqtt_make_request
 }
 
 static void s_on_mqtt_request_complete(
-    const struct aws_byte_cursor *response_topic,
-    const struct aws_byte_cursor *payload,
+    const struct aws_mqtt_rr_incoming_publish_event *publish_event,
     int error_code,
     void *user_data) {
 
@@ -368,10 +367,10 @@ static void s_on_mqtt_request_complete(
         request_binding->on_request_complete_callback,
         "(is#y#)",
         /* i */ error_code,
-        /* s */ response_topic ? response_topic->ptr : NULL,
-        /* # */ response_topic ? response_topic->len : 0,
-        /* y */ payload ? payload->ptr : NULL,
-        /* # */ payload ? payload->len : 0);
+        /* s */ publish_event ? publish_event->topic.ptr : NULL,
+        /* # */ publish_event ? publish_event->topic.len : 0,
+        /* y */ publish_event ? publish_event->payload.ptr : NULL,
+        /* # */ publish_event ? publish_event->payload.len : 0);
     if (!result) {
         PyErr_WriteUnraisable(PyErr_Occurred());
     }
@@ -467,7 +466,7 @@ PyObject *aws_py_mqtt_request_response_client_make_request(PyObject *self, PyObj
         };
 
         if (aws_mqtt_request_response_client_submit_request(client_binding->native, &request_options)) {
-            s_on_mqtt_request_complete(NULL, NULL, aws_last_error(), request_binding);
+            s_on_mqtt_request_complete(NULL, aws_last_error(), request_binding);
         }
     }
 
@@ -551,9 +550,10 @@ static void s_aws_mqtt_streaming_operation_subscription_status_callback_python(
 }
 
 static void s_aws_mqtt_streaming_operation_incoming_publish_callback_python(
-    struct aws_byte_cursor payload,
-    struct aws_byte_cursor topic,
+    const struct aws_mqtt_rr_incoming_publish_event *publish_event,
     void *user_data) {
+
+    AWS_FATAL_ASSERT(publish_event != NULL);
 
     struct mqtt_streaming_operation_binding *stream_binding = user_data;
 
@@ -565,10 +565,10 @@ static void s_aws_mqtt_streaming_operation_incoming_publish_callback_python(
     PyObject *result = PyObject_CallFunction(
         stream_binding->incoming_publish_callable,
         "(s#y#)",
-        /* s */ topic.ptr,
-        /* # */ topic.len,
-        /* y */ payload.ptr,
-        /* # */ payload.len);
+        /* s */ publish_event->topic.ptr,
+        /* # */ publish_event->topic.len,
+        /* y */ publish_event->payload.ptr,
+        /* # */ publish_event->payload.len);
     if (!result) {
         PyErr_WriteUnraisable(PyErr_Occurred());
     }
