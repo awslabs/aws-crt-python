@@ -112,7 +112,7 @@ class HttpClientConnection(HttpConnectionBase):
             If successful, the Future will contain a new :class:`HttpClientConnection`.
             Otherwise, it will contain an exception.
         """
-        return HttpClientConnection._generic_new(
+        return HttpClientConnection._new_common(
             host_name,
             port,
             bootstrap,
@@ -121,7 +121,7 @@ class HttpClientConnection(HttpConnectionBase):
             proxy_options)
 
     @staticmethod
-    def _generic_new(
+    def _new_common(
             host_name,
             port,
             bootstrap=None,
@@ -239,7 +239,7 @@ class Http2ClientConnection(HttpClientConnection):
             socket_options=None,
             tls_connection_options=None,
             proxy_options=None):
-        return HttpClientConnection._generic_new(
+        return HttpClientConnection._new_common(
             host_name,
             port,
             bootstrap,
