@@ -94,7 +94,7 @@ class HttpConnectionBase(NativeResource):
         self._shutdown_future = Future()
 
     @property
-    def shutdown_future(self) -> Future:
+    def shutdown_future(self) -> "concurrent.futures.Future":
         """
         concurrent.futures.Future: Completes when this connection has finished shutting down.
         Future will contain a result of None, or an exception indicating why shutdown occurred.
@@ -107,7 +107,7 @@ class HttpConnectionBase(NativeResource):
         """HttpVersion: Protocol used by this connection"""
         return self._version
 
-    def close(self) -> Future:
+    def close(self) -> "concurrent.futures.Future":
         """Close the connection.
 
         Shutdown is asynchronous. This call has no effect if the connection is already
@@ -145,7 +145,7 @@ class HttpClientConnection(HttpConnectionBase):
             bootstrap: Optional[ClientBootstrap] = None,
             socket_options: Optional[SocketOptions] = None,
             tls_connection_options: Optional[TlsConnectionOptions] = None,
-            proxy_options: Optional['HttpProxyOptions'] = None) -> Future:
+            proxy_options: Optional['HttpProxyOptions'] = None) -> "concurrent.futures.Future":
         """
         Asynchronously establish a new HttpClientConnection.
 
@@ -190,7 +190,7 @@ class HttpClientConnection(HttpConnectionBase):
             proxy_options: Optional['HttpProxyOptions'] = None,
             expected_version: Optional[HttpVersion] = None,
             initial_settings: Optional[List[Http2Setting]] = None,
-            on_remote_settings_changed: Optional[Callable[[List[Http2Setting]], None]] = None) -> Future:
+            on_remote_settings_changed: Optional[Callable[[List[Http2Setting]], None]] = None) -> "concurrent.futures.Future":
         """
         Initialize the generic part of the HttpClientConnection class.
         """
@@ -304,7 +304,8 @@ class Http2ClientConnection(HttpClientConnection):
             tls_connection_options: Optional[TlsConnectionOptions] = None,
             proxy_options: Optional['HttpProxyOptions'] = None,
             initial_settings: Optional[List[Http2Setting]] = None,
-            on_remote_settings_changed: Optional[Callable[[List[Http2Setting]], None]] = None) -> Future:
+            on_remote_settings_changed: Optional[Callable[[List[Http2Setting]],
+                                                          None]] = None) -> "concurrent.futures.Future":
         """
         Asynchronously establish an HTTP/2 client connection.
         Notes: to set up the connection, the server must support HTTP/2 and TlsConnectionOptions
@@ -354,7 +355,7 @@ class HttpStreamBase(NativeResource):
         return self._connection
 
     @property
-    def completion_future(self) -> Future:
+    def completion_future(self) -> "concurrent.futures.Future":
         return self._completion_future
 
     def _on_body(self, chunk: bytes) -> None:
@@ -456,7 +457,7 @@ class Http2ClientStream(HttpClientStream):
 
     def write_data(self,
                    data_stream: Union[InputStream, Any],
-                   end_stream: bool = False) -> Future:
+                   end_stream: bool = False) -> "concurrent.futures.Future":
         future: Future = Future()
         body_stream: InputStream = InputStream.wrap(data_stream, allow_none=True)
 
