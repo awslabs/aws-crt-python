@@ -229,14 +229,11 @@ PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args) {
     PyObject *socket_options_py;
     PyObject *tls_options_py;
     PyObject *proxy_options_py;
-    PyObject *initial_settings_py;
-    PyObject *on_remote_settings_changed_py;
     PyObject *py_core;
-    bool success = false;
 
     if (!PyArg_ParseTuple(
             args,
-            "Os#IOOOOOO",
+            "Os#IOOOO",
             &bootstrap_py,
             &host_name,
             &host_name_len,
@@ -244,8 +241,6 @@ PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args) {
             &socket_options_py,
             &tls_options_py,
             &proxy_options_py,
-            &initial_settings_py,
-            &on_remote_settings_changed_py,
             &py_core)) {
         return NULL;
     }
@@ -265,7 +260,7 @@ PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args) {
     if (tls_options_py != Py_None) {
         tls_options = aws_py_get_tls_connection_options(tls_options_py);
         if (!tls_options) {
-            goto done;
+            goto error;
         }
     }
 

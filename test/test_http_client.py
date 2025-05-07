@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0.
 
 import awscrt.exceptions
-from awscrt.http import HttpClientConnection, HttpClientStream, HttpHeaders, HttpProxyOptions, HttpRequest, HttpVersion, Http2ClientConnection, Http2Setting, Http2SettingID
+from awscrt.http import HttpClientConnection, HttpClientStream, HttpHeaders, HttpProxyOptions, HttpRequest, HttpVersion, Http2ClientConnection
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions, TlsCipherPref
 from concurrent.futures import Future, thread
 from http.server import HTTPServer, SimpleHTTPRequestHandler
@@ -449,23 +449,6 @@ class TestClientMockServer(NativeResourceTest):
             self.p_server.kill()
         super().tearDown()
 
-    def _on_remote_settings_changed(self, settings):
-        # The mock server has the default settings with
-        # ENABLE_PUSH = 0
-        # MAX_CONCURRENT_STREAMS = 100
-        # MAX_HEADER_LIST_SIZE = 2**16
-        # using h2@4.1.0, code can be found in
-        # https://github.com/python-hyper/h2/blob/191ac06e0949fcfe3367b06eeb101a5a1a335964/src/h2/connection.py#L340-L359
-        # Check the settings here
-        self.assertEqual(len(settings), 3)
-        for i in settings:
-            if i.id == Http2SettingID.ENABLE_PUSH:
-                self.assertEqual(i.value, 0)
-            if i.id == Http2SettingID.MAX_CONCURRENT_STREAMS:
-                self.assertEqual(i.value, 100)
-            if i.id == Http2SettingID.MAX_HEADER_LIST_SIZE:
-                self.assertEqual(i.value, 2**16)
-
     def _new_mock_connection(self):
 
         event_loop_group = EventLoopGroup()
@@ -482,14 +465,11 @@ class TestClientMockServer(NativeResourceTest):
         tls_conn_opt = tls_ctx.new_connection_options()
         tls_conn_opt.set_server_name(self.mock_server_url.hostname)
         tls_conn_opt.set_alpn_list(["h2"])
-        initial_settings = [Http2Setting(Http2SettingID.ENABLE_PUSH, 0)]
 
         connection_future = Http2ClientConnection.new(host_name=self.mock_server_url.hostname,
                                                       port=port,
                                                       bootstrap=bootstrap,
-                                                      tls_connection_options=tls_conn_opt,
-                                                      initial_settings=initial_settings,
-                                                      on_remote_settings_changed=self._on_remote_settings_changed)
+                                                      tls_connection_options=tls_conn_opt)
         return connection_future.result(self.timeout)
 
     def test_h2_mock_server_manual_write(self):
@@ -589,35 +569,6 @@ class TestClientMockServer(NativeResourceTest):
         self.assertIsNone(exception)
         # stream will complete with another exception.
         stream.completion_future.result()
-        self.assertEqual(None, connection.close().exception(self.timeout))
-
-    def test_h2_mock_server_settings(self):
-        connection = self._new_mock_connection()
-        # check we set an h2 connection
-        self.assertEqual(connection.version, HttpVersion.Http2)
-
-        request = HttpRequest('POST', self.mock_server_url.path)
-        request.headers.add('host', self.mock_server_url.hostname)
-        response = Response()
-        stream = connection.request(request, response.on_response, response.on_body, manual_write=True)
-        stream.activate()
-        exception = None
-        try:
-            # If the stream is not configured to allow manual writes, this should throw an exception directly
-            f = stream.write_data(BytesIO(b'hello'), False)
-            f.result(self.timeout)
-            stream.write_data(BytesIO(b'he123123'), False)
-            stream.write_data(None, False)
-            stream.write_data(BytesIO(b'hello'), True)
-        except RuntimeError as e:
-            exception = e
-        self.assertIsNone(exception)
-        stream_completion_result = stream.completion_future.result(80)
-        # check result
-        self.assertEqual(200, response.status_code)
-        self.assertEqual(200, stream_completion_result)
-        print(response.body)
-
         self.assertEqual(None, connection.close().exception(self.timeout))
 
 

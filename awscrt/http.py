@@ -385,14 +385,14 @@ class HttpClientStream(HttpStreamBase):
                  request: 'HttpRequest',
                  on_response: Optional[Callable[..., None]] = None,
                  on_body: Optional[Callable[..., None]] = None) -> None:
-        self._generic_init(connection, request, on_response, on_body)
+        self._init_common(connection, request, on_response, on_body)
 
-    def _generic_init(self,
-                      connection: HttpClientConnection,
-                      request: 'HttpRequest',
-                      on_response: Optional[Callable[..., None]] = None,
-                      on_body: Optional[Callable[..., None]] = None,
-                      http2_manual_write: bool = False) -> None:
+    def _init_common(self,
+                     connection: HttpClientConnection,
+                     request: 'HttpRequest',
+                     on_response: Optional[Callable[..., None]] = None,
+                     on_body: Optional[Callable[..., None]] = None,
+                     http2_manual_write: bool = False) -> None:
         assert isinstance(connection, HttpClientConnection)
         assert isinstance(request, HttpRequest)
         assert callable(on_response) or on_response is None
@@ -452,7 +452,7 @@ class Http2ClientStream(HttpClientStream):
                  on_response: Optional[Callable[..., None]] = None,
                  on_body: Optional[Callable[..., None]] = None,
                  manual_write: bool = False) -> None:
-        super()._generic_init(connection, request, on_response, on_body, manual_write)
+        super()._init_common(connection, request, on_response, on_body, manual_write)
 
     def write_data(self,
                    data_stream: Union[InputStream, Any],

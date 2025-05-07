@@ -236,8 +236,8 @@ PyObject *aws_py_http_client_stream_new(PyObject *self, PyObject *args) {
     PyObject *py_stream = NULL;
     PyObject *py_connection = NULL;
     PyObject *py_request = NULL;
-    int h2_manual_write = 0;
-    if (!PyArg_ParseTuple(args, "OOOp", &py_stream, &py_connection, &py_request, &h2_manual_write)) {
+    int http2_manual_write = 0;
+    if (!PyArg_ParseTuple(args, "OOOp", &py_stream, &py_connection, &py_request, &http2_manual_write)) {
         return NULL;
     }
 
@@ -284,7 +284,7 @@ PyObject *aws_py_http_client_stream_new(PyObject *self, PyObject *args) {
         .on_response_body = s_on_incoming_body,
         .on_complete = s_on_stream_complete,
         .user_data = stream,
-        .http2_use_manual_data_writes = h2_manual_write,
+        .http2_use_manual_data_writes = http2_manual_write,
     };
 
     stream->native = aws_http_connection_make_request(native_connection, &request_options);
