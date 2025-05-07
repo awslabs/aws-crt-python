@@ -1,7 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 
-import base64
 from io import BytesIO
 import unittest
 import os
@@ -12,6 +11,9 @@ import time
 from test import NativeResourceTest
 from concurrent.futures import Future
 from multiprocessing import Process
+import multiprocessing as mp
+import sys
+import gc
 
 from awscrt.http import HttpHeaders, HttpRequest
 from awscrt.auth import AwsCredentials
@@ -42,7 +44,7 @@ from awscrt.auth import (
     AwsSigningAlgorithm,
     AwsSigningConfig,
 )
-import zlib
+from awscrt.common import join_all_native_threads
 
 MB = 1024 ** 2
 GB = 1024 ** 3
@@ -61,7 +63,15 @@ def cross_proc_task():
         exit(-1)
 
 
+def release_lock_task():
+    # remove the global lock
+    global CRT_S3_PROCESS_LOCK
+    CRT_S3_PROCESS_LOCK = None
+    exit(0)
+
+
 class CrossProcessLockTest(NativeResourceTest):
+
     def setUp(self):
         self.nonce = time.time()
         super().setUp()
@@ -91,13 +101,36 @@ class CrossProcessLockTest(NativeResourceTest):
             # acquiring this lock in a sub-process should fail since we
             # already hold the lock in this process.
             self.assertNotEqual(0, process.exitcode)
-
         # now that we've released the lock above, the same sub-process path
         # should now succeed.
         unlocked_process = Process(target=cross_proc_task)
         unlocked_process.start()
         unlocked_process.join()
         self.assertEqual(0, unlocked_process.exitcode)
+
+    @unittest.skipIf(sys.platform.startswith('win'), "Windows doesn't support fork")
+    def test_fork_shares_lock(self):
+        # mock the use case from boto3 where a global lock used and the workaround with fork.
+        global CRT_S3_PROCESS_LOCK
+        CRT_S3_PROCESS_LOCK = CrossProcessLock(cross_process_lock_name)
+        CRT_S3_PROCESS_LOCK.acquire()
+        mp.set_start_method('fork', force=True)
+        # the first forked process release the forked lock.
+        # when the process forked, the child process also has the lock and it could release the lock before
+        # the parent process. Make sure when this happens, the lock is still held by the parent process.
+        release_process = Process(target=release_lock_task)
+        release_process.start()
+        release_process.join()
+
+        # create another process try to acquire the lock, it should fail as the
+        # lock should still be held with the main process.
+        process = Process(target=cross_proc_task)
+        process.start()
+        process.join()
+        # acquiring this lock in a sub-process should fail since we
+        # already hold the lock in this process.
+        self.assertNotEqual(0, process.exitcode)
+        del CRT_S3_PROCESS_LOCK
 
 
 class FileCreator(object):
@@ -179,7 +212,6 @@ def s3_client_new(
         opt = TlsContextOptions()
         ctx = ClientTlsContext(opt)
         tls_option = TlsConnectionOptions(ctx)
-
     s3_client = S3Client(
         bootstrap=bootstrap,
         region=region,
@@ -190,7 +222,6 @@ def s3_client_new(
         enable_s3express=enable_s3express,
         memory_limit=mem_limit,
         network_interface_names=network_interface_names)
-
     return s3_client
 
 
@@ -593,6 +624,77 @@ class S3RequestTest(NativeResourceTest):
             self.transferred_len,
             "the transferred length reported does not match body we sent")
         self._validate_successful_response(request_type is S3RequestType.PUT_OBJECT)
+
+    def upload_with_global_client(self):
+        global CRT_S3_CLIENT
+        if CRT_S3_CLIENT is None:
+            CRT_S3_CLIENT = s3_client_new(False, self.region, 5 * MB)
+        put_body_stream = open(self.temp_put_obj_file_path, "rb")
+        content_length = os.stat(self.temp_put_obj_file_path).st_size
+        request = self._put_object_request(put_body_stream, content_length)
+        s3_request = CRT_S3_CLIENT.make_request(
+            request=request,
+            type=S3RequestType.PUT_OBJECT,
+            on_headers=self._on_request_headers,
+            on_body=self._on_request_body,
+            on_done=self._on_request_done)
+
+        shutdown_event = s3_request.shutdown_event
+        s3_request = None
+        self.assertTrue(shutdown_event.wait(self.timeout))
+        put_body_stream.close()
+
+    def fork_s3_client(self):
+        try:
+            # init_logging(LogLevel.Trace, f"aws-crt-python{os.getpid()}.log")
+            self.upload_with_global_client()
+            global CRT_S3_CLIENT
+            del CRT_S3_CLIENT
+            exit(0)
+        except Exception as e:
+            print(f"fork_s3_client error: {e}")
+            exit(-1)
+
+    def before_fork(self):
+        global CRT_S3_CLIENT
+        try:
+            if CRT_S3_CLIENT is not None:
+                # The client is not safe to use after fork, so we need to release it.
+                # make sure the client is shutdown properly before fork
+                # also wait for every thread to be joined, incase of some thread is in the middle of cleanup.
+                shutdown_event = CRT_S3_CLIENT.shutdown_event
+                CRT_S3_CLIENT = None
+                gc.collect()
+                self.assertTrue(shutdown_event.wait(self.timeout))
+                self.assertTrue(join_all_native_threads(timeout_sec=10))
+        except Exception as e:
+            print(f"before_fork error: {e}")
+            # fail hard as exceptions raised from the fork handler will be ignored.
+            sys.stdout.flush()
+            sys.stderr.flush()
+            os._exit(-1)
+
+    @unittest.skipIf(sys.platform.startswith('win') or sys.platform == 'darwin',
+                     "Test skipped on Windows and macOS. Windows doesn't support fork. macOS has background threads crashes the forked process.")
+    def test_fork_workaround(self):
+        # mock the boto3 use case where a global client is used and the
+        # workaround for fork is to release the client from the fork handler.
+        global CRT_S3_CLIENT
+        CRT_S3_CLIENT = s3_client_new(False, self.region, 5 * MB)
+        self.upload_with_global_client()
+        # fork the process and use the global S3 client for the transfer.
+        # to workaround the background thread issue that cleaned after fork,
+        # we need to make sure the client is shutdown properly
+        # and all background threads has joined before fork, see `self.before_fork`
+        # And in the sub-process, we can recreate the global S3 client and use it.
+        os.register_at_fork(before=self.before_fork)
+        mp.set_start_method('fork', force=True)
+        process = Process(target=self.fork_s3_client)
+        process.start()
+        process.join(10)
+        self.assertEqual(0, process.exitcode)
+        self.upload_with_global_client()
+        del CRT_S3_CLIENT
 
     def _round_trip_with_checksums_helper(
             self,

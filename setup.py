@@ -1,6 +1,5 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
-import codecs
 import glob
 import os
 import os.path
@@ -13,12 +12,22 @@ import subprocess
 import sys
 import sysconfig
 from wheel.bdist_wheel import bdist_wheel
+
 if sys.platform == 'win32':
     # distutils is deprecated in Python 3.10 and removed in 3.12. However, it still works because Python defines a compatibility interface as long as setuptools is installed.
     # We don't have an official alternative for distutils.ccompiler as of September 2024. See: https://github.com/pypa/setuptools/issues/2806
     # Once that issue is resolved, we can migrate to the official solution.
     # For now, restrict distutils to Windows only, where it's needed.
     import distutils.ccompiler
+
+# The minimum MACOSX_DEPLOYMENT_TARGET required for the library. If not
+# set, the library will use the default value from python
+# sysconfig.get_config_var('MACOSX_DEPLOYMENT_TARGET').
+MACOS_DEPLOYMENT_TARGET_MIN = "10.15"
+
+
+def parse_version(version_string):
+    return tuple(int(x) for x in version_string.split("."))
 
 
 def is_64bit():
@@ -29,8 +38,9 @@ def is_32bit():
     return is_64bit() == False
 
 
+# TODO: Fix this. Since adding pyproject.toml, it always returns False
 def is_development_mode():
-    """Return whether we're building in development mode.
+    """Return whether we're building in Development Mode (a.k.a. “Editable Installs”).
     https://setuptools.pypa.io/en/latest/userguide/development_mode.html
     These builds can take shortcuts to encourage faster iteration,
     and turn on more warnings as errors to encourage correct code."""
@@ -55,11 +65,7 @@ def run_cmd(args):
 
 
 def copy_tree(src, dst):
-    if sys.version_info >= (3, 8):
-        shutil.copytree(src, dst, dirs_exist_ok=True)
-    else:
-        shutil.rmtree(dst, ignore_errors=True)
-        shutil.copytree(src, dst)
+    shutil.copytree(src, dst, dirs_exist_ok=True)
 
 
 def is_macos_universal2():
@@ -144,6 +150,16 @@ def using_system_libs():
             or not os.path.exists(os.path.join(PROJECT_DIR, 'crt', 'aws-c-common', 'CMakeLists.txt')))
 
 
+def using_libcrypto():
+    """If true, libcrypto is used, even on win/mac."""
+    if sys.platform == 'darwin' or sys.platform == 'win32':
+        # use libcrypto on mac/win to support ed25519, unless its disabled via env-var
+        return not os.getenv('AWS_CRT_BUILD_DISABLE_LIBCRYPTO_USE_FOR_ED25519_EVERYWHERE') == '1'
+    else:
+        # on Unix we always use libcrypto
+        return True
+
+
 def using_system_libcrypto():
     """If true, don't build AWS-LC. Use the libcrypto that's already on the system."""
     return using_system_libs() or os.getenv('AWS_CRT_BUILD_USE_SYSTEM_LIBCRYPTO') == '1'
@@ -164,10 +180,14 @@ class AwsLib:
 # The extension depends on these libs.
 # They're built along with the extension (unless using_system_libs() is True)
 AWS_LIBS = []
-if sys.platform != 'darwin' and sys.platform != 'win32':
+
+if using_libcrypto():
     # aws-lc produces libcrypto.a
     AWS_LIBS.append(AwsLib('aws-lc', libname='crypto'))
+
+if sys.platform != 'darwin' and sys.platform != 'win32':
     AWS_LIBS.append(AwsLib('s2n'))
+
 AWS_LIBS.append(AwsLib('aws-c-common'))
 AWS_LIBS.append(AwsLib('aws-c-sdkutils'))
 AWS_LIBS.append(AwsLib('aws-c-cal'))
@@ -214,15 +234,22 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
             f'-DCMAKE_BUILD_TYPE={build_type}',
         ])
 
-        if using_system_libcrypto():
-            cmake_args.append('-DUSE_OPENSSL=ON')
+        if using_libcrypto():
+            if using_system_libcrypto():
+                cmake_args.append('-DUSE_OPENSSL=ON')
+
+            cmake_args.append('-DAWS_USE_LIBCRYPTO_TO_SUPPORT_ED25519_EVERYWHERE=ON')
 
         if sys.platform == 'darwin':
-            # build lib with same MACOSX_DEPLOYMENT_TARGET that python will ultimately
-            # use to link everything together, otherwise there will be linker warnings.
+            # get Python's MACOSX_DEPLOYMENT_TARGET version
             macosx_target_ver = sysconfig.get_config_var('MACOSX_DEPLOYMENT_TARGET')
-            if macosx_target_ver and 'MACOSX_DEPLOYMENT_TARGET' not in os.environ:
-                cmake_args.append(f'-DCMAKE_OSX_DEPLOYMENT_TARGET={macosx_target_ver}')
+            # If MACOS_DEPLOYMENT_TARGET_MIN is set to a later version than python distribution,
+            # override MACOSX_DEPLOYMENT_TARGET.
+            if macosx_target_ver is None or parse_version(
+                    MACOS_DEPLOYMENT_TARGET_MIN) > parse_version(macosx_target_ver):
+                macosx_target_ver = MACOS_DEPLOYMENT_TARGET_MIN
+                os.environ['MACOSX_DEPLOYMENT_TARGET'] = macosx_target_ver
+            cmake_args.append(f'-DCMAKE_OSX_DEPLOYMENT_TARGET={macosx_target_ver}')
 
             if osx_arch:
                 cmake_args.append(f'-DCMAKE_OSX_ARCHITECTURES={osx_arch}')
@@ -365,12 +392,6 @@ def awscrt_ext():
         if not sys.platform.startswith('openbsd'):
             libraries += ['rt']
 
-        # hide the symbols from libcrypto.a
-        # this prevents weird crashes if an application also ends up using
-        # libcrypto.so from the system's OpenSSL installation.
-        # Do this even if using system libcrypto, since it could still be a static lib.
-        extra_link_args += ['-Wl,--exclude-libs,libcrypto.a']
-
         # OpenBSD 7.4+ defaults to linking with --execute-only, which is bad for AWS-LC.
         # See: https://github.com/aws/aws-lc/blob/4b07805bddc55f68e5ce8c42f215da51c7a4e099/CMakeLists.txt#L44-L53
         # (If AWS-LC's CMakeLists.txt removes these lines in the future, we can remove this hack here as well)
@@ -386,6 +407,12 @@ def awscrt_ext():
         # python usually adds -pthread automatically, but we've observed
         # rare cases where that didn't happen, so let's be explicit.
         extra_link_args += ['-pthread']
+
+        # hide the symbols from libcrypto.a
+        # this prevents weird crashes if an application also ends up using
+        # libcrypto.so from the system's OpenSSL installation.
+        # Do this even if using system libcrypto, since it could still be a static lib.
+        extra_link_args += ['-Wl,--exclude-libs,libcrypto.a']
 
     if sys.platform != 'win32' or distutils.ccompiler.get_default_compiler() != 'msvc':
         extra_compile_args += ['-Wno-strict-aliasing', '-std=gnu99']
@@ -439,12 +466,6 @@ def awscrt_ext():
     )
 
 
-def _load_readme():
-    readme_path = os.path.join(PROJECT_DIR, 'README.md')
-    with codecs.open(readme_path, 'r', 'utf-8') as f:
-        return f.read()
-
-
 def _load_version():
     init_path = os.path.join(PROJECT_DIR, 'awscrt', '__init__.py')
     with open(init_path) as fp:
@@ -452,27 +473,9 @@ def _load_version():
 
 
 setuptools.setup(
-    name="awscrt",
     version=_load_version(),
-    license="Apache 2.0",
-    author="Amazon Web Services, Inc",
-    author_email="aws-sdk-common-runtime@amazon.com",
-    description="A common runtime for AWS Python projects",
-    long_description=_load_readme(),
-    long_description_content_type='text/markdown',
-    url="https://github.com/awslabs/aws-crt-python",
     # Note: find_packages() without extra args will end up installing test/
     packages=setuptools.find_packages(include=['awscrt*']),
-    classifiers=[
-        "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: Apache Software License",
-        "Operating System :: Microsoft :: Windows",
-        "Operating System :: POSIX",
-        "Operating System :: Unix",
-        "Operating System :: MacOS",
-    ],
-    python_requires='>=3.8',
     ext_modules=[awscrt_ext()],
     cmdclass={'build_ext': awscrt_build_ext, "bdist_wheel": bdist_wheel_abi3},
-    test_suite='test',
 )

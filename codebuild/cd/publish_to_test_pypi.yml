@@ -1,12 +1,12 @@
 version: 0.2
-# this image assumes Ubuntu 14.04 base image
+# this image assumes base Codebuild Ubuntu image
 phases:
   install:
     commands:
       - sudo apt-get update -y
       - sudo apt-get install python3 python3-pip -y
       - python3 -m pip install --user --upgrade pip
-      - python3 -m pip install --user --upgrade twine setuptools wheel boto3 PyOpenSSL six
+      - python3 -m pip install --user --upgrade twine boto3
   pre_build:
     commands:
       - export CC=gcc
@@ -21,7 +21,7 @@ phases:
       - ls -la dist/
       - cd aws-crt-python
       - python3 continuous-delivery/pull-pypirc.py alpha
-      - python3 -m twine upload -r testpypi ../dist/*
+      - python3 -m twine upload --repository testpypi --verbose ../dist/*
   post_build:
     commands:
       - echo Build completed on `date`

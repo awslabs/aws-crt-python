@@ -4,9 +4,12 @@ import os
 import re
 import subprocess
 
-tag = subprocess.check_output(['git', 'describe', '--tags'])
-# strip the leading v
-version = str(tag[1:].strip(), 'utf8')
+tag = subprocess.run(['git', 'describe', '--tags'],
+                     capture_output=True, check=True,
+                     text=True).stdout.strip()
+# convert v0.2.12-2-g50254a9 to 0.2.12
+# test-version-exists will ensure to not include non-tagged commits
+version = tag.split('-', 1)[0]
 init_path = os.path.join(os.path.dirname(__file__), '..', 'awscrt', '__init__.py')
 print("Updating awscrt.__version__ to version {}".format(version))
 contents = None

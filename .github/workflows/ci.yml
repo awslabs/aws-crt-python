@@ -70,7 +70,7 @@ jobs:
           ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-manylinux2014-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }} --python /opt/python/${{ matrix.python }}/bin/python
 
   manylinux2014-arm64:
-    runs-on: codebuild-aws-crt-python-arm64-${{ github.run_id }}-${{ github.run_attempt }}-arm-3.0-large
+    runs-on: ubuntu-24.04-arm
     strategy:
       fail-fast: false
       matrix:
@@ -121,9 +121,8 @@ jobs:
           aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
           ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-musllinux-1-1-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }} --python /opt/python/${{ matrix.python }}/bin/python
 
-
   musllinux-1-1-arm64:
-    runs-on: codebuild-aws-crt-python-arm64-${{ github.run_id }}-${{ github.run_attempt }}-arm-3.0-large
+    runs-on: ubuntu-24.04-arm
     strategy:
       fail-fast: false
       matrix:
@@ -148,7 +147,7 @@ jobs:
           ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-musllinux-1-1-aarch64 build -p ${{ env.PACKAGE_NAME }} --python /opt/python/${{ matrix.python }}/bin/python
 
   raspberry:
-    runs-on: codebuild-aws-crt-python-arm64-${{ github.run_id }}-${{ github.run_attempt }}-arm-3.0-large
+    runs-on: ubuntu-24.04-arm
     strategy:
       fail-fast: false
       matrix:
@@ -259,6 +258,7 @@ jobs:
     permissions:
       id-token: write # This is required for requesting the JWT
     steps:
+      - uses: ilammy/setup-nasm@v1
       - name: configure AWS credentials (containers)
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -268,7 +268,6 @@ jobs:
         run: |
           python -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder.pyz')"
           python builder.pyz build -p ${{ env.PACKAGE_NAME }} --python "C:\\hostedtoolcache\\windows\\Python\\3.8.10\\${{ matrix.arch }}\\python.exe"
-
 
   macos:
     runs-on: macos-14 # latest
@@ -373,8 +372,7 @@ jobs:
           submodules: true
       - name: Run tests
         run: |
-          python3 -m pip install --upgrade --requirement requirements-dev.txt
-          python3 -m pip install . --verbose
+          python3 -m pip install ".[dev]" --verbose
           python3 -m unittest discover --failfast --verbose
 
   package-source:
@@ -392,22 +390,23 @@ jobs:
           submodules: true
       - name: Package source + install
         run: |
-          python3 setup.py sdist
+          python3 -m pip install build
+          python3 -m build --sdist
           cd dist
           python3 -m pip install -v awscrt-1.0.0.dev0.tar.gz
           python3 -c "import awscrt.io"
 
   # check that docs can still build
   check-docs:
-    runs-on: ubuntu-22.04 # latest
+    runs-on: ubuntu-22.04 #  getting errors from sphinx using ubuntu-24.04, so stuck on 22.04 till we diagnose it
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: true
       - name: Check docs
         run: |
-          python3 -m pip install -r requirements-dev.txt
-          python3 -m pip install --verbose .
+          python3 -m pip install --upgrade pip
+          python3 -m pip install --verbose ".[dev]"
           ./scripts/make-docs.py
 
   check-submodules:
