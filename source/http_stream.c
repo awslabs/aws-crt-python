@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0.
  */
 #include "http.h"
+#include "io.h"
 
 #include <aws/http/request_response.h>
 
@@ -235,7 +236,8 @@ PyObject *aws_py_http_client_stream_new(PyObject *self, PyObject *args) {
     PyObject *py_stream = NULL;
     PyObject *py_connection = NULL;
     PyObject *py_request = NULL;
-    if (!PyArg_ParseTuple(args, "OOO", &py_stream, &py_connection, &py_request)) {
+    int http2_manual_write = 0;
+    if (!PyArg_ParseTuple(args, "OOOp", &py_stream, &py_connection, &py_request, &http2_manual_write)) {
         return NULL;
     }
 
@@ -282,6 +284,7 @@ PyObject *aws_py_http_client_stream_new(PyObject *self, PyObject *args) {
         .on_response_body = s_on_incoming_body,
         .on_complete = s_on_stream_complete,
         .user_data = stream,
+        .http2_use_manual_data_writes = http2_manual_write,
     };
 
     stream->native = aws_http_connection_make_request(native_connection, &request_options);
@@ -321,5 +324,70 @@ PyObject *aws_py_http_client_stream_activate(PyObject *self, PyObject *args) {
     /* Force python self to stay alive until on_complete callback */
     Py_INCREF(py_stream);
 
+    Py_RETURN_NONE;
+}
+
+static void s_on_http2_write_data_complete(struct aws_http_stream *stream, int error_code, void *user_data) {
+    (void)stream;
+    PyObject *py_on_write_complete = (PyObject *)user_data;
+    AWS_FATAL_ASSERT(py_on_write_complete);
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
+
+    /* Invoke on_setup, then clear our reference to it */
+    PyObject *result = PyObject_CallFunction(py_on_write_complete, "(i)", error_code);
+    if (result) {
+        Py_DECREF(result);
+    } else {
+        /* Callback might fail during application shutdown */
+        PyErr_WriteUnraisable(PyErr_Occurred());
+    }
+    Py_DECREF(py_on_write_complete);
+    PyGILState_Release(state);
+}
+
+PyObject *aws_py_http2_client_stream_write_data(PyObject *self, PyObject *args) {
+    (void)self;
+
+    PyObject *py_stream = NULL;
+    PyObject *py_body_stream = NULL;
+    int end_stream = false;
+    PyObject *py_on_write_complete = NULL;
+    if (!PyArg_ParseTuple(args, "OOpO", &py_stream, &py_body_stream, &end_stream, &py_on_write_complete)) {
+        return NULL;
+    }
+
+    struct aws_http_stream *http_stream = aws_py_get_http_stream(py_stream);
+    if (!http_stream) {
+        return NULL;
+    }
+
+    struct aws_input_stream *body_stream = NULL;
+    // Write an empty stream is allowed.
+    if (py_body_stream != Py_None) {
+        /* The py_body_stream has the same lifetime as the C stream, no need to keep it alive from this binding. */
+        body_stream = aws_py_get_input_stream(py_body_stream);
+        if (!body_stream) {
+            return PyErr_AwsLastError();
+        }
+    }
+
+    /* Make sure the python callback live long enough for C to call. */
+    Py_INCREF(py_on_write_complete);
+
+    struct aws_http2_stream_write_data_options write_options = {
+        .data = body_stream,
+        .end_stream = end_stream,
+        .on_complete = s_on_http2_write_data_complete,
+        .user_data = py_on_write_complete,
+    };
+
+    int error = aws_http2_stream_write_data(http_stream, &write_options);
+    if (error) {
+        Py_DECREF(py_on_write_complete);
+        return PyErr_AwsLastError();
+    }
     Py_RETURN_NONE;
 }
