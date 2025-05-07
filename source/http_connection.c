@@ -175,7 +175,7 @@ static int s_convert_http2_settings(
     return AWS_OP_SUCCESS;
 error:
     *out_size = 0;
-    aws_mem_release(allocator, out_settings);
+    aws_mem_release(allocator, *out_settings);
     *out_settings = NULL;
     return AWS_OP_ERR;
 }
