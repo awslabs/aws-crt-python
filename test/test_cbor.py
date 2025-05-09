@@ -14,7 +14,7 @@ class TestCBOR(NativeResourceTest):
         try:
             # pass float instead of int
             encoder.write_int(1.1)
-        except AssertionError as e:
+        except TypeError as e:
             self.assertIsNotNone(e)
         else:
             self.assertTrue(False)
@@ -125,12 +125,16 @@ class TestCBOR(NativeResourceTest):
                         # TODO: we don't support parse the tag to python type yet.
                         # hard code the tag cases to the expected format.
                         tag_id = decoder.pop_next_tag_val()
+                        if tag_id == 0:
+                            tag_value_type = "string"
+                        else:
+                            tag_value_type = "uint"
                         tag_data = decoder.pop_next_data_item()
                         decoded_data = {
                             "tag": {
                                 "id": tag_id,
                                 "value": {
-                                    "uint": tag_data
+                                    tag_value_type: tag_data
                                 }
                             }
                         }
