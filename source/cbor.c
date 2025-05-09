@@ -236,13 +236,14 @@ static PyObject *s_cbor_encoder_write_pyobject(struct encoder_binding *encoder_b
         return s_cbor_encoder_write_pyobject_as_bool(encoder_binding->native, py_object);
     } else if (PyBytes_CheckExact(py_object)) {
         return s_cbor_encoder_write_pyobject_as_bytes(encoder_binding->native, py_object);
-    } else if (PyUnicode_CheckExact(py_object)) {
+    } else if (PyUnicode_Check(py_object)) {
+        /* Allow subclasses of `str` */
         return s_cbor_encoder_write_pyobject_as_text(encoder_binding->native, py_object);
-    } else if (PyList_CheckExact(py_object)) {
-        /* Write py_list */
+    } else if (PyList_Check(py_object)) {
+        /* Write py_list, allow subclasses of `list` */
         return s_cbor_encoder_write_pylist(encoder_binding, py_object);
-    } else if (PyDict_CheckExact(py_object)) {
-        /* Write py_dict */
+    } else if (PyDict_Check(py_object)) {
+        /* Write py_dict, allow subclasses of `dict` */
         return s_cbor_encoder_write_pydict(encoder_binding, py_object);
     } else if (py_object == Py_None) {
         aws_cbor_encoder_write_null(encoder_binding->native);
