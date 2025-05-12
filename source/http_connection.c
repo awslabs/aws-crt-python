@@ -142,7 +142,7 @@ static void s_on_client_connection_setup(
 static int s_convert_http2_settings(
     PyObject *initial_settings_py,
     struct aws_allocator *allocator,
-    struct aws_http2_setting **out_settings,
+    struct aws_http2_setting *out_settings[],
     size_t *out_size) {
     Py_ssize_t py_list_size = PyList_Size(initial_settings_py);
     if (py_list_size == 0) {
