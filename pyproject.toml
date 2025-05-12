@@ -1,14 +1,16 @@
 [build-system]
 requires = [
   "setuptools>=75.3.1",
-  "wheel>=0.45.1", # used by our setup.py
+  "wheel>=0.45.1",      # used by our setup.py
 ]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "awscrt"
-license = {text = "Apache-2.0", files = ["LICENSE"]}
-authors = [{name = "Amazon Web Services, Inc", email = "aws-sdk-common-runtime@amazon.com"}]
+license = { text = "Apache-2.0", files = ["LICENSE"] }
+authors = [
+  { name = "Amazon Web Services, Inc", email = "aws-sdk-common-runtime@amazon.com" },
+]
 description = "A common runtime for AWS Python projects"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -19,9 +21,7 @@ classifiers = [
   "Operating System :: Unix",
   "Operating System :: MacOS",
 ]
-dynamic = [
-  "version",
-]
+dynamic = ["version"]
 
 [project.urls]
 github = "https://github.com/awslabs/aws-crt-python"
@@ -31,9 +31,10 @@ releasenotes = "https://github.com/awslabs/aws-crt-python/releases"
 
 [project.optional-dependencies]
 dev = [
-  "autopep8>=2.3.1", # for code formatting
-  "build>=1.2.2", # for building wheels
+  "autopep8>=2.3.1",                             # for code formatting
+  "build>=1.2.2",                                # for building wheels
   "sphinx>=7.2.6,<7.3; python_version >= '3.9'", # for building docs
-  "websockets>=13.1", # for tests
-  "h2", # for tests
+  "websockets>=13.1",                            # for tests
+  # for tests, restrict to exact version for test_http_client/TestClientMockServer/_on_remote_settings_changed that relies on the implementation details. Also, this is no needs to update this package.
+  "h2==4.1.0",
 ]
