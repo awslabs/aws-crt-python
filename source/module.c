@@ -496,7 +496,8 @@ int aws_py_translate_py_error(void) {
     }
 
     /* Print standard traceback to sys.stderr and clear the error indicator. */
-    PyErr_Print();
+    /* Handles the exception in C, do not set the last vars for python. */
+    PyErr_PrintEx(0 /*set_sys_last_vars*/);
     fprintf(stderr, "Treating Python exception as error %d(%s)\n", aws_error_code, aws_error_name(aws_error_code));
 
     return aws_error_code;
@@ -829,6 +830,7 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(http_client_connection_new, METH_VARARGS),
     AWS_PY_METHOD_DEF(http_client_stream_new, METH_VARARGS),
     AWS_PY_METHOD_DEF(http_client_stream_activate, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http2_client_stream_write_data, METH_VARARGS),
     AWS_PY_METHOD_DEF(http_message_new_request, METH_VARARGS),
     AWS_PY_METHOD_DEF(http_message_get_request_method, METH_VARARGS),
     AWS_PY_METHOD_DEF(http_message_set_request_method, METH_VARARGS),

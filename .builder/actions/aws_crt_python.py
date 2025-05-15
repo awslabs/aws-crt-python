@@ -29,6 +29,7 @@ class AWSCrtPython(Builder.Action):
 
         # Enable S3 tests
         env.shell.setenv('AWS_TEST_S3', '1')
+        env.shell.setenv('AWS_TEST_LOCALHOST', '1')
 
         actions = [
             [self.python, '--version'],
