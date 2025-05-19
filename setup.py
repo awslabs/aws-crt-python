@@ -227,6 +227,13 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
         cmake_args = [cmake]
         cmake_args.append(f'-H{source_dir}')
         cmake_args.append(f'-B{build_dir}')
+
+        # This is the minimum version of the Windows SDK needed for schannel.h with SCH_CREDENTIALS and
+        # TLS_PARAMETERS. These are required to build Windows Binaries with TLS 1.3 support. This will tell
+        # Jenkins to use this version of the SDK during build.
+        if sys.platform == 'win32':
+            cmake_args.append('-DCMAKE_SYSTEM_VERSION=10.0.17763.0')
+
         cmake_args.extend(determine_generator_args())
         cmake_args.extend(determine_cross_compile_args())
         cmake_args.extend([
