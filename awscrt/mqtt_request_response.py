@@ -62,16 +62,15 @@ class IncomingPublishEvent:
     payload: 'Optional[bytes]' = None
 
 
+SubscriptionStatusListener = Callable[[SubscriptionStatusEvent], None]
 """
 Signature for a handler that listens to subscription status events.
 """
-SubscriptionStatusListener = Callable[[SubscriptionStatusEvent], None]
 
+IncomingPublishListener = Callable[[IncomingPublishEvent], None]
 """
 Signature for a handler that listens to incoming publish events.
 """
-IncomingPublishListener = Callable[[IncomingPublishEvent], None]
-
 
 @dataclass
 class StreamingOperationOptions:
