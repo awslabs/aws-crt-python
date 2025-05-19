@@ -72,6 +72,7 @@ IncomingPublishListener = Callable[[IncomingPublishEvent], None]
 Signature for a handler that listens to incoming publish events.
 """
 
+
 @dataclass
 class StreamingOperationOptions:
     """
