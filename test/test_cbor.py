@@ -6,6 +6,7 @@ from awscrt.cbor import *
 import json
 import struct
 import os
+import datetime
 
 
 class TestCBOR(NativeResourceTest):
@@ -67,6 +68,88 @@ class TestCBOR(NativeResourceTest):
         # Temp val only for easier to debug.
         t = decoder.pop_next_data_item()
         self.assertEqual(val_to_write, t)
+
+    def test_cbor_encode_decode_indef(self):
+        encoder = AwsCborEncoder()
+        numerics = [-100.12, 100.0, -100, 100, 2**64 - 1, -2**64, 18446744073709551616.0]
+        another_map = {
+            2**6: [1, 2, 3],
+            -2**6: [1, ["2", b"3"], {"most complicated": numerics}, 2**6, -2**7]
+        }
+        encoder.write_indef_array_start()
+        for i in numerics:
+            encoder.write_data_item(i)
+        encoder.write_break()
+
+        encoder.write_indef_map_start()
+        for key in another_map:
+            encoder.write_data_item(key)
+            encoder.write_data_item(another_map[key])
+        encoder.write_break()
+
+        text1 = "test"
+        text2 = "text"
+        encoder.write_indef_text_start()
+        encoder.write_text(text1)
+        encoder.write_text(text2)
+        encoder.write_break()
+
+        bytes1 = b"test"
+        bytes2 = b"bytes"
+        encoder.write_indef_bytes_start()
+        encoder.write_bytes(bytes1)
+        encoder.write_bytes(bytes2)
+        encoder.write_break()
+
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        # Temp val only for easier to debug.
+        t = decoder.pop_next_data_item()
+        self.assertEqual(numerics, t)
+        t = decoder.pop_next_data_item()
+        self.assertEqual(another_map, t)
+        t = decoder.pop_next_data_item()
+        self.assertEqual(text1 + text2, t)
+        t = decoder.pop_next_data_item()
+        self.assertEqual(bytes1 + bytes2, t)
+        self.assertEqual(0, decoder.get_remaining_bytes_len())
+
+    def test_cbor_encode_decode_epoch_time(self):
+        time_stamp_secs = 100.1  # some random time
+
+        encoder = AwsCborEncoder()
+        encoder.write_tag(1)  # tag time
+        encoder.write_float(time_stamp_secs)
+
+        def on_epoch_time(epoch_secs):
+            return datetime.datetime.fromtimestamp(epoch_secs)
+
+        # without the handler for epoch time, it just return the numeric.
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        t = decoder.pop_next_data_item()
+        self.assertEqual(time_stamp_secs, t)
+
+        # add handler
+        decoder = AwsCborDecoder(encoder.get_encoded_data(), on_epoch_time)
+        t = decoder.pop_next_data_item()
+        self.assertEqual(datetime.datetime.fromtimestamp(time_stamp_secs), t)
+
+    def test_cbor_encode_decode_unexpected_tag(self):
+        time_stamp_secs = 100.1  # some random time
+
+        encoder = AwsCborEncoder()
+        encoder.write_tag(0)  # tag time
+        encoder.write_float(time_stamp_secs)
+
+        def on_epoch_time(epoch_secs):
+            return datetime.datetime.fromtimestamp(epoch_secs)
+        # add handler
+        decoder = AwsCborDecoder(encoder.get_encoded_data(), on_epoch_time)
+        exception = None
+        try:
+            t = decoder.pop_next_data_item()
+        except Exception as e:
+            exception = e
+        self.assertIsNotNone(exception)
 
     def _ieee754_bits_to_float(self, bits):
         return struct.unpack('>f', struct.pack('>I', bits))[0]

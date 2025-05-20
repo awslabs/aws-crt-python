@@ -5,9 +5,7 @@ import _awscrt
 
 from awscrt import NativeResource
 from enum import IntEnum
-from typing import Callable, Any
-import datetime
-from dateutil.tz import tzlocal
+from typing import Callable, Any, Union
 
 
 class AwsCborType(IntEnum):
@@ -43,7 +41,7 @@ class AwsCborEncoder(NativeResource):
 
     def __init__(self):
         super().__init__()
-        self._binding = _awscrt.cbor_encoder_new(self)
+        self._binding = _awscrt.cbor_encoder_new()
 
     def get_encoded_data(self) -> bytes:
         """Return the current encoded data as bytes
@@ -150,6 +148,43 @@ class AwsCborEncoder(NativeResource):
         """
         return _awscrt.cbor_encoder_write_simple_types(self._binding, AwsCborType.Null)
 
+    def write_undefined(self):
+        """Add a simple value 23 as undefined. Refer to RFC8949 section 3.3
+        """
+        return _awscrt.cbor_encoder_write_simple_types(self._binding, AwsCborType.Undefined)
+
+    def write_indef_array_start(self):
+        """Begin an indefinite-length array. Must be closed with write_break().
+        Refer to RFC8949 section 3.2.2
+        """
+        return _awscrt.cbor_encoder_write_simple_types(self._binding, AwsCborType.IndefArray)
+
+    def write_indef_map_start(self):
+        """Begin an indefinite-length map. Must be closed with write_break().
+        Refer to RFC8949 section 3.2.2
+        """
+        return _awscrt.cbor_encoder_write_simple_types(self._binding, AwsCborType.IndefMap)
+
+    def write_indef_bytes_start(self):
+        """Begin an indefinite-length byte string. Must be followed by definite-length
+        byte strings and closed with write_break().
+        Refer to RFC8949 section 3.2.2
+        """
+        return _awscrt.cbor_encoder_write_simple_types(self._binding, AwsCborType.IndefBytes)
+
+    def write_indef_text_start(self):
+        """Begin an indefinite-length text string. Must be followed by definite-length
+        text strings and closed with write_break().
+        Refer to RFC8949 section 3.2.2
+        """
+        return _awscrt.cbor_encoder_write_simple_types(self._binding, AwsCborType.IndefStr)
+
+    def write_break(self):
+        """Write a break code (0xFF) to close an indefinite-length item.
+        Refer to RFC8949 section 3.2.2
+        """
+        return _awscrt.cbor_encoder_write_simple_types(self._binding, AwsCborType.Break)
+
     def write_bool(self, val: bool):
         """Add a simple value 20/21 as false/true. Refer to RFC8949 section 3.3
         """
@@ -206,44 +241,32 @@ class AwsCborDecoder(NativeResource):
         - call reset_src() to reset the src data to be decoded, if needed.
     """
 
-    def __init__(self, src: bytes, on_tag: Callable[[int, Any], Any] = None):
+    def __init__(self, src: bytes, on_epoch_time: Callable[[Union[int, float]], Any] = None, **kwargs):
         """Create an instance of AwsCborDecoder with the src data to be decoded.
         The src data should be a bytes of cbor formatted data.
 
         Args:
             src (bytes): the bytes of cbor formatted data to be decoded.
-            on_tag (Callable[[int, Any], Any], optional): Optional callback invoked once tags are encountered during decoding.
-                The function should take the following arguments:
-                    *   `tag_id` (int): The tag id as int.
+            on_epoch_time (Callable[[int, Any], Any], optional): Optional callback invoked once tags
+                with id: 1, which is the epoch time, are encountered during decoding a data_item.
 
-                    *   `tag_val` (Any): the decoded value for the tag.
+                The function should take the following arguments:
+                    *   `epoch_secs` (int | float): the seconds since epoch.
 
                 The function should return
-                    *   `result` (Any): The PyObject the tagged value converted to.
-
+                    *   `result` (Any): The PyObject the epoch time converted to.
         """
         super().__init__()
         self._src = src
-        self._binding = _awscrt.cbor_decoder_new(src)
-        self._on_tag = on_tag
+        self._binding = _awscrt.cbor_decoder_new(self, src)
+        self._on_epoch_time = on_epoch_time
 
-    def _tag_conversion_callback(self, tag_id: int, tag_val: Any) -> Any:
-        if self._on_tag is not None:
-            return self._on_tag(tag_id, tag_val)
+    def _on_epoch_time_callback(self, epoch_secs: Union[int, float]) -> Any:
+        if self._on_epoch_time is not None:
+            return self._on_epoch_time(epoch_secs)
         else:
-            if tag_id == 0:
-                tag_value_type = "string"
-            else:
-                tag_value_type = "uint"
-            # by default, return the tag as a dict with the tag id and value
-            return {
-                "tag": {
-                    "id": tag_id,
-                    "value": {
-                        tag_value_type: tag_val
-                    }
-                }
-            }
+            # just default to the numeric type.
+            return epoch_secs
 
     def peek_next_type(self) -> AwsCborType:
         """Return the AwsCborType of the next data item in the cbor formatted data
@@ -408,56 +431,18 @@ class AwsCborDecoder(NativeResource):
         - `AwsCborType.Bool` -> bool
         - `AwsCborType.ArrayStart` or `AwsCborType.IndefArray` and all the followed data items in the array -> list
         - `AwsCborType.MapStart` or `AwsCborType.IndefMap` and all the followed data items in the map -> dict
+        - `AwsCborType.Tag`: For tag with id 1, as the epoch time, it invokes the _on_epoch_time for python to convert to expected type.
+                             For the reset tag, exception will be raised.
         """
         return _awscrt.cbor_decoder_pop_next_data_item(self._binding)
 
-    def _pop_next_data_item_sdk(self) -> Any:
-        """Helper function to decode cbor formatted data to a python object.
-        It based on `pop_next_data_item` with the following specific rules for SDKs:
-        1. It the content in a collection has None, it will be ignored
-            - If a value in the list is None, the list will NOT include the None value.
-            - If a value or key in the dict is None, the dict will NOT include the key/value pair.
-        2. For epoch time, it will be converted to datetime object.
-        3. All other tag will not be supported and raise error.
-        """
-        def on_tag_sdk(tag_id: int, tag_val: Any) -> Any:
-            if tag_id == 1:
-                # convert the epoch time to datetime object
-                epoch_zero = datetime.datetime(1970, 1, 1, 0, 0, 0)
-                epoch_zero_localized = epoch_zero.astimezone(tzlocal())
-                return epoch_zero_localized + datetime.timedelta(seconds=tag_val)
-            else:
-                # raise error for unsupported tag
-                raise ValueError(f"Unsupported tag id: {tag_id}")
-        if self._on_tag is None:
-            self._on_tag = on_tag_sdk
-        return _awscrt.cbor_decoder_pop_next_data_item_sdk(self._binding)
-
-
-# class CRTCborParser:
-#     _decoders = {}
-#     _lock = threading.Lock()
-
-#     def parse(self, data: bytes):
-#         """Helper function to decode cbor formatted data to a python object.
-#         It based on `AwsCborDecoder.pop_next_data_item()` with the following specific rules for SDKs:
-#         1. It the value is None, it will be ignored.
-#         2. For epoch time, it will be converted to datetime object.
-#         3. All other tag will not be supported and raise error.
-
-#         Args:
-#             data (bytes): cbor formatted data to be decoded.
-#         Returns:
-#             tuple: (decoded_data: Any, remaining_bytes: bytes)
-#         """
-#         with self._lock:
-#             id = threading.get_ident()
-#             if id not in self._decoders:
-#                 decoder = AwsCborDecoder(data)
-#                 self._decoders[id] = decoder
-#             else:
-#                 decoder = self._decoders[id]
-#                 decoder.reset_src(data)
-
-#         result = decoder._pop_next_data_item_sdk()
-#         return result, data[:decoder.get_remaining_bytes_len()]
+    # def _pop_next_data_item_sdk(self) -> Any:
+    #     """Helper function to decode cbor formatted data to a python object.
+    #     It based on `pop_next_data_item` with the following specific rules for SDKs:
+    #     1. It the content in a collection has None, it will be ignored
+    #         - If a value in the list is None, the list will NOT include the None value.
+    #         - If a value or key in the dict is None, the dict will NOT include the key/value pair.
+    #     2. For epoch time, it will be converted to datetime object.
+    #     3. All other tag will not be supported and raise error.
+    #     """
+    #     return _awscrt.cbor_decoder_pop_next_data_item_sdk(self._binding)
