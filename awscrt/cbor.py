@@ -104,8 +104,7 @@ class AwsCborEncoder(NativeResource):
 
     def write_array_start(self, number_entries: int):
         """Add a start of array element.
-            A logistic with the `number_entries`
-            for the cbor data items to be included in the array.
+            for a number of the cbor data items to be included in the array.
             `number_entries` should 0 to 2^64 inclusive.
             Otherwise, overflow will be raised.
 
