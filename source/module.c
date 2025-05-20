@@ -5,6 +5,7 @@
 #include "module.h"
 
 #include "auth.h"
+#include "cbor.h"
 #include "checksums.h"
 #include "common.h"
 #include "crypto.h"
@@ -115,6 +116,14 @@ PyObject *PyUnicode_FromAwsString(const struct aws_string *aws_str) {
         return NULL;
     }
     return PyUnicode_FromStringAndSize(aws_string_c_str(aws_str), aws_str->len);
+}
+
+PyObject *PyBytes_FromAwsByteCursor(const struct aws_byte_cursor *cursor) {
+    if (cursor->len > PY_SSIZE_T_MAX) {
+        PyErr_SetString(PyExc_OverflowError, "Cursor exceeds PY_SSIZE_T_MAX");
+        return NULL;
+    }
+    return PyBytes_FromStringAndSize((const char *)cursor->ptr, (Py_ssize_t)cursor->len);
 }
 
 uint32_t PyObject_GetAttrAsUint32(PyObject *o, const char *class_name, const char *attr_name) {
@@ -899,6 +908,41 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(websocket_increment_read_window, METH_VARARGS),
     AWS_PY_METHOD_DEF(websocket_create_handshake_request, METH_VARARGS),
 
+    /* CBOR Encode */
+    AWS_PY_METHOD_DEF(cbor_encoder_new, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_encoder_get_encoded_data, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_encoder_write_uint, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_encoder_write_negint, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_encoder_write_float, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_encoder_write_bytes, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_encoder_write_text, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_encoder_write_array_start, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_encoder_write_map_start, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_encoder_write_tag, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_encoder_write_bool, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_encoder_write_simple_types, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_encoder_write_py_list, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_encoder_write_py_dict, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_encoder_write_data_item, METH_VARARGS),
+
+    /* CBOR Decode */
+    AWS_PY_METHOD_DEF(cbor_decoder_new, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_decoder_peek_type, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_decoder_get_remaining_bytes_len, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_decoder_consume_next_element, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_decoder_consume_next_data_item, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_decoder_pop_next_unsigned_int, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_decoder_pop_next_negative_int, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_decoder_pop_next_float, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_decoder_pop_next_boolean, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_decoder_pop_next_bytes, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_decoder_pop_next_text, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_decoder_pop_next_array_start, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_decoder_pop_next_map_start, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_decoder_pop_next_tag, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_decoder_pop_next_py_list, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_decoder_pop_next_py_dict, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_decoder_pop_next_data_item, METH_VARARGS),
     {NULL, NULL, 0, NULL},
 };
 
