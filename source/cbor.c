@@ -24,6 +24,7 @@ static void s_cbor_encoder_capsule_destructor(PyObject *py_capsule) {
 
 PyObject *aws_py_cbor_encoder_new(PyObject *self, PyObject *args) {
     (void)self;
+    (void)args;
     struct aws_cbor_encoder *encoder = aws_cbor_encoder_new(aws_py_get_allocator());
     AWS_ASSERT(encoder != NULL);
     PyObject *py_capsule = PyCapsule_New(encoder, s_capsule_name_cbor_encoder, s_cbor_encoder_capsule_destructor);
