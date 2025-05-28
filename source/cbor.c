@@ -19,7 +19,9 @@ static struct aws_cbor_encoder *s_cbor_encoder_from_capsule(PyObject *py_capsule
 /* Runs when GC destroys the capsule */
 static void s_cbor_encoder_capsule_destructor(PyObject *py_capsule) {
     struct aws_cbor_encoder *encoder = s_cbor_encoder_from_capsule(py_capsule);
-    aws_cbor_encoder_destroy(encoder);
+    if (encoder) {
+        aws_cbor_encoder_destroy(encoder);
+    }
 }
 
 PyObject *aws_py_cbor_encoder_new(PyObject *self, PyObject *args) {
@@ -46,10 +48,6 @@ PyObject *aws_py_cbor_encoder_get_encoded_data(PyObject *self, PyObject *args) {
         return NULL;
     }
     struct aws_byte_cursor encoded_data = aws_cbor_encoder_get_encoded_data(encoder);
-    if (encoded_data.len == 0) {
-        /* TODO: probably better to be empty instead of None?? */
-        Py_RETURN_NONE;
-    }
     return PyBytes_FromStringAndSize((const char *)encoded_data.ptr, encoded_data.len);
 }
 
@@ -57,6 +55,8 @@ PyObject *aws_py_cbor_encoder_get_encoded_data(PyObject *self, PyObject *args) {
     static PyObject *s_cbor_encoder_write_pyobject_as_##field(struct aws_cbor_encoder *encoder, PyObject *py_object) { \
         ctype data = py_conversion(py_object);                                                                         \
         if (PyErr_Occurred()) {                                                                                        \
+            /* Add context to make debugging easier */                                                                 \
+            PyErr_Format(PyExc_TypeError, "Failed to convert Python object to " #ctype " for CBOR " #field);           \
             return NULL;                                                                                               \
         }                                                                                                              \
         aws_cbor_encoder_write_##field(encoder, data);                                                                 \
@@ -143,7 +143,12 @@ static PyObject *s_cbor_encoder_write_pylist(struct aws_cbor_encoder *encoder, P
             PyErr_SetString(PyExc_RuntimeError, "Failed to get item from list");
             return NULL;
         }
-        s_cbor_encoder_write_pyobject(encoder, item);
+        PyObject *result = s_cbor_encoder_write_pyobject(encoder, item);
+        if (!result) {
+            // Error already set by s_cbor_encoder_write_pyobject
+            return NULL;
+        }
+        Py_DECREF(result);
     }
     Py_RETURN_NONE;
 }
@@ -156,8 +161,19 @@ static PyObject *s_cbor_encoder_write_pydict(struct aws_cbor_encoder *encoder, P
     Py_ssize_t pos = 0;
 
     while (PyDict_Next(py_dict, &pos, &key, &value)) {
-        s_cbor_encoder_write_pyobject(encoder, key);
-        s_cbor_encoder_write_pyobject(encoder, value);
+        PyObject *key_result = s_cbor_encoder_write_pyobject(encoder, key);
+        if (!key_result) {
+            // Error already set by s_cbor_encoder_write_pyobject
+            return NULL;
+        }
+        Py_DECREF(key_result);
+
+        PyObject *value_result = s_cbor_encoder_write_pyobject(encoder, value);
+        if (!value_result) {
+            // Error already set by s_cbor_encoder_write_pyobject
+            return NULL;
+        }
+        Py_DECREF(value_result);
     }
     Py_RETURN_NONE;
 }
@@ -286,8 +302,10 @@ static struct aws_cbor_decoder *s_cbor_decoder_from_capsule(PyObject *py_capsule
 /* Runs when GC destroys the capsule */
 static void s_cbor_decoder_capsule_destructor(PyObject *py_capsule) {
     struct decoder_binding *binding = PyCapsule_GetPointer(py_capsule, s_capsule_name_cbor_decoder);
-    aws_cbor_decoder_destroy(binding->native);
-    aws_mem_release(aws_py_get_allocator(), binding);
+    if (binding) {
+        aws_cbor_decoder_destroy(binding->native);
+        aws_mem_release(aws_py_get_allocator(), binding);
+    }
 }
 
 PyObject *aws_py_cbor_decoder_new(PyObject *self, PyObject *args) {

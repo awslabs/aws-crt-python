@@ -9,7 +9,31 @@ from typing import Callable, Any, Union
 
 
 class AwsCborType(IntEnum):
-    # Corresponding to `enum aws_cbor_type` in aws/common/cbor.h
+    """CBOR data type enumeration.
+
+    Corresponds to `enum aws_cbor_type` in aws/common/cbor.h from AWS C Common Runtime.
+    These values represent the different types of data items that can be encoded/decoded in CBOR format
+    according to RFC 8949.
+
+    Attributes:
+        Unknown: Unknown/uninitialized type
+        UnsignedInt: Unsigned integer (major type 0)
+        NegativeInt: Negative integer (major type 1)
+        Float: Floating-point number (major type 7, 25/26/27)
+        Bytes: Byte string (major type 2)
+        Text: Text string (major type 3)
+        ArrayStart: Start of definite-length array (major type 4)
+        MapStart: Start of definite-length map (major type 5)
+        Tag: Semantic tag (major type 6)
+        Bool: Boolean value (major type 7, simple value 20/21)
+        Null: Null value (major type 7, simple value 22)
+        Undefined: Undefined value (major type 7, simple value 23)
+        Break: Break stop code for indefinite-length items (major type 7, simple value 31)
+        IndefBytes: Start of indefinite-length byte string
+        IndefStr: Start of indefinite-length text string
+        IndefArray: Start of indefinite-length array
+        IndefMap: Start of indefinite-length map
+    """
     Unknown = 0
     UnsignedInt = 1
     NegativeInt = 2
@@ -30,13 +54,38 @@ class AwsCborType(IntEnum):
 
 
 class AwsCborEncoder(NativeResource):
-    """ Encoder for CBOR
-        This class is used to encode data into CBOR format.
-        Typical usage of encoder:
-        - create an instance of AwsCborEncoder
-        - call write_* methods to write data into the encoder
-        - call get_encoded_data() to get the encoded data
-        - call reset() to clear the encoder for next use
+    """CBOR encoder for converting Python objects to CBOR binary format.
+
+    This class provides methods to encode various Python data types into CBOR (Concise Binary Object
+    Representation) format as defined in RFC 8949. The encoder builds CBOR data incrementally by
+    calling write_* methods in sequence.
+
+    Thread Safety:
+        This class is NOT thread-safe. Each encoder instance should only be used from a single thread.
+        Create separate encoder instances for concurrent encoding operations.
+
+    Memory Management:
+        The encoder automatically manages internal memory and integrates with AWS CRT memory management.
+        Call reset() to clear internal buffers for reuse, or let the encoder be garbage collected.
+
+    Typical Usage:
+        ```python
+        encoder = AwsCborEncoder()
+        encoder.write_int(42)
+        encoder.write_text("hello")
+        encoder.write_array_start(2)
+        encoder.write_bool(True)
+        encoder.write_null()
+        cbor_data = encoder.get_encoded_data()
+        ```
+
+    For complex data structures, use write_data_item() which automatically handles nested objects:
+        ```python
+        encoder = AwsCborEncoder()
+        data = {"numbers": [1, 2, 3], "text": "example", "flag": True}
+        encoder.write_data_item(data)
+        cbor_data = encoder.get_encoded_data()
+        ```
     """
 
     def __init__(self):
@@ -52,7 +101,16 @@ class AwsCborEncoder(NativeResource):
         return _awscrt.cbor_encoder_get_encoded_data(self._binding)
 
     def reset(self):
-        """Clear the current encoded data to empty bytes
+        """Clear the encoder's internal buffer and reset to initial state.
+
+        After calling this method, the encoder is ready to encode new data from scratch.
+        Any previously encoded data is discarded and cannot be recovered.
+
+        This is useful for reusing the same encoder instance to encode multiple
+        independent CBOR documents without creating new encoder objects.
+
+        Note:
+            This operation does not raise exceptions and always succeeds.
         """
         return _awscrt.cbor_encoder_reset(self._binding)
 
@@ -66,19 +124,16 @@ class AwsCborEncoder(NativeResource):
         Args:
             val (int): value to be encoded and written to the encoded data.
         """
-        val_to_encode = val
-        if val < 0:
+        if val >= 0:
+            return _awscrt.cbor_encoder_write_uint(self._binding, val)
+        else:
             # For negative value, the value to encode is -1 - val.
             val_to_encode = -1 - val
-        if val >= 0:
-            return _awscrt.cbor_encoder_write_uint(self._binding, val_to_encode)
-        else:
             return _awscrt.cbor_encoder_write_negint(self._binding, val_to_encode)
 
     def write_float(self, val: float):
         """Write a double as cbor formatted
-            If the val can be convert the int without loss of precision,
-            it will be converted to int to be written to as cbor formatted.
+            Encodes as the most compact CBOR representation without loss of precision.
 
         Args:
             val (float): value to be encoded and written to the encoded data.
@@ -106,13 +161,13 @@ class AwsCborEncoder(NativeResource):
         """Add a start of array element.
             for a number of the cbor data items to be included in the array.
             `number_entries` should 0 to 2^64 inclusive.
-            Otherwise, overflow will be raised.
+            Otherwise, ValueError will be raised.
 
         Args:
             number_entries (int): number of entries in the array to be written
         """
         if number_entries < 0 or number_entries > 2**64:
-            raise OverflowError()
+            raise ValueError(f"{number_entries} must be between 0 and 2^64")
 
         return _awscrt.cbor_encoder_write_array_start(self._binding, number_entries)
 
@@ -120,13 +175,13 @@ class AwsCborEncoder(NativeResource):
         """Add a start of map element, with the `number_entries`
             for the number of pair of cbor data items to be included in the map.
             `number_entries` should 0 to 2^64 inclusive.
-            Otherwise, overflow will be raised.
+            Otherwise, ValueError will be raised.
 
         Args:
             number_entries (int): number of entries in the map to be written
         """
         if number_entries < 0 or number_entries > 2**64:
-            raise ValueError()
+            raise ValueError(f"{number_entries} must be between 0 and 2^64")
 
         return _awscrt.cbor_encoder_write_map_start(self._binding, number_entries)
 
@@ -138,7 +193,7 @@ class AwsCborEncoder(NativeResource):
             tag_number (int): the tag number, refer to RFC8949 section 3.4 for the valid tag number.
         """
         if tag_number < 0 or tag_number > 2**64:
-            raise ValueError()
+            raise ValueError(f"{tag_number} must be between 0 and 2^64")
 
         return _awscrt.cbor_encoder_write_tag(self._binding, tag_number)
 
@@ -230,14 +285,78 @@ class AwsCborEncoder(NativeResource):
 
 
 class AwsCborDecoder(NativeResource):
-    """ Decoder for CBOR
-        This class is used to decode a bytes of CBOR encoded data to python objects.
-        Typical usage of decoder:
-        - create an instance of AwsCborDecoder with bytes of cbor formatted data to be decoded
-        - call peek_next_type() to get the type of the next data item
-        - call pop_next_*() to based on the type of the next data item to decode it
-        - Until expected data decoded, call get_remaining_bytes_len() to check if there is any remaining bytes left.
-        - call reset_src() to reset the src data to be decoded, if needed.
+    """CBOR decoder for converting CBOR binary format to Python objects.
+
+    This class provides methods to decode CBOR (Concise Binary Object Representation) binary data
+    into Python data types as defined in RFC 8949. The decoder processes CBOR data sequentially
+    using a peek-and-pop approach, allowing fine-grained control over the decoding process.
+
+    Thread Safety:
+        This class is NOT thread-safe. Each decoder instance should only be used from a single thread.
+        Create separate decoder instances for concurrent decoding operations.
+
+    Memory Management:
+        The decoder holds a reference to the source data and automatically manages internal state.
+        Use reset_src() to decode new data with the same decoder instance, or let the decoder
+        be garbage collected when no longer needed.
+
+    Decoding Workflow:
+        The decoder uses a sequential peek-and-pop pattern:
+        1. Use peek_next_type() to inspect the next data item type without consuming it
+        2. Use appropriate pop_next_*() method to decode and consume the data item
+        3. Repeat until all expected data is decoded
+        4. Check get_remaining_bytes_len() to get the remaining unprocessed data.
+
+    Basic Usage:
+        ```python
+        # Decode simple values
+        decoder = AwsCborDecoder(cbor_data)
+        if decoder.peek_next_type() == AwsCborType.UnsignedInt:
+            value = decoder.pop_next_unsigned_int()
+        ```
+
+    Generic Decoding:
+        For automatic type detection and conversion, use pop_next_data_item():
+        ```python
+        decoder = AwsCborDecoder(cbor_data)
+        python_object = decoder.pop_next_data_item()  # Automatically handles any CBOR type
+        ```
+
+    Complex Structures:
+        ```python
+        decoder = AwsCborDecoder(cbor_data)
+
+        # Manually decode an array
+        if decoder.peek_next_type() == AwsCborType.ArrayStart:
+            array_length = decoder.pop_next_array_start()
+            items = []
+            for _ in range(array_length):
+                items.append(decoder.pop_next_data_item())
+
+        # Or use the convenience method
+        array = decoder.pop_next_list()  # Handles both definite and indefinite arrays
+        ```
+
+    Tagged Values and Callbacks:
+        Handle semantic tags (like timestamps) with custom processing:
+        ```python
+        def handle_timestamp(epoch_secs):
+            return datetime.fromtimestamp(epoch_secs, tz=timezone.utc)
+
+        decoder = AwsCborDecoder(cbor_data, on_epoch_time=handle_timestamp)
+        timestamp = decoder.pop_next_data_item()  # Returns datetime object for tag 1
+        ```
+
+    Error Handling:
+        The decoder raises exceptions for malformed data, type mismatches, and unexpected end-of-data.
+        Always handle these exceptions in production code:
+        ```python
+        try:
+            decoder = AwsCborDecoder(cbor_data)
+            result = decoder.pop_next_data_item()
+        except ValueError as e:
+            print(f"CBOR decoding error: {e}")
+        ```
     """
 
     def __init__(self, src: bytes, on_epoch_time: Callable[[Union[int, float]], Any] = None, **kwargs):
@@ -278,10 +397,25 @@ class AwsCborDecoder(NativeResource):
         return _awscrt.cbor_decoder_get_remaining_bytes_len(self._binding)
 
     def get_remaining_bytes(self) -> bytes:
-        """Return the remaining bytes not consumed yet of the src data.
+        """Return the remaining unprocessed CBOR data as bytes.
+
+        This method returns a slice of the original source data that has not yet been
+        consumed by the decoder. Useful for debugging, validation, or passing remaining
+        data to another decoder instance.
+
+        Returns:
+            bytes: The remaining unprocessed CBOR data. Returns empty bytes (b'') if
+                all data has been consumed.
+
+        Warning:
+            The returned bytes share memory with the original source data. Modifications
+            to the source data after decoder creation may affect the returned bytes.
         """
         remaining_length = _awscrt.cbor_decoder_get_remaining_bytes_len(self._binding)
-        return self._src[-remaining_length:] if remaining_length > 0 else b''
+        if remaining_length <= 0:
+            return b''
+        start_idx = len(self._src) - remaining_length
+        return self._src[start_idx:]
 
     def reset_src(self, src: bytes):
         """Reset the src data to be decoded.
@@ -344,9 +478,12 @@ class AwsCborDecoder(NativeResource):
     def pop_next_negative_int(self) -> int:
         """Return and consume the next data item as negative int if it's a `AwsCborType.NegativeInt`
         Otherwise, it will raise ValueError.
+
+        Note: CBOR stores negative integers as -(val + 1), so we convert back
+        to the actual negative value by computing -(val + 1) = -1 - val.
         """
-        val = _awscrt.cbor_decoder_pop_next_negative_int(self._binding)
-        return -1 - val
+        encoded_val = _awscrt.cbor_decoder_pop_next_negative_int(self._binding)
+        return -1 - encoded_val
 
     def pop_next_double(self) -> float:
         """Return and consume the next data item as float if it's a `AwsCborType.Float`
@@ -434,14 +571,3 @@ class AwsCborDecoder(NativeResource):
                              For the reset tag, exception will be raised.
         """
         return _awscrt.cbor_decoder_pop_next_data_item(self._binding)
-
-    # def _pop_next_data_item_sdk(self) -> Any:
-    #     """Helper function to decode cbor formatted data to a python object.
-    #     It based on `pop_next_data_item` with the following specific rules for SDKs:
-    #     1. It the content in a collection has None, it will be ignored
-    #         - If a value in the list is None, the list will NOT include the None value.
-    #         - If a value or key in the dict is None, the dict will NOT include the key/value pair.
-    #     2. For epoch time, it will be converted to datetime object.
-    #     3. All other tag will not be supported and raise error.
-    #     """
-    #     return _awscrt.cbor_decoder_pop_next_data_item_sdk(self._binding)
