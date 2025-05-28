@@ -26,7 +26,7 @@ if sys.platform == 'win32':
 MACOS_DEPLOYMENT_TARGET_MIN = "10.15"
 
 # This is the minimum version of the Windows SDK needed for schannel.h with SCH_CREDENTIALS and
-# TLS_PARAMETERS. These are required to build Windows Binaries with TLS 1.3 support. 
+# TLS_PARAMETERS. These are required to build Windows Binaries with TLS 1.3 support.
 WINDOWS_SDK_VERSION_TLS1_3_SUPPORT = "10.0.17763.0"
 
 
@@ -134,11 +134,12 @@ def determine_generator_args():
             # https://cmake.org/cmake/help/latest/variable/CMAKE_GENERATOR_PLATFORM.html#variable:CMAKE_GENERATOR_PLATFORM
             if get_cmake_version() >= (3, 27):
                 # Set windows sdk version to the one that supports TLS 1.3
-                arch_str.append(f",version={WINDOWS_SDK_VERSION_TLS1_3_SUPPORT}")
-            else: 
-                # for cmake < 3.27, we have to specify the version with CMAKE_SYSTEM_VERSION. Please note this flag will be 
+                arch_str += f",version={WINDOWS_SDK_VERSION_TLS1_3_SUPPORT}"
+            else:
+                # for cmake < 3.27, we have to specify the version with CMAKE_SYSTEM_VERSION. Please note this flag will be
                 # ignored by cmake versions >= 3.27.
-                arch_str.append(f" -DCMAKE_SYSTEM_VERSION={WINDOWS_SDK_VERSION_TLS1_3_SUPPORT}")
+                arch_str += f" -DCMAKE_SYSTEM_VERSION={WINDOWS_SDK_VERSION_TLS1_3_SUPPORT}"
+        print('Using Visual Studio', vs_version, vs_year, 'with architecture', arch_str)
 
         return ['-G', vs_version_gen_str, '-A', arch_str]
 
@@ -160,6 +161,7 @@ def get_cmake_path():
 
     raise Exception("CMake must be installed to build from source.")
 
+
 def get_cmake_version():
     """Return the version of CMake installed on the system."""
     cmake_path = get_cmake_path()
@@ -173,6 +175,7 @@ def get_cmake_version():
         return parse_version(version)
     except BaseException:
         return (0, 0, 0)  # Return a default version if cmake is not found or fails
+
 
 def using_system_libs():
     """If true, don't build any dependencies. Use the libs that are already on the system."""
