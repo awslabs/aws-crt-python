@@ -12,12 +12,22 @@ import subprocess
 import sys
 import sysconfig
 from wheel.bdist_wheel import bdist_wheel
+
 if sys.platform == 'win32':
     # distutils is deprecated in Python 3.10 and removed in 3.12. However, it still works because Python defines a compatibility interface as long as setuptools is installed.
     # We don't have an official alternative for distutils.ccompiler as of September 2024. See: https://github.com/pypa/setuptools/issues/2806
     # Once that issue is resolved, we can migrate to the official solution.
     # For now, restrict distutils to Windows only, where it's needed.
     import distutils.ccompiler
+
+# The minimum MACOSX_DEPLOYMENT_TARGET required for the library. If not
+# set, the library will use the default value from python
+# sysconfig.get_config_var('MACOSX_DEPLOYMENT_TARGET').
+MACOS_DEPLOYMENT_TARGET_MIN = "10.15"
+
+
+def parse_version(version_string):
+    return tuple(int(x) for x in version_string.split("."))
 
 
 def is_64bit():
@@ -55,11 +65,7 @@ def run_cmd(args):
 
 
 def copy_tree(src, dst):
-    if sys.version_info >= (3, 8):
-        shutil.copytree(src, dst, dirs_exist_ok=True)
-    else:
-        shutil.rmtree(dst, ignore_errors=True)
-        shutil.copytree(src, dst)
+    shutil.copytree(src, dst, dirs_exist_ok=True)
 
 
 def is_macos_universal2():
@@ -144,6 +150,16 @@ def using_system_libs():
             or not os.path.exists(os.path.join(PROJECT_DIR, 'crt', 'aws-c-common', 'CMakeLists.txt')))
 
 
+def using_libcrypto():
+    """If true, libcrypto is used, even on win/mac."""
+    if sys.platform == 'darwin' or sys.platform == 'win32':
+        # use libcrypto on mac/win to support ed25519, unless its disabled via env-var
+        return not os.getenv('AWS_CRT_BUILD_DISABLE_LIBCRYPTO_USE_FOR_ED25519_EVERYWHERE') == '1'
+    else:
+        # on Unix we always use libcrypto
+        return True
+
+
 def using_system_libcrypto():
     """If true, don't build AWS-LC. Use the libcrypto that's already on the system."""
     return using_system_libs() or os.getenv('AWS_CRT_BUILD_USE_SYSTEM_LIBCRYPTO') == '1'
@@ -152,11 +168,6 @@ def using_system_libcrypto():
 def forcing_static_libs():
     """If true, force libs to be linked statically."""
     return os.getenv('AWS_CRT_BUILD_FORCE_STATIC_LIBS') == '1'
-
-
-def disable_libcrypto_use_for_ed25519_everywhere():
-    """If true, libcrypto is not used on mac/win to support ed25519 and apis instead return not supported."""
-    return os.getenv('AWS_CRT_BUILD_DISABLE_LIBCRYPTO_USE_FOR_ED25519_EVERYWHERE') == '1'
 
 
 class AwsLib:
@@ -170,7 +181,7 @@ class AwsLib:
 # They're built along with the extension (unless using_system_libs() is True)
 AWS_LIBS = []
 
-if not disable_libcrypto_use_for_ed25519_everywhere() or (sys.platform != 'darwin' and sys.platform != 'win32'):
+if using_libcrypto():
     # aws-lc produces libcrypto.a
     AWS_LIBS.append(AwsLib('aws-lc', libname='crypto'))
 
@@ -230,18 +241,22 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
             f'-DCMAKE_BUILD_TYPE={build_type}',
         ])
 
-        if using_system_libcrypto():
-            cmake_args.append('-DUSE_OPENSSL=ON')
+        if using_libcrypto():
+            if using_system_libcrypto():
+                cmake_args.append('-DUSE_OPENSSL=ON')
 
-        if not disable_libcrypto_use_for_ed25519_everywhere():
             cmake_args.append('-DAWS_USE_LIBCRYPTO_TO_SUPPORT_ED25519_EVERYWHERE=ON')
 
         if sys.platform == 'darwin':
-            # build lib with same MACOSX_DEPLOYMENT_TARGET that python will ultimately
-            # use to link everything together, otherwise there will be linker warnings.
+            # get Python's MACOSX_DEPLOYMENT_TARGET version
             macosx_target_ver = sysconfig.get_config_var('MACOSX_DEPLOYMENT_TARGET')
-            if macosx_target_ver and 'MACOSX_DEPLOYMENT_TARGET' not in os.environ:
-                cmake_args.append(f'-DCMAKE_OSX_DEPLOYMENT_TARGET={macosx_target_ver}')
+            # If MACOS_DEPLOYMENT_TARGET_MIN is set to a later version than python distribution,
+            # override MACOSX_DEPLOYMENT_TARGET.
+            if macosx_target_ver is None or parse_version(
+                    MACOS_DEPLOYMENT_TARGET_MIN) > parse_version(macosx_target_ver):
+                macosx_target_ver = MACOS_DEPLOYMENT_TARGET_MIN
+                os.environ['MACOSX_DEPLOYMENT_TARGET'] = macosx_target_ver
+            cmake_args.append(f'-DCMAKE_OSX_DEPLOYMENT_TARGET={macosx_target_ver}')
 
             if osx_arch:
                 cmake_args.append(f'-DCMAKE_OSX_ARCHITECTURES={osx_arch}')
@@ -367,6 +382,19 @@ def awscrt_ext():
         extra_link_args += ['-framework', 'Security']
 
     else:  # unix
+        if forcing_static_libs():
+            # linker will prefer shared libraries over static if it can find both.
+            # force linker to choose static variant by using
+            # "-l:libaws-c-common.a" syntax instead of just "-laws-c-common".
+            #
+            # This helps AWS developers creating Lambda applications from Brazil.
+            # In Brazil, both shared and static libs are available.
+            # But Lambda requires all shared libs to be explicitly packaged up.
+            # So it's simpler to link them in statically and have less runtime dependencies.
+            #
+            # Don't apply this trick to dependencies that are always on the OS (e.g. librt)
+            libraries = [':lib{}.a'.format(x) for x in libraries]
+
         # OpenBSD doesn't have librt; functions are found in libc instead.
         if not sys.platform.startswith('openbsd'):
             libraries += ['rt']
@@ -392,20 +420,6 @@ def awscrt_ext():
         # libcrypto.so from the system's OpenSSL installation.
         # Do this even if using system libcrypto, since it could still be a static lib.
         extra_link_args += ['-Wl,--exclude-libs,libcrypto.a']
-
-    if not disable_libcrypto_use_for_ed25519_everywhere() or (sys.platform != 'darwin' and sys.platform != 'win32'):
-        if forcing_static_libs():
-            # linker will prefer shared libraries over static if it can find both.
-            # force linker to choose static variant by using
-            # "-l:libaws-c-common.a" syntax instead of just "-laws-c-common".
-            #
-            # This helps AWS developers creating Lambda applications from Brazil.
-            # In Brazil, both shared and static libs are available.
-            # But Lambda requires all shared libs to be explicitly packaged up.
-            # So it's simpler to link them in statically and have less runtime dependencies.
-            #
-            # Don't apply this trick to dependencies that are always on the OS (e.g. librt)
-            libraries = [':lib{}.a'.format(x) for x in libraries]
 
     if sys.platform != 'win32' or distutils.ccompiler.get_default_compiler() != 'msvc':
         extra_compile_args += ['-Wno-strict-aliasing', '-std=gnu99']

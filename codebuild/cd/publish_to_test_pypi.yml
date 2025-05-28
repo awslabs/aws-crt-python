@@ -1,5 +1,5 @@
 version: 0.2
-# this image assumes Ubuntu 14.04 base image
+# this image assumes base Codebuild Ubuntu image
 phases:
   install:
     commands:
@@ -21,7 +21,7 @@ phases:
       - ls -la dist/
       - cd aws-crt-python
       - python3 continuous-delivery/pull-pypirc.py alpha
-      - python3 -m twine upload -r testpypi ../dist/*
+      - python3 -m twine upload --repository testpypi --verbose ../dist/*
   post_build:
     commands:
       - echo Build completed on `date`

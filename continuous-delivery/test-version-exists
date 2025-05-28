@@ -1,9 +1,14 @@
 #!/usr/bin/env bash
 set -ex
 #force a failure if there's no tag
-git describe --tags
-# now get the tag
-CURRENT_TAG=$(git describe --tags | cut -f2 -dv)
+GIT_TAG=$(git describe --tags)
+# Check if the git tag version starts with 'v'
+if [[ "$GIT_TAG" != v* ]]; then
+    echo "Current tag version does not start with 'v', please ensure the tag is correctly formatted."
+    exit 1
+fi
+# now get the tag without leading 'v'
+CURRENT_TAG=$(echo $GIT_TAG | cut -f2 -dv)
 # convert v0.2.12-2-g50254a9 to 0.2.12
 CURRENT_TAG_VERSION=$(git describe --tags | cut -f1 -d'-' | cut -f2 -dv)
 # if there's a hash on the tag, then this is not a release tagged commit
