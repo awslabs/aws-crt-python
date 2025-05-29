@@ -114,9 +114,6 @@ def determine_generator_args():
             assert (vs_version and vs_year)
         except Exception:
             raise RuntimeError('No supported version of MSVC compiler could be found!')
-
-        print('Using Visual Studio', vs_version, vs_year)
-
         vs_version_gen_str = "Visual Studio {} {}".format(vs_version, vs_year)
 
         if vs_year <= 2017:
@@ -128,17 +125,16 @@ def determine_generator_args():
         # For VS2019 (and presumably later), architecture is passed via -A flag
         arch_str = "x64" if is_64bit() else "Win32"
 
-        # If the flag is specified, we make sure we set the Windows SDK version to the one that supports TLS 1.3.
-        if os.getenv('AWS_CRT_BUILD_WARNINGS_ARE_ERRORS') == '1':
-            # Introduced in cmake 3.27+, the generator string supports a version field to specify the windows sdk version in use
-            # https://cmake.org/cmake/help/latest/variable/CMAKE_GENERATOR_PLATFORM.html#variable:CMAKE_GENERATOR_PLATFORM
-            if get_cmake_version() >= (3, 27):
-                # Set windows sdk version to the one that supports TLS 1.3
-                arch_str += f",version={WINDOWS_SDK_VERSION_TLS1_3_SUPPORT}"
-            else:
-                # for cmake < 3.27, we have to specify the version with CMAKE_SYSTEM_VERSION. Please note this flag will be
-                # ignored by cmake versions >= 3.27.
-                arch_str += f" -DCMAKE_SYSTEM_VERSION={WINDOWS_SDK_VERSION_TLS1_3_SUPPORT}"
+        # Introduced in cmake 3.27+, the generator string supports a version field to specify the windows sdk version in use
+        # https://cmake.org/cmake/help/latest/variable/CMAKE_GENERATOR_PLATFORM.html#variable:CMAKE_GENERATOR_PLATFORM
+        if get_cmake_version() >= (3, 27):
+            # Set windows sdk version to the one that supports TLS 1.3
+            arch_str += f",version={AWS_CRT_WINDOWS_SDK_VERSION}"
+        else:
+            # for cmake < 3.27, we have to specify the version with CMAKE_SYSTEM_VERSION. Please note this flag will be
+            # ignored by cmake versions >= 3.27.
+            arch_str += f" -DCMAKE_SYSTEM_VERSION={AWS_CRT_WINDOWS_SDK_VERSION}"
+
         print('Using Visual Studio', vs_version, vs_year, 'with architecture', arch_str)
 
         return ['-G', vs_version_gen_str, '-A', arch_str]
