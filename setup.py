@@ -135,11 +135,11 @@ def determine_generator_args():
         # https://cmake.org/cmake/help/latest/variable/CMAKE_GENERATOR_PLATFORM.html#variable:CMAKE_GENERATOR_PLATFORM
         if get_cmake_version() >= (3, 27):
             # Set windows sdk version to the one that supports TLS 1.3
-            arch_str += f",version={AWS_CRT_WINDOWS_SDK_VERSION}"
+            arch_str += f",version={windows_sdk_version}"
         else:
             # for cmake < 3.27, we have to specify the version with CMAKE_SYSTEM_VERSION. Please note this flag will be
             # ignored by cmake versions >= 3.27.
-            arch_str += f" -DCMAKE_SYSTEM_VERSION={AWS_CRT_WINDOWS_SDK_VERSION}"
+            arch_str += f" -DCMAKE_SYSTEM_VERSION={windows_sdk_version}"
 
         print('Using Visual Studio', vs_version, vs_year, 'with architecture', arch_str)
 
