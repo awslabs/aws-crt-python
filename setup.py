@@ -125,6 +125,12 @@ def determine_generator_args():
         # For VS2019 (and presumably later), architecture is passed via -A flag
         arch_str = "x64" if is_64bit() else "Win32"
 
+        windows_sdk_version = os.getenv('AWS_CRT_WINDOWS_SDK_VERSION')
+        if windows_sdk_version is None:
+            windows_sdk_version = WINDOWS_SDK_VERSION_TLS1_3_SUPPORT
+
+        # Set the target windows SDK version. We have a minimum required version of the Windows SDK needed for schannel.h with SCH_CREDENTIALS and
+        # TLS_PARAMETERS. These are required to build Windows Binaries with TLS 1.3 support.
         # Introduced in cmake 3.27+, the generator string supports a version field to specify the windows sdk version in use
         # https://cmake.org/cmake/help/latest/variable/CMAKE_GENERATOR_PLATFORM.html#variable:CMAKE_GENERATOR_PLATFORM
         if get_cmake_version() >= (3, 27):
