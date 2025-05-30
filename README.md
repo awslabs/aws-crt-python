@@ -116,3 +116,6 @@ AWS_CRT_BUILD_USE_SYSTEM_LIBS=1 python3 -m pip install .
 ```
 
 If these dependencies are available as both static and shared libs, you can force the static ones to be used by setting: `AWS_CRT_BUILD_FORCE_STATIC_LIBS=1`
+
+### Windows SDK Version
+aws-crt-python builds against windows sdk version `10.0.17763.0`. This is the minimal version required for TLS  1.3 support on Windows. If you need a different Windows SDK version, you can set environment variable `AWS_CRT_WINDOWS_SDK_VERSION=<version>` while building from source:
