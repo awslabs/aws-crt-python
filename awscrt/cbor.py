@@ -19,7 +19,7 @@ class AwsCborType(IntEnum):
         Unknown: Unknown/uninitialized type
         UnsignedInt: Unsigned integer (major type 0)
         NegativeInt: Negative integer (major type 1)
-        Float: Floating-point number (major type 7, 25/26/27)
+        Float: Floating-point number (major type 7, simple value 25/26/27)
         Bytes: Byte string (major type 2)
         Text: Text string (major type 3)
         ArrayStart: Start of definite-length array (major type 4)
@@ -29,10 +29,10 @@ class AwsCborType(IntEnum):
         Null: Null value (major type 7, simple value 22)
         Undefined: Undefined value (major type 7, simple value 23)
         Break: Break stop code for indefinite-length items (major type 7, simple value 31)
-        IndefBytes: Start of indefinite-length byte string
-        IndefStr: Start of indefinite-length text string
-        IndefArray: Start of indefinite-length array
-        IndefMap: Start of indefinite-length map
+        IndefBytes: Start of indefinite-length byte string (major type 2)
+        IndefStr: Start of indefinite-length text string (major type 3)
+        IndefArray: Start of indefinite-length array (major type 4)
+        IndefMap: Start of indefinite-length map (major type 5)
     """
     Unknown = 0
     UnsignedInt = 1
