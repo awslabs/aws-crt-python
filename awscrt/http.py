@@ -359,7 +359,6 @@ class HttpStreamBase(NativeResource):
         return self._completion_future
 
     def _on_body(self, chunk: bytes) -> None:
-        # print("########### _on_body, chunk size:", len(chunk))
         if self._on_body_cb:
             self._on_body_cb(http_stream=self, chunk=chunk)
 
@@ -584,8 +583,6 @@ class HttpHeaders(NativeResource):
         super().__init__()
         self._binding = _awscrt.http_headers_new()
         if name_value_pairs:
-            # for i in name_value_pairs:
-            # print("########### headers: ", i)
             self.add_pairs(name_value_pairs)
 
     @classmethod
