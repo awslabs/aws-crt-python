@@ -142,7 +142,7 @@ async def send_get_request(connection, host_name):
 
     # Set up response handler
     response = Response("GET")
-    stream = connection.request(request, response.on_response, response.on_body)
+    stream = connection.request(request)
     stream.activate()
 
     # Wait for completion
@@ -171,7 +171,7 @@ async def send_post_request(connection, host_name):
 
     # Set up response handler
     response = Response("POST")
-    stream = connection.request(request, response.on_response, response.on_body)
+    stream = connection.request(request)
     stream.activate()
 
     # Wait for completion
@@ -194,7 +194,7 @@ async def send_stream_request(connection, host_name):
 
     # Set up response handler
     response = Response("STREAM")
-    stream = connection.request(request, response.on_response, response.on_body, manual_write=True)
+    stream = connection.request(request, manual_write=True)
     stream.activate()
 
     # Stream data in chunks
@@ -208,13 +208,20 @@ async def send_stream_request(connection, host_name):
     #     print(f"Sending chunk {i + 1}/{len(data_chunks)}, size: {len(chunk)} bytes")
     #     # Use BytesIO for each chunk
     #     chunk_stream = io.BytesIO(chunk)
-    #     await stream.write_data(chunk_stream, end_stream=(i == len(data_chunks) - 1))
+    #     await stream.write_data_async(chunk_stream, end_stream=(i == len(data_chunks) - 1))
     #     # Simulate processing time between chunks
     #     await asyncio.sleep(0.1)
-    await stream.write_data(io.BytesIO(data_chunks[0]), end_stream=False)
-    await stream.write_data(io.BytesIO(data_chunks[1]), end_stream=True)
-    # await stream.write_data(io.BytesIO(data_chunks[1]), end_stream=True)
+    await stream.write_data_async(io.BytesIO(data_chunks[0]), end_stream=False)
+    await stream.write_data_async(io.BytesIO(data_chunks[1]), end_stream=True)
+    # await stream.write_data_async(io.BytesIO(data_chunks[1]), end_stream=True)
     result = await stream.next()
+
+    status_code = await stream.response_status_code()
+    print(f"Stream request completed with status code: {status_code}")
+    headers = await stream.response_headers()
+    print("\nStream Response headers:")
+    for name, value in headers:
+        print(f"{name}: {value}")
 
     # Wait for completion
     status_code = await stream.wait_for_completion()

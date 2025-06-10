@@ -292,7 +292,6 @@ class HttpClientStreamAsync(HttpClientStream):
 
     # Create a new on_body_cb that puts chunks in the queue
     def _on_body(self, chunk: bytes) -> None:
-        print("################# chunk is", chunk)
         if self._chunk_futures:
             # print("################# chunk in future is", chunk)
             future = self._chunk_futures.popleft()
@@ -373,6 +372,6 @@ class Http2ClientStreamAsync(HttpClientStreamAsync, Http2ClientStream):
         Returns:
             None: When the write completes.
         """
-        print("######################### async write_data called #########################")
+        # print("######################### async write_data called #########################")
         future = self.write_data(data_stream, end_stream)
         await asyncio.wrap_future(future)
