@@ -398,7 +398,7 @@ class HttpClientStream(HttpStreamBase):
         assert isinstance(connection, HttpClientConnection)
         assert isinstance(request, HttpRequest)
         assert callable(on_response) or on_response is None
-        # assert callable(on_body) or on_body is None
+        assert callable(on_body) or on_body is None
 
         super().__init__(connection, on_body)
 
@@ -588,8 +588,8 @@ class HttpHeaders(NativeResource):
         super().__init__()
         self._binding = _awscrt.http_headers_new()
         if name_value_pairs:
-            for i in name_value_pairs:
-                print("########### headers: ", i)
+            # for i in name_value_pairs:
+            # print("########### headers: ", i)
             self.add_pairs(name_value_pairs)
 
     @classmethod

@@ -128,11 +128,7 @@ class HttpClientConnectionAsync(HttpClientConnection):
         await asyncio.wrap_future(close_future)
 
     def request(self,
-                request: 'HttpRequest',
-                on_response: Optional[Callable[...,
-                                               None]] = None,
-                on_body: Optional[Callable[...,
-                                           None]] = None) -> 'Http2ClientStreamAsync':
+                request: 'HttpRequest') -> 'Http2ClientStreamAsync':
         """Create `HttpClientStreamAsync` to carry out the request/response exchange.
 
         NOTE: The HTTP stream sends no data until `HttpClientStreamAsync.activate()`
@@ -178,8 +174,7 @@ class HttpClientConnectionAsync(HttpClientConnection):
                 Tuple[HttpClientStreamAsync, HttpResponseAsync]: A tuple containing the stream
                 and a response wrapper that provides async methods to access the response.
         """
-        stream = HttpClientStream(self, request, on_response, on_body)
-        async_stream = HttpClientStreamAsync._from_stream(stream)
+        async_stream = HttpClientStreamAsync(self, request)
 
         return async_stream
 
@@ -232,10 +227,7 @@ class Http2ClientConnectionAsync(HttpClientConnectionAsync):
 
     def request(self,
                 request: 'HttpRequest',
-                on_response: Optional[Callable[...,
-                                               None]] = None,
-                on_body: Optional[Callable[...,
-                                           None]] = None,
+                on_response: Optional[Callable[..., None]] = None,
                 manual_write: bool = False) -> 'Http2ClientStreamAsync':
         """Create `Http2ClientStreamAsync` to carry out the request/response exchange.
 
@@ -249,8 +241,7 @@ class Http2ClientConnectionAsync(HttpClientConnectionAsync):
             Http2ClientStreamAsync: Stream for the HTTP/2 request/response exchange.
         """
         print("######################### async request called #########################")
-        stream = Http2ClientStream(self, request, on_response, on_body, manual_write)
-        async_stream = Http2ClientStreamAsync._from_stream(stream)
+        async_stream = Http2ClientStreamAsync(self, request, on_response, manual_write)
 
         return async_stream
 
@@ -272,8 +263,7 @@ class HttpClientStreamAsync(HttpClientStream):
             contain an exception indicating why it failed.
     """
     __slots__ = (
-        '_response_status_code',
-        '_on_response_cb',
+        '_response_status_future',
         '_on_body_cb',
         '_request',
         '_version',
@@ -283,70 +273,42 @@ class HttpClientStreamAsync(HttpClientStream):
         '_stream_completed',
         '_original_on_body_cb')
 
-    @classmethod
-    def _from_stream(cls, stream: HttpClientStream) -> 'HttpClientStreamAsync':
-        """Create an HttpClientStreamAsync from an HttpClientStream"""
-        new_stream = cls.__new__(cls)
-        # Keep a reference to the original stream to prevent garbage collection
-        new_stream._original_stream = stream
-        # Copy the binding and properties from the original stream
-        new_stream._binding = stream._binding
-        new_stream._connection = stream._connection
+    def __init__(self, connection, request):
+        super()._init_common(connection, request)
 
-        # Initialize chunk queue and stream completion flag
-        new_stream._chunk_futures = deque()
-        new_stream._stream_completed = False
-        new_stream._received_chunks = deque()
-
-        # Capture the current event loop to use in callbacks
+    def _init_common(self, connection, request, on_response, http2_manual_write: bool = False) -> None:
+        super()._init_common(connection, request, on_response, http2_manual_write=http2_manual_write)
+        self._chunk_futures = deque()
+        self._stream_completed = False
+        self._received_chunks = deque()
         loop = asyncio.get_event_loop()
-        new_stream._completion_future = loop.create_future()
+        self._completion_future = loop.create_future()
+        self._response_status_future = loop.create_future()
+        self._response_headers_future = loop.create_future()
 
-        # Add a callback to bridge the original future to the asyncio future
-        def _on_done(fut):
-            try:
-                result = fut.result()
-                loop.call_soon_threadsafe(new_stream._completion_future.set_result, result)
-                # Mark the stream as completed when the completion_future resolves
-                loop.call_soon_threadsafe(lambda: setattr(new_stream, '_stream_completed', True))
-            except Exception as e:
-                loop.call_soon_threadsafe(new_stream._completion_future.set_exception, e)
-                # Mark the stream as completed on error as well
-                loop.call_soon_threadsafe(lambda: setattr(new_stream, '_stream_completed', True))
+    def _on_response(self, status_code: int, name_value_pairs: List[Tuple[str, str]]) -> None:
+        self._response_status_future.set_result(status_code)
+        self._response_headers_future.set_result(name_value_pairs)
 
-        stream._completion_future.add_done_callback(_on_done)
+    # Create a new on_body_cb that puts chunks in the queue
+    def _on_body(self, chunk: bytes) -> None:
+        print("################# chunk is", chunk)
+        if self._chunk_futures:
+            # print("################# chunk in future is", chunk)
+            future = self._chunk_futures.popleft()
+            future.set_result(chunk)
+        else:
+            # print("################# chunk in recoved is", chunk)
+            self._received_chunks.append(chunk)
 
-        # Create a new on_body_cb that puts chunks in the queue
-        def wrapped_on_body_cb(http_stream, chunk, **kwargs):
-            # print("################# chunk is", chunk)
-            if new_stream._chunk_futures:
-                # print("################# chunk in future is", chunk)
-                future = new_stream._chunk_futures.popleft()
-                future.set_result(chunk)
-            else:
-                # print("################# chunk in recoved is", chunk)
-                new_stream._received_chunks.append(chunk)
+    def _on_complete(self, error_code: int) -> None:
+        # done with HttpRequest, drop reference
+        self._request = None  # type: ignore
 
-        # Replace the on_body_cb with our wrapper
-        stream._on_body_cb = wrapped_on_body_cb
-        new_stream._on_body_cb = wrapped_on_body_cb
-
-        new_stream._response_status_code = stream._response_status_code
-        new_stream._on_response_cb = stream._on_response_cb
-        new_stream._request = stream._request
-        new_stream._version = stream._version
-
-        return new_stream
-
-    def activate(self) -> None:
-        print("######################### async activate called #########################")
-        """Begin sending the request.
-
-        The HTTP stream does nothing until this is called. Call activate() when you
-        are ready for its callbacks and events to fire.
-        """
-        # Use the original stream's binding
-        self._original_stream.activate()
+        if error_code == 0:
+            self._completion_future.set_result(self._response_status_future.result())
+        else:
+            self._completion_future.set_exception(awscrt.exceptions.from_code(error_code))
 
     async def next(self) -> bytes:
         # print("######################### async next called #########################")
@@ -373,16 +335,35 @@ class HttpClientStreamAsync(HttpClientStream):
         """
         return await self._completion_future
 
+    async def response_status_code(self) -> int:
+        """Get the response status code asynchronously.
 
-class Http2ClientStreamAsync(HttpClientStreamAsync):
+        Returns:
+            int: The response status code.
+        """
+        return await self._response_status_future
+
+    async def response_headers(self) -> List[Tuple[str, str]]:
+        """Get the response headers asynchronously.
+
+        Returns:
+            List[Tuple[str, str]]: The response headers as a list of (name, value) tuples.
+        """
+        return await self._response_headers_future
+
+
+class Http2ClientStreamAsync(HttpClientStreamAsync, Http2ClientStream):
     """HTTP/2 stream that sends a request and receives a response.
 
     Create an Http2ClientStreamAsync with `Http2ClientConnectionAsync.request()`.
     """
 
-    async def write_data(self,
-                         data_stream: Union[InputStream, Any],
-                         end_stream: bool = False) -> None:
+    def __init__(self, connection, request, on_response, manual_write):
+        super()._init_common(connection, request, on_response, http2_manual_write=manual_write)
+
+    async def write_data_async(self,
+                               data_stream: Union[InputStream, Any],
+                               end_stream: bool = False) -> None:
         """Write data to the stream asynchronously.
 
         Args:
@@ -392,6 +373,6 @@ class Http2ClientStreamAsync(HttpClientStreamAsync):
         Returns:
             None: When the write completes.
         """
-        # print("######################### async write_data called #########################")
-        future = self._original_stream.write_data(data_stream, end_stream)
+        print("######################### async write_data called #########################")
+        future = self.write_data(data_stream, end_stream)
         await asyncio.wrap_future(future)
