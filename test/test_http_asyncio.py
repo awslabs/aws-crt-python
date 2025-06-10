@@ -26,12 +26,22 @@ class Response:
         self.headers = None
         self.body = bytearray()
 
-    def on_response(self, http_stream, status_code, headers, **kwargs):
-        self.status_code = status_code
-        self.headers = HttpHeaders(headers)
+    async def collect_response(self, stream):
+        """Collects complete response from a stream"""
+        # Get status code and headers
+        self.status_code = await stream.response_status_code()
+        headers_list = await stream.response_headers()
+        self.headers = HttpHeaders(headers_list)
 
-    def on_body(self, http_stream, chunk, **kwargs):
-        self.body.extend(chunk)
+        # Collect body chunks
+        while True:
+            chunk = await stream.next()
+            if not chunk:
+                break
+            self.body.extend(chunk)
+
+        # Return status code for convenience
+        return self.status_code
 
 
 class TestRequestHandler(SimpleHTTPRequestHandler):
@@ -115,16 +125,19 @@ class TestAsyncClient(NativeResourceTest):
         self._start_server(secure)
         try:
             connection = await self._new_client_connection(secure)
+            self.assertTrue(connection.is_open())
 
             test_asset_path = 'test/test_http_asyncio.py'
 
+            # Create request and get stream - stream is already activated
             request = HttpRequest('GET', '/' + test_asset_path)
-            response = Response()
-            stream = connection.request(request, response.on_response, response.on_body)
-            stream.activate()
+            stream = connection.request(request)
 
-            # wait for stream to complete
-            status_code = await stream.wait_for_completion()
+            # Collect and process response
+            response = Response()
+            status_code = await response.collect_response(stream)
+
+            # Verify results
             self.assertEqual(200, status_code)
             self.assertEqual(200, response.status_code)
 
@@ -152,13 +165,15 @@ class TestAsyncClient(NativeResourceTest):
                 # seek back to start of stream before trying to send it
                 outgoing_body_stream.seek(0)
 
+                # Create request and get stream - stream is already activated
                 request = HttpRequest('PUT', '/' + test_asset_path, headers, outgoing_body_stream)
-                response = Response()
-                http_stream = connection.request(request, response.on_response, response.on_body)
-                http_stream.activate()
+                stream = connection.request(request)
 
-                # wait for stream to complete
-                status_code = await http_stream.wait_for_completion()
+                # Collect and process response
+                response = Response()
+                status_code = await response.collect_response(stream)
+
+                # Verify results
                 self.assertEqual(200, status_code)
                 self.assertEqual(200, response.status_code)
 

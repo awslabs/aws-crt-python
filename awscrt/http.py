@@ -408,7 +408,6 @@ class HttpClientStream(HttpStreamBase):
         # keep HttpRequest alive until stream completes
         self._request: 'HttpRequest' = request
         self._version: HttpVersion = connection.version
-        print("########### http2_manual_write: ", http2_manual_write)
         self._binding = _awscrt.http_client_stream_new(self, connection, request, http2_manual_write)
 
     @property

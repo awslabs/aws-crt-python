@@ -201,10 +201,12 @@ class HttpClientStreamAsync(HttpClientStream):
         '_chunk_futures',
         '_received_chunks',
         '_completion_future',
-        '_stream_completed')
+        '_stream_completed',
+        '_status_code',
+        '_loop')
 
     def __init__(self, connection: HttpClientConnectionAsync, request: HttpRequest) -> None:
-        super()._init_common(connection, request)
+        self._init_common(connection, request)
 
     def _init_common(self, connection: HttpClientConnectionAsync,
                      request: HttpRequest,
@@ -213,20 +215,27 @@ class HttpClientStreamAsync(HttpClientStream):
         super()._init_common(connection, request, http2_manual_write=http2_manual_write)
 
         # Set up async state tracking
-        loop = asyncio.get_event_loop()
+        self._loop = asyncio.get_event_loop()
         self._chunk_futures = deque()
         self._received_chunks = deque()
         self._stream_completed = False
 
         # Create futures for async operations
-        self._completion_future = loop.create_future()
-        self._response_status_future = loop.create_future()
-        self._response_headers_future = loop.create_future()
+        self._completion_future = self._loop.create_future()
+        self._response_status_future = self._loop.create_future()
+        self._response_headers_future = self._loop.create_future()
+        self._status_code = None
 
         # Activate the stream immediately
         self.activate()
 
     def _on_response(self, status_code: int, name_value_pairs: List[Tuple[str, str]]) -> None:
+        self._status_code = status_code
+        # invoked from the C thread, so we need to schedule the result setting on the event loop
+        self._loop.call_soon_threadsafe(self._set_response, status_code, name_value_pairs)
+
+    def _set_response(self, status_code: int, name_value_pairs: List[Tuple[str, str]]) -> None:
+        """Set the response status and headers in the futures."""
         self._response_status_future.set_result(status_code)
         self._response_headers_future.set_result(name_value_pairs)
 
@@ -238,8 +247,13 @@ class HttpClientStreamAsync(HttpClientStream):
             self._received_chunks.append(chunk)
 
     def _on_complete(self, error_code: int) -> None:
+        # invoked from the C thread, so we need to schedule the result setting on the event loop
+        self._loop.call_soon_threadsafe(self._set_completion, error_code)
+
+    def _set_completion(self, error_code: int) -> None:
+        """Set the completion status of the stream."""
         if error_code == 0:
-            self._completion_future.set_result(self._response_status_future.result())
+            self._completion_future.set_result(self._status_code)
         else:
             self._completion_future.set_exception(awscrt.exceptions.from_code(error_code))
 
