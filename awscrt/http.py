@@ -359,6 +359,7 @@ class HttpStreamBase(NativeResource):
         return self._completion_future
 
     def _on_body(self, chunk: bytes) -> None:
+        # print("########### _on_body, chunk size:", len(chunk))
         if self._on_body_cb:
             self._on_body_cb(http_stream=self, chunk=chunk)
 
@@ -397,7 +398,7 @@ class HttpClientStream(HttpStreamBase):
         assert isinstance(connection, HttpClientConnection)
         assert isinstance(request, HttpRequest)
         assert callable(on_response) or on_response is None
-        assert callable(on_body) or on_body is None
+        # assert callable(on_body) or on_body is None
 
         super().__init__(connection, on_body)
 
@@ -407,7 +408,7 @@ class HttpClientStream(HttpStreamBase):
         # keep HttpRequest alive until stream completes
         self._request: 'HttpRequest' = request
         self._version: HttpVersion = connection.version
-
+        print("########### http2_manual_write: ", http2_manual_write)
         self._binding = _awscrt.http_client_stream_new(self, connection, request, http2_manual_write)
 
     @property
@@ -428,9 +429,11 @@ class HttpClientStream(HttpStreamBase):
         The HTTP stream does nothing until this is called. Call activate() when you
         are ready for its callbacks and events to fire.
         """
+        print("########### activate")
         _awscrt.http_client_stream_activate(self)
 
     def _on_response(self, status_code: int, name_value_pairs: List[Tuple[str, str]]) -> None:
+        print("########### _on_response, status_code:", status_code)
         self._response_status_code = status_code
 
         if self._on_response_cb:
@@ -532,6 +535,7 @@ class HttpRequest(HttpMessageBase):
 
         binding = _awscrt.http_message_new_request(headers)
         super().__init__(binding, headers, body_stream)
+        print("########### body_stream: ", body_stream)
         self.method = method
         self.path = path
 
@@ -584,6 +588,8 @@ class HttpHeaders(NativeResource):
         super().__init__()
         self._binding = _awscrt.http_headers_new()
         if name_value_pairs:
+            for i in name_value_pairs:
+                print("########### headers: ", i)
             self.add_pairs(name_value_pairs)
 
     @classmethod
@@ -822,14 +828,13 @@ class _HttpClientConnectionCore:
     def _on_connection_setup(self, binding: Any, error_code: int, http_version: HttpVersion) -> None:
         if self._connect_future is None:
             return
-
+        if error_code != 0:
+            self._connect_future.set_exception(awscrt.exceptions.from_code(error_code))
+            return
         if self._expected_version and self._expected_version != http_version:
             # unexpected protocol version
             # AWS_ERROR_HTTP_UNSUPPORTED_PROTOCOL
             self._connect_future.set_exception(awscrt.exceptions.from_code(2060))
-            return
-        if error_code != 0:
-            self._connect_future.set_exception(awscrt.exceptions.from_code(error_code))
             return
         if http_version == HttpVersion.Http2:
             connection = Http2ClientConnection()
