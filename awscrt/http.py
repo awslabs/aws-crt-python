@@ -429,11 +429,9 @@ class HttpClientStream(HttpStreamBase):
         The HTTP stream does nothing until this is called. Call activate() when you
         are ready for its callbacks and events to fire.
         """
-        print("########### activate")
         _awscrt.http_client_stream_activate(self)
 
     def _on_response(self, status_code: int, name_value_pairs: List[Tuple[str, str]]) -> None:
-        print("########### _on_response, status_code:", status_code)
         self._response_status_code = status_code
 
         if self._on_response_cb:
@@ -535,7 +533,6 @@ class HttpRequest(HttpMessageBase):
 
         binding = _awscrt.http_message_new_request(headers)
         super().__init__(binding, headers, body_stream)
-        print("########### body_stream: ", body_stream)
         self.method = method
         self.path = path
 
