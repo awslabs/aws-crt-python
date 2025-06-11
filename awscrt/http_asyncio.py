@@ -3,6 +3,16 @@ HTTP AsyncIO support
 
 This module provides asyncio wrappers around the awscrt.http module.
 All network operations in `awscrt.http_asyncio` are asynchronous and use Python's asyncio framework.
+
+Threading Notes:
+    - Each asyncio event loop is typically associated with a specific thread
+    - When using HTTP streams across threads, you must specify the appropriate event loop
+      when creating the stream to avoid "Future attached to a different loop" errors
+    - For example, if you create a connection in Thread A but want to use it in Thread B,
+      pass Thread B's event loop when creating the stream:
+      `stream = connection.request(request, loop=thread_b_event_loop)`
+    - All async operations on a stream (await stream.next(), etc.) must be performed in the
+      thread that owns the event loop used to create the stream
 """
 
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
@@ -14,7 +24,7 @@ import awscrt.exceptions
 from typing import List, Tuple, Optional, Union, Callable, Any
 from awscrt.http import (
     HttpClientConnection, HttpRequest, HttpClientStream, HttpProxyOptions,
-    Http2Setting, Http2ClientConnection, HttpConnectionBase, Http2ClientStream
+    Http2Setting, HttpVersion, Http2ClientStream
 )
 from awscrt.io import (
     ClientBootstrap, SocketOptions, TlsConnectionOptions, InputStream
@@ -62,39 +72,15 @@ class HttpClientConnectionAsync(HttpClientConnection):
         Returns:
             HttpClientConnectionAsync: A new HTTP client connection.
         """
-        future = HttpClientConnection.new(
+        future = HttpClientConnection._generic_new(
             host_name,
             port,
             bootstrap,
             socket_options,
             tls_connection_options,
-            proxy_options)
-        connection = await asyncio.wrap_future(future)
-        return HttpClientConnectionAsync._from_connection(connection)
-
-    @classmethod
-    def _from_connection(cls, connection: HttpClientConnection) -> "HttpClientConnectionAsync":
-        """Create an HttpClientConnectionAsync from an HttpClientConnection"""
-        new_conn = cls.__new__(cls)
-        # Copy the binding and properties from the original connection
-        new_conn._binding = connection._binding
-        new_conn._version = connection._version
-        new_conn._host_name = connection._host_name
-        new_conn._port = connection._port
-        # Initialize the parent class without calling __init__
-        HttpConnectionBase.__init__(new_conn)
-        new_conn._shutdown_future = connection._shutdown_future
-        return new_conn
-
-    @property
-    def host_name(self) -> str:
-        """Remote hostname"""
-        return self._host_name
-
-    @property
-    def port(self) -> int:
-        """Remote port"""
-        return self._port
+            proxy_options,
+            asyncio_connection=True)
+        return await asyncio.wrap_future(future)
 
     async def close(self) -> None:
         """Close the connection asynchronously.
@@ -109,16 +95,19 @@ class HttpClientConnectionAsync(HttpClientConnection):
         await asyncio.wrap_future(close_future)
 
     def request(self,
-                request: 'HttpRequest') -> 'HttpClientStreamAsync':
+                request: 'HttpRequest',
+                loop: Optional[asyncio.AbstractEventLoop] = None) -> 'HttpClientStreamAsync':
         """Create `HttpClientStreamAsync` to carry out the request/response exchange.
 
         Args:
             request (HttpRequest): Definition for outgoing request.
+            loop (Optional[asyncio.AbstractEventLoop]): Event loop to use for async operations.
+                If None, the current event loop is used.
 
         Returns:
             HttpClientStreamAsync: Stream for the HTTP request/response exchange.
         """
-        return HttpClientStreamAsync(self, request)
+        return HttpClientStreamAsync(self, request, loop)
 
 
 class Http2ClientConnectionAsync(HttpClientConnectionAsync):
@@ -154,32 +143,35 @@ class Http2ClientConnectionAsync(HttpClientConnectionAsync):
 
                     *   `settings` (List[Http2Setting]): List of settings that were changed.
         """
-        future = Http2ClientConnection.new(
+        future = HttpClientConnection._generic_new(
             host_name,
             port,
             bootstrap,
             socket_options,
             tls_connection_options,
             proxy_options,
+            HttpVersion.Http2,
             initial_settings,
-            on_remote_settings_changed)
-
-        connection = await asyncio.wrap_future(future)
-        return Http2ClientConnectionAsync._from_connection(connection)
+            on_remote_settings_changed,
+            asyncio_connection=True)
+        return await asyncio.wrap_future(future)
 
     def request(self,
                 request: 'HttpRequest',
-                manual_write: bool = False) -> 'Http2ClientStreamAsync':
+                manual_write: bool = False,
+                loop: Optional[asyncio.AbstractEventLoop] = None) -> 'Http2ClientStreamAsync':
         """Create `Http2ClientStreamAsync` to carry out the request/response exchange.
 
         Args:
             request (HttpRequest): Definition for outgoing request.
             manual_write (bool): If True, enables manual data writing on the stream.
+            loop (Optional[asyncio.AbstractEventLoop]): Event loop to use for async operations.
+                If None, the current event loop is used.
 
         Returns:
             Http2ClientStreamAsync: Stream for the HTTP/2 request/response exchange.
         """
-        return Http2ClientStreamAsync(self, request, manual_write)
+        return Http2ClientStreamAsync(self, request, manual_write, loop)
 
 
 class HttpClientStreamAsync(HttpClientStream):
@@ -205,17 +197,35 @@ class HttpClientStreamAsync(HttpClientStream):
         '_status_code',
         '_loop')
 
-    def __init__(self, connection: HttpClientConnectionAsync, request: HttpRequest) -> None:
-        self._init_common(connection, request)
+    def __init__(self, connection: HttpClientConnectionAsync, request: HttpRequest,
+                 loop: Optional[asyncio.AbstractEventLoop] = None) -> None:
+        """Initialize an HTTP client stream.
+
+        Args:
+            connection (HttpClientConnectionAsync): The connection to send the request on.
+            request (HttpRequest): The HTTP request to send.
+            loop (Optional[asyncio.AbstractEventLoop]): Event loop to use for async operations.
+                If None, the current event loop is used.
+        """
+        self._init_common(connection, request, loop=loop)
 
     def _init_common(self, connection: HttpClientConnectionAsync,
                      request: HttpRequest,
-                     http2_manual_write: bool = False) -> None:
+                     http2_manual_write: bool = False,
+                     loop: Optional[asyncio.AbstractEventLoop] = None) -> None:
         # Initialize the parent class
         super()._init_common(connection, request, http2_manual_write=http2_manual_write)
 
-        # Set up async state tracking
-        self._loop = asyncio.get_event_loop()
+        # Attach the event loop for async operations
+        if loop is None:
+            # Use the current event loop if none is provided
+            loop = asyncio.get_event_loop()
+        elif not isinstance(loop, asyncio.AbstractEventLoop):
+            raise TypeError("loop must be an instance of asyncio.AbstractEventLoop")
+        self._loop = loop
+
+        # deque is thread-safe for appending and popping, so that we don't need
+        # locks to handle the callbacks from the C thread
         self._chunk_futures = deque()
         self._received_chunks = deque()
         self._stream_completed = False
@@ -240,6 +250,10 @@ class HttpClientStreamAsync(HttpClientStream):
         self._response_headers_future.set_result(name_value_pairs)
 
     def _on_body(self, chunk: bytes) -> None:
+        self._loop.call_soon_threadsafe(self._set_body_chunk, chunk)
+
+    def _set_body_chunk(self, chunk: bytes) -> None:
+        """Process body chunk on the correct event loop thread."""
         if self._chunk_futures:
             future = self._chunk_futures.popleft()
             future.set_result(chunk)
@@ -257,6 +271,11 @@ class HttpClientStreamAsync(HttpClientStream):
         else:
             self._completion_future.set_exception(awscrt.exceptions.from_code(error_code))
 
+        if self._chunk_futures:
+            # the stream is completed, so we need to set the futures
+            future = self._chunk_futures.popleft()
+            future.set_result("")
+
     async def next(self) -> bytes:
         """Get the next chunk from the response body.
 
@@ -271,7 +290,7 @@ class HttpClientStreamAsync(HttpClientStream):
         else:
             future = Future[bytes]()
             self._chunk_futures.append(future)
-            return await asyncio.wrap_future(future)
+            return await asyncio.wrap_future(future, loop=self._loop)
 
     async def wait_for_completion(self) -> int:
         """Wait asynchronously for the stream to complete.
@@ -304,8 +323,9 @@ class Http2ClientStreamAsync(HttpClientStreamAsync, Http2ClientStream):
     Create an Http2ClientStreamAsync with `Http2ClientConnectionAsync.request()`.
     """
 
-    def __init__(self, connection: HttpClientConnectionAsync, request: HttpRequest, manual_write: bool) -> None:
-        super()._init_common(connection, request, http2_manual_write=manual_write)
+    def __init__(self, connection: HttpClientConnectionAsync, request: HttpRequest, manual_write: bool,
+                 loop: Optional[asyncio.AbstractEventLoop] = None) -> None:
+        super()._init_common(connection, request, http2_manual_write=manual_write, loop=loop)
 
     async def write_data_async(self,
                                data_stream: Union[InputStream, Any],
