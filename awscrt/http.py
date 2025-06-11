@@ -463,6 +463,9 @@ class Http2ClientStream(HttpClientStream):
         body_stream: InputStream = InputStream.wrap(data_stream, allow_none=True)
 
         def on_write_complete(error_code: int) -> None:
+            if future.cancelled():
+                # the future was cancelled, so we don't need to set the result or exception
+                return
             if error_code:
                 future.set_exception(awscrt.exceptions.from_code(error_code))
             else:
