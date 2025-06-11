@@ -276,7 +276,23 @@ class HttpClientStreamAsync(HttpClientStream):
             future = self._chunk_futures.popleft()
             future.set_result("")
 
-    async def next(self) -> bytes:
+    async def get_response_status_code(self) -> int:
+        """Get the response status code asynchronously.
+
+        Returns:
+            int: The response status code.
+        """
+        return await self._response_status_future
+
+    async def get_response_headers(self) -> List[Tuple[str, str]]:
+        """Get the response headers asynchronously.
+
+        Returns:
+            List[Tuple[str, str]]: The response headers as a list of (name, value) tuples.
+        """
+        return await self._response_headers_future
+
+    async def get_next_response_chunk(self) -> bytes:
         """Get the next chunk from the response body.
 
         Returns:
@@ -299,22 +315,6 @@ class HttpClientStreamAsync(HttpClientStream):
             int: The response status code.
         """
         return await self._completion_future
-
-    async def response_status_code(self) -> int:
-        """Get the response status code asynchronously.
-
-        Returns:
-            int: The response status code.
-        """
-        return await self._response_status_future
-
-    async def response_headers(self) -> List[Tuple[str, str]]:
-        """Get the response headers asynchronously.
-
-        Returns:
-            List[Tuple[str, str]]: The response headers as a list of (name, value) tuples.
-        """
-        return await self._response_headers_future
 
 
 class Http2ClientStreamAsync(HttpClientStreamAsync, Http2ClientStream):

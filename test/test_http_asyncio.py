@@ -33,12 +33,12 @@ class Response:
     async def collect_response(self, stream):
         """Collects complete response from a stream"""
         # Get status code and headers
-        self.status_code = await stream.response_status_code()
-        headers_list = await stream.response_headers()
+        self.status_code = await stream.get_response_status_code()
+        headers_list = await stream.get_response_headers()
         self.headers = HttpHeaders(headers_list)
         # Collect body chunks
         while True:
-            chunk = await stream.next()
+            chunk = await stream.get_next_response_chunk()
             if not chunk:
                 break
             self.body.extend(chunk)
