@@ -304,7 +304,7 @@ class HttpClientStreamAsync(HttpClientStream):
         elif self._completion_future.done():
             return b""
         else:
-            future = Future[bytes]()
+            future = Future()
             self._chunk_futures.append(future)
             return await asyncio.wrap_future(future, loop=self._loop)
 
