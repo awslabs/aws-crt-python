@@ -3,16 +3,6 @@ HTTP AsyncIO support
 
 This module provides asyncio wrappers around the awscrt.http module.
 All network operations in `awscrt.http_asyncio` are asynchronous and use Python's asyncio framework.
-
-Threading Notes:
-    - Each asyncio event loop is typically associated with a specific thread
-    - When using HTTP streams across threads, you must specify the appropriate event loop
-      when creating the stream to avoid "Future attached to a different loop" errors
-    - For example, if you create a connection in Thread A but want to use it in Thread B,
-      pass Thread B's event loop when creating the stream:
-      `stream = connection.request(request, loop=thread_b_event_loop)`
-    - All async operations on a stream (await stream.next(), etc.) must be performed in the
-      thread that owns the event loop used to create the stream
 """
 
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
@@ -186,6 +176,10 @@ class HttpClientStreamAsync(HttpClientStream):
             the response status code (int) when the request/response exchange
             completes. If the exchange fails to complete, the Future will
             contain an exception indicating why it failed.
+
+    Notes:
+        All async method on a stream (await stream.next(), etc.) must be performed in the
+        thread that owns the event loop used to create the stream
     """
     __slots__ = (
         '_response_status_future',
