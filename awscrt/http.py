@@ -190,7 +190,8 @@ class HttpClientConnection(HttpConnectionBase):
             proxy_options: Optional['HttpProxyOptions'] = None,
             expected_version: Optional[HttpVersion] = None,
             initial_settings: Optional[List[Http2Setting]] = None,
-            on_remote_settings_changed: Optional[Callable[[List[Http2Setting]], None]] = None) -> "concurrent.futures.Future":
+            on_remote_settings_changed: Optional[Callable[[List[Http2Setting]], None]] = None,
+            asyncio_connection=False) -> "concurrent.futures.Future":
         """
         Initialize the generic part of the HttpClientConnection class.
         """
@@ -217,7 +218,8 @@ class HttpClientConnection(HttpConnectionBase):
                 tls_connection_options=tls_connection_options,
                 connect_future=future,
                 expected_version=expected_version,
-                on_remote_settings_changed=on_remote_settings_changed)
+                on_remote_settings_changed=on_remote_settings_changed,
+                asyncio_connection=asyncio_connection)
 
             _awscrt.http_client_connection_new(
                 bootstrap,
@@ -407,7 +409,6 @@ class HttpClientStream(HttpStreamBase):
         # keep HttpRequest alive until stream completes
         self._request: 'HttpRequest' = request
         self._version: HttpVersion = connection.version
-
         self._binding = _awscrt.http_client_stream_new(self, connection, request, http2_manual_write)
 
     @property
@@ -462,6 +463,9 @@ class Http2ClientStream(HttpClientStream):
         body_stream: InputStream = InputStream.wrap(data_stream, allow_none=True)
 
         def on_write_complete(error_code: int) -> None:
+            if future.cancelled():
+                # the future was cancelled, so we don't need to set the result or exception
+                return
             if error_code:
                 future.set_exception(awscrt.exceptions.from_code(error_code))
             else:
@@ -809,7 +813,8 @@ class _HttpClientConnectionCore:
             tls_connection_options: Optional[TlsConnectionOptions] = None,
             connect_future: Optional[Future] = None,
             expected_version: Optional[HttpVersion] = None,
-            on_remote_settings_changed: Optional[Callable[[List[Http2Setting]], None]] = None) -> None:
+            on_remote_settings_changed: Optional[Callable[[List[Http2Setting]], None]] = None,
+            asyncio_connection=False) -> None:
         self._shutdown_future = None
         self._host_name = host_name
         self._port = port
@@ -818,23 +823,31 @@ class _HttpClientConnectionCore:
         self._connect_future = connect_future
         self._expected_version = expected_version
         self._on_remote_settings_changed_from_user = on_remote_settings_changed
+        self._asyncio_connection = asyncio_connection
 
     def _on_connection_setup(self, binding: Any, error_code: int, http_version: HttpVersion) -> None:
         if self._connect_future is None:
             return
-
+        if error_code != 0:
+            self._connect_future.set_exception(awscrt.exceptions.from_code(error_code))
+            return
         if self._expected_version and self._expected_version != http_version:
             # unexpected protocol version
             # AWS_ERROR_HTTP_UNSUPPORTED_PROTOCOL
             self._connect_future.set_exception(awscrt.exceptions.from_code(2060))
             return
-        if error_code != 0:
-            self._connect_future.set_exception(awscrt.exceptions.from_code(error_code))
-            return
-        if http_version == HttpVersion.Http2:
-            connection = Http2ClientConnection()
+        if self._asyncio_connection:
+            # Import is done here to avoid circular import issues
+            from awscrt.http_asyncio import HttpClientConnectionAsync, Http2ClientConnectionAsync
+            if http_version == HttpVersion.Http2:
+                connection = Http2ClientConnectionAsync()
+            else:
+                connection = HttpClientConnectionAsync()
         else:
-            connection = HttpClientConnection()
+            if http_version == HttpVersion.Http2:
+                connection = Http2ClientConnection()
+            else:
+                connection = HttpClientConnection()
 
         connection._host_name = self._host_name
         connection._port = self._port
