@@ -25,6 +25,10 @@ if sys.platform == 'win32':
 # sysconfig.get_config_var('MACOSX_DEPLOYMENT_TARGET').
 MACOS_DEPLOYMENT_TARGET_MIN = "10.15"
 
+# This is the minimum version of the Windows SDK needed for schannel.h with SCH_CREDENTIALS and
+# TLS_PARAMETERS. These are required to build Windows Binaries with TLS 1.3 support.
+WINDOWS_SDK_VERSION_TLS1_3_SUPPORT = "10.0.17763.0"
+
 
 def parse_version(version_string):
     return tuple(int(x) for x in version_string.split("."))
@@ -84,7 +88,7 @@ def determine_cross_compile_args():
     return []
 
 
-def determine_generator_args():
+def determine_generator_args(cmake_version=None, windows_sdk_version=None):
     if sys.platform == 'win32':
         try:
             # See which compiler python picks
@@ -110,10 +114,9 @@ def determine_generator_args():
             assert (vs_version and vs_year)
         except Exception:
             raise RuntimeError('No supported version of MSVC compiler could be found!')
+        vs_version_gen_str = "Visual Studio {} {}".format(vs_version, vs_year)
 
         print('Using Visual Studio', vs_version, vs_year)
-
-        vs_version_gen_str = "Visual Studio {} {}".format(vs_version, vs_year)
 
         if vs_year <= 2017:
             # For VS2017 and earlier, architecture goes at end of generator string
@@ -123,6 +126,17 @@ def determine_generator_args():
 
         # For VS2019 (and presumably later), architecture is passed via -A flag
         arch_str = "x64" if is_64bit() else "Win32"
+
+        # Set the target windows SDK version. We have a minimum required version of the Windows SDK needed for schannel.h with SCH_CREDENTIALS and
+        # TLS_PARAMETERS. These are required to build Windows Binaries with TLS 1.3 support.
+        # Introduced in cmake 3.27+, the generator string supports a version field to specify the windows sdk version in use
+        # https://cmake.org/cmake/help/latest/variable/CMAKE_GENERATOR_PLATFORM.html#variable:CMAKE_GENERATOR_PLATFORM
+        if cmake_version >= (3, 27):
+            # Set windows sdk version to the one that supports TLS 1.3
+            arch_str += f",version={windows_sdk_version}"
+
+        print('Using Visual Studio', vs_version, vs_year, 'with architecture', arch_str)
+
         return ['-G', vs_version_gen_str, '-A', arch_str]
 
     return []
@@ -142,6 +156,21 @@ def get_cmake_path():
             return cmake_found
 
     raise Exception("CMake must be installed to build from source.")
+
+
+def get_cmake_version():
+    """Return the version of CMake installed on the system."""
+    cmake_path = get_cmake_path()
+    if not cmake_path:
+        return (0, 0, 0)
+    try:
+        output = subprocess.check_output([cmake_path, '--version'], text=True)
+        version_line = output.split('\n')[0]
+        version = version_line.split(' ')[-1]
+        print(f"Found CMake version: {version}")
+        return parse_version(version)
+    except BaseException:
+        return (0, 0, 0)  # Return a default version if cmake is not found or fails
 
 
 def using_system_libs():
@@ -227,7 +256,27 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
         cmake_args = [cmake]
         cmake_args.append(f'-H{source_dir}')
         cmake_args.append(f'-B{build_dir}')
-        cmake_args.extend(determine_generator_args())
+
+        if sys.platform == 'win32':
+            windows_sdk_version = os.getenv('AWS_CRT_WINDOWS_SDK_VERSION')
+            if windows_sdk_version is None:
+                windows_sdk_version = WINDOWS_SDK_VERSION_TLS1_3_SUPPORT
+
+            cmake_version = get_cmake_version()
+
+            cmake_args.extend(
+                determine_generator_args(
+                    cmake_version=cmake_version,
+                    windows_sdk_version=windows_sdk_version))
+
+            if cmake_version < (3, 27):
+                # Set the target windows SDK version. We have a minimum required version of the Windows SDK needed for schannel.h with SCH_CREDENTIALS and
+                # TLS_PARAMETERS. These are required to build Windows Binaries with TLS 1.3 support.
+                # for cmake < 3.27, we have to specify the version with CMAKE_SYSTEM_VERSION. Please note this flag will be
+                # ignored by cmake versions >= 3.27.
+                # checkout determine_generator_args() for the case of cmake >= 3.27
+                cmake_args.append(f'-DCMAKE_SYSTEM_VERSION={windows_sdk_version}')
+
         cmake_args.extend(determine_cross_compile_args())
         cmake_args.extend([
             f'-DCMAKE_INSTALL_PREFIX={install_path}',
