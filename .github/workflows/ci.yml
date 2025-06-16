@@ -258,9 +258,9 @@ jobs:
       id-token: write # This is required for requesting the JWT
     steps:
       - uses: actions/setup-python@v5
-        id: python310
+        id: python38
         with:
-          python-version: '3.10.11'
+          python-version: '3.8.10'
           architecture: ${{ matrix.arch }}
       - uses: ilammy/setup-nasm@v1
       - name: configure AWS credentials (containers)
@@ -271,7 +271,7 @@ jobs:
       - name: Build ${{ env.PACKAGE_NAME }} + consumers
         run: |
           python -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder.pyz')"
-          python builder.pyz build -p ${{ env.PACKAGE_NAME }} --python "${{ steps.python310.outputs.python-path }}"
+          python builder.pyz build -p ${{ env.PACKAGE_NAME }} --python "${{ steps.python38.outputs.python-path }}"
 
   macos:
     runs-on: macos-14 # latest
