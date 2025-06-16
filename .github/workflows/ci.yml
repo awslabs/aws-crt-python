@@ -250,7 +250,7 @@ jobs:
 
 
   windows:
-    runs-on: windows-2025 # latest
+    runs-on: windows-2022
     strategy:
       matrix:
         arch: [x86, x64]
