@@ -418,6 +418,21 @@ class HttClientStreamBase(HttpStreamBase):
         This is None until a response arrives."""
         return self._response_status_code
 
+    def _on_response(self, status_code: int, name_value_pairs: List[Tuple[str, str]]) -> None:
+        self._response_status_code = status_code
+
+        if self._on_response_cb:
+            self._on_response_cb(http_stream=self, status_code=status_code, headers=name_value_pairs)
+
+    def _on_complete(self, error_code: int) -> None:
+        # done with HttpRequest, drop reference
+        self._request = None  # type: ignore
+
+        if error_code == 0:
+            self._completion_future.set_result(self._response_status_code)
+        else:
+            self._completion_future.set_exception(awscrt.exceptions.from_code(error_code))
+
 
 class HttpClientStream(HttClientStreamBase):
     """HTTP stream that sends a request and receives a response.
@@ -451,21 +466,6 @@ class HttpClientStream(HttClientStreamBase):
         """
         _awscrt.http_client_stream_activate(self)
 
-    def _on_response(self, status_code: int, name_value_pairs: List[Tuple[str, str]]) -> None:
-        self._response_status_code = status_code
-
-        if self._on_response_cb:
-            self._on_response_cb(http_stream=self, status_code=status_code, headers=name_value_pairs)
-
-    def _on_complete(self, error_code: int) -> None:
-        # done with HttpRequest, drop reference
-        self._request = None  # type: ignore
-
-        if error_code == 0:
-            self._completion_future.set_result(self._response_status_code)
-        else:
-            self._completion_future.set_exception(awscrt.exceptions.from_code(error_code))
-
 
 class Http2ClientStream(HttClientStreamBase):
     def __init__(self,
@@ -475,6 +475,14 @@ class Http2ClientStream(HttClientStreamBase):
                  on_body: Optional[Callable[..., None]] = None,
                  manual_write: bool = False) -> None:
         self._init_common(connection, request, on_response, on_body, manual_write)
+
+    def activate(self) -> None:
+        """Begin sending the request.
+
+        The HTTP stream does nothing until this is called. Call activate() when you
+        are ready for its callbacks and events to fire.
+        """
+        _awscrt.http_client_stream_activate(self)
 
     def write_data(self,
                    data_stream: Union[InputStream, Any],

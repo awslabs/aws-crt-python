@@ -303,9 +303,7 @@ static void s_client_bootstrap_on_shutdown_complete(void *user_data) {
     aws_mem_release(aws_py_get_allocator(), bootstrap);
 
     if (shutdown_complete) {
-        printf("Client bootstrap shutdown complete, invoking callback %p\n", shutdown_complete);
         PyObject *result = PyObject_CallFunction(shutdown_complete, "()");
-        printf("Result is %p\n", result);
         if (result) {
             Py_DECREF(result);
         } else {
