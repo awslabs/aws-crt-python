@@ -94,14 +94,9 @@ Ensure `pip` (Python's package manager) is installed and up to date:
 (.venv) $ python3 -m ensurepip --upgrade
 ```
 
-Install dev dependencies:
+Install aws-crt-python, and its dev dependencies (helper script `python3 scripts/install-dev.py` does this):
 ```sh
-(.venv) $ python3 -m pip install --upgrade --requirement requirements-dev.txt
-```
-
-Install aws-crt-python (helper script `python3 scripts/install-dev.py` does this):
-```sh
-(.venv) $ python3 -m pip install --verbose --editable .
+(.venv) $ python3 -m pip install --verbose --editable ".[dev]"
 ```
 
 You must re-run this command any time the C source code changes.
@@ -177,12 +172,13 @@ specific environment variables are set:
 We use automatic code formatters in this project and pull requests will fail unless
 the code is formatted correctly.
 
-`autopep8` is used for python code. You installed this earlier via `requirements-dev.txt`.
+`autopep8` is used for python code. You installed this earlier via `.[dev]` dependencies.
 
-For C code `clang-format` is used (specifically version 9).
-To install this on Mac using homebrew, run:
+For C code `clang-format` is used. You need to install an exact version (see `CLANG_FORMAT_VERSION=...` line at the top of [format-check.py](../../format-check.py)) via [pipx](https://github.com/pypa/pipx). Doing this on MacOS looks like:
 ```sh
-(.venv) $ brew install llvm@9
+(.venv) $ brew install pipx
+(.venv) $ pipx ensurepath
+(.venv) $ pipx install clang-format==<CLANG_FORMAT_VERSION from format-check.py>
 ```
 
 Use helper scripts to automatically format your code (or configure your IDE to do it):
@@ -194,7 +190,7 @@ Use helper scripts to automatically format your code (or configure your IDE to d
 (.venv) $ python3 scripts/format-python.py
 
 # just format C files
-(.venv) $ python3 scripts/format-c.py
+(.venv) $ python3 format-check.py -i
 ```
 
 ## Using an IDE

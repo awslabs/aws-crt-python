@@ -8,15 +8,13 @@ phases:
     commands:
       - export CC=gcc
       - cd aws-crt-python
-      - /opt/python/cp37-cp37m/bin/python ./continuous-delivery/update-version.py
+      - /opt/python/cp38-cp38/bin/python ./continuous-delivery/update-version.py
   build:
     commands:
       - echo Build started on `date`
-      - /opt/python/cp37-cp37m/bin/python setup.py sdist bdist_wheel
-      - auditwheel repair --plat manylinux1_i686 dist/awscrt-*cp37-cp37m-linux_i686.whl
-      - /opt/python/cp38-cp38/bin/python setup.py sdist bdist_wheel
+      - /opt/python/cp38-cp38/bin/python -m build
       - auditwheel repair --plat manylinux1_i686 dist/awscrt-*cp38-cp38-linux_i686.whl
-      - /opt/python/cp39-cp39/bin/python setup.py sdist bdist_wheel
+      - /opt/python/cp39-cp39/bin/python -m build
       - auditwheel repair --plat manylinux1_i686 dist/awscrt-*cp39-cp39-linux_i686.whl
       # python 3.9 is the last version manylinux1 will ever receive
       - cp -r wheelhouse ../dist

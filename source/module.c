@@ -5,6 +5,7 @@
 #include "module.h"
 
 #include "auth.h"
+#include "cbor.h"
 #include "checksums.h"
 #include "common.h"
 #include "crypto.h"
@@ -14,6 +15,7 @@
 #include "mqtt5_client.h"
 #include "mqtt_client.h"
 #include "mqtt_client_connection.h"
+#include "mqtt_request_response.h"
 #include "s3.h"
 #include "websocket.h"
 
@@ -116,16 +118,31 @@ PyObject *PyUnicode_FromAwsString(const struct aws_string *aws_str) {
     return PyUnicode_FromStringAndSize(aws_string_c_str(aws_str), aws_str->len);
 }
 
+PyObject *PyBytes_FromAwsByteCursor(const struct aws_byte_cursor *cursor) {
+    if (cursor->len > PY_SSIZE_T_MAX) {
+        PyErr_SetString(PyExc_OverflowError, "Cursor exceeds PY_SSIZE_T_MAX");
+        return NULL;
+    }
+    return PyBytes_FromStringAndSize((const char *)cursor->ptr, (Py_ssize_t)cursor->len);
+}
+
 uint32_t PyObject_GetAttrAsUint32(PyObject *o, const char *class_name, const char *attr_name) {
     uint32_t result = UINT32_MAX;
 
-    PyObject *attr = PyObject_GetAttrString(o, attr_name);
+    PyObject *attr = PyObject_GetAttrString(o, attr_name); /* new reference */
     if (!attr) {
         PyErr_Format(PyExc_AttributeError, "'%s.%s' attribute not found", class_name, attr_name);
         return result;
     }
 
+    if (attr == Py_None) {
+        PyErr_Format(PyExc_AttributeError, "'%s.%s' required integral attribute is None", class_name, attr_name);
+        goto done;
+    }
+
     PyObject_GetAsOptionalUint32(attr, class_name, attr_name, &result);
+
+done:
 
     Py_DECREF(attr);
     return result;
@@ -134,13 +151,20 @@ uint32_t PyObject_GetAttrAsUint32(PyObject *o, const char *class_name, const cha
 uint16_t PyObject_GetAttrAsUint16(PyObject *o, const char *class_name, const char *attr_name) {
     uint16_t result = UINT16_MAX;
 
-    PyObject *attr = PyObject_GetAttrString(o, attr_name);
+    PyObject *attr = PyObject_GetAttrString(o, attr_name); /* new reference */
     if (!attr) {
         PyErr_Format(PyExc_AttributeError, "'%s.%s' attribute not found", class_name, attr_name);
         return result;
     }
 
+    if (attr == Py_None) {
+        PyErr_Format(PyExc_AttributeError, "'%s.%s' required integral attribute is None", class_name, attr_name);
+        goto done;
+    }
+
     PyObject_GetAsOptionalUint16(attr, class_name, attr_name, &result);
+
+done:
 
     Py_DECREF(attr);
     return result;
@@ -149,13 +173,20 @@ uint16_t PyObject_GetAttrAsUint16(PyObject *o, const char *class_name, const cha
 uint8_t PyObject_GetAttrAsUint8(PyObject *o, const char *class_name, const char *attr_name) {
     uint8_t result = UINT8_MAX;
 
-    PyObject *attr = PyObject_GetAttrString(o, attr_name);
+    PyObject *attr = PyObject_GetAttrString(o, attr_name); /* new reference */
     if (!attr) {
         PyErr_Format(PyExc_AttributeError, "'%s.%s' attribute not found", class_name, attr_name);
         return result;
     }
 
+    if (attr == Py_None) {
+        PyErr_Format(PyExc_AttributeError, "'%s.%s' required integral attribute is None", class_name, attr_name);
+        goto done;
+    }
+
     PyObject_GetAsOptionalUint8(attr, class_name, attr_name, &result);
+
+done:
 
     Py_DECREF(attr);
     return result;
@@ -164,10 +195,15 @@ uint8_t PyObject_GetAttrAsUint8(PyObject *o, const char *class_name, const char 
 bool PyObject_GetAttrAsBool(PyObject *o, const char *class_name, const char *attr_name) {
     bool result = false;
 
-    PyObject *attr = PyObject_GetAttrString(o, attr_name);
+    PyObject *attr = PyObject_GetAttrString(o, attr_name); /* new reference */
     if (!attr) {
         PyErr_Format(PyExc_AttributeError, "'%s.%s' attribute not found", class_name, attr_name);
         return result;
+    }
+
+    if (attr == Py_None) {
+        PyErr_Format(PyExc_AttributeError, "'%s.%s' required boolean attribute is None", class_name, attr_name);
+        goto done;
     }
 
     int val = PyObject_IsTrue(attr);
@@ -185,13 +221,21 @@ done:
 int PyObject_GetAttrAsIntEnum(PyObject *o, const char *class_name, const char *attr_name) {
     int result = -1;
 
-    PyObject *attr = PyObject_GetAttrString(o, attr_name);
+    PyObject *attr = PyObject_GetAttrString(o, attr_name); /* new reference */
     if (!attr) {
         PyErr_Format(PyExc_AttributeError, "'%s.%s' attribute not found", class_name, attr_name);
         return result;
     }
 
+    if (attr == Py_None) {
+        PyErr_Format(
+            PyExc_AttributeError, "'%s.%s' required integral enumeration attribute is None", class_name, attr_name);
+        goto done;
+    }
+
     PyObject_GetAsOptionalIntEnum(attr, class_name, attr_name, &result);
+
+done:
 
     Py_DECREF(attr);
     return result;
@@ -364,7 +408,8 @@ PyObject *PyErr_AwsLastError(void) {
 }
 
 #define AWS_DEFINE_ERROR_INFO_CRT(CODE, STR)                                                                           \
-    [(CODE)-AWS_ERROR_ENUM_BEGIN_RANGE(AWS_CRT_PYTHON_PACKAGE_ID)] = AWS_DEFINE_ERROR_INFO(CODE, STR, "aws-crt-python")
+    [(CODE) - AWS_ERROR_ENUM_BEGIN_RANGE(AWS_CRT_PYTHON_PACKAGE_ID)] =                                                 \
+        AWS_DEFINE_ERROR_INFO(CODE, STR, "aws-crt-python")
 
 /* clang-format off */
 static struct aws_error_info s_errors[] = {
@@ -451,7 +496,8 @@ int aws_py_translate_py_error(void) {
     }
 
     /* Print standard traceback to sys.stderr and clear the error indicator. */
-    PyErr_Print();
+    /* Handles the exception in C, do not set the last vars for python. */
+    PyErr_PrintEx(0 /*set_sys_last_vars*/);
     fprintf(stderr, "Treating Python exception as error %d(%s)\n", aws_error_code, aws_error_name(aws_error_code));
 
     return aws_error_code;
@@ -513,6 +559,39 @@ PyObject *aws_py_memory_view_from_byte_buffer(struct aws_byte_buf *buf) {
     Py_ssize_t mem_size = available;
     char *mem_start = (char *)(buf->buffer + buf->len);
     return PyMemoryView_FromMemory(mem_start, mem_size, PyBUF_WRITE);
+}
+
+PyObject *aws_py_weakref_get_ref(PyObject *ref) {
+    /* If Python >= 3.13 */
+#if PY_VERSION_HEX >= 0x030D0000
+    /* Use PyWeakref_GetRef() (new in Python 3.13), which gets you:
+     * a new strong reference,
+     * or NULL because ref is dead,
+     * or -1 because you called it wrong */
+    PyObject *obj = NULL;
+    if (PyWeakref_GetRef(ref, &obj) == -1) {
+        PyErr_WriteUnraisable(PyErr_Occurred());
+        AWS_ASSERT(0 && "expected a weakref");
+    }
+    return obj;
+
+#else
+    /* Use PyWeakref_GetObject() (deprecated as of Python 3.13), which gets you:
+     * a borrowed reference,
+     * or Py_None because ref is dead,
+     * or NULL because you called it wrong */
+    PyObject *obj = PyWeakref_GetObject(ref); /* borrowed reference */
+    if (obj == NULL) {
+        PyErr_WriteUnraisable(PyErr_Occurred());
+        AWS_ASSERT(0 && "expected a weakref");
+    } else if (obj == Py_None) {
+        obj = NULL;
+    } else {
+        /* Be like PyWeakref_GetRef() and make it new strong reference */
+        Py_INCREF(obj);
+    }
+    return obj;
+#endif
 }
 
 int aws_py_gilstate_ensure(PyGILState_STATE *out_state) {
@@ -655,8 +734,7 @@ static void s_install_crash_handler(void) {
  * Definitions
  ******************************************************************************/
 
-#define AWS_PY_METHOD_DEF(NAME, FLAGS)                                                                                 \
-    { #NAME, aws_py_##NAME, (FLAGS), NULL }
+#define AWS_PY_METHOD_DEF(NAME, FLAGS) {#NAME, aws_py_##NAME, (FLAGS), NULL}
 
 static PyMethodDef s_module_methods[] = {
     /* Common */
@@ -709,6 +787,13 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(mqtt5_client_get_stats, METH_VARARGS),
     AWS_PY_METHOD_DEF(mqtt5_ws_handshake_transform_complete, METH_VARARGS),
 
+    /* MQTT Request Response Client */
+    AWS_PY_METHOD_DEF(mqtt_request_response_client_new_from_5, METH_VARARGS),
+    AWS_PY_METHOD_DEF(mqtt_request_response_client_new_from_311, METH_VARARGS),
+    AWS_PY_METHOD_DEF(mqtt_request_response_client_make_request, METH_VARARGS),
+    AWS_PY_METHOD_DEF(mqtt_request_response_client_create_stream, METH_VARARGS),
+    AWS_PY_METHOD_DEF(mqtt_streaming_operation_open, METH_VARARGS),
+
     /* Cryptographic primitives */
     AWS_PY_METHOD_DEF(md5_new, METH_NOARGS),
     AWS_PY_METHOD_DEF(sha256_new, METH_NOARGS),
@@ -722,14 +807,22 @@ static PyMethodDef s_module_methods[] = {
     /* RSA crypto primitives */
     AWS_PY_METHOD_DEF(rsa_private_key_from_pem_data, METH_VARARGS),
     AWS_PY_METHOD_DEF(rsa_public_key_from_pem_data, METH_VARARGS),
+    AWS_PY_METHOD_DEF(rsa_private_key_from_der_data, METH_VARARGS),
+    AWS_PY_METHOD_DEF(rsa_public_key_from_der_data, METH_VARARGS),
     AWS_PY_METHOD_DEF(rsa_encrypt, METH_VARARGS),
     AWS_PY_METHOD_DEF(rsa_decrypt, METH_VARARGS),
     AWS_PY_METHOD_DEF(rsa_sign, METH_VARARGS),
     AWS_PY_METHOD_DEF(rsa_verify, METH_VARARGS),
 
+    /* ED25519 crypto primitives */
+    AWS_PY_METHOD_DEF(ed25519_new_generate, METH_NOARGS),
+    AWS_PY_METHOD_DEF(ed25519_export_public_key, METH_VARARGS),
+    AWS_PY_METHOD_DEF(ed25519_export_private_key, METH_VARARGS),
+
     /* Checksum primitives */
     AWS_PY_METHOD_DEF(checksums_crc32, METH_VARARGS),
     AWS_PY_METHOD_DEF(checksums_crc32c, METH_VARARGS),
+    AWS_PY_METHOD_DEF(checksums_crc64nvme, METH_VARARGS),
 
     /* HTTP */
     AWS_PY_METHOD_DEF(http_connection_close, METH_VARARGS),
@@ -737,6 +830,7 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(http_client_connection_new, METH_VARARGS),
     AWS_PY_METHOD_DEF(http_client_stream_new, METH_VARARGS),
     AWS_PY_METHOD_DEF(http_client_stream_activate, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http2_client_stream_write_data, METH_VARARGS),
     AWS_PY_METHOD_DEF(http_message_new_request, METH_VARARGS),
     AWS_PY_METHOD_DEF(http_message_get_request_method, METH_VARARGS),
     AWS_PY_METHOD_DEF(http_message_set_request_method, METH_VARARGS),
@@ -814,6 +908,41 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(websocket_increment_read_window, METH_VARARGS),
     AWS_PY_METHOD_DEF(websocket_create_handshake_request, METH_VARARGS),
 
+    /* CBOR Encode */
+    AWS_PY_METHOD_DEF(cbor_encoder_new, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_encoder_get_encoded_data, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_encoder_write_uint, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_encoder_write_negint, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_encoder_write_float, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_encoder_write_bytes, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_encoder_write_text, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_encoder_write_array_start, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_encoder_write_map_start, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_encoder_write_tag, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_encoder_write_bool, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_encoder_write_simple_types, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_encoder_write_py_list, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_encoder_write_py_dict, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_encoder_write_data_item, METH_VARARGS),
+
+    /* CBOR Decode */
+    AWS_PY_METHOD_DEF(cbor_decoder_new, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_decoder_peek_type, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_decoder_get_remaining_bytes_len, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_decoder_consume_next_element, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_decoder_consume_next_data_item, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_decoder_pop_next_unsigned_int, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_decoder_pop_next_negative_int, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_decoder_pop_next_float, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_decoder_pop_next_boolean, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_decoder_pop_next_bytes, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_decoder_pop_next_text, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_decoder_pop_next_array_start, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_decoder_pop_next_map_start, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_decoder_pop_next_tag, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_decoder_pop_next_py_list, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_decoder_pop_next_py_dict, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cbor_decoder_pop_next_data_item, METH_VARARGS),
     {NULL, NULL, 0, NULL},
 };
 

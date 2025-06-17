@@ -21,3 +21,12 @@ def crc32c(input: bytes, previous_crc32c: int = 0) -> int:
     Returns an unsigned 32-bit integer.
     """
     return _awscrt.checksums_crc32c(input, previous_crc32c)
+
+
+def crc64nvme(input: bytes, previous_crc64nvme: int = 0) -> int:
+    """
+    Perform a CRC64 NVME computation.
+    If continuing to update a running CRC, pass its value into `previous_crc64nvme`.
+    Returns an unsigned 64-bit integer.
+    """
+    return _awscrt.checksums_crc64nvme(input, previous_crc64nvme)

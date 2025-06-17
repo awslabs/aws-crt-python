@@ -30,6 +30,7 @@ enum aws_crt_python_errors {
 /* AWS Specific Helpers */
 PyObject *PyUnicode_FromAwsByteCursor(const struct aws_byte_cursor *cursor);
 PyObject *PyUnicode_FromAwsString(const struct aws_string *aws_str);
+PyObject *PyBytes_FromAwsByteCursor(const struct aws_byte_cursor *cursor);
 
 /* Return the named attribute, converted to the specified type.
  * If conversion cannot occur a python exception is set (check PyExc_Occurred()) */
@@ -105,6 +106,27 @@ PyObject *aws_py_get_error_message(PyObject *self, PyObject *args);
 
 /* Create a write-only memoryview from the remaining free space in an aws_byte_buf */
 PyObject *aws_py_memory_view_from_byte_buffer(struct aws_byte_buf *buf);
+
+/* Python 3.13+ changed the function to get a reference from WeakRef. This function is an abstraction over two different
+ * APIs since we support Python versions before 3.13. Returns a strong reference if non-null, which you must release. */
+
+/**
+ * Given a weak reference, returns a NEW strong reference to the referenced object,
+ * or NULL if the reference is dead (this function NEVER raises a python exception or AWS Error).
+ *
+ * You MUST NOT call this if ref came from a user, or ref is NULL.
+ *
+ * This is a simplified version of PyWeakref_GetRef() / PyWeakref_GetObject().
+ * Simpler because:
+ * - Python 3.13 adds PyWeakref_GetRef() and deprecates PyWeakref_GetObject().
+ *   This function calls the appropriate one.
+ *
+ * - This functions has 2 outcomes instead of 3:
+ *   The 3rd being a Python exception for calling it incorrectly.
+ *   If that happens, this function calls PyErr_WriteUnraisable() to clear the exception,
+ *   which is what you would have done anyway.
+ */
+PyObject *aws_py_weakref_get_ref(PyObject *ref);
 
 /* Allocator that calls into PyObject_[Malloc|Free|Realloc] */
 struct aws_allocator *aws_py_get_allocator(void);

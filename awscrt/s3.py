@@ -10,13 +10,12 @@ from concurrent.futures import Future
 from awscrt import NativeResource
 from awscrt.http import HttpRequest
 from awscrt.io import ClientBootstrap, TlsConnectionOptions
-from awscrt.auth import AwsCredentials, AwsCredentialsProvider, AwsSignatureType, AwsSignedBodyHeaderType, AwsSignedBodyValue, AwsSigningAlgorithm, AwsSigningConfig
 from awscrt.auth import AwsCredentialsProvider, AwsSignatureType, AwsSignedBodyHeaderType, AwsSignedBodyValue, \
     AwsSigningAlgorithm, AwsSigningConfig
 import awscrt.exceptions
 import threading
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Sequence
 from enum import IntEnum
 
 
@@ -43,6 +42,7 @@ class CrossProcessLock(NativeResource):
 
     def __enter__(self):
         self.acquire()
+        return self
 
     def release(self):
         _awscrt.s3_cross_process_lock_release(self._binding)
@@ -102,6 +102,9 @@ class S3ChecksumAlgorithm(IntEnum):
 
     SHA256 = 4
     """SHA-256"""
+
+    CRC64NVME = 5
+    """CRC64NVME"""
 
 
 class S3ChecksumLocation(IntEnum):
@@ -205,6 +208,15 @@ class S3Client(NativeResource):
             client can use for buffering data for requests.
             Default values scale with target throughput and are currently
             between 2GiB and 8GiB (may change in future)
+
+        network_interface_names: (Optional[Sequence(str)])
+            **THIS IS AN EXPERIMENTAL AND UNSTABLE API.**
+            A sequence of network interface names. The client will distribute the
+            connections across network interfaces. If any interface name is invalid, goes down,
+            or has any issues like network access, you will see connection failures.
+            This option is only supported on Linux, MacOS, and platforms that have either SO_BINDTODEVICE or IP_BOUND_IF. It
+            is not supported on Windows. `AWS_ERROR_PLATFORM_NOT_SUPPORTED` will be raised on unsupported platforms. On
+            Linux, SO_BINDTODEVICE is used and requires kernel version >= 5.7 or root privileges.
     """
 
     __slots__ = ('shutdown_event', '_region')
@@ -222,7 +234,8 @@ class S3Client(NativeResource):
             multipart_upload_threshold=None,
             throughput_target_gbps=None,
             enable_s3express=False,
-            memory_limit=None):
+            memory_limit=None,
+            network_interface_names: Optional[Sequence[str]] = None):
         assert isinstance(bootstrap, ClientBootstrap) or bootstrap is None
         assert isinstance(region, str)
         assert isinstance(signing_config, AwsSigningConfig) or signing_config is None
@@ -235,6 +248,7 @@ class S3Client(NativeResource):
             throughput_target_gbps,
             float) or throughput_target_gbps is None
         assert isinstance(enable_s3express, bool) or enable_s3express is None
+        assert isinstance(network_interface_names, Sequence) or network_interface_names is None
 
         if credential_provider and signing_config:
             raise ValueError("'credential_provider' has been deprecated in favor of 'signing_config'.  "
@@ -270,6 +284,10 @@ class S3Client(NativeResource):
             throughput_target_gbps = 0
         if memory_limit is None:
             memory_limit = 0
+        if network_interface_names is not None:
+            # ensure this is a list, so it's simpler to process in C
+            if not isinstance(network_interface_names, list):
+                network_interface_names = list(network_interface_names)
 
         self._binding = _awscrt.s3_client_new(
             bootstrap,
@@ -284,6 +302,7 @@ class S3Client(NativeResource):
             throughput_target_gbps,
             enable_s3express,
             memory_limit,
+            network_interface_names,
             s3_client_core)
 
     def make_request(
@@ -314,10 +333,25 @@ class S3Client(NativeResource):
             request (HttpRequest): The overall outgoing API request for S3 operation.
                 If the request body is a file, set send_filepath for better performance.
 
-            operation_name(Optional[str]): Optional S3 operation name (e.g. "CreateBucket").
-                This will only be used when `type` is :attr:`~S3RequestType.DEFAULT`;
-                it is automatically populated for other types.
+            operation_name(Optional[str]): S3 operation name (e.g. "CreateBucket").
+                This MUST be set when `type` is :attr:`~S3RequestType.DEFAULT`.
+                It is ignored for other types, since the operation is implicitly known.
+                See `S3 API documentation
+                <https://docs.aws.amazon.com/AmazonS3/latest/API/API_Operations_Amazon_Simple_Storage_Service.html>`_
+                for the canonical list of names.
+
                 This name is used to fill out details in metrics and error reports.
+                It also drives some operation-specific behavior.
+                If you pass the wrong name, you risk getting the wrong behavior.
+
+                For example, every operation except "GetObject" has its response checked
+                for error, even if the HTTP status-code was 200 OK
+                (see `knowledge center <https://repost.aws/knowledge-center/s3-resolve-200-internalerror>`_).
+                If you used the :attr:`~S3RequestType.DEFAULT` type to do
+                `GetObject <https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObject.html>`_,
+                but mis-named it "Download", and the object looked like XML with an error code,
+                then the request would fail. You risk logging the full response body,
+                and leaking sensitive data.
 
             recv_filepath (Optional[str]): Optional file path. If set, the
                 response body is written directly to a file and the
@@ -499,6 +533,9 @@ class S3Request(NativeResource):
         assert isinstance(part_size, int) or part_size is None
         assert isinstance(multipart_upload_threshold, int) or multipart_upload_threshold is None
 
+        if type == S3RequestType.DEFAULT and not operation_name:
+            raise ValueError("'operation_name' must be set when using S3RequestType.DEFAULT")
+
         super().__init__()
 
         self._finished_future = Future()
@@ -567,12 +604,11 @@ class S3ResponseError(awscrt.exceptions.AwsCrtError):
         headers (list[tuple[str, str]]): Headers from HTTP response.
         body (Optional[bytes]): Body of HTTP response (if any).
             This is usually XML. It may be None in the case of a HEAD response.
-        operation_name (Optional[str]): Name of the S3 operation that failed (if known).
+        operation_name: Name of the S3 operation that failed.
             For example, if a :attr:`~S3RequestType.PUT_OBJECT` fails
             this could be "PutObject", "CreateMultipartUpload", "UploadPart",
             "CompleteMultipartUpload", or others. For :attr:`~S3RequestType.DEFAULT`,
             this is the `operation_name` passed to :meth:`S3Client.make_request()`.
-            If the S3 operation name is unknown, this will be None.
         code (int): CRT error code.
         name (str): CRT error name.
         message (str): CRT error message.

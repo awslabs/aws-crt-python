@@ -1,7 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 
-import base64
 from io import BytesIO
 import unittest
 import os
@@ -12,11 +11,12 @@ import time
 from test import NativeResourceTest
 from concurrent.futures import Future
 from multiprocessing import Process
+import multiprocessing as mp
+import sys
+import gc
 
 from awscrt.http import HttpHeaders, HttpRequest
-from awscrt.s3 import S3Client, S3RequestType, create_default_s3_signing_config
-from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions
-from awscrt.auth import AwsCredentials, AwsCredentialsProvider, AwsSignatureType, AwsSignedBodyHeaderType, AwsSignedBodyValue, AwsSigningAlgorithm, AwsSigningConfig
+from awscrt.auth import AwsCredentials
 from awscrt.s3 import (
     S3ChecksumAlgorithm,
     S3ChecksumConfig,
@@ -44,7 +44,7 @@ from awscrt.auth import (
     AwsSigningAlgorithm,
     AwsSigningConfig,
 )
-import zlib
+from awscrt.common import join_all_native_threads
 
 MB = 1024 ** 2
 GB = 1024 ** 3
@@ -63,7 +63,15 @@ def cross_proc_task():
         exit(-1)
 
 
+def release_lock_task():
+    # remove the global lock
+    global CRT_S3_PROCESS_LOCK
+    CRT_S3_PROCESS_LOCK = None
+    exit(0)
+
+
 class CrossProcessLockTest(NativeResourceTest):
+
     def setUp(self):
         self.nonce = time.time()
         super().setUp()
@@ -93,13 +101,36 @@ class CrossProcessLockTest(NativeResourceTest):
             # acquiring this lock in a sub-process should fail since we
             # already hold the lock in this process.
             self.assertNotEqual(0, process.exitcode)
-
         # now that we've released the lock above, the same sub-process path
         # should now succeed.
         unlocked_process = Process(target=cross_proc_task)
         unlocked_process.start()
         unlocked_process.join()
         self.assertEqual(0, unlocked_process.exitcode)
+
+    @unittest.skipIf(sys.platform.startswith('win'), "Windows doesn't support fork")
+    def test_fork_shares_lock(self):
+        # mock the use case from boto3 where a global lock used and the workaround with fork.
+        global CRT_S3_PROCESS_LOCK
+        CRT_S3_PROCESS_LOCK = CrossProcessLock(cross_process_lock_name)
+        CRT_S3_PROCESS_LOCK.acquire()
+        mp.set_start_method('fork', force=True)
+        # the first forked process release the forked lock.
+        # when the process forked, the child process also has the lock and it could release the lock before
+        # the parent process. Make sure when this happens, the lock is still held by the parent process.
+        release_process = Process(target=release_lock_task)
+        release_process.start()
+        release_process.join()
+
+        # create another process try to acquire the lock, it should fail as the
+        # lock should still be held with the main process.
+        process = Process(target=cross_proc_task)
+        process.start()
+        process.join()
+        # acquiring this lock in a sub-process should fail since we
+        # already hold the lock in this process.
+        self.assertNotEqual(0, process.exitcode)
+        del CRT_S3_PROCESS_LOCK
 
 
 class FileCreator(object):
@@ -158,7 +189,8 @@ def s3_client_new(
         part_size=0,
         is_cancel_test=False,
         enable_s3express=False,
-        mem_limit=None):
+        mem_limit=None,
+        network_interface_names=None):
 
     if is_cancel_test:
         # for cancellation tests, make things slow, so it's less likely that
@@ -180,7 +212,6 @@ def s3_client_new(
         opt = TlsContextOptions()
         ctx = ClientTlsContext(opt)
         tls_option = TlsConnectionOptions(ctx)
-
     s3_client = S3Client(
         bootstrap=bootstrap,
         region=region,
@@ -189,8 +220,8 @@ def s3_client_new(
         part_size=part_size,
         throughput_target_gbps=throughput_target_gbps,
         enable_s3express=enable_s3express,
-        memory_limit=mem_limit)
-
+        memory_limit=mem_limit,
+        network_interface_names=network_interface_names)
     return s3_client
 
 
@@ -221,6 +252,11 @@ class S3ClientTest(NativeResourceTest):
         s3_client = s3_client_new(True, self.region)
         self.assertIsNotNone(s3_client)
 
+    def test_sanity_network_interface_names(self):
+        # This is just a sanity test to ensure that we are passing the parameter correctly.
+        with self.assertRaises(Exception):
+            s3_client_new(True, self.region, network_interface_names=("eth0", "invalid-network-interface"))
+
     def test_wait_shutdown(self):
         s3_client = s3_client_new(False, self.region)
         self.assertIsNotNone(s3_client)
@@ -248,6 +284,7 @@ class S3RequestTest(NativeResourceTest):
         self.num_threads = 0
         self.special_path = "put_object_test_10MB@$%.txt"
         self.non_ascii_file_name = "ÉxÅmple.txt"
+        self.part_size = 5 * MB
 
         self.response_headers = None
         self.response_status_code = None
@@ -358,13 +395,12 @@ class S3RequestTest(NativeResourceTest):
             request_type,
             exception_name=None,
             enable_s3express=False,
-            region="us-west-2",
             mem_limit=None,
             **kwargs):
         s3_client = s3_client_new(
             False,
-            region,
-            5 * MB,
+            self.region,
+            self.part_size,
             enable_s3express=enable_s3express,
             mem_limit=mem_limit)
         signing_config = None
@@ -387,8 +423,14 @@ class S3RequestTest(NativeResourceTest):
         self.assertTrue(shutdown_event.wait(self.timeout))
 
         if exception_name is None:
-            finished_future.result()
-            self._validate_successful_response(request_type is S3RequestType.PUT_OBJECT)
+            try:
+                finished_future.result()
+                self._validate_successful_response(request_type is S3RequestType.PUT_OBJECT)
+            except S3ResponseError as e:
+                print(e.status_code)
+                print(e.headers)
+                print(e.body)
+                raise e
         else:
             e = finished_future.exception()
             self.assertEqual(e.name, exception_name)
@@ -431,14 +473,16 @@ class S3RequestTest(NativeResourceTest):
         put_body_stream.close()
 
     def test_get_object_s3express(self):
+        self.region = "us-east-1"
         request = self._get_object_request("/crt-download-10MB", enable_s3express=True)
-        self._test_s3_put_get_object(request, S3RequestType.GET_OBJECT, enable_s3express=True, region="us-east-1")
+        self._test_s3_put_get_object(request, S3RequestType.GET_OBJECT, enable_s3express=True)
 
     def test_put_object_s3express(self):
+        self.region = "us-east-1"
         put_body_stream = open(self.temp_put_obj_file_path, "rb")
         content_length = os.stat(self.temp_put_obj_file_path).st_size
         request = self._put_object_request(put_body_stream, content_length, enable_s3express=True)
-        self._test_s3_put_get_object(request, S3RequestType.PUT_OBJECT, enable_s3express=True, region="us-east-1")
+        self._test_s3_put_get_object(request, S3RequestType.PUT_OBJECT, enable_s3express=True)
         put_body_stream.close()
 
     def test_put_object_multiple_times(self):
@@ -581,28 +625,116 @@ class S3RequestTest(NativeResourceTest):
             "the transferred length reported does not match body we sent")
         self._validate_successful_response(request_type is S3RequestType.PUT_OBJECT)
 
-    def test_put_get_with_checksum(self):
-        put_body = b'hello world'
-        put_body_stream = BytesIO(put_body)
-        content_length = len(put_body)
-        path = '/hello-world.txt'
+    def upload_with_global_client(self):
+        global CRT_S3_CLIENT
+        if CRT_S3_CLIENT is None:
+            CRT_S3_CLIENT = s3_client_new(False, self.region, 5 * MB)
+        put_body_stream = open(self.temp_put_obj_file_path, "rb")
+        content_length = os.stat(self.temp_put_obj_file_path).st_size
+        request = self._put_object_request(put_body_stream, content_length)
+        s3_request = CRT_S3_CLIENT.make_request(
+            request=request,
+            type=S3RequestType.PUT_OBJECT,
+            on_headers=self._on_request_headers,
+            on_body=self._on_request_body,
+            on_done=self._on_request_done)
 
-        # calculate expected CRC32 header value:
-        # a string containing the url-safe-base64-encoding of a big-endian-32-bit-CRC
-        crc32_int = zlib.crc32(put_body)
-        crc32_big_endian = crc32_int.to_bytes(4, 'big')
-        crc32_base64_bytes = base64.urlsafe_b64encode(crc32_big_endian)
-        crc32_base64_str = crc32_base64_bytes.decode()
+        shutdown_event = s3_request.shutdown_event
+        s3_request = None
+        self.assertTrue(shutdown_event.wait(self.timeout))
+        put_body_stream.close()
+
+    def fork_s3_client(self):
+        try:
+            # init_logging(LogLevel.Trace, f"aws-crt-python{os.getpid()}.log")
+            self.upload_with_global_client()
+            global CRT_S3_CLIENT
+            del CRT_S3_CLIENT
+            exit(0)
+        except Exception as e:
+            print(f"fork_s3_client error: {e}")
+            exit(-1)
+
+    def before_fork(self):
+        global CRT_S3_CLIENT
+        try:
+            if CRT_S3_CLIENT is not None:
+                # The client is not safe to use after fork, so we need to release it.
+                # make sure the client is shutdown properly before fork
+                # also wait for every thread to be joined, incase of some thread is in the middle of cleanup.
+                shutdown_event = CRT_S3_CLIENT.shutdown_event
+                CRT_S3_CLIENT = None
+                gc.collect()
+                self.assertTrue(shutdown_event.wait(self.timeout))
+                self.assertTrue(join_all_native_threads(timeout_sec=10))
+        except Exception as e:
+            print(f"before_fork error: {e}")
+            # fail hard as exceptions raised from the fork handler will be ignored.
+            sys.stdout.flush()
+            sys.stderr.flush()
+            os._exit(-1)
+
+    @unittest.skipIf(sys.platform.startswith('win') or sys.platform == 'darwin',
+                     "Test skipped on Windows and macOS. Windows doesn't support fork. macOS has background threads crashes the forked process.")
+    def test_fork_workaround(self):
+        # mock the boto3 use case where a global client is used and the
+        # workaround for fork is to release the client from the fork handler.
+        global CRT_S3_CLIENT
+        CRT_S3_CLIENT = s3_client_new(False, self.region, 5 * MB)
+        self.upload_with_global_client()
+        # fork the process and use the global S3 client for the transfer.
+        # to workaround the background thread issue that cleaned after fork,
+        # we need to make sure the client is shutdown properly
+        # and all background threads has joined before fork, see `self.before_fork`
+        # And in the sub-process, we can recreate the global S3 client and use it.
+        os.register_at_fork(before=self.before_fork)
+        mp.set_start_method('fork', force=True)
+        process = Process(target=self.fork_s3_client)
+        process.start()
+        process.join()
+        self.assertEqual(0, process.exitcode)
+        self.upload_with_global_client()
+        del CRT_S3_CLIENT
+
+    def _round_trip_with_checksums_helper(
+            self,
+            algo=S3ChecksumAlgorithm.CRC32,
+            mpu=True,
+            provide_full_object_checksum=False):
+        if not mpu:
+            # increase the part size for the client to use single part upload
+            self.part_size = 20 * MB
+
+        put_body_stream = open(self.temp_put_obj_file_path, "rb")
+        content_length = os.stat(self.temp_put_obj_file_path).st_size
+        # construct different path to prevent race condition between tests
+        path = '/hello-world-' + algo.name
+        if mpu:
+            path += "-mpu"
+        if provide_full_object_checksum:
+            path += "-full-object"
+
+        if algo == S3ChecksumAlgorithm.CRC32:
+            checksum_header_name = 'x-amz-checksum-crc32'
+            checksum_str = 'a9ccsg=='
+        elif algo == S3ChecksumAlgorithm.CRC64NVME:
+            checksum_header_name = 'x-amz-checksum-crc64nvme'
+            checksum_str = 'tPMvgM0jSDQ='
+        else:
+            raise Exception("Checksum algo not supported by test helper")
 
         # upload, with client adding checksum
         upload_request = self._put_object_request(put_body_stream, content_length, path=path)
         upload_checksum_config = S3ChecksumConfig(
-            algorithm=S3ChecksumAlgorithm.CRC32,
+            algorithm=algo,
             location=S3ChecksumLocation.TRAILER)
+        if provide_full_object_checksum:
+            upload_request.headers.add(checksum_header_name, checksum_str)
+            # checksum will be provided from the header, don't set the checksum configs
+            upload_checksum_config = None
+
         self._test_s3_put_get_object(upload_request, S3RequestType.PUT_OBJECT,
                                      checksum_config=upload_checksum_config)
-        self.assertEqual(HttpHeaders(self.response_headers).get('x-amz-checksum-crc32'),
-                         crc32_base64_str)
 
         # download, with client validating checksum
         download_request = self._get_object_request(path)
@@ -610,9 +742,31 @@ class S3RequestTest(NativeResourceTest):
         self._test_s3_put_get_object(download_request, S3RequestType.GET_OBJECT,
                                      checksum_config=download_checksum_config)
         self.assertTrue(self.done_did_validate_checksum)
-        self.assertEqual(self.done_checksum_validation_algorithm, S3ChecksumAlgorithm.CRC32)
-        self.assertEqual(HttpHeaders(self.response_headers).get('x-amz-checksum-crc32'),
-                         crc32_base64_str)
+        self.assertEqual(self.done_checksum_validation_algorithm, algo)
+        self.assertEqual(HttpHeaders(self.response_headers).get(checksum_header_name),
+                         checksum_str)
+        put_body_stream.close()
+
+    def test_round_trip_with_trailing_checksum(self):
+        self._round_trip_with_checksums_helper(S3ChecksumAlgorithm.CRC32, mpu=False)
+
+    def test_round_trip_with_full_object_checksum_mpu(self):
+        self._round_trip_with_checksums_helper(
+            S3ChecksumAlgorithm.CRC64NVME,
+            mpu=True,
+            provide_full_object_checksum=True)
+
+    def test_round_trip_with_full_object_checksum_single_part(self):
+        self._round_trip_with_checksums_helper(
+            S3ChecksumAlgorithm.CRC64NVME,
+            mpu=False,
+            provide_full_object_checksum=True)
+
+    def test_round_trip_with_full_object_checksum_mpu_crc32(self):
+        self._round_trip_with_checksums_helper(S3ChecksumAlgorithm.CRC32, mpu=True, provide_full_object_checksum=True)
+
+    def test_round_trip_with_full_object_checksum_single_part_crc32(self):
+        self._round_trip_with_checksums_helper(S3ChecksumAlgorithm.CRC32, mpu=False, provide_full_object_checksum=True)
 
     def _on_progress_cancel_after_first_chunk(self, progress):
         self.transferred_len += progress

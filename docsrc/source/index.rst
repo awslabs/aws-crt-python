@@ -12,6 +12,7 @@ API Reference
    :maxdepth: 2
 
    api/auth
+   api/checksums
    api/common
    api/crypto
    api/exceptions
@@ -20,6 +21,7 @@ API Reference
    api/io
    api/mqtt
    api/mqtt5
+   api/mqtt_request_response
    api/s3
    api/websocket
 

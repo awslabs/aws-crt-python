@@ -1,70 +1,41 @@
 import Builder
 import argparse
-import os
+from pathlib import Path
 import sys
-
-# Fall back on using the "{python}" builder variable
-PYTHON_DEFAULT = '{python}'
 
 
 class AWSCrtPython(Builder.Action):
-    python = PYTHON_DEFAULT
-
-    # Some CI containers have pip installed via "rpm" or non-Python methods, and this causes issues when
-    # we try to update pip via "python -m pip install --upgrade" because there are no RECORD files present.
-    # Therefore, we have to seek alternative ways with a last resort of installing with "--ignore-installed"
-    # if nothing else works AND the builder is running in GitHub actions.
-    # As of writing, this is primarily an issue with the AL2-x64 image.
-    def try_to_upgrade_pip(self, env):
-        did_upgrade = False
-
-        if (self.python == '{python}'):
-            self.python = env.config["variables"]["python"]
-
-        pip_result = env.shell.exec(self.python, '-m', 'pip', 'install', '--upgrade', 'pip', check=False)
-        if pip_result.returncode == 0:
-            did_upgrade = True
-        else:
-            print("Could not update pip via normal pip upgrade. Next trying via package manager...")
-
-        if (did_upgrade == False):
-            try:
-                Builder.InstallPackages(['pip']).run(env)
-                did_upgrade = True
-            except Exception:
-                print("Could not update pip via package manager. Next resorting to forcing an ignore install...")
-
-        if (did_upgrade == False):
-            # Only run in GitHub actions by checking for specific environment variable
-            # Source: https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
-            if (os.getenv("GITHUB_ACTIONS") is not None):
-                pip_result = env.shell.exec(
-                    self.python, '-m', 'pip', 'install', '--upgrade',
-                    '--ignore-installed', 'pip', check=False)
-                if pip_result.returncode == 0:
-                    did_upgrade = True
-                else:
-                    print("Could not update pip via ignore install! Something is terribly wrong!")
-                    sys.exit(12)
-            else:
-                print("Not on GitHub actions - skipping reinstalling Pip. Update/Install pip manually and rerun the builder")
 
     def run(self, env):
         # allow custom python to be used
         parser = argparse.ArgumentParser()
         parser.add_argument('--python')
         args = parser.parse_known_args(env.args.args)[0]
-        self.python = args.python if args.python else PYTHON_DEFAULT
+        if args.python:
+            self.python = args.python
+        else:
+            # Fall back on using the "{python}" builder variable
+            self.python = env.config['variables']['python']
+
+        # Create a virtual environment and use that.
+        # Otherwise, in places like ubuntu 24.04, PEP 668 stops
+        # you from globally installing/upgrading packages
+        venv_dirpath = Path.cwd() / '.venv-builder'
+        env.shell.exec(self.python, '-m', 'venv', str(venv_dirpath), check=True)
+        if sys.platform == 'win32':
+            self.python = str(venv_dirpath / 'Scripts/python')
+        else:
+            self.python = str(venv_dirpath / 'bin/python')
 
         # Enable S3 tests
         env.shell.setenv('AWS_TEST_S3', '1')
+        env.shell.setenv('AWS_TEST_LOCALHOST', '1')
 
         actions = [
-            # Upgrade Pip via a number of different methods
-            self.try_to_upgrade_pip,
-            [self.python, '-m', 'pip', 'install', '--upgrade', '--requirement', 'requirements-dev.txt'],
+            [self.python, '--version'],
+            [self.python, '-m', 'pip', 'install', '--upgrade', 'pip'],
             Builder.SetupCrossCICrtEnvironment(),
-            [self.python, '-m', 'pip', 'install', '--verbose', '.'],
+            [self.python, '-m', 'pip', 'install', '--verbose', '.[dev]'],
             # "--failfast" because, given how our leak-detection in tests currently works,
             # once one test fails all the rest usually fail too.
             [self.python, '-m', 'unittest', 'discover', '--verbose', '--failfast'],

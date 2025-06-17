@@ -1,13 +1,10 @@
 version: 0.2
-#this build spec assumes the ubuntu 14.04 trusty image
+#this image assumes base Codebuild Ubuntu image
 #this build run simply verifies we haven't published something at this tag yet.
 #if we have we fail the build and stop the pipeline, if we haven't we allow the pipeline to run.
 phases:
   install:
     commands:
-      - sudo apt-get update -y
-      - sudo apt-get install python3 python3-pip -y
-      - pip3 install --upgrade setuptools
   pre_build:
     commands:
   build:

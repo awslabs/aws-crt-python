@@ -91,7 +91,12 @@ class RSASignatureAlgorithm(IntEnum):
     PKCSv1.5 padding with sha256 hash function
     """
 
-    PSS_SHA256 = 1
+    PKCS1_5_SHA1 = 1
+    """
+    PKCSv1.5 padding with sha1 hash function
+    """
+
+    PSS_SHA256 = 2
     """
     PSS padding with sha256 hash function
     """
@@ -117,6 +122,24 @@ class RSA(NativeResource):
         Raises ValueError if pem does not have public key object.
         """
         return RSA(binding=_awscrt.rsa_public_key_from_pem_data(pem_data))
+
+    @staticmethod
+    def new_private_key_from_der_data(der_data: Union[bytes, bytearray, memoryview]) -> 'RSA':
+        """
+        Creates a new instance of private RSA key pair from der data.
+        Expects key in PKCS1 format.
+        Raises ValueError if pem does not have private key object.
+        """
+        return RSA(binding=_awscrt.rsa_private_key_from_der_data(der_data))
+
+    @staticmethod
+    def new_public_key_from_der_data(der_data: Union[bytes, bytearray, memoryview]) -> 'RSA':
+        """
+        Creates a new instance of public RSA key pair from der data.
+        Expects key in PKCS1 format.
+        Raises ValueError if pem does not have public key object.
+        """
+        return RSA(binding=_awscrt.rsa_public_key_from_der_data(der_data))
 
     def encrypt(self, encryption_algorithm: RSAEncryptionAlgorithm,
                 plaintext: Union[bytes, bytearray, memoryview]) -> bytes:
@@ -148,3 +171,42 @@ class RSA(NativeResource):
         Returns True if signature matches and False if not.
         """
         return _awscrt.rsa_verify(self._binding, signature_algorithm, digest, signature)
+
+
+class ED25519ExportFormat(IntEnum):
+    """ED25519 Export format"""
+
+    RAW = 0
+    """
+    Raw bytes.
+    """
+
+    OPENSSH_B64 = 1
+    """
+    Base64 encoded OpenSSH format as defined in RFC 8709.
+    """
+
+
+class ED25519(NativeResource):
+    def __init__(self, binding):
+        super().__init__()
+        self._binding = binding
+
+    @staticmethod
+    def new_generate() -> 'ED25519':
+        """
+        Generates a new instance of ED25159 key pair.
+        """
+        return ED25519(binding=_awscrt.ed25519_new_generate())
+
+    def export_public_key(self, export_format: ED25519ExportFormat) -> bytes:
+        """
+        Exports public part of the key in specified format.
+        """
+        return _awscrt.ed25519_export_public_key(self._binding, export_format)
+
+    def export_private_key(self, export_format: ED25519ExportFormat) -> bytes:
+        """
+        Exports public part of the key in specified format.
+        """
+        return _awscrt.ed25519_export_private_key(self._binding, export_format)

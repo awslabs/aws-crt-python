@@ -168,8 +168,8 @@ class MqttConnectionTest(NativeResourceTest):
             host_name=test_input_endpoint,
             port=8883,
             will=Will(self.TEST_TOPIC, QoS.AT_LEAST_ONCE, self.TEST_MSG, False),
-            ping_timeout_ms=500,
-            keep_alive_secs=1
+            ping_timeout_ms=10000,
+            keep_alive_secs=30
         )
         connection.connect().result(TIMEOUT)
 
@@ -177,7 +177,9 @@ class MqttConnectionTest(NativeResourceTest):
             client=client,
             client_id=create_client_id(),
             host_name=test_input_endpoint,
-            port=8883
+            port=8883,
+            ping_timeout_ms=10000,
+            keep_alive_secs=30
         )
         subscriber.connect().result(TIMEOUT)
 
@@ -193,18 +195,29 @@ class MqttConnectionTest(NativeResourceTest):
         self.assertEqual(self.TEST_TOPIC, suback['topic'])
         self.assertIs(QoS.AT_LEAST_ONCE, suback['qos'])
 
-        # Disconnect the will client to send the will
-        time.sleep(1.1)  # wait 1.1 seconds to ensure we can make another client ID connect
+        # wait a few seconds to ensure we can make another client ID connect (don't trigger IoT Core limit)
+        time.sleep(2)
+
+        # Disconnect the will client to send the will by making another connection with the same client id
         disconnecter = Connection(
             client=client,
             client_id=will_client_id,
             host_name=test_input_endpoint,
             port=8883,
             will=Will(self.TEST_TOPIC, QoS.AT_LEAST_ONCE, self.TEST_MSG, False),
-            ping_timeout_ms=500,
-            keep_alive_secs=1
+            ping_timeout_ms=10000,
+            keep_alive_secs=30
         )
-        disconnecter.connect().result(TIMEOUT)
+
+        # A race condition exists in IoT Core where the interrupter may get refused rather than the existing
+        # connection getting dropped.  Loop until we successfully connect.
+        continue_connecting = True
+        while continue_connecting:
+            try:
+                disconnecter.connect().result(TIMEOUT)
+                continue_connecting = False
+            except BaseException:
+                pass
 
         # Receive message
         rcv = received.result(TIMEOUT)

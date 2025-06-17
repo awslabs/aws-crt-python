@@ -9,19 +9,19 @@ on:
 
 jobs:
   update-docs-branch:
-    runs-on: ubuntu-20.04 # latest
+    runs-on: ubuntu-22.04 # getting errors from sphinx using ubuntu-24.04, so stuck on 22.04 till we diagnose it
     permissions:
       contents: write # allow push
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: true
 
       - name: Update docs branch
         run: |
-          python3 -m pip install sphinx
-          python3 -m pip install --verbose .
+          python3 -m pip install --upgrade pip
+          python3 -m pip install --verbose ".[dev]"
           ./scripts/make-docs.py
 
       - name: Commit

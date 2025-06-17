@@ -140,8 +140,8 @@ static void s_on_connection_success(
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
-    PyObject *self = PyWeakref_GetObject(py_connection->self_proxy); /* borrowed reference */
-    if (self != Py_None) {
+    PyObject *self = aws_py_weakref_get_ref(py_connection->self_proxy); /* new reference */
+    if (self != NULL) {
         PyObject *success_result =
             PyObject_CallMethod(self, "_on_connection_success", "(iN)", return_code, PyBool_FromLong(session_present));
         if (success_result) {
@@ -149,6 +149,7 @@ static void s_on_connection_success(
         } else {
             PyErr_WriteUnraisable(PyErr_Occurred());
         }
+        Py_DECREF(self);
     }
 
     PyGILState_Release(state);
@@ -167,14 +168,15 @@ static void s_on_connection_failure(struct aws_mqtt_client_connection *connectio
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
-    PyObject *self = PyWeakref_GetObject(py_connection->self_proxy); /* borrowed reference */
-    if (self != Py_None) {
+    PyObject *self = aws_py_weakref_get_ref(py_connection->self_proxy); /* new reference */
+    if (self != NULL) {
         PyObject *success_result = PyObject_CallMethod(self, "_on_connection_failure", "(i)", error_code);
         if (success_result) {
             Py_DECREF(success_result);
         } else {
             PyErr_WriteUnraisable(PyErr_Occurred());
         }
+        Py_DECREF(self);
     }
 
     PyGILState_Release(state);
@@ -194,14 +196,15 @@ static void s_on_connection_interrupted(struct aws_mqtt_client_connection *conne
     }
 
     /* Ensure that python class is still alive */
-    PyObject *self = PyWeakref_GetObject(py_connection->self_proxy); /* borrowed reference */
-    if (self != Py_None) {
+    PyObject *self = aws_py_weakref_get_ref(py_connection->self_proxy); /* new reference */
+    if (self != NULL) {
         PyObject *result = PyObject_CallMethod(self, "_on_connection_interrupted", "(i)", error_code);
         if (result) {
             Py_DECREF(result);
         } else {
             PyErr_WriteUnraisable(PyErr_Occurred());
         }
+        Py_DECREF(self);
     }
 
     PyGILState_Release(state);
@@ -227,8 +230,8 @@ static void s_on_connection_resumed(
     }
 
     /* Ensure that python class is still alive */
-    PyObject *self = PyWeakref_GetObject(py_connection->self_proxy); /* borrowed reference */
-    if (self != Py_None) {
+    PyObject *self = aws_py_weakref_get_ref(py_connection->self_proxy); /* new reference */
+    if (self != NULL) {
         PyObject *result =
             PyObject_CallMethod(self, "_on_connection_resumed", "(iN)", return_code, PyBool_FromLong(session_present));
         if (result) {
@@ -236,6 +239,7 @@ static void s_on_connection_resumed(
         } else {
             PyErr_WriteUnraisable(PyErr_Occurred());
         }
+        Py_DECREF(self);
     }
 
     PyGILState_Release(state);
@@ -258,14 +262,15 @@ static void s_on_connection_closed(
 
     struct mqtt_connection_binding *py_connection = userdata;
     /* Ensure that python class is still alive */
-    PyObject *self = PyWeakref_GetObject(py_connection->self_proxy); /* borrowed reference */
-    if (self != Py_None) {
+    PyObject *self = aws_py_weakref_get_ref(py_connection->self_proxy); /* new reference */
+    if (self != NULL) {
         PyObject *result = PyObject_CallMethod(self, "_on_connection_closed", "()");
         if (result) {
             Py_DECREF(result);
         } else {
             PyErr_WriteUnraisable(PyErr_Occurred());
         }
+        Py_DECREF(self);
     }
 
     PyGILState_Release(state);
@@ -535,8 +540,9 @@ static void s_ws_handshake_transform(
     }
 
     /* Ensure python mqtt connection object is still alive */
-    PyObject *connection_py = PyWeakref_GetObject(connection_binding->self_proxy); /* borrowed reference */
-    if (connection_py == Py_None) {
+
+    PyObject *connection_py = aws_py_weakref_get_ref(connection_binding->self_proxy); /* new reference */
+    if (connection_py == NULL) {
         aws_raise_error(AWS_ERROR_INVALID_STATE);
         goto done;
     }
@@ -593,6 +599,7 @@ static void s_ws_handshake_transform(
 done:;
     /* Save off error code, so it doesn't got stomped before we pass it to callback*/
     int error_code = aws_last_error();
+    Py_XDECREF(connection_py);
 
     if (ws_transform_capsule) {
         Py_DECREF(ws_transform_capsule);
@@ -615,13 +622,13 @@ PyObject *aws_py_mqtt_ws_handshake_transform_complete(PyObject *self, PyObject *
 
     PyObject *exception_py;
     PyObject *ws_transform_capsule;
-    if (!PyArg_ParseTuple(args, "OO", &exception_py, &ws_transform_capsule)) {
+    int error_code = AWS_ERROR_SUCCESS;
+    if (!PyArg_ParseTuple(args, "OOi", &exception_py, &ws_transform_capsule, &error_code)) {
         return NULL;
     }
 
-    int error_code = AWS_ERROR_SUCCESS;
-    if (exception_py != Py_None) {
-        /* TODO: Translate Python exception to aws error. In the meantime here's a catch-all. */
+    if (exception_py != Py_None && error_code == AWS_ERROR_SUCCESS) {
+        /* Fallback code for if the error source was outside the CRT native implementation */
         error_code = AWS_ERROR_HTTP_CALLBACK_FAILURE;
     }
 
