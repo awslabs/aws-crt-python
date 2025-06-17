@@ -16,7 +16,7 @@ import awscrt.exceptions
 from typing import List, Tuple, Optional, Union, Callable, Any, AsyncIterator
 from awscrt.http import (
     HttpClientConnectionBase, HttpRequest, HttClientStreamBase, HttpProxyOptions,
-    Http2Setting, HttpVersion, Http2ClientStream
+    Http2Setting, HttpVersion
 )
 from awscrt.io import (
     ClientBootstrap, SocketOptions, TlsConnectionOptions, InputStream
