@@ -161,7 +161,7 @@ class Http2ClientConnectionAsync(HttpClientConnectionBase):
 
     def request(self,
                 request: 'HttpRequest',
-                manual_write: bool = False,
+                async_body: AsyncIterator[bytes] = None,
                 loop: Optional[asyncio.AbstractEventLoop] = None) -> 'Http2ClientStreamAsync':
         """Create `Http2ClientStreamAsync` to carry out the request/response exchange.
 
@@ -174,7 +174,7 @@ class Http2ClientConnectionAsync(HttpClientConnectionBase):
         Returns:
             Http2ClientStreamAsync: Stream for the HTTP/2 request/response exchange.
         """
-        return Http2ClientStreamAsync(self, request, manual_write, loop)
+        return Http2ClientStreamAsync(self, request, async_body, loop)
 
 
 class HttpClientStreamAsyncBase(HttClientStreamBase):
@@ -188,11 +188,12 @@ class HttpClientStreamAsyncBase(HttClientStreamBase):
         '_status_code',
         '_loop')
 
-    def _init_common(self, connection: HttpClientConnectionAsync,
+    def _init_common(self, connection: HttpClientConnectionBase,
                      request: HttpRequest,
-                     http2_manual_write: bool = False,
+                     async_body: AsyncIterator[bytes] = None,
                      loop: Optional[asyncio.AbstractEventLoop] = None) -> None:
         # Initialize the parent class
+        http2_manual_write = async_body is not None and connection.version is HttpVersion.Http2
         super()._init_common(connection, request, http2_manual_write=http2_manual_write)
 
         # Attach the event loop for async operations
@@ -214,6 +215,10 @@ class HttpClientStreamAsyncBase(HttClientStreamBase):
         self._response_status_future = self._loop.create_future()
         self._response_headers_future = self._loop.create_future()
         self._status_code = None
+
+        self._async_body = async_body
+        if self._async_body is not None:
+            self._writer = asyncio.Task(self._set_async_body(self._async_body))
 
         # Activate the stream immediately
         _awscrt.http_client_stream_activate(self)
@@ -333,26 +338,16 @@ class Http2ClientStreamAsync(HttpClientStreamAsyncBase):
     Create an Http2ClientStreamAsync with `Http2ClientConnectionAsync.request()`.
     """
 
-    def __init__(self, connection: HttpClientConnectionAsync, request: HttpRequest, manual_write: bool,
+    def __init__(self,
+                 connection: HttpClientConnectionAsync,
+                 request: HttpRequest,
+                 async_body: AsyncIterator[bytes] = None,
                  loop: Optional[asyncio.AbstractEventLoop] = None) -> None:
-        super()._init_common(connection, request, http2_manual_write=manual_write, loop=loop)
+        super()._init_common(connection, request, async_body=async_body, loop=loop)
 
-    async def write_data(self,
-                         data_stream: Union[InputStream, Any],
-                         end_stream: bool = False) -> None:
-        """Write data to the stream asynchronously.
-
-        Args:
-            data_stream (AsyncIterator[bytes]): Async iterator that yields bytes to write.
-                Can be None to write an empty body, which is useful to finalize a request
-                with end_stream=True.
-            end_stream (bool): Whether this is the last data to write.
-
-        Returns:
-            None: When the write completes.
-        """
+    async def _write_data(self, body, end_stream):
         future: Future = Future()
-        body_stream: InputStream = InputStream.wrap(data_stream, allow_none=True)
+        body_stream: InputStream = InputStream.wrap(body, allow_none=True)
 
         def on_write_complete(error_code: int) -> None:
             if future.cancelled():
@@ -365,3 +360,22 @@ class Http2ClientStreamAsync(HttpClientStreamAsyncBase):
 
         _awscrt.http2_client_stream_write_data(self, body_stream, end_stream, on_write_complete)
         await asyncio.wrap_future(future)
+
+    async def _set_async_body(self, body_iterator: AsyncIterator[bytes]):
+        """Write data to the stream asynchronously.
+
+        Args:
+            data_stream (AsyncIterator[bytes]): Async iterator that yields bytes to write.
+                Can be None to write an empty body, which is useful to finalize a request
+                with end_stream=True.
+
+        Returns:
+            None: When the write completes.
+        """
+        try:
+            async for chunk in body_iterator:
+                await self._write_data(io.BytesIO(chunk), False)
+        except Exception:
+            raise
+        finally:
+            await self._write_data(None, True)
