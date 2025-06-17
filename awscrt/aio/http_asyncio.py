@@ -218,7 +218,7 @@ class HttpClientStreamAsyncBase(HttClientStreamBase):
 
         self._async_body = async_body
         if self._async_body is not None:
-            self._writer = asyncio.Task(self._set_async_body(self._async_body))
+            self._writer = self._loop.create_task(self._set_async_body(self._async_body))
 
         # Activate the stream immediately
         _awscrt.http_client_stream_activate(self)
