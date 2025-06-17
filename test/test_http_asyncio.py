@@ -18,7 +18,7 @@ from http.server import HTTPServer, SimpleHTTPRequestHandler
 from awscrt import io
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsContextOptions, TlsCipherPref
 from awscrt.http import HttpHeaders, HttpRequest, HttpVersion, Http2Setting, Http2SettingID
-from awscrt.http_asyncio import HttpClientConnectionAsync, Http2ClientConnectionAsync
+from awscrt.aio.http_asyncio import HttpClientConnectionAsync, Http2ClientConnectionAsync
 import threading
 
 
@@ -321,7 +321,7 @@ class TestAsyncClient(NativeResourceTest):
         exception = None
         try:
             # If the stream is not configured to allow manual writes, this should throw an exception
-            await stream.write_data_async(BytesIO(b'hello'), False)
+            await stream.write_data(BytesIO(b'hello'), False)
         except RuntimeError as e:
             exception = e
 
@@ -565,10 +565,10 @@ class TestAsyncClientMockServer(NativeResourceTest):
         stream = connection.request(request, manual_write=True)
 
         # Write data in chunks
-        await stream.write_data_async(BytesIO(b'hello'), False)
-        await stream.write_data_async(BytesIO(b'he123123'), False)
-        await stream.write_data_async(None, False)
-        await stream.write_data_async(BytesIO(b'hello'), True)
+        await stream.write_data(BytesIO(b'hello'), False)
+        await stream.write_data(BytesIO(b'he123123'), False)
+        await stream.write_data(None, False)
+        await stream.write_data(BytesIO(b'hello'), True)
 
         # Collect response
         response = Response()
@@ -610,7 +610,7 @@ class TestAsyncClientMockServer(NativeResourceTest):
         exception = None
         data = self.DelayStream(bad_read=True)
         try:
-            await stream.write_data_async(data, False)
+            await stream.write_data(data, False)
         except Exception as e:
             exception = e
         stream_completion_exception = None
@@ -636,11 +636,11 @@ class TestAsyncClientMockServer(NativeResourceTest):
 
         # Create data stream and immediately delete the reference after writing
         data = self.DelayStream(bad_read=False)
-        await stream.write_data_async(data, False)
+        await stream.write_data(data, False)
         del data
 
         # Finish the request
-        await stream.write_data_async(None, True)
+        await stream.write_data(None, True)
 
         # Collect response
         response = Response()
@@ -670,7 +670,7 @@ class TestAsyncClientMockServer(NativeResourceTest):
         request.headers.add('host', self.mock_server_url.hostname)
         stream = connection.request(request, manual_write=True)
 
-        await stream.write_data_async(BytesIO(b'hello'), True)
+        await stream.write_data(BytesIO(b'hello'), True)
 
         response = Response()
         status_code = await response.collect_response(stream)

@@ -107,19 +107,6 @@ class HttpConnectionBase(NativeResource):
         """HttpVersion: Protocol used by this connection"""
         return self._version
 
-    def close(self) -> "concurrent.futures.Future":
-        """Close the connection.
-
-        Shutdown is asynchronous. This call has no effect if the connection is already
-        closing.
-
-        Returns:
-            concurrent.futures.Future: This connection's :attr:`shutdown_future`,
-            which completes when shutdown has finished.
-        """
-        _awscrt.http_connection_close(self._binding)
-        return self.shutdown_future
-
     def is_open(self) -> bool:
         """
         Returns:
@@ -130,55 +117,8 @@ class HttpConnectionBase(NativeResource):
         return _awscrt.http_connection_is_open(self._binding)
 
 
-class HttpClientConnection(HttpConnectionBase):
-    """
-    An HTTP client connection.
-
-    Use :meth:`HttpClientConnection.new()` to establish a new connection.
-    """
+class HttpClientConnectionBase(HttpConnectionBase):
     __slots__ = ('_host_name', '_port')
-
-    @classmethod
-    def new(cls,
-            host_name: str,
-            port: int,
-            bootstrap: Optional[ClientBootstrap] = None,
-            socket_options: Optional[SocketOptions] = None,
-            tls_connection_options: Optional[TlsConnectionOptions] = None,
-            proxy_options: Optional['HttpProxyOptions'] = None) -> "concurrent.futures.Future":
-        """
-        Asynchronously establish a new HttpClientConnection.
-
-        Args:
-            host_name (str): Connect to host.
-
-            port (int): Connect to port.
-
-            bootstrap (Optional [ClientBootstrap]): Client bootstrap to use when initiating socket connection.
-                If None is provided, the default singleton is used.
-
-            socket_options (Optional[SocketOptions]): Optional socket options.
-                If None is provided, then default options are used.
-
-            tls_connection_options (Optional[TlsConnectionOptions]): Optional TLS
-                connection options. If None is provided, then the connection will
-                be attempted over plain-text.
-
-            proxy_options (Optional[HttpProxyOptions]): Optional proxy options.
-                If None is provided then a proxy is not used.
-
-        Returns:
-            concurrent.futures.Future: A Future which completes when connection succeeds or fails.
-            If successful, the Future will contain a new :class:`HttpClientConnection`.
-            Otherwise, it will contain an exception.
-        """
-        return HttpClientConnection._generic_new(
-            host_name,
-            port,
-            bootstrap,
-            socket_options,
-            tls_connection_options,
-            proxy_options)
 
     @staticmethod
     def _generic_new(
@@ -247,6 +187,57 @@ class HttpClientConnection(HttpConnectionBase):
         """Remote port"""
         return self._port
 
+
+class HttpClientConnection(HttpClientConnectionBase):
+    """
+    An HTTP client connection.
+
+    Use :meth:`HttpClientConnection.new()` to establish a new connection.
+    """
+    __slots__ = ('_host_name', '_port')
+
+    @classmethod
+    def new(cls,
+            host_name: str,
+            port: int,
+            bootstrap: Optional[ClientBootstrap] = None,
+            socket_options: Optional[SocketOptions] = None,
+            tls_connection_options: Optional[TlsConnectionOptions] = None,
+            proxy_options: Optional['HttpProxyOptions'] = None) -> "concurrent.futures.Future":
+        """
+        Asynchronously establish a new HttpClientConnection.
+
+        Args:
+            host_name (str): Connect to host.
+
+            port (int): Connect to port.
+
+            bootstrap (Optional [ClientBootstrap]): Client bootstrap to use when initiating socket connection.
+                If None is provided, the default singleton is used.
+
+            socket_options (Optional[SocketOptions]): Optional socket options.
+                If None is provided, then default options are used.
+
+            tls_connection_options (Optional[TlsConnectionOptions]): Optional TLS
+                connection options. If None is provided, then the connection will
+                be attempted over plain-text.
+
+            proxy_options (Optional[HttpProxyOptions]): Optional proxy options.
+                If None is provided then a proxy is not used.
+
+        Returns:
+            concurrent.futures.Future: A Future which completes when connection succeeds or fails.
+            If successful, the Future will contain a new :class:`HttpClientConnection`.
+            Otherwise, it will contain an exception.
+        """
+        return cls._generic_new(
+            host_name,
+            port,
+            bootstrap,
+            socket_options,
+            tls_connection_options,
+            proxy_options)
+
     def request(self,
                 request: 'HttpRequest',
                 on_response: Optional[Callable[..., None]] = None,
@@ -294,8 +285,21 @@ class HttpClientConnection(HttpConnectionBase):
         """
         return HttpClientStream(self, request, on_response, on_body)
 
+    def close(self) -> "concurrent.futures.Future":
+        """Close the connection.
 
-class Http2ClientConnection(HttpClientConnection):
+        Shutdown is asynchronous. This call has no effect if the connection is already
+        closing.
+
+        Returns:
+            concurrent.futures.Future: This connection's :attr:`shutdown_future`,
+            which completes when shutdown has finished.
+        """
+        _awscrt.http_connection_close(self._binding)
+        return self.shutdown_future
+
+
+class Http2ClientConnection(HttpClientConnectionBase):
 
     @classmethod
     def new(cls,
@@ -323,7 +327,7 @@ class Http2ClientConnection(HttpClientConnection):
 
                     *   `settings` (List[Http2Setting]): List of settings that were changed.
         """
-        return HttpClientConnection._generic_new(
+        return cls._generic_new(
             host_name,
             port,
             bootstrap,
@@ -340,6 +344,19 @@ class Http2ClientConnection(HttpClientConnection):
                 on_body: Optional[Callable[..., None]] = None,
                 manual_write: bool = False) -> 'Http2ClientStream':
         return Http2ClientStream(self, request, on_response, on_body, manual_write)
+
+    def close(self) -> "concurrent.futures.Future":
+        """Close the connection.
+
+        Shutdown is asynchronous. This call has no effect if the connection is already
+        closing.
+
+        Returns:
+            concurrent.futures.Future: This connection's :attr:`shutdown_future`,
+            which completes when shutdown has finished.
+        """
+        _awscrt.http_connection_close(self._binding)
+        return self.shutdown_future
 
 
 class HttpStreamBase(NativeResource):
@@ -365,38 +382,16 @@ class HttpStreamBase(NativeResource):
             self._on_body_cb(http_stream=self, chunk=chunk)
 
 
-class HttpClientStream(HttpStreamBase):
-    """HTTP stream that sends a request and receives a response.
-
-    Create an HttpClientStream with :meth:`HttpClientConnection.request()`.
-
-    NOTE: The HTTP stream sends no data until :meth:`HttpClientStream.activate()`
-    is called. Call activate() when you're ready for callbacks and events to fire.
-
-    Attributes:
-        connection (HttpClientConnection): This stream's connection.
-
-        completion_future (concurrent.futures.Future): Future that will contain
-            the response status code (int) when the request/response exchange
-            completes. If the exchange fails to complete, the Future will
-            contain an exception indicating why it failed.
-    """
+class HttClientStreamBase(HttpStreamBase):
     __slots__ = ('_response_status_code', '_on_response_cb', '_on_body_cb', '_request', '_version')
 
-    def __init__(self,
-                 connection: HttpClientConnection,
-                 request: 'HttpRequest',
-                 on_response: Optional[Callable[..., None]] = None,
-                 on_body: Optional[Callable[..., None]] = None) -> None:
-        self._init_common(connection, request, on_response, on_body)
-
     def _init_common(self,
-                     connection: HttpClientConnection,
+                     connection: HttpClientConnectionBase,
                      request: 'HttpRequest',
                      on_response: Optional[Callable[..., None]] = None,
                      on_body: Optional[Callable[..., None]] = None,
                      http2_manual_write: bool = False) -> None:
-        assert isinstance(connection, HttpClientConnection)
+        assert isinstance(connection, HttpClientConnectionBase)
         assert isinstance(request, HttpRequest)
         assert callable(on_response) or on_response is None
         assert callable(on_body) or on_body is None
@@ -423,6 +418,31 @@ class HttpClientStream(HttpStreamBase):
         This is None until a response arrives."""
         return self._response_status_code
 
+
+class HttpClientStream(HttClientStreamBase):
+    """HTTP stream that sends a request and receives a response.
+
+    Create an HttpClientStream with :meth:`HttpClientConnection.request()`.
+
+    NOTE: The HTTP stream sends no data until :meth:`HttpClientStream.activate()`
+    is called. Call activate() when you're ready for callbacks and events to fire.
+
+    Attributes:
+        connection (HttpClientConnection): This stream's connection.
+
+        completion_future (concurrent.futures.Future): Future that will contain
+            the response status code (int) when the request/response exchange
+            completes. If the exchange fails to complete, the Future will
+            contain an exception indicating why it failed.
+    """
+
+    def __init__(self,
+                 connection: HttpClientConnection,
+                 request: 'HttpRequest',
+                 on_response: Optional[Callable[..., None]] = None,
+                 on_body: Optional[Callable[..., None]] = None) -> None:
+        self._init_common(connection, request, on_response, on_body)
+
     def activate(self) -> None:
         """Begin sending the request.
 
@@ -447,14 +467,14 @@ class HttpClientStream(HttpStreamBase):
             self._completion_future.set_exception(awscrt.exceptions.from_code(error_code))
 
 
-class Http2ClientStream(HttpClientStream):
+class Http2ClientStream(HttClientStreamBase):
     def __init__(self,
                  connection: HttpClientConnection,
                  request: 'HttpRequest',
                  on_response: Optional[Callable[..., None]] = None,
                  on_body: Optional[Callable[..., None]] = None,
                  manual_write: bool = False) -> None:
-        super()._init_common(connection, request, on_response, on_body, manual_write)
+        self._init_common(connection, request, on_response, on_body, manual_write)
 
     def write_data(self,
                    data_stream: Union[InputStream, Any],
@@ -838,7 +858,7 @@ class _HttpClientConnectionCore:
             return
         if self._asyncio_connection:
             # Import is done here to avoid circular import issues
-            from awscrt.http_asyncio import HttpClientConnectionAsync, Http2ClientConnectionAsync
+            from awscrt.aio.http_asyncio import HttpClientConnectionAsync, Http2ClientConnectionAsync
             if http_version == HttpVersion.Http2:
                 connection = Http2ClientConnectionAsync()
             else:
