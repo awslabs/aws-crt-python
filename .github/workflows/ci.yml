@@ -250,14 +250,20 @@ jobs:
 
 
   windows:
-    # https://github.com/actions/runner-images/issues/12034 Python 3.8.10 is no longer available on windows-2022
-    runs-on: windows-2025
+    # Currently, setup.py explicitly tries to use Windows SDK 10.0.17763.0.
+    # The windows-2025 image does not provide this SDK version out of the box, so keep windows-2022 for now.
+    runs-on: windows-2022
     strategy:
       matrix:
         arch: [x86, x64]
     permissions:
       id-token: write # This is required for requesting the JWT
     steps:
+      - uses: actions/setup-python@v5
+        id: python38
+        with:
+          python-version: '3.8.10'
+          architecture: ${{ matrix.arch }}
       - uses: ilammy/setup-nasm@v1
       - name: configure AWS credentials (containers)
         uses: aws-actions/configure-aws-credentials@v4
@@ -268,7 +274,7 @@ jobs:
         run: |
           where python
           python -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder.pyz')"
-          python builder.pyz build -p ${{ env.PACKAGE_NAME }} --python "C:\\hostedtoolcache\\windows\\Python\\3.9.13\\${{ matrix.arch }}\\python.exe"
+          python builder.pyz build -p ${{ env.PACKAGE_NAME }} --python "${{ steps.python38.outputs.python-path }}"
 
   macos:
     runs-on: macos-14 # latest
