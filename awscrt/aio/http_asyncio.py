@@ -26,7 +26,7 @@ from collections import deque
 
 class HttpClientConnectionAsyncUnified(HttpClientConnectionBase):
     """
-    An async HTTP client connection.
+    An async unified HTTP client connection for either a HTTP/1 or HTTP/2 connection.
 
     Use `HttpClientConnectionAsync.new()` to establish a new connection.
     """
@@ -89,23 +89,24 @@ class HttpClientConnectionAsyncUnified(HttpClientConnectionBase):
                 request: 'HttpRequest',
                 async_body: AsyncIterator[bytes] = None,
                 loop: Optional[asyncio.AbstractEventLoop] = None) -> 'HttpClientStreamAsyncUnified':
-        """Create `HttpClientStreamAsync` to carry out the request/response exchange.
+        """Create `HttpClientStreamAsyncUnified` to carry out the request/response exchange.
 
         Args:
             request (HttpRequest): Definition for outgoing request.
+            async_body (AsyncIterator[bytes], optional): Async iterator providing chunks of the request body.
+                If provided, the body will be sent incrementally as chunks become available.
             loop (Optional[asyncio.AbstractEventLoop]): Event loop to use for async operations.
                 If None, the current event loop is used.
 
         Returns:
-            HttpClientStreamAsync: Stream for the HTTP request/response exchange.
+            HttpClientStreamAsyncUnified: Stream for the HTTP request/response exchange.
         """
-        # return HttpClientStreamAsyncBase(self, request, loop)
-        pass
+        raise NotImplementedError("Subclasses must implement request")
 
 
 class HttpClientConnectionAsync(HttpClientConnectionAsyncUnified):
     """
-    An async HTTP/1.1 client connection.
+    An async HTTP/1.1 only client connection.
 
     Use `HttpClientConnectionAsync.new()` to establish a new connection.
     """
@@ -161,6 +162,8 @@ class HttpClientConnectionAsync(HttpClientConnectionAsyncUnified):
 
         Args:
             request (HttpRequest): Definition for outgoing request.
+            async_body (AsyncIterator[bytes], optional): Async iterator providing chunks of the request body.
+                Not supported for HTTP/1.1 connections yet, use the request's body_stream instead.
             loop (Optional[asyncio.AbstractEventLoop]): Event loop to use for async operations.
                 If None, the current event loop is used.
 
@@ -172,7 +175,7 @@ class HttpClientConnectionAsync(HttpClientConnectionAsyncUnified):
 
 class Http2ClientConnectionAsync(HttpClientConnectionAsyncUnified):
     """
-    An async HTTP/2 client connection.
+    An async HTTP/2 only client connection.
 
     Use `Http2ClientConnectionAsync.new()` to establish a new connection.
     """
@@ -224,7 +227,8 @@ class Http2ClientConnectionAsync(HttpClientConnectionAsyncUnified):
 
         Args:
             request (HttpRequest): Definition for outgoing request.
-            manual_write (bool): If True, enables manual data writing on the stream.
+            async_body (AsyncIterator[bytes], optional): Async iterator providing chunks of the request body.
+                If provided, the body will be sent incrementally as chunks become available from the iterator.
             loop (Optional[asyncio.AbstractEventLoop]): Event loop to use for async operations.
                 If None, the current event loop is used.
 
