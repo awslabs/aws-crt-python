@@ -407,7 +407,7 @@ class HttpStreamBase(NativeResource):
     """
     __slots__ = ('_connection', '_completion_future', '_on_body_cb')
 
-    def __init__(self, connection: HttpConnectionBase, on_body: Optional[Callable[..., None]] = None) -> None:
+    def __init__(self, connection, on_body: Optional[Callable[..., None]] = None) -> None:
         super().__init__()
         self._connection: HttpConnectionBase = connection
         self._completion_future: Future = Future()
