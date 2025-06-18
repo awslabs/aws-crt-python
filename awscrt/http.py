@@ -938,11 +938,11 @@ class _HttpClientConnectionCore:
             return
         if self._asyncio_connection:
             # Import is done here to avoid circular import issues
-            from awscrt.aio.http_asyncio import HttpClientConnectionAsync, Http2ClientConnectionAsync
+            from awscrt.aio.aiohttp import AIOHttpClientConnection, AIOHttp2ClientConnection
             if http_version == HttpVersion.Http2:
-                connection = Http2ClientConnectionAsync()
+                connection = AIOHttp2ClientConnection()
             else:
-                connection = HttpClientConnectionAsync()
+                connection = AIOHttpClientConnection()
         else:
             if http_version == HttpVersion.Http2:
                 connection = Http2ClientConnection()

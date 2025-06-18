@@ -24,11 +24,11 @@ from awscrt.io import (
 from collections import deque
 
 
-class HttpClientConnectionAsyncUnified(HttpClientConnectionBase):
+class AIOHttpClientConnectionUnified(HttpClientConnectionBase):
     """
     An async unified HTTP client connection for either a HTTP/1 or HTTP/2 connection.
 
-    Use `HttpClientConnectionAsync.new()` to establish a new connection.
+    Use `AIOHttpClientConnection.new()` to establish a new connection.
     """
 
     @classmethod
@@ -38,9 +38,9 @@ class HttpClientConnectionAsyncUnified(HttpClientConnectionBase):
                   bootstrap: Optional[ClientBootstrap] = None,
                   socket_options: Optional[SocketOptions] = None,
                   tls_connection_options: Optional[TlsConnectionOptions] = None,
-                  proxy_options: Optional['HttpProxyOptions'] = None) -> "HttpClientConnectionAsyncUnified":
+                  proxy_options: Optional['HttpProxyOptions'] = None) -> "AIOHttpClientConnectionUnified":
         """
-        Asynchronously establish a new HttpClientConnectionAsyncUnified.
+        Asynchronously establish a new AIOHttpClientConnectionUnified.
 
         Args:
             host_name (str): Connect to host.
@@ -61,7 +61,7 @@ class HttpClientConnectionAsyncUnified(HttpClientConnectionBase):
                 If None is provided then a proxy is not used.
 
         Returns:
-            HttpClientConnectionAsync: A new HTTP client connection.
+            AIOHttpClientConnection: A new HTTP client connection.
         """
         future = cls._generic_new(
             host_name,
@@ -88,8 +88,8 @@ class HttpClientConnectionAsyncUnified(HttpClientConnectionBase):
     def request(self,
                 request: 'HttpRequest',
                 request_body_generator: AsyncIterator[bytes] = None,
-                loop: Optional[asyncio.AbstractEventLoop] = None) -> 'HttpClientStreamAsyncUnified':
-        """Create `HttpClientStreamAsyncUnified` to carry out the request/response exchange.
+                loop: Optional[asyncio.AbstractEventLoop] = None) -> 'AIOHttpClientStreamUnified':
+        """Create `AIOHttpClientStreamUnified` to carry out the request/response exchange.
 
         Args:
             request (HttpRequest): Definition for outgoing request.
@@ -99,16 +99,16 @@ class HttpClientConnectionAsyncUnified(HttpClientConnectionBase):
                 If None, the current event loop is used.
 
         Returns:
-            HttpClientStreamAsyncUnified: Stream for the HTTP request/response exchange.
+            AIOHttpClientStreamUnified: Stream for the HTTP request/response exchange.
         """
-        return HttpClientStreamAsyncUnified(self, request, request_body_generator, loop)
+        return AIOHttpClientStreamUnified(self, request, request_body_generator, loop)
 
 
-class HttpClientConnectionAsync(HttpClientConnectionAsyncUnified):
+class AIOHttpClientConnection(AIOHttpClientConnectionUnified):
     """
     An async HTTP/1.1 only client connection.
 
-    Use `HttpClientConnectionAsync.new()` to establish a new connection.
+    Use `AIOHttpClientConnection.new()` to establish a new connection.
     """
 
     @classmethod
@@ -118,9 +118,9 @@ class HttpClientConnectionAsync(HttpClientConnectionAsyncUnified):
                   bootstrap: Optional[ClientBootstrap] = None,
                   socket_options: Optional[SocketOptions] = None,
                   tls_connection_options: Optional[TlsConnectionOptions] = None,
-                  proxy_options: Optional['HttpProxyOptions'] = None) -> "HttpClientConnectionAsync":
+                  proxy_options: Optional['HttpProxyOptions'] = None) -> "AIOHttpClientConnection":
         """
-        Asynchronously establish a new HttpClientConnectionAsync.
+        Asynchronously establish a new AIOHttpClientConnection.
 
         Args:
             host_name (str): Connect to host.
@@ -141,7 +141,7 @@ class HttpClientConnectionAsync(HttpClientConnectionAsyncUnified):
                 If None is provided then a proxy is not used.
 
         Returns:
-            HttpClientConnectionAsync: A new HTTP client connection.
+            AIOHttpClientConnection: A new HTTP client connection.
         """
         future = cls._generic_new(
             host_name,
@@ -157,8 +157,8 @@ class HttpClientConnectionAsync(HttpClientConnectionAsyncUnified):
     def request(self,
                 request: 'HttpRequest',
                 request_body_generator: AsyncIterator[bytes] = None,
-                loop: Optional[asyncio.AbstractEventLoop] = None) -> 'HttpClientStreamAsync':
-        """Create `HttpClientStreamAsync` to carry out the request/response exchange.
+                loop: Optional[asyncio.AbstractEventLoop] = None) -> 'AIOHttpClientStream':
+        """Create `AIOHttpClientStream` to carry out the request/response exchange.
 
         Args:
             request (HttpRequest): Definition for outgoing request.
@@ -168,16 +168,16 @@ class HttpClientConnectionAsync(HttpClientConnectionAsyncUnified):
                 If None, the current event loop is used.
 
         Returns:
-            HttpClientStreamAsync: Stream for the HTTP request/response exchange.
+            AIOHttpClientStream: Stream for the HTTP request/response exchange.
         """
-        return HttpClientStreamAsync(self, request, loop)
+        return AIOHttpClientStream(self, request, loop)
 
 
-class Http2ClientConnectionAsync(HttpClientConnectionAsyncUnified):
+class AIOHttp2ClientConnection(AIOHttpClientConnectionUnified):
     """
     An async HTTP/2 only client connection.
 
-    Use `Http2ClientConnectionAsync.new()` to establish a new connection.
+    Use `AIOHttp2ClientConnection.new()` to establish a new connection.
     """
 
     @classmethod
@@ -190,12 +190,12 @@ class Http2ClientConnectionAsync(HttpClientConnectionAsyncUnified):
                   proxy_options: Optional['HttpProxyOptions'] = None,
                   initial_settings: Optional[List[Http2Setting]] = None,
                   on_remote_settings_changed: Optional[Callable[[List[Http2Setting]],
-                                                                None]] = None) -> "Http2ClientConnectionAsync":
+                                                                None]] = None) -> "AIOHttp2ClientConnection":
         """
         Asynchronously establish an HTTP/2 client connection.
         Notes: to set up the connection, the server must support HTTP/2 and TlsConnectionOptions
 
-        This class extends HttpClientConnectionAsync with HTTP/2 specific functionality.
+        This class extends AIOHttpClientConnection with HTTP/2 specific functionality.
 
         HTTP/2 specific args:
             initial_settings (List[Http2Setting]): The initial settings to change for the connection.
@@ -222,8 +222,8 @@ class Http2ClientConnectionAsync(HttpClientConnectionAsyncUnified):
     def request(self,
                 request: 'HttpRequest',
                 request_body_generator: AsyncIterator[bytes] = None,
-                loop: Optional[asyncio.AbstractEventLoop] = None) -> 'Http2ClientStreamAsync':
-        """Create `Http2ClientStreamAsync` to carry out the request/response exchange.
+                loop: Optional[asyncio.AbstractEventLoop] = None) -> 'AIOHttp2ClientStream':
+        """Create `AIOHttp2ClientStream` to carry out the request/response exchange.
 
         Args:
             request (HttpRequest): Definition for outgoing request.
@@ -233,12 +233,12 @@ class Http2ClientConnectionAsync(HttpClientConnectionAsyncUnified):
                 If None, the current event loop is used.
 
         Returns:
-            Http2ClientStreamAsync: Stream for the HTTP/2 request/response exchange.
+            AIOHttp2ClientStream: Stream for the HTTP/2 request/response exchange.
         """
-        return Http2ClientStreamAsync(self, request, request_body_generator, loop)
+        return AIOHttp2ClientStream(self, request, request_body_generator, loop)
 
 
-class HttpClientStreamAsyncUnified(HttpClientStreamBase):
+class AIOHttpClientStreamUnified(HttpClientStreamBase):
     __slots__ = (
         '_response_status_future',
         '_response_headers_future',
@@ -250,7 +250,7 @@ class HttpClientStreamAsyncUnified(HttpClientStreamBase):
         '_loop')
 
     def __init__(self,
-                 connection: HttpClientConnectionAsync,
+                 connection: AIOHttpClientConnection,
                  request: HttpRequest,
                  request_body_generator: AsyncIterator[bytes] = None,
                  loop: Optional[asyncio.AbstractEventLoop] = None) -> None:
@@ -366,13 +366,13 @@ class HttpClientStreamAsyncUnified(HttpClientStreamBase):
         ...
 
 
-class HttpClientStreamAsync(HttpClientStreamAsyncUnified):
+class AIOHttpClientStream(AIOHttpClientStreamUnified):
     """Async HTTP stream that sends a request and receives a response.
 
-    Create an HttpClientStreamAsync with `HttpClientConnectionAsync.request()`.
+    Create an AIOHttpClientStream with `AIOHttpClientConnection.request()`.
 
     Attributes:
-        connection (HttpClientConnectionAsync): This stream's connection.
+        connection (AIOHttpClientConnection): This stream's connection.
 
         completion_future (asyncio.Future): Future that will contain
             the response status code (int) when the request/response exchange
@@ -384,12 +384,12 @@ class HttpClientStreamAsync(HttpClientStreamAsyncUnified):
         thread that owns the event loop used to create the stream
     """
 
-    def __init__(self, connection: HttpClientConnectionAsync, request: HttpRequest,
+    def __init__(self, connection: AIOHttpClientConnection, request: HttpRequest,
                  loop: Optional[asyncio.AbstractEventLoop] = None) -> None:
         """Initialize an HTTP client stream.
 
         Args:
-            connection (HttpClientConnectionAsync): The connection to send the request on.
+            connection (AIOHttpClientConnection): The connection to send the request on.
             request (HttpRequest): The HTTP request to send.
             loop (Optional[asyncio.AbstractEventLoop]): Event loop to use for async operations.
                 If None, the current event loop is used.
@@ -397,14 +397,14 @@ class HttpClientStreamAsync(HttpClientStreamAsyncUnified):
         super().__init__(connection, request, loop=loop)
 
 
-class Http2ClientStreamAsync(HttpClientStreamAsyncUnified):
+class AIOHttp2ClientStream(AIOHttpClientStreamUnified):
     """HTTP/2 stream that sends a request and receives a response.
 
-    Create an Http2ClientStreamAsync with `Http2ClientConnectionAsync.request()`.
+    Create an AIOHttp2ClientStream with `AIOHttp2ClientConnection.request()`.
     """
 
     def __init__(self,
-                 connection: HttpClientConnectionAsync,
+                 connection: AIOHttpClientConnection,
                  request: HttpRequest,
                  request_body_generator: AsyncIterator[bytes] = None,
                  loop: Optional[asyncio.AbstractEventLoop] = None) -> None:

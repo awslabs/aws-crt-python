@@ -12,7 +12,7 @@ import sys
 import io
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsConnectionOptions, TlsContextOptions
 from awscrt.http import HttpHeaders, HttpRequest, Http2Setting, Http2SettingID
-from awscrt.aio.http_asyncio import Http2ClientConnectionAsync
+from awscrt.aio.aiohttp import AIOHttp2ClientConnection
 # from awscrt_python_logging_example import PythonLoggingRedirector
 import awscrt.io
 import logging
@@ -91,7 +91,7 @@ async def make_concurrent_requests():
     ]
 
     print(f"Connecting to {host_name}:{port} using HTTP/2...")
-    connection = await Http2ClientConnectionAsync.new(
+    connection = await AIOHttp2ClientConnection.new(
         host_name=host_name,
         port=port,
         bootstrap=bootstrap,
@@ -236,9 +236,9 @@ async def send_stream_request(connection, host_name):
             print(f"Yielding chunk of size: {len(chunk)} bytes")
             yield chunk
             # Simulate some async processing between chunks
-            await asyncio.sleep(2)
+            await asyncio.sleep(0.1)
 
-    stream = connection.request(request, async_body=async_data_generator())
+    stream = connection.request(request, request_body_generator=async_data_generator())
 
     # Process the response
     print("hey")
@@ -250,15 +250,15 @@ async def send_stream_request(connection, host_name):
         print(f"{name}: {value}")
 
     # Get the response body
-    # body = bytearray()
-    # while True:
-    #     chunk = await stream.get_next_response_chunk()
-    #     if not chunk:
-    #         break
-    #     body.extend(chunk)
+    body = bytearray()
+    while True:
+        chunk = await stream.get_next_response_chunk()
+        if not chunk:
+            break
+        body.extend(chunk)
 
-    # print("\nStream Response body:")
-    # print(body.decode("utf-8"))
+    print("\nStream Response body:")
+    print(body.decode("utf-8"))
     await stream.wait_for_completion()
 
     # Return the status code from the async iterator example

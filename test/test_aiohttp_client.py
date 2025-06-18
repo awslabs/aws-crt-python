@@ -18,7 +18,7 @@ from http.server import HTTPServer, SimpleHTTPRequestHandler
 from awscrt import io
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsContextOptions, TlsCipherPref
 from awscrt.http import HttpHeaders, HttpRequest, HttpVersion, Http2Setting, Http2SettingID
-from awscrt.aio.http_asyncio import HttpClientConnectionAsync, Http2ClientConnectionAsync
+from awscrt.aio.aiohttp import AIOHttpClientConnection, AIOHttp2ClientConnection
 import threading
 
 
@@ -103,7 +103,7 @@ class TestAsyncClient(NativeResourceTest):
         event_loop_group = EventLoopGroup()
         host_resolver = DefaultHostResolver(event_loop_group)
         bootstrap = ClientBootstrap(event_loop_group, host_resolver)
-        return await HttpClientConnectionAsync.new(
+        return await AIOHttpClientConnection.new(
             host_name=self.hostname,
             port=self.port,
             bootstrap=bootstrap,
@@ -279,7 +279,7 @@ class TestAsyncClient(NativeResourceTest):
         tls_conn_opt.set_server_name(url.hostname)
         tls_conn_opt.set_alpn_list(["h2"])
 
-        connection = await Http2ClientConnectionAsync.new(
+        connection = await AIOHttp2ClientConnection.new(
             host_name=url.hostname,
             port=port,
             bootstrap=bootstrap,
@@ -551,7 +551,7 @@ class TestAsyncClientMockServer(NativeResourceTest):
         if initial_settings is None:
             initial_settings = [Http2Setting(Http2SettingID.ENABLE_PUSH, 0)]
 
-        connection = await Http2ClientConnectionAsync.new(
+        connection = await AIOHttp2ClientConnection.new(
             host_name=self.mock_server_url.hostname,
             port=port,
             bootstrap=bootstrap,
