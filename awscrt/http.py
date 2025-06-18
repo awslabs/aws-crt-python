@@ -399,7 +399,12 @@ class Http2ClientConnection(HttpClientConnectionBase):
 
 
 class HttpStreamBase(NativeResource):
-    """Base for HTTP stream classes"""
+    """Base for HTTP stream classes.
+
+    Attributes:
+        connection: The HTTP connection this stream belongs to.
+        completion_future: Future that completes when the operation finishes.
+    """
     __slots__ = ('_connection', '_completion_future', '_on_body_cb')
 
     def __init__(self, connection: HttpConnectionBase, on_body: Optional[Callable[..., None]] = None) -> None:
@@ -421,7 +426,16 @@ class HttpStreamBase(NativeResource):
             self._on_body_cb(http_stream=self, chunk=chunk)
 
 
-class HttClientStreamBase(HttpStreamBase):
+class HttpClientStreamBase(HttpStreamBase):
+    """Base for HTTP client stream classes.
+
+    Attributes:
+        connection: This stream's connection.
+
+        completion_future: Future that completes when
+            the request/response exchange is finished.
+    """
+
     __slots__ = ('_response_status_code', '_on_response_cb', '_on_body_cb', '_request', '_version')
 
     def _init_common(self,
@@ -473,7 +487,7 @@ class HttClientStreamBase(HttpStreamBase):
             self._completion_future.set_exception(awscrt.exceptions.from_code(error_code))
 
 
-class HttpClientStream(HttClientStreamBase):
+class HttpClientStream(HttpClientStreamBase):
     """HTTP stream that sends a request and receives a response.
 
     Create an HttpClientStream with :meth:`HttpClientConnection.request()`.
@@ -506,7 +520,7 @@ class HttpClientStream(HttClientStreamBase):
         _awscrt.http_client_stream_activate(self)
 
 
-class Http2ClientStream(HttClientStreamBase):
+class Http2ClientStream(HttpClientStreamBase):
     def __init__(self,
                  connection: HttpClientConnection,
                  request: 'HttpRequest',
