@@ -15,7 +15,7 @@ from concurrent.futures import Future
 import awscrt.exceptions
 from typing import List, Tuple, Optional, Union, Callable, Any, AsyncIterator
 from awscrt.http import (
-    HttpClientConnectionBase, HttpRequest, HttClientStreamBase, HttpProxyOptions,
+    HttpClientConnectionBase, HttpRequest, HttpClientStreamBase, HttpProxyOptions,
     Http2Setting, HttpVersion
 )
 from awscrt.io import (
@@ -238,7 +238,7 @@ class Http2ClientConnectionAsync(HttpClientConnectionAsyncUnified):
         return Http2ClientStreamAsync(self, request, request_body_generator, loop)
 
 
-class HttpClientStreamAsyncUnified(HttClientStreamBase):
+class HttpClientStreamAsyncUnified(HttpClientStreamBase):
     __slots__ = (
         '_response_status_future',
         '_response_headers_future',
