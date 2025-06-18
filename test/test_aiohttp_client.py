@@ -129,7 +129,7 @@ class TestAsyncClient(NativeResourceTest):
             connection = await self._new_client_connection(secure)
             self.assertTrue(connection.is_open())
 
-            test_asset_path = 'test/test_http_asyncio.py'
+            test_asset_path = 'test/test_aiohttp_client.py'
 
             # Create request and get stream - stream is already activated
             request = HttpRequest('GET', '/' + test_asset_path)
@@ -157,7 +157,7 @@ class TestAsyncClient(NativeResourceTest):
         self._start_server(secure)
         try:
             connection = await self._new_client_connection(secure)
-            test_asset_path = 'test/test_http_asyncio.py'
+            test_asset_path = 'test/test_aiohttp_client.py'
             with open(test_asset_path, 'rb') as outgoing_body_stream:
                 outgoing_body_bytes = outgoing_body_stream.read()
                 headers = HttpHeaders([
@@ -217,7 +217,7 @@ class TestAsyncClient(NativeResourceTest):
         try:
             connection = await self._new_client_connection(secure)
 
-            request = HttpRequest('GET', '/test/test_http_asyncio.py')
+            request = HttpRequest('GET', '/test/test_aiohttp_client.py')
             stream = connection.request(request)
 
             # Store stream but delete all local references
@@ -394,7 +394,7 @@ class TestAsyncClient(NativeResourceTest):
             # Function to run in a different thread with a different event loop
             async def thread_func(conn):
                 # Create new event loop for this thread
-                test_asset_path = 'test/test_http_asyncio.py'
+                test_asset_path = 'test/test_aiohttp_client.py'
                 request = HttpRequest('GET', '/' + test_asset_path)
 
                 # Use the connection but with the current thread's event loop
