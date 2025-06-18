@@ -343,6 +343,45 @@ class Http2ClientConnection(HttpClientConnectionBase):
                 on_response: Optional[Callable[..., None]] = None,
                 on_body: Optional[Callable[..., None]] = None,
                 manual_write: bool = False) -> 'Http2ClientStream':
+        """Create `Http2ClientStream` to carry out the request/response exchange.
+
+        NOTE: The HTTP stream sends no data until `Http2ClientStream.activate()`
+        is called. Call activate() when you're ready for callbacks and events to fire.
+
+        Args:
+            request (HttpRequest): Definition for outgoing request.
+
+            on_response: Optional callback invoked once main response headers are received.
+                The function should take the following arguments and return nothing:
+
+                    *   `http_stream` (`Http2ClientStream`): HTTP/2 stream carrying
+                        out this request/response exchange.
+
+                    *   `status_code` (int): Response status code.
+
+                    *   `headers` (List[Tuple[str, str]]): Response headers as a
+                        list of (name,value) pairs.
+
+                    *   `**kwargs` (dict): Forward compatibility kwargs.
+
+            on_body: Optional callback invoked 0+ times as response body data is received.
+                The function should take the following arguments and return nothing:
+
+                    *   `http_stream` (`Http2ClientStream`): HTTP/2 stream carrying
+                        out this request/response exchange.
+
+                    *   `chunk` (buffer): Response body data (not necessarily
+                        a whole "chunk" of chunked encoding).
+
+                    *   `**kwargs` (dict): Forward-compatibility kwargs.
+
+            manual_write (bool): If True, enables manual data writing on the stream.
+                This allows calling `write_data()` to stream the request body in chunks.
+                Note: In the asyncio version, this is replaced by the async_body parameter.
+
+        Returns:
+            Http2ClientStream: Stream for the HTTP/2 request/response exchange.
+        """
         return Http2ClientStream(self, request, on_response, on_body, manual_write)
 
     def close(self) -> "concurrent.futures.Future":
@@ -487,6 +526,25 @@ class Http2ClientStream(HttClientStreamBase):
     def write_data(self,
                    data_stream: Union[InputStream, Any],
                    end_stream: bool = False) -> "concurrent.futures.Future":
+        """Write a chunk of data to the request body stream.
+
+        This method is only available when the stream was created with
+        manual_write=True. This allows incremental writing of request data.
+
+        Note: In the asyncio version, this is replaced by the request_body_generator parameter
+        which accepts an async generator.
+
+        Args:
+            data_stream (Union[InputStream, Any]): Data to write. If not an InputStream,
+                it will be wrapped in one. Can be None to send an empty chunk.
+
+            end_stream (bool): True to indicate this is the last chunk and no more data
+                will be sent. False if more chunks will follow.
+
+        Returns:
+            concurrent.futures.Future: Future that completes when the write operation
+                is done. The future will contain None on success, or an exception on failure.
+        """
         future: Future = Future()
         body_stream: InputStream = InputStream.wrap(data_stream, allow_none=True)
 

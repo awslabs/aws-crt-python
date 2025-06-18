@@ -87,13 +87,13 @@ class HttpClientConnectionAsyncUnified(HttpClientConnectionBase):
 
     def request(self,
                 request: 'HttpRequest',
-                async_body: AsyncIterator[bytes] = None,
+                request_body_generator: AsyncIterator[bytes] = None,
                 loop: Optional[asyncio.AbstractEventLoop] = None) -> 'HttpClientStreamAsyncUnified':
         """Create `HttpClientStreamAsyncUnified` to carry out the request/response exchange.
 
         Args:
             request (HttpRequest): Definition for outgoing request.
-            async_body (AsyncIterator[bytes], optional): Async iterator providing chunks of the request body.
+            request_body_generator (AsyncIterator[bytes], optional): Async iterator providing chunks of the request body.
                 If provided, the body will be sent incrementally as chunks become available.
             loop (Optional[asyncio.AbstractEventLoop]): Event loop to use for async operations.
                 If None, the current event loop is used.
@@ -101,7 +101,7 @@ class HttpClientConnectionAsyncUnified(HttpClientConnectionBase):
         Returns:
             HttpClientStreamAsyncUnified: Stream for the HTTP request/response exchange.
         """
-        raise NotImplementedError("Subclasses must implement request")
+        return HttpClientStreamAsyncUnified(self, request, request_body_generator, loop)
 
 
 class HttpClientConnectionAsync(HttpClientConnectionAsyncUnified):
@@ -156,13 +156,13 @@ class HttpClientConnectionAsync(HttpClientConnectionAsyncUnified):
 
     def request(self,
                 request: 'HttpRequest',
-                async_body: AsyncIterator[bytes] = None,
+                request_body_generator: AsyncIterator[bytes] = None,
                 loop: Optional[asyncio.AbstractEventLoop] = None) -> 'HttpClientStreamAsync':
         """Create `HttpClientStreamAsync` to carry out the request/response exchange.
 
         Args:
             request (HttpRequest): Definition for outgoing request.
-            async_body (AsyncIterator[bytes], optional): Async iterator providing chunks of the request body.
+            request_body_generator (AsyncIterator[bytes], optional): Async iterator providing chunks of the request body.
                 Not supported for HTTP/1.1 connections yet, use the request's body_stream instead.
             loop (Optional[asyncio.AbstractEventLoop]): Event loop to use for async operations.
                 If None, the current event loop is used.
@@ -221,13 +221,13 @@ class Http2ClientConnectionAsync(HttpClientConnectionAsyncUnified):
 
     def request(self,
                 request: 'HttpRequest',
-                async_body: AsyncIterator[bytes] = None,
+                request_body_generator: AsyncIterator[bytes] = None,
                 loop: Optional[asyncio.AbstractEventLoop] = None) -> 'Http2ClientStreamAsync':
         """Create `Http2ClientStreamAsync` to carry out the request/response exchange.
 
         Args:
             request (HttpRequest): Definition for outgoing request.
-            async_body (AsyncIterator[bytes], optional): Async iterator providing chunks of the request body.
+            request_body_generator (AsyncIterator[bytes], optional): Async iterator providing chunks of the request body.
                 If provided, the body will be sent incrementally as chunks become available from the iterator.
             loop (Optional[asyncio.AbstractEventLoop]): Event loop to use for async operations.
                 If None, the current event loop is used.
@@ -235,7 +235,7 @@ class Http2ClientConnectionAsync(HttpClientConnectionAsyncUnified):
         Returns:
             Http2ClientStreamAsync: Stream for the HTTP/2 request/response exchange.
         """
-        return Http2ClientStreamAsync(self, request, async_body, loop)
+        return Http2ClientStreamAsync(self, request, request_body_generator, loop)
 
 
 class HttpClientStreamAsyncUnified(HttClientStreamBase):
@@ -252,10 +252,10 @@ class HttpClientStreamAsyncUnified(HttClientStreamBase):
     def __init__(self,
                  connection: HttpClientConnectionAsync,
                  request: HttpRequest,
-                 async_body: AsyncIterator[bytes] = None,
+                 request_body_generator: AsyncIterator[bytes] = None,
                  loop: Optional[asyncio.AbstractEventLoop] = None) -> None:
         # Initialize the parent class
-        http2_manual_write = async_body is not None and connection.version is HttpVersion.Http2
+        http2_manual_write = request_body_generator is not None and connection.version is HttpVersion.Http2
         super()._init_common(connection, request, http2_manual_write=http2_manual_write)
 
         # Attach the event loop for async operations
@@ -278,9 +278,9 @@ class HttpClientStreamAsyncUnified(HttClientStreamBase):
         self._response_headers_future = self._loop.create_future()
         self._status_code = None
 
-        self._async_body = async_body
-        if self._async_body is not None:
-            self._writer = self._loop.create_task(self._set_async_body(self._async_body))
+        self._request_body_generator = request_body_generator
+        if self._request_body_generator is not None:
+            self._writer = self._loop.create_task(self._set_request_body_generator(self._request_body_generator))
 
         # Activate the stream immediately
         _awscrt.http_client_stream_activate(self)
@@ -362,7 +362,7 @@ class HttpClientStreamAsyncUnified(HttClientStreamBase):
         """
         return await self._completion_future
 
-    async def _set_async_body(self, body_iterator: AsyncIterator[bytes]):
+    async def _set_request_body_generator(self, body_iterator: AsyncIterator[bytes]):
         ...
 
 
@@ -406,9 +406,9 @@ class Http2ClientStreamAsync(HttpClientStreamAsyncUnified):
     def __init__(self,
                  connection: HttpClientConnectionAsync,
                  request: HttpRequest,
-                 async_body: AsyncIterator[bytes] = None,
+                 request_body_generator: AsyncIterator[bytes] = None,
                  loop: Optional[asyncio.AbstractEventLoop] = None) -> None:
-        super().__init__(connection, request, async_body=async_body, loop=loop)
+        super().__init__(connection, request, request_body_generator=request_body_generator, loop=loop)
 
     async def _write_data(self, body, end_stream):
         future: Future = Future()
@@ -426,7 +426,7 @@ class Http2ClientStreamAsync(HttpClientStreamAsyncUnified):
         _awscrt.http2_client_stream_write_data(self, body_stream, end_stream, on_write_complete)
         await asyncio.wrap_future(future)
 
-    async def _set_async_body(self, body_iterator: AsyncIterator[bytes]):
+    async def _set_request_body_generator(self, body_iterator: AsyncIterator[bytes]):
         try:
             async for chunk in body_iterator:
                 await self._write_data(io.BytesIO(chunk), False)

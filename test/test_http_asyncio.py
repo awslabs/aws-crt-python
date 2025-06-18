@@ -318,7 +318,7 @@ class TestAsyncClient(NativeResourceTest):
         request = HttpRequest('GET', url.path)
         request.headers.add('host', url.hostname)
 
-        # Create stream without using async_body parameter
+        # Create stream without using request_body_generator parameter
         # (which would be needed to properly configure it for writing)
         stream = connection.request(request)
 
@@ -327,7 +327,7 @@ class TestAsyncClient(NativeResourceTest):
         exception = None
         try:
             # Attempt to access internal write_data method which should raise an exception
-            # since the stream wasn't created with async_body
+            # since the stream wasn't created with request_body_generator
             await stream._write_data(BytesIO(b'hello'), False)
         except (RuntimeError, AttributeError) as e:
             exception = e
@@ -579,7 +579,7 @@ class TestAsyncClientMockServer(NativeResourceTest):
             for i in body_chunks:
                 yield i
 
-        stream = connection.request(request, async_body=body_generator())
+        stream = connection.request(request, request_body_generator=body_generator())
 
         # Collect response
         response = Response()
@@ -631,7 +631,7 @@ class TestAsyncClientMockServer(NativeResourceTest):
         async def body_generator():
             yield b'hello'
 
-        stream = connection.request(request, async_body=body_generator())
+        stream = connection.request(request, request_body_generator=body_generator())
 
         response = Response()
         status_code = await response.collect_response(stream)
