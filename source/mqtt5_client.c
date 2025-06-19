@@ -1657,7 +1657,9 @@ PyObject *aws_py_mqtt5_client_publish(PyObject *self, PyObject *args) {
     Py_INCREF(metadata->callback);
 
     struct aws_mqtt5_publish_completion_options publish_completion_options = {
-        .completion_callback = &s_on_publish_complete_fn, .completion_user_data = metadata};
+        .completion_callback = &s_on_publish_complete_fn,
+        .completion_user_data = metadata,
+        .ack_timeout_seconds_override = 0};
 
     if (aws_mqtt5_client_publish(client->native, &publish_view, &publish_completion_options)) {
         PyErr_SetAwsLastError();
@@ -1888,7 +1890,9 @@ PyObject *aws_py_mqtt5_client_subscribe(PyObject *self, PyObject *args) {
     Py_INCREF(metadata->callback);
 
     struct aws_mqtt5_subscribe_completion_options subscribe_completion_options = {
-        .completion_callback = &s_on_subscribe_complete_fn, .completion_user_data = metadata};
+        .completion_callback = &s_on_subscribe_complete_fn,
+        .completion_user_data = metadata,
+        .ack_timeout_seconds_override = 0};
 
     if (aws_mqtt5_client_subscribe(client->native, &subscribe_view, &subscribe_completion_options)) {
         PyErr_SetAwsLastError();
@@ -2067,7 +2071,9 @@ PyObject *aws_py_mqtt5_client_unsubscribe(PyObject *self, PyObject *args) {
     Py_INCREF(metadata->callback);
 
     struct aws_mqtt5_unsubscribe_completion_options unsubscribe_completion_options = {
-        .completion_callback = &s_on_unsubscribe_complete_fn, .completion_user_data = metadata};
+        .completion_callback = &s_on_unsubscribe_complete_fn,
+        .completion_user_data = metadata,
+        .ack_timeout_seconds_override = 0};
 
     if (aws_mqtt5_client_unsubscribe(client->native, &unsubscribe_view, &unsubscribe_completion_options)) {
         PyErr_SetAwsLastError();
