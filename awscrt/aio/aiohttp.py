@@ -9,7 +9,7 @@ All network operations in `awscrt.http_asyncio` are asynchronous and use Python'
 # SPDX-License-Identifier: Apache-2.0.
 
 import asyncio
-import io
+from io import BytesIO
 import _awscrt
 from concurrent.futures import Future
 import awscrt.exceptions
@@ -317,8 +317,8 @@ class AIOHttpClientStreamUnified(HttpClientStreamBase):
         else:
             self._completion_future.set_exception(awscrt.exceptions.from_code(error_code))
 
-        if self._chunk_futures:
-            # the stream is completed, so we need to set the futures
+        # Resolve all pending chunk futures with an empty string to indicate end of stream
+        while self._chunk_futures:
             future = self._chunk_futures.popleft()
             future.set_result("")
 
@@ -411,8 +411,8 @@ class AIOHttp2ClientStream(AIOHttpClientStreamUnified):
         super().__init__(connection, request, request_body_generator=request_body_generator, loop=loop)
 
     async def _write_data(self, body, end_stream):
-        future: Future = Future()
-        body_stream: InputStream = InputStream.wrap(body, allow_none=True)
+        future = Future()
+        body_stream = InputStream.wrap(body, allow_none=True)
 
         def on_write_complete(error_code: int) -> None:
             if future.cancelled():
@@ -429,8 +429,6 @@ class AIOHttp2ClientStream(AIOHttpClientStreamUnified):
     async def _set_request_body_generator(self, body_iterator: AsyncIterator[bytes]):
         try:
             async for chunk in body_iterator:
-                await self._write_data(io.BytesIO(chunk), False)
-        except Exception:
-            raise
+                await self._write_data(BytesIO(chunk), False)
         finally:
             await self._write_data(None, True)

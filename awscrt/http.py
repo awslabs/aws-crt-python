@@ -409,8 +409,8 @@ class HttpStreamBase(NativeResource):
 
     def __init__(self, connection, on_body: Optional[Callable[..., None]] = None) -> None:
         super().__init__()
-        self._connection: HttpConnectionBase = connection
-        self._completion_future: Future = Future()
+        self._connection = connection
+        self._completion_future = Future()
         self._on_body_cb: Optional[Callable[..., None]] = on_body
 
     @property
@@ -455,8 +455,8 @@ class HttpClientStreamBase(HttpStreamBase):
         self._response_status_code: Optional[int] = None
 
         # keep HttpRequest alive until stream completes
-        self._request: 'HttpRequest' = request
-        self._version: HttpVersion = connection.version
+        self._request = request
+        self._version = connection.version
         self._binding = _awscrt.http_client_stream_new(self, connection, request, http2_manual_write)
 
     @property
@@ -559,8 +559,8 @@ class Http2ClientStream(HttpClientStreamBase):
             concurrent.futures.Future: Future that completes when the write operation
                 is done. The future will contain None on success, or an exception on failure.
         """
-        future: Future = Future()
-        body_stream: InputStream = InputStream.wrap(data_stream, allow_none=True)
+        future = Future()
+        body_stream = InputStream.wrap(data_stream, allow_none=True)
 
         def on_write_complete(error_code: int) -> None:
             if future.cancelled():
@@ -587,7 +587,7 @@ class HttpMessageBase(NativeResource):
 
         super().__init__()
         self._binding = binding
-        self._headers: HttpHeaders = headers
+        self._headers = headers
         self._body_stream: Optional[InputStream] = None
 
         if body_stream:
@@ -891,13 +891,13 @@ class HttpProxyOptions:
                  auth_username: Optional[str] = None,
                  auth_password: Optional[str] = None,
                  connection_type: HttpProxyConnectionType = HttpProxyConnectionType.Legacy) -> None:
-        self.host_name: str = host_name
-        self.port: int = port
-        self.tls_connection_options: Optional[TlsConnectionOptions] = tls_connection_options
-        self.auth_type: HttpProxyAuthenticationType = auth_type
-        self.auth_username: Optional[str] = auth_username
-        self.auth_password: Optional[str] = auth_password
-        self.connection_type: HttpProxyConnectionType = connection_type
+        self.host_name = host_name
+        self.port = port
+        self.tls_connection_options = tls_connection_options
+        self.auth_type = auth_type
+        self.auth_username = auth_username
+        self.auth_password = auth_password
+        self.connection_type = connection_type
 
 
 class _HttpClientConnectionCore:
