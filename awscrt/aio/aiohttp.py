@@ -38,7 +38,7 @@ class AIOHttpClientConnectionUnified(HttpClientConnectionBase):
                   bootstrap: Optional[ClientBootstrap] = None,
                   socket_options: Optional[SocketOptions] = None,
                   tls_connection_options: Optional[TlsConnectionOptions] = None,
-                  proxy_options: Optional['HttpProxyOptions'] = None) -> "AIOHttpClientConnectionUnified":
+                  proxy_options: Optional[HttpProxyOptions] = None) -> "AIOHttpClientConnectionUnified":
         """
         Asynchronously establish a new AIOHttpClientConnectionUnified.
 
@@ -118,7 +118,7 @@ class AIOHttpClientConnection(AIOHttpClientConnectionUnified):
                   bootstrap: Optional[ClientBootstrap] = None,
                   socket_options: Optional[SocketOptions] = None,
                   tls_connection_options: Optional[TlsConnectionOptions] = None,
-                  proxy_options: Optional['HttpProxyOptions'] = None) -> "AIOHttpClientConnection":
+                  proxy_options: Optional[HttpProxyOptions] = None) -> "AIOHttpClientConnection":
         """
         Asynchronously establish a new AIOHttpClientConnection.
 
@@ -187,7 +187,7 @@ class AIOHttp2ClientConnection(AIOHttpClientConnectionUnified):
                   bootstrap: Optional[ClientBootstrap] = None,
                   socket_options: Optional[SocketOptions] = None,
                   tls_connection_options: Optional[TlsConnectionOptions] = None,
-                  proxy_options: Optional['HttpProxyOptions'] = None,
+                  proxy_options: Optional[HttpProxyOptions] = None,
                   initial_settings: Optional[List[Http2Setting]] = None,
                   on_remote_settings_changed: Optional[Callable[[List[Http2Setting]],
                                                                 None]] = None) -> "AIOHttp2ClientConnection":
@@ -322,6 +322,9 @@ class AIOHttpClientStreamUnified(HttpClientStreamBase):
             future = self._chunk_futures.popleft()
             future.set_result("")
 
+    async def _set_request_body_generator(self, body_iterator: AsyncIterator[bytes]):
+        ...
+
     async def get_response_status_code(self) -> int:
         """Get the response status code asynchronously.
 
@@ -361,9 +364,6 @@ class AIOHttpClientStreamUnified(HttpClientStreamBase):
             int: The response status code.
         """
         return await self._completion_future
-
-    async def _set_request_body_generator(self, body_iterator: AsyncIterator[bytes]):
-        ...
 
 
 class AIOHttpClientStream(AIOHttpClientStreamUnified):
@@ -424,7 +424,7 @@ class AIOHttp2ClientStream(AIOHttpClientStreamUnified):
                 future.set_result(None)
 
         _awscrt.http2_client_stream_write_data(self, body_stream, end_stream, on_write_complete)
-        await asyncio.wrap_future(future)
+        await asyncio.wrap_future(future, self._loop)
 
     async def _set_request_body_generator(self, body_iterator: AsyncIterator[bytes]):
         try:
