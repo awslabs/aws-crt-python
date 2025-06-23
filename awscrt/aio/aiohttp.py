@@ -2,18 +2,14 @@
 HTTP AsyncIO support
 
 This module provides asyncio wrappers around the awscrt.http module.
-All network operations in `awscrt.http_asyncio` are asynchronous and use Python's asyncio framework.
+All network operations in `awscrt.aio.aiohttp` are asynchronous and use Python's asyncio framework.
 """
 
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 
-import asyncio
-from io import BytesIO
 import _awscrt
-from concurrent.futures import Future
 import awscrt.exceptions
-from typing import List, Tuple, Optional, Union, Callable, Any, AsyncIterator
 from awscrt.http import (
     HttpClientConnectionBase, HttpRequest, HttpClientStreamBase, HttpProxyOptions,
     Http2Setting, HttpVersion
@@ -21,7 +17,11 @@ from awscrt.http import (
 from awscrt.io import (
     ClientBootstrap, SocketOptions, TlsConnectionOptions, InputStream
 )
+import asyncio
 from collections import deque
+from io import BytesIO
+from concurrent.futures import Future
+from typing import List, Tuple, Optional, Union, Callable, Any, AsyncIterator
 
 
 class AIOHttpClientConnectionUnified(HttpClientConnectionBase):
