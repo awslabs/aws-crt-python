@@ -424,7 +424,7 @@ class AIOHttp2ClientStream(AIOHttpClientStreamUnified):
                 future.set_result(None)
 
         _awscrt.http2_client_stream_write_data(self, body_stream, end_stream, on_write_complete)
-        await asyncio.wrap_future(future, self._loop)
+        await asyncio.wrap_future(future, loop=self._loop)
 
     async def _set_request_body_generator(self, body_iterator: AsyncIterator[bytes]):
         try:
