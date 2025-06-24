@@ -21,7 +21,7 @@ import asyncio
 from collections import deque
 from io import BytesIO
 from concurrent.futures import Future
-from typing import List, Tuple, Optional, Union, Callable, Any, AsyncIterator
+from typing import List, Tuple, Optional, Callable, AsyncIterator
 
 
 class AIOHttpClientConnectionUnified(HttpClientConnectionBase):
@@ -273,9 +273,9 @@ class AIOHttpClientStreamUnified(HttpClientStreamBase):
         self._stream_completed = False
 
         # Create futures for async operations
-        self._completion_future = self._loop.create_future()
-        self._response_status_future = self._loop.create_future()
-        self._response_headers_future = self._loop.create_future()
+        self._completion_future = Future()
+        self._response_status_future = Future()
+        self._response_headers_future = Future()
         self._status_code = None
 
         self._request_body_generator = request_body_generator
@@ -288,17 +288,10 @@ class AIOHttpClientStreamUnified(HttpClientStreamBase):
     def _on_response(self, status_code: int, name_value_pairs: List[Tuple[str, str]]) -> None:
         self._status_code = status_code
         # invoked from the C thread, so we need to schedule the result setting on the event loop
-        self._loop.call_soon_threadsafe(self._set_response, status_code, name_value_pairs)
-
-    def _set_response(self, status_code: int, name_value_pairs: List[Tuple[str, str]]) -> None:
-        """Set the response status and headers in the futures."""
         self._response_status_future.set_result(status_code)
         self._response_headers_future.set_result(name_value_pairs)
 
     def _on_body(self, chunk: bytes) -> None:
-        self._loop.call_soon_threadsafe(self._set_body_chunk, chunk)
-
-    def _set_body_chunk(self, chunk: bytes) -> None:
         """Process body chunk on the correct event loop thread."""
         if self._chunk_futures:
             future = self._chunk_futures.popleft()
@@ -307,10 +300,6 @@ class AIOHttpClientStreamUnified(HttpClientStreamBase):
             self._received_chunks.append(chunk)
 
     def _on_complete(self, error_code: int) -> None:
-        # invoked from the C thread, so we need to schedule the result setting on the event loop
-        self._loop.call_soon_threadsafe(self._set_completion, error_code)
-
-    def _set_completion(self, error_code: int) -> None:
         """Set the completion status of the stream."""
         if error_code == 0:
             self._completion_future.set_result(self._status_code)
@@ -331,7 +320,7 @@ class AIOHttpClientStreamUnified(HttpClientStreamBase):
         Returns:
             int: The response status code.
         """
-        return await self._response_status_future
+        return await asyncio.wrap_future(self._response_status_future, loop=self._loop)
 
     async def get_response_headers(self) -> List[Tuple[str, str]]:
         """Get the response headers asynchronously.
@@ -339,7 +328,7 @@ class AIOHttpClientStreamUnified(HttpClientStreamBase):
         Returns:
             List[Tuple[str, str]]: The response headers as a list of (name, value) tuples.
         """
-        return await self._response_headers_future
+        return await asyncio.wrap_future(self._response_headers_future, loop=self._loop)
 
     async def get_next_response_chunk(self) -> bytes:
         """Get the next chunk from the response body.
@@ -363,7 +352,7 @@ class AIOHttpClientStreamUnified(HttpClientStreamBase):
         Returns:
             int: The response status code.
         """
-        return await self._completion_future
+        return await asyncio.wrap_future(self._completion_future, loop=self._loop)
 
 
 class AIOHttpClientStream(AIOHttpClientStreamUnified):
