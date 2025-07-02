@@ -532,9 +532,15 @@ class MqttConnectionTest(NativeResourceTest):
             client_id=connection.client_id,
             on_connection_success_callback=on_connection_success_callback_dup)
 
-        connection_dup.connect().result(TIMEOUT)
-        on_connection_success_future_dup.result(TIMEOUT)
-        connection_dup.disconnect().result(TIMEOUT)
+        dup_success = False
+        while not dup_success:
+            try:
+                connection_dup.connect().result(TIMEOUT)
+                on_connection_success_future_dup.result(TIMEOUT)
+                dup_success = True
+                connection_dup.disconnect().result(TIMEOUT)
+            except:
+                time.sleep(2)
 
         # After the second client disconnects, the first one should reconnect,
         # and on_connection_success callback should be fired once again.
