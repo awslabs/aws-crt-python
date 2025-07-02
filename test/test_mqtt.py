@@ -539,7 +539,7 @@ class MqttConnectionTest(NativeResourceTest):
                 on_connection_success_future_dup.result(TIMEOUT)
                 dup_success = True
                 connection_dup.disconnect().result(TIMEOUT)
-            except:
+            except BaseException :
                 time.sleep(2)
 
         # After the second client disconnects, the first one should reconnect,
