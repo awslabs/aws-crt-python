@@ -252,7 +252,7 @@ jobs:
   windows:
     # Currently, setup.py explicitly tries to use Windows SDK 10.0.17763.0.
     # The windows-2025 image does not provide this SDK version out of the box, so keep windows-2022 for now.
-    runs-on: windows-2022
+    runs-on: windows-2025
     strategy:
       matrix:
         arch: [x86, x64]
