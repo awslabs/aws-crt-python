@@ -16,7 +16,10 @@ from awscrt.http import HttpProxyOptions, HttpRequest
 from awscrt.io import ClientBootstrap, ClientTlsContext, SocketOptions
 from dataclasses import dataclass
 from awscrt.mqtt5 import Client as Mqtt5Client
-from typing_extensions import deprecated
+try:
+    from typing import deprecated # Python 3.12+
+except ImportError:
+    from typing_extensions import deprecated # Python 3.11 or earlier
 
 
 class QoS(IntEnum):
