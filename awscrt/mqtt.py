@@ -16,6 +16,7 @@ from awscrt.http import HttpProxyOptions, HttpRequest
 from awscrt.io import ClientBootstrap, ClientTlsContext, SocketOptions
 from dataclasses import dataclass
 from awscrt.mqtt5 import Client as Mqtt5Client
+from typing_extensions import deprecated
 
 
 class QoS(IntEnum):
@@ -167,9 +168,20 @@ class OnConnectionClosedData:
     """
     pass
 
-
+@deprecated("""
+    Deprecated tag: Please use MQTT5 Client for new code. There are no current plans to
+    fully deprecate the MQTT 3.1.1 client but it is highly recommended customers migrate
+    to the MQTT5 Client to have access to a more robust feature set, clearer error handling, and lifetime
+    management. More details can be found here: <URL>
+    """, since="9.9.9")
 class Client(NativeResource):
-    """MQTT client.
+    """
+    Deprecated Definition. Please use MQTT5 Client for new code. There are no current plans to
+    fully deprecate the MQTT 3.1.1 client but it is highly recommended customers migrate
+    to the MQTT5 Client to have access to a more robust feature set, clearer error handling, and lifetime
+    management. More details can be found here: <URL>
+
+    MQTT client.
 
     Args:
         bootstrap (Optional [ClientBootstrap]): Client bootstrap to use when initiating new socket connections.
