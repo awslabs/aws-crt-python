@@ -16,15 +16,27 @@ from awscrt.http import HttpProxyOptions, HttpRequest
 from awscrt.io import ClientBootstrap, ClientTlsContext, SocketOptions
 from dataclasses import dataclass
 from awscrt.mqtt5 import Client as Mqtt5Client
-try:
-    from typing import deprecated # Python 3.12+
-except ImportError:
+
+# TYPE_CHECKING is used to exclusively execute code by static analysers. Never at runtime.
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    # Static analysers will always attempt to import deprecated from typing_extensions and
+    # fall back to known interpretation of `deprecated` if it fails and appropriately handle
+    # the `@deprecated` tags.
+    from typing_extensions import deprecated
+else:
     try:
-        from typing_extensions import deprecated # Python 3.11 or earlier
+        # preferred import of deprecated
+        from typing_extensions import deprecated
     except ModuleNotFoundError:
-        def deprecated(msg=None, *, since=None):
-            def wrapper(obj): return obj
-            return wrapper
+        try:
+            # Python 3.12+
+            from typing import deprecated
+        except ImportError:
+            # shim if both are unavailable that turn `deprecated` into a no-op
+            def deprecated(msg=None, *, since=None):
+                def wrapper(obj): return obj
+                return wrapper
 
 
 class QoS(IntEnum):
