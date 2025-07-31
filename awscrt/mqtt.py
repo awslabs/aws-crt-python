@@ -19,7 +19,12 @@ from awscrt.mqtt5 import Client as Mqtt5Client
 try:
     from typing import deprecated # Python 3.12+
 except ImportError:
-    from typing_extensions import deprecated # Python 3.11 or earlier
+    try:
+        from typing_extensions import deprecated # Python 3.11 or earlier
+    except ModuleNotFoundError:
+        def deprecated(msg=None, *, since=None):
+            def wrapper(obj): return obj
+            return wrapper
 
 
 class QoS(IntEnum):
