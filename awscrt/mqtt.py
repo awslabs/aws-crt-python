@@ -188,6 +188,7 @@ class OnConnectionClosedData:
     """
     pass
 
+
 @deprecated(
     """
     Deprecated tag: Please use MQTT5 Client for new code. There are no current plans to
