@@ -188,12 +188,14 @@ class OnConnectionClosedData:
     """
     pass
 
-@deprecated("""
+@deprecated(
+    """
     Deprecated tag: Please use MQTT5 Client for new code. There are no current plans to
     fully deprecate the MQTT 3.1.1 client but it is highly recommended customers migrate
     to the MQTT5 Client to have access to a more robust feature set, clearer error handling, and lifetime
     management. More details can be found here: <URL>
-    """, since="9.9.9")
+    """,
+    since="9.9.9")
 class Client(NativeResource):
     """
     Deprecated Definition. Please use MQTT5 Client for new code. There are no current plans to
