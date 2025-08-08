@@ -170,6 +170,7 @@ jobs:
   linux-compat:
     runs-on: ubuntu-24.04 # latest
     strategy:
+      fail-fast: false
       matrix:
         image:
           - al2-x64
@@ -192,6 +193,7 @@ jobs:
   linux-compiler-compat:
     runs-on: ubuntu-24.04 # latest
     strategy:
+      fail-fast: false
       matrix:
         compiler:
           - clang-6
@@ -248,12 +250,12 @@ jobs:
           USES_LIBCRYPTO_SO=`echo "$LINKED_AGAINST" | grep 'libcrypto*.so' | head -1`
           test -n "$USES_LIBCRYPTO_SO"
 
-
   windows:
     # Currently, setup.py explicitly tries to use Windows SDK 10.0.17763.0.
     # The windows-2025 image does not provide this SDK version out of the box, so keep windows-2022 for now.
     runs-on: windows-2022
     strategy:
+      fail-fast: false
       matrix:
         arch: [x86, x64]
     permissions:
@@ -306,7 +308,6 @@ jobs:
           python3 -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder')"
           chmod a+x builder
           ./builder build -p ${{ env.PACKAGE_NAME }}
-
 
   openbsd:
     runs-on: ubuntu-24.04 # latest
