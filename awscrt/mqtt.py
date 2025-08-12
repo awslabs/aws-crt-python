@@ -31,10 +31,10 @@ else:
         from typing_extensions import deprecated as _impl
     except Exception:
         try:
-            from typing import deprecated as _impl # Python 3.13+
+            from typing import deprecated as _impl  # Python 3.13+
         except Exception:
             _impl = None
-    
+
     def deprecated(msg=None, *, since=None):
         if _impl is None:
             def _noop(obj): return obj
@@ -43,7 +43,7 @@ else:
             try:
                 return _impl(msg, since=since)
             except TypeError:
-                pass # older typing_extensions: no 'since' keyword
+                pass  # older typing_extensions: no 'since' keyword
         return _impl(msg)
 
 
@@ -199,18 +199,18 @@ class OnConnectionClosedData:
 
 @deprecated(
     """
-    Deprecated tag: Please use MQTT5 Client for new code. There are no current plans to
-    fully deprecate the MQTT 3.1.1 client but it is highly recommended customers migrate
-    to the MQTT5 Client to have access to a more robust feature set, clearer error handling, and lifetime
-    management. More details can be found here: <URL>
+    We strongly recommend using mqtt5.Client. There are no current plans to fully deprecate 
+    the MQTT 3.1.1 client but it is highly recommended customers migrate to the MQTT5 client to access 
+    a more robust feature set, clearer error handling, and lifetime management. More details can be found 
+    in the GitHub Repo FAQ
     """,
     since="9.9.9")
 class Client(NativeResource):
     """
-    Deprecated Definition. Please use MQTT5 Client for new code. There are no current plans to
-    fully deprecate the MQTT 3.1.1 client but it is highly recommended customers migrate
-    to the MQTT5 Client to have access to a more robust feature set, clearer error handling, and lifetime
-    management. More details can be found here: <URL>
+    Deprecated: We strongly recommend using mqtt5.Client. There are no current plans to fully deprecate 
+    the MQTT 3.1.1 client but it is highly recommended customers migrate to the MQTT5 client to access 
+    a more robust feature set, clearer error handling, and lifetime management. More details can be found 
+    in the GitHub Repo FAQ
 
     MQTT client.
 
@@ -253,18 +253,18 @@ class OperationStatisticsData:
 
 @deprecated(
     """
-    Deprecated tag: Please use MQTT5 Client for new code. There are no current plans to
-    fully deprecate the MQTT 3.1.1 client but it is highly recommended customers migrate
-    to the MQTT5 Client to have access to a more robust feature set, clearer error handling, and lifetime
-    management. More details can be found here: <URL>
+    We strongly recommend using mqtt5.Client. There are no current plans to fully deprecate 
+    the MQTT 3.1.1 client but it is highly recommended customers migrate to the MQTT5 client to access 
+    a more robust feature set, clearer error handling, and lifetime management. More details can be found 
+    in the GitHub Repo FAQ
     """,
     since="9.9.9")
 class Connection(NativeResource):
     """
-    Deprecated Definition. Please use MQTT5 Client for new code. There are no current plans to
-    fully deprecate the MQTT 3.1.1 client but it is highly recommended customers migrate
-    to the MQTT5 Client to have access to a more robust feature set, clearer error handling, and lifetime
-    management. More details can be found here: <URL>
+    Deprecated: We strongly recommend using mqtt5.Client. There are no current plans to fully deprecate 
+    the MQTT 3.1.1 client but it is highly recommended customers migrate to the MQTT5 client to access 
+    a more robust feature set, clearer error handling, and lifetime management. More details can be found 
+    in the GitHub Repo FAQ
     
     MQTT client connection.
 
