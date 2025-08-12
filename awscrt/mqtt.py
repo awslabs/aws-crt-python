@@ -265,7 +265,7 @@ class Connection(NativeResource):
     the MQTT 3.1.1 client but it is highly recommended customers migrate to the MQTT5 client to access
     a more robust feature set, clearer error handling, and lifetime management. More details can be found
     in the GitHub Repo FAQ
-    
+
     MQTT client connection.
 
     Args:
