@@ -43,6 +43,7 @@ else:
                 pass
         return _deprecated_impl(msg)
 
+
 def get_cpu_group_count() -> int:
     """
     Returns number of processor groups on the system.

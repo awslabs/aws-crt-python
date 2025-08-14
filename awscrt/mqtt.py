@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from awscrt.mqtt5 import Client as Mqtt5Client
 from awscrt.common import deprecated
 
+
 class QoS(IntEnum):
     """Quality of Service enumeration
 
