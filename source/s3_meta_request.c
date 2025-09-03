@@ -439,6 +439,7 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
         .progress_callback = s_s3_request_on_progress,
         .part_size = part_size,
         .multipart_upload_threshold = multipart_upload_threshold,
+        /* If fio options not set, let native code to decide the default instead */
         .fio_opts = fio_options_set ? &fio_opts : NULL,
         .user_data = meta_request,
     };

@@ -395,6 +395,7 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
         .enable_s3express = enable_s3express,
         .network_interface_names_array = network_interface_names,
         .num_network_interface_names = num_network_interface_names,
+        /* If fio options not set, let native code to decide the default instead */
         .fio_opts = fio_options_set ? &fio_opts : NULL,
     };
 
