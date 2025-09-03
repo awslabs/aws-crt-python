@@ -332,6 +332,10 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     int validate_response_checksum;                    /* p - boolean predicate */
     uint64_t part_size;                                /* K */
     uint64_t multipart_upload_threshold;               /* K */
+    int fio_options_set;                               /* p - boolean predicate */
+    int should_stream;                                 /* p - boolean predicate */
+    double disk_throughput_gbps;                       /* d */
+    int direct_io;                                     /* p - boolean predicate */
     PyObject *py_core;                                 /* O */
     if (!PyArg_ParseTuple(
             args,
@@ -352,6 +356,10 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
             &validate_response_checksum,
             &part_size,
             &multipart_upload_threshold,
+            &fio_options_set,
+            &should_stream,
+            &disk_throughput_gbps,
+            &direct_io,
             &py_core)) {
         return NULL;
     }
@@ -407,6 +415,11 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
         aws_mem_release(allocator, meta_request);
         return NULL;
     }
+    struct aws_s3_file_io_options fio_opts = {
+        .should_stream = should_stream,
+        .disk_throughput_gbps = disk_throughput_gbps,
+        .direct_io = direct_io,
+    };
 
     meta_request->py_core = py_core;
     Py_INCREF(meta_request->py_core);
@@ -426,6 +439,7 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
         .progress_callback = s_s3_request_on_progress,
         .part_size = part_size,
         .multipart_upload_threshold = multipart_upload_threshold,
+        .fio_opts = fio_options_set ? &fio_opts : NULL,
         .user_data = meta_request,
     };
 

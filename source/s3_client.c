@@ -258,11 +258,15 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
     int enable_s3express;                 /* p */
     uint64_t mem_limit;                   /* K */
     PyObject *network_interface_names_py; /* O */
+    int fio_options_set;                  /* p - boolean predicate */
+    int should_stream;                    /* p - boolean predicate */
+    double disk_throughput_gbps;          /* d */
+    int direct_io;                        /* p - boolean predicate */
     PyObject *py_core;                    /* O */
 
     if (!PyArg_ParseTuple(
             args,
-            "OOOOOs#iKKdpKOO",
+            "OOOOOs#iKKdpKOppdpO",
             &bootstrap_py,
             &signing_config_py,
             &credential_provider_py,
@@ -277,6 +281,10 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
             &enable_s3express,
             &mem_limit,
             &network_interface_names_py,
+            &fio_options_set,
+            &should_stream,
+            &disk_throughput_gbps,
+            &direct_io,
             &py_core)) {
         return NULL;
     }
@@ -366,6 +374,11 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
             }
         }
     }
+    struct aws_s3_file_io_options fio_opts = {
+        .should_stream = should_stream,
+        .disk_throughput_gbps = disk_throughput_gbps,
+        .direct_io = direct_io,
+    };
 
     struct aws_s3_client_config s3_config = {
         .region = region,
@@ -382,6 +395,7 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
         .enable_s3express = enable_s3express,
         .network_interface_names_array = network_interface_names,
         .num_network_interface_names = num_network_interface_names,
+        .fio_opts = fio_options_set ? &fio_opts : NULL,
     };
 
     s3_client->native = aws_s3_client_new(allocator, &s3_config);
