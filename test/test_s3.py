@@ -398,14 +398,12 @@ class S3RequestTest(NativeResourceTest):
             enable_s3express=False,
             mem_limit=None,
             **kwargs):
-        fio_options = S3FileIoOptions(should_stream=True, disk_throughput_gbps=10.0, direct_io=True)
         s3_client = s3_client_new(
             False,
             self.region,
             self.part_size,
             enable_s3express=enable_s3express,
-            mem_limit=mem_limit,
-            fio_options=fio_options)
+            mem_limit=mem_limit)
         signing_config = None
         if enable_s3express:
             signing_config = AwsSigningConfig(
