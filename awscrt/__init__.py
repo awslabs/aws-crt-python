@@ -7,7 +7,7 @@ __all__ = [
     'auth',
     'crypto',
     'http',
-    'aio.aiohttp',
+    'aio.http',
     'io',
     'mqtt',
     'mqtt5',

@@ -2,7 +2,7 @@
 HTTP AsyncIO support
 
 This module provides asyncio wrappers around the awscrt.http module.
-All network operations in `awscrt.aio.aiohttp` are asynchronous and use Python's asyncio framework.
+All network operations in `awscrt.aio.http` are asynchronous and use Python's asyncio framework.
 """
 
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.

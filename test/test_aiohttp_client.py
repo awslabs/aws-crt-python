@@ -18,7 +18,7 @@ from http.server import HTTPServer, SimpleHTTPRequestHandler
 from awscrt import io
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsContextOptions, TlsCipherPref
 from awscrt.http import HttpHeaders, HttpRequest, HttpVersion, Http2Setting, Http2SettingID
-from awscrt.aio.aiohttp import AIOHttpClientConnection, AIOHttp2ClientConnection
+from awscrt.aio.http import AIOHttpClientConnection, AIOHttp2ClientConnection
 import threading
 
 
