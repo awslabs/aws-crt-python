@@ -208,6 +208,7 @@ jobs:
     permissions:
       id-token: write # This is required for requesting the JWT
     steps:
+      - uses: actions/checkout@v4
       - name: configure AWS credentials (containers)
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -219,7 +220,20 @@ jobs:
       - name: Build ${{ env.PACKAGE_NAME }}
         run: |
           aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
-          ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-${{ env.LINUX_BASE_IMAGE }} build -p ${{ env.PACKAGE_NAME }} --compiler=${{ matrix.compiler }}
+          # Create modified container script that installs Python 3.10
+          cat > ./linux-container-ci-python310.sh << 'EOF'
+          #!/bin/bash
+          set -e
+          BUILDER_VERSION=$1
+          shift
+          IMAGE_NAME=$1
+          shift
+          aws ecr get-login-password | docker login 123124136734.dkr.ecr.us-east-1.amazonaws.com -u AWS --password-stdin
+          export DOCKER_IMAGE=123124136734.dkr.ecr.us-east-1.amazonaws.com/${IMAGE_NAME}:${BUILDER_VERSION}
+          docker run --env GITHUB_REF --env GITHUB_HEAD_REF --env AWS_ACCESS_KEY_ID --env AWS_SECRET_ACCESS_KEY --env AWS_SESSION_TOKEN --env AWS_DEFAULT_REGION --env CXXFLAGS --env AWS_CRT_ARCH --env CTEST_PARALLEL_LEVEL -v $(pwd)/scripts:/scripts $DOCKER_IMAGE bash -c "/scripts/install-python310.sh && /usr/local/bin/builder.pyz --version=${BUILDER_VERSION} $@"
+          EOF
+          chmod +x ./linux-container-ci-python310.sh
+          ./linux-container-ci-python310.sh ${{ env.BUILDER_VERSION }} aws-crt-${{ env.LINUX_BASE_IMAGE }} build -p ${{ env.PACKAGE_NAME }} --compiler=${{ matrix.compiler }}
 
   use-system-libcrypto:
     runs-on: ubuntu-24.04 # latest
