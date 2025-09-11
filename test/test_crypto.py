@@ -318,7 +318,12 @@ class TestCredentials(NativeResourceTest):
         self.assertFalse(rsa.verify(RSASignatureAlgorithm.PKCS1_5_SHA256, digest, b'bad signature'))
 
     def test_ed25519_keygen(self):
-        key = ED25519.new_generate()
+        try:
+            key = ED25519.new_generate()
+        except RuntimeError as e:
+            if "AWS_ERROR_CAL_UNSUPPORTED_ALGORITHM" in str(e):
+                self.skipTest("ED25519 algorithm is unsupported on this platform")
+            raise
 
         self.assertEqual(32, len(key.export_public_key(ED25519ExportFormat.RAW)))
         self.assertEqual(32, len(key.export_private_key(ED25519ExportFormat.RAW)))
