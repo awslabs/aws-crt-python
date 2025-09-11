@@ -7,7 +7,7 @@ on:
       - 'docs'
 
 env:
-  BUILDER_VERSION: v0.9.84
+  BUILDER_VERSION: v0.9.85
   BUILDER_SOURCE: releases
   BUILDER_HOST: https://d19elf31gohf1l.cloudfront.net
   PACKAGE_NAME: aws-crt-python
@@ -188,12 +188,7 @@ jobs:
       - name: Build ${{ env.PACKAGE_NAME }}
         run: |
           aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
-          if [ "${{ matrix.image }}" = "al2-x64" ]; then
-            aws ecr get-login-password | docker login 123124136734.dkr.ecr.us-east-1.amazonaws.com -u AWS --password-stdin
-            docker run --env GITHUB_REF --env GITHUB_HEAD_REF --env AWS_ACCESS_KEY_ID --env AWS_SECRET_ACCESS_KEY --env AWS_SESSION_TOKEN --env AWS_DEFAULT_REGION --env CXXFLAGS --env AWS_CRT_ARCH --env CTEST_PARALLEL_LEVEL --entrypoint='' 123124136734.dkr.ecr.us-east-1.amazonaws.com/aws-crt-${{ matrix.image }}:${{ env.BUILDER_VERSION }} bash -c 'amazon-linux-extras install python3.8 -y && yum install -y python38-devel && curl -sSL -o /usr/local/bin/builder.pyz https://d19elf31gohf1l.cloudfront.net/releases/${{ env.BUILDER_VERSION }}/builder.pyz && chmod a+x /usr/local/bin/builder.pyz && /usr/local/bin/builder.pyz build -p ${{ env.PACKAGE_NAME }} --python=python3.8 --version=${{ env.BUILDER_VERSION }}'
-          else
-            ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }}
-          fi
+          ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }}
 
   linux-compiler-compat:
     runs-on: ubuntu-24.04 # latest
