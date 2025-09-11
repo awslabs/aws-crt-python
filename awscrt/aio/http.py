@@ -28,7 +28,7 @@ class AIOHttpClientConnectionUnified(HttpClientConnectionBase):
     """
     An async unified HTTP client connection for either a HTTP/1 or HTTP/2 connection.
 
-    Use `AIOHttpClientConnection.new()` to establish a new connection.
+    Use `AIOHttpClientConnectionUnified.new()` to establish a new connection.
     """
 
     @classmethod
@@ -61,7 +61,7 @@ class AIOHttpClientConnectionUnified(HttpClientConnectionBase):
                 If None is provided then a proxy is not used.
 
         Returns:
-            AIOHttpClientConnection: A new HTTP client connection.
+            AIOHttpClientConnectionUnified: A new unified HTTP client connection.
         """
         future = cls._generic_new(
             host_name,
