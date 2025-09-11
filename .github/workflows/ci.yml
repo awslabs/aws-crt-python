@@ -219,8 +219,8 @@ jobs:
           aws sts get-caller-identity
       - name: Build ${{ env.PACKAGE_NAME }}
         run: |
-          aws ecr get-login-password | docker login 123124136734.dkr.ecr.us-east-1.amazonaws.com -u AWS --password-stdin
-          docker run --env GITHUB_REF --env GITHUB_HEAD_REF --env AWS_ACCESS_KEY_ID --env AWS_SECRET_ACCESS_KEY --env AWS_SESSION_TOKEN --env AWS_DEFAULT_REGION --env CXXFLAGS --env AWS_CRT_ARCH --env CTEST_PARALLEL_LEVEL --entrypoint='' 123124136734.dkr.ecr.us-east-1.amazonaws.com/aws-crt-${{ env.LINUX_BASE_IMAGE }}:${{ env.BUILDER_VERSION }} bash -c 'apt-get update && apt-get install -y wget build-essential zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev libsqlite3-dev && cd /tmp && wget https://www.python.org/ftp/python/3.10.12/Python-3.10.12.tgz && tar xzf Python-3.10.12.tgz && cd Python-3.10.12 && ./configure && make -j4 && make altinstall && cd /root && curl -sSL -o /usr/local/bin/builder.pyz https://d19elf31gohf1l.cloudfront.net/releases/${{ env.BUILDER_VERSION }}/builder.pyz && chmod a+x /usr/local/bin/builder.pyz && /usr/local/bin/builder.pyz build -p ${{ env.PACKAGE_NAME }} --compiler=${{ matrix.compiler }} --version=${{ env.BUILDER_VERSION }}'
+          aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
+          ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-${{ env.LINUX_BASE_IMAGE }} build -p ${{ env.PACKAGE_NAME }} --compiler=${{ matrix.compiler }}
 
   use-system-libcrypto:
     runs-on: ubuntu-24.04 # latest
