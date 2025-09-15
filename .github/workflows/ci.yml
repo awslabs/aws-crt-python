@@ -7,7 +7,7 @@ on:
       - 'docs'
 
 env:
-  BUILDER_VERSION: ubuntu-18-x64-keep
+  BUILDER_VERSION: ubuntu-update
   BUILDER_SOURCE: channels
   # Kick CI
   # BUILDER_VERSION: v0.9.86
