@@ -319,7 +319,7 @@ class TestCredentials(NativeResourceTest):
 
     def test_ed25519_keygen(self):
         key = ED25519.new_generate()
-        
+
         self.assertEqual(32, len(key.export_public_key(ED25519ExportFormat.RAW)))
         self.assertEqual(32, len(key.export_private_key(ED25519ExportFormat.RAW)))
 
