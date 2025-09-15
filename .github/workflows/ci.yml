@@ -7,9 +7,10 @@ on:
       - 'docs'
 
 env:
-  # BUILDER_VERSION: v0.9.86
   BUILDER_VERSION: ubuntu-18-x64-keep
-  BUILDER_SOURCE: releases
+  BUILDER_SOURCE: channels
+  # BUILDER_VERSION: v0.9.86
+  # BUILDER_SOURCE: releases
   BUILDER_HOST: https://d19elf31gohf1l.cloudfront.net
   PACKAGE_NAME: aws-crt-python
   LINUX_BASE_IMAGE: ubuntu-18-x64
