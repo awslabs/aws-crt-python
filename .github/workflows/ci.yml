@@ -9,6 +9,7 @@ on:
 env:
   BUILDER_VERSION: ubuntu-18-x64-keep
   BUILDER_SOURCE: channels
+  # Kick CI
   # BUILDER_VERSION: v0.9.86
   # BUILDER_SOURCE: releases
   BUILDER_HOST: https://d19elf31gohf1l.cloudfront.net
