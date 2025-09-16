@@ -7,11 +7,8 @@ on:
       - 'docs'
 
 env:
-  BUILDER_VERSION: ubuntu-update
-  BUILDER_SOURCE: channels
-  # Kick CI
-  # BUILDER_VERSION: v0.9.86
-  # BUILDER_SOURCE: releases
+  BUILDER_VERSION: v0.9.87
+  BUILDER_SOURCE: releases
   BUILDER_HOST: https://d19elf31gohf1l.cloudfront.net
   PACKAGE_NAME: aws-crt-python
   LINUX_BASE_IMAGE: ubuntu-18-x64
