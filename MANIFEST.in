@@ -45,6 +45,8 @@ prune crt/aws-lc/third_party
 graft crt/aws-lc/third_party/fiat
 graft crt/aws-lc/third_party/s2n-bignum
 graft crt/aws-lc/third_party/jitterentropy
+prune crt/aws-lc/third_party/jitterentropy/tests
+prune crt/aws-lc/third_party/jitterentropy/doc
 prune crt/aws-lc/tool
 prune crt/aws-lc/util
 include crt/aws-lc/util/fipstools/CMakeLists.txt
