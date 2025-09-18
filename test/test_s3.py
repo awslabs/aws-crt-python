@@ -25,6 +25,7 @@ from awscrt.s3 import (
     S3RequestType,
     S3ResponseError,
     CrossProcessLock,
+    S3FileIoOptions,
     create_default_s3_signing_config,
     get_optimized_platforms,
 )
@@ -589,6 +590,16 @@ class S3RequestTest(NativeResourceTest):
         content_length = os.stat(self.temp_put_obj_file_path).st_size
         request = self._put_object_request(None, content_length)
         self._test_s3_put_get_object(request, S3RequestType.PUT_OBJECT, send_filepath=self.temp_put_obj_file_path)
+
+    def test_put_object_filepath_with_fio_options(self):
+        content_length = os.stat(self.temp_put_obj_file_path).st_size
+        request = self._put_object_request(None, content_length)
+        fio_options = S3FileIoOptions(should_stream=True, disk_throughput_gbps=10.0, direct_io=True)
+        self._test_s3_put_get_object(
+            request,
+            S3RequestType.PUT_OBJECT,
+            send_filepath=self.temp_put_obj_file_path,
+            fio_options=fio_options)
 
     def test_put_object_filepath_unknown_content_length(self):
         content_length = os.stat(self.temp_put_obj_file_path).st_size
