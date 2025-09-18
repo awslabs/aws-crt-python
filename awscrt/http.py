@@ -107,19 +107,6 @@ class HttpConnectionBase(NativeResource):
         """HttpVersion: Protocol used by this connection"""
         return self._version
 
-    def close(self) -> "concurrent.futures.Future":
-        """Close the connection.
-
-        Shutdown is asynchronous. This call has no effect if the connection is already
-        closing.
-
-        Returns:
-            concurrent.futures.Future: This connection's :attr:`shutdown_future`,
-            which completes when shutdown has finished.
-        """
-        _awscrt.http_connection_close(self._binding)
-        return self.shutdown_future
-
     def is_open(self) -> bool:
         """
         Returns:
@@ -130,7 +117,78 @@ class HttpConnectionBase(NativeResource):
         return _awscrt.http_connection_is_open(self._binding)
 
 
-class HttpClientConnection(HttpConnectionBase):
+class HttpClientConnectionBase(HttpConnectionBase):
+    __slots__ = ('_host_name', '_port')
+
+    @staticmethod
+    def _generic_new(
+            host_name: str,
+            port: int,
+            bootstrap: Optional[ClientBootstrap] = None,
+            socket_options: Optional[SocketOptions] = None,
+            tls_connection_options: Optional[TlsConnectionOptions] = None,
+            proxy_options: Optional['HttpProxyOptions'] = None,
+            expected_version: Optional[HttpVersion] = None,
+            initial_settings: Optional[List[Http2Setting]] = None,
+            on_remote_settings_changed: Optional[Callable[[List[Http2Setting]], None]] = None,
+            asyncio_connection=False) -> "concurrent.futures.Future":
+        """
+        Initialize the generic part of the HttpClientConnection class.
+        """
+        assert isinstance(bootstrap, ClientBootstrap) or bootstrap is None
+        assert isinstance(host_name, str)
+        assert isinstance(port, int)
+        assert isinstance(tls_connection_options, TlsConnectionOptions) or tls_connection_options is None
+        assert isinstance(socket_options, SocketOptions) or socket_options is None
+        assert isinstance(proxy_options, HttpProxyOptions) or proxy_options is None
+
+        future = Future()
+
+        try:
+            if not socket_options:
+                socket_options = SocketOptions()
+
+            if not bootstrap:
+                bootstrap = ClientBootstrap.get_or_create_static_default()
+
+            connection_core = _HttpClientConnectionCore(
+                host_name,
+                port,
+                bootstrap=bootstrap,
+                tls_connection_options=tls_connection_options,
+                connect_future=future,
+                expected_version=expected_version,
+                on_remote_settings_changed=on_remote_settings_changed,
+                asyncio_connection=asyncio_connection)
+
+            _awscrt.http_client_connection_new(
+                bootstrap,
+                host_name,
+                port,
+                socket_options,
+                tls_connection_options,
+                proxy_options,
+                initial_settings,
+                on_remote_settings_changed,
+                connection_core)
+
+        except Exception as e:
+            future.set_exception(e)
+
+        return future
+
+    @property
+    def host_name(self) -> str:
+        """Remote hostname"""
+        return self._host_name
+
+    @property
+    def port(self) -> int:
+        """Remote port"""
+        return self._port
+
+
+class HttpClientConnection(HttpClientConnectionBase):
     """
     An HTTP client connection.
 
@@ -172,78 +230,13 @@ class HttpClientConnection(HttpConnectionBase):
             If successful, the Future will contain a new :class:`HttpClientConnection`.
             Otherwise, it will contain an exception.
         """
-        return HttpClientConnection._generic_new(
+        return cls._generic_new(
             host_name,
             port,
             bootstrap,
             socket_options,
             tls_connection_options,
             proxy_options)
-
-    @staticmethod
-    def _generic_new(
-            host_name: str,
-            port: int,
-            bootstrap: Optional[ClientBootstrap] = None,
-            socket_options: Optional[SocketOptions] = None,
-            tls_connection_options: Optional[TlsConnectionOptions] = None,
-            proxy_options: Optional['HttpProxyOptions'] = None,
-            expected_version: Optional[HttpVersion] = None,
-            initial_settings: Optional[List[Http2Setting]] = None,
-            on_remote_settings_changed: Optional[Callable[[List[Http2Setting]], None]] = None) -> "concurrent.futures.Future":
-        """
-        Initialize the generic part of the HttpClientConnection class.
-        """
-        assert isinstance(bootstrap, ClientBootstrap) or bootstrap is None
-        assert isinstance(host_name, str)
-        assert isinstance(port, int)
-        assert isinstance(tls_connection_options, TlsConnectionOptions) or tls_connection_options is None
-        assert isinstance(socket_options, SocketOptions) or socket_options is None
-        assert isinstance(proxy_options, HttpProxyOptions) or proxy_options is None
-
-        future = Future()
-
-        try:
-            if not socket_options:
-                socket_options = SocketOptions()
-
-            if not bootstrap:
-                bootstrap = ClientBootstrap.get_or_create_static_default()
-
-            connection_core = _HttpClientConnectionCore(
-                host_name,
-                port,
-                bootstrap=bootstrap,
-                tls_connection_options=tls_connection_options,
-                connect_future=future,
-                expected_version=expected_version,
-                on_remote_settings_changed=on_remote_settings_changed)
-
-            _awscrt.http_client_connection_new(
-                bootstrap,
-                host_name,
-                port,
-                socket_options,
-                tls_connection_options,
-                proxy_options,
-                initial_settings,
-                on_remote_settings_changed,
-                connection_core)
-
-        except Exception as e:
-            future.set_exception(e)
-
-        return future
-
-    @property
-    def host_name(self) -> str:
-        """Remote hostname"""
-        return self._host_name
-
-    @property
-    def port(self) -> int:
-        """Remote port"""
-        return self._port
 
     def request(self,
                 request: 'HttpRequest',
@@ -292,8 +285,21 @@ class HttpClientConnection(HttpConnectionBase):
         """
         return HttpClientStream(self, request, on_response, on_body)
 
+    def close(self) -> "concurrent.futures.Future":
+        """Close the connection.
 
-class Http2ClientConnection(HttpClientConnection):
+        Shutdown is asynchronous. This call has no effect if the connection is already
+        closing.
+
+        Returns:
+            concurrent.futures.Future: This connection's :attr:`shutdown_future`,
+            which completes when shutdown has finished.
+        """
+        _awscrt.http_connection_close(self._binding)
+        return self.shutdown_future
+
+
+class Http2ClientConnection(HttpClientConnectionBase):
 
     @classmethod
     def new(cls,
@@ -321,7 +327,7 @@ class Http2ClientConnection(HttpClientConnection):
 
                     *   `settings` (List[Http2Setting]): List of settings that were changed.
         """
-        return HttpClientConnection._generic_new(
+        return cls._generic_new(
             host_name,
             port,
             bootstrap,
@@ -337,17 +343,74 @@ class Http2ClientConnection(HttpClientConnection):
                 on_response: Optional[Callable[..., None]] = None,
                 on_body: Optional[Callable[..., None]] = None,
                 manual_write: bool = False) -> 'Http2ClientStream':
+        """Create `Http2ClientStream` to carry out the request/response exchange.
+
+        NOTE: The HTTP stream sends no data until `Http2ClientStream.activate()`
+        is called. Call activate() when you're ready for callbacks and events to fire.
+
+        Args:
+            request (HttpRequest): Definition for outgoing request.
+
+            on_response: Optional callback invoked once main response headers are received.
+                The function should take the following arguments and return nothing:
+
+                    *   `http_stream` (`Http2ClientStream`): HTTP/2 stream carrying
+                        out this request/response exchange.
+
+                    *   `status_code` (int): Response status code.
+
+                    *   `headers` (List[Tuple[str, str]]): Response headers as a
+                        list of (name,value) pairs.
+
+                    *   `**kwargs` (dict): Forward compatibility kwargs.
+
+            on_body: Optional callback invoked 0+ times as response body data is received.
+                The function should take the following arguments and return nothing:
+
+                    *   `http_stream` (`Http2ClientStream`): HTTP/2 stream carrying
+                        out this request/response exchange.
+
+                    *   `chunk` (buffer): Response body data (not necessarily
+                        a whole "chunk" of chunked encoding).
+
+                    *   `**kwargs` (dict): Forward-compatibility kwargs.
+
+            manual_write (bool): If True, enables manual data writing on the stream.
+                This allows calling `write_data()` to stream the request body in chunks.
+                Note: In the asyncio version, this is replaced by the async_body parameter.
+
+        Returns:
+            Http2ClientStream: Stream for the HTTP/2 request/response exchange.
+        """
         return Http2ClientStream(self, request, on_response, on_body, manual_write)
+
+    def close(self) -> "concurrent.futures.Future":
+        """Close the connection.
+
+        Shutdown is asynchronous. This call has no effect if the connection is already
+        closing.
+
+        Returns:
+            concurrent.futures.Future: This connection's :attr:`shutdown_future`,
+            which completes when shutdown has finished.
+        """
+        _awscrt.http_connection_close(self._binding)
+        return self.shutdown_future
 
 
 class HttpStreamBase(NativeResource):
-    """Base for HTTP stream classes"""
+    """Base for HTTP stream classes.
+
+    Attributes:
+        connection: The HTTP connection this stream belongs to.
+        completion_future: Future that completes when the operation finishes.
+    """
     __slots__ = ('_connection', '_completion_future', '_on_body_cb')
 
-    def __init__(self, connection: HttpConnectionBase, on_body: Optional[Callable[..., None]] = None) -> None:
+    def __init__(self, connection, on_body: Optional[Callable[..., None]] = None) -> None:
         super().__init__()
-        self._connection: HttpConnectionBase = connection
-        self._completion_future: Future = Future()
+        self._connection = connection
+        self._completion_future = Future()
         self._on_body_cb: Optional[Callable[..., None]] = on_body
 
     @property
@@ -363,38 +426,25 @@ class HttpStreamBase(NativeResource):
             self._on_body_cb(http_stream=self, chunk=chunk)
 
 
-class HttpClientStream(HttpStreamBase):
-    """HTTP stream that sends a request and receives a response.
-
-    Create an HttpClientStream with :meth:`HttpClientConnection.request()`.
-
-    NOTE: The HTTP stream sends no data until :meth:`HttpClientStream.activate()`
-    is called. Call activate() when you're ready for callbacks and events to fire.
+class HttpClientStreamBase(HttpStreamBase):
+    """Base for HTTP client stream classes.
 
     Attributes:
-        connection (HttpClientConnection): This stream's connection.
+        connection: This stream's connection.
 
-        completion_future (concurrent.futures.Future): Future that will contain
-            the response status code (int) when the request/response exchange
-            completes. If the exchange fails to complete, the Future will
-            contain an exception indicating why it failed.
+        completion_future: Future that completes when
+            the request/response exchange is finished.
     """
+
     __slots__ = ('_response_status_code', '_on_response_cb', '_on_body_cb', '_request', '_version')
 
-    def __init__(self,
-                 connection: HttpClientConnection,
-                 request: 'HttpRequest',
-                 on_response: Optional[Callable[..., None]] = None,
-                 on_body: Optional[Callable[..., None]] = None) -> None:
-        self._init_common(connection, request, on_response, on_body)
-
     def _init_common(self,
-                     connection: HttpClientConnection,
+                     connection: HttpClientConnectionBase,
                      request: 'HttpRequest',
                      on_response: Optional[Callable[..., None]] = None,
                      on_body: Optional[Callable[..., None]] = None,
                      http2_manual_write: bool = False) -> None:
-        assert isinstance(connection, HttpClientConnection)
+        assert isinstance(connection, HttpClientConnectionBase)
         assert isinstance(request, HttpRequest)
         assert callable(on_response) or on_response is None
         assert callable(on_body) or on_body is None
@@ -405,9 +455,8 @@ class HttpClientStream(HttpStreamBase):
         self._response_status_code: Optional[int] = None
 
         # keep HttpRequest alive until stream completes
-        self._request: 'HttpRequest' = request
-        self._version: HttpVersion = connection.version
-
+        self._request = request
+        self._version = connection.version
         self._binding = _awscrt.http_client_stream_new(self, connection, request, http2_manual_write)
 
     @property
@@ -421,14 +470,6 @@ class HttpClientStream(HttpStreamBase):
 
         This is None until a response arrives."""
         return self._response_status_code
-
-    def activate(self) -> None:
-        """Begin sending the request.
-
-        The HTTP stream does nothing until this is called. Call activate() when you
-        are ready for its callbacks and events to fire.
-        """
-        _awscrt.http_client_stream_activate(self)
 
     def _on_response(self, status_code: int, name_value_pairs: List[Tuple[str, str]]) -> None:
         self._response_status_code = status_code
@@ -446,22 +487,85 @@ class HttpClientStream(HttpStreamBase):
             self._completion_future.set_exception(awscrt.exceptions.from_code(error_code))
 
 
-class Http2ClientStream(HttpClientStream):
+class HttpClientStream(HttpClientStreamBase):
+    """HTTP stream that sends a request and receives a response.
+
+    Create an HttpClientStream with :meth:`HttpClientConnection.request()`.
+
+    NOTE: The HTTP stream sends no data until :meth:`HttpClientStream.activate()`
+    is called. Call activate() when you're ready for callbacks and events to fire.
+
+    Attributes:
+        connection (HttpClientConnection): This stream's connection.
+
+        completion_future (concurrent.futures.Future): Future that will contain
+            the response status code (int) when the request/response exchange
+            completes. If the exchange fails to complete, the Future will
+            contain an exception indicating why it failed.
+    """
+
+    def __init__(self,
+                 connection: HttpClientConnection,
+                 request: 'HttpRequest',
+                 on_response: Optional[Callable[..., None]] = None,
+                 on_body: Optional[Callable[..., None]] = None) -> None:
+        self._init_common(connection, request, on_response, on_body)
+
+    def activate(self) -> None:
+        """Begin sending the request.
+
+        The HTTP stream does nothing until this is called. Call activate() when you
+        are ready for its callbacks and events to fire.
+        """
+        _awscrt.http_client_stream_activate(self)
+
+
+class Http2ClientStream(HttpClientStreamBase):
     def __init__(self,
                  connection: HttpClientConnection,
                  request: 'HttpRequest',
                  on_response: Optional[Callable[..., None]] = None,
                  on_body: Optional[Callable[..., None]] = None,
                  manual_write: bool = False) -> None:
-        super()._init_common(connection, request, on_response, on_body, manual_write)
+        self._init_common(connection, request, on_response, on_body, manual_write)
+
+    def activate(self) -> None:
+        """Begin sending the request.
+
+        The HTTP stream does nothing until this is called. Call activate() when you
+        are ready for its callbacks and events to fire.
+        """
+        _awscrt.http_client_stream_activate(self)
 
     def write_data(self,
                    data_stream: Union[InputStream, Any],
                    end_stream: bool = False) -> "concurrent.futures.Future":
-        future: Future = Future()
-        body_stream: InputStream = InputStream.wrap(data_stream, allow_none=True)
+        """Write a chunk of data to the request body stream.
+
+        This method is only available when the stream was created with
+        manual_write=True. This allows incremental writing of request data.
+
+        Note: In the asyncio version, this is replaced by the request_body_generator parameter
+        which accepts an async generator.
+
+        Args:
+            data_stream (Union[InputStream, Any]): Data to write. If not an InputStream,
+                it will be wrapped in one. Can be None to send an empty chunk.
+
+            end_stream (bool): True to indicate this is the last chunk and no more data
+                will be sent. False if more chunks will follow.
+
+        Returns:
+            concurrent.futures.Future: Future that completes when the write operation
+                is done. The future will contain None on success, or an exception on failure.
+        """
+        future = Future()
+        body_stream = InputStream.wrap(data_stream, allow_none=True)
 
         def on_write_complete(error_code: int) -> None:
+            if future.cancelled():
+                # the future was cancelled, so we don't need to set the result or exception
+                return
             if error_code:
                 future.set_exception(awscrt.exceptions.from_code(error_code))
             else:
@@ -483,7 +587,7 @@ class HttpMessageBase(NativeResource):
 
         super().__init__()
         self._binding = binding
-        self._headers: HttpHeaders = headers
+        self._headers = headers
         self._body_stream: Optional[InputStream] = None
 
         if body_stream:
@@ -787,13 +891,13 @@ class HttpProxyOptions:
                  auth_username: Optional[str] = None,
                  auth_password: Optional[str] = None,
                  connection_type: HttpProxyConnectionType = HttpProxyConnectionType.Legacy) -> None:
-        self.host_name: str = host_name
-        self.port: int = port
-        self.tls_connection_options: Optional[TlsConnectionOptions] = tls_connection_options
-        self.auth_type: HttpProxyAuthenticationType = auth_type
-        self.auth_username: Optional[str] = auth_username
-        self.auth_password: Optional[str] = auth_password
-        self.connection_type: HttpProxyConnectionType = connection_type
+        self.host_name = host_name
+        self.port = port
+        self.tls_connection_options = tls_connection_options
+        self.auth_type = auth_type
+        self.auth_username = auth_username
+        self.auth_password = auth_password
+        self.connection_type = connection_type
 
 
 class _HttpClientConnectionCore:
@@ -809,7 +913,8 @@ class _HttpClientConnectionCore:
             tls_connection_options: Optional[TlsConnectionOptions] = None,
             connect_future: Optional[Future] = None,
             expected_version: Optional[HttpVersion] = None,
-            on_remote_settings_changed: Optional[Callable[[List[Http2Setting]], None]] = None) -> None:
+            on_remote_settings_changed: Optional[Callable[[List[Http2Setting]], None]] = None,
+            asyncio_connection=False) -> None:
         self._shutdown_future = None
         self._host_name = host_name
         self._port = port
@@ -818,23 +923,31 @@ class _HttpClientConnectionCore:
         self._connect_future = connect_future
         self._expected_version = expected_version
         self._on_remote_settings_changed_from_user = on_remote_settings_changed
+        self._asyncio_connection = asyncio_connection
 
     def _on_connection_setup(self, binding: Any, error_code: int, http_version: HttpVersion) -> None:
         if self._connect_future is None:
             return
-
+        if error_code != 0:
+            self._connect_future.set_exception(awscrt.exceptions.from_code(error_code))
+            return
         if self._expected_version and self._expected_version != http_version:
             # unexpected protocol version
             # AWS_ERROR_HTTP_UNSUPPORTED_PROTOCOL
             self._connect_future.set_exception(awscrt.exceptions.from_code(2060))
             return
-        if error_code != 0:
-            self._connect_future.set_exception(awscrt.exceptions.from_code(error_code))
-            return
-        if http_version == HttpVersion.Http2:
-            connection = Http2ClientConnection()
+        if self._asyncio_connection:
+            # Import is done here to avoid circular import issues
+            from awscrt.aio.http import AIOHttpClientConnection, AIOHttp2ClientConnection
+            if http_version == HttpVersion.Http2:
+                connection = AIOHttp2ClientConnection()
+            else:
+                connection = AIOHttpClientConnection()
         else:
-            connection = HttpClientConnection()
+            if http_version == HttpVersion.Http2:
+                connection = Http2ClientConnection()
+            else:
+                connection = HttpClientConnection()
 
         connection._host_name = self._host_name
         connection._port = self._port
