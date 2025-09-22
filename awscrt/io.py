@@ -277,6 +277,10 @@ class TlsCipherPref(IntEnum):
     PQ_DEFAULT = 8  # :
     """Recommended default policy with post-quantum algorithm support. This policy may change over time."""
 
+    TLSv1_2_2025_07 = 9
+    """A TLS Cipher Preference ordering that supports TLS 1.2 through TLS 1.3, and does not include CBC cipher suites. 
+       It is FIPS-complaint."""
+
     def is_supported(self):
         """Return whether this Cipher Preference is available in the underlying platform's TLS implementation"""
         return _awscrt.is_tls_cipher_supported(self.value)
