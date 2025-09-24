@@ -80,8 +80,7 @@ PyObject *aws_py_init_logging(PyObject *self, PyObject *args) {
         aws_logger_set(&s_logger);
         s_logger_init = true;
     } else {
-        PyErr_SetNone(PyExc_ValueError);
-        return NULL;
+        return PyErr_AwsLastError();
     }
 
     Py_RETURN_NONE;
