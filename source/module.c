@@ -70,10 +70,10 @@ PyObject *aws_py_init_logging(PyObject *self, PyObject *args) {
         log_options.filename = file_path;
     }
 
+    /* It is not safe to clean up a running logger */
     if (s_logger_init) {
-        aws_logger_set(NULL);
-        aws_logger_clean_up(&s_logger);
-        s_logger_init = false;
+        aws_raise_error(AWS_ERROR_INVALID_STATE);
+        return PyErr_AwsLastError();
     }
 
     if (aws_logger_init_standard(&s_logger, allocator, &log_options) == AWS_OP_SUCCESS) {
