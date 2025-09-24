@@ -39,13 +39,6 @@ static bool s_logger_init = false;
 PyObject *aws_py_init_logging(PyObject *self, PyObject *args) {
     (void)self;
 
-    if (s_logger_init) {
-        aws_logger_set(NULL);
-        aws_logger_clean_up(&s_logger);
-    }
-
-    s_logger_init = true;
-
     /* NOTE: We are NOT using aws_py_get_allocator() for logging.
      * This avoid deadlock during aws_mem_tracer_dump() */
     struct aws_allocator *allocator = aws_default_allocator();
@@ -77,8 +70,19 @@ PyObject *aws_py_init_logging(PyObject *self, PyObject *args) {
         log_options.filename = file_path;
     }
 
-    aws_logger_init_standard(&s_logger, allocator, &log_options);
-    aws_logger_set(&s_logger);
+    if (s_logger_init) {
+        aws_logger_set(NULL);
+        aws_logger_clean_up(&s_logger);
+        s_logger_init = false;
+    }
+
+    if (aws_logger_init_standard(&s_logger, allocator, &log_options) == AWS_OP_SUCCESS) {
+        aws_logger_set(&s_logger);
+        s_logger_init = true;
+    } else {
+        PyErr_SetNone(PyExc_ValueError);
+        return NULL;
+    }
 
     Py_RETURN_NONE;
 }
