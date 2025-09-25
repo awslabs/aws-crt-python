@@ -105,6 +105,8 @@ class Mqtt5TestCallbacks():
             self.future_disconnection.set_result(lifecycle_disconnect_data)
 
 
+MAX_RETRIES = 5
+
 class Mqtt5ClientTest(NativeResourceTest):
 
     def _create_client(
@@ -132,6 +134,22 @@ class Mqtt5ClientTest(NativeResourceTest):
 
         client = mqtt5.Client(client_options)
         return client
+
+    @staticmethod
+    def _is_retryable_exception(e):
+        exception_text = str(e)
+        return "AWS_IO_TLS_NEGOTIATION_TIMEOUT" in exception_text or "AWS_IO_SOCKET_TIMEOUT" in exception_text
+
+    def _test_retry_wrapper(self, test_function):
+        for i in range(MAX_RETRIES):
+            try:
+                test_function()
+                return
+            except Exception as e:
+                if self._is_retryable_exception(e) and i + 1 < MAX_RETRIES:
+                    time.sleep(1)
+                else:
+                    raise
 
     # ==============================================================
     #             CREATION TEST CASES
@@ -195,7 +213,7 @@ class Mqtt5ClientTest(NativeResourceTest):
     #             DIRECT CONNECT TEST CASES
     # ==============================================================
 
-    def test_direct_connect_minimum(self):
+    def _test_direct_connect_minimum(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_HOST")
         input_port = int(_get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_PORT"))
 
@@ -210,7 +228,10 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    def test_direct_connect_basic_auth(self):
+    def test_direct_connect_minimum(self):
+        self._test_retry_wrapper(self._test_direct_connect_minimum)
+
+    def _test_direct_connect_basic_auth(self):
         input_username = _get_env_variable("AWS_TEST_MQTT5_BASIC_AUTH_USERNAME")
         input_password = _get_env_variable("AWS_TEST_MQTT5_BASIC_AUTH_PASSWORD")
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_BASIC_AUTH_HOST")
@@ -233,7 +254,10 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    def test_direct_connect_tls(self):
+    def test_direct_connect_basic_auth(self):
+        self._test_retry_wrapper(self._test_direct_connect_basic_auth)
+
+    def _test_direct_connect_tls(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_TLS_HOST")
         input_port = int(_get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_TLS_PORT"))
 
@@ -252,7 +276,10 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    def test_direct_connect_mutual_tls(self):
+    def test_direct_connect_tls(self):
+        self._test_retry_wrapper(self._test_direct_connect_tls)
+
+    def _test_direct_connect_mutual_tls(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
         input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
@@ -274,7 +301,10 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    def test_direct_connect_http_proxy_tls(self):
+    def test_direct_connect_mutual_tls(self):
+        self._test_retry_wrapper(self._test_direct_connect_mutual_tls)
+
+    def _test_direct_connect_http_proxy_tls(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_TLS_HOST")
         input_port = int(_get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_TLS_PORT"))
         input_proxy_host = _get_env_variable("AWS_TEST_MQTT5_PROXY_HOST")
@@ -303,7 +333,10 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    def test_direct_connect_maximum(self):
+    def test_direct_connect_http_proxy_tls(self):
+        self._test_retry_wrapper(self._test_direct_connect_http_proxy_tls)
+
+    def _test_direct_connect_maximum(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_HOST")
         input_port = int(_get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_PORT"))
 
@@ -358,11 +391,14 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
+    def test_direct_connect_maximum(self):
+        self._test_retry_wrapper(self._test_direct_connect_maximum)
+
     # ==============================================================
     #             WEBSOCKET CONNECT TEST CASES
     # ==============================================================
 
-    def test_websocket_connect_minimum(self):
+    def _test_websocket_connect_minimum(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_WS_MQTT_HOST")
         input_port = int(_get_env_variable("AWS_TEST_MQTT5_WS_MQTT_PORT"))
 
@@ -379,7 +415,10 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    def test_websocket_connect_basic_auth(self):
+    def test_websocket_connect_minimum(self):
+        self._test_retry_wrapper(self._test_websocket_connect_minimum)
+
+    def _test_websocket_connect_basic_auth(self):
         input_username = _get_env_variable("AWS_TEST_MQTT5_BASIC_AUTH_USERNAME")
         input_password = _get_env_variable("AWS_TEST_MQTT5_BASIC_AUTH_PASSWORD")
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_WS_MQTT_BASIC_AUTH_HOST")
@@ -404,7 +443,10 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    def test_websocket_connect_tls(self):
+    def test_websocket_connect_basic_auth(self):
+        self._test_retry_wrapper(self._test_websocket_connect_basic_auth)
+
+    def _test_websocket_connect_tls(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_WS_MQTT_TLS_HOST")
         input_port = int(_get_env_variable("AWS_TEST_MQTT5_WS_MQTT_TLS_PORT"))
 
@@ -424,9 +466,12 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
+    def test_websocket_connect_tls(self):
+        self._test_retry_wrapper(self._test_websocket_connect_tls)
+
     #  test_websocket_connect_sigv4 against IoT Core : tested in the SDK
 
-    def test_websocket_connect_http_proxy_tls(self):
+    def _test_websocket_connect_http_proxy_tls(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_WS_MQTT_TLS_HOST")
         input_port = int(_get_env_variable("AWS_TEST_MQTT5_WS_MQTT_TLS_PORT"))
         input_proxy_host = _get_env_variable("AWS_TEST_MQTT5_PROXY_HOST")
@@ -457,7 +502,10 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    def test_websocket_connect_maximum(self):
+    def test_websocket_connect_http_proxy_tls(self):
+        self._test_retry_wrapper(self._test_websocket_connect_http_proxy_tls)
+
+    def _test_websocket_connect_maximum(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_WS_MQTT_HOST")
         input_port = int(_get_env_variable("AWS_TEST_MQTT5_WS_MQTT_PORT"))
 
@@ -511,6 +559,9 @@ class Mqtt5ClientTest(NativeResourceTest):
         callbacks.future_connection_success.result(TIMEOUT)
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
+
+    def test_websocket_connect_maximum(self):
+        self._test_retry_wrapper(self._test_websocket_connect_maximum)
 
     # ==============================================================
     #             NEGATIVE CONNECT TEST CASES
@@ -611,6 +662,8 @@ class Mqtt5ClientTest(NativeResourceTest):
 
         client1.start()
         callbacks.future_connection_success.result(TIMEOUT)
+
+        time.sleep(5)
 
         client2.start()
 
@@ -760,7 +813,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         with self.assertRaises(OverflowError) as cm:
             self._create_client(client_options=client_options)
 
-    def test_negative_disconnect_packet_properties(self):
+    def _test_negative_disconnect_packet_properties(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
         input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
@@ -787,7 +840,10 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    def test_negative_publish_packet_properties(self):
+    def test_negative_disconnect_packet_properties(self):
+        self._test_retry_wrapper(self._test_negative_disconnect_packet_properties)
+
+    def _test_negative_publish_packet_properties(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
         input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
@@ -813,7 +869,10 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    def test_negative_subscribe_packet_properties(self):
+    def test_negative_publish_packet_properties(self):
+        self._test_retry_wrapper(self._test_negative_publish_packet_properties)
+
+    def _test_negative_subscribe_packet_properties(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
         input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
@@ -842,11 +901,14 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
+    def test_negative_subscribe_packet_properties(self):
+        self._test_retry_wrapper(self._test_negative_subscribe_packet_properties)
+
     # ==============================================================
     #             NEGOTIATED SETTINGS TEST CASES
     # ==============================================================
 
-    def test_negotiated_settings_minimal_settings(self):
+    def _test_negotiated_settings_minimal_settings(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_HOST")
         input_port = int(_get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_PORT"))
 
@@ -869,7 +931,10 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    def test_negotiated_settings_maximum_settings(self):
+    def test_negotiated_settings_minimal_settings(self):
+        self._test_retry_wrapper(self._test_negotiated_settings_minimal_settings)
+
+    def _test_negotiated_settings_maximum_settings(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_HOST")
         input_port = int(_get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_PORT"))
 
@@ -910,7 +975,10 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    def test_negotiated_settings_server_limit(self):
+    def test_negotiated_settings_maximum_settings(self):
+        self._test_retry_wrapper(self._test_negotiated_settings_maximum_settings)
+
+    def _test_negotiated_settings_server_limit(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_HOST")
         input_port = int(_get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_PORT"))
 
@@ -943,11 +1011,14 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
+    def test_negotiated_settings_server_limit(self):
+        self._test_retry_wrapper(self._test_negotiated_settings_server_limit)
+
     # ==============================================================
     #             OPERATION TEST CASES
     # ==============================================================
 
-    def test_operation_sub_unsub(self):
+    def _test_operation_sub_unsub(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
         input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
@@ -1009,7 +1080,10 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    def test_operation_will(self):
+    def test_operation_sub_unsub(self):
+        self._test_retry_wrapper(self._test_operation_sub_unsub)
+
+    def _test_operation_will(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
         input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
@@ -1072,7 +1146,10 @@ class Mqtt5ClientTest(NativeResourceTest):
         client2.stop()
         callbacks2.future_stopped.result(TIMEOUT)
 
-    def do_will_correlation_data_test(self, outbound_correlation_data_bytes, outbound_correlation_data,
+    def test_operation_will(self):
+        self._test_retry_wrapper(self._test_operation_will)
+
+    def _do_will_correlation_data_test(self, outbound_correlation_data_bytes, outbound_correlation_data,
                                       expected_correlation_data_bytes, expected_correlation_data):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
@@ -1142,29 +1219,44 @@ class Mqtt5ClientTest(NativeResourceTest):
         client2.stop()
         callbacks2.future_stopped.result(TIMEOUT)
 
-    def test_will_correlation_data_bytes_binary(self):
+    def _test_will_correlation_data_bytes_binary(self):
         correlation_data = bytearray(os.urandom(64))
-        self.do_will_correlation_data_test(correlation_data, None, correlation_data, None)
+        self._do_will_correlation_data_test(correlation_data, None, correlation_data, None)
+
+    def test_will_correlation_data_bytes_binary(self):
+        self._test_retry_wrapper(self._test_will_correlation_data_bytes_binary)
+
+    def _test_will_correlation_data_bytes_string(self):
+        correlation_data = "CorrelationData"
+        correlation_data_as_bytes = correlation_data.encode('utf-8')
+        self._do_will_correlation_data_test(correlation_data, None, correlation_data_as_bytes, correlation_data)
 
     def test_will_correlation_data_bytes_string(self):
-        correlation_data = "CorrelationData"
-        correlation_data_as_bytes = correlation_data.encode('utf-8')
-        self.do_correlation_data_test(correlation_data, None, correlation_data_as_bytes, correlation_data)
+        self._test_retry_wrapper(self._test_will_correlation_data_bytes_string)
+
+    def _test_will_correlation_data_binary(self):
+        correlation_data = bytearray(os.urandom(64))
+        self._do_will_correlation_data_test(None, correlation_data, correlation_data, None)
 
     def test_will_correlation_data_binary(self):
-        correlation_data = bytearray(os.urandom(64))
-        self.do_correlation_data_test(None, correlation_data, correlation_data, None)
+        self._test_retry_wrapper(self._test_will_correlation_data_binary)
 
-    def test_will_correlation_data_string(self):
+    def _test_will_correlation_data_string(self):
         correlation_data = "CorrelationData"
         correlation_data_as_bytes = correlation_data.encode('utf-8')
-        self.do_correlation_data_test(None, correlation_data, correlation_data_as_bytes, correlation_data)
+        self._do_will_correlation_data_test(None, correlation_data, correlation_data_as_bytes, correlation_data)
+
+    def test_will_correlation_data_string(self):
+        self._test_retry_wrapper(self._test_will_correlation_data_string)
+
+    def _test_will_correlation_data_bytes_binary_precedence(self):
+        correlation_data = bytearray(os.urandom(64))
+        self._do_will_correlation_data_test(correlation_data, "Ignored", correlation_data, None)
 
     def test_will_correlation_data_bytes_binary_precedence(self):
-        correlation_data = bytearray(os.urandom(64))
-        self.do_correlation_data_test(correlation_data, "Ignored", correlation_data, None)
+        self._test_retry_wrapper(self._test_will_correlation_data_bytes_binary_precedence)
 
-    def test_operation_binary_publish(self):
+    def _test_operation_binary_publish(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
         input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
@@ -1226,7 +1318,10 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    def do_correlation_data_test(self, outbound_correlation_data_bytes, outbound_correlation_data,
+    def test_operation_binary_publish(self):
+        self._test_retry_wrapper(self._test_operation_binary_publish)
+
+    def _do_correlation_data_test(self, outbound_correlation_data_bytes, outbound_correlation_data,
                                  expected_correlation_data_bytes, expected_correlation_data):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
@@ -1279,33 +1374,48 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    def test_operation_publish_correlation_data_bytes_binary(self):
+    def _test_operation_publish_correlation_data_bytes_binary(self):
         correlation_data = bytearray(os.urandom(64))
-        self.do_correlation_data_test(correlation_data, None, correlation_data, None)
+        self._do_correlation_data_test(correlation_data, None, correlation_data, None)
+
+    def test_operation_publish_correlation_data_bytes_binary(self):
+        self._test_retry_wrapper(self._test_operation_publish_correlation_data_bytes_binary)
+
+    def _test_operation_publish_correlation_data_bytes_string(self):
+        correlation_data = "CorrelationData"
+        correlation_data_as_bytes = correlation_data.encode('utf-8')
+        self._do_correlation_data_test(correlation_data, None, correlation_data_as_bytes, correlation_data)
 
     def test_operation_publish_correlation_data_bytes_string(self):
-        correlation_data = "CorrelationData"
-        correlation_data_as_bytes = correlation_data.encode('utf-8')
-        self.do_correlation_data_test(correlation_data, None, correlation_data_as_bytes, correlation_data)
+        self._test_retry_wrapper(self._test_operation_publish_correlation_data_bytes_string)
+
+    def _test_operation_publish_correlation_data_binary(self):
+        correlation_data = bytearray(os.urandom(64))
+        self._do_correlation_data_test(None, correlation_data, correlation_data, None)
 
     def test_operation_publish_correlation_data_binary(self):
-        correlation_data = bytearray(os.urandom(64))
-        self.do_correlation_data_test(None, correlation_data, correlation_data, None)
+        self._test_retry_wrapper(self._test_operation_publish_correlation_data_binary)
 
-    def test_operation_publish_correlation_data_string(self):
+    def _test_operation_publish_correlation_data_string(self):
         correlation_data = "CorrelationData"
         correlation_data_as_bytes = correlation_data.encode('utf-8')
-        self.do_correlation_data_test(None, correlation_data, correlation_data_as_bytes, correlation_data)
+        self._do_correlation_data_test(None, correlation_data, correlation_data_as_bytes, correlation_data)
+
+    def test_operation_publish_correlation_data_string(self):
+        self._test_retry_wrapper(self._test_operation_publish_correlation_data_string)
+
+    def _test_operation_publish_correlation_data_bytes_binary_precedence(self):
+        correlation_data = bytearray(os.urandom(64))
+        self._do_correlation_data_test(correlation_data, "Ignored", correlation_data, None)
 
     def test_operation_publish_correlation_data_bytes_binary_precedence(self):
-        correlation_data = bytearray(os.urandom(64))
-        self.do_correlation_data_test(correlation_data, "Ignored", correlation_data, None)
+        self._test_retry_wrapper(self._test_operation_publish_correlation_data_bytes_binary_precedence)
 
     # ==============================================================
     #             OPERATION ERROR TEST CASES
     # ==============================================================
 
-    def test_operation_error_null_publish(self):
+    def _test_operation_error_null_publish(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_HOST")
         input_port = int(_get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_PORT"))
 
@@ -1324,7 +1434,10 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    def test_operation_error_null_subscribe(self):
+    def test_operation_error_null_publish(self):
+        self._test_retry_wrapper(self._test_operation_error_null_publish)
+
+    def _test_operation_error_null_subscribe(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_HOST")
         input_port = int(_get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_PORT"))
 
@@ -1343,7 +1456,10 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    def test_operation_error_null_unsubscribe(self):
+    def test_operation_error_null_subscribe(self):
+        self._test_retry_wrapper(self._test_operation_error_null_subscribe)
+
+    def _test_operation_error_null_unsubscribe(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_HOST")
         input_port = int(_get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_PORT"))
 
@@ -1362,7 +1478,10 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    def test_operation_rejoin_always(self):
+    def test_operation_error_null_unsubscribe(self):
+        self._test_retry_wrapper(self._test_operation_error_null_unsubscribe)
+
+    def _test_operation_rejoin_always(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
         input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
@@ -1398,11 +1517,14 @@ class Mqtt5ClientTest(NativeResourceTest):
         client2.stop()
         callbacks2.future_stopped.result(TIMEOUT)
 
+    def test_operation_rejoin_always(self):
+        self._test_retry_wrapper(self._test_operation_rejoin_always)
+
     # ==============================================================
     #             QOS1 TEST CASES
     # ==============================================================
 
-    def test_qos1_happy_path(self):
+    def _test_qos1_happy_path(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
         input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
@@ -1467,11 +1589,14 @@ class Mqtt5ClientTest(NativeResourceTest):
         client2.stop()
         callbacks2.future_stopped.result(TIMEOUT)
 
+    def test_qos1_happy_path(self):
+        self._test_retry_wrapper(self._test_qos1_happy_path)
+
     # ==============================================================
     #             RETAIN TEST CASES
     # ==============================================================
 
-    def test_retain_set_and_clear(self):
+    def _test_retain_set_and_clear(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
         input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
@@ -1556,11 +1681,14 @@ class Mqtt5ClientTest(NativeResourceTest):
         client3.stop()
         callbacks3.future_stopped.result(TIMEOUT)
 
+    def test_retain_set_and_clear(self):
+        self._test_retry_wrapper(self._test_retain_set_and_clear)
+
     # ==============================================================
     #             INTERRUPTION TEST CASES
     # ==============================================================
 
-    def test_interruption_sub(self):
+    def _test_interruption_sub(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
         input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
@@ -1595,7 +1723,10 @@ class Mqtt5ClientTest(NativeResourceTest):
 
         callbacks.future_stopped.result(TIMEOUT)
 
-    def test_interruption_unsub(self):
+    def test_interruption_sub(self):
+        self._test_retry_wrapper(self._test_interruption_sub)
+
+    def _test_interruption_unsub(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
         input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
@@ -1629,7 +1760,10 @@ class Mqtt5ClientTest(NativeResourceTest):
 
         callbacks.future_stopped.result(TIMEOUT)
 
-    def test_interruption_qos1_publish(self):
+    def test_interruption_unsub(self):
+        self._test_retry_wrapper(self._test_interruption_unsub)
+
+    def _test_interruption_qos1_publish(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
         input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
@@ -1666,11 +1800,14 @@ class Mqtt5ClientTest(NativeResourceTest):
 
         callbacks.future_stopped.result(TIMEOUT)
 
+    def test_interruption_qos1_publish(self):
+        self._test_retry_wrapper(self._test_interruption_qos1_publish)
+
     # ==============================================================
     #             MISC TEST CASES
     # ==============================================================
 
-    def test_operation_statistics_uc1(self):
+    def _test_operation_statistics_uc1(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
         input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
@@ -1721,6 +1858,8 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
+    def test_operation_statistics_uc1(self):
+        self._test_retry_wrapper(self._test_operation_statistics_uc1)
 
 if __name__ == 'main':
     unittest.main()
