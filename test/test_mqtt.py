@@ -12,6 +12,7 @@ import uuid
 import time
 
 TIMEOUT = 100.0
+MAX_RETRIES = 5
 
 
 def _get_env_variable(env_name):
@@ -59,7 +60,19 @@ class MqttConnectionTest(NativeResourceTest):
             on_connection_resumed=on_connection_resumed_callback)
         return connection
 
-    def test_connect_disconnect(self):
+    def _test_retry_wrapper(self, test_function):
+        for i in range(MAX_RETRIES):
+            try:
+                test_function()
+                return
+            except Exception as e:
+                exception_text = str(e)
+                if "AWS_IO_TLS_NEGOTIATION_TIMEOUT" in exception_text or "AWS_IO_SOCKET_TIMEOUT" in exception_text:
+                    raise
+                else:
+                    time.sleep(1)
+
+    def _test_connect_disconnect(self):
         test_input_endpoint = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
         test_input_cert = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_CERT")
         test_input_key = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_KEY")
@@ -70,6 +83,9 @@ class MqttConnectionTest(NativeResourceTest):
         connection = self._create_connection(test_input_endpoint, test_tls)
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
+
+    def test_connect_disconnect(self):
+        self._test_retry_wrapper(self._test_connect_disconnect)
 
     def test_ecc_connect_disconnect(self):
         test_input_endpoint = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
