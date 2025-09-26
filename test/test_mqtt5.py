@@ -5,7 +5,7 @@ from concurrent.futures import Future
 from awscrt import mqtt5, io, http, exceptions
 from test import NativeResourceTest
 from threading import Lock
-import os
+import os, sys
 import unittest
 import uuid
 import time
@@ -274,6 +274,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
+    @unittest.skipIf(sys.platform=="Linux", "s2n policy only available on linux")
     def test_direct_connect_mutual_tls_with_tlsv1_2_2025(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
