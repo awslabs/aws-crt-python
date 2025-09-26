@@ -827,5 +827,6 @@ class MqttConnectionTest(NativeResourceTest):
     def test_mqtt311_websocket_connect_http_proxy_tls(self):
         test_retry_wrapper(self._test_mqtt311_websocket_connect_http_proxy_tls)
 
+
 if __name__ == 'main':
     unittest.main()

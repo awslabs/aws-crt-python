@@ -1,7 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 from awscrt.mqtt_request_response import StreamingOperationOptions
-from test import NativeResourceTest
+from test import test_retry_wrapper, NativeResourceTest
 from awscrt import io, mqtt5, mqtt_request_response, mqtt
 
 from concurrent.futures import Future
@@ -436,11 +436,17 @@ class MqttRequestResponseClientTest(NativeResourceTest):
     #             CREATION SUCCESS TEST CASES
     # ==============================================================
 
-    def test_client_creation_success5(self):
+    def _test_client_creation_success5(self):
         self._do_mqtt5_test(lambda protocol_client: self._create_rr_client(protocol_client, 2, 2, 30))
 
-    def test_client_creation_success311(self):
+    def test_client_creation_success5(self):
+        test_retry_wrapper(self._test_client_creation_success5)
+
+    def _test_client_creation_success311(self):
         self._do_mqtt311_test(lambda protocol_client: self._create_rr_client(protocol_client, 2, 2, 30))
+
+    def test_client_creation_success311(self):
+        test_retry_wrapper(self._test_client_creation_success311)
 
     # ==============================================================
     #             CREATION FAILURE TEST CASES
@@ -545,210 +551,354 @@ class MqttRequestResponseClientTest(NativeResourceTest):
     #             make_request SUCCESS TEST CASES
     # ==============================================================
 
-    def test_get_shadow_success_no_such_shadow5(self):
+    def _test_get_shadow_success_no_such_shadow5(self):
         self._do_mqtt5_test(
+            lambda protocol_client: self._do_get_shadow_success_no_such_shadow_test(
+                protocol_client, True))
+
+    def test_get_shadow_success_no_such_shadow5(self):
+        test_retry_wrapper(self._test_get_shadow_success_no_such_shadow5)
+
+    def _test_get_shadow_success_no_such_shadow311(self):
+        self._do_mqtt311_test(
             lambda protocol_client: self._do_get_shadow_success_no_such_shadow_test(
                 protocol_client, True))
 
     def test_get_shadow_success_no_such_shadow311(self):
-        self._do_mqtt311_test(
-            lambda protocol_client: self._do_get_shadow_success_no_such_shadow_test(
-                protocol_client, True))
+        test_retry_wrapper(self._test_get_shadow_success_no_such_shadow311)
 
-    def test_get_shadow_success_no_such_shadow_no_correlation_token5(self):
+    def _test_get_shadow_success_no_such_shadow_no_correlation_token5(self):
         self._do_mqtt5_test(
             lambda protocol_client: self._do_get_shadow_success_no_such_shadow_test(
                 protocol_client, False))
 
-    def test_get_shadow_success_no_such_shadow_no_correlation_token311(self):
+    def test_get_shadow_success_no_such_shadow_no_correlation_token5(self):
+        test_retry_wrapper(self._test_get_shadow_success_no_such_shadow_no_correlation_token5)
+
+    def _test_get_shadow_success_no_such_shadow_no_correlation_token311(self):
         self._do_mqtt311_test(
             lambda protocol_client: self._do_get_shadow_success_no_such_shadow_test(
                 protocol_client, False))
 
-    def test_update_delete_shadow_success5(self):
+    def test_get_shadow_success_no_such_shadow_no_correlation_token311(self):
+        test_retry_wrapper(self._test_get_shadow_success_no_such_shadow_no_correlation_token311)
+
+    def _test_update_delete_shadow_success5(self):
         self._do_mqtt5_test(lambda protocol_client: self._do_update_delete_shadow_success_test(protocol_client, True))
 
-    def test_update_delete_shadow_success311(self):
+    def test_update_delete_shadow_success5(self):
+        test_retry_wrapper(self._test_update_delete_shadow_success5)
+
+    def _test_update_delete_shadow_success311(self):
         self._do_mqtt311_test(lambda protocol_client: self._do_update_delete_shadow_success_test(protocol_client, True))
 
-    def test_update_delete_shadow_success_no_correlation_token5(self):
+    def test_update_delete_shadow_success311(self):
+        test_retry_wrapper(self._test_update_delete_shadow_success311)
+
+    def _test_update_delete_shadow_success_no_correlation_token5(self):
         self._do_mqtt5_test(lambda protocol_client: self._do_update_delete_shadow_success_test(protocol_client, False))
 
-    def test_update_delete_shadow_success_no_correlation_token311(self):
+    def test_update_delete_shadow_success_no_correlation_token5(self):
+        test_retry_wrapper(self._test_update_delete_shadow_success_no_correlation_token5)
+
+    def _test_update_delete_shadow_success_no_correlation_token311(self):
         self._do_mqtt311_test(
             lambda protocol_client: self._do_update_delete_shadow_success_test(
                 protocol_client, False))
+
+    def test_update_delete_shadow_success_no_correlation_token311(self):
+        test_retry_wrapper(self._test_update_delete_shadow_success_no_correlation_token311)
 
     # ==============================================================
     #             make_request FAILURE TEST CASES
     # ==============================================================
 
-    def test_get_shadow_failure_no_response_paths5(self):
+    def _test_get_shadow_failure_no_response_paths5(self):
         self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(
+            protocol_client, lambda options: _empty_response_paths(options)))
+
+    def test_get_shadow_failure_no_response_paths5(self):
+        test_retry_wrapper(self._test_get_shadow_failure_no_response_paths5)
+
+    def _test_get_shadow_failure_no_response_paths311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(
             protocol_client, lambda options: _empty_response_paths(options)))
 
     def test_get_shadow_failure_no_response_paths311(self):
-        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(
-            protocol_client, lambda options: _empty_response_paths(options)))
+        test_retry_wrapper(self._test_get_shadow_failure_no_response_paths311)
+
+    def _test_get_shadow_failure_invalid_response_path_topic5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_future_failure_test(
+            protocol_client, lambda options: _invalidate_response_path_topic(options)))
 
     def test_get_shadow_failure_invalid_response_path_topic5(self):
-        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_future_failure_test(
+        test_retry_wrapper(self._test_get_shadow_failure_invalid_response_path_topic5)
+
+    def _test_get_shadow_failure_invalid_response_path_topic311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_future_failure_test(
             protocol_client, lambda options: _invalidate_response_path_topic(options)))
 
     def test_get_shadow_failure_invalid_response_path_topic311(self):
-        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_future_failure_test(
-            protocol_client, lambda options: _invalidate_response_path_topic(options)))
+        test_retry_wrapper(self._test_get_shadow_failure_invalid_response_path_topic311)
+
+    def _test_get_shadow_failure_none_response_path_topic5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(
+            protocol_client, lambda options: _none_response_path_topic(options)))
 
     def test_get_shadow_failure_none_response_path_topic5(self):
-        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(
+        test_retry_wrapper(self._test_get_shadow_failure_none_response_path_topic5)
+
+    def _test_get_shadow_failure_none_response_path_topic311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(
             protocol_client, lambda options: _none_response_path_topic(options)))
 
     def test_get_shadow_failure_none_response_path_topic311(self):
-        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(
-            protocol_client, lambda options: _none_response_path_topic(options)))
+        test_retry_wrapper(self._test_get_shadow_failure_none_response_path_topic311)
+
+    def _test_get_shadow_failure_missing_response_path_topic5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(
+            protocol_client, lambda options: _missing_response_path_topic(options)))
 
     def test_get_shadow_failure_missing_response_path_topic5(self):
-        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(
+        test_retry_wrapper(self._test_get_shadow_failure_missing_response_path_topic5)
+
+    def _test_get_shadow_failure_missing_response_path_topic311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(
             protocol_client, lambda options: _missing_response_path_topic(options)))
 
     def test_get_shadow_failure_missing_response_path_topic311(self):
-        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(
-            protocol_client, lambda options: _missing_response_path_topic(options)))
+        test_retry_wrapper(self._test_get_shadow_failure_missing_response_path_topic311)
+
+    def _test_get_shadow_failure_response_path_topic_type_mismatch5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(
+            protocol_client, lambda options: _type_mismatch_response_path_topic(options)))
 
     def test_get_shadow_failure_response_path_topic_type_mismatch5(self):
-        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(
+        test_retry_wrapper(self._test_get_shadow_failure_response_path_topic_type_mismatch5)
+
+    def _test_get_shadow_failure_response_path_topic_type_mismatch311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(
             protocol_client, lambda options: _type_mismatch_response_path_topic(options)))
 
     def test_get_shadow_failure_response_path_topic_type_mismatch311(self):
-        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(
-            protocol_client, lambda options: _type_mismatch_response_path_topic(options)))
+        test_retry_wrapper(self._test_get_shadow_failure_response_path_topic_type_mismatch311)
+
+    def _test_get_shadow_failure_response_path_correlation_token_json_path_type_mismatch5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(
+            protocol_client, lambda options: _type_mismatch_response_path_correlation_token_json_path(options)))
 
     def test_get_shadow_failure_response_path_correlation_token_json_path_type_mismatch5(self):
-        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(
+        test_retry_wrapper(self._test_get_shadow_failure_response_path_correlation_token_json_path_type_mismatch5)
+
+    def _test_get_shadow_failure_response_path_correlation_token_json_path_type_mismatch311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(
             protocol_client, lambda options: _type_mismatch_response_path_correlation_token_json_path(options)))
 
     def test_get_shadow_failure_response_path_correlation_token_json_path_type_mismatch311(self):
-        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(
-            protocol_client, lambda options: _type_mismatch_response_path_correlation_token_json_path(options)))
+        test_retry_wrapper(self._test_get_shadow_failure_response_path_correlation_token_json_path_type_mismatch311)
+
+    def _test_get_shadow_failure_response_paths_type_mismatch5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(
+            protocol_client, lambda options: _type_mismatch_response_paths(options)))
 
     def test_get_shadow_failure_response_paths_type_mismatch5(self):
-        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(
+        test_retry_wrapper(self._test_get_shadow_failure_response_paths_type_mismatch5)
+
+    def _test_get_shadow_failure_response_paths_type_mismatch311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(
             protocol_client, lambda options: _type_mismatch_response_paths(options)))
 
     def test_get_shadow_failure_response_paths_type_mismatch311(self):
-        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(
-            protocol_client, lambda options: _type_mismatch_response_paths(options)))
+        test_retry_wrapper(self._test_get_shadow_failure_response_paths_type_mismatch311)
 
-    def test_get_shadow_failure_invalid_subscription_topic5(self):
+    def _test_get_shadow_failure_invalid_subscription_topic5(self):
         self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_future_failure_test(
             protocol_client, lambda options: _invalidate_subscription_topic_filter(options)))
 
-    def test_get_shadow_failure_invalid_subscription_topic311(self):
+    def test_get_shadow_failure_invalid_subscription_topic5(self):
+        test_retry_wrapper(self._test_get_shadow_failure_invalid_subscription_topic5)
+
+    def _test_get_shadow_failure_invalid_subscription_topic311(self):
         self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_future_failure_test(
             protocol_client, lambda options: _invalidate_subscription_topic_filter(options)))
 
-    def test_get_shadow_failure_subscription_topic_type_mismatch5(self):
+    def test_get_shadow_failure_invalid_subscription_topic311(self):
+        test_retry_wrapper(self._test_get_shadow_failure_invalid_subscription_topic311)
+
+    def _test_get_shadow_failure_subscription_topic_type_mismatch5(self):
         self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(
+            protocol_client, lambda options: _type_mismatch_subscription_topic_filter(options)))
+
+    def test_get_shadow_failure_subscription_topic_type_mismatch5(self):
+        test_retry_wrapper(self._test_get_shadow_failure_subscription_topic_type_mismatch5)
+
+    def _test_get_shadow_failure_subscription_topic_type_mismatch311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(
             protocol_client, lambda options: _type_mismatch_subscription_topic_filter(options)))
 
     def test_get_shadow_failure_subscription_topic_type_mismatch311(self):
-        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(
-            protocol_client, lambda options: _type_mismatch_subscription_topic_filter(options)))
+        test_retry_wrapper(self._test_get_shadow_failure_subscription_topic_type_mismatch311)
+
+    def _test_get_shadow_failure_subscriptions_type_mismatch5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(
+            protocol_client, lambda options: _type_mismatch_subscriptions(options)))
 
     def test_get_shadow_failure_subscriptions_type_mismatch5(self):
-        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(
+        test_retry_wrapper(self._test_get_shadow_failure_subscriptions_type_mismatch5)
+
+    def _test_get_shadow_failure_subscriptions_type_mismatch311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(
             protocol_client, lambda options: _type_mismatch_subscriptions(options)))
 
     def test_get_shadow_failure_subscriptions_type_mismatch311(self):
-        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(
-            protocol_client, lambda options: _type_mismatch_subscriptions(options)))
+        test_retry_wrapper(self._test_get_shadow_failure_subscriptions_type_mismatch311)
+
+    def _test_get_shadow_failure_empty_subscriptions5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(
+            protocol_client, lambda options: _empty_subscription_topic_filters(options)))
 
     def test_get_shadow_failure_empty_subscriptions5(self):
-        self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(
+        test_retry_wrapper(self._test_get_shadow_failure_empty_subscriptions5)
+
+    def _test_get_shadow_failure_empty_subscriptions311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(
             protocol_client, lambda options: _empty_subscription_topic_filters(options)))
 
     def test_get_shadow_failure_empty_subscriptions311(self):
-        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(
-            protocol_client, lambda options: _empty_subscription_topic_filters(options)))
+        test_retry_wrapper(self._test_get_shadow_failure_empty_subscriptions311)
 
-    def test_get_shadow_failure_none_publish_topic5(self):
+    def _test_get_shadow_failure_none_publish_topic5(self):
         self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(
             protocol_client, lambda options: _none_publish_topic(options)))
 
-    def test_get_shadow_failure_none_publish_topic311(self):
+    def test_get_shadow_failure_none_publish_topic5(self):
+        test_retry_wrapper(self._test_get_shadow_failure_none_publish_topic5)
+
+    def _test_get_shadow_failure_none_publish_topic311(self):
         self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(
             protocol_client, lambda options: _none_publish_topic(options)))
 
-    def test_get_shadow_failure_bad_publish_topic5(self):
+    def test_get_shadow_failure_none_publish_topic311(self):
+        test_retry_wrapper(self._test_get_shadow_failure_none_publish_topic311)
+
+    def _test_get_shadow_failure_bad_publish_topic5(self):
         self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_future_failure_test(
             protocol_client, lambda options: _bad_publish_topic(options)))
 
-    def test_get_shadow_failure_bad_publish_topic311(self):
+    def test_get_shadow_failure_bad_publish_topic5(self):
+        test_retry_wrapper(self._test_get_shadow_failure_bad_publish_topic5)
+
+    def _test_get_shadow_failure_bad_publish_topic311(self):
         self._do_mqtt311_test(
             lambda protocol_client: self._do_get_shadow_future_failure_test(
                 protocol_client,
                 lambda options: _bad_publish_topic(options)))
 
-    def test_get_shadow_failure_publish_topic_type_mismatch5(self):
+    def test_get_shadow_failure_bad_publish_topic311(self):
+        test_retry_wrapper(self._test_get_shadow_failure_bad_publish_topic311)
+
+    def _test_get_shadow_failure_publish_topic_type_mismatch5(self):
         self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(
+            protocol_client, lambda options: _type_mismatch_publish_topic(options)))
+
+    def test_get_shadow_failure_publish_topic_type_mismatch5(self):
+        test_retry_wrapper(self._test_get_shadow_failure_publish_topic_type_mismatch5)
+
+    def _test_get_shadow_failure_publish_topic_type_mismatch311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(
             protocol_client, lambda options: _type_mismatch_publish_topic(options)))
 
     def test_get_shadow_failure_publish_topic_type_mismatch311(self):
-        self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(
-            protocol_client, lambda options: _type_mismatch_publish_topic(options)))
+        test_retry_wrapper(self._test_get_shadow_failure_publish_topic_type_mismatch311)
 
-    def test_get_shadow_failure_correlation_token_type_mismatch5(self):
+    def _test_get_shadow_failure_correlation_token_type_mismatch5(self):
         self._do_mqtt5_test(lambda protocol_client: self._do_get_shadow_failure_test(
             protocol_client, lambda options: _type_mismatch_correlation_token(options)))
 
-    def test_get_shadow_failure_correlation_token_type_mismatch311(self):
+    def test_get_shadow_failure_correlation_token_type_mismatch5(self):
+        test_retry_wrapper(self._test_get_shadow_failure_correlation_token_type_mismatch5)
+
+    def _test_get_shadow_failure_correlation_token_type_mismatch311(self):
         self._do_mqtt311_test(lambda protocol_client: self._do_get_shadow_failure_test(
             protocol_client, lambda options: _type_mismatch_correlation_token(options)))
+
+    def test_get_shadow_failure_correlation_token_type_mismatch311(self):
+        test_retry_wrapper(self._test_get_shadow_failure_correlation_token_type_mismatch311)
 
     # ==============================================================
     #             streaming operation SUCCESS TEST CASES
     # ==============================================================
 
-    def test_streaming_operation_success5(self):
+    def _test_streaming_operation_success5(self):
         self._do_mqtt5_test(lambda protocol_client: self._do_stream_success_test(protocol_client))
 
-    def test_streaming_operation_success311(self):
+    def test_streaming_operation_success5(self):
+        test_retry_wrapper(self._test_streaming_operation_success5)
+
+    def _test_streaming_operation_success311(self):
         self._do_mqtt311_test(lambda protocol_client: self._do_stream_success_test(protocol_client))
+
+    def test_streaming_operation_success311(self):
+        test_retry_wrapper(self._test_streaming_operation_success311)
 
     # ==============================================================
     #             create_stream FAILURE TEST CASES
     # ==============================================================
-    def test_create_stream_failure_subscription_topic_filter_none5(self):
+    def _test_create_stream_failure_subscription_topic_filter_none5(self):
         self._do_mqtt5_test(lambda protocol_client: self._do_create_stream_failure_test(
+            protocol_client, lambda options: _subscription_topic_filter_none(options)))
+
+    def test_create_stream_failure_subscription_topic_filter_none5(self):
+        test_retry_wrapper(self._test_create_stream_failure_subscription_topic_filter_none5)
+
+    def _test_create_stream_failure_subscription_topic_filter_none311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_create_stream_failure_test(
             protocol_client, lambda options: _subscription_topic_filter_none(options)))
 
     def test_create_stream_failure_subscription_topic_filter_none311(self):
-        self._do_mqtt311_test(lambda protocol_client: self._do_create_stream_failure_test(
-            protocol_client, lambda options: _subscription_topic_filter_none(options)))
+        test_retry_wrapper(self._test_create_stream_failure_subscription_topic_filter_none311)
+
+    def _test_create_stream_failure_subscription_topic_filter_type_mismatch5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_create_stream_failure_test(
+            protocol_client, lambda options: _type_mismatch_stream_subscription_topic_filter(options)))
 
     def test_create_stream_failure_subscription_topic_filter_type_mismatch5(self):
-        self._do_mqtt5_test(lambda protocol_client: self._do_create_stream_failure_test(
+        test_retry_wrapper(self._test_create_stream_failure_subscription_topic_filter_type_mismatch5)
+
+    def _test_create_stream_failure_subscription_topic_filter_type_mismatch311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_create_stream_failure_test(
             protocol_client, lambda options: _type_mismatch_stream_subscription_topic_filter(options)))
 
     def test_create_stream_failure_subscription_topic_filter_type_mismatch311(self):
-        self._do_mqtt311_test(lambda protocol_client: self._do_create_stream_failure_test(
-            protocol_client, lambda options: _type_mismatch_stream_subscription_topic_filter(options)))
+        test_retry_wrapper(self._test_create_stream_failure_subscription_topic_filter_type_mismatch311)
+
+    def _test_create_stream_failure_subscription_status_listener_type_mismatch5(self):
+        self._do_mqtt5_test(lambda protocol_client: self._do_create_stream_failure_test(
+            protocol_client, lambda options: _type_mismatch_subscription_status_listener(options)))
 
     def test_create_stream_failure_subscription_status_listener_type_mismatch5(self):
-        self._do_mqtt5_test(lambda protocol_client: self._do_create_stream_failure_test(
+        test_retry_wrapper(self._test_create_stream_failure_subscription_status_listener_type_mismatch5)
+
+    def _test_create_stream_failure_subscription_status_listener_type_mismatch311(self):
+        self._do_mqtt311_test(lambda protocol_client: self._do_create_stream_failure_test(
             protocol_client, lambda options: _type_mismatch_subscription_status_listener(options)))
 
     def test_create_stream_failure_subscription_status_listener_type_mismatch311(self):
-        self._do_mqtt311_test(lambda protocol_client: self._do_create_stream_failure_test(
-            protocol_client, lambda options: _type_mismatch_subscription_status_listener(options)))
+        test_retry_wrapper(self._test_create_stream_failure_subscription_status_listener_type_mismatch311)
 
-    def test_create_stream_failure_incoming_publish_listener_type_mismatch5(self):
+    def _test_create_stream_failure_incoming_publish_listener_type_mismatch5(self):
         self._do_mqtt5_test(lambda protocol_client: self._do_create_stream_failure_test(
             protocol_client, lambda options: _type_mismatch_incoming_publish_listener(options)))
 
-    def test_create_stream_failure_incoming_publish_listener_type_mismatch311(self):
+    def test_create_stream_failure_incoming_publish_listener_type_mismatch5(self):
+        test_retry_wrapper(self._test_create_stream_failure_incoming_publish_listener_type_mismatch5)
+
+    def _test_create_stream_failure_incoming_publish_listener_type_mismatch311(self):
         self._do_mqtt311_test(lambda protocol_client: self._do_create_stream_failure_test(
             protocol_client, lambda options: _type_mismatch_incoming_publish_listener(options)))
+
+    def test_create_stream_failure_incoming_publish_listener_type_mismatch311(self):
+        test_retry_wrapper(self._test_create_stream_failure_incoming_publish_listener_type_mismatch311)
 
 
 if __name__ == 'main':

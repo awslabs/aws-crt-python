@@ -580,5 +580,6 @@ class Mqtt5to3AdapterTest(NativeResourceTest):
     def test_multiple_adapters(self):
         test_retry_wrapper(self._test_multiple_adapters)
 
+
 if __name__ == 'main':
     unittest.main()

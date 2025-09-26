@@ -57,11 +57,14 @@ class NativeResourceTest(unittest.TestCase):
             NativeResourceTest._previous_test_failed = True
             raise
 
+
 MAX_RETRIES = 5
+
 
 def _is_retryable_exception(e):
     exception_text = str(e)
     return "AWS_IO_TLS_NEGOTIATION_TIMEOUT" in exception_text or "AWS_IO_SOCKET_TIMEOUT" in exception_text
+
 
 def test_retry_wrapper(test_function):
     for i in range(MAX_RETRIES):

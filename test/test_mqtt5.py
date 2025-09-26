@@ -106,6 +106,7 @@ class Mqtt5TestCallbacks():
 
 MAX_RETRIES = 5
 
+
 class Mqtt5ClientTest(NativeResourceTest):
 
     def _create_client(
@@ -1133,7 +1134,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         test_retry_wrapper(self._test_operation_will)
 
     def _do_will_correlation_data_test(self, outbound_correlation_data_bytes, outbound_correlation_data,
-                                      expected_correlation_data_bytes, expected_correlation_data):
+                                       expected_correlation_data_bytes, expected_correlation_data):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
         input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
@@ -1305,7 +1306,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         test_retry_wrapper(self._test_operation_binary_publish)
 
     def _do_correlation_data_test(self, outbound_correlation_data_bytes, outbound_correlation_data,
-                                 expected_correlation_data_bytes, expected_correlation_data):
+                                  expected_correlation_data_bytes, expected_correlation_data):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
         input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
@@ -1843,6 +1844,7 @@ class Mqtt5ClientTest(NativeResourceTest):
 
     def test_operation_statistics_uc1(self):
         test_retry_wrapper(self._test_operation_statistics_uc1)
+
 
 if __name__ == 'main':
     unittest.main()
