@@ -44,7 +44,10 @@ class MqttRequestResponse5TestCallbacks():
 
     def on_lifecycle_connection_success(self, lifecycle_connection_success: mqtt5.LifecycleConnectSuccessData):
         if self.future_connection_success:
-            self.future_connection_success.set_result(lifecycle_connection_success)
+            if self.future_connection_success.done():
+                pass
+            else:
+                self.future_connection_success.set_result(lifecycle_connection_success)
 
     def on_lifecycle_connection_failure(self, lifecycle_connection_failure: mqtt5.LifecycleConnectFailureData):
         if self.future_connection_success:
