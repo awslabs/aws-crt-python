@@ -553,6 +553,10 @@ class MqttConnectionTest(NativeResourceTest):
         self.assertEqual(success_data['return_code'], ConnectReturnCode.ACCEPTED)
         self.assertEqual(success_data['session_present'], False)
 
+        # Putting a sleep here helps prevent a "race" condition in IoT Core where the second connection can get
+        # rejected rather than the first disconnected.
+        time.sleep(5)
+
         # Reset the future for the reconnect attempt.
         on_connection_success_future = Future()
 
