@@ -5,7 +5,8 @@ from concurrent.futures import Future
 from awscrt import mqtt5, io, http, exceptions
 from test import NativeResourceTest
 from threading import Lock
-import os, sys
+import os
+import sys
 import unittest
 import uuid
 import time
@@ -274,7 +275,6 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    @unittest.skipIf(sys.platform=="Linux", "s2n policy only available on linux")
     def test_direct_connect_mutual_tls_with_tlsv1_2_2025(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
@@ -288,8 +288,19 @@ class Mqtt5ClientTest(NativeResourceTest):
             input_cert,
             input_key
         )
-        tls_ctx_options.cipher_pref = io.TlsCipherPref.TLSv1_2_2025_07
-        client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
+        exception_occurred = None
+        try:
+            tls_ctx_options.cipher_pref = io.TlsCipherPref.TLSv1_2_2025_07
+            client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
+        except Exception as e:
+            if sys.platform.startswith("Linux"):
+                exception_occurred = e
+            # The cipher suite is only supported on Linux with s2n so far. If we are
+            # not on Linux, we should get AWS_IO_TLS_CIPHER_PREF_UNSUPPORTED error
+            elif 'AWS_IO_TLS_CIPHER_PREF_UNSUPPORTED' not in str(e):
+                exception_occurred = e
+
+        self.assertIsNone(exception_occurred, "Exception on set tls cipher preference.")
 
         callbacks = Mqtt5TestCallbacks()
         client = self._create_client(client_options=client_options, callbacks=callbacks)
