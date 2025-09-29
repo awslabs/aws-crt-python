@@ -3,7 +3,7 @@
 
 from concurrent.futures import Future
 from awscrt import mqtt5, io, auth
-from test import NativeResourceTest
+from test import test_retry_wrapper, NativeResourceTest
 import os
 import unittest
 import uuid
@@ -108,7 +108,7 @@ class MqttConnectionTest(NativeResourceTest):
         client = mqtt5.Client(client_options)
         return client
 
-    def test_mqtt5_cred_pkcs12(self):
+    def _test_mqtt5_cred_pkcs12(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_PKCS12_KEY")
         input_key_password = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_PKCS12_KEY_PASSWORD")
@@ -130,7 +130,10 @@ class MqttConnectionTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    def test_mqtt5_cred_windows_cert(self):
+    def test_mqtt5_cred_pkcs12(self):
+        test_retry_wrapper(self._test_mqtt5_cred_pkcs12)
+
+    def _test_mqtt5_cred_windows_cert(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_windows = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_WINDOWS_CERT_STORE")
 
@@ -150,7 +153,10 @@ class MqttConnectionTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    def test_mqtt5_cred_pkcs11(self):
+    def test_mqtt5_cred_windows_cert(self):
+        test_retry_wrapper(self._test_mqtt5_cred_windows_cert)
+
+    def _test_mqtt5_cred_pkcs11(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_pkcs11_lib = _get_env_variable("AWS_TEST_PKCS11_LIB")
         input_pkcs11_pin = _get_env_variable("AWS_TEST_PKCS11_PIN")
@@ -181,7 +187,10 @@ class MqttConnectionTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    def test_mqtt5_ws_cred_static(self):
+    def test_mqtt5_cred_pkcs11(self):
+        test_retry_wrapper(self._test_mqtt5_cred_pkcs11)
+
+    def _test_mqtt5_ws_cred_static(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_role_access_key = _get_env_variable("AWS_TEST_MQTT5_ROLE_CREDENTIAL_ACCESS_KEY")
         input_role_secret_access_key = _get_env_variable("AWS_TEST_MQTT5_ROLE_CREDENTIAL_SECRET_ACCESS_KEY")
@@ -221,7 +230,10 @@ class MqttConnectionTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    def test_mqtt5_ws_cred_cognito(self):
+    def test_mqtt5_ws_cred_static(self):
+        test_retry_wrapper(self._test_mqtt5_ws_cred_static)
+
+    def _test_mqtt5_ws_cred_cognito(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_cognito_endpoint = _get_env_variable("AWS_TEST_MQTT5_COGNITO_ENDPOINT")
         input_cognito_identity = _get_env_variable("AWS_TEST_MQTT5_COGNITO_IDENTITY")
@@ -260,7 +272,10 @@ class MqttConnectionTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    def test_mqtt5_ws_cred_x509(self):
+    def test_mqtt5_ws_cred_cognito(self):
+        test_retry_wrapper(self._test_mqtt5_ws_cred_cognito)
+
+    def _test_mqtt5_ws_cred_x509(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_X509_CERT")
         input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_X509_KEY")
@@ -307,7 +322,10 @@ class MqttConnectionTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    def test_mqtt5_ws_cred_profile(self):
+    def test_mqtt5_ws_cred_x509(self):
+        test_retry_wrapper(self._test_mqtt5_ws_cred_x509)
+
+    def _test_mqtt5_ws_cred_profile(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_profile_config = _get_env_variable("AWS_TEST_MQTT5_IOT_PROFILE_CONFIG")
         input_profile_cred = _get_env_variable("AWS_TEST_MQTT5_IOT_PROFILE_CREDENTIALS")
@@ -345,13 +363,22 @@ class MqttConnectionTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
+    def test_mqtt5_ws_cred_profile(self):
+        test_retry_wrapper(self._test_mqtt5_ws_cred_profile)
+
+    def _test_mqtt5_ws_cred_environment(self):
+        self._test_mqtt5_ws_cred_environment_aux(use_default_chain=False)
+
     def test_mqtt5_ws_cred_environment(self):
-        self._test_mqtt5_ws_cred_environment(use_default_chain=False)
+        test_retry_wrapper(self._test_mqtt5_ws_cred_environment)
+
+    def _test_mqtt5_ws_cred_default_chain(self):
+        self._test_mqtt5_ws_cred_environment_aux(use_default_chain=True)
 
     def test_mqtt5_ws_cred_default_chain(self):
-        self._test_mqtt5_ws_cred_environment(use_default_chain=True)
+        test_retry_wrapper(self._test_mqtt5_ws_cred_default_chain)
 
-    def _test_mqtt5_ws_cred_environment(self, use_default_chain):
+    def _test_mqtt5_ws_cred_environment_aux(self, use_default_chain):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_access_key = _get_env_variable("AWS_TEST_MQTT5_ROLE_CREDENTIAL_ACCESS_KEY")
         input_secret_access_key = _get_env_variable("AWS_TEST_MQTT5_ROLE_CREDENTIAL_SECRET_ACCESS_KEY")
