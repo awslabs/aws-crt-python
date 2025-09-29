@@ -288,19 +288,18 @@ class Mqtt5ClientTest(NativeResourceTest):
             input_cert,
             input_key
         )
-        exception_occurred = None
+        
         try:
             tls_ctx_options.cipher_pref = io.TlsCipherPref.TLSv1_2_2025_07
             client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
         except Exception as e:
-            if sys.platform.startswith("Linux"):
-                exception_occurred = e
-            # The cipher suite is only supported on Linux with s2n so far. If we are
-            # not on Linux, we should get AWS_IO_TLS_CIPHER_PREF_UNSUPPORTED error
-            elif 'AWS_IO_TLS_CIPHER_PREF_UNSUPPORTED' not in str(e):
-                exception_occurred = e
-
-        self.assertIsNone(exception_occurred, "Exception on set tls cipher preference.")
+            if sys.platform.startswith("linux"):
+                # On Linux, this should not fail
+                self.fail(f"Unexpected error on Linux: {e}")
+            else:
+                # On non-Linux platforms, verify we get the expected error and skip
+                self.assertIn('AWS_IO_TLS_CIPHER_PREF_UNSUPPORTED', str(e))
+                self.skipTest(f"TLSv1_2_2025_07 not supported on {sys.platform}")
 
         callbacks = Mqtt5TestCallbacks()
         client = self._create_client(client_options=client_options, callbacks=callbacks)
