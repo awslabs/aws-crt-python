@@ -4,7 +4,7 @@
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, Pkcs11Lib, TlsContextOptions
 from awscrt import auth
 from awscrt.mqtt import Client, Connection
-from test import NativeResourceTest
+from test import test_retry_wrapper, NativeResourceTest
 import os
 import unittest
 import uuid
@@ -25,7 +25,7 @@ def create_client_id():
 
 class MqttConnectionTest(NativeResourceTest):
 
-    def test_mqtt311_cred_pkcs12(self):
+    def _test_mqtt311_cred_pkcs12(self):
         input_key = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_PKCS12_KEY")
         input_key_password = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_PKCS12_KEY_PASSWORD")
         input_host_name = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
@@ -46,7 +46,10 @@ class MqttConnectionTest(NativeResourceTest):
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
-    def test_mqtt311_cred_windows_cert(self):
+    def test_mqtt311_cred_pkcs12(self):
+        test_retry_wrapper(self._test_mqtt311_cred_pkcs12)
+
+    def _test_mqtt311_cred_windows_cert(self):
         input_windows = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_WINDOWS_CERT_STORE")
         input_host_name = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
 
@@ -65,7 +68,10 @@ class MqttConnectionTest(NativeResourceTest):
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
-    def test_mqtt311_cred_pkcs11(self):
+    def test_mqtt311_cred_windows_cert(self):
+        test_retry_wrapper(self._test_mqtt311_cred_windows_cert)
+
+    def _test_mqtt311_cred_pkcs11(self):
         input_pkcs11_lib = _get_env_variable("AWS_TEST_PKCS11_LIB")
         input_pkcs11_pin = _get_env_variable("AWS_TEST_PKCS11_PIN")
         input_pkcs11_token_label = _get_env_variable("AWS_TEST_PKCS11_TOKEN_LABEL")
@@ -95,7 +101,10 @@ class MqttConnectionTest(NativeResourceTest):
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
-    def test_mqtt311_ws_cred_static(self):
+    def test_mqtt311_cred_pkcs11(self):
+        test_retry_wrapper(self._test_mqtt311_cred_pkcs11)
+
+    def _test_mqtt311_ws_cred_static(self):
         input_role_access_key = _get_env_variable("AWS_TEST_MQTT311_ROLE_CREDENTIAL_ACCESS_KEY")
         input_role_secret_key = _get_env_variable("AWS_TEST_MQTT311_ROLE_CREDENTIAL_SECRET_ACCESS_KEY")
         input_role_session_token = _get_env_variable("AWS_TEST_MQTT311_ROLE_CREDENTIAL_SESSION_TOKEN")
@@ -136,7 +145,10 @@ class MqttConnectionTest(NativeResourceTest):
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
-    def test_mqtt311_ws_cred_cognito(self):
+    def test_mqtt311_ws_cred_static(self):
+        test_retry_wrapper(self._test_mqtt311_ws_cred_static)
+
+    def _test_mqtt311_ws_cred_cognito(self):
         input_cognito_endpoint = _get_env_variable("AWS_TEST_MQTT311_COGNITO_ENDPOINT")
         input_cognito_identity = _get_env_variable("AWS_TEST_MQTT311_COGNITO_IDENTITY")
         input_region = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_REGION")
@@ -178,7 +190,10 @@ class MqttConnectionTest(NativeResourceTest):
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
-    def test_mqtt311_ws_cred_x509(self):
+    def test_mqtt311_ws_cred_cognito(self):
+        test_retry_wrapper(self._test_mqtt311_ws_cred_cognito)
+
+    def _test_mqtt311_ws_cred_x509(self):
         input_x509_cert = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_X509_CERT")
         input_x509_key = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_X509_KEY")
         input_x509_endpoint = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_X509_ENDPOINT")
@@ -226,7 +241,10 @@ class MqttConnectionTest(NativeResourceTest):
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
-    def test_mqtt311_ws_cred_profile(self):
+    def test_mqtt311_ws_cred_x509(self):
+        test_retry_wrapper(self._test_mqtt311_ws_cred_x509)
+
+    def _test_mqtt311_ws_cred_profile(self):
         input_profile_config = _get_env_variable("AWS_TEST_MQTT311_IOT_PROFILE_CONFIG")
         input_profile_cred = _get_env_variable("AWS_TEST_MQTT311_IOT_PROFILE_CREDENTIALS")
         input_region = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_REGION")
@@ -265,13 +283,22 @@ class MqttConnectionTest(NativeResourceTest):
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
+    def test_mqtt311_ws_cred_profile(self):
+        test_retry_wrapper(self._test_mqtt311_ws_cred_profile)
+
+    def _test_mqtt311_ws_cred_environment(self):
+        self._test_mqtt311_ws_cred_environment_aux(use_default_chain=False)
+
     def test_mqtt311_ws_cred_environment(self):
-        self._test_mqtt311_ws_cred_environment(use_default_chain=False)
+        test_retry_wrapper(self._test_mqtt311_ws_cred_environment)
+
+    def _test_mqtt311_ws_cred_default(self):
+        self._test_mqtt311_ws_cred_environment_aux(use_default_chain=True)
 
     def test_mqtt311_ws_cred_default(self):
-        self._test_mqtt311_ws_cred_environment(use_default_chain=True)
+        test_retry_wrapper(self._test_mqtt311_ws_cred_default)
 
-    def _test_mqtt311_ws_cred_environment(self, use_default_chain):
+    def _test_mqtt311_ws_cred_environment_aux(self, use_default_chain):
         input_access_key = _get_env_variable("AWS_TEST_MQTT311_ROLE_CREDENTIAL_ACCESS_KEY")
         input_secret_access_key = _get_env_variable("AWS_TEST_MQTT311_ROLE_CREDENTIAL_SECRET_ACCESS_KEY")
         input_session_token = _get_env_variable("AWS_TEST_MQTT311_ROLE_CREDENTIAL_SESSION_TOKEN")
