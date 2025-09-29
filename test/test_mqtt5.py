@@ -288,7 +288,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             input_cert,
             input_key
         )
-        
+
         try:
             tls_ctx_options.cipher_pref = io.TlsCipherPref.TLSv1_2_2025_07
             client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
