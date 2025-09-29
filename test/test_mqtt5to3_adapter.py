@@ -4,7 +4,7 @@
 from concurrent.futures import Future
 from awscrt import mqtt5, io, http, exceptions
 from awscrt.mqtt import Connection, ConnectReturnCode, OnConnectionSuccessData, OnConnectionFailureData, OnConnectionClosedData, QoS
-from test import NativeResourceTest
+from test import test_retry_wrapper, NativeResourceTest
 from test.test_mqtt5 import Mqtt5TestCallbacks, _get_env_variable, create_client_id
 import unittest
 import uuid
@@ -220,20 +220,6 @@ class Mqtt5to3AdapterTest(NativeResourceTest):
 
         return self._create_client(client_options=client_options, callbacks=callbacks), callbacks
 
-    def _test_with_mqtt3_connect(self, setup_client: callable):
-        client, callbacks = setup_client()
-        connection = client.new_connection()
-        connection.connect().result(TIMEOUT)
-        connection.disconnect().result(TIMEOUT)
-
-    def _test_with_mqtt5_connect(self, setup_client: callable):
-        client, callbacks = setup_client()
-        connection = client.new_connection()
-        client.start()
-        callbacks.future_connection_success.result(TIMEOUT)
-        client.stop()
-        callbacks.future_stopped.result(TIMEOUT)
-
     # ==============================================================
     #             CONNECTION TEST HELPER FUNCTIONS
     # ==============================================================
@@ -315,14 +301,20 @@ class Mqtt5to3AdapterTest(NativeResourceTest):
     # ==============================================================
     #         CONNECT THROUGH MQTT311 INTERFACE TEST CASES
     # ==============================================================
-    def test_direct_connect_through_mqtt311_minimum(self):
+    def _test_direct_connect_through_mqtt311_minimum(self):
         self._test_with_mqtt3_connect(self._setup_direct_connect_minimum)
+
+    def test_direct_connect_through_mqtt311_minimum(self):
+        test_retry_wrapper(self._test_direct_connect_through_mqtt311_minimum)
 
     # def test_direct_connect_through_mqtt311_basic_auth(self):
     #     self._test_with_mqtt3_connect(self._setup_direct_connect_basic_auth)
 
-    def test_direct_connect_through_mqtt311_mutual_tls(self):
+    def _test_direct_connect_through_mqtt311_mutual_tls(self):
         self._test_with_mqtt3_connect(self._setup_direct_connect_mutual_tls)
+
+    def test_direct_connect_through_mqtt311_mutual_tls(self):
+        test_retry_wrapper(self._test_direct_connect_through_mqtt311_mutual_tls)
 
     # def test_direct_connect_through_mqtt311_websocket_minimum(self):
     #     self._test_with_mqtt3_connect(self._setup_websocket_connect_minimum)
@@ -334,14 +326,20 @@ class Mqtt5to3AdapterTest(NativeResourceTest):
     #         CONNECT THROUGH MQTT5 INTERFACE TEST CASES
     # ==============================================================
 
-    def test_direct_connect_through_mqtt5_minimum(self):
+    def _test_direct_connect_through_mqtt5_minimum(self):
         self._test_with_mqtt5_connect(self._setup_direct_connect_minimum)
+
+    def test_direct_connect_through_mqtt5_minimum(self):
+        test_retry_wrapper(self._test_direct_connect_through_mqtt5_minimum)
 
     # def test_direct_connect_through_mqtt5_basic_auth(self):
     #     self._test_with_mqtt5_connect(self._setup_direct_connect_basic_auth)
 
-    def test_direct_connect_through_mqtt5_mutual_tls(self):
+    def _test_direct_connect_through_mqtt5_mutual_tls(self):
         self._test_with_mqtt5_connect(self._setup_direct_connect_mutual_tls)
+
+    def test_direct_connect_through_mqtt5_mutual_tls(self):
+        test_retry_wrapper(self._test_direct_connect_through_mqtt5_mutual_tls)
 
     # def test_direct_connect_through_mqtt5_websocket_minimum(self):
     #     self._test_with_mqtt5_connect(self._setup_websocket_connect_minimum)
@@ -353,7 +351,7 @@ class Mqtt5to3AdapterTest(NativeResourceTest):
     #             OPERATION TEST CASES
     # ==============================================================
 
-    def test_operation_sub_unsub(self):
+    def _test_operation_sub_unsub(self):
         TEST_TOPIC = '/test/topic/adapter' + str(uuid.uuid4())
 
         client, mqtt5_callbacks = self._setup_direct_connect_mutual_tls()
@@ -397,7 +395,10 @@ class Mqtt5to3AdapterTest(NativeResourceTest):
 
         connection.disconnect().result(TIMEOUT)
 
-    def test_operation_null_ack(self):
+    def test_operation_sub_unsub(self):
+        test_retry_wrapper(self._test_operation_sub_unsub)
+
+    def _test_operation_null_ack(self):
         TEST_TOPIC = '/test/topic/adapter' + str(uuid.uuid4())
         exception_occurred = False
 
@@ -420,10 +421,13 @@ class Mqtt5to3AdapterTest(NativeResourceTest):
 
         assert (exception_occurred)
 
+    def test_operation_null_ack(self):
+        test_retry_wrapper(self._test_operation_null_ack)
+
     # ==============================================================
     #                 MQTT311 CALLBACK TEST CASES
     # ==============================================================
-    def test_connection_success_callback(self):
+    def _test_connection_success_callback(self):
         client, _ = self._setup_direct_connect_minimum()
         mqtt311_callbacks = Mqtt311TestCallbacks()
         connection = self._create_connection(client, mqtt311_callbacks)
@@ -432,7 +436,10 @@ class Mqtt5to3AdapterTest(NativeResourceTest):
         mqtt311_callbacks.future_connection_success.result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
-    def test_connection_failure_callback(self):
+    def test_connection_success_callback(self):
+        test_retry_wrapper(self._test_connection_success_callback)
+
+    def _test_connection_failure_callback(self):
         client_options = mqtt5.ClientOptions(
             host_name="badhost",
             port=1883
@@ -451,7 +458,10 @@ class Mqtt5to3AdapterTest(NativeResourceTest):
         failure_data = mqtt311_callbacks.future_connection_failure.result(TIMEOUT)
         self.assertTrue(failure_data['error'] is not None)
 
-    def test_connection_interrupted_and_resumed_callback(self):
+    def test_connection_failure_callback(self):
+        test_retry_wrapper(self._test_connection_failure_callback)
+
+    def _test_connection_interrupted_and_resumed_callback(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_HOST")
         input_port = int(_get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_PORT"))
 
@@ -487,10 +497,13 @@ class Mqtt5to3AdapterTest(NativeResourceTest):
         connection1.disconnect().result(TIMEOUT)
         connection2.disconnect().result(TIMEOUT)
 
+    def test_connection_interrupted_and_resumed_callback(self):
+        test_retry_wrapper(self._test_connection_interrupted_and_resumed_callback)
+
     # ==============================================================
     #                 ADAPTER TEST CASES
     # ==============================================================
-    def test_multiple_adapters(self):
+    def _test_multiple_adapters(self):
         TEST_TOPIC1 = '/test/topic/adapter1' + str(uuid.uuid4())
         TEST_TOPIC2 = '/test/topic/adapter2' + str(uuid.uuid4())
         TEST_TOPIC3 = '/test/topic/adapter3' + str(uuid.uuid4())
@@ -563,6 +576,9 @@ class Mqtt5to3AdapterTest(NativeResourceTest):
 
         client.stop()
         mqtt5_callbacks.future_stopped.result(TIMEOUT)
+
+    def test_multiple_adapters(self):
+        test_retry_wrapper(self._test_multiple_adapters)
 
 
 if __name__ == 'main':
