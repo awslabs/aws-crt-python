@@ -4,7 +4,7 @@
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, Pkcs11Lib, TlsContextOptions
 from awscrt import http
 from awscrt.mqtt import Client, Connection, QoS, Will, OnConnectionClosedData, OnConnectionFailureData, OnConnectionSuccessData, ConnectReturnCode
-from test import NativeResourceTest
+from test import test_retry_wrapper, NativeResourceTest
 from concurrent.futures import Future
 import os
 import unittest
@@ -59,7 +59,7 @@ class MqttConnectionTest(NativeResourceTest):
             on_connection_resumed=on_connection_resumed_callback)
         return connection
 
-    def test_connect_disconnect(self):
+    def _test_connect_disconnect(self):
         test_input_endpoint = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
         test_input_cert = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_CERT")
         test_input_key = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_KEY")
@@ -71,7 +71,10 @@ class MqttConnectionTest(NativeResourceTest):
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
-    def test_ecc_connect_disconnect(self):
+    def test_connect_disconnect(self):
+        test_retry_wrapper(self._test_connect_disconnect)
+
+    def _test_ecc_connect_disconnect(self):
         test_input_endpoint = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
         test_input_cert = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_ECC_CERT")
         test_input_key = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_ECC_KEY")
@@ -83,7 +86,10 @@ class MqttConnectionTest(NativeResourceTest):
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
-    def test_pkcs11(self):
+    def test_ecc_connect_disconnect(self):
+        test_retry_wrapper(self._test_ecc_connect_disconnect)
+
+    def _test_pkcs11(self):
         test_input_endpoint = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
         test_input_pkcs11_lib = _get_env_variable("AWS_TEST_PKCS11_LIB")
         test_input_pkcs11_pin = _get_env_variable("AWS_TEST_PKCS11_PIN")
@@ -105,7 +111,10 @@ class MqttConnectionTest(NativeResourceTest):
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
-    def test_pub_sub(self):
+    def test_pkcs11(self):
+        test_retry_wrapper(self._test_pkcs11)
+
+    def _test_pub_sub(self):
         self.TEST_TOPIC = '/test/me/senpai/' + str(uuid.uuid4())
         test_input_endpoint = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
         test_input_cert = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_CERT")
@@ -148,7 +157,10 @@ class MqttConnectionTest(NativeResourceTest):
         # disconnect
         connection.disconnect().result(TIMEOUT)
 
-    def test_will(self):
+    def test_pub_sub(self):
+        test_retry_wrapper(self._test_pub_sub)
+
+    def _test_will(self):
         self.TEST_TOPIC = '/test/me/senpai/' + str(uuid.uuid4())
         test_input_endpoint = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
         test_input_cert = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_CERT")
@@ -239,7 +251,10 @@ class MqttConnectionTest(NativeResourceTest):
         # disconnect
         subscriber.disconnect().result(TIMEOUT)
 
-    def test_on_message(self):
+    def test_will(self):
+        test_retry_wrapper(self._test_will)
+
+    def _test_on_message(self):
         test_input_endpoint = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
         test_input_cert = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_CERT")
         test_input_key = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_KEY")
@@ -275,7 +290,10 @@ class MqttConnectionTest(NativeResourceTest):
         # disconnect
         connection.disconnect().result(TIMEOUT)
 
-    def test_on_message_old_fn_signature(self):
+    def test_on_message(self):
+        test_retry_wrapper(self._test_on_message)
+
+    def _test_on_message_old_fn_signature(self):
         # ensure that message-received callbacks with the old function signature still work
 
         test_input_endpoint = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
@@ -320,7 +338,10 @@ class MqttConnectionTest(NativeResourceTest):
         # disconnect
         connection.disconnect().result(TIMEOUT)
 
-    def test_connect_disconnect_with_default_singletons(self):
+    def test_on_message_old_fn_signature(self):
+        test_retry_wrapper(self._test_on_message_old_fn_signature)
+
+    def _test_connect_disconnect_with_default_singletons(self):
         test_input_endpoint = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
         test_input_cert = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_CERT")
         test_input_key = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_KEY")
@@ -337,7 +358,10 @@ class MqttConnectionTest(NativeResourceTest):
         EventLoopGroup.release_static_default()
         DefaultHostResolver.release_static_default()
 
-    def test_connect_publish_wait_statistics_disconnect(self):
+    def test_connect_disconnect_with_default_singletons(self):
+        test_retry_wrapper(self._test_connect_disconnect_with_default_singletons)
+
+    def _test_connect_publish_wait_statistics_disconnect(self):
         test_input_endpoint = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
         test_input_cert = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_CERT")
         test_input_key = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_KEY")
@@ -369,7 +393,10 @@ class MqttConnectionTest(NativeResourceTest):
         # disconnect
         connection.disconnect().result(TIMEOUT)
 
-    def test_connect_publish_statistics_wait_disconnect(self):
+    def test_connect_publish_wait_statistics_disconnect(self):
+        test_retry_wrapper(self._test_connect_publish_wait_statistics_disconnect)
+
+    def _test_connect_publish_statistics_wait_disconnect(self):
         test_input_endpoint = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
         test_input_cert = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_CERT")
         test_input_key = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_KEY")
@@ -409,7 +436,10 @@ class MqttConnectionTest(NativeResourceTest):
         # disconnect
         connection.disconnect().result(TIMEOUT)
 
-    def test_connect_disconnect_with_callbacks_happy(self):
+    def test_connect_publish_statistics_wait_disconnect(self):
+        test_retry_wrapper(self._test_connect_publish_statistics_wait_disconnect)
+
+    def _test_connect_disconnect_with_callbacks_happy(self):
         test_input_endpoint = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
         test_input_cert = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_CERT")
         test_input_key = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_KEY")
@@ -442,7 +472,10 @@ class MqttConnectionTest(NativeResourceTest):
         connection.disconnect().result(TIMEOUT)
         on_connection_closed_future.result(TIMEOUT)
 
-    def test_connect_disconnect_with_callbacks_unhappy(self):
+    def test_connect_disconnect_with_callbacks_happy(self):
+        test_retry_wrapper(self._test_connect_disconnect_with_callbacks_happy)
+
+    def _test_connect_disconnect_with_callbacks_unhappy(self):
         test_input_endpoint = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
         test_input_cert = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_CERT")
         test_input_key = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_KEY")
@@ -478,7 +511,10 @@ class MqttConnectionTest(NativeResourceTest):
         failure_data = on_onnection_failure_future.result(TIMEOUT)
         self.assertTrue(failure_data['error'] is not None)
 
-    def test_connect_disconnect_with_callbacks_happy_on_resume(self):
+    def test_connect_disconnect_with_callbacks_unhappy(self):
+        test_retry_wrapper(self._test_connect_disconnect_with_callbacks_unhappy)
+
+    def _test_connect_disconnect_with_callbacks_happy_on_resume(self):
         # Check that an on_connection_success callback fires on a resumed connection.
 
         # NOTE Since there is no mocked server available on this abstraction level, the only sensible approach
@@ -517,6 +553,10 @@ class MqttConnectionTest(NativeResourceTest):
         self.assertEqual(success_data['return_code'], ConnectReturnCode.ACCEPTED)
         self.assertEqual(success_data['session_present'], False)
 
+        # Putting a sleep here helps prevent a "race" condition in IoT Core where the second connection can get
+        # rejected rather than the first disconnected.
+        time.sleep(5)
+
         # Reset the future for the reconnect attempt.
         on_connection_success_future = Future()
 
@@ -547,11 +587,14 @@ class MqttConnectionTest(NativeResourceTest):
         connection.disconnect().result(TIMEOUT)
         on_connection_closed_future.result(TIMEOUT)
 
+    def test_connect_disconnect_with_callbacks_happy_on_resume(self):
+        test_retry_wrapper(self._test_connect_disconnect_with_callbacks_happy_on_resume)
+
     # ==============================================================
     #             MOSQUITTO CONNECTION TESTS
     # ==============================================================
 
-    def test_mqtt311_direct_connect_minimum(self):
+    def _test_mqtt311_direct_connect_minimum(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_HOST")
         input_port = int(_get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_PORT"))
 
@@ -567,7 +610,10 @@ class MqttConnectionTest(NativeResourceTest):
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
-    def test_mqtt311_direct_connect_basic_auth(self):
+    def test_mqtt311_direct_connect_minimum(self):
+        test_retry_wrapper(self._test_mqtt311_direct_connect_minimum)
+
+    def _test_mqtt311_direct_connect_basic_auth(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_BASIC_AUTH_HOST")
         input_port = int(_get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_BASIC_AUTH_PORT"))
         input_username = _get_env_variable("AWS_TEST_MQTT311_BASIC_AUTH_USERNAME")
@@ -587,7 +633,10 @@ class MqttConnectionTest(NativeResourceTest):
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
-    def test_mqtt311_direct_connect_tls(self):
+    def test_mqtt311_direct_connect_basic_auth(self):
+        test_retry_wrapper(self._test_mqtt311_direct_connect_basic_auth)
+
+    def _test_mqtt311_direct_connect_tls(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_TLS_HOST")
         input_port = int(_get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_TLS_PORT"))
 
@@ -605,7 +654,10 @@ class MqttConnectionTest(NativeResourceTest):
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
-    def test_mqtt311_direct_connect_mutual_tls(self):
+    def test_mqtt311_direct_connect_tls(self):
+        test_retry_wrapper(self._test_mqtt311_direct_connect_tls)
+
+    def _test_mqtt311_direct_connect_mutual_tls(self):
         input_cert = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_CERT")
         input_key = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_RSA_KEY")
         input_host = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
@@ -626,7 +678,10 @@ class MqttConnectionTest(NativeResourceTest):
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
-    def test_mqtt311_direct_connect_http_proxy_tls(self):
+    def test_mqtt311_direct_connect_mutual_tls(self):
+        test_retry_wrapper(self._test_mqtt311_direct_connect_mutual_tls)
+
+    def _test_mqtt311_direct_connect_http_proxy_tls(self):
         input_proxy_host = _get_env_variable("AWS_TEST_MQTT311_PROXY_HOST")
         input_proxy_port = int(_get_env_variable("AWS_TEST_MQTT311_PROXY_PORT"))
         input_host_name = _get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_TLS_HOST")
@@ -655,7 +710,10 @@ class MqttConnectionTest(NativeResourceTest):
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
-    def test_mqtt311_websocket_connect_minimum(self):
+    def test_mqtt311_direct_connect_http_proxy_tls(self):
+        test_retry_wrapper(self._test_mqtt311_direct_connect_http_proxy_tls)
+
+    def _test_mqtt311_websocket_connect_minimum(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT311_WS_MQTT_HOST")
         input_port = int(_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_PORT"))
 
@@ -677,7 +735,10 @@ class MqttConnectionTest(NativeResourceTest):
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
-    def test_mqtt311_websocket_connect_basic_auth(self):
+    def test_mqtt311_websocket_connect_minimum(self):
+        test_retry_wrapper(self._test_mqtt311_websocket_connect_minimum)
+
+    def _test_mqtt311_websocket_connect_basic_auth(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT311_WS_MQTT_BASIC_AUTH_HOST")
         input_port = int(_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_BASIC_AUTH_PORT"))
         input_username = _get_env_variable("AWS_TEST_MQTT311_BASIC_AUTH_USERNAME")
@@ -703,7 +764,10 @@ class MqttConnectionTest(NativeResourceTest):
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
-    def test_mqtt311_websocket_connect_tls(self):
+    def test_mqtt311_websocket_connect_basic_auth(self):
+        test_retry_wrapper(self._test_mqtt311_websocket_connect_basic_auth)
+
+    def _test_mqtt311_websocket_connect_tls(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT311_WS_MQTT_TLS_HOST")
         input_port = int(_get_env_variable("AWS_TEST_MQTT311_WS_MQTT_TLS_PORT"))
 
@@ -727,7 +791,10 @@ class MqttConnectionTest(NativeResourceTest):
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
-    def test_mqtt311_websocket_connect_http_proxy_tls(self):
+    def test_mqtt311_websocket_connect_tls(self):
+        test_retry_wrapper(self._test_mqtt311_websocket_connect_tls)
+
+    def _test_mqtt311_websocket_connect_http_proxy_tls(self):
         input_proxy_host = _get_env_variable("AWS_TEST_MQTT311_PROXY_HOST")
         input_proxy_port = int(_get_env_variable("AWS_TEST_MQTT311_PROXY_PORT"))
         input_host_name = _get_env_variable("AWS_TEST_MQTT311_WS_MQTT_TLS_HOST")
@@ -760,6 +827,9 @@ class MqttConnectionTest(NativeResourceTest):
             proxy_options=http_proxy_options)
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
+
+    def test_mqtt311_websocket_connect_http_proxy_tls(self):
+        test_retry_wrapper(self._test_mqtt311_websocket_connect_http_proxy_tls)
 
 
 if __name__ == 'main':

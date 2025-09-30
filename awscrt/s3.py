@@ -142,6 +142,43 @@ class S3ChecksumConfig:
     """Whether to retrieve and validate response checksums."""
 
 
+@dataclass
+class S3FileIoOptions:
+    """
+    Controls how client performance file I/O operations.
+    Only applies to the file based workload.
+    Notes: only applies when `send_filepath` is set from the request.
+    """
+
+    should_stream: bool = False
+    """
+    Skip buffering the part in memory before sending the request.
+    If set, set the `disk_throughput` to be reasonable align with the available disk throughput.
+    Otherwise, the transfer may fail with connection starvation.
+    """
+
+    disk_throughput_gbps: (Optional[float]) = 0.0
+    """
+    The estimated disk throughput. Only be applied when `streaming_upload` is true.
+    in gigabits per second (Gbps).
+    When doing upload with streaming, it's important to set the disk throughput to prevent the connection starvation.
+
+    Notes: There are possibilities that cannot reach the all available disk throughput:
+    1. Disk is busy with other applications
+    2. OS Cache may cap the throughput, use `direct_io` to get around this.
+    """
+
+    direct_io: bool = False
+    """
+    Enable direct IO to bypass the OS cache. Helpful when the disk I/O outperforms the kernel cache.
+    Notes:
+    - Only supported on linux for now.
+    - Only supports upload for now.
+    - Check NOTES for O_DIRECT for additional info https://man7.org/linux/man-pages/man2/openat.2.html
+    In summary, O_DIRECT is a potentially powerful tool that should be used with caution.
+    """
+
+
 class S3Client(NativeResource):
     """S3 client
 
@@ -217,6 +254,11 @@ class S3Client(NativeResource):
             This option is only supported on Linux, MacOS, and platforms that have either SO_BINDTODEVICE or IP_BOUND_IF. It
             is not supported on Windows. `AWS_ERROR_PLATFORM_NOT_SUPPORTED` will be raised on unsupported platforms. On
             Linux, SO_BINDTODEVICE is used and requires kernel version >= 5.7 or root privileges.
+
+        fio_options: (Optional[S3FileIoOptions])
+            If set, this controls how the client interact with file I/O.
+            If not set, a default options will be created to avoid memory issue based on the size of file.
+            Note: Only applies when the request created with `send_filepath`
     """
 
     __slots__ = ('shutdown_event', '_region')
@@ -235,7 +277,8 @@ class S3Client(NativeResource):
             throughput_target_gbps=None,
             enable_s3express=False,
             memory_limit=None,
-            network_interface_names: Optional[Sequence[str]] = None):
+            network_interface_names: Optional[Sequence[str]] = None,
+            fio_options: Optional['S3FileIoOptions'] = None):
         assert isinstance(bootstrap, ClientBootstrap) or bootstrap is None
         assert isinstance(region, str)
         assert isinstance(signing_config, AwsSigningConfig) or signing_config is None
@@ -249,6 +292,7 @@ class S3Client(NativeResource):
             float) or throughput_target_gbps is None
         assert isinstance(enable_s3express, bool) or enable_s3express is None
         assert isinstance(network_interface_names, Sequence) or network_interface_names is None
+        assert isinstance(fio_options, S3FileIoOptions) or fio_options is None
 
         if credential_provider and signing_config:
             raise ValueError("'credential_provider' has been deprecated in favor of 'signing_config'.  "
@@ -288,6 +332,15 @@ class S3Client(NativeResource):
             # ensure this is a list, so it's simpler to process in C
             if not isinstance(network_interface_names, list):
                 network_interface_names = list(network_interface_names)
+        fio_options_set = False
+        should_stream = False
+        disk_throughput_gbps = 0.0
+        direct_io = False
+        if fio_options is not None:
+            fio_options_set = True
+            should_stream = fio_options.should_stream
+            disk_throughput_gbps = fio_options.disk_throughput_gbps
+            direct_io = fio_options.direct_io
 
         self._binding = _awscrt.s3_client_new(
             bootstrap,
@@ -303,6 +356,10 @@ class S3Client(NativeResource):
             enable_s3express,
             memory_limit,
             network_interface_names,
+            fio_options_set,
+            should_stream,
+            disk_throughput_gbps,
+            direct_io,
             s3_client_core)
 
     def make_request(
@@ -318,6 +375,7 @@ class S3Client(NativeResource):
             checksum_config=None,
             part_size=None,
             multipart_upload_threshold=None,
+            fio_options=None,
             on_headers=None,
             on_body=None,
             on_done=None,
@@ -397,6 +455,11 @@ class S3Client(NativeResource):
                 If not set, `part_size` adjusted by client will be used as the threshold.
                 If both `part_size` and `multipart_upload_threshold` are not set,
                 the values from `aws_s3_client_config` are used.
+
+            fio_options: (Optional[S3FileIoOptions])
+                If set, this overrides the client fio_options to control how this request interact with file I/O.
+                If not set, a default options will be created to avoid memory issue based on the size of file.
+                Note: Only applies when the request created with `send_filepath`
 
             on_headers: Optional callback invoked as the response received, and even the API request
                 has been split into multiple parts, this callback will only be invoked once as
@@ -483,6 +546,7 @@ class S3Client(NativeResource):
             checksum_config=checksum_config,
             part_size=part_size,
             multipart_upload_threshold=multipart_upload_threshold,
+            fio_options=fio_options,
             on_headers=on_headers,
             on_body=on_body,
             on_done=on_done,
@@ -520,6 +584,7 @@ class S3Request(NativeResource):
             checksum_config=None,
             part_size=None,
             multipart_upload_threshold=None,
+            fio_options=None,
             on_headers=None,
             on_body=None,
             on_done=None,
@@ -532,6 +597,7 @@ class S3Request(NativeResource):
         assert callable(on_done) or on_done is None
         assert isinstance(part_size, int) or part_size is None
         assert isinstance(multipart_upload_threshold, int) or multipart_upload_threshold is None
+        assert isinstance(fio_options, S3FileIoOptions) or fio_options is None
 
         if type == S3RequestType.DEFAULT and not operation_name:
             raise ValueError("'operation_name' must be set when using S3RequestType.DEFAULT")
@@ -555,6 +621,15 @@ class S3Request(NativeResource):
             if checksum_config.location is not None:
                 checksum_location = checksum_config.location.value
             validate_response_checksum = checksum_config.validate_response
+        fio_options_set = False
+        should_stream = False
+        disk_throughput_gbps = 0.0
+        direct_io = False
+        if fio_options is not None:
+            fio_options_set = True
+            should_stream = fio_options.should_stream
+            disk_throughput_gbps = fio_options.disk_throughput_gbps
+            direct_io = fio_options.direct_io
 
         s3_request_core = _S3RequestCore(
             request,
@@ -583,6 +658,10 @@ class S3Request(NativeResource):
             validate_response_checksum,
             part_size,
             multipart_upload_threshold,
+            fio_options_set,
+            should_stream,
+            disk_throughput_gbps,
+            direct_io,
             s3_request_core)
 
     @property
