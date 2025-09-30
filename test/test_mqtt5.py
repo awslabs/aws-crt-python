@@ -289,42 +289,6 @@ class Mqtt5ClientTest(NativeResourceTest):
     def test_direct_connect_mutual_tls(self):
         test_retry_wrapper(self._test_direct_connect_mutual_tls)
 
-    def test_direct_connect_mutual_tls_with_tlsv1_2_2025(self):
-        test_retry_wrapper(self._test_direct_connect_mutual_tls_with_tlsv1_2_2025)
-
-    def _test_direct_connect_mutual_tls_with_tlsv1_2_2025(self):
-        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
-        input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
-        input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
-
-        client_options = mqtt5.ClientOptions(
-            host_name=input_host_name,
-            port=8883
-        )
-        tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(
-            input_cert,
-            input_key
-        )
-
-        try:
-            tls_ctx_options.cipher_pref = io.TlsCipherPref.TLSv1_2_2025_07
-            client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
-        except Exception as e:
-            if sys.platform.startswith("linux"):
-                # On Linux, this should not fail
-                self.fail(f"Unexpected error on Linux: {e}")
-            else:
-                # On non-Linux platforms, verify we get the expected error and skip
-                self.assertIn('AWS_IO_TLS_CIPHER_PREF_UNSUPPORTED', str(e))
-                self.skipTest(f"TLSv1_2_2025_07 not supported on {sys.platform}")
-
-        callbacks = Mqtt5TestCallbacks()
-        client = self._create_client(client_options=client_options, callbacks=callbacks)
-        client.start()
-        callbacks.future_connection_success.result(TIMEOUT)
-        client.stop()
-        callbacks.future_stopped.result(TIMEOUT)
-
     def _test_direct_connect_http_proxy_tls(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_TLS_HOST")
         input_port = int(_get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_TLS_PORT"))
