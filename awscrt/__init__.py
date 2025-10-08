@@ -4,10 +4,10 @@
 from weakref import WeakSet
 
 __all__ = [
+    'aio',
     'auth',
     'crypto',
     'http',
-    'aio.http',
     'io',
     'mqtt',
     'mqtt5',
