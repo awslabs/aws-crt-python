@@ -113,6 +113,21 @@ class ClientTlsContextTest(NativeResourceTest):
         opt.override_default_trust_store_from_path(None, 'test/resources/ca.crt')
         ctx = ClientTlsContext(opt)
 
+    def test_set_cipher_preference_tlsv1_2_2025(self):
+        opt = TlsContextOptions()
+        opt.cipher_pref = TlsCipherPref.TLSv1_2_2025_07
+
+        try:
+            ctx = ClientTlsContext(opt)
+        except Exception as e:
+            if sys.platform.startswith("linux"):
+                # On Linux, this should not fail
+                self.fail(f"Unexpected error on Linux: {e}")
+            else:
+                # On non-Linux platforms, verify we get the expected error and skip
+                self.assertIn('AWS_IO_TLS_CIPHER_PREF_UNSUPPORTED', str(e))
+                self.skipTest(f"TLSv1_2_2025_07 not supported on {sys.platform}")
+
 
 class TlsConnectionOptionsTest(NativeResourceTest):
     def test_init(self):
