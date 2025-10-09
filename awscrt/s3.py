@@ -145,6 +145,7 @@ class S3ChecksumConfig:
 @dataclass
 class S3FileIoOptions:
     """
+    WARNING: experimental/unstable, the default behavior is subjected to change in the future.
     Controls how client performance file I/O operations.
     Only applies to the file based workload.
     Notes: only applies when `send_filepath` is set from the request.
@@ -153,19 +154,20 @@ class S3FileIoOptions:
     should_stream: bool = False
     """
     Skip buffering the part in memory before sending the request.
-    If set, set the `disk_throughput` to be reasonable align with the available disk throughput.
-    Otherwise, the transfer may fail with connection starvation.
+
+    Default to false on small objects, and true when the object size exceed a certain threshold.
     """
 
     disk_throughput_gbps: (Optional[float]) = 0.0
     """
     The estimated disk throughput. Only be applied when `streaming_upload` is true.
     in gigabits per second (Gbps).
-    When doing upload with streaming, it's important to set the disk throughput to prevent the connection starvation.
 
     Notes: There are possibilities that cannot reach the all available disk throughput:
     1. Disk is busy with other applications
     2. OS Cache may cap the throughput, use `direct_io` to get around this.
+
+    Default to `throughput_target_gbps`.
     """
 
     direct_io: bool = False
