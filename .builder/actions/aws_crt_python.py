@@ -39,9 +39,13 @@ class AWSCrtPython(Builder.Action):
             # "--failfast" because, given how our leak-detection in tests currently works,
             # once one test fails all the rest usually fail too.
             [self.python, '-m', 'unittest', 'discover', '--verbose', '--failfast'],
-            # http_client_test.py launches external processes using the extra args
-            [self.python, 'crt/aws-c-http/integration-testing/http_client_test.py',
-                self.python, 'elasticurl.py'],
+            # postman-echo.com in now requires TLS1.3,
+            # but our Mac implementation doesn't support TLS1.3 yet.
+            # The work has been planned to Dec. 2025 to support TLS1.3,
+            # so disable the test for now. And reenable it afterward
+            # # http_client_test.py launches external processes using the extra args
+            # [self.python, 'crt/aws-c-http/integration-testing/http_client_test.py',
+            #     self.python, 'elasticurl.py'],
         ]
 
         return Builder.Script(actions, name='aws-crt-python')
