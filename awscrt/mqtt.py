@@ -6,7 +6,8 @@ All network operations in `awscrt.mqtt` are asynchronous.
 
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
-import _awscrt, platform
+import _awscrt
+import platform
 from concurrent.futures import Future
 from enum import IntEnum
 from inspect import signature
@@ -16,6 +17,7 @@ from awscrt.http import HttpProxyOptions, HttpRequest
 from awscrt.io import ClientBootstrap, ClientTlsContext, SocketOptions
 from dataclasses import dataclass
 from awscrt.mqtt5 import Client as Mqtt5Client, _get_awsiot_metrics_str
+
 
 class QoS(IntEnum):
     """Quality of Service enumeration

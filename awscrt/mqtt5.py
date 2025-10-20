@@ -6,7 +6,8 @@ MQTT5
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 from typing import Any, Callable, Union
-import _awscrt, platform
+import _awscrt
+import platform
 from concurrent.futures import Future
 from enum import IntEnum
 from awscrt import NativeResource, exceptions
@@ -18,34 +19,37 @@ from inspect import signature
 
 # Global variable to cache metrics string
 _metrics_str = None
+
+
 def _get_awsiot_metrics_str(current_username=""):
-        global _metrics_str
+    global _metrics_str
 
-        username_has_query = False
-        if current_username.find("?") != -1:
-            username_has_query = True
-        # The SDK query is already set, skip adding it again
-        if username_has_query and current_username.find("SDK=") != -1:
-            return ""
+    username_has_query = False
+    if current_username.find("?") != -1:
+        username_has_query = True
+    # The SDK query is already set, skip adding it again
+    if username_has_query and current_username.find("SDK=") != -1:
+        return ""
 
-        if _metrics_str is None:
+    if _metrics_str is None:
+        try:
+            import importlib.metadata
             try:
-                import importlib.metadata
-                try:
-                    version = importlib.metadata.version("awscrt")
-                    _metrics_str = "SDK=CRTPython&Version={}&Platform={}".format(version, platform.system())
-                except importlib.metadata.PackageNotFoundError:
-                    _metrics_str = "SDK=CRTPython&Version=dev&Platform={}".format(platform.system())
-            except BaseException:
-                _metrics_str = ""
+                version = importlib.metadata.version("awscrt")
+                _metrics_str = "SDK=CRTPython&Version={}&Platform={}".format(version, platform.system())
+            except importlib.metadata.PackageNotFoundError:
+                _metrics_str = "SDK=CRTPython&Version=dev&Platform={}".format(platform.system())
+        except BaseException:
+            _metrics_str = ""
 
-        if not _metrics_str == "":
-            if username_has_query:
-                return "&" + _metrics_str
-            else:
-                return "?" + _metrics_str
+    if not _metrics_str == "":
+        if username_has_query:
+            return "&" + _metrics_str
         else:
-            return ""
+            return "?" + _metrics_str
+    else:
+        return ""
+
 
 class QoS(IntEnum):
     """MQTT message delivery quality of service.
