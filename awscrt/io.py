@@ -278,8 +278,9 @@ class TlsCipherPref(IntEnum):
     """Recommended default policy with post-quantum algorithm support. This policy may change over time."""
 
     TLSv1_2_2025_07 = 9
-    """A TLS Cipher Preference ordering that supports TLS 1.2 through TLS 1.3, and does not include CBC cipher suites.
-       It is FIPS-complaint."""
+    """A TLS Cipher Preference requiring TLS 1.2+ with FIPS compliance and perfect forward secrecy. This security policy
+    is based on the AWS-CRT-SDK-TLSv1.2-2023 s2n TLS policy with enhanced security restrictions. It supports AES-GCM and
+    ECDHE cipher suites with ECDSA and RSA-PSS signature schemes, and uses NIST P-256 and P-384 curves only."""
 
     def is_supported(self):
         """Return whether this Cipher Preference is available in the underlying platform's TLS implementation"""
