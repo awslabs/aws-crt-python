@@ -6,7 +6,7 @@ All network operations in `awscrt.mqtt` are asynchronous.
 
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
-import _awscrt
+import _awscrt, platform
 from concurrent.futures import Future
 from enum import IntEnum
 from inspect import signature
@@ -15,8 +15,7 @@ import awscrt.exceptions
 from awscrt.http import HttpProxyOptions, HttpRequest
 from awscrt.io import ClientBootstrap, ClientTlsContext, SocketOptions
 from dataclasses import dataclass
-from awscrt.mqtt5 import Client as Mqtt5Client
-
+from awscrt.mqtt5 import Client as Mqtt5Client, _get_awsiot_metrics_str
 
 class QoS(IntEnum):
     """Quality of Service enumeration
@@ -404,7 +403,8 @@ class Connection(NativeResource):
         self.ping_timeout_ms = ping_timeout_ms
         self.protocol_operation_timeout_ms = protocol_operation_timeout_ms
         self.will = will
-        self.username = username
+        username = username if username else ""
+        self.username = username + _get_awsiot_metrics_str(username if username else "")
         self.password = password
         self.socket_options = socket_options if socket_options else SocketOptions()
         self.proxy_options = proxy_options if proxy_options else websocket_proxy_options

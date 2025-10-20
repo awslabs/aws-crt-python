@@ -6,7 +6,7 @@ MQTT5
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 from typing import Any, Callable, Union
-import _awscrt
+import _awscrt, platform
 from concurrent.futures import Future
 from enum import IntEnum
 from awscrt import NativeResource, exceptions
@@ -16,6 +16,36 @@ from dataclasses import dataclass
 from collections.abc import Sequence
 from inspect import signature
 
+# Global variable to cache metrics string
+_metrics_str = None
+def _get_awsiot_metrics_str(current_username=""):
+        global _metrics_str
+
+        username_has_query = False
+        if current_username.find("?") != -1:
+            username_has_query = True
+        # The SDK query is already set, skip adding it again
+        if username_has_query and current_username.find("SDK=") != -1:
+            return ""
+
+        if _metrics_str is None:
+            try:
+                import importlib.metadata
+                try:
+                    version = importlib.metadata.version("awscrt")
+                    _metrics_str = "SDK=CRTPython&Version={}&Platform={}".format(version, platform.system())
+                except importlib.metadata.PackageNotFoundError:
+                    _metrics_str = "SDK=CRTPython&Version=dev&Platform={}".format(platform.system())
+            except BaseException:
+                _metrics_str = ""
+
+        if not _metrics_str == "":
+            if username_has_query:
+                return "&" + _metrics_str
+            else:
+                return "?" + _metrics_str
+        else:
+            return ""
 
 class QoS(IntEnum):
     """MQTT message delivery quality of service.
@@ -1753,6 +1783,9 @@ class Client(NativeResource):
             is_will_none = False
             will = connect_options.will
 
+        username = connect_options.username if connect_options.username else ""
+        username += _get_awsiot_metrics_str(username)
+        connect_options.username = username
         websocket_is_none = client_options.websocket_handshake_transform is None
         self.tls_ctx = client_options.tls_ctx
         self._binding = _awscrt.mqtt5_client_new(self,
