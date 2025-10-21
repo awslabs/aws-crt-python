@@ -31,7 +31,7 @@ PyObject *aws_py_get_platform_build_os_string(PyObject *self, PyObject *args) {
     (void)args;
 
     struct aws_byte_cursor os_string = aws_get_platform_build_os_string();
-    return PyUnicode_FromStringAndSize((const char *)os_string.ptr, os_string.len);
+    return PyUnicode_FromAwsByteCursor(&os_string);
 }
 
 PyObject *aws_py_thread_join_all_managed(PyObject *self, PyObject *args) {
