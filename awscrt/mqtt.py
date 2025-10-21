@@ -7,7 +7,6 @@ All network operations in `awscrt.mqtt` are asynchronous.
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 import _awscrt
-import platform
 from concurrent.futures import Future
 from enum import IntEnum
 from inspect import signature

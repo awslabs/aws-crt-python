@@ -7,7 +7,6 @@ MQTT5
 # SPDX-License-Identifier: Apache-2.0.
 from typing import Any, Callable, Union
 import _awscrt
-import platform
 from concurrent.futures import Future
 from enum import IntEnum
 from awscrt import NativeResource, exceptions
@@ -36,13 +35,15 @@ def _get_awsiot_metrics_str(current_username=""):
             import importlib.metadata
             try:
                 version = importlib.metadata.version("awscrt")
-                _metrics_str = "SDK=CRTPython&Version={}&Platform={}".format(version, _awscrt.get_platform_build_os_string())
+                _metrics_str = "SDK=CRTPython&Version={}&Platform={}".format(
+                    version, _awscrt.get_platform_build_os_string())
             except importlib.metadata.PackageNotFoundError:
                 _metrics_str = "SDK=CRTPython&Version=dev&Platform={}".format(_awscrt.get_platform_build_os_string())
         except BaseException:
             _metrics_str = ""
 
     if not _metrics_str == "":
+        print("Appending AWS IoT metrics to username: {}".format(_metrics_str))
         if username_has_query:
             return "&" + _metrics_str
         else:
