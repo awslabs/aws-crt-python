@@ -43,7 +43,6 @@ def _get_awsiot_metrics_str(current_username=""):
             _metrics_str = ""
 
     if not _metrics_str == "":
-        print("Appending AWS IoT metrics to username: {}".format(_metrics_str))
         if username_has_query:
             return "&" + _metrics_str
         else:
