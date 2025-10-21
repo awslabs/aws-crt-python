@@ -36,9 +36,9 @@ def _get_awsiot_metrics_str(current_username=""):
             import importlib.metadata
             try:
                 version = importlib.metadata.version("awscrt")
-                _metrics_str = "SDK=CRTPython&Version={}&Platform={}".format(version, platform.system())
+                _metrics_str = "SDK=CRTPython&Version={}&Platform={}".format(version, _awscrt.get_platform_build_os_string())
             except importlib.metadata.PackageNotFoundError:
-                _metrics_str = "SDK=CRTPython&Version=dev&Platform={}".format(platform.system())
+                _metrics_str = "SDK=CRTPython&Version=dev&Platform={}".format(_awscrt.get_platform_build_os_string())
         except BaseException:
             _metrics_str = ""
 
