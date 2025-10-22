@@ -1758,10 +1758,11 @@ class Client(NativeResource):
 
     Args:
         client_options (ClientOptions): The ClientOptions dataclass to used to configure the new Client.
+        enable_metrics (bool): Whether to append AWS IoT metrics to the username field during CONNECT. Default: True
 
     """
 
-    def __init__(self, client_options: ClientOptions):
+    def __init__(self, client_options: ClientOptions, enable_metrics: bool = True):
 
         super().__init__()
 
@@ -1787,8 +1788,10 @@ class Client(NativeResource):
             is_will_none = False
             will = connect_options.will
 
-        username = connect_options.username if connect_options.username else ""
-        username += _get_awsiot_metrics_str(username)
+        username = connect_options.username
+        if enable_metrics:
+            username = username if username else ""
+            username += _get_awsiot_metrics_str(username)
         connect_options.username = username
         websocket_is_none = client_options.websocket_handshake_transform is None
         self.tls_ctx = client_options.tls_ctx

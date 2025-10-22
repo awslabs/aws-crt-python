@@ -330,6 +330,8 @@ class Connection(NativeResource):
 
         proxy_options (Optional[awscrt.http.HttpProxyOptions]):
             Optional proxy options for all connections.
+
+        enable_metrics (bool): If true, append AWS IoT metrics to the username. (Default to true)
         """
 
     def __init__(self,
@@ -355,7 +357,8 @@ class Connection(NativeResource):
                  proxy_options=None,
                  on_connection_success=None,
                  on_connection_failure=None,
-                 on_connection_closed=None
+                 on_connection_closed=None,
+                 enable_metrics=True
                  ):
 
         assert isinstance(client, Client) or isinstance(client, Mqtt5Client)
@@ -404,8 +407,12 @@ class Connection(NativeResource):
         self.ping_timeout_ms = ping_timeout_ms
         self.protocol_operation_timeout_ms = protocol_operation_timeout_ms
         self.will = will
-        username = username if username else ""
-        self.username = username + _get_awsiot_metrics_str(username if username else "")
+
+        if enable_metrics:
+            username = username if username else ""
+            username += _get_awsiot_metrics_str(username)
+
+        self.username = username
         self.password = password
         self.socket_options = socket_options if socket_options else SocketOptions()
         self.proxy_options = proxy_options if proxy_options else websocket_proxy_options

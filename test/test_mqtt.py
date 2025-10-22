@@ -629,7 +629,8 @@ class MqttConnectionTest(NativeResourceTest):
             host_name=input_host_name,
             port=input_port,
             username=input_username,
-            password=input_password)
+            password=input_password,
+            enable_metrics=False)
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
