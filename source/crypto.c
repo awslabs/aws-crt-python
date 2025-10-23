@@ -679,7 +679,7 @@ PyObject *aws_py_ec_key_from_der_data(PyObject *self, PyObject *args) {
         goto on_done;
     }
 
-    capsule = PyCapsule_New(key_pair, s_capsule_name_rsa, s_ec_destructor);
+    capsule = PyCapsule_New(key_pair, s_capsule_name_ec, s_ec_destructor);
 
     if (capsule == NULL) {
         aws_ecc_key_pair_release(key_pair);
