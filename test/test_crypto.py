@@ -341,7 +341,7 @@ class TestCredentials(NativeResourceTest):
         signature = ec.sign(digest)
 
         (r, s) = EC.decode_der_signature(signature)
-        self.assertEquals(signature, EC.encode_raw_signature(ECRawSignature(r=r, r=s)))
+        self.assertEquals(signature, EC.encode_raw_signature(ECRawSignature(r=r, s=s)))
 
         self.assertTrue(ec.verify(digest, signature))
 
@@ -354,7 +354,7 @@ class TestCredentials(NativeResourceTest):
         signature = ec.sign(digest)
 
         (r, s) = EC.decode_der_signature(signature)
-        self.assertEquals(signature, EC.encode_raw_signature(ECRawSignature(r=r, r=s)))
+        self.assertEquals(signature, EC.encode_raw_signature(ECRawSignature(r=r, s=s)))
 
         self.assertTrue(ec.verify(digest, signature))
 
@@ -367,7 +367,7 @@ class TestCredentials(NativeResourceTest):
         signature = ec.sign(digest)
 
         (r, s) = EC.decode_der_signature(signature)
-        self.assertEqual(signature, EC.encode_raw_signature(ECRawSignature(r=r, r=s)))
+        self.assertEqual(signature, EC.encode_raw_signature(ECRawSignature(r=r, s=s)))
 
         self.assertTrue(ec.verify(digest, signature))
 
