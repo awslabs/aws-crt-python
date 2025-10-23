@@ -363,7 +363,7 @@ class TestCredentials(NativeResourceTest):
         h.update(b'totally original test string')
         digest = h.digest()
 
-        ec = EC.new_key_from_der_data(base64.decodebytes(EC_PRIVATE_KEY_SEC1_BASE64))
+        ec = EC.new_key_from_der_data(base64.decode(EC_PRIVATE_KEY_SEC1_BASE64))
         signature = ec.sign(digest)
 
         (r, s) = EC.decode_der_signature(signature)
