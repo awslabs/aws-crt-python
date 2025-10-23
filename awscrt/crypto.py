@@ -211,6 +211,7 @@ class ED25519(NativeResource):
         """
         return _awscrt.ed25519_export_private_key(self._binding, export_format)
 
+
 class ECType(IntEnum):
     """Elliptic Curve Type"""
 
@@ -223,6 +224,7 @@ class ECType(IntEnum):
     """
     P-384 curve aka secp384r1
     """
+
 
 class ECExportFormat(IntEnum):
     """EC Export format"""
@@ -242,9 +244,11 @@ class ECExportFormat(IntEnum):
     Raw bytes for the public key as defined in x509/SPKI ("EC Public Key" or "Public Key" in pem)
     """
 
+
 class ECRawSignature(NamedTuple):
     r: bytes
     s: bytes
+
 
 class EC(NativeResource):
     def __init__(self, binding):
@@ -306,5 +310,3 @@ class EC(NativeResource):
         """
         return _awscrt.ec_verify(self._binding, digest, signature)
     
-
-
