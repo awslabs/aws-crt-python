@@ -284,7 +284,7 @@ class EC(NativeResource):
     @staticmethod
     def encode_raw_signature(signature: ECRawSignature) -> bytes:
         """
-        Encodes raw signature into raw der.
+        Encodes raw signature into der.
         """
         return _awscrt.ec_encode_signature(signature)
 
