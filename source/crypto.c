@@ -813,7 +813,7 @@ PyObject *aws_py_ec_encode_signature(PyObject *self, PyObject *args) {
     struct aws_byte_buf result_buf;
     aws_byte_buf_init(&result_buf, allocator, buf_size);
 
-    if (aws_ecc_encode_signature_raw_to_der(r_cur, s_cur, &result_buf)) {
+    if (aws_ecc_encode_signature_raw_to_der(allocator, r_cur, s_cur, &result_buf)) {
         aws_byte_buf_clean_up_secure(&result_buf);
         goto on_error;
     }
@@ -840,7 +840,7 @@ PyObject *aws_py_ec_decode_signature(PyObject *self, PyObject *args) {
     struct aws_allocator *allocator = aws_py_get_allocator();
     struct aws_byte_cursor r_cur = {0};
     struct aws_byte_cursor s_cur = {0};
-    if (aws_ecc_decode_signature_der_to_raw(allocator, signature, r_cur, s_cur)) {
+    if (aws_ecc_decode_signature_der_to_raw(allocator, signature_cur, &r_cur, &s_cur)) {
         return PyErr_AwsLastError();
     }
 
