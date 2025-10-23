@@ -302,7 +302,7 @@ class EC(NativeResource):
         """
         return _awscrt.ec_sign(self._binding, digest)
 
-    def verify(self,digest: Union[bytes, bytearray, memoryview],
+    def verify(self, digest: Union[bytes, bytearray, memoryview],
                signature: Union[bytes, bytearray, memoryview]) -> bool:
         """
         Verifies signature against digest.
