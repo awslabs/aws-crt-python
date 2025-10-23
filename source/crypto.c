@@ -655,7 +655,7 @@ PyObject *aws_py_ec_new_generate(PyObject *self, PyObject *args) {
     capsule = PyCapsule_New(key_pair, s_capsule_name_ec, s_ec_destructor);
 
     if (capsule == NULL) {
-        aws_ec_key_pair_release(key_pair);
+        aws_ecc_key_pair_release(key_pair);
     }
 
     return capsule;
@@ -672,7 +672,7 @@ PyObject *aws_py_ec_key_from_der_data(PyObject *self, PyObject *args) {
     PyObject *capsule = NULL;
     struct aws_allocator *allocator = aws_py_get_allocator();
 
-    struct aws_ecc_key_pair *key_pair = aws_ecc_key_pair_new_from_asn1(allocator, *der_data_cur);
+    struct aws_ecc_key_pair *key_pair = aws_ecc_key_pair_new_from_asn1(allocator, &der_data_cur);
 
     if (key_pair == NULL) {
         PyErr_AwsLastError();
@@ -736,7 +736,7 @@ PyObject *aws_py_ec_sign(PyObject *self, PyObject *args) {
     struct aws_byte_buf result_buf;
     aws_byte_buf_init(&result_buf, allocator, aws_ecc_key_pair_signature_length(ec));
 
-    if (aws_ecc_key_pair_sign_message(ec, digest_cur, &result_buf)) {
+    if (aws_ecc_key_pair_sign_message(ec, &digest_cur, &result_buf)) {
         aws_byte_buf_clean_up_secure(&result_buf);
         return PyErr_AwsLastError();
     }
@@ -753,16 +753,16 @@ PyObject *aws_py_ec_verify(PyObject *self, PyObject *args) {
     struct aws_byte_cursor digest_cur;
     struct aws_byte_cursor signature_cur;
     if (!PyArg_ParseTuple(
-            args, "Oy#y#", &rsa_capsule, &digest_cur.ptr, &digest_cur.len, &signature_cur.ptr, &signature_cur.len)) {
+            args, "Oy#y#", &ec_capsule, &digest_cur.ptr, &digest_cur.len, &signature_cur.ptr, &signature_cur.len)) {
         return NULL;
     }
 
-    struct aws_ecc_key_pair *ec = PyCapsule_GetPointer(rsa_capsule, s_capsule_name_ec);
+    struct aws_ecc_key_pair *ec = PyCapsule_GetPointer(ec_capsule, s_capsule_name_ec);
     if (ec == NULL) {
         return NULL;
     }
 
-    if (aws_ecc_key_pair_verify_signature(ec, digest_cur, signature_cur)) {
+    if (aws_ecc_key_pair_verify_signature(ec, &digest_cur, &signature_cur)) {
         if (aws_last_error() == AWS_ERROR_CAL_SIGNATURE_VALIDATION_FAILED) {
             aws_reset_error();
             Py_RETURN_FALSE;
@@ -813,7 +813,7 @@ PyObject *aws_py_ec_encode_signature(PyObject *self, PyObject *args) {
     struct aws_byte_buf result_buf;
     aws_byte_buf_init(&result_buf, allocator, buf_size);
 
-    if (aws_ecc_encode_signature_raw_to_der(r, s, &result_buf)) {
+    if (aws_ecc_encode_signature_raw_to_der(r_cur, s_cur, &result_buf)) {
         aws_byte_buf_clean_up_secure(&result_buf);
         goto on_error;
     }
