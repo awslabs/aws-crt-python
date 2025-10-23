@@ -3,7 +3,7 @@
 
 
 from test import NativeResourceTest
-from awscrt.crypto import Hash, RSA, RSAEncryptionAlgorithm, RSASignatureAlgorithm, ED25519, ED25519ExportFormat, EC, ECType
+from awscrt.crypto import Hash, RSA, RSAEncryptionAlgorithm, RSASignatureAlgorithm, ED25519, ED25519ExportFormat, EC, ECType, ECRawSignature
 import base64
 import unittest
 
@@ -341,7 +341,7 @@ class TestCredentials(NativeResourceTest):
         signature = ec.sign(digest)
 
         (r, s) = EC.decode_der_signature(signature)
-        self.assertEquals(signature, EC.encode_der_signature(r, s))
+        self.assertEquals(signature, EC.encode_raw_signature(ECRawSignature(r=r, r=s)))
 
         self.assertTrue(ec.verify(digest, signature))
 
@@ -354,7 +354,7 @@ class TestCredentials(NativeResourceTest):
         signature = ec.sign(digest)
 
         (r, s) = EC.decode_der_signature(signature)
-        self.assertEquals(signature, EC.encode_raw_signature(r, s))
+        self.assertEquals(signature, EC.encode_raw_signature(ECRawSignature(r=r, r=s)))
 
         self.assertTrue(ec.verify(digest, signature))
 
@@ -367,7 +367,7 @@ class TestCredentials(NativeResourceTest):
         signature = ec.sign(digest)
 
         (r, s) = EC.decode_der_signature(signature)
-        self.assertEqual(signature, EC.encode_raw_signature((r, s)))
+        self.assertEqual(signature, EC.encode_raw_signature(ECRawSignature(r=r, r=s)))
 
         self.assertTrue(ec.verify(digest, signature))
 
