@@ -852,8 +852,8 @@ PyObject *aws_py_ec_decode_signature(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    PyTuple_SET_ITEM(result, 0, PyBytes_FromStringAndSize((char *)r_cur.ptr, r_cur.len));
-    PyTuple_SET_ITEM(result, 1, PyBytes_FromStringAndSize((char *)s_cur.ptr, s_cur.len));
+    PyTuple_SetItem(result, 0, PyBytes_FromStringAndSize((char *)r_cur.ptr, r_cur.len));
+    PyTuple_SetItem(result, 1, PyBytes_FromStringAndSize((char *)s_cur.ptr, s_cur.len));
 
     return result;
 }
