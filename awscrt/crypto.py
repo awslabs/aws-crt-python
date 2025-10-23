@@ -278,7 +278,7 @@ class EC(NativeResource):
         """
         Decodes ec signature into raw r and s.
         """
-        (r, s) = _awscrt.decode_signature(signature)
+        (r, s) = _awscrt.ec_decode_signature(signature)
         return ECRawSignature(r=r, s=s)
 
     @staticmethod
@@ -286,7 +286,7 @@ class EC(NativeResource):
         """
         Encodes raw signature into raw der.
         """
-        return _awscrt.encode_signature(signature)
+        return _awscrt.ec_encode_signature(signature)
 
     def export_key(self, export_format: ECExportFormat) -> bytes:
         """
