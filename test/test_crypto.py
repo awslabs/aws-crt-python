@@ -3,7 +3,7 @@
 
 
 from test import NativeResourceTest
-from awscrt.crypto import Hash, RSA, RSAEncryptionAlgorithm, RSASignatureAlgorithm, ED25519, ED25519ExportFormat
+from awscrt.crypto import Hash, RSA, RSAEncryptionAlgorithm, RSASignatureAlgorithm, ED25519, ED25519ExportFormat, EC, ECType
 import base64
 import unittest
 
@@ -113,6 +113,12 @@ RSA_PRIVATE_KEY_DER_BASE64 = (
     '9neFAoGBAMqQA2YWCHhnRtjn4iGMrTk8iOHBd8AGBBzX9rPKXDqWlOr/iQq90qX0'
     '59309stR/bAhMzxOx31777XEPO1md854iXXr0XDMQlwCYkWyWb6hp4JlsqFBPMjn'
     'nGXWA0Gp6UWgpg4Hvjdsu+0FQ3AhDMBKZZ8fBFb4EW+HRQIHPnbH')
+
+EC_PRIVATE_KEY_SEC1_BASE64 = (
+    'MHcCAQEEIJkWKltOY4ZMX4439yu9lx1caIAYw5EPw8P5Osl6S6P2oAoGCCqGSM49'
+    'AwEHoUQDQgAE7GzXS9wzwlYyrVJWrPXw5iiZhIOvc2/+14M7QoFdLuDb9qykxhZ+'
+    'PuD/e0PooTZQkoMGlLPUkwbeY4qhHD+yVw=='
+)
 
 
 class TestCredentials(NativeResourceTest):
@@ -326,6 +332,44 @@ class TestCredentials(NativeResourceTest):
         self.assertEqual(68, len(key.export_public_key(ED25519ExportFormat.OPENSSH_B64)))
         self.assertEqual(312, len(key.export_private_key(ED25519ExportFormat.OPENSSH_B64)))
 
+    def test_ec_p256_signing_roundtrip(self):
+        h = Hash.sha256_new()
+        h.update(b'totally original test string')
+        digest = h.digest()
+
+        ec = EC.new_generate(ECType.P_256)
+        signature = ec.sign(digest)
+
+        (r, s) = EC.decode_der_signature(signature)
+        self.assertEquals(signature, EC.encode_der_signature(r, s))
+
+        self.assertTrue(ec.verify(digest, signature))
+
+    def test_ec_p384_signing_roundtrip(self):
+        h = Hash.sha256_new()
+        h.update(b'totally original test string')
+        digest = h.digest()
+
+        ec = EC.new_generate(ECType.P_384)
+        signature = ec.sign(digest)
+
+        (r, s) = EC.decode_der_signature(signature)
+        self.assertEquals(signature, EC.encode_der_signature(r, s))
+
+        self.assertTrue(ec.verify(digest, signature))
+
+    def test_ec_asn1_signing_roundtrip(self):
+        h = Hash.sha256_new()
+        h.update(b'totally original test string')
+        digest = h.digest()
+
+        ec = EC.new_key_from_der_data(base64.decodebytes(EC_PRIVATE_KEY_SEC1_BASE64))
+        signature = ec.sign(digest)
+
+        (r, s) = EC.decode_der_signature(signature)
+        self.assertEquals(signature, EC.encode_der_signature(r, s))
+
+        self.assertTrue(ec.verify(digest, signature))
 
 if __name__ == '__main__':
     unittest.main()
