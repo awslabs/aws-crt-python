@@ -847,7 +847,7 @@ PyObject *aws_py_ec_decode_signature(PyObject *self, PyObject *args) {
         return PyErr_AwsLastError();
     }
 
-    PyObject *result = PyTuple_New(3);
+    PyObject *result = PyTuple_New(2);
     if (!result) {
         return NULL;
     }
