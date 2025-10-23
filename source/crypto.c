@@ -639,18 +639,17 @@ PyObject *aws_py_ec_new_generate(PyObject *self, PyObject *args) {
     (void)args;
 
     int ec_type = 0;
-    if (!PyArg_ParseTuple(args, "i", &ec_capsule, &ec_type)) {
+    if (!PyArg_ParseTuple(args, "i", &ec_type)) {
         return NULL;
     }
 
-    PyObject *ec_capsule = NULL;
+    PyObject *capsule = NULL;
     struct aws_allocator *allocator = aws_py_get_allocator();
 
     struct aws_ec_key_pair *key_pair = aws_ecc_key_pair_new_generate_random(allocator, ec_type);
 
     if (key_pair == NULL) {
-        PyErr_AwsLastError();
-        goto on_done;
+        return PyErr_AwsLastError();
     }
 
     capsule = PyCapsule_New(key_pair, s_capsule_name_ec, s_ec_destructor);
@@ -659,7 +658,6 @@ PyObject *aws_py_ec_new_generate(PyObject *self, PyObject *args) {
         aws_ec_key_pair_release(key_pair);
     }
 
-on_done:
     return capsule;
 }
 
@@ -674,7 +672,7 @@ PyObject *aws_py_ec_key_from_der_data(PyObject *self, PyObject *args) {
     PyObject *capsule = NULL;
     struct aws_allocator *allocator = aws_py_get_allocator();
 
-    struct aws_rsa_key_pair *key_pair = aws_ecc_key_pair_new_from_asn1(allocator, der_data_cur);
+    struct aws_rsa_key_pair *key_pair = aws_ecc_key_pair_new_from_asn1(allocator, *der_data_cur);
 
     if (key_pair == NULL) {
         PyErr_AwsLastError();
