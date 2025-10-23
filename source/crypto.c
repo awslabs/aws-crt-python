@@ -774,6 +774,7 @@ PyObject *aws_py_ec_verify(PyObject *self, PyObject *args) {
 }
 
 PyObject *aws_py_ec_encode_signature(PyObject *self, PyObject *args) {
+    (void)self;
 
     PyObject *signature;
     PyObject *r_bytes;
@@ -832,6 +833,8 @@ on_error:
 }
 
 PyObject *aws_py_ec_decode_signature(PyObject *self, PyObject *args) {
+    (void)self;
+
     struct aws_byte_cursor signature_cur;
     if (!PyArg_ParseTuple(args, "s#", &signature_cur.ptr, &signature_cur.len)) {
         return NULL;
@@ -849,8 +852,8 @@ PyObject *aws_py_ec_decode_signature(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    PyTuple_SET_ITEM(result, 0, PyBytes_FromStringAndSize(r_cur.ptr, r_cur.len));
-    PyTuple_SET_ITEM(result, 1, PyBytes_FromStringAndSize(s_cur.ptr, s_cur.len));
+    PyTuple_SET_ITEM(result, 0, PyBytes_FromStringAndSize((char *)r_cur.ptr, r_cur.len));
+    PyTuple_SET_ITEM(result, 1, PyBytes_FromStringAndSize((char *)s_cur.ptr, s_cur.len));
 
     return result;
 }
