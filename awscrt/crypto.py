@@ -261,7 +261,7 @@ class EC(NativeResource):
         Generates a new instance of EC key pair.
         """
         return EC(binding=_awscrt.ec_new_generate())
-    
+
     @staticmethod
     def new_key_from_der_data(der_data: Union[bytes, bytearray, memoryview]) -> 'EC':
         """
@@ -293,7 +293,7 @@ class EC(NativeResource):
         Exports the key in specified format.
         """
         return _awscrt.ec_export_key(self._binding, export_format)
-    
+
     def sign(self, digest: Union[bytes, bytearray, memoryview]) -> bytes:
         """
         Signs data using a given algorithm.
@@ -309,4 +309,3 @@ class EC(NativeResource):
         Returns True if signature matches and False if not.
         """
         return _awscrt.ec_verify(self._binding, digest, signature)
-    
