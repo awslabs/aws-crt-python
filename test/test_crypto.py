@@ -371,5 +371,6 @@ class TestCredentials(NativeResourceTest):
 
         self.assertTrue(ec.verify(digest, signature))
 
+
 if __name__ == '__main__':
     unittest.main()
