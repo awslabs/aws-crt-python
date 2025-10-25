@@ -380,11 +380,11 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
 
         # Warning: very hacky. feel free to replace with something cleaner
         # Problem: if you install python through homebrew, python config ldflags
-        # will point to homebrew lib folder. 
+        # will point to homebrew lib folder.
         # setuptools puts python ldflags before any of our lib paths, so if there is openssl or
         # another libcrypto in homebrew libs, it will get picked up before aws-lc we are building against.
         # And then we have fun failures due to lib mismatch.
-        # I could not find a cleaner way, so lets just hook into linker command and make sure 
+        # I could not find a cleaner way, so lets just hook into linker command and make sure
         # our libs appear before other libs.
         if sys.platform == 'darwin' and using_libcrypto() and not using_system_libs() and not using_system_libcrypto():
 
@@ -392,7 +392,8 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
 
             for i, item in enumerate(self.compiler.linker_so):
                 if item.startswith('-L'):
-                    self.compiler.linker_so[i:i] = [f"-L{item}" for item in self.library_dirs] + ['-Wl,-search_paths_first']
+                    self.compiler.linker_so[i:i] = [
+                        f"-L{item}" for item in self.library_dirs] + ['-Wl,-search_paths_first']
                     break
 
             try:
@@ -528,8 +529,6 @@ def awscrt_ext():
         define_macros.append(('Py_LIMITED_API', '0x030B0000'))
         py_limited_api = True
 
-    print 
-
     return setuptools.Extension(
         '_awscrt',
         language='c',
@@ -541,6 +540,7 @@ def awscrt_ext():
         define_macros=define_macros,
         py_limited_api=py_limited_api,
     )
+
 
 def _load_version():
     init_path = os.path.join(PROJECT_DIR, 'awscrt', '__init__.py')
