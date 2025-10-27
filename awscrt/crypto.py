@@ -260,7 +260,7 @@ class EC(NativeResource):
         """
         Generates a new instance of EC key pair.
         """
-        return EC(binding=_awscrt.ec_new_generate())
+        return EC(binding=_awscrt.ec_new_generate(type))
 
     @staticmethod
     def new_key_from_der_data(der_data: Union[bytes, bytearray, memoryview]) -> 'EC':

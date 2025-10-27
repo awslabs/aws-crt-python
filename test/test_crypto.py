@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0.
 
 
+from awscrt.io import LogLevel, init_logging
 from test import NativeResourceTest
 from awscrt.crypto import Hash, RSA, RSAEncryptionAlgorithm, RSASignatureAlgorithm, ED25519, ED25519ExportFormat, EC, ECType, ECRawSignature
 import base64
@@ -115,9 +116,9 @@ RSA_PRIVATE_KEY_DER_BASE64 = (
     'nGXWA0Gp6UWgpg4Hvjdsu+0FQ3AhDMBKZZ8fBFb4EW+HRQIHPnbH')
 
 EC_PRIVATE_KEY_SEC1_BASE64 = (
-    'MHcCAQEEIJkWKltOY4ZMX4439yu9lx1caIAYw5EPw8P5Osl6S6P2oAoGCCqGSM49'
-    'AwEHoUQDQgAE7GzXS9wzwlYyrVJWrPXw5iiZhIOvc2/+14M7QoFdLuDb9qykxhZ+'
-    'PuD/e0PooTZQkoMGlLPUkwbeY4qhHD+yVw=='
+    'MHcCAQEEIHjt7c+VnkIkN6RW7QgZPFNLb/9AZEhqSYYMtwrlLb3WoAoGCCqGSM49'
+    'AwEHoUQDQgAEv2FjRpMtADMZ4zoZxshV9chEkembgzZnXSUNe+DA8dKqXN/7qTcZ'
+    'jYJHKIi+Rn88zUGqCJo3DWF/X+ufVfdU2g=='
 )
 
 
@@ -368,6 +369,7 @@ class TestCredentials(NativeResourceTest):
 
         (r, s) = EC.decode_der_signature(signature)
         self.assertEqual(signature, EC.encode_raw_signature(ECRawSignature(r=r, s=s)))
+        print(base64.b64encode(signature))
 
         self.assertTrue(ec.verify(digest, signature))
 
