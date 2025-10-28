@@ -297,11 +297,11 @@ class EC(NativeResource):
         """
         return _awscrt.ec_export_key(self._binding, export_format)
     
-    def get_public_coords(self, export_format: ECExportFormat) -> ECPublicCoords:
+    def get_public_coords(self) -> ECPublicCoords:
         """
         Get public coords of the key
         """
-        (x, y) = _awscrt.ec_get_public_coords(self._binding, export_format)
+        (x, y) = _awscrt.ec_get_public_coords(self._binding)
         return ECPublicCoords(x=x, y=y)
 
     def sign(self, digest: Union[bytes, bytearray, memoryview]) -> bytes:
