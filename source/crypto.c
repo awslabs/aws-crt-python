@@ -862,7 +862,6 @@ PyObject *aws_py_ec_decode_signature(PyObject *self, PyObject *args) {
 PyObject *aws_py_ec_get_public_coords(PyObject *self, PyObject *args) {
     (void)self;
 
-    struct aws_allocator *allocator = aws_py_get_allocator();
     PyObject *ec_capsule = NULL;
     if (!PyArg_ParseTuple(args, "O", &ec_capsule)) {
         return NULL;
