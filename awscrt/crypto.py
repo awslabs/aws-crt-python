@@ -3,7 +3,7 @@
 
 import _awscrt
 from awscrt import NativeResource
-from typing import Union
+from typing import Union, NamedTuple
 from enum import IntEnum
 
 
@@ -210,3 +210,114 @@ class ED25519(NativeResource):
         Exports public part of the key in specified format.
         """
         return _awscrt.ed25519_export_private_key(self._binding, export_format)
+
+
+class ECType(IntEnum):
+    """Elliptic Curve Type"""
+
+    P_256 = 0
+    """
+    P-256 curve aka secp256r1
+    """
+
+    P_384 = 1
+    """
+    P-384 curve aka secp384r1
+    """
+
+
+class ECExportFormat(IntEnum):
+    """EC Export format"""
+
+    SEC1 = 0
+    """
+    Raw bytes for the private key as defined in Sec1 ("EC Private Key" in pem)
+    """
+
+    PKCS8 = 1
+    """
+    Raw bytes for the private key as defined in PKCS8 ("Private Key" in pem)
+    """
+
+    SPKI = 2
+    """
+    Raw bytes for the public key as defined in x509/SPKI ("EC Public Key" or "Public Key" in pem)
+    """
+
+
+class ECRawSignature(NamedTuple):
+    r: bytes
+    s: bytes
+
+
+class ECPublicCoords(NamedTuple):
+    x: bytes
+    y: bytes
+
+
+class EC(NativeResource):
+    def __init__(self, binding):
+        super().__init__()
+        self._binding = binding
+
+    @staticmethod
+    def new_generate(type: ECType) -> 'EC':
+        """
+        Generates a new instance of EC key pair.
+        """
+        return EC(binding=_awscrt.ec_new_generate(type))
+
+    @staticmethod
+    def new_key_from_der_data(der_data: Union[bytes, bytearray, memoryview]) -> 'EC':
+        """
+        Creates a new instance of EC key pair from der data.
+        Will figure out what type of key it is without hint (i.e. pem header).
+        Supports all formats specified in ECExportFormat.
+        Expects raw bytes (i.e. strip b64 you get when reading pem).
+        Raises ValueError if pem does not have private key object.
+        """
+        return EC(binding=_awscrt.ec_key_from_der_data(der_data))
+
+    @staticmethod
+    def decode_der_signature(signature: bytes) -> ECRawSignature:
+        """
+        Decodes ec signature into raw r and s.
+        """
+        (r, s) = _awscrt.ec_decode_signature(signature)
+        return ECRawSignature(r=r, s=s)
+
+    @staticmethod
+    def encode_raw_signature(signature: ECRawSignature) -> bytes:
+        """
+        Encodes raw signature into der.
+        """
+        return _awscrt.ec_encode_signature(signature)
+
+    def export_key(self, export_format: ECExportFormat) -> bytes:
+        """
+        Exports the key in specified format.
+        """
+        return _awscrt.ec_export_key(self._binding, export_format)
+
+    def get_public_coords(self) -> ECPublicCoords:
+        """
+        Get public coords of the key
+        """
+        (x, y) = _awscrt.ec_get_public_coords(self._binding)
+        return ECPublicCoords(x=x, y=y)
+
+    def sign(self, digest: Union[bytes, bytearray, memoryview]) -> bytes:
+        """
+        Signs data using a given algorithm.
+        Returns DER encoded signature.
+        Note: function expects digest of the message, ex sha256
+        """
+        return _awscrt.ec_sign(self._binding, digest)
+
+    def verify(self, digest: Union[bytes, bytearray, memoryview],
+               signature: Union[bytes, bytearray, memoryview]) -> bool:
+        """
+        Verifies signature against digest.
+        Returns True if signature matches and False if not.
+        """
+        return _awscrt.ec_verify(self._binding, digest, signature)

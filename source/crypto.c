@@ -5,6 +5,7 @@
 
 #include "crypto.h"
 
+#include "aws/cal/ecc.h"
 #include "aws/cal/ed25519.h"
 #include "aws/cal/hash.h"
 #include "aws/cal/hmac.h"
@@ -16,6 +17,7 @@ const char *s_capsule_name_hash = "aws_hash";
 const char *s_capsule_name_hmac = "aws_hmac";
 const char *s_capsule_name_rsa = "aws_rsa";
 const char *s_capsule_name_ed25519 = "aws_ed25519";
+const char *s_capsule_name_ec = "aws_ec";
 
 static void s_hash_destructor(PyObject *hash_capsule) {
     assert(PyCapsule_CheckExact(hash_capsule));
@@ -364,7 +366,7 @@ PyObject *aws_py_rsa_private_key_from_der_data(PyObject *self, PyObject *args) {
     (void)self;
 
     struct aws_byte_cursor der_data_cur;
-    if (!PyArg_ParseTuple(args, "y#", &der_data_cur.ptr, &der_data_cur.len)) {
+    if (!PyArg_ParseTuple(args, "s#", &der_data_cur.ptr, &der_data_cur.len)) {
         return NULL;
     }
 
@@ -392,7 +394,7 @@ PyObject *aws_py_rsa_public_key_from_der_data(PyObject *self, PyObject *args) {
     (void)self;
 
     struct aws_byte_cursor der_data_cur;
-    if (!PyArg_ParseTuple(args, "y#", &der_data_cur.ptr, &der_data_cur.len)) {
+    if (!PyArg_ParseTuple(args, "s#", &der_data_cur.ptr, &der_data_cur.len)) {
         return NULL;
     }
 
@@ -423,7 +425,7 @@ PyObject *aws_py_rsa_encrypt(PyObject *self, PyObject *args) {
     PyObject *rsa_capsule = NULL;
     int encrypt_algo = 0;
     struct aws_byte_cursor plaintext_cur;
-    if (!PyArg_ParseTuple(args, "Ois#", &rsa_capsule, &encrypt_algo, &plaintext_cur.ptr, &plaintext_cur.len)) {
+    if (!PyArg_ParseTuple(args, "Oiy#", &rsa_capsule, &encrypt_algo, &plaintext_cur.ptr, &plaintext_cur.len)) {
         return NULL;
     }
 
@@ -623,4 +625,264 @@ PyObject *aws_py_ed25519_export_private_key(PyObject *self, PyObject *args) {
     PyObject *ret = PyBytes_FromStringAndSize((const char *)result_buf.buffer, result_buf.len);
     aws_byte_buf_clean_up_secure(&result_buf);
     return ret;
+}
+
+static void s_ec_destructor(PyObject *ec_capsule) {
+    struct aws_ecc_key_pair *key_pair = PyCapsule_GetPointer(ec_capsule, s_capsule_name_ec);
+    assert(key_pair);
+
+    aws_ecc_key_pair_release(key_pair);
+}
+
+PyObject *aws_py_ec_new_generate(PyObject *self, PyObject *args) {
+    (void)self;
+    (void)args;
+
+    int ec_type = 0;
+    if (!PyArg_ParseTuple(args, "i", &ec_type)) {
+        return NULL;
+    }
+
+    PyObject *capsule = NULL;
+    struct aws_allocator *allocator = aws_py_get_allocator();
+
+    struct aws_ecc_key_pair *key_pair = aws_ecc_key_pair_new_generate_random(allocator, ec_type);
+
+    if (key_pair == NULL) {
+        return PyErr_AwsLastError();
+    }
+
+    capsule = PyCapsule_New(key_pair, s_capsule_name_ec, s_ec_destructor);
+
+    if (capsule == NULL) {
+        aws_ecc_key_pair_release(key_pair);
+    }
+
+    return capsule;
+}
+
+PyObject *aws_py_ec_key_from_der_data(PyObject *self, PyObject *args) {
+    (void)self;
+
+    struct aws_byte_cursor der_data_cur;
+    if (!PyArg_ParseTuple(args, "y#", &der_data_cur.ptr, &der_data_cur.len)) {
+        return NULL;
+    }
+
+    PyObject *capsule = NULL;
+    struct aws_allocator *allocator = aws_py_get_allocator();
+
+    struct aws_ecc_key_pair *key_pair = aws_ecc_key_pair_new_from_asn1(allocator, &der_data_cur);
+
+    if (key_pair == NULL) {
+        PyErr_AwsLastError();
+        goto on_done;
+    }
+
+    capsule = PyCapsule_New(key_pair, s_capsule_name_ec, s_ec_destructor);
+
+    if (capsule == NULL) {
+        aws_ecc_key_pair_release(key_pair);
+    }
+
+on_done:
+    return capsule;
+}
+
+PyObject *aws_py_ec_export_key(PyObject *self, PyObject *args) {
+    (void)self;
+    PyObject *ec_capsule = NULL;
+    int export_format = 0;
+
+    if (!PyArg_ParseTuple(args, "Oi", &ec_capsule, &export_format)) {
+        return NULL;
+    }
+
+    struct aws_ecc_key_pair *ec = PyCapsule_GetPointer(ec_capsule, s_capsule_name_ec);
+    if (ec == NULL) {
+        return NULL;
+    }
+
+    struct aws_allocator *allocator = aws_py_get_allocator();
+    struct aws_byte_buf result_buf;
+    /* all current curves max out at around 200 bytes in pkcs8, */
+    aws_byte_buf_init(&result_buf, allocator, 512);
+
+    if (aws_ecc_key_pair_export(ec, export_format, &result_buf)) {
+        aws_byte_buf_clean_up_secure(&result_buf);
+        return PyErr_AwsLastError();
+    }
+
+    PyObject *ret = PyBytes_FromStringAndSize((const char *)result_buf.buffer, result_buf.len);
+    aws_byte_buf_clean_up_secure(&result_buf);
+    return ret;
+}
+
+PyObject *aws_py_ec_sign(PyObject *self, PyObject *args) {
+    (void)self;
+
+    struct aws_allocator *allocator = aws_py_get_allocator();
+    PyObject *ec_capsule = NULL;
+    struct aws_byte_cursor digest_cur;
+    if (!PyArg_ParseTuple(args, "Oy#", &ec_capsule, &digest_cur.ptr, &digest_cur.len)) {
+        return NULL;
+    }
+
+    struct aws_ecc_key_pair *ec = PyCapsule_GetPointer(ec_capsule, s_capsule_name_ec);
+    if (ec == NULL) {
+        return NULL;
+    }
+
+    struct aws_byte_buf result_buf;
+    aws_byte_buf_init(&result_buf, allocator, aws_ecc_key_pair_signature_length(ec));
+
+    if (aws_ecc_key_pair_sign_message(ec, &digest_cur, &result_buf)) {
+        aws_byte_buf_clean_up_secure(&result_buf);
+        return PyErr_AwsLastError();
+    }
+
+    PyObject *ret = PyBytes_FromStringAndSize((const char *)result_buf.buffer, result_buf.len);
+    aws_byte_buf_clean_up_secure(&result_buf);
+    return ret;
+}
+
+PyObject *aws_py_ec_verify(PyObject *self, PyObject *args) {
+    (void)self;
+
+    PyObject *ec_capsule = NULL;
+    struct aws_byte_cursor digest_cur;
+    struct aws_byte_cursor signature_cur;
+    if (!PyArg_ParseTuple(
+            args, "Oy#y#", &ec_capsule, &digest_cur.ptr, &digest_cur.len, &signature_cur.ptr, &signature_cur.len)) {
+        return NULL;
+    }
+
+    struct aws_ecc_key_pair *ec = PyCapsule_GetPointer(ec_capsule, s_capsule_name_ec);
+    if (ec == NULL) {
+        return NULL;
+    }
+
+    if (aws_ecc_key_pair_verify_signature(ec, &digest_cur, &signature_cur)) {
+        if (aws_last_error() == AWS_ERROR_CAL_SIGNATURE_VALIDATION_FAILED) {
+            aws_reset_error();
+            Py_RETURN_FALSE;
+        }
+        return PyErr_AwsLastError();
+    }
+
+    Py_RETURN_TRUE;
+}
+
+PyObject *aws_py_ec_encode_signature(PyObject *self, PyObject *args) {
+    (void)self;
+
+    PyObject *signature;
+    PyObject *r_bytes;
+    PyObject *s_bytes;
+
+    if (!PyArg_ParseTuple(args, "O", &signature))
+        return NULL;
+
+    r_bytes = PyObject_GetAttrString(signature, "r");
+    if (!r_bytes)
+        return NULL;
+
+    s_bytes = PyObject_GetAttrString(signature, "s");
+    if (!s_bytes) {
+        Py_DECREF(r_bytes);
+        return NULL;
+    }
+
+    /* Note: PyBytes_Check does not null check, hence explicit null check before. */
+    if (!PyBytes_Check(r_bytes) || !PyBytes_Check(s_bytes)) {
+        PyErr_SetString(PyExc_TypeError, "r and s must be bytes");
+        Py_DECREF(r_bytes);
+        Py_DECREF(s_bytes);
+        return NULL;
+    }
+
+    struct aws_allocator *allocator = aws_py_get_allocator();
+
+    struct aws_byte_cursor r_cur = aws_byte_cursor_from_pybytes(r_bytes);
+    struct aws_byte_cursor s_cur = aws_byte_cursor_from_pybytes(s_bytes);
+
+    size_t buf_size = r_cur.len + s_cur.len + 32; /* der has static overhead of couple bytes, just overallocate */
+    if (buf_size > 256) {
+        aws_raise_error(AWS_ERROR_INVALID_ARGUMENT);
+        goto on_error;
+    }
+
+    struct aws_byte_buf result_buf;
+    aws_byte_buf_init(&result_buf, allocator, buf_size);
+
+    if (aws_ecc_encode_signature_raw_to_der(allocator, r_cur, s_cur, &result_buf)) {
+        aws_byte_buf_clean_up_secure(&result_buf);
+        goto on_error;
+    }
+
+    Py_DECREF(r_bytes);
+    Py_DECREF(s_bytes);
+
+    PyObject *ret = PyBytes_FromStringAndSize((const char *)result_buf.buffer, result_buf.len);
+    aws_byte_buf_clean_up_secure(&result_buf);
+    return ret;
+
+on_error:
+    Py_DECREF(r_bytes);
+    Py_DECREF(s_bytes);
+    return PyErr_AwsLastError();
+}
+
+PyObject *aws_py_ec_decode_signature(PyObject *self, PyObject *args) {
+    (void)self;
+
+    struct aws_byte_cursor signature_cur;
+    if (!PyArg_ParseTuple(args, "y#", &signature_cur.ptr, &signature_cur.len)) {
+        return NULL;
+    }
+
+    struct aws_allocator *allocator = aws_py_get_allocator();
+    struct aws_byte_cursor r_cur = {0};
+    struct aws_byte_cursor s_cur = {0};
+    if (aws_ecc_decode_signature_der_to_raw(allocator, signature_cur, &r_cur, &s_cur)) {
+        return PyErr_AwsLastError();
+    }
+
+    PyObject *result = PyTuple_New(2);
+    if (!result) {
+        return NULL;
+    }
+
+    PyTuple_SetItem(result, 0, PyBytes_FromStringAndSize((char *)r_cur.ptr, r_cur.len));
+    PyTuple_SetItem(result, 1, PyBytes_FromStringAndSize((char *)s_cur.ptr, s_cur.len));
+
+    return result;
+}
+
+PyObject *aws_py_ec_get_public_coords(PyObject *self, PyObject *args) {
+    (void)self;
+
+    PyObject *ec_capsule = NULL;
+    if (!PyArg_ParseTuple(args, "O", &ec_capsule)) {
+        return NULL;
+    }
+
+    struct aws_ecc_key_pair *ec = PyCapsule_GetPointer(ec_capsule, s_capsule_name_ec);
+    if (ec == NULL) {
+        return NULL;
+    }
+
+    struct aws_byte_cursor x_cur = {0};
+    struct aws_byte_cursor y_cur = {0};
+    aws_ecc_key_pair_get_public_key(ec, &x_cur, &y_cur);
+
+    PyObject *result = PyTuple_New(2);
+    if (!result) {
+        return NULL;
+    }
+
+    PyTuple_SetItem(result, 0, PyBytes_FromStringAndSize((char *)x_cur.ptr, x_cur.len));
+    PyTuple_SetItem(result, 1, PyBytes_FromStringAndSize((char *)y_cur.ptr, y_cur.len));
+
+    return result;
 }

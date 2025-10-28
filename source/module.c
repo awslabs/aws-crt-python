@@ -822,6 +822,16 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(ed25519_export_public_key, METH_VARARGS),
     AWS_PY_METHOD_DEF(ed25519_export_private_key, METH_VARARGS),
 
+    /* EC crypto primitives */
+    AWS_PY_METHOD_DEF(ec_new_generate, METH_VARARGS),
+    AWS_PY_METHOD_DEF(ec_key_from_der_data, METH_VARARGS),
+    AWS_PY_METHOD_DEF(ec_export_key, METH_VARARGS),
+    AWS_PY_METHOD_DEF(ec_sign, METH_VARARGS),
+    AWS_PY_METHOD_DEF(ec_verify, METH_VARARGS),
+    AWS_PY_METHOD_DEF(ec_encode_signature, METH_VARARGS),
+    AWS_PY_METHOD_DEF(ec_decode_signature, METH_VARARGS),
+    AWS_PY_METHOD_DEF(ec_get_public_coords, METH_VARARGS),
+
     /* Checksum primitives */
     AWS_PY_METHOD_DEF(checksums_crc32, METH_VARARGS),
     AWS_PY_METHOD_DEF(checksums_crc32c, METH_VARARGS),
