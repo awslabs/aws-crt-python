@@ -249,9 +249,11 @@ class ECRawSignature(NamedTuple):
     r: bytes
     s: bytes
 
+
 class ECPublicCoords(NamedTuple):
     x: bytes
     y: bytes
+
 
 class EC(NativeResource):
     def __init__(self, binding):
@@ -296,7 +298,7 @@ class EC(NativeResource):
         Exports the key in specified format.
         """
         return _awscrt.ec_export_key(self._binding, export_format)
-    
+
     def get_public_coords(self) -> ECPublicCoords:
         """
         Get public coords of the key
