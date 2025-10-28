@@ -110,7 +110,7 @@ PyObject *aws_py_hash_update(PyObject *self, PyObject *args) {
     const char *to_hash_c_str;
     Py_ssize_t to_hash_len;
 
-    if (!PyArg_ParseTuple(args, "Oy#", &hash_capsule, &to_hash_c_str, &to_hash_len)) {
+    if (!PyArg_ParseTuple(args, "Os#", &hash_capsule, &to_hash_c_str, &to_hash_len)) {
         return PyErr_AwsLastError();
     }
 
@@ -179,7 +179,7 @@ PyObject *aws_py_sha256_hmac_new(PyObject *self, PyObject *args) {
     const char *secret_ptr;
     Py_ssize_t secret_len;
 
-    if (!PyArg_ParseTuple(args, "y#", &secret_ptr, &secret_len)) {
+    if (!PyArg_ParseTuple(args, "s#", &secret_ptr, &secret_len)) {
         return PyErr_AwsLastError();
     }
 
@@ -202,7 +202,7 @@ PyObject *aws_py_hmac_update(PyObject *self, PyObject *args) {
     const char *to_hmac_ptr;
     Py_ssize_t to_hmac_len;
 
-    if (!PyArg_ParseTuple(args, "Oy#", &hmac_capsule, &to_hmac_ptr, &to_hmac_len)) {
+    if (!PyArg_ParseTuple(args, "Os#", &hmac_capsule, &to_hmac_ptr, &to_hmac_len)) {
         return PyErr_AwsLastError();
     }
 
@@ -273,7 +273,7 @@ PyObject *aws_py_rsa_private_key_from_pem_data(PyObject *self, PyObject *args) {
     (void)self;
 
     struct aws_byte_cursor pem_data_cur;
-    if (!PyArg_ParseTuple(args, "y#", &pem_data_cur.ptr, &pem_data_cur.len)) {
+    if (!PyArg_ParseTuple(args, "s#", &pem_data_cur.ptr, &pem_data_cur.len)) {
         return NULL;
     }
 
@@ -323,7 +323,7 @@ PyObject *aws_py_rsa_public_key_from_pem_data(PyObject *self, PyObject *args) {
     (void)self;
 
     struct aws_byte_cursor pem_data_cur;
-    if (!PyArg_ParseTuple(args, "y#", &pem_data_cur.ptr, &pem_data_cur.len)) {
+    if (!PyArg_ParseTuple(args, "s#", &pem_data_cur.ptr, &pem_data_cur.len)) {
         return NULL;
     }
 
@@ -366,7 +366,7 @@ PyObject *aws_py_rsa_private_key_from_der_data(PyObject *self, PyObject *args) {
     (void)self;
 
     struct aws_byte_cursor der_data_cur;
-    if (!PyArg_ParseTuple(args, "y#", &der_data_cur.ptr, &der_data_cur.len)) {
+    if (!PyArg_ParseTuple(args, "s#", &der_data_cur.ptr, &der_data_cur.len)) {
         return NULL;
     }
 
@@ -394,7 +394,7 @@ PyObject *aws_py_rsa_public_key_from_der_data(PyObject *self, PyObject *args) {
     (void)self;
 
     struct aws_byte_cursor der_data_cur;
-    if (!PyArg_ParseTuple(args, "y#", &der_data_cur.ptr, &der_data_cur.len)) {
+    if (!PyArg_ParseTuple(args, "s#", &der_data_cur.ptr, &der_data_cur.len)) {
         return NULL;
     }
 
