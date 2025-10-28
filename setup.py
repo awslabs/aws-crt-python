@@ -315,6 +315,7 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
         run_cmd(build_cmd)
 
     def _build_dependencies(self):
+
         build_dir = os.path.join(self.build_temp, 'deps')
         install_path = os.path.join(self.build_temp, 'deps', 'install')
 
@@ -375,6 +376,34 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
 
         self.library_dirs.insert(0, os.path.join(install_path, lib_dir))
 
+    def build_extension(self, ext):
+
+        # Warning: very hacky. feel free to replace with something cleaner
+        # Problem: if you install python through homebrew, python config ldflags
+        # will point to homebrew lib folder.
+        # setuptools puts python ldflags before any of our lib paths, so if there is openssl or
+        # another libcrypto in homebrew libs, it will get picked up before aws-lc we are building against.
+        # And then we have fun failures due to lib mismatch.
+        # I could not find a cleaner way, so lets just hook into linker command and make sure
+        # our libs appear before other libs.
+        if ((sys.platform == 'darwin' or sys.platform == 'linux')
+                and using_libcrypto() and not using_system_libs() and not using_system_libcrypto()):
+
+            orig_linker_so = self.compiler.linker_so[:]
+
+            for i, item in enumerate(self.compiler.linker_so):
+                if item.startswith('-L'):
+                    self.compiler.linker_so[i:i] = [
+                        f"-L{item}" for item in self.library_dirs] + ['-Wl,-search_paths_first']
+                    break
+
+            try:
+                super().build_extension(ext)
+            finally:
+                self.compiler.linker_so = orig_linker_so
+        else:
+            super().build_extension(ext)
+
     def run(self):
         if using_system_libs():
             print("Skip building dependencies")
@@ -422,7 +451,6 @@ def awscrt_ext():
 
     elif sys.platform == 'darwin':
         extra_link_args += ['-framework', 'Security']
-
     else:  # unix
         if forcing_static_libs():
             # linker will prefer shared libraries over static if it can find both.
