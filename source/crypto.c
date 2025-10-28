@@ -110,7 +110,7 @@ PyObject *aws_py_hash_update(PyObject *self, PyObject *args) {
     const char *to_hash_c_str;
     Py_ssize_t to_hash_len;
 
-    if (!PyArg_ParseTuple(args, "Os#", &hash_capsule, &to_hash_c_str, &to_hash_len)) {
+    if (!PyArg_ParseTuple(args, "Oy#", &hash_capsule, &to_hash_c_str, &to_hash_len)) {
         return PyErr_AwsLastError();
     }
 
@@ -179,7 +179,7 @@ PyObject *aws_py_sha256_hmac_new(PyObject *self, PyObject *args) {
     const char *secret_ptr;
     Py_ssize_t secret_len;
 
-    if (!PyArg_ParseTuple(args, "s#", &secret_ptr, &secret_len)) {
+    if (!PyArg_ParseTuple(args, "y#", &secret_ptr, &secret_len)) {
         return PyErr_AwsLastError();
     }
 
@@ -202,7 +202,7 @@ PyObject *aws_py_hmac_update(PyObject *self, PyObject *args) {
     const char *to_hmac_ptr;
     Py_ssize_t to_hmac_len;
 
-    if (!PyArg_ParseTuple(args, "Os#", &hmac_capsule, &to_hmac_ptr, &to_hmac_len)) {
+    if (!PyArg_ParseTuple(args, "Oy#", &hmac_capsule, &to_hmac_ptr, &to_hmac_len)) {
         return PyErr_AwsLastError();
     }
 
@@ -273,7 +273,7 @@ PyObject *aws_py_rsa_private_key_from_pem_data(PyObject *self, PyObject *args) {
     (void)self;
 
     struct aws_byte_cursor pem_data_cur;
-    if (!PyArg_ParseTuple(args, "s#", &pem_data_cur.ptr, &pem_data_cur.len)) {
+    if (!PyArg_ParseTuple(args, "y#", &pem_data_cur.ptr, &pem_data_cur.len)) {
         return NULL;
     }
 
@@ -323,7 +323,7 @@ PyObject *aws_py_rsa_public_key_from_pem_data(PyObject *self, PyObject *args) {
     (void)self;
 
     struct aws_byte_cursor pem_data_cur;
-    if (!PyArg_ParseTuple(args, "s#", &pem_data_cur.ptr, &pem_data_cur.len)) {
+    if (!PyArg_ParseTuple(args, "y#", &pem_data_cur.ptr, &pem_data_cur.len)) {
         return NULL;
     }
 
@@ -425,7 +425,7 @@ PyObject *aws_py_rsa_encrypt(PyObject *self, PyObject *args) {
     PyObject *rsa_capsule = NULL;
     int encrypt_algo = 0;
     struct aws_byte_cursor plaintext_cur;
-    if (!PyArg_ParseTuple(args, "Ois#", &rsa_capsule, &encrypt_algo, &plaintext_cur.ptr, &plaintext_cur.len)) {
+    if (!PyArg_ParseTuple(args, "Oiy#", &rsa_capsule, &encrypt_algo, &plaintext_cur.ptr, &plaintext_cur.len)) {
         return NULL;
     }
 
@@ -793,6 +793,7 @@ PyObject *aws_py_ec_encode_signature(PyObject *self, PyObject *args) {
         return NULL;
     }
 
+    /* Note: PyBytes_Check does not null check, hence explicit null check before. */
     if (!PyBytes_Check(r_bytes) || !PyBytes_Check(s_bytes)) {
         PyErr_SetString(PyExc_TypeError, "r and s must be bytes");
         Py_DECREF(r_bytes);
@@ -836,7 +837,7 @@ PyObject *aws_py_ec_decode_signature(PyObject *self, PyObject *args) {
     (void)self;
 
     struct aws_byte_cursor signature_cur;
-    if (!PyArg_ParseTuple(args, "s#", &signature_cur.ptr, &signature_cur.len)) {
+    if (!PyArg_ParseTuple(args, "y#", &signature_cur.ptr, &signature_cur.len)) {
         return NULL;
     }
 
@@ -854,6 +855,38 @@ PyObject *aws_py_ec_decode_signature(PyObject *self, PyObject *args) {
 
     PyTuple_SetItem(result, 0, PyBytes_FromStringAndSize((char *)r_cur.ptr, r_cur.len));
     PyTuple_SetItem(result, 1, PyBytes_FromStringAndSize((char *)s_cur.ptr, s_cur.len));
+
+    return result;
+}
+
+PyObject *aws_py_ec_get_public_coords(PyObject *self, PyObject *args) {
+    (void)self;
+
+    struct aws_allocator *allocator = aws_py_get_allocator();
+    PyObject *ec_capsule = NULL;
+    struct aws_byte_cursor digest_cur;
+    if (!PyArg_ParseTuple(args, "O", &ec_capsule)) {
+        return NULL;
+    }
+
+    struct aws_ecc_key_pair *ec = PyCapsule_GetPointer(ec_capsule, s_capsule_name_ec);
+    if (ec == NULL) {
+        return NULL;
+    }
+
+    struct aws_byte_cursor x_cur = {0};
+    struct aws_byte_cursor y_cur = {0};
+    if (aws_ecc_key_pair_get_public_key(ec, &x_cur, &y_cur)) {
+        return PyErr_AwsLastError();
+    }
+
+    PyObject *result = PyTuple_New(2);
+    if (!result) {
+        return NULL;
+    }
+
+    PyTuple_SetItem(result, 0, PyBytes_FromStringAndSize((char *)x_cur.ptr, x_cur.len));
+    PyTuple_SetItem(result, 1, PyBytes_FromStringAndSize((char *)y_cur.ptr, y_cur.len));
 
     return result;
 }
