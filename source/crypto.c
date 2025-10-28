@@ -864,7 +864,6 @@ PyObject *aws_py_ec_get_public_coords(PyObject *self, PyObject *args) {
 
     struct aws_allocator *allocator = aws_py_get_allocator();
     PyObject *ec_capsule = NULL;
-    struct aws_byte_cursor digest_cur;
     if (!PyArg_ParseTuple(args, "O", &ec_capsule)) {
         return NULL;
     }
