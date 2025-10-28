@@ -386,7 +386,8 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
         # And then we have fun failures due to lib mismatch.
         # I could not find a cleaner way, so lets just hook into linker command and make sure
         # our libs appear before other libs.
-        if sys.platform == 'darwin' and using_libcrypto() and not using_system_libs() and not using_system_libcrypto():
+        if ((sys.platform == 'darwin' or sys.platform == 'linux') 
+            and using_libcrypto() and not using_system_libs() and not using_system_libcrypto()):
 
             orig_linker_so = self.compiler.linker_so[:]
 
