@@ -874,9 +874,7 @@ PyObject *aws_py_ec_get_public_coords(PyObject *self, PyObject *args) {
 
     struct aws_byte_cursor x_cur = {0};
     struct aws_byte_cursor y_cur = {0};
-    if (aws_ecc_key_pair_get_public_key(ec, &x_cur, &y_cur)) {
-        return PyErr_AwsLastError();
-    }
+    aws_ecc_key_pair_get_public_key(ec, &x_cur, &y_cur);
 
     PyObject *result = PyTuple_New(2);
     if (!result) {
