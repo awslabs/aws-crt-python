@@ -1372,6 +1372,7 @@ class ClientOptions:
         on_lifecycle_event_connection_success_fn (Callable[[LifecycleConnectSuccessData],]): Callback for Lifecycle Event Connection Success.
         on_lifecycle_event_connection_failure_fn (Callable[[LifecycleConnectFailureData],]): Callback for Lifecycle Event Connection Failure.
         on_lifecycle_event_disconnection_fn (Callable[[LifecycleDisconnectData],]): Callback for Lifecycle Event Disconnection.
+        enable_aws_metrics (bool): Whether to append AWS IoT metrics to the username field during CONNECT. Default: True
     """
     host_name: str
     port: int = None
@@ -1398,6 +1399,7 @@ class ClientOptions:
     on_lifecycle_event_connection_success_fn: Callable[[LifecycleConnectSuccessData], None] = None
     on_lifecycle_event_connection_failure_fn: Callable[[LifecycleConnectFailureData], None] = None
     on_lifecycle_event_disconnection_fn: Callable[[LifecycleDisconnectData], None] = None
+    enable_aws_metrics: bool = True
 
 
 def _check_callback(callback):
@@ -1758,11 +1760,10 @@ class Client(NativeResource):
 
     Args:
         client_options (ClientOptions): The ClientOptions dataclass to used to configure the new Client.
-        enable_metrics (bool): Whether to append AWS IoT metrics to the username field during CONNECT. Default: True
 
     """
 
-    def __init__(self, client_options: ClientOptions, enable_metrics: bool = True):
+    def __init__(self, client_options: ClientOptions):
 
         super().__init__()
 
@@ -1789,7 +1790,7 @@ class Client(NativeResource):
             will = connect_options.will
 
         username = connect_options.username
-        if enable_metrics:
+        if client_options.enable_aws_metrics:
             username = username if username else ""
             username += _get_awsiot_metrics_str(username)
         connect_options.username = username

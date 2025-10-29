@@ -230,7 +230,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             host_name=input_host_name,
             port=input_port,
             connect_options=connect_options,
-            enable_metrics=False
+            enable_aws_metrics=False
         )
         callbacks = Mqtt5TestCallbacks()
         client = self._create_client(client_options=client_options, callbacks=callbacks)
@@ -413,7 +413,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             client_id=create_client_id(),
             username=input_username,
             password=input_password,
-            enable_metrics=False
+            enable_aws_metrics=False
         )
         client_options = mqtt5.ClientOptions(
             host_name=input_host_name,
