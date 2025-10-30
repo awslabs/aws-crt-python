@@ -30,7 +30,6 @@ def init_logging(log_level, file_name):
 
     Args:
         log_level (LogLevel): Display messages of this importance and higher.
-            `LogLevel.NoLogs` will disable logging.
         file_name (str): Logging destination. To write to stdout or stderr pass
             'stdout' or 'stderr' as strings. Otherwise, a file path is assumed.
     """
@@ -46,7 +45,6 @@ def set_log_level(log_level):
 
     Args:
         log_level (LogLevel): Display messages of this importance and higher.
-            `LogLevel.NoLogs` will disable logging.
     """
     assert log_level is not None
 
