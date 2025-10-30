@@ -40,6 +40,17 @@ def init_logging(log_level, file_name):
     _awscrt.init_logging(log_level, file_name)
 
 
+def set_log_level(log_level):
+    """Change the log level of `awscrt`.
+
+    Args:
+        log_level (LogLevel): Display messages of this importance and higher.
+            `LogLevel.NoLogs` will disable logging.
+    """
+    assert log_level is not None
+
+    _awscrt.set_log_level(log_level)
+
 class EventLoopGroup(NativeResource):
     """A collection of event-loops.
 
