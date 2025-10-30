@@ -51,6 +51,7 @@ def set_log_level(log_level):
 
     _awscrt.set_log_level(log_level)
 
+
 class EventLoopGroup(NativeResource):
     """A collection of event-loops.
 
