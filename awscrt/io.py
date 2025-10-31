@@ -41,7 +41,7 @@ def init_logging(log_level, file_name):
 
 def set_log_level(log_level):
     """Change the log level of `awscrt`. init_logging() must have been called
-    before using this function.
+    before using this function or else an exception will be raised.
 
     Args:
         log_level (LogLevel): Display messages of this importance and higher.
