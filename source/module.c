@@ -86,6 +86,27 @@ PyObject *aws_py_init_logging(PyObject *self, PyObject *args) {
     Py_RETURN_NONE;
 }
 
+PyObject *aws_py_set_log_level(PyObject *self, PyObject *args) {
+    (void)self;
+
+    if (!s_logger_init) {
+        aws_raise_error(AWS_ERROR_INVALID_STATE);
+        return PyErr_AwsLastError();
+    }
+
+    int log_level = 0;
+    if (!PyArg_ParseTuple(args, "b", &log_level)) {
+        PyErr_SetNone(PyExc_ValueError);
+        return NULL;
+    }
+
+    if (aws_logger_set_log_level(&s_logger, log_level) != AWS_OP_SUCCESS) {
+        return PyErr_AwsLastError();
+    }
+
+    Py_RETURN_NONE;
+}
+
 struct aws_byte_cursor aws_byte_cursor_from_pyunicode(PyObject *str) {
     Py_ssize_t len;
     const char *ptr = PyUnicode_AsUTF8AndSize(str, &len);
@@ -761,6 +782,7 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(tls_connection_options_set_alpn_list, METH_VARARGS),
     AWS_PY_METHOD_DEF(tls_connection_options_set_server_name, METH_VARARGS),
     AWS_PY_METHOD_DEF(init_logging, METH_VARARGS),
+    AWS_PY_METHOD_DEF(set_log_level, METH_VARARGS),
     AWS_PY_METHOD_DEF(input_stream_new, METH_VARARGS),
     AWS_PY_METHOD_DEF(pkcs11_lib_new, METH_VARARGS),
 

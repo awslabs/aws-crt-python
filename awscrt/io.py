@@ -30,7 +30,6 @@ def init_logging(log_level, file_name):
 
     Args:
         log_level (LogLevel): Display messages of this importance and higher.
-            `LogLevel.NoLogs` will disable logging.
         file_name (str): Logging destination. To write to stdout or stderr pass
             'stdout' or 'stderr' as strings. Otherwise, a file path is assumed.
     """
@@ -38,6 +37,18 @@ def init_logging(log_level, file_name):
     assert file_name is not None
 
     _awscrt.init_logging(log_level, file_name)
+
+
+def set_log_level(log_level):
+    """Change the log level of `awscrt`. init_logging() must have been called
+    before using this function or else an exception will be raised.
+
+    Args:
+        log_level (LogLevel): Display messages of this importance and higher.
+    """
+    assert log_level is not None
+
+    _awscrt.set_log_level(log_level)
 
 
 class EventLoopGroup(NativeResource):

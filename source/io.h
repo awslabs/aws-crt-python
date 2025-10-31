@@ -24,6 +24,11 @@ bool aws_py_socket_options_init(struct aws_socket_options *socket_options, PyObj
 PyObject *aws_py_init_logging(PyObject *self, PyObject *args);
 
 /**
+ * Change logging level of the global logger.
+ */
+PyObject *aws_py_set_log_level(PyObject *self, PyObject *args);
+
+/**
  * Returns True if ALPN is available, False if it is not.
  */
 PyObject *aws_py_is_alpn_available(PyObject *self, PyObject *args);
