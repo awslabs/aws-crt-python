@@ -2,8 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0.
 
 
+from awscrt.io import LogLevel, init_logging
 from test import NativeResourceTest
-from awscrt.crypto import Hash, RSA, RSAEncryptionAlgorithm, RSASignatureAlgorithm, ED25519, ED25519ExportFormat
+from awscrt.crypto import Hash, RSA, RSAEncryptionAlgorithm, RSASignatureAlgorithm, ED25519, ED25519ExportFormat, EC, ECType, ECRawSignature
 import base64
 import unittest
 
@@ -113,6 +114,12 @@ RSA_PRIVATE_KEY_DER_BASE64 = (
     '9neFAoGBAMqQA2YWCHhnRtjn4iGMrTk8iOHBd8AGBBzX9rPKXDqWlOr/iQq90qX0'
     '59309stR/bAhMzxOx31777XEPO1md854iXXr0XDMQlwCYkWyWb6hp4JlsqFBPMjn'
     'nGXWA0Gp6UWgpg4Hvjdsu+0FQ3AhDMBKZZ8fBFb4EW+HRQIHPnbH')
+
+EC_PRIVATE_KEY_SEC1_BASE64 = (
+    'MHcCAQEEIHjt7c+VnkIkN6RW7QgZPFNLb/9AZEhqSYYMtwrlLb3WoAoGCCqGSM49'
+    'AwEHoUQDQgAEv2FjRpMtADMZ4zoZxshV9chEkembgzZnXSUNe+DA8dKqXN/7qTcZ'
+    'jYJHKIi+Rn88zUGqCJo3DWF/X+ufVfdU2g=='
+)
 
 
 class TestCredentials(NativeResourceTest):
@@ -325,6 +332,61 @@ class TestCredentials(NativeResourceTest):
 
         self.assertEqual(68, len(key.export_public_key(ED25519ExportFormat.OPENSSH_B64)))
         self.assertEqual(312, len(key.export_private_key(ED25519ExportFormat.OPENSSH_B64)))
+
+    def test_ec_p256_signing_roundtrip(self):
+        h = Hash.sha256_new()
+        h.update(b'totally original test string')
+        digest = h.digest()
+
+        ec = EC.new_generate(ECType.P_256)
+        signature = ec.sign(digest)
+
+        (r, s) = EC.decode_der_signature(signature)
+        self.assertEqual(signature, EC.encode_raw_signature(ECRawSignature(r=r, s=s)))
+
+        self.assertTrue(ec.verify(digest, signature))
+
+    def test_ec_p384_signing_roundtrip(self):
+        h = Hash.sha256_new()
+        h.update(b'totally original test string')
+        digest = h.digest()
+
+        ec = EC.new_generate(ECType.P_384)
+        signature = ec.sign(digest)
+
+        (r, s) = EC.decode_der_signature(signature)
+        self.assertEqual(signature, EC.encode_raw_signature(ECRawSignature(r=r, s=s)))
+
+        self.assertTrue(ec.verify(digest, signature))
+
+    def test_ec_asn1_signing_roundtrip(self):
+        h = Hash.sha256_new()
+        h.update(b'totally original test string')
+        digest = h.digest()
+
+        ec = EC.new_key_from_der_data(base64.b64decode(EC_PRIVATE_KEY_SEC1_BASE64))
+        signature = ec.sign(digest)
+
+        (x, y) = ec.get_public_coords()
+
+        expected_x = bytes([0xbf, 0x61, 0x63, 0x46, 0x93, 0x2d, 0x00, 0x33,
+                            0x19, 0xe3, 0x3a, 0x19, 0xc6, 0xc8, 0x55, 0xf5,
+                            0xc8, 0x44, 0x91, 0xe9, 0x9b, 0x83, 0x36, 0x67,
+                            0x5d, 0x25, 0x0d, 0x7b, 0xe0, 0xc0, 0xf1, 0xd2])
+
+        expected_y = bytes([0xaa, 0x5c, 0xdf, 0xfb, 0xa9, 0x37, 0x19, 0x8d,
+                            0x82, 0x47, 0x28, 0x88, 0xbe, 0x46, 0x7f, 0x3c,
+                            0xcd, 0x41, 0xaa, 0x08, 0x9a, 0x37, 0x0d, 0x61,
+                            0x7f, 0x5f, 0xeb, 0x9f, 0x55, 0xf7, 0x54, 0xda])
+
+        self.assertEqual(x, expected_x)
+        self.assertEqual(y, expected_y)
+
+        (r, s) = EC.decode_der_signature(signature)
+        self.assertEqual(signature, EC.encode_raw_signature(ECRawSignature(r=r, s=s)))
+        print(base64.b64encode(signature))
+
+        self.assertTrue(ec.verify(digest, signature))
 
 
 if __name__ == '__main__':
