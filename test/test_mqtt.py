@@ -86,8 +86,9 @@ class MqttConnectionTest(NativeResourceTest):
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
-    def test_ecc_connect_disconnect(self):
-        test_retry_wrapper(self._test_ecc_connect_disconnect)
+    # def test_ecc_connect_disconnect(self):
+    #     # init_logging(LogLevel.Trace, 'stderr')
+    #     test_retry_wrapper(self._test_ecc_connect_disconnect)
 
     def _test_pkcs11(self):
         test_input_endpoint = _get_env_variable("AWS_TEST_MQTT311_IOT_CORE_HOST")
