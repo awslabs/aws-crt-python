@@ -230,7 +230,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             host_name=input_host_name,
             port=input_port,
             connect_options=connect_options,
-            enable_aws_metrics=False    # Disable AWS metrics for basic auth on non-AWS broker 
+            enable_aws_metrics=False    # Disable AWS metrics for basic auth on non-AWS broker
         )
         callbacks = Mqtt5TestCallbacks()
         client = self._create_client(client_options=client_options, callbacks=callbacks)
@@ -418,7 +418,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             host_name=input_host_name,
             port=input_port,
             connect_options=connect_options,
-            enable_aws_metrics=False    # Disable AWS metrics for basic auth on non-AWS broker 
+            enable_aws_metrics=False    # Disable AWS metrics for basic auth on non-AWS broker
         )
         callbacks = Mqtt5TestCallbacks()
         client_options.websocket_handshake_transform = callbacks.ws_handshake_transform
@@ -618,7 +618,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             host_name=input_host_name,
             port=input_port,
             connect_options=connect_options,
-            enable_aws_metrics=False    # Disable AWS metrics for basic auth on non-AWS broker 
+            enable_aws_metrics=False    # Disable AWS metrics for basic auth on non-AWS broker
         )
         callbacks = Mqtt5TestCallbacks()
         client = self._create_client(client_options=client_options, callbacks=callbacks)
