@@ -630,7 +630,7 @@ class MqttConnectionTest(NativeResourceTest):
             port=input_port,
             username=input_username,
             password=input_password,
-            enable_aws_metrics=False)
+            enable_aws_metrics=False) # Disable AWS metrics for basic auth on non-AWS broker 
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
@@ -762,7 +762,7 @@ class MqttConnectionTest(NativeResourceTest):
             password=input_password,
             use_websockets=True,
             websocket_handshake_transform=sign_function,
-            enable_aws_metrics=False)
+            enable_aws_metrics=False)   # Disable AWS metrics for basic auth on non-AWS broker 
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
