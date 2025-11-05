@@ -517,7 +517,7 @@ class TestClientMockServer(NativeResourceTest):
             f.result(self.timeout)
             stream.write_data(BytesIO(body_chunks[1]), False)
             stream.write_data(None, False)
-            stream.write_data(BytesIO(body_chunks[2], True))
+            stream.write_data(BytesIO(body_chunks[2]), True)
         except RuntimeError as e:
             exception = e
         self.assertIsNone(exception)
