@@ -485,10 +485,10 @@ class TestAsyncClientMockServer(NativeResourceTest):
             'crt',
             'aws-c-http',
             'tests',
-            'py_localhost',
-            'server.py')
+            'mock_server',
+            'h2tls_mock_server.py')
         python_path = sys.executable
-        self.mock_server_url = urlparse("https://localhost:3443/upload_test")
+        self.mock_server_url = urlparse("https://localhost:3443/echo")
         self.p_server = subprocess.Popen([python_path, server_path])
         # Wait for server to be ready
         self._wait_for_server_ready()
@@ -568,6 +568,8 @@ class TestAsyncClientMockServer(NativeResourceTest):
 
         request = HttpRequest('POST', self.mock_server_url.path)
         request.headers.add('host', self.mock_server_url.hostname)
+        # special header to config the mock server to return the byte count received
+        request.headers.add('x-upload-test', 'true')
 
         # Create an async generator for the request body
         body_chunks = [b'hello', b'he123123', b'', b'hello']
