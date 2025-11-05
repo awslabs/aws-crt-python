@@ -13,6 +13,7 @@ from urllib.parse import urlparse
 from test import NativeResourceTest
 import ssl
 import os
+import json
 from io import BytesIO
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from awscrt import io
@@ -568,14 +569,14 @@ class TestAsyncClientMockServer(NativeResourceTest):
 
         request = HttpRequest('POST', self.mock_server_url.path)
         request.headers.add('host', self.mock_server_url.hostname)
-        # special header to config the mock server to return the byte count received
-        request.headers.add('x-upload-test', 'true')
 
         # Create an async generator for the request body
         body_chunks = [b'hello', b'he123123', b'', b'hello']
         total_length = 0
+        content = b''
         for i in body_chunks:
             total_length = total_length + len(i)
+            content += i
 
         async def body_generator():
             for i in body_chunks:
@@ -590,8 +591,11 @@ class TestAsyncClientMockServer(NativeResourceTest):
         # Check result
         self.assertEqual(200, status_code)
         self.assertEqual(200, response.status_code)
-        # mock server response the total length received, check if it matches what we sent
-        self.assertEqual(total_length, int(response.body.decode()))
+        # Parse the response from mock server which has format:
+        # '{\n    "bytes": <bytes received>\n}'
+        parsed_response = json.loads(response.body.decode())
+        self.assertEqual(total_length, int(parsed_response["bytes"]))
+        self.assertEqual(content.decode(), parsed_response["body"])
         await connection.close()
 
     class DelayStream:
