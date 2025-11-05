@@ -592,7 +592,10 @@ class TestAsyncClientMockServer(NativeResourceTest):
         self.assertEqual(200, status_code)
         self.assertEqual(200, response.status_code)
         # Parse the response from mock server which has format:
-        # '{\n    "bytes": <bytes received>\n}'
+        # {
+        #   "body": <str of data received>,
+        #   "bytes": <byte count of data received>
+        # }
         parsed_response = json.loads(response.body.decode())
         self.assertEqual(total_length, int(parsed_response["bytes"]))
         self.assertEqual(content.decode(), parsed_response["body"])

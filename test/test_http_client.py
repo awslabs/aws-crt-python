@@ -10,6 +10,7 @@ import unittest
 import threading
 from test import NativeResourceTest
 import ssl
+import json
 import os
 from io import BytesIO
 from http.server import HTTPServer, SimpleHTTPRequestHandler
@@ -417,10 +418,10 @@ class TestClientMockServer(NativeResourceTest):
             'crt',
             'aws-c-http',
             'tests',
-            'py_localhost',
-            'server.py')
+            'mock_server',
+            'h2tls_mock_server.py')
         python_path = sys.executable
-        self.mock_server_url = urlparse("https://localhost:3443/upload_test")
+        self.mock_server_url = urlparse("https://localhost:3443/echo")
         self.p_server = subprocess.Popen([python_path, server_path])
         # Wait for server to be ready
         self._wait_for_server_ready()
@@ -504,13 +505,19 @@ class TestClientMockServer(NativeResourceTest):
         stream = connection.request(request, response.on_response, response.on_body, manual_write=True)
         stream.activate()
         exception = None
+        body_chunks = [b'hello', b'he123123', b'hello']
+        total_length = 0
+        content = b''
+        for i in body_chunks:
+            total_length = total_length + len(i)
+            content += i
         try:
             # If the stream is not configured to allow manual writes, this should throw an exception directly
-            f = stream.write_data(BytesIO(b'hello'), False)
+            f = stream.write_data(BytesIO(body_chunks[0]), False)
             f.result(self.timeout)
-            stream.write_data(BytesIO(b'he123123'), False)
+            stream.write_data(BytesIO(body_chunks[1]), False)
             stream.write_data(None, False)
-            stream.write_data(BytesIO(b'hello'), True)
+            stream.write_data(BytesIO(body_chunks[2], True))
         except RuntimeError as e:
             exception = e
         self.assertIsNone(exception)
@@ -518,7 +525,14 @@ class TestClientMockServer(NativeResourceTest):
         # check result
         self.assertEqual(200, response.status_code)
         self.assertEqual(200, stream_completion_result)
-        print(response.body)
+        # Parse the response from mock server which has format:
+        # {
+        #   "body": <str of data received>,
+        #   "bytes": <byte count of data received>
+        # }
+        parsed_response = json.loads(response.body.decode())
+        self.assertEqual(total_length, int(parsed_response["bytes"]))
+        self.assertEqual(content.decode(), parsed_response["body"])
 
         self.assertEqual(None, connection.close().exception(self.timeout))
 
