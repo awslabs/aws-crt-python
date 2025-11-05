@@ -248,7 +248,7 @@ class S3Client(NativeResource):
             Default values scale with target throughput and are currently
             between 2GiB and 8GiB (may change in future)
 
-        network_interface_names: (Optional[Sequence(str)])
+        network_interface_names (Optional[Sequence(str)]):
             **THIS IS AN EXPERIMENTAL AND UNSTABLE API.**
             A sequence of network interface names. The client will distribute the
             connections across network interfaces. If any interface name is invalid, goes down,
@@ -257,10 +257,14 @@ class S3Client(NativeResource):
             is not supported on Windows. `AWS_ERROR_PLATFORM_NOT_SUPPORTED` will be raised on unsupported platforms. On
             Linux, SO_BINDTODEVICE is used and requires kernel version >= 5.7 or root privileges.
 
-        fio_options: (Optional[S3FileIoOptions])
+        fio_options (Optional[S3FileIoOptions]):
             If set, this controls how the client interact with file I/O.
             If not set, a default options will be created to avoid memory issue based on the size of file.
             Note: Only applies when the request created with `send_filepath`
+
+        max_active_connections_override (Optional[int]):
+            When set, this will cap the number of active connections for the meta request.
+            When not set, the client will determine this value based on `throughput_target_gbps`. (Recommended)
     """
 
     __slots__ = ('shutdown_event', '_region')
@@ -280,7 +284,8 @@ class S3Client(NativeResource):
             enable_s3express=False,
             memory_limit=None,
             network_interface_names: Optional[Sequence[str]] = None,
-            fio_options: Optional['S3FileIoOptions'] = None):
+            fio_options: Optional['S3FileIoOptions'] = None,
+            max_active_connections_override: Optional[int] = None):
         assert isinstance(bootstrap, ClientBootstrap) or bootstrap is None
         assert isinstance(region, str)
         assert isinstance(signing_config, AwsSigningConfig) or signing_config is None
@@ -295,6 +300,7 @@ class S3Client(NativeResource):
         assert isinstance(enable_s3express, bool) or enable_s3express is None
         assert isinstance(network_interface_names, Sequence) or network_interface_names is None
         assert isinstance(fio_options, S3FileIoOptions) or fio_options is None
+        assert isinstance(max_active_connections_override, int) or max_active_connections_override is None
 
         if credential_provider and signing_config:
             raise ValueError("'credential_provider' has been deprecated in favor of 'signing_config'.  "
@@ -334,6 +340,8 @@ class S3Client(NativeResource):
             # ensure this is a list, so it's simpler to process in C
             if not isinstance(network_interface_names, list):
                 network_interface_names = list(network_interface_names)
+        if max_active_connections_override is None:
+            max_active_connections_override = 0
         fio_options_set = False
         should_stream = False
         disk_throughput_gbps = 0.0
@@ -362,6 +370,7 @@ class S3Client(NativeResource):
             should_stream,
             disk_throughput_gbps,
             direct_io,
+            max_active_connections_override,
             s3_client_core)
 
     def make_request(
@@ -378,6 +387,7 @@ class S3Client(NativeResource):
             part_size=None,
             multipart_upload_threshold=None,
             fio_options=None,
+            max_active_connections_override=None,
             on_headers=None,
             on_body=None,
             on_done=None,
@@ -458,10 +468,14 @@ class S3Client(NativeResource):
                 If both `part_size` and `multipart_upload_threshold` are not set,
                 the values from `aws_s3_client_config` are used.
 
-            fio_options: (Optional[S3FileIoOptions])
+            fio_options (Optional[S3FileIoOptions]):
                 If set, this overrides the client fio_options to control how this request interact with file I/O.
                 If not set, a default options will be created to avoid memory issue based on the size of file.
                 Note: Only applies when the request created with `send_filepath`
+
+            max_active_connections_override (Optional[int]):
+                When set, this will cap the number of active connections for the meta request.
+                When not set, the client will determine it based on client side settings. (Recommended)
 
             on_headers: Optional callback invoked as the response received, and even the API request
                 has been split into multiple parts, this callback will only be invoked once as
@@ -549,6 +563,7 @@ class S3Client(NativeResource):
             part_size=part_size,
             multipart_upload_threshold=multipart_upload_threshold,
             fio_options=fio_options,
+            max_active_connections_override=max_active_connections_override,
             on_headers=on_headers,
             on_body=on_body,
             on_done=on_done,
@@ -587,6 +602,7 @@ class S3Request(NativeResource):
             part_size=None,
             multipart_upload_threshold=None,
             fio_options=None,
+            max_active_connections_override=None,
             on_headers=None,
             on_body=None,
             on_done=None,
@@ -600,6 +616,7 @@ class S3Request(NativeResource):
         assert isinstance(part_size, int) or part_size is None
         assert isinstance(multipart_upload_threshold, int) or multipart_upload_threshold is None
         assert isinstance(fio_options, S3FileIoOptions) or fio_options is None
+        assert isinstance(max_active_connections_override, int) or max_active_connections_override is None
 
         if type == S3RequestType.DEFAULT and not operation_name:
             raise ValueError("'operation_name' must be set when using S3RequestType.DEFAULT")
@@ -632,6 +649,8 @@ class S3Request(NativeResource):
             should_stream = fio_options.should_stream
             disk_throughput_gbps = fio_options.disk_throughput_gbps
             direct_io = fio_options.direct_io
+        if max_active_connections_override is None:
+            max_active_connections_override = 0
 
         s3_request_core = _S3RequestCore(
             request,
@@ -664,6 +683,7 @@ class S3Request(NativeResource):
             should_stream,
             disk_throughput_gbps,
             direct_io,
+            max_active_connections_override,
             s3_request_core)
 
     @property
