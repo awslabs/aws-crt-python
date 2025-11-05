@@ -224,6 +224,7 @@ class S3Client(NativeResource):
             for each connection, unless `tls_mode` is :attr:`S3RequestTlsMode.DISABLED`
 
         part_size (Optional[int]): Size, in bytes, of parts that files will be downloaded or uploaded in.
+            If not set, a dynamic default part size will be used based on the throughput target, memory_limit_in_bytes.
             Note: for :attr:`S3RequestType.PUT_OBJECT` request, client will adjust the part size to meet the service limits.
             (max number of parts per upload is 10,000, minimum upload part size is 5 MiB)
 
@@ -455,7 +456,8 @@ class S3Client(NativeResource):
             checksum_config (Optional[S3ChecksumConfig]): Optional checksum settings.
 
             part_size (Optional[int]): Size, in bytes, of parts that files will be downloaded or uploaded in.
-                If not set, the part size configured for the client will be used.
+                If not set, the part size configured for the client will be used, which defaults to a dynamic value based on
+                the throughput target, memory_limit_in_bytes and the requested object size.
                 Note: for :attr:`S3RequestType.PUT_OBJECT` request, client will adjust the part size to meet the service limits.
                 (max number of parts per upload is 10,000, minimum upload part size is 5 MiB)
 
