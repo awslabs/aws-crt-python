@@ -428,6 +428,3 @@ jobs:
       # note: using "@main" because "@${{env.BUILDER_VERSION}}" doesn't work
       # https://github.com/actions/runner/issues/480
       uses: awslabs/aws-crt-builder/.github/actions/check-submodules@main
-
-      #kick
-      
