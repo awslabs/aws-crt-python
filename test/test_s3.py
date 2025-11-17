@@ -36,6 +36,8 @@ from awscrt.io import (
     EventLoopGroup,
     TlsConnectionOptions,
     TlsContextOptions,
+    init_logging,
+    LogLevel
 )
 from awscrt.auth import (
     AwsCredentialsProvider,
@@ -781,11 +783,14 @@ class S3RequestTest(NativeResourceTest):
 
     def _on_progress_cancel_after_first_chunk(self, progress):
         self.transferred_len += progress
+        print("progress: %d" % progress)
         self.progress_invoked += 1
         self.s3_request.cancel()
 
     def test_multipart_get_object_cancel(self):
         # a 5 GB file
+        print("TESTEST")
+        init_logging(LogLevel.Trace, "stdout")
         request = self._get_object_request("/get_object_test_5120MB.txt")
         s3_client = s3_client_new(False, self.region, 5 * MB, is_cancel_test=True)
         with tempfile.NamedTemporaryFile(mode="w", delete=False) as file:
