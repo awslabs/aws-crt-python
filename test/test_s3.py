@@ -820,6 +820,7 @@ class S3RequestTest(NativeResourceTest):
             self.s3_request = None
             self.assertTrue(shutdown_event.wait(self.timeout))
             os.remove(file.name)
+        self.assertTrue(join_all_native_threads(timeout_sec=10))
         set_log_level(LogLevel.NoLogs)
 
     def test_get_object_quick_cancel(self):
