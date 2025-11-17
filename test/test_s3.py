@@ -37,6 +37,7 @@ from awscrt.io import (
     TlsConnectionOptions,
     TlsContextOptions,
     init_logging,
+    set_log_level,
     LogLevel
 )
 from awscrt.auth import (
@@ -819,6 +820,7 @@ class S3RequestTest(NativeResourceTest):
             self.s3_request = None
             self.assertTrue(shutdown_event.wait(self.timeout))
             os.remove(file.name)
+        set_log_level(LogLevel.NoLogs)
 
     def test_get_object_quick_cancel(self):
         # a 5 GB file
