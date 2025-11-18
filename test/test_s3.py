@@ -790,37 +790,35 @@ class S3RequestTest(NativeResourceTest):
 
     def test_multipart_get_object_cancel(self):
         # a 5 GB file
-        print("TESTEST")
-        init_logging(LogLevel.Trace, "stdout")
-        request = self._get_object_request("/get_object_test_5120MB.txt")
-        s3_client = s3_client_new(False, self.region, 5 * MB, is_cancel_test=True)
-        with tempfile.NamedTemporaryFile(mode="w", delete=False) as file:
-            file.close()
-            self.s3_request = s3_client.make_request(
-                request=request,
-                recv_filepath=file.name,
-                type=S3RequestType.GET_OBJECT,
-                on_headers=self._on_request_headers,
-                on_progress=self._on_progress_cancel_after_first_chunk,
-                on_done=self._on_request_done)
-            finished_future = self.s3_request.finished_future
-            e = finished_future.exception(self.timeout)
-            self.assertEqual(e.name, "AWS_ERROR_S3_CANCELED")
+        for i in range(10):
+            request = self._get_object_request("/get_object_test_5120MB.txt")
+            s3_client = s3_client_new(False, self.region, 5 * MB, is_cancel_test=True)
+            with tempfile.NamedTemporaryFile(mode="w", delete=False) as file:
+                file.close()
+                self.s3_request = s3_client.make_request(
+                    request=request,
+                    recv_filepath=file.name,
+                    type=S3RequestType.GET_OBJECT,
+                    on_headers=self._on_request_headers,
+                    on_progress=self._on_progress_cancel_after_first_chunk,
+                    on_done=self._on_request_done)
+                finished_future = self.s3_request.finished_future
+                e = finished_future.exception(self.timeout)
+                self.assertEqual(e.name, "AWS_ERROR_S3_CANCELED")
 
-            # Result check
-            self.data_len = int(HttpHeaders(self.response_headers).get("Content-Length"))
-            self.assertLess(
-                self.transferred_len,
-                self.data_len,
-                "the cancel failed to block all the following body")
+                # Result check
+                self.data_len = int(HttpHeaders(self.response_headers).get("Content-Length"))
+                self.assertLess(
+                    self.transferred_len,
+                    self.data_len,
+                    "the cancel failed to block all the following body")
 
-            # The on_finish callback may invoke the progress
-            self.assertLessEqual(self.progress_invoked, 2)
-            shutdown_event = self.s3_request.shutdown_event
-            self.s3_request = None
-            self.assertTrue(shutdown_event.wait(self.timeout))
-            os.remove(file.name)
-        set_log_level(LogLevel.NoLogs)
+                # The on_finish callback may invoke the progress
+                self.assertLessEqual(self.progress_invoked, 2)
+                shutdown_event = self.s3_request.shutdown_event
+                self.s3_request = None
+                self.assertTrue(shutdown_event.wait(self.timeout))
+                os.remove(file.name)
 
     def test_get_object_quick_cancel(self):
         # a 5 GB file
