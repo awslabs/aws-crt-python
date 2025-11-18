@@ -815,6 +815,7 @@ class S3RequestTest(NativeResourceTest):
 
                 # The on_finish callback may invoke the progress
                 self.assertLessEqual(self.progress_invoked, 2)
+                self.progress_invoked = 0
                 shutdown_event = self.s3_request.shutdown_event
                 self.s3_request = None
                 self.assertTrue(shutdown_event.wait(self.timeout))
