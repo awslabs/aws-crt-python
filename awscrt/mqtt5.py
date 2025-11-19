@@ -17,33 +17,36 @@ from collections.abc import Sequence
 from inspect import signature
 
 # Global variable to cache metrics string
-_metrics_str = None
+_sdk_str = None
+_platform_str = None
 
 
 def _get_awsiot_metrics_str(current_username=""):
-    global _metrics_str
+    global _sdk_str
+    global _platform_str
 
-    username_has_query = False
-    if current_username.find("?") != -1:
-        username_has_query = True
-    # The SDK query is already set, skip adding it again
-    if username_has_query and current_username.find("SDK=") != -1:
-        return ""
-
-    if _metrics_str is None:
+    _metrics_str = ""
+    if _sdk_str is None:
         try:
             import importlib.metadata
             try:
                 version = importlib.metadata.version("awscrt")
-                _metrics_str = "SDK=CRTPython&Version={}&Platform={}".format(
-                    version, _awscrt.get_platform_build_os_string())
+                _sdk_str = "SDK=CRTPython&Version={}".format(version)
             except importlib.metadata.PackageNotFoundError:
-                _metrics_str = "SDK=CRTPython&Version=dev&Platform={}".format(_awscrt.get_platform_build_os_string())
+                _sdk_str = "SDK=CRTPython&Version=dev"
         except BaseException:
-            _metrics_str = ""
+            _sdk_str = ""
+
+    if _platform_str is None:
+        _platform_str = "Platform={}".format(_awscrt.get_platform_build_os_string())
+
+    if current_username.find("SDK=") == -1:
+        _metrics_str += _sdk_str
+    if current_username.find("Platform=") == -1:
+        _metrics_str += ("&" if len(_metrics_str) > 0 else "") + _platform_str
 
     if not _metrics_str == "":
-        if username_has_query:
+        if current_username.find("?") != -1:
             return "&" + _metrics_str
         else:
             return "?" + _metrics_str
@@ -1793,6 +1796,7 @@ class Client(NativeResource):
         if client_options.enable_aws_metrics:
             username = username if username else ""
             username += _get_awsiot_metrics_str(username)
+
         connect_options.username = username
         websocket_is_none = client_options.websocket_handshake_transform is None
         self.tls_ctx = client_options.tls_ctx
