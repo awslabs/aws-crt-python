@@ -13,6 +13,7 @@
 
 PyObject *aws_py_get_cpu_group_count(PyObject *self, PyObject *args);
 PyObject *aws_py_get_cpu_count_for_group(PyObject *self, PyObject *args);
+PyObject *aws_py_get_platform_build_os_string(PyObject *self, PyObject *args);
 
 PyObject *aws_py_thread_join_all_managed(PyObject *self, PyObject *args);
 

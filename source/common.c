@@ -26,6 +26,14 @@ PyObject *aws_py_get_cpu_count_for_group(PyObject *self, PyObject *args) {
     return PyLong_FromSize_t(count);
 }
 
+PyObject *aws_py_get_platform_build_os_string(PyObject *self, PyObject *args) {
+    (void)self;
+    (void)args;
+
+    struct aws_byte_cursor os_string = aws_get_platform_build_os_string();
+    return PyUnicode_FromAwsByteCursor(&os_string);
+}
+
 PyObject *aws_py_thread_join_all_managed(PyObject *self, PyObject *args) {
     (void)self;
 

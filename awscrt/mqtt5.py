@@ -16,6 +16,43 @@ from dataclasses import dataclass
 from collections.abc import Sequence
 from inspect import signature
 
+# Global variable to cache metrics string
+_sdk_str = None
+_platform_str = None
+
+
+def _get_awsiot_metrics_str(current_username=""):
+    global _sdk_str
+    global _platform_str
+
+    _metrics_str = ""
+    if _sdk_str is None:
+        try:
+            import importlib.metadata
+            try:
+                version = importlib.metadata.version("awscrt")
+                _sdk_str = "SDK=CRTPython&Version={}".format(version)
+            except importlib.metadata.PackageNotFoundError:
+                _sdk_str = "SDK=CRTPython&Version=dev"
+        except BaseException:
+            _sdk_str = ""
+
+    if _platform_str is None:
+        _platform_str = "Platform={}".format(_awscrt.get_platform_build_os_string())
+
+    if current_username.find("SDK=") == -1:
+        _metrics_str += _sdk_str
+    if current_username.find("Platform=") == -1:
+        _metrics_str += ("&" if len(_metrics_str) > 0 else "") + _platform_str
+
+    if not _metrics_str == "":
+        if current_username.find("?") != -1:
+            return "&" + _metrics_str
+        else:
+            return "?" + _metrics_str
+    else:
+        return ""
+
 
 class QoS(IntEnum):
     """MQTT message delivery quality of service.
@@ -1338,6 +1375,7 @@ class ClientOptions:
         on_lifecycle_event_connection_success_fn (Callable[[LifecycleConnectSuccessData],]): Callback for Lifecycle Event Connection Success.
         on_lifecycle_event_connection_failure_fn (Callable[[LifecycleConnectFailureData],]): Callback for Lifecycle Event Connection Failure.
         on_lifecycle_event_disconnection_fn (Callable[[LifecycleDisconnectData],]): Callback for Lifecycle Event Disconnection.
+        enable_aws_metrics (bool): Whether to append AWS IoT metrics to the username field during CONNECT. Default: True
     """
     host_name: str
     port: int = None
@@ -1364,6 +1402,7 @@ class ClientOptions:
     on_lifecycle_event_connection_success_fn: Callable[[LifecycleConnectSuccessData], None] = None
     on_lifecycle_event_connection_failure_fn: Callable[[LifecycleConnectFailureData], None] = None
     on_lifecycle_event_disconnection_fn: Callable[[LifecycleDisconnectData], None] = None
+    enable_aws_metrics: bool = True
 
 
 def _check_callback(callback):
@@ -1753,6 +1792,12 @@ class Client(NativeResource):
             is_will_none = False
             will = connect_options.will
 
+        username = connect_options.username
+        if client_options.enable_aws_metrics:
+            username = username if username else ""
+            username += _get_awsiot_metrics_str(username)
+
+        connect_options.username = username
         websocket_is_none = client_options.websocket_handshake_transform is None
         self.tls_ctx = client_options.tls_ctx
         self._binding = _awscrt.mqtt5_client_new(self,
