@@ -16,6 +16,7 @@ from awscrt.http import HttpProxyOptions, HttpRequest
 from awscrt.io import ClientBootstrap, ClientTlsContext, SocketOptions
 from dataclasses import dataclass
 from awscrt.mqtt5 import Client as Mqtt5Client
+from iot_metrics import SdkMetrics
 
 
 class QoS(IntEnum):
@@ -330,6 +331,14 @@ class Connection(NativeResource):
 
         proxy_options (Optional[awscrt.http.HttpProxyOptions]):
             Optional proxy options for all connections.
+
+        enable_metrics (bool): If true, enable IoT SDK metrics in CONNECT packet username field, otherwise, disabled.
+            Default to True.  You may set it to false if you are not using AWS IoT services, and
+            using a custom authentication mechanism.
+
+        metrics (Optional[SdkMetrics]):
+            Configuration for IoT SDK metrics that are embedded in MQTT username field.
+            If None is provided, default SdkMetrics configuration is used.
         """
 
     def __init__(self,
@@ -355,7 +364,9 @@ class Connection(NativeResource):
                  proxy_options=None,
                  on_connection_success=None,
                  on_connection_failure=None,
-                 on_connection_closed=None
+                 on_connection_closed=None,
+                 enable_metrics=True,
+                 metrics=None,
                  ):
 
         assert isinstance(client, Client) or isinstance(client, Mqtt5Client)
@@ -369,6 +380,7 @@ class Connection(NativeResource):
         assert callable(on_connection_success) or on_connection_success is None
         assert callable(on_connection_failure) or on_connection_failure is None
         assert callable(on_connection_closed) or on_connection_closed is None
+        assert isinstance(metrics, SdkMetrics) or metrics is None
 
         if reconnect_min_timeout_secs > reconnect_max_timeout_secs:
             raise ValueError("'reconnect_min_timeout_secs' cannot exceed 'reconnect_max_timeout_secs'")
@@ -408,6 +420,10 @@ class Connection(NativeResource):
         self.password = password
         self.socket_options = socket_options if socket_options else SocketOptions()
         self.proxy_options = proxy_options if proxy_options else websocket_proxy_options
+        if enable_metrics:
+            self.metrics = metrics if metrics else SdkMetrics()
+        else:
+            self.metrics = None
 
         self._binding = _awscrt.mqtt_client_connection_new(
             self,

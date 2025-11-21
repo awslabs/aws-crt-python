@@ -3,6 +3,7 @@
 
 from concurrent.futures import Future
 from awscrt import mqtt5, io, http, exceptions
+from awscrt.iot_metrics import SdkMetrics
 from test import test_retry_wrapper, NativeResourceTest
 import os
 import unittest
@@ -224,7 +225,8 @@ class Mqtt5ClientTest(NativeResourceTest):
         connect_options = mqtt5.ConnectPacket(
             client_id=create_client_id(),
             username=input_username,
-            password=input_password
+            password=input_password,
+            enable_metrics=False
         )
         client_options = mqtt5.ClientOptions(
             host_name=input_host_name,
@@ -610,7 +612,8 @@ class Mqtt5ClientTest(NativeResourceTest):
         connect_options = mqtt5.ConnectPacket(
             client_id=create_client_id(),
             username="bad username",
-            password="bad password"
+            password="bad password",
+            enable_metrics=False
         )
         client_options = mqtt5.ClientOptions(
             host_name=input_host_name,

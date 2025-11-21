@@ -830,6 +830,8 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
     PyObject *maximum_packet_size_py;          /* optional uint32_t */
     PyObject *will_delay_interval_sec_py;      /* optional uint32_t */
     PyObject *user_properties_py;              /* optional */
+    PyObject *is_metrics_enabled_py;           /* optional PublishPacket */
+    struct aws_byte_cursor metrics_library_name; /* optional IoT SDK metrics username */
 
     /* Will */
     PyObject *is_will_none_py; /* optional PublishPacket */
@@ -862,7 +864,7 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
 
     if (!PyArg_ParseTuple(
             args,
-            "Os#IOOOOz#Oz#z#OOOOOOOOOz*Oz#OOOz#z*z#OOOOOOOOOOOOOO",
+            "Os#IOOOOz#Oz#z#OOOOOOOOz#OOz*Oz#OOOz#z*z#OOOOOOOOOOOOOO",
             /* O */ &self_py,
             /* s */ &host_name.ptr,
             /* # */ &host_name.len,
@@ -887,6 +889,9 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
             /* O */ &maximum_packet_size_py,
             /* O */ &will_delay_interval_sec_py,
             /* O */ &user_properties_py,
+            /* O */ &is_metrics_enabled_py,
+            /* z */ &metrics_library_name.ptr,
+            /* # */ &metrics_library_name.len,
 
             /* O */ &is_will_none_py,
             /* O */ &will_qos_val_py,
@@ -1216,6 +1221,14 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
         goto done;
     }
     connect_options.user_properties = user_properties_tmp;
+
+    /* METRICS */
+    struct aws_mqtt_iot_sdk_metrics metrics_tmp;
+    AWS_ZERO_STRUCT(metrics_tmp);
+    if (PyObject_IsTrue(is_metrics_enabled_py)) {
+        metrics_tmp.library_name = metrics_library_name;
+        connect_options.metrics = &metrics_tmp;
+    }
 
     /* WILL */
 

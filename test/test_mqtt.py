@@ -4,6 +4,7 @@
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, Pkcs11Lib, TlsContextOptions
 from awscrt import http
 from awscrt.mqtt import Client, Connection, QoS, Will, OnConnectionClosedData, OnConnectionFailureData, OnConnectionSuccessData, ConnectReturnCode
+from awscrt.iot_metrics import SdkMetrics
 from test import test_retry_wrapper, NativeResourceTest
 from concurrent.futures import Future
 import os
@@ -629,7 +630,8 @@ class MqttConnectionTest(NativeResourceTest):
             host_name=input_host_name,
             port=input_port,
             username=input_username,
-            password=input_password)
+            password=input_password,
+            enable_metrics=False)
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
@@ -760,7 +762,8 @@ class MqttConnectionTest(NativeResourceTest):
             username=input_username,
             password=input_password,
             use_websockets=True,
-            websocket_handshake_transform=sign_function)
+            websocket_handshake_transform=sign_function,
+            enable_metrics=False)
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 

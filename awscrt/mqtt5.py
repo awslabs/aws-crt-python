@@ -15,6 +15,7 @@ from awscrt.io import ClientBootstrap, SocketOptions, ClientTlsContext
 from dataclasses import dataclass
 from collections.abc import Sequence
 from inspect import signature
+from awscrt.iot_metrics import SdkMetrics
 
 
 class QoS(IntEnum):
@@ -1158,6 +1159,9 @@ class ConnectPacket:
         will_delay_interval_sec (int): A time interval, in seconds, that the server should wait (for a session reconnection) before sending the will message associated with the connection's session.  If omitted or None, the server will send the will when the associated session is destroyed.  If the session is destroyed before a will delay interval has elapsed, then the will must be sent at the time of session destruction.
         will (PublishPacket): The definition of a message to be published when the connection's session is destroyed by the server or when the will delay interval has elapsed, whichever comes first.  If None, then nothing will be sent.
         user_properties (Sequence[UserProperty]): List of MQTT5 user properties included with the packet.
+        enable_metrics (bool): If true, enable IoT SDK metrics in CONNECT packet username field, otherwise, disabled. Default to True. You may set it to false if you are not using AWS IoT services, and using a custom authentication mechanism.
+        metrics (Optional[SdkMetrics]): Configuration for IoT SDK metrics that are embedded in MQTT username field. If None is provided, default SdkMetrics configuration is used.
+
     """
     keep_alive_interval_sec: int = None
     client_id: str = None
@@ -1171,6 +1175,8 @@ class ConnectPacket:
     will_delay_interval_sec: int = None
     will: PublishPacket = None
     user_properties: 'Sequence[UserProperty]' = None
+    enable_metrics: bool = True
+    metrics: SdkMetrics = None
 
 
 class WebsocketHandshakeTransformArgs:
@@ -1728,7 +1734,6 @@ class Client(NativeResource):
     """
 
     def __init__(self, client_options: ClientOptions):
-
         super().__init__()
 
         core = _ClientCore(client_options)
@@ -1745,6 +1750,12 @@ class Client(NativeResource):
         socket_options = client_options.socket_options
         if not socket_options:
             socket_options = SocketOptions()
+
+        # Handle metrics configuration
+        if connect_options.enable_metrics:
+            self.metrics = connect_options.metrics if connect_options.metrics else SdkMetrics()
+        else:
+            self.metrics = None
 
         if not connect_options.will:
             is_will_none = True
@@ -1773,6 +1784,8 @@ class Client(NativeResource):
                                                  connect_options.maximum_packet_size,
                                                  connect_options.will_delay_interval_sec,
                                                  connect_options.user_properties,
+                                                 connect_options.enable_metrics,
+                                                 self.metrics.library_name if self.metrics else None,
                                                  is_will_none,
                                                  will.qos,
                                                  will.payload,
@@ -1797,6 +1810,7 @@ class Client(NativeResource):
                                                  client_options.ack_timeout_sec,
                                                  client_options.topic_aliasing_options,
                                                  websocket_is_none,
+
                                                  core)
 
         # Store the options for adapter
