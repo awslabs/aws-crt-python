@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: Apache-2.0.
 
 
-from awscrt.io import LogLevel, init_logging
 from test import NativeResourceTest
 from awscrt.crypto import Hash, RSA, RSAEncryptionAlgorithm, RSASignatureAlgorithm, ED25519, ED25519ExportFormat, EC, ECType, ECRawSignature
 import base64
@@ -397,7 +396,7 @@ class TestCredentials(NativeResourceTest):
                            0xe7, 0xb4, 0x83, 0xe6, 0xb8, 0xc9, 0x46, 0xa8, 0x0a, 0xd8, 0x46, 0xfa,
                            0x80, 0x0a, 0xd8, 0xca, 0xc5, 0x3f, 0x8e, 0xbd])
 
-        padded_sig = ec.decode_der_signature_to_padded_pair(signature=signature, pad_to=32)
+        padded_sig = EC.decode_der_signature_to_padded_pair(signature=signature, pad_to=32)
 
         expected_sig = bytes([0x00, 0x2d, 0x2a, 0xad, 0xce, 0xbc, 0x1b, 0x3f, 0x78, 0xec, 0xd1, 0x12, 0x53,
                               0x9e, 0xc0, 0xe3, 0x44, 0x7b, 0x37, 0x5f, 0x6a, 0x99, 0xca, 0x0b, 0x27, 0xb5,
