@@ -859,6 +859,34 @@ PyObject *aws_py_ec_decode_signature(PyObject *self, PyObject *args) {
     return result;
 }
 
+PyObject *aws_py_ec_decode_signature_to_padded_pair(PyObject *self, PyObject *args) {
+    (void)self;
+
+    Py_ssize_t pad_to;
+    struct aws_byte_cursor signature_cur;
+    if (!PyArg_ParseTuple(args, "y#n", &signature_cur.ptr, &signature_cur.len, &pad_to)) {
+        return NULL;
+    }
+
+    if (pad_to > 256) {
+        aws_raise_error(AWS_ERROR_INVALID_ARGUMENT);
+        goto on_error;
+    }
+
+    size_t buf_size = pad_to * 2;
+    struct aws_byte_buf result_buf;
+    aws_byte_buf_init(&result_buf, allocator, buf_size);
+
+    if (aws_ecc_decode_signature_der_to_raw_padded(allocator, signature_cur, &result_buf)) {
+        aws_byte_buf_clean_up_secure(&result_buf);
+        return PyErr_AwsLastError();
+    }
+
+    PyObject *ret = PyBytes_FromStringAndSize((const char *)result_buf.buffer, result_buf.len);
+    aws_byte_buf_clean_up_secure(&result_buf);
+    return ret;
+}
+
 PyObject *aws_py_ec_get_public_coords(PyObject *self, PyObject *args) {
     (void)self;
 
