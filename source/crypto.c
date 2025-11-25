@@ -873,6 +873,7 @@ PyObject *aws_py_ec_decode_signature_to_padded_pair(PyObject *self, PyObject *ar
         goto on_error;
     }
 
+    struct aws_allocator *allocator = aws_py_get_allocator();
     size_t buf_size = pad_to * 2;
     struct aws_byte_buf result_buf;
     aws_byte_buf_init(&result_buf, allocator, buf_size);
