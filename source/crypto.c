@@ -870,7 +870,7 @@ PyObject *aws_py_ec_decode_signature_to_padded_pair(PyObject *self, PyObject *ar
 
     if (pad_to > 256) {
         aws_raise_error(AWS_ERROR_INVALID_ARGUMENT);
-        goto on_error;
+        return PyErr_AwsLastError();
     }
 
     struct aws_allocator *allocator = aws_py_get_allocator();
