@@ -878,7 +878,7 @@ PyObject *aws_py_ec_decode_signature_to_padded_pair(PyObject *self, PyObject *ar
     struct aws_byte_buf result_buf;
     aws_byte_buf_init(&result_buf, allocator, buf_size);
 
-    if (aws_ecc_decode_signature_der_to_raw_padded(allocator, signature_cur, &result_buf)) {
+    if (aws_ecc_decode_signature_der_to_raw_padded(allocator, signature_cur, &result_buf, pad_to)) {
         aws_byte_buf_clean_up_secure(&result_buf);
         return PyErr_AwsLastError();
     }

@@ -852,7 +852,7 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(ec_verify, METH_VARARGS),
     AWS_PY_METHOD_DEF(ec_encode_signature, METH_VARARGS),
     AWS_PY_METHOD_DEF(ec_decode_signature, METH_VARARGS),
-     AWS_PY_METHOD_DEF(ec_decode_signature_to_padded_pair, METH_VARARGS),
+    AWS_PY_METHOD_DEF(ec_decode_signature_to_padded_pair, METH_VARARGS),
     AWS_PY_METHOD_DEF(ec_get_public_coords, METH_VARARGS),
 
     /* Checksum primitives */
