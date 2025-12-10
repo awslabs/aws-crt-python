@@ -63,10 +63,10 @@ static int s_init_datetime_cache(void) {
     return 0;
 }
 
-static void s_cleanup_datetime_cache(void) {
-    Py_XDECREF(s_datetime_class);
-    s_datetime_class = NULL;
-}
+// static void s_cleanup_datetime_cache(void) {
+//     Py_XDECREF(s_datetime_class);
+//     s_datetime_class = NULL;
+// }
 
 int aws_py_is_datetime_instance(PyObject *obj) {
     if (!s_datetime_class && s_init_datetime_cache() < 0) {
