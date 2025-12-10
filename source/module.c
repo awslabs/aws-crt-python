@@ -65,11 +65,6 @@ static int s_init_datetime_cache(void) {
     return AWS_OP_SUCCESS;
 }
 
-// static void s_cleanup_datetime_cache(void) {
-//     Py_XDECREF(s_datetime_class);
-//     s_datetime_class = NULL;
-// }
-
 int aws_py_is_datetime_instance(PyObject *obj, bool *out_is_datetime) {
     AWS_ASSERT(out_is_datetime);
 
@@ -79,7 +74,7 @@ int aws_py_is_datetime_instance(PyObject *obj, bool *out_is_datetime) {
 
     int result = PyObject_IsInstance(obj, s_datetime_class);
     if (result < 0) {
-        return AWS_OP_ERR; /* PyObject_IsInstance failed */
+        return aws_py_raise_error(); /* PyObject_IsInstance failed */
     }
 
     *out_is_datetime = (result != 0);
