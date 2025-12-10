@@ -36,6 +36,45 @@
 static struct aws_logger s_logger;
 static bool s_logger_init = false;
 
+/*******************************************************************************
+ * DateTime Type Cache (for stable ABI compatibility)
+ ******************************************************************************/
+static PyObject *s_datetime_class = NULL;
+
+static int s_init_datetime_cache(void) {
+    if (s_datetime_class) {
+        return 0; /* Already initialized */
+    }
+
+    /* Import datetime module */
+    PyObject *datetime_module = PyImport_ImportModule("datetime");
+    if (!datetime_module) {
+        return -1;
+    }
+
+    /* Get datetime class - new reference we'll keep */
+    s_datetime_class = PyObject_GetAttrString(datetime_module, "datetime");
+    Py_DECREF(datetime_module);
+
+    if (!s_datetime_class) {
+        return -1;
+    }
+
+    return 0;
+}
+
+static void s_cleanup_datetime_cache(void) {
+    Py_XDECREF(s_datetime_class);
+    s_datetime_class = NULL;
+}
+
+int aws_py_is_datetime_instance(PyObject *obj) {
+    if (!s_datetime_class && s_init_datetime_cache() < 0) {
+        return -1;
+    }
+    return PyObject_IsInstance(obj, s_datetime_class);
+}
+
 PyObject *aws_py_init_logging(PyObject *self, PyObject *args) {
     (void)self;
 
@@ -1034,6 +1073,12 @@ PyMODINIT_FUNC PyInit__awscrt(void) {
 
     aws_register_error_info(&s_error_list);
     s_error_map_init();
+
+    /* Initialize datetime type cache for stable ABI datetime support */
+    if (s_init_datetime_cache() < 0) {
+        /* Non-fatal: datetime encoding will fail but rest of module works */
+        PyErr_Clear();
+    }
 
     return m;
 }

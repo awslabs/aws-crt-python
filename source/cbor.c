@@ -200,7 +200,7 @@ static PyObject *s_cbor_encoder_write_pyobject(struct aws_cbor_encoder *encoder,
 
     PyObject *result = NULL;
 
-    /* Exact type matches first (no subclasses) */
+    /* Exact type matches first (no subclasses) - fast path */
     if (type == (PyObject *)&PyLong_Type) {
         result = s_cbor_encoder_write_pylong(encoder, py_object);
     } else if (type == (PyObject *)&PyFloat_Type) {
@@ -219,8 +219,32 @@ static PyObject *s_cbor_encoder_write_pyobject(struct aws_cbor_encoder *encoder,
         /* Write py_dict, allow subclasses of `dict` */
         result = s_cbor_encoder_write_pydict(encoder, py_object);
     } else {
-        /* Unsupported type */
-        PyErr_Format(PyExc_ValueError, "Not supported type %R", type);
+        /* Check for datetime using stable ABI (slower, so checked last) */
+        int is_dt = aws_py_is_datetime_instance(py_object);
+        if (is_dt < 0) {
+            /* Error occurred during datetime check */
+            result = NULL;
+        } else if (is_dt > 0) {
+            /* Convert datetime to CBOR epoch time (tag 1) */
+            PyObject *timestamp_method = PyObject_GetAttrString(py_object, "timestamp");
+            if (timestamp_method) {
+                PyObject *timestamp = PyObject_CallNoArgs(timestamp_method);
+                Py_DECREF(timestamp_method);
+                if (timestamp) {
+                    /* Write CBOR tag 1 (epoch time) + timestamp */
+                    aws_cbor_encoder_write_tag(encoder, AWS_CBOR_TAG_EPOCH_TIME);
+                    result = s_cbor_encoder_write_pyobject_as_float(encoder, timestamp);
+                    Py_DECREF(timestamp);
+                } else {
+                    result = NULL; /* timestamp() call failed */
+                }
+            } else {
+                result = NULL; /* Failed to get timestamp method */
+            }
+        } else {
+            /* Unsupported type */
+            PyErr_Format(PyExc_ValueError, "Not supported type %R", type);
+        }
     }
 
     /* Release the type reference */

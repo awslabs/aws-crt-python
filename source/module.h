@@ -70,6 +70,15 @@ struct aws_byte_cursor aws_byte_cursor_from_pyunicode(PyObject *str);
  * If conversion cannot occur, cursor->ptr will be NULL and a python exception is set */
 struct aws_byte_cursor aws_byte_cursor_from_pybytes(PyObject *py_bytes);
 
+/**
+ * Check if a PyObject is an instance of datetime.datetime using stable ABI.
+ * Returns:
+ *  1 if obj is a datetime instance
+ *  0 if obj is not a datetime instance
+ * -1 on error (Python exception set)
+ */
+int aws_py_is_datetime_instance(PyObject *obj);
+
 /* Set current thread's error indicator based on aws_last_error() */
 void PyErr_SetAwsLastError(void);
 
