@@ -183,30 +183,49 @@ static PyObject *s_cbor_encoder_write_pyobject(struct aws_cbor_encoder *encoder,
     /**
      * TODO: timestamp <-> datetime?? Decimal fraction <-> decimal??
      */
-    if (PyLong_CheckExact(py_object)) {
-        return s_cbor_encoder_write_pylong(encoder, py_object);
-    } else if (PyFloat_CheckExact(py_object)) {
-        return s_cbor_encoder_write_pyobject_as_float(encoder, py_object);
-    } else if (PyBool_Check(py_object)) {
-        return s_cbor_encoder_write_pyobject_as_bool(encoder, py_object);
-    } else if (PyBytes_CheckExact(py_object)) {
-        return s_cbor_encoder_write_pyobject_as_bytes(encoder, py_object);
-    } else if (PyUnicode_Check(py_object)) {
-        /* Allow subclasses of `str` */
-        return s_cbor_encoder_write_pyobject_as_text(encoder, py_object);
-    } else if (PyList_Check(py_object)) {
-        /* Write py_list, allow subclasses of `list` */
-        return s_cbor_encoder_write_pylist(encoder, py_object);
-    } else if (PyDict_Check(py_object)) {
-        /* Write py_dict, allow subclasses of `dict` */
-        return s_cbor_encoder_write_pydict(encoder, py_object);
-    } else if (py_object == Py_None) {
+
+    /* Handle None first as it's a singleton, not a type */
+    if (py_object == Py_None) {
         aws_cbor_encoder_write_null(encoder);
-    } else {
-        PyErr_Format(PyExc_ValueError, "Not supported type %R", (PyObject *)Py_TYPE(py_object));
+        Py_RETURN_NONE;
     }
 
-    Py_RETURN_NONE;
+    /* Get type once for efficiency - PyObject_Type returns a new reference */
+    /* https://docs.python.org/3/c-api/structures.html#c.Py_TYPE is not a stable API until 3.14, so that we cannot use
+     * it. */
+    PyObject *type = PyObject_Type(py_object);
+    if (!type) {
+        return NULL;
+    }
+
+    PyObject *result = NULL;
+
+    /* Exact type matches first (no subclasses) */
+    if (type == (PyObject *)&PyLong_Type) {
+        result = s_cbor_encoder_write_pylong(encoder, py_object);
+    } else if (type == (PyObject *)&PyFloat_Type) {
+        result = s_cbor_encoder_write_pyobject_as_float(encoder, py_object);
+    } else if (type == (PyObject *)&PyBool_Type) {
+        result = s_cbor_encoder_write_pyobject_as_bool(encoder, py_object);
+    } else if (type == (PyObject *)&PyBytes_Type) {
+        result = s_cbor_encoder_write_pyobject_as_bytes(encoder, py_object);
+    } else if (PyType_IsSubtype((PyTypeObject *)type, &PyUnicode_Type)) {
+        /* Allow subclasses of `str` */
+        result = s_cbor_encoder_write_pyobject_as_text(encoder, py_object);
+    } else if (PyType_IsSubtype((PyTypeObject *)type, &PyList_Type)) {
+        /* Write py_list, allow subclasses of `list` */
+        result = s_cbor_encoder_write_pylist(encoder, py_object);
+    } else if (PyType_IsSubtype((PyTypeObject *)type, &PyDict_Type)) {
+        /* Write py_dict, allow subclasses of `dict` */
+        result = s_cbor_encoder_write_pydict(encoder, py_object);
+    } else {
+        /* Unsupported type */
+        PyErr_Format(PyExc_ValueError, "Not supported type %R", type);
+    }
+
+    /* Release the type reference */
+    Py_DECREF(type);
+    return result;
 }
 
 /*********************************** BINDINGS ***********************************************/
