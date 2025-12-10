@@ -43,13 +43,14 @@ static PyObject *s_datetime_class = NULL;
 
 static int s_init_datetime_cache(void) {
     if (s_datetime_class) {
-        return 0; /* Already initialized */
+        return AWS_OP_SUCCESS; /* Already initialized */
     }
 
     /* Import datetime module */
     PyObject *datetime_module = PyImport_ImportModule("datetime");
     if (!datetime_module) {
-        return -1;
+        /* Python exception already set by PyImport_ImportModule */
+        return aws_py_raise_error();
     }
 
     /* Get datetime class - new reference we'll keep */
@@ -57,10 +58,11 @@ static int s_init_datetime_cache(void) {
     Py_DECREF(datetime_module);
 
     if (!s_datetime_class) {
-        return -1;
+        /* Python exception already set by PyObject_GetAttrString */
+        return aws_py_raise_error();
     }
 
-    return 0;
+    return AWS_OP_SUCCESS;
 }
 
 // static void s_cleanup_datetime_cache(void) {
@@ -68,11 +70,20 @@ static int s_init_datetime_cache(void) {
 //     s_datetime_class = NULL;
 // }
 
-int aws_py_is_datetime_instance(PyObject *obj) {
-    if (!s_datetime_class && s_init_datetime_cache() < 0) {
-        return -1;
+int aws_py_is_datetime_instance(PyObject *obj, bool *out_is_datetime) {
+    AWS_ASSERT(out_is_datetime);
+
+    if (!s_datetime_class && s_init_datetime_cache() != AWS_OP_SUCCESS) {
+        return AWS_OP_ERR;
     }
-    return PyObject_IsInstance(obj, s_datetime_class);
+
+    int result = PyObject_IsInstance(obj, s_datetime_class);
+    if (result < 0) {
+        return AWS_OP_ERR; /* PyObject_IsInstance failed */
+    }
+
+    *out_is_datetime = (result != 0);
+    return AWS_OP_SUCCESS;
 }
 
 PyObject *aws_py_init_logging(PyObject *self, PyObject *args) {

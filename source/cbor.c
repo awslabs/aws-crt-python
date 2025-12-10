@@ -220,26 +220,21 @@ static PyObject *s_cbor_encoder_write_pyobject(struct aws_cbor_encoder *encoder,
         result = s_cbor_encoder_write_pydict(encoder, py_object);
     } else {
         /* Check for datetime using stable ABI (slower, so checked last) */
-        int is_dt = aws_py_is_datetime_instance(py_object);
-        if (is_dt < 0) {
+        bool is_datetime = false;
+        if (aws_py_is_datetime_instance(py_object, &is_datetime) != AWS_OP_SUCCESS) {
             /* Error occurred during datetime check */
             result = NULL;
-        } else if (is_dt > 0) {
+        } else if (is_datetime) {
             /* Convert datetime to CBOR epoch time (tag 1) */
-            PyObject *timestamp_method = PyObject_GetAttrString(py_object, "timestamp");
-            if (timestamp_method) {
-                PyObject *timestamp = PyObject_CallNoArgs(timestamp_method);
-                Py_DECREF(timestamp_method);
-                if (timestamp) {
-                    /* Write CBOR tag 1 (epoch time) + timestamp */
-                    aws_cbor_encoder_write_tag(encoder, AWS_CBOR_TAG_EPOCH_TIME);
-                    result = s_cbor_encoder_write_pyobject_as_float(encoder, timestamp);
-                    Py_DECREF(timestamp);
-                } else {
-                    result = NULL; /* timestamp() call failed */
-                }
+            /* Call timestamp() method - PyObject_CallMethod is more idiomatic and compatible with Python 3.8+ */
+            PyObject *timestamp = PyObject_CallMethod(py_object, "timestamp", NULL);
+            if (timestamp) {
+                /* Write CBOR tag 1 (epoch time) + timestamp */
+                aws_cbor_encoder_write_tag(encoder, AWS_CBOR_TAG_EPOCH_TIME);
+                result = s_cbor_encoder_write_pyobject_as_float(encoder, timestamp);
+                Py_DECREF(timestamp);
             } else {
-                result = NULL; /* Failed to get timestamp method */
+                result = NULL; /* timestamp() call failed */
             }
         } else {
             /* Unsupported type */
