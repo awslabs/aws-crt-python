@@ -283,6 +283,29 @@ class AwsCborEncoder(NativeResource):
         """
         return _awscrt.cbor_encoder_write_data_item(self._binding, data_item)
 
+    def write_data_item_shaped(self, data_item: Any, shape: Any):
+        """Generic API to write any type of data_item as cbor formatted, using shape information.
+
+        The shape parameter guides serialization based on the service model definition.
+        This is used to replicate what CrtRpcV2CBORSerializer does in botocore.
+
+        The supported shape types are:
+        - integer/long: int
+        - float/double: float
+        - boolean: bool
+        - blob: bytes
+        - string: str
+        - list: list with member shape
+        - map: dict with key and value shapes
+        - structure: dict with member shapes
+        - timestamp: datetime or numeric
+
+        Args:
+            data_item (Any): data to be encoded
+            shape (Any): shape object from botocore with type_name and serialization info
+        """
+        return _awscrt.cbor_encoder_write_data_item_shaped(self._binding, data_item, shape)
+
 
 class AwsCborDecoder(NativeResource):
     """CBOR decoder for converting CBOR binary format to Python objects.

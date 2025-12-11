@@ -231,6 +231,96 @@ class TestCBOR(NativeResourceTest):
 
         self.assertIn("Not supported type", str(context3.exception))
 
+    def test_cbor_encode_decode_special_floats(self):
+        """Test encoding and decoding special float values: inf, -inf, and NaN"""
+        import math
+
+        # Test positive infinity
+        encoder = AwsCborEncoder()
+        pos_inf = float('inf')
+        encoder.write_float(pos_inf)
+        print(encoder.get_encoded_data())
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        decoded_pos_inf = decoder.pop_next_data_item()
+        print(decoded_pos_inf)
+        self.assertTrue(math.isinf(decoded_pos_inf))
+        self.assertTrue(decoded_pos_inf > 0)
+
+        # Test negative infinity
+        encoder = AwsCborEncoder()
+        neg_inf = float('-inf')
+        encoder.write_float(neg_inf)
+
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        decoded_neg_inf = decoder.pop_next_data_item()
+        self.assertTrue(math.isinf(decoded_neg_inf))
+        self.assertTrue(decoded_neg_inf < 0)
+
+        # Test NaN
+        encoder = AwsCborEncoder()
+        nan_val = float('nan')
+        encoder.write_float(nan_val)
+
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        decoded_nan = decoder.pop_next_data_item()
+        self.assertTrue(math.isnan(decoded_nan))
+
+        # Test special floats in a list using write_data_item
+        encoder = AwsCborEncoder()
+        special_floats_list = [float('inf'), float('-inf'), float('nan'), 42.0, -100.5]
+        encoder.write_data_item(special_floats_list)
+
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        decoded_list = decoder.pop_next_data_item()
+        self.assertEqual(len(decoded_list), 5)
+        self.assertTrue(math.isinf(decoded_list[0]) and decoded_list[0] > 0)
+        self.assertTrue(math.isinf(decoded_list[1]) and decoded_list[1] < 0)
+        self.assertTrue(math.isnan(decoded_list[2]))
+        self.assertEqual(decoded_list[3], 42.0)
+        self.assertEqual(decoded_list[4], -100.5)
+
+        # Test special floats in a dictionary
+        encoder = AwsCborEncoder()
+        special_floats_dict = {
+            "positive_infinity": float('inf'),
+            "negative_infinity": float('-inf'),
+            "not_a_number": float('nan'),
+            "normal": 3.14
+        }
+        encoder.write_data_item(special_floats_dict)
+
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        decoded_dict = decoder.pop_next_data_item()
+        self.assertTrue(math.isinf(decoded_dict["positive_infinity"]) and decoded_dict["positive_infinity"] > 0)
+        self.assertTrue(math.isinf(decoded_dict["negative_infinity"]) and decoded_dict["negative_infinity"] < 0)
+        self.assertTrue(math.isnan(decoded_dict["not_a_number"]))
+        self.assertEqual(decoded_dict["normal"], 3.14)
+
+        # Test special floats in nested structures
+        encoder = AwsCborEncoder()
+        nested_structure = {
+            "data": [
+                {"value": float('inf'), "type": "infinity"},
+                {"value": float('-inf'), "type": "negative_infinity"},
+                {"value": float('nan'), "type": "nan"}
+            ],
+            "metadata": {
+                "max": float('inf'),
+                "min": float('-inf')
+            }
+        }
+        encoder.write_data_item(nested_structure)
+
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        decoded_nested = decoder.pop_next_data_item()
+        self.assertTrue(math.isinf(decoded_nested["data"][0]["value"]) and decoded_nested["data"][0]["value"] > 0)
+        self.assertTrue(math.isinf(decoded_nested["data"][1]["value"]) and decoded_nested["data"][1]["value"] < 0)
+        self.assertTrue(math.isnan(decoded_nested["data"][2]["value"]))
+        self.assertTrue(math.isinf(decoded_nested["metadata"]["max"]) and decoded_nested["metadata"]["max"] > 0)
+        self.assertTrue(math.isinf(decoded_nested["metadata"]["min"]) and decoded_nested["metadata"]["min"] < 0)
+
+        self.assertEqual(decoder.get_remaining_bytes_len(), 0)
+
     def _ieee754_bits_to_float(self, bits):
         return struct.unpack('>f', struct.pack('>I', bits))[0]
 
