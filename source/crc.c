@@ -104,3 +104,90 @@ done:
     }
     return py_result;
 }
+
+PyObject *aws_py_checksums_crc32_combine(PyObject *self, PyObject *args) {
+    (void)self;
+    PyObject *py_crc1;
+    PyObject *py_crc2;
+    PyObject *py_len2;
+
+    if (!PyArg_ParseTuple(args, "OOO", &py_crc1, &py_crc2, &py_len2)) {
+        return NULL;
+    }
+
+    uint32_t crc1 = PyLong_AsUnsignedLong(py_crc1);
+    if (crc1 == (uint32_t)-1 && PyErr_Occurred()) {
+        return NULL;
+    }
+
+    uint32_t crc2 = PyLong_AsUnsignedLong(py_crc2);
+    if (crc2 == (uint32_t)-1 && PyErr_Occurred()) {
+        return NULL;
+    }
+
+    uint64_t len2 = PyLong_AsUnsignedLongLong(py_len2);
+    if (len2 == (uint64_t)-1 && PyErr_Occurred()) {
+        return NULL;
+    }
+
+    uint32_t result = aws_checksums_crc32_combine(crc1, crc2, len2);
+    return PyLong_FromUnsignedLong(result);
+}
+
+PyObject *aws_py_checksums_crc32c_combine(PyObject *self, PyObject *args) {
+    (void)self;
+    PyObject *py_crc1;
+    PyObject *py_crc2;
+    PyObject *py_len2;
+
+    if (!PyArg_ParseTuple(args, "OOO", &py_crc1, &py_crc2, &py_len2)) {
+        return NULL;
+    }
+
+    uint32_t crc1 = PyLong_AsUnsignedLong(py_crc1);
+    if (crc1 == (uint32_t)-1 && PyErr_Occurred()) {
+        return NULL;
+    }
+
+    uint32_t crc2 = PyLong_AsUnsignedLong(py_crc2);
+    if (crc2 == (uint32_t)-1 && PyErr_Occurred()) {
+        return NULL;
+    }
+
+    uint64_t len2 = PyLong_AsUnsignedLongLong(py_len2);
+    if (len2 == (uint64_t)-1 && PyErr_Occurred()) {
+        return NULL;
+    }
+
+    uint32_t result = aws_checksums_crc32c_combine(crc1, crc2, len2);
+    return PyLong_FromUnsignedLong(result);
+}
+
+PyObject *aws_py_checksums_crc64nvme_combine(PyObject *self, PyObject *args) {
+    (void)self;
+    PyObject *py_crc1;
+    PyObject *py_crc2;
+    PyObject *py_len2;
+
+    if (!PyArg_ParseTuple(args, "OOO", &py_crc1, &py_crc2, &py_len2)) {
+        return NULL;
+    }
+
+    uint64_t crc1 = PyLong_AsUnsignedLongLong(py_crc1);
+    if (crc1 == (uint64_t)-1 && PyErr_Occurred()) {
+        return NULL;
+    }
+
+    uint64_t crc2 = PyLong_AsUnsignedLongLong(py_crc2);
+    if (crc2 == (uint64_t)-1 && PyErr_Occurred()) {
+        return NULL;
+    }
+
+    uint64_t len2 = PyLong_AsUnsignedLongLong(py_len2);
+    if (len2 == (uint64_t)-1 && PyErr_Occurred()) {
+        return NULL;
+    }
+
+    uint64_t result = aws_checksums_crc64nvme_combine(crc1, crc2, len2);
+    return PyLong_FromUnsignedLongLong(result);
+}
