@@ -283,26 +283,58 @@ class AwsCborEncoder(NativeResource):
         """
         return _awscrt.cbor_encoder_write_data_item(self._binding, data_item)
 
-    def write_data_item_shaped(self, data_item: Any, shape: Any):
+    def write_data_item_shaped(self,
+                               data_item: Any,
+                               shape: 'CRTShape',
+                               timestamp_converter: Callable[[Any],
+                                                             float] = None):
         """Generic API to write any type of data_item as cbor formatted, using shape information.
 
-        The shape parameter guides serialization based on the service model definition.
-        This is used to replicate what CrtRpcV2CBORSerializer does in botocore.
+        The shape parameter must be a CRTShape wrapper object - a lightweight wrapper around
+        botocore Shape objects that exposes only the properties needed by the CRT CBOR encoder.
 
-        The supported shape types are:
-        - integer/long: int
-        - float/double: float
-        - boolean: bool
-        - blob: bytes
-        - string: str
-        - list: list with member shape
-        - map: dict with key and value shapes
-        - structure: dict with member shapes
-        - timestamp: datetime or numeric
+        Supported shape types:
+        - integer/long: Integer values
+        - float/double: Floating point values
+        - boolean: Boolean values
+        - blob: Byte strings
+        - string: Text strings
+        - list: Lists with typed members
+        - map: Maps with typed keys and values
+        - structure: Structures with named members (None values filtered)
+        - timestamp: Timestamps (with optional converter callback)
 
         Args:
-            data_item (Any): data to be encoded
-            shape (Any): shape object from botocore with type_name and serialization info
+            data_item (Any): The data to encode
+            shape (CRTShape): A CRTShape wrapper object that wraps a botocore Shape
+            timestamp_converter (Callable[[Any], float], optional): Optional callback to convert
+                timestamp values to epoch seconds (float). If not provided, assumes data_item
+                is already a numeric timestamp for timestamp shapes.
+
+        Example:
+            ```python
+            from awscrt.cbor_shape import CRTShape
+
+            encoder = AwsCborEncoder()
+
+            # Wrap the botocore shape
+            crt_shape = CRTShape(botocore_shape)
+
+            # Encode data with shape information
+            data = {"id": 123, "name": "Alice"}
+
+            def timestamp_converter(dt):
+                return dt.timestamp()
+
+            encoder.write_data_item_shaped(data, crt_shape, timestamp_converter)
+            cbor_bytes = encoder.get_encoded_data()
+            ```
+
+        For complete specification, see CRT_SHAPE_WRAPPER_APPROACH.md
+
+        Note:
+            The CRTShape wrapper provides lazy initialization and caching for optimal performance.
+            Shape objects are typically cached by the serializer for reuse across multiple requests.
         """
         return _awscrt.cbor_encoder_write_data_item_shaped(self._binding, data_item, shape)
 
