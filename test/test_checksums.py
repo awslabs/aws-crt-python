@@ -137,179 +137,67 @@ class TestChecksums(NativeResourceTest):
         val = checksums.crc64nvme(huge_buffer)
         self.assertEqual(0x2645c28052b1fbb0, val)
 
-    def test_crc32_combine_basic(self):
-        # Test combining two CRC32 checksums
+    def _test_combine_helper(self, checksum_fn, combine_fn):
+        """Helper method to test checksum combine functions with various scenarios."""
+
+        # Test 1: Basic combine of two blocks
         data1 = b"Hello, "
         data2 = b"World!"
 
-        # Compute CRCs separately
-        crc1 = checksums.crc32(data1)
-        crc2 = checksums.crc32(data2)
-
-        # Combine them
-        combined = checksums.combine_crc32(crc1, crc2, len(data2))
-
-        # Compute CRC of concatenated data
-        expected = checksums.crc32(data1 + data2)
+        crc1 = checksum_fn(data1)
+        crc2 = checksum_fn(data2)
+        combined = combine_fn(crc1, crc2, len(data2))
+        expected = checksum_fn(data1 + data2)
 
         self.assertEqual(expected, combined)
 
-    def test_crc32_combine_empty_second_block(self):
-        # Test combining with empty second block
+        # Test 2: Empty second block
         data1 = b"Hello, World!"
         data2 = b""
 
-        crc1 = checksums.crc32(data1)
-        crc2 = checksums.crc32(data2)
+        crc1 = checksum_fn(data1)
+        crc2 = checksum_fn(data2)
+        combined = combine_fn(crc1, crc2, len(data2))
 
-        combined = checksums.combine_crc32(crc1, crc2, len(data2))
-
-        # Should equal the first CRC since second block is empty
         self.assertEqual(crc1, combined)
 
-    def test_crc32_combine_multiple_blocks(self):
-        # Test combining multiple blocks
+        # Test 3: Multiple blocks
         data1 = b"The quick "
         data2 = b"brown fox "
         data3 = b"jumps over the lazy dog"
 
-        crc1 = checksums.crc32(data1)
-        crc2 = checksums.crc32(data2)
-        crc3 = checksums.crc32(data3)
+        crc1 = checksum_fn(data1)
+        crc2 = checksum_fn(data2)
+        crc3 = checksum_fn(data3)
 
-        # Combine first two
-        combined_12 = checksums.combine_crc32(crc1, crc2, len(data2))
-
-        # Combine result with third
-        combined_123 = checksums.combine_crc32(combined_12, crc3, len(data3))
-
-        # Compare with CRC of all data
-        expected = checksums.crc32(data1 + data2 + data3)
+        combined_12 = combine_fn(crc1, crc2, len(data2))
+        combined_123 = combine_fn(combined_12, crc3, len(data3))
+        expected = checksum_fn(data1 + data2 + data3)
 
         self.assertEqual(expected, combined_123)
 
-    def test_crc32_combine_large_blocks(self):
-        # Test with larger data blocks
-        data1 = bytes(1024)  # 1KB of zeros
-        data2 = bytes(range(256)) * 4  # 1KB of pattern
-
-        crc1 = checksums.crc32(data1)
-        crc2 = checksums.crc32(data2)
-
-        combined = checksums.combine_crc32(crc1, crc2, len(data2))
-        expected = checksums.crc32(data1 + data2)
-
-        self.assertEqual(expected, combined)
-
-    def test_crc32c_combine_basic(self):
-        # Test combining two CRC32C checksums
-        data1 = b"Hello, "
-        data2 = b"World!"
-
-        crc1 = checksums.crc32c(data1)
-        crc2 = checksums.crc32c(data2)
-
-        combined = checksums.combine_crc32c(crc1, crc2, len(data2))
-        expected = checksums.crc32c(data1 + data2)
-
-        self.assertEqual(expected, combined)
-
-    def test_crc32c_combine_empty_second_block(self):
-        # Test combining with empty second block
-        data1 = b"Hello, World!"
-        data2 = b""
-
-        crc1 = checksums.crc32c(data1)
-        crc2 = checksums.crc32c(data2)
-
-        combined = checksums.combine_crc32c(crc1, crc2, len(data2))
-
-        self.assertEqual(crc1, combined)
-
-    def test_crc32c_combine_multiple_blocks(self):
-        # Test combining multiple blocks
-        data1 = b"The quick "
-        data2 = b"brown fox "
-        data3 = b"jumps over the lazy dog"
-
-        crc1 = checksums.crc32c(data1)
-        crc2 = checksums.crc32c(data2)
-        crc3 = checksums.crc32c(data3)
-
-        combined_12 = checksums.combine_crc32c(crc1, crc2, len(data2))
-        combined_123 = checksums.combine_crc32c(combined_12, crc3, len(data3))
-
-        expected = checksums.crc32c(data1 + data2 + data3)
-
-        self.assertEqual(expected, combined_123)
-
-    def test_crc32c_combine_large_blocks(self):
-        # Test with larger data blocks
+        # Test 4: Large blocks
         data1 = bytes(1024)
         data2 = bytes(range(256)) * 4
 
-        crc1 = checksums.crc32c(data1)
-        crc2 = checksums.crc32c(data2)
-
-        combined = checksums.combine_crc32c(crc1, crc2, len(data2))
-        expected = checksums.crc32c(data1 + data2)
-
-        self.assertEqual(expected, combined)
-
-    def test_crc64nvme_combine_basic(self):
-        # Test combining two CRC64-NVME checksums
-        data1 = b"Hello, "
-        data2 = b"World!"
-
-        crc1 = checksums.crc64nvme(data1)
-        crc2 = checksums.crc64nvme(data2)
-
-        combined = checksums.combine_crc64nvme(crc1, crc2, len(data2))
-        expected = checksums.crc64nvme(data1 + data2)
+        crc1 = checksum_fn(data1)
+        crc2 = checksum_fn(data2)
+        combined = combine_fn(crc1, crc2, len(data2))
+        expected = checksum_fn(data1 + data2)
 
         self.assertEqual(expected, combined)
 
-    def test_crc64nvme_combine_empty_second_block(self):
-        # Test combining with empty second block
-        data1 = b"Hello, World!"
-        data2 = b""
+    def test_crc32_combine(self):
+        """Test CRC32 combine function."""
+        self._test_combine_helper(checksums.crc32, checksums.combine_crc32)
 
-        crc1 = checksums.crc64nvme(data1)
-        crc2 = checksums.crc64nvme(data2)
+    def test_crc32c_combine(self):
+        """Test CRC32C combine function."""
+        self._test_combine_helper(checksums.crc32c, checksums.combine_crc32c)
 
-        combined = checksums.combine_crc64nvme(crc1, crc2, len(data2))
-
-        self.assertEqual(crc1, combined)
-
-    def test_crc64nvme_combine_multiple_blocks(self):
-        # Test combining multiple blocks
-        data1 = b"The quick "
-        data2 = b"brown fox "
-        data3 = b"jumps over the lazy dog"
-
-        crc1 = checksums.crc64nvme(data1)
-        crc2 = checksums.crc64nvme(data2)
-        crc3 = checksums.crc64nvme(data3)
-
-        combined_12 = checksums.combine_crc64nvme(crc1, crc2, len(data2))
-        combined_123 = checksums.combine_crc64nvme(combined_12, crc3, len(data3))
-
-        expected = checksums.crc64nvme(data1 + data2 + data3)
-
-        self.assertEqual(expected, combined_123)
-
-    def test_crc64nvme_combine_large_blocks(self):
-        # Test with larger data blocks
-        data1 = bytes(1024)
-        data2 = bytes(range(256)) * 4
-
-        crc1 = checksums.crc64nvme(data1)
-        crc2 = checksums.crc64nvme(data2)
-
-        combined = checksums.combine_crc64nvme(crc1, crc2, len(data2))
-        expected = checksums.crc64nvme(data1 + data2)
-
-        self.assertEqual(expected, combined)
+    def test_crc64nvme_combine(self):
+        """Test CRC64-NVME combine function."""
+        self._test_combine_helper(checksums.crc64nvme, checksums.combine_crc64nvme)
 
 
 if __name__ == '__main__':
