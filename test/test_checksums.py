@@ -199,6 +199,25 @@ class TestChecksums(NativeResourceTest):
         """Test CRC64-NVME combine function."""
         self._test_combine_helper(checksums.crc64nvme, checksums.combine_crc64nvme)
 
+    def test_combine_invalid_inputs(self):
+        """Test that combine functions raise ValueError for invalid inputs."""
+        # Test invalid values (should fail for all algorithms)
+        for combine_fn in [checksums.combine_crc32, checksums.combine_crc32c, checksums.combine_crc64nvme]:
+            with self.assertRaises(ValueError) as context:
+                combine_fn(-1, 0, 0)
+            self.assertIn("not a valid unsigned", str(context.exception))
+
+            with self.assertRaises(ValueError) as context:
+                combine_fn(0, 0, -1)
+            self.assertIn("not a valid unsigned", str(context.exception))
+
+        # Test that valid inputs don't raise exceptions
+        for combine_fn in [checksums.combine_crc32, checksums.combine_crc32c, checksums.combine_crc64nvme]:
+            # This should not raise any exception
+            result = combine_fn(0, 0, 0)
+            # Result should be an integer
+            self.assertIsInstance(result, int)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -117,16 +117,22 @@ PyObject *aws_py_checksums_crc32_combine(PyObject *self, PyObject *args) {
 
     uint32_t crc1 = PyLong_AsUnsignedLong(py_crc1);
     if (crc1 == (uint32_t)-1 && PyErr_Occurred()) {
+        PyErr_Clear();
+        PyErr_SetString(PyExc_ValueError, "crc32_result1 is not a valid unsigned 32-bit integer");
         return NULL;
     }
 
     uint32_t crc2 = PyLong_AsUnsignedLong(py_crc2);
     if (crc2 == (uint32_t)-1 && PyErr_Occurred()) {
+        PyErr_Clear();
+        PyErr_SetString(PyExc_ValueError, "crc32_result2 is not a valid unsigned 32-bit integer");
         return NULL;
     }
 
     uint64_t len2 = PyLong_AsUnsignedLongLong(py_len2);
     if (len2 == (uint64_t)-1 && PyErr_Occurred()) {
+        PyErr_Clear();
+        PyErr_SetString(PyExc_ValueError, "data_length2 is not a valid unsigned 64-bit integer");
         return NULL;
     }
 
@@ -146,16 +152,22 @@ PyObject *aws_py_checksums_crc32c_combine(PyObject *self, PyObject *args) {
 
     uint32_t crc1 = PyLong_AsUnsignedLong(py_crc1);
     if (crc1 == (uint32_t)-1 && PyErr_Occurred()) {
+        PyErr_Clear();
+        PyErr_SetString(PyExc_ValueError, "crc32c_result1 is not a valid unsigned 32-bit integer");
         return NULL;
     }
 
     uint32_t crc2 = PyLong_AsUnsignedLong(py_crc2);
     if (crc2 == (uint32_t)-1 && PyErr_Occurred()) {
+        PyErr_Clear();
+        PyErr_SetString(PyExc_ValueError, "crc32c_result2 is not a valid unsigned 32-bit integer");
         return NULL;
     }
 
     uint64_t len2 = PyLong_AsUnsignedLongLong(py_len2);
     if (len2 == (uint64_t)-1 && PyErr_Occurred()) {
+        PyErr_Clear();
+        PyErr_SetString(PyExc_ValueError, "data_length2 is not a valid unsigned 64-bit integer");
         return NULL;
     }
 
@@ -175,16 +187,22 @@ PyObject *aws_py_checksums_crc64nvme_combine(PyObject *self, PyObject *args) {
 
     uint64_t crc1 = PyLong_AsUnsignedLongLong(py_crc1);
     if (crc1 == (uint64_t)-1 && PyErr_Occurred()) {
+        PyErr_Clear();
+        PyErr_SetString(PyExc_ValueError, "crc64nvme_result1 is not a valid unsigned 64-bit integer");
         return NULL;
     }
 
     uint64_t crc2 = PyLong_AsUnsignedLongLong(py_crc2);
     if (crc2 == (uint64_t)-1 && PyErr_Occurred()) {
+        PyErr_Clear();
+        PyErr_SetString(PyExc_ValueError, "crc64nvme_result2 is not a valid unsigned 64-bit integer");
         return NULL;
     }
 
     uint64_t len2 = PyLong_AsUnsignedLongLong(py_len2);
     if (len2 == (uint64_t)-1 && PyErr_Occurred()) {
+        PyErr_Clear();
+        PyErr_SetString(PyExc_ValueError, "data_length2 is not a valid unsigned 64-bit integer");
         return NULL;
     }
 
