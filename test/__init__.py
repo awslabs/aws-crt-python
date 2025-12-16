@@ -73,6 +73,7 @@ def test_retry_wrapper(test_function):
             return
         except Exception as e:
             if _is_retryable_exception(e) and i + 1 < MAX_RETRIES:
+                check_for_leaks(timeout_sec=TIMEOUT)  # Force cleanup between retries
                 time.sleep(1)
             else:
                 raise

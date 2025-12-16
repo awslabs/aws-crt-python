@@ -13,6 +13,7 @@ from urllib.parse import urlparse
 from test import NativeResourceTest
 import ssl
 import os
+import json
 from io import BytesIO
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from awscrt import io
@@ -485,10 +486,10 @@ class TestAsyncClientMockServer(NativeResourceTest):
             'crt',
             'aws-c-http',
             'tests',
-            'py_localhost',
-            'server.py')
+            'mock_server',
+            'h2tls_mock_server.py')
         python_path = sys.executable
-        self.mock_server_url = urlparse("https://localhost:3443/upload_test")
+        self.mock_server_url = urlparse("https://localhost:3443/echo")
         self.p_server = subprocess.Popen([python_path, server_path])
         # Wait for server to be ready
         self._wait_for_server_ready()
@@ -572,8 +573,10 @@ class TestAsyncClientMockServer(NativeResourceTest):
         # Create an async generator for the request body
         body_chunks = [b'hello', b'he123123', b'', b'hello']
         total_length = 0
+        content = b''
         for i in body_chunks:
             total_length = total_length + len(i)
+            content += i
 
         async def body_generator():
             for i in body_chunks:
@@ -588,8 +591,14 @@ class TestAsyncClientMockServer(NativeResourceTest):
         # Check result
         self.assertEqual(200, status_code)
         self.assertEqual(200, response.status_code)
-        # mock server response the total length received, check if it matches what we sent
-        self.assertEqual(total_length, int(response.body.decode()))
+        # Parse the response from mock server which has format:
+        # {
+        #   "body": <str of data received>,
+        #   "bytes": <byte count of data received>
+        # }
+        parsed_response = json.loads(response.body.decode())
+        self.assertEqual(total_length, int(parsed_response["bytes"]))
+        self.assertEqual(content.decode(), parsed_response["body"])
         await connection.close()
 
     class DelayStream:

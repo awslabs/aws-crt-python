@@ -30,7 +30,6 @@ def init_logging(log_level, file_name):
 
     Args:
         log_level (LogLevel): Display messages of this importance and higher.
-            `LogLevel.NoLogs` will disable logging.
         file_name (str): Logging destination. To write to stdout or stderr pass
             'stdout' or 'stderr' as strings. Otherwise, a file path is assumed.
     """
@@ -38,6 +37,18 @@ def init_logging(log_level, file_name):
     assert file_name is not None
 
     _awscrt.init_logging(log_level, file_name)
+
+
+def set_log_level(log_level):
+    """Change the log level of `awscrt`. init_logging() must have been called
+    before using this function or else an exception will be raised.
+
+    Args:
+        log_level (LogLevel): Display messages of this importance and higher.
+    """
+    assert log_level is not None
+
+    _awscrt.set_log_level(log_level)
 
 
 class EventLoopGroup(NativeResource):
@@ -276,6 +287,11 @@ class TlsCipherPref(IntEnum):
 
     PQ_DEFAULT = 8  # :
     """Recommended default policy with post-quantum algorithm support. This policy may change over time."""
+
+    TLSv1_2_2025_07 = 9
+    """A TLS Cipher Preference requiring TLS 1.2+ with FIPS compliance and perfect forward secrecy. This security policy
+    is based on the AWS-CRT-SDK-TLSv1.2-2023 s2n TLS policy with enhanced security restrictions. It supports AES-GCM and
+    ECDHE cipher suites with ECDSA and RSA-PSS signature schemes, and uses NIST P-256 and P-384 curves only."""
 
     def is_supported(self):
         """Return whether this Cipher Preference is available in the underlying platform's TLS implementation"""

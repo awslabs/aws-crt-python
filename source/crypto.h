@@ -46,4 +46,14 @@ PyObject *aws_py_ed25519_new_generate(PyObject *self, PyObject *args);
 PyObject *aws_py_ed25519_export_public_key(PyObject *self, PyObject *args);
 PyObject *aws_py_ed25519_export_private_key(PyObject *self, PyObject *args);
 
+PyObject *aws_py_ec_new_generate(PyObject *self, PyObject *args);
+PyObject *aws_py_ec_key_from_der_data(PyObject *self, PyObject *args);
+PyObject *aws_py_ec_export_key(PyObject *self, PyObject *args);
+PyObject *aws_py_ec_sign(PyObject *self, PyObject *args);
+PyObject *aws_py_ec_verify(PyObject *self, PyObject *args);
+PyObject *aws_py_ec_encode_signature(PyObject *self, PyObject *args);
+PyObject *aws_py_ec_decode_signature(PyObject *self, PyObject *args);
+PyObject *aws_py_ec_decode_signature_to_padded_pair(PyObject *self, PyObject *args);
+PyObject *aws_py_ec_get_public_coords(PyObject *self, PyObject *args);
+
 #endif /* AWS_CRT_PYTHON_CRYPTO_H */
