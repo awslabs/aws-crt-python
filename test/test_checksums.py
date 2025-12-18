@@ -137,6 +137,87 @@ class TestChecksums(NativeResourceTest):
         val = checksums.crc64nvme(huge_buffer)
         self.assertEqual(0x2645c28052b1fbb0, val)
 
+    def _test_combine_helper(self, checksum_fn, combine_fn):
+        """Helper method to test checksum combine functions with various scenarios."""
+
+        # Test 1: Basic combine of two blocks
+        data1 = b"Hello, "
+        data2 = b"World!"
+
+        crc1 = checksum_fn(data1)
+        crc2 = checksum_fn(data2)
+        combined = combine_fn(crc1, crc2, len(data2))
+        expected = checksum_fn(data1 + data2)
+
+        self.assertEqual(expected, combined)
+
+        # Test 2: Empty second block
+        data1 = b"Hello, World!"
+        data2 = b""
+
+        crc1 = checksum_fn(data1)
+        crc2 = checksum_fn(data2)
+        combined = combine_fn(crc1, crc2, len(data2))
+
+        self.assertEqual(crc1, combined)
+
+        # Test 3: Multiple blocks
+        data1 = b"The quick "
+        data2 = b"brown fox "
+        data3 = b"jumps over the lazy dog"
+
+        crc1 = checksum_fn(data1)
+        crc2 = checksum_fn(data2)
+        crc3 = checksum_fn(data3)
+
+        combined_12 = combine_fn(crc1, crc2, len(data2))
+        combined_123 = combine_fn(combined_12, crc3, len(data3))
+        expected = checksum_fn(data1 + data2 + data3)
+
+        self.assertEqual(expected, combined_123)
+
+        # Test 4: Large blocks
+        data1 = bytes(1024)
+        data2 = bytes(range(256)) * 4
+
+        crc1 = checksum_fn(data1)
+        crc2 = checksum_fn(data2)
+        combined = combine_fn(crc1, crc2, len(data2))
+        expected = checksum_fn(data1 + data2)
+
+        self.assertEqual(expected, combined)
+
+    def test_crc32_combine(self):
+        """Test CRC32 combine function."""
+        self._test_combine_helper(checksums.crc32, checksums.combine_crc32)
+
+    def test_crc32c_combine(self):
+        """Test CRC32C combine function."""
+        self._test_combine_helper(checksums.crc32c, checksums.combine_crc32c)
+
+    def test_crc64nvme_combine(self):
+        """Test CRC64-NVME combine function."""
+        self._test_combine_helper(checksums.crc64nvme, checksums.combine_crc64nvme)
+
+    def test_combine_invalid_inputs(self):
+        """Test that combine functions raise ValueError for invalid inputs."""
+        # Test invalid values (should fail for all algorithms)
+        for combine_fn in [checksums.combine_crc32, checksums.combine_crc32c, checksums.combine_crc64nvme]:
+            with self.assertRaises(ValueError) as context:
+                combine_fn(-1, 0, 0)
+            self.assertIn("not a valid unsigned", str(context.exception))
+
+            with self.assertRaises(ValueError) as context:
+                combine_fn(0, 0, -1)
+            self.assertIn("not a valid unsigned", str(context.exception))
+
+        # Test that valid inputs don't raise exceptions
+        for combine_fn in [checksums.combine_crc32, checksums.combine_crc32c, checksums.combine_crc64nvme]:
+            # This should not raise any exception
+            result = combine_fn(0, 0, 0)
+            # Result should be an integer
+            self.assertIsInstance(result, int)
+
 
 if __name__ == '__main__':
     unittest.main()
