@@ -180,10 +180,6 @@ static PyObject *s_cbor_encoder_write_pydict(struct aws_cbor_encoder *encoder, P
 
 static PyObject *s_cbor_encoder_write_pyobject(struct aws_cbor_encoder *encoder, PyObject *py_object) {
 
-    /**
-     * TODO: timestamp <-> datetime?? Decimal fraction <-> decimal??
-     */
-
     /* Handle None first as it's a singleton, not a type */
     if (py_object == Py_None) {
         aws_cbor_encoder_write_null(encoder);
@@ -219,27 +215,8 @@ static PyObject *s_cbor_encoder_write_pyobject(struct aws_cbor_encoder *encoder,
         /* Write py_dict, allow subclasses of `dict` */
         result = s_cbor_encoder_write_pydict(encoder, py_object);
     } else {
-        /* Check for datetime using stable ABI (slower, so checked last) */
-        bool is_datetime = false;
-        if (aws_py_is_datetime_instance(py_object, &is_datetime) != AWS_OP_SUCCESS) {
-            /* Error occurred during datetime check */
-            result = NULL;
-        } else if (is_datetime) {
-            /* Convert datetime to CBOR epoch time (tag 1) */
-            /* Call timestamp() method - PyObject_CallMethod is more idiomatic and compatible with Python 3.8+ */
-            PyObject *timestamp = PyObject_CallMethod(py_object, "timestamp", NULL);
-            if (timestamp) {
-                /* Write CBOR tag 1 (epoch time) + timestamp */
-                aws_cbor_encoder_write_tag(encoder, AWS_CBOR_TAG_EPOCH_TIME);
-                result = s_cbor_encoder_write_pyobject_as_float(encoder, timestamp);
-                Py_DECREF(timestamp);
-            } else {
-                result = NULL; /* timestamp() call failed */
-            }
-        } else {
-            /* Unsupported type */
-            PyErr_Format(PyExc_ValueError, "Not supported type %R", type);
-        }
+        /* Unsupported type */
+        PyErr_Format(PyExc_ValueError, "Not supported type %R", type);
     }
 
     /* Release the type reference */
@@ -280,12 +257,14 @@ ENCODER_WRITE(data_item, s_cbor_encoder_write_pyobject)
 static PyObject *s_cbor_encoder_write_pyobject_shaped(
     struct aws_cbor_encoder *encoder,
     PyObject *py_object,
-    PyObject *py_shape);
+    PyObject *py_shape,
+    PyObject *py_timestamp_converter);
 
 static PyObject *s_cbor_encoder_write_shaped_structure(
     struct aws_cbor_encoder *encoder,
     PyObject *py_dict,
-    PyObject *py_shape) {
+    PyObject *py_shape,
+    PyObject *py_timestamp_converter) {
 
     /* Filter None values */
     PyObject *filtered_dict = PyDict_New();
@@ -353,7 +332,8 @@ static PyObject *s_cbor_encoder_write_shaped_structure(
         Py_DECREF(key_result);
 
         /* Write the value with shape */
-        PyObject *value_result = s_cbor_encoder_write_pyobject_shaped(encoder, value, member_shape);
+        PyObject *value_result =
+            s_cbor_encoder_write_pyobject_shaped(encoder, value, member_shape, py_timestamp_converter);
         if (!value_result) {
             Py_DECREF(filtered_dict);
             Py_DECREF(members);
@@ -370,7 +350,8 @@ static PyObject *s_cbor_encoder_write_shaped_structure(
 static PyObject *s_cbor_encoder_write_shaped_list(
     struct aws_cbor_encoder *encoder,
     PyObject *py_list,
-    PyObject *py_shape) {
+    PyObject *py_shape,
+    PyObject *py_timestamp_converter) {
 
     Py_ssize_t size = PyList_Size(py_list);
     aws_cbor_encoder_write_array_start(encoder, (size_t)size);
@@ -387,7 +368,7 @@ static PyObject *s_cbor_encoder_write_shaped_list(
             Py_DECREF(member_shape);
             return NULL;
         }
-        PyObject *result = s_cbor_encoder_write_pyobject_shaped(encoder, item, member_shape);
+        PyObject *result = s_cbor_encoder_write_pyobject_shaped(encoder, item, member_shape, py_timestamp_converter);
         if (!result) {
             Py_DECREF(member_shape);
             return NULL;
@@ -402,7 +383,8 @@ static PyObject *s_cbor_encoder_write_shaped_list(
 static PyObject *s_cbor_encoder_write_shaped_map(
     struct aws_cbor_encoder *encoder,
     PyObject *py_dict,
-    PyObject *py_shape) {
+    PyObject *py_shape,
+    PyObject *py_timestamp_converter) {
 
     Py_ssize_t size = PyDict_Size(py_dict);
     aws_cbor_encoder_write_map_start(encoder, (size_t)size);
@@ -421,7 +403,7 @@ static PyObject *s_cbor_encoder_write_shaped_map(
     Py_ssize_t pos = 0;
 
     while (PyDict_Next(py_dict, &pos, &key, &value)) {
-        PyObject *key_result = s_cbor_encoder_write_pyobject_shaped(encoder, key, key_shape);
+        PyObject *key_result = s_cbor_encoder_write_pyobject_shaped(encoder, key, key_shape, py_timestamp_converter);
         if (!key_result) {
             Py_DECREF(key_shape);
             Py_DECREF(value_shape);
@@ -429,7 +411,8 @@ static PyObject *s_cbor_encoder_write_shaped_map(
         }
         Py_DECREF(key_result);
 
-        PyObject *value_result = s_cbor_encoder_write_pyobject_shaped(encoder, value, value_shape);
+        PyObject *value_result =
+            s_cbor_encoder_write_pyobject_shaped(encoder, value, value_shape, py_timestamp_converter);
         if (!value_result) {
             Py_DECREF(key_shape);
             Py_DECREF(value_shape);
@@ -446,7 +429,8 @@ static PyObject *s_cbor_encoder_write_shaped_map(
 static PyObject *s_cbor_encoder_write_pyobject_shaped(
     struct aws_cbor_encoder *encoder,
     PyObject *py_object,
-    PyObject *py_shape) {
+    PyObject *py_shape,
+    PyObject *py_timestamp_converter) {
 
     /* Get type_name from shape */
     PyObject *type_name = PyObject_GetAttrString(py_shape, "type_name");
@@ -483,27 +467,23 @@ static PyObject *s_cbor_encoder_write_pyobject_shaped(
     } else if (aws_byte_cursor_eq_c_str(&type_cursor, "string")) {
         result = s_cbor_encoder_write_pyobject_as_text(encoder, py_object);
     } else if (aws_byte_cursor_eq_c_str(&type_cursor, "list")) {
-        result = s_cbor_encoder_write_shaped_list(encoder, py_object, py_shape);
+        result = s_cbor_encoder_write_shaped_list(encoder, py_object, py_shape, py_timestamp_converter);
     } else if (aws_byte_cursor_eq_c_str(&type_cursor, "map")) {
-        result = s_cbor_encoder_write_shaped_map(encoder, py_object, py_shape);
+        result = s_cbor_encoder_write_shaped_map(encoder, py_object, py_shape, py_timestamp_converter);
     } else if (aws_byte_cursor_eq_c_str(&type_cursor, "structure")) {
-        result = s_cbor_encoder_write_shaped_structure(encoder, py_object, py_shape);
+        result = s_cbor_encoder_write_shaped_structure(encoder, py_object, py_shape, py_timestamp_converter);
     } else if (aws_byte_cursor_eq_c_str(&type_cursor, "timestamp")) {
         /* Write CBOR tag 1 (epoch time) */
         aws_cbor_encoder_write_tag(encoder, AWS_CBOR_TAG_EPOCH_TIME);
-
-        /* Check if it's a datetime object */
-        bool is_datetime = false;
-        if (aws_py_is_datetime_instance(py_object, &is_datetime) == AWS_OP_SUCCESS && is_datetime) {
-            /* Convert datetime to timestamp */
-            PyObject *timestamp = PyObject_CallMethod(py_object, "timestamp", NULL);
-            if (timestamp) {
-                result = s_cbor_encoder_write_pyobject_as_float(encoder, timestamp);
-                Py_DECREF(timestamp);
-            }
-        } else {
-            /* Assume it's already a numeric timestamp */
-            result = s_cbor_encoder_write_pyobject_as_float(encoder, py_object);
+        if (!py_timestamp_converter || py_timestamp_converter == Py_None) {
+            /* Error out as the timestamp_converter is not provided */
+            PyErr_Format(PyExc_ValueError, "Timestamp converter is not provided to enable timestamp");
+        }
+        /* Call the converter to get epoch seconds as float */
+        PyObject *converted = PyObject_CallFunctionObjArgs(py_timestamp_converter, py_object, NULL);
+        if (converted) {
+            result = s_cbor_encoder_write_pyobject_as_float(encoder, converted);
+            Py_DECREF(converted);
         }
     } else {
         /* Format error message with cursor data */
@@ -519,8 +499,9 @@ PyObject *aws_py_cbor_encoder_write_data_item_shaped(PyObject *self, PyObject *a
     PyObject *py_capsule;
     PyObject *py_object;
     PyObject *py_shape;
+    PyObject *py_timestamp_converter = NULL;
 
-    if (!PyArg_ParseTuple(args, "OOO", &py_capsule, &py_object, &py_shape)) {
+    if (!PyArg_ParseTuple(args, "OOOO", &py_capsule, &py_object, &py_shape, &py_timestamp_converter)) {
         return NULL;
     }
 
@@ -529,7 +510,7 @@ PyObject *aws_py_cbor_encoder_write_data_item_shaped(PyObject *self, PyObject *a
         return NULL;
     }
 
-    return s_cbor_encoder_write_pyobject_shaped(encoder, py_object, py_shape);
+    return s_cbor_encoder_write_pyobject_shaped(encoder, py_object, py_shape, py_timestamp_converter);
 }
 
 PyObject *aws_py_cbor_encoder_write_simple_types(PyObject *self, PyObject *args) {

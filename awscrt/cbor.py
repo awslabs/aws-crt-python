@@ -384,7 +384,7 @@ class AwsCborEncoder(NativeResource):
 
     def write_data_item_shaped(self,
                                data_item: Any,
-                               shape: 'CRTShape',
+                               shape: 'ShapeBase',
                                timestamp_converter: Callable[[Any],
                                                              float] = None):
         """Generic API to write any type of data_item as cbor formatted, using shape information.
@@ -435,7 +435,7 @@ class AwsCborEncoder(NativeResource):
             The CRTShape wrapper provides lazy initialization and caching for optimal performance.
             Shape objects are typically cached by the serializer for reuse across multiple requests.
         """
-        return _awscrt.cbor_encoder_write_data_item_shaped(self._binding, data_item, shape)
+        return _awscrt.cbor_encoder_write_data_item_shaped(self._binding, data_item, shape, timestamp_converter)
 
 
 class AwsCborDecoder(NativeResource):

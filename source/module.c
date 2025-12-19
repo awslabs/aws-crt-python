@@ -36,51 +36,6 @@
 static struct aws_logger s_logger;
 static bool s_logger_init = false;
 
-/*******************************************************************************
- * DateTime Type Cache (for stable ABI compatibility)
- ******************************************************************************/
-static PyObject *s_datetime_class = NULL;
-
-static int s_init_datetime_cache(void) {
-    if (s_datetime_class) {
-        return AWS_OP_SUCCESS; /* Already initialized */
-    }
-
-    /* Import datetime module */
-    PyObject *datetime_module = PyImport_ImportModule("datetime");
-    if (!datetime_module) {
-        /* Python exception already set by PyImport_ImportModule */
-        return aws_py_raise_error();
-    }
-
-    /* Get datetime class - new reference we'll keep */
-    s_datetime_class = PyObject_GetAttrString(datetime_module, "datetime");
-    Py_DECREF(datetime_module);
-
-    if (!s_datetime_class) {
-        /* Python exception already set by PyObject_GetAttrString */
-        return aws_py_raise_error();
-    }
-
-    return AWS_OP_SUCCESS;
-}
-
-int aws_py_is_datetime_instance(PyObject *obj, bool *out_is_datetime) {
-    AWS_ASSERT(out_is_datetime);
-
-    if (!s_datetime_class && s_init_datetime_cache() != AWS_OP_SUCCESS) {
-        return AWS_OP_ERR;
-    }
-
-    int result = PyObject_IsInstance(obj, s_datetime_class);
-    if (result < 0) {
-        return aws_py_raise_error(); /* PyObject_IsInstance failed */
-    }
-
-    *out_is_datetime = (result != 0);
-    return AWS_OP_SUCCESS;
-}
-
 PyObject *aws_py_init_logging(PyObject *self, PyObject *args) {
     (void)self;
 
@@ -1080,12 +1035,6 @@ PyMODINIT_FUNC PyInit__awscrt(void) {
 
     aws_register_error_info(&s_error_list);
     s_error_map_init();
-
-    /* Initialize datetime type cache for stable ABI datetime support */
-    if (s_init_datetime_cache() < 0) {
-        /* Non-fatal: datetime encoding will fail but rest of module works */
-        PyErr_Clear();
-    }
 
     return m;
 }
