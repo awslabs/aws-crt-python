@@ -382,3 +382,496 @@ class TestCBOR(NativeResourceTest):
                         tag_data = decoder.pop_next_data_item()
                     else:
                         decoded_data = decoder.pop_next_data_item()
+
+    # Helper shape classes for testing write_data_item_shaped
+    class SimpleShape(ShapeBase):
+        """Simple shape implementation for testing"""
+
+        def __init__(self, type_name):
+            self._type_name = type_name
+
+        @property
+        def type_name(self):
+            return self._type_name
+
+    class ListShape(ShapeBase):
+        """List shape implementation for testing"""
+
+        def __init__(self, member_shape):
+            self._member_shape = member_shape
+
+        @property
+        def type_name(self):
+            return "list"
+
+        @property
+        def member(self):
+            return self._member_shape
+
+    class MapShape(ShapeBase):
+        """Map shape implementation for testing"""
+
+        def __init__(self, key_shape, value_shape):
+            self._key_shape = key_shape
+            self._value_shape = value_shape
+
+        @property
+        def type_name(self):
+            return "map"
+
+        @property
+        def key(self):
+            return self._key_shape
+
+        @property
+        def value(self):
+            return self._value_shape
+
+    class StructureShape(ShapeBase):
+        """Structure shape implementation for testing"""
+
+        def __init__(self, members_dict, serialization_names=None):
+            self._members_dict = members_dict
+            self._serialization_names = serialization_names or {}
+
+        @property
+        def type_name(self):
+            return "structure"
+
+        @property
+        def members(self):
+            return self._members_dict
+
+        def get_serialization_name(self, member_name):
+            return self._serialization_names.get(member_name, member_name)
+
+    def test_write_data_item_shaped_basic_types(self):
+        """Test write_data_item_shaped with basic scalar types"""
+
+        # Test integer
+        encoder = AwsCborEncoder()
+        encoder.write_data_item_shaped(42, self.SimpleShape("integer"))
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        self.assertEqual(decoder.pop_next_data_item(), 42)
+
+        # Test long (same as integer in Python 3)
+        encoder = AwsCborEncoder()
+        encoder.write_data_item_shaped(2**63, self.SimpleShape("long"))
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        self.assertEqual(decoder.pop_next_data_item(), 2**63)
+
+        # Test float
+        encoder = AwsCborEncoder()
+        encoder.write_data_item_shaped(3.14, self.SimpleShape("float"))
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        self.assertAlmostEqual(decoder.pop_next_data_item(), 3.14, places=5)
+
+        # Test double
+        encoder = AwsCborEncoder()
+        encoder.write_data_item_shaped(2.718281828, self.SimpleShape("double"))
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        self.assertAlmostEqual(decoder.pop_next_data_item(), 2.718281828, places=9)
+
+        # Test boolean - True
+        encoder = AwsCborEncoder()
+        encoder.write_data_item_shaped(True, self.SimpleShape("boolean"))
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        self.assertTrue(decoder.pop_next_data_item())
+
+        # Test boolean - False
+        encoder = AwsCborEncoder()
+        encoder.write_data_item_shaped(False, self.SimpleShape("boolean"))
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        self.assertFalse(decoder.pop_next_data_item())
+
+        # Test string
+        encoder = AwsCborEncoder()
+        encoder.write_data_item_shaped("hello world", self.SimpleShape("string"))
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        self.assertEqual(decoder.pop_next_data_item(), "hello world")
+
+        # Test empty string
+        encoder = AwsCborEncoder()
+        encoder.write_data_item_shaped("", self.SimpleShape("string"))
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        self.assertEqual(decoder.pop_next_data_item(), "")
+
+        # Test blob
+        encoder = AwsCborEncoder()
+        encoder.write_data_item_shaped(b"binary data", self.SimpleShape("blob"))
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        self.assertEqual(decoder.pop_next_data_item(), b"binary data")
+
+        # Test empty blob
+        encoder = AwsCborEncoder()
+        encoder.write_data_item_shaped(b"", self.SimpleShape("blob"))
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        self.assertEqual(decoder.pop_next_data_item(), b"")
+
+    def test_write_data_item_shaped_list(self):
+        """Test write_data_item_shaped with list types"""
+
+        # Test list of integers
+        encoder = AwsCborEncoder()
+        int_list_shape = self.ListShape(self.SimpleShape("integer"))
+        encoder.write_data_item_shaped([1, 2, 3, 4, 5], int_list_shape)
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        self.assertEqual(decoder.pop_next_data_item(), [1, 2, 3, 4, 5])
+
+        # Test list of strings
+        encoder = AwsCborEncoder()
+        string_list_shape = self.ListShape(self.SimpleShape("string"))
+        encoder.write_data_item_shaped(["a", "b", "c"], string_list_shape)
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        self.assertEqual(decoder.pop_next_data_item(), ["a", "b", "c"])
+
+        # Test empty list
+        encoder = AwsCborEncoder()
+        encoder.write_data_item_shaped([], int_list_shape)
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        self.assertEqual(decoder.pop_next_data_item(), [])
+
+        # Test nested list
+        encoder = AwsCborEncoder()
+        nested_list_shape = self.ListShape(self.ListShape(self.SimpleShape("integer")))
+        encoder.write_data_item_shaped([[1, 2], [3, 4], [5]], nested_list_shape)
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        self.assertEqual(decoder.pop_next_data_item(), [[1, 2], [3, 4], [5]])
+
+    def test_write_data_item_shaped_map(self):
+        """Test write_data_item_shaped with map types"""
+
+        # Test map with string keys and integer values
+        encoder = AwsCborEncoder()
+        map_shape = self.MapShape(self.SimpleShape("string"), self.SimpleShape("integer"))
+        data = {"a": 1, "b": 2, "c": 3}
+        encoder.write_data_item_shaped(data, map_shape)
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        self.assertEqual(decoder.pop_next_data_item(), data)
+
+        # Test map with integer keys and string values
+        encoder = AwsCborEncoder()
+        map_shape = self.MapShape(self.SimpleShape("integer"), self.SimpleShape("string"))
+        data = {1: "one", 2: "two", 3: "three"}
+        encoder.write_data_item_shaped(data, map_shape)
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        self.assertEqual(decoder.pop_next_data_item(), data)
+
+        # Test empty map
+        encoder = AwsCborEncoder()
+        encoder.write_data_item_shaped({}, map_shape)
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        self.assertEqual(decoder.pop_next_data_item(), {})
+
+        # Test nested map
+        encoder = AwsCborEncoder()
+        nested_map_shape = self.MapShape(
+            self.SimpleShape("string"),
+            self.MapShape(self.SimpleShape("string"), self.SimpleShape("integer"))
+        )
+        data = {"outer1": {"inner1": 1, "inner2": 2}, "outer2": {"inner3": 3}}
+        encoder.write_data_item_shaped(data, nested_map_shape)
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        self.assertEqual(decoder.pop_next_data_item(), data)
+
+    def test_write_data_item_shaped_structure(self):
+        """Test write_data_item_shaped with structure types"""
+
+        # Test simple structure
+        encoder = AwsCborEncoder()
+        struct_shape = self.StructureShape({
+            "id": self.SimpleShape("integer"),
+            "name": self.SimpleShape("string"),
+            "active": self.SimpleShape("boolean")
+        })
+        data = {"id": 123, "name": "Alice", "active": True}
+        encoder.write_data_item_shaped(data, struct_shape)
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        self.assertEqual(decoder.pop_next_data_item(), data)
+
+        # Test structure with None values (should be filtered out)
+        encoder = AwsCborEncoder()
+        data_with_none = {"id": 456, "name": None, "active": False}
+        encoder.write_data_item_shaped(data_with_none, struct_shape)
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        # None values should be filtered out
+        self.assertEqual(decoder.pop_next_data_item(), {"id": 456, "active": False})
+
+        # Test structure with custom serialization names
+        # Note: Custom serialization names may not be fully implemented yet in C binding
+        # This test documents the expected behavior when it's implemented
+        encoder = AwsCborEncoder()
+        struct_shape_custom = self.StructureShape(
+            {
+                "user_id": self.SimpleShape("integer"),
+                "user_name": self.SimpleShape("string")
+            },
+            serialization_names={"user_id": "UserId", "user_name": "UserName"}
+        )
+        data = {"user_id": 789, "user_name": "Bob"}
+        encoder.write_data_item_shaped(data, struct_shape_custom)
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        # For now, it uses the original names (not custom serialization names)
+        # TODO: Update this test when custom serialization is implemented
+        self.assertEqual(decoder.pop_next_data_item(), {"user_id": 789, "user_name": "Bob"})
+
+    def test_write_data_item_shaped_nested_structure(self):
+        """Test write_data_item_shaped with nested structures"""
+
+        # Create nested structure: User with Address
+        encoder = AwsCborEncoder()
+        address_shape = self.StructureShape({
+            "street": self.SimpleShape("string"),
+            "city": self.SimpleShape("string"),
+            "zip": self.SimpleShape("integer")
+        })
+        user_shape = self.StructureShape({
+            "id": self.SimpleShape("integer"),
+            "name": self.SimpleShape("string"),
+            "address": address_shape
+        })
+
+        data = {
+            "id": 1,
+            "name": "Alice",
+            "address": {
+                "street": "123 Main St",
+                "city": "Springfield",
+                "zip": 12345
+            }
+        }
+        encoder.write_data_item_shaped(data, user_shape)
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        self.assertEqual(decoder.pop_next_data_item(), data)
+
+        # Test with None in nested structure
+        encoder = AwsCborEncoder()
+        data_with_none = {
+            "id": 2,
+            "name": "Bob",
+            "address": {
+                "street": "456 Elm St",
+                "city": None,  # This should be filtered
+                "zip": 67890
+            }
+        }
+        encoder.write_data_item_shaped(data_with_none, user_shape)
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        expected = {
+            "id": 2,
+            "name": "Bob",
+            "address": {
+                "street": "456 Elm St",
+                "zip": 67890
+            }
+        }
+        self.assertEqual(decoder.pop_next_data_item(), expected)
+
+    def test_write_data_item_shaped_structure_with_list(self):
+        """Test write_data_item_shaped with structures containing lists"""
+
+        encoder = AwsCborEncoder()
+        struct_shape = self.StructureShape({
+            "id": self.SimpleShape("integer"),
+            "tags": self.ListShape(self.SimpleShape("string")),
+            "scores": self.ListShape(self.SimpleShape("integer"))
+        })
+
+        data = {
+            "id": 100,
+            "tags": ["python", "aws", "cbor"],
+            "scores": [85, 90, 95]
+        }
+        encoder.write_data_item_shaped(data, struct_shape)
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        self.assertEqual(decoder.pop_next_data_item(), data)
+
+    def test_write_data_item_shaped_structure_with_map(self):
+        """Test write_data_item_shaped with structures containing maps"""
+
+        encoder = AwsCborEncoder()
+        struct_shape = self.StructureShape({
+            "id": self.SimpleShape("integer"),
+            "metadata": self.MapShape(self.SimpleShape("string"), self.SimpleShape("string")),
+            "counts": self.MapShape(self.SimpleShape("string"), self.SimpleShape("integer"))
+        })
+
+        data = {
+            "id": 200,
+            "metadata": {"author": "Alice", "version": "1.0"},
+            "counts": {"views": 100, "likes": 50}
+        }
+        encoder.write_data_item_shaped(data, struct_shape)
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        self.assertEqual(decoder.pop_next_data_item(), data)
+
+    def test_write_data_item_shaped_timestamp(self):
+        """Test write_data_item_shaped with timestamp type"""
+
+        # Test timestamp with converter
+        encoder = AwsCborEncoder()
+        timestamp_shape = self.SimpleShape("timestamp")
+
+        # Create a mock datetime-like object
+        class MockDateTime:
+            def timestamp(self):
+                return 1609459200.0  # 2021-01-01 00:00:00 UTC
+
+        mock_dt = MockDateTime()
+
+        # Converter function
+        def timestamp_converter(dt):
+            return dt.timestamp()
+
+        encoder.write_data_item_shaped(mock_dt, timestamp_shape, timestamp_converter)
+
+        # Decode and verify it's encoded as epoch time with tag
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        # Should have tag 1 followed by the float value
+        self.assertEqual(decoder.peek_next_type(), AwsCborType.Tag)
+        tag_id = decoder.pop_next_tag_val()
+        self.assertEqual(tag_id, 1)
+        timestamp_value = decoder.pop_next_data_item()
+        self.assertAlmostEqual(timestamp_value, 1609459200.0, places=5)
+
+        # Test timestamp without converter (already numeric)
+        # When converter is None, pass a simple converter that returns the value as-is
+        encoder = AwsCborEncoder()
+        encoder.write_data_item_shaped(1609459200.5, timestamp_shape, lambda x: x)
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        self.assertEqual(decoder.peek_next_type(), AwsCborType.Tag)
+        tag_id = decoder.pop_next_tag_val()
+        self.assertEqual(tag_id, 1)
+        timestamp_value = decoder.pop_next_data_item()
+        self.assertAlmostEqual(timestamp_value, 1609459200.5, places=5)
+
+    def test_write_data_item_shaped_complex_nested(self):
+        """Test write_data_item_shaped with complex nested structures"""
+
+        encoder = AwsCborEncoder()
+
+        # Create a complex shape: Organization with departments, each with employees
+        employee_shape = self.StructureShape({
+            "id": self.SimpleShape("integer"),
+            "name": self.SimpleShape("string"),
+            "email": self.SimpleShape("string"),
+            "skills": self.ListShape(self.SimpleShape("string"))
+        })
+
+        department_shape = self.StructureShape({
+            "name": self.SimpleShape("string"),
+            "budget": self.SimpleShape("integer"),
+            "employees": self.ListShape(employee_shape)
+        })
+
+        org_shape = self.StructureShape({
+            "org_name": self.SimpleShape("string"),
+            "founded": self.SimpleShape("integer"),
+            "departments": self.ListShape(department_shape),
+            "metadata": self.MapShape(self.SimpleShape("string"), self.SimpleShape("string"))
+        })
+
+        data = {
+            "org_name": "TechCorp",
+            "founded": 2020,
+            "departments": [
+                {
+                    "name": "Engineering",
+                    "budget": 1000000,
+                    "employees": [
+                        {
+                            "id": 1,
+                            "name": "Alice",
+                            "email": "alice@techcorp.com",
+                            "skills": ["Python", "Go", "AWS"]
+                        },
+                        {
+                            "id": 2,
+                            "name": "Bob",
+                            "email": "bob@techcorp.com",
+                            "skills": ["Java", "Kubernetes"]
+                        }
+                    ]
+                },
+                {
+                    "name": "Sales",
+                    "budget": 500000,
+                    "employees": [
+                        {
+                            "id": 3,
+                            "name": "Charlie",
+                            "email": "charlie@techcorp.com",
+                            "skills": ["Negotiation", "CRM"]
+                        }
+                    ]
+                }
+            ],
+            "metadata": {"industry": "Technology", "location": "Seattle"}
+        }
+
+        encoder.write_data_item_shaped(data, org_shape)
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        decoded = decoder.pop_next_data_item()
+        self.assertEqual(decoded, data)
+
+    def test_write_data_item_shaped_empty_collections(self):
+        """Test write_data_item_shaped with empty collections"""
+
+        # Empty structure
+        encoder = AwsCborEncoder()
+        struct_shape = self.StructureShape({})
+        encoder.write_data_item_shaped({}, struct_shape)
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        self.assertEqual(decoder.pop_next_data_item(), {})
+
+        # Structure with all None values (should result in empty map)
+        encoder = AwsCborEncoder()
+        struct_shape = self.StructureShape({
+            "a": self.SimpleShape("string"),
+            "b": self.SimpleShape("integer")
+        })
+        encoder.write_data_item_shaped({"a": None, "b": None}, struct_shape)
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        self.assertEqual(decoder.pop_next_data_item(), {})
+
+    def test_write_data_item_shaped_special_values(self):
+        """Test write_data_item_shaped with special float values"""
+        import math
+
+        # Test positive infinity
+        encoder = AwsCborEncoder()
+        encoder.write_data_item_shaped(float('inf'), self.SimpleShape("float"))
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        result = decoder.pop_next_data_item()
+        self.assertTrue(math.isinf(result) and result > 0)
+
+        # Test negative infinity
+        encoder = AwsCborEncoder()
+        encoder.write_data_item_shaped(float('-inf'), self.SimpleShape("double"))
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        result = decoder.pop_next_data_item()
+        self.assertTrue(math.isinf(result) and result < 0)
+
+        # Test NaN
+        encoder = AwsCborEncoder()
+        encoder.write_data_item_shaped(float('nan'), self.SimpleShape("float"))
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        result = decoder.pop_next_data_item()
+        self.assertTrue(math.isnan(result))
+
+    def test_write_data_item_shaped_large_numbers(self):
+        """Test write_data_item_shaped with large numbers"""
+
+        # Test large positive integer
+        encoder = AwsCborEncoder()
+        large_int = 2**63 - 1
+        encoder.write_data_item_shaped(large_int, self.SimpleShape("long"))
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        self.assertEqual(decoder.pop_next_data_item(), large_int)
+
+        # Test large negative integer
+        encoder = AwsCborEncoder()
+        large_neg = -2**63
+        encoder.write_data_item_shaped(large_neg, self.SimpleShape("long"))
+        decoder = AwsCborDecoder(encoder.get_encoded_data())
+        self.assertEqual(decoder.pop_next_data_item(), large_neg)
