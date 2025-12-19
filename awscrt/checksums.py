@@ -30,3 +30,84 @@ def crc64nvme(input: bytes, previous_crc64nvme: int = 0) -> int:
     Returns an unsigned 64-bit integer.
     """
     return _awscrt.checksums_crc64nvme(input, previous_crc64nvme)
+
+
+def combine_crc32(crc32_result1: int, crc32_result2: int, data_length2: int) -> int:
+    """
+    Combine two CRC32 (Ethernet, gzip) checksums computed over separate data blocks.
+
+    This is equivalent to computing the CRC32 of the concatenated data blocks without
+    having to re-scan the data.
+
+    Given:
+        crc1 = CRC32(data_block_A)
+        crc2 = CRC32(data_block_B)
+
+    This function computes:
+        result = CRC32(data_block_A || data_block_B)
+
+    Args:
+        crc32_result1: The CRC32 checksum of the first data block
+        crc32_result2: The CRC32 checksum of the second data block
+        data_length2: The length (in bytes) of the original data that produced crc32_result2.
+                      This is NOT the size of the checksum (which is always 4 bytes),
+                      but rather the size of the data block that was checksummed.
+
+    Returns:
+        The combined CRC32 checksum as if computed over the concatenated data
+    """
+    return _awscrt.checksums_crc32_combine(crc32_result1, crc32_result2, data_length2)
+
+
+def combine_crc32c(crc32c_result1: int, crc32c_result2: int, data_length2: int) -> int:
+    """
+    Combine two CRC32C (Castagnoli, iSCSI) checksums computed over separate data blocks.
+
+    This is equivalent to computing the CRC32C of the concatenated data blocks without
+    having to re-scan the data.
+
+    Given:
+        crc1 = CRC32C(data_block_A)
+        crc2 = CRC32C(data_block_B)
+
+    This function computes:
+        result = CRC32C(data_block_A || data_block_B)
+
+    Args:
+        crc32c_result1: The CRC32C checksum of the first data block
+        crc32c_result2: The CRC32C checksum of the second data block
+        data_length2: The length (in bytes) of the original data that produced crc32c_result2.
+                      This is NOT the size of the checksum (which is always 4 bytes),
+                      but rather the size of the data block that was checksummed.
+
+    Returns:
+        The combined CRC32C checksum as if computed over the concatenated data
+    """
+    return _awscrt.checksums_crc32c_combine(crc32c_result1, crc32c_result2, data_length2)
+
+
+def combine_crc64nvme(crc64nvme_result1: int, crc64nvme_result2: int, data_length2: int) -> int:
+    """
+    Combine two CRC64-NVME (CRC64-Rocksoft) checksums computed over separate data blocks.
+
+    This is equivalent to computing the CRC64-NVME of the concatenated data blocks without
+    having to re-scan the data.
+
+    Given:
+        crc1 = CRC64_NVME(data_block_A)
+        crc2 = CRC64_NVME(data_block_B)
+
+    This function computes:
+        result = CRC64_NVME(data_block_A || data_block_B)
+
+    Args:
+        crc64nvme_result1: The CRC64-NVME checksum of the first data block
+        crc64nvme_result2: The CRC64-NVME checksum of the second data block
+        data_length2: The length (in bytes) of the original data that produced crc64nvme_result2.
+                      This is NOT the size of the checksum (which is always 8 bytes),
+                      but rather the size of the data block that was checksummed.
+
+    Returns:
+        The combined CRC64-NVME checksum as if computed over the concatenated data
+    """
+    return _awscrt.checksums_crc64nvme_combine(crc64nvme_result1, crc64nvme_result2, data_length2)
