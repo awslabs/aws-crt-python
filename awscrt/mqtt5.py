@@ -1797,8 +1797,6 @@ class Client(NativeResource):
                                                  connect_options.maximum_packet_size,
                                                  connect_options.will_delay_interval_sec,
                                                  connect_options.user_properties,
-                                                 client_options.enable_metrics,
-                                                 self.metrics.library_name if self.metrics else None,
                                                  is_will_none,
                                                  will.qos,
                                                  will.payload,
@@ -1811,6 +1809,8 @@ class Client(NativeResource):
                                                  will.correlation_data_bytes or will.correlation_data,
                                                  will.content_type,
                                                  will.user_properties,
+                                                 client_options.enable_metrics,
+                                                 self.metrics.library_name if self.metrics else None,
                                                  client_options.session_behavior,
                                                  client_options.extended_validation_and_flow_control_options,
                                                  client_options.offline_queue_behavior,
@@ -1823,7 +1823,6 @@ class Client(NativeResource):
                                                  client_options.ack_timeout_sec,
                                                  client_options.topic_aliasing_options,
                                                  websocket_is_none,
-
                                                  core)
 
         # Store the options for adapter
