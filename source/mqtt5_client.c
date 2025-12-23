@@ -819,17 +819,17 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
     uint32_t port;
 
     /* Connect Options */
-    struct aws_byte_cursor client_id;            /* optional */
-    PyObject *keep_alive_interval_sec_py;        /* optional uint16_t */
-    struct aws_byte_cursor username;             /* optional */
-    struct aws_byte_cursor password;             /* optional */
-    PyObject *session_expiry_interval_sec_py;    /* optional uint32_t */
-    PyObject *request_response_information_py;   /* optional bool */
-    PyObject *request_problem_information_py;    /* optional bool */
-    PyObject *receive_maximum_py;                /* optional uint16_t */
-    PyObject *maximum_packet_size_py;            /* optional uint32_t */
-    PyObject *will_delay_interval_sec_py;        /* optional uint32_t */
-    PyObject *user_properties_py;                /* optional */
+    struct aws_byte_cursor client_id;          /* optional */
+    PyObject *keep_alive_interval_sec_py;      /* optional uint16_t */
+    struct aws_byte_cursor username;           /* optional */
+    struct aws_byte_cursor password;           /* optional */
+    PyObject *session_expiry_interval_sec_py;  /* optional uint32_t */
+    PyObject *request_response_information_py; /* optional bool */
+    PyObject *request_problem_information_py;  /* optional bool */
+    PyObject *receive_maximum_py;              /* optional uint16_t */
+    PyObject *maximum_packet_size_py;          /* optional uint32_t */
+    PyObject *will_delay_interval_sec_py;      /* optional uint32_t */
+    PyObject *user_properties_py;              /* optional */
 
     /* Metrics */
     PyObject *is_metrics_enabled_py;             /* optional enable metrics */
@@ -907,7 +907,6 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
             /* z */ &will_content_type.ptr,
             /* # */ &will_content_type.len,
             /* O */ &will_user_properties_py,
-
 
             /* Metrics */
             /* O */ &is_metrics_enabled_py,

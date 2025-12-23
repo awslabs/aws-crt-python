@@ -4,7 +4,6 @@
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, Pkcs11Lib, TlsContextOptions
 from awscrt import http
 from awscrt.mqtt import Client, Connection, QoS, Will, OnConnectionClosedData, OnConnectionFailureData, OnConnectionSuccessData, ConnectReturnCode
-from awscrt.iot_metrics import SdkMetrics
 from test import test_retry_wrapper, NativeResourceTest
 from concurrent.futures import Future
 import os

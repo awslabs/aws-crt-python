@@ -1170,7 +1170,7 @@ class ConnectPacket:
         will_delay_interval_sec (int): A time interval, in seconds, that the server should wait (for a session reconnection) before sending the will message associated with the connection's session.  If omitted or None, the server will send the will when the associated session is destroyed.  If the session is destroyed before a will delay interval has elapsed, then the will must be sent at the time of session destruction.
         will (PublishPacket): The definition of a message to be published when the connection's session is destroyed by the server or when the will delay interval has elapsed, whichever comes first.  If None, then nothing will be sent.
         user_properties (Sequence[UserProperty]): List of MQTT5 user properties included with the packet.
-        
+
     """
     keep_alive_interval_sec: int = None
     client_id: str = None

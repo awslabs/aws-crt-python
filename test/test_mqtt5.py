@@ -1869,12 +1869,12 @@ class Mqtt5ClientTest(NativeResourceTest):
         client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
         callbacks = Mqtt5TestCallbacks()
         client = self._create_client(client_options=client_options, callbacks=callbacks)
-        
+
         # Verify metrics are enabled by default
         self.assertTrue(client_options.connect_options.enable_metrics)
         self.assertIsNotNone(client.metrics)
         self.assertEqual(client.metrics.library_name, "IoTDeviceSDK/Python")
-        
+
         client.start()
         callbacks.future_connection_success.result(TIMEOUT)
         client.stop()
@@ -1903,11 +1903,11 @@ class Mqtt5ClientTest(NativeResourceTest):
         client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
         callbacks = Mqtt5TestCallbacks()
         client = self._create_client(client_options=client_options, callbacks=callbacks)
-        
+
         # Verify metrics are disabled
         self.assertFalse(client_options.connect_options.enable_metrics)
         self.assertIsNone(client.metrics)
-        
+
         client.start()
         callbacks.future_connection_success.result(TIMEOUT)
         client.stop()
@@ -1922,7 +1922,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
 
         custom_metrics = mqtt5.SdkMetrics(library_name="CustomSDK/Test")
-        
+
         tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(
             input_cert,
             input_key
@@ -1939,12 +1939,12 @@ class Mqtt5ClientTest(NativeResourceTest):
         client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
         callbacks = Mqtt5TestCallbacks()
         client = self._create_client(client_options=client_options, callbacks=callbacks)
-        
+
         # Verify custom metrics are set
         self.assertTrue(client_options.connect_options.enable_metrics)
         self.assertIsNotNone(client.metrics)
         self.assertEqual(client.metrics.library_name, "CustomSDK/Test")
-        
+
         client.start()
         callbacks.future_connection_success.result(TIMEOUT)
         client.stop()
