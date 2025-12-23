@@ -1170,9 +1170,7 @@ class ConnectPacket:
         will_delay_interval_sec (int): A time interval, in seconds, that the server should wait (for a session reconnection) before sending the will message associated with the connection's session.  If omitted or None, the server will send the will when the associated session is destroyed.  If the session is destroyed before a will delay interval has elapsed, then the will must be sent at the time of session destruction.
         will (PublishPacket): The definition of a message to be published when the connection's session is destroyed by the server or when the will delay interval has elapsed, whichever comes first.  If None, then nothing will be sent.
         user_properties (Sequence[UserProperty]): List of MQTT5 user properties included with the packet.
-        enable_metrics (bool): If true, enable IoT SDK metrics in CONNECT packet username field, otherwise, disabled. Default to True. You may set it to false if you are not using AWS IoT services, and using a custom authentication mechanism.
-        metrics (Optional[SdkMetrics]): Configuration for IoT SDK metrics that are embedded in MQTT username field. If None is provided, default SdkMetrics configuration is used.
-
+        
     """
     keep_alive_interval_sec: int = None
     client_id: str = None
@@ -1186,8 +1184,6 @@ class ConnectPacket:
     will_delay_interval_sec: int = None
     will: PublishPacket = None
     user_properties: 'Sequence[UserProperty]' = None
-    enable_metrics: bool = True
-    metrics: SdkMetrics = None
 
 
 class WebsocketHandshakeTransformArgs:
@@ -1355,6 +1351,8 @@ class ClientOptions:
         on_lifecycle_event_connection_success_fn (Callable[[LifecycleConnectSuccessData],]): Callback for Lifecycle Event Connection Success.
         on_lifecycle_event_connection_failure_fn (Callable[[LifecycleConnectFailureData],]): Callback for Lifecycle Event Connection Failure.
         on_lifecycle_event_disconnection_fn (Callable[[LifecycleDisconnectData],]): Callback for Lifecycle Event Disconnection.
+        enable_metrics (bool): If true, enable IoT SDK metrics in CONNECT packet username field, otherwise, disabled. Default to True. You may set it to false if you are not using AWS IoT services, and using a custom authentication mechanism.
+
     """
     host_name: str
     port: int = None
@@ -1381,6 +1379,7 @@ class ClientOptions:
     on_lifecycle_event_connection_success_fn: Callable[[LifecycleConnectSuccessData], None] = None
     on_lifecycle_event_connection_failure_fn: Callable[[LifecycleConnectFailureData], None] = None
     on_lifecycle_event_disconnection_fn: Callable[[LifecycleDisconnectData], None] = None
+    enable_metrics: bool = True
 
 
 def _check_callback(callback):
@@ -1409,6 +1408,7 @@ class _ClientCore:
         self._on_lifecycle_connection_failure_cb = _check_callback(
             client_options.on_lifecycle_event_connection_failure_fn)
         self._on_lifecycle_disconnection_cb = _check_callback(client_options.on_lifecycle_event_disconnection_fn)
+        self._enable_metrics = client_options.enable_metrics
 
     def _ws_handshake_transform(self, http_request_binding, http_headers_binding, native_userdata):
         if self._ws_handshake_transform_cb is None:
