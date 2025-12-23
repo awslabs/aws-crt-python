@@ -1894,11 +1894,11 @@ class Mqtt5ClientTest(NativeResourceTest):
         )
         client_options = mqtt5.ClientOptions(
             host_name=input_host_name,
-            port=8883
+            port=8883,
+            enable_metrics=False
         )
         client_options.connect_options = mqtt5.ConnectPacket(
-            client_id=create_client_id(),
-            enable_metrics=False
+            client_id=create_client_id()
         )
         client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
         callbacks = Mqtt5TestCallbacks()
