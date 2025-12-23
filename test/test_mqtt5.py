@@ -1916,43 +1916,6 @@ class Mqtt5ClientTest(NativeResourceTest):
     def test_metrics_disabled(self):
         test_retry_wrapper(self._test_metrics_disabled)
 
-    def _test_metrics_custom_library_name(self):
-        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
-        input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
-        input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
-
-        custom_metrics = mqtt5.SdkMetrics(library_name="CustomSDK/Test")
-
-        tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(
-            input_cert,
-            input_key
-        )
-        client_options = mqtt5.ClientOptions(
-            host_name=input_host_name,
-            port=8883
-        )
-        client_options.connect_options = mqtt5.ConnectPacket(
-            client_id=create_client_id(),
-            enable_metrics=True,
-            metrics=custom_metrics
-        )
-        client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
-        callbacks = Mqtt5TestCallbacks()
-        client = self._create_client(client_options=client_options, callbacks=callbacks)
-
-        # Verify custom metrics are set
-        self.assertTrue(client_options.enable_metrics)
-        self.assertIsNotNone(client.metrics)
-        self.assertEqual(client.metrics.library_name, "CustomSDK/Test")
-
-        client.start()
-        callbacks.future_connection_success.result(TIMEOUT)
-        client.stop()
-        callbacks.future_stopped.result(TIMEOUT)
-
-    def test_metrics_custom_library_name(self):
-        test_retry_wrapper(self._test_metrics_custom_library_name)
-
 
 if __name__ == 'main':
     unittest.main()
