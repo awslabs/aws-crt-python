@@ -336,10 +336,11 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     int should_stream;                                 /* p - boolean predicate */
     double disk_throughput_gbps;                       /* d */
     int direct_io;                                     /* p - boolean predicate */
+    uint64_t max_active_connections_override;          /* K */
     PyObject *py_core;                                 /* O */
     if (!PyArg_ParseTuple(
             args,
-            "OOOizOOzzs#iipKKppdpO",
+            "OOOizOOzzs#iipKKppdpKO",
             &py_s3_request,
             &s3_client_py,
             &http_request_py,
@@ -360,6 +361,7 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
             &should_stream,
             &disk_throughput_gbps,
             &direct_io,
+            &max_active_connections_override,
             &py_core)) {
         return NULL;
     }
@@ -441,6 +443,7 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
         .multipart_upload_threshold = multipart_upload_threshold,
         /* If fio options not set, let native code to decide the default instead */
         .fio_opts = fio_options_set ? &fio_opts : NULL,
+        .max_active_connections_override = max_active_connections_override,
         .user_data = meta_request,
     };
 

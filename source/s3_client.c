@@ -245,28 +245,29 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
 
     struct aws_allocator *allocator = aws_py_get_allocator();
 
-    PyObject *bootstrap_py;               /* O */
-    PyObject *signing_config_py;          /* O */
-    PyObject *credential_provider_py;     /* O */
-    PyObject *tls_options_py;             /* O */
-    PyObject *on_shutdown_py;             /* O */
-    struct aws_byte_cursor region;        /* s# */
-    int tls_mode;                         /* i */
-    uint64_t part_size;                   /* K */
-    uint64_t multipart_upload_threshold;  /* K */
-    double throughput_target_gbps;        /* d */
-    int enable_s3express;                 /* p */
-    uint64_t mem_limit;                   /* K */
-    PyObject *network_interface_names_py; /* O */
-    int fio_options_set;                  /* p - boolean predicate */
-    int should_stream;                    /* p - boolean predicate */
-    double disk_throughput_gbps;          /* d */
-    int direct_io;                        /* p - boolean predicate */
-    PyObject *py_core;                    /* O */
+    PyObject *bootstrap_py;                   /* O */
+    PyObject *signing_config_py;              /* O */
+    PyObject *credential_provider_py;         /* O */
+    PyObject *tls_options_py;                 /* O */
+    PyObject *on_shutdown_py;                 /* O */
+    struct aws_byte_cursor region;            /* s# */
+    int tls_mode;                             /* i */
+    uint64_t part_size;                       /* K */
+    uint64_t multipart_upload_threshold;      /* K */
+    double throughput_target_gbps;            /* d */
+    int enable_s3express;                     /* p */
+    uint64_t mem_limit;                       /* K */
+    PyObject *network_interface_names_py;     /* O */
+    int fio_options_set;                      /* p - boolean predicate */
+    int should_stream;                        /* p - boolean predicate */
+    double disk_throughput_gbps;              /* d */
+    int direct_io;                            /* p - boolean predicate */
+    uint64_t max_active_connections_override; /* K */
+    PyObject *py_core;                        /* O */
 
     if (!PyArg_ParseTuple(
             args,
-            "OOOOOs#iKKdpKOppdpO",
+            "OOOOOs#iKKdpKOppdpKO",
             &bootstrap_py,
             &signing_config_py,
             &credential_provider_py,
@@ -285,6 +286,7 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
             &should_stream,
             &disk_throughput_gbps,
             &direct_io,
+            &max_active_connections_override,
             &py_core)) {
         return NULL;
     }
@@ -397,6 +399,7 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
         .num_network_interface_names = num_network_interface_names,
         /* If fio options not set, let native code to decide the default instead */
         .fio_opts = fio_options_set ? &fio_opts : NULL,
+        .max_active_connections_override = max_active_connections_override,
     };
 
     s3_client->native = aws_s3_client_new(allocator, &s3_config);

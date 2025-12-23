@@ -287,6 +287,16 @@ class EC(NativeResource):
         return ECRawSignature(r=r, s=s)
 
     @staticmethod
+    def decode_der_signature_to_padded_pair(signature: bytes, pad_to: int) -> bytes:
+        """
+        Decodes ec signature into padded r || s.
+        Both r and s are padded to the specified value and then concatenated.
+        Typical format for jwt use case.
+        Note: pad_to typically should equal to coord size. e.g 32 for P256 or 48 for P384
+        """
+        return _awscrt.ec_decode_signature_to_padded_pair(signature, pad_to)
+
+    @staticmethod
     def encode_raw_signature(signature: ECRawSignature) -> bytes:
         """
         Encodes raw signature into der.
