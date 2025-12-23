@@ -1871,7 +1871,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         client = self._create_client(client_options=client_options, callbacks=callbacks)
 
         # Verify metrics are enabled by default
-        self.assertTrue(client_options.connect_options.enable_metrics)
+        self.assertTrue(client_options.enable_metrics)
         self.assertIsNotNone(client.metrics)
         self.assertEqual(client.metrics.library_name, "IoTDeviceSDK/Python")
 
@@ -1905,7 +1905,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         client = self._create_client(client_options=client_options, callbacks=callbacks)
 
         # Verify metrics are disabled
-        self.assertFalse(client_options.connect_options.enable_metrics)
+        self.assertFalse(client_options.enable_metrics)
         self.assertIsNone(client.metrics)
 
         client.start()
@@ -1941,7 +1941,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         client = self._create_client(client_options=client_options, callbacks=callbacks)
 
         # Verify custom metrics are set
-        self.assertTrue(client_options.connect_options.enable_metrics)
+        self.assertTrue(client_options.enable_metrics)
         self.assertIsNotNone(client.metrics)
         self.assertEqual(client.metrics.library_name, "CustomSDK/Test")
 
