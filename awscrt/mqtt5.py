@@ -1721,7 +1721,8 @@ class _Mqtt5to3AdapterOptions:
             ping_timeout_ms: int,
             keep_alive_secs: int,
             ack_timeout_secs: int,
-            clean_session: int):
+            clean_session: int,
+            enable_metrics: bool):
         self.host_name = host_name
         self.port = port
         self.client_id = "" if client_id is None else client_id
@@ -1732,6 +1733,7 @@ class _Mqtt5to3AdapterOptions:
         self.keep_alive_secs: int = 1200 if keep_alive_secs is None else keep_alive_secs
         self.ack_timeout_secs: int = 0 if ack_timeout_secs is None else ack_timeout_secs
         self.clean_session: bool = True if clean_session is None else clean_session
+        self.enable_metrics: bool = True if enable_metrics is None else enable_metrics
 
 
 class Client(NativeResource):
@@ -1763,8 +1765,8 @@ class Client(NativeResource):
             socket_options = SocketOptions()
 
         # Handle metrics configuration
-        if connect_options.enable_metrics:
-            self.metrics = connect_options.metrics if connect_options.metrics else SdkMetrics()
+        if client_options.enable_metrics:
+            self.metrics = SdkMetrics()
         else:
             self.metrics = None
 
@@ -1795,7 +1797,7 @@ class Client(NativeResource):
                                                  connect_options.maximum_packet_size,
                                                  connect_options.will_delay_interval_sec,
                                                  connect_options.user_properties,
-                                                 connect_options.enable_metrics,
+                                                 client_options.enable_metrics,
                                                  self.metrics.library_name if self.metrics else None,
                                                  is_will_none,
                                                  will.qos,
@@ -1836,7 +1838,8 @@ class Client(NativeResource):
             keep_alive_secs=connect_options.keep_alive_interval_sec,
             ack_timeout_secs=client_options.ack_timeout_sec,
             clean_session=(
-                client_options.session_behavior < ClientSessionBehaviorType.REJOIN_ALWAYS if client_options.session_behavior else True))
+                client_options.session_behavior < ClientSessionBehaviorType.REJOIN_ALWAYS if client_options.session_behavior else True),
+            enable_metrics=client_options.enable_metrics)
 
     def start(self):
         """Notifies the MQTT5 client that you want it maintain connectivity to the configured endpoint.
@@ -2068,5 +2071,6 @@ class Client(NativeResource):
             use_websockets=False,
             websocket_proxy_options=None,
             websocket_handshake_transform=None,
-            proxy_options=None
+            proxy_options=None,
+            enable_metrics=self.adapter_options.enable_metrics
         )
