@@ -232,11 +232,17 @@ PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args) {
     PyObject *initial_settings_py;
     PyObject *on_remote_settings_changed_py;
     PyObject *py_core;
+    int manual_window_management = 0;
+    PyObject *initial_window_size_py = Py_None;
+    PyObject *read_buffer_capacity_py = Py_None;
+    int conn_manual_window_management = 0;
+    PyObject *conn_window_size_threshold_py = Py_None;
+    PyObject *stream_window_size_threshold_py = Py_None;
     bool success = false;
 
     if (!PyArg_ParseTuple(
             args,
-            "Os#IOOOOOO",
+            "Os#IOOOOOOpOOpOO",
             &bootstrap_py,
             &host_name,
             &host_name_len,
@@ -246,7 +252,13 @@ PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args) {
             &proxy_options_py,
             &initial_settings_py,
             &on_remote_settings_changed_py,
-            &py_core)) {
+            &py_core,
+            &manual_window_management,
+            &initial_window_size_py,
+            &read_buffer_capacity_py,
+            &conn_manual_window_management,
+            &conn_window_size_threshold_py,
+            &stream_window_size_threshold_py)) {
         return NULL;
     }
 
@@ -286,6 +298,23 @@ PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args) {
         http2_options.on_remote_settings_change = s_http2_on_remote_settings_change;
     }
 
+    /* Set up HTTP/2 flow control options */
+    if (conn_manual_window_management) {
+        http2_options.conn_manual_window_management = true;
+    }
+    if (conn_window_size_threshold_py != Py_None) {
+        http2_options.conn_window_size_threshold = PyLong_AsSize_t(conn_window_size_threshold_py);
+        if (PyErr_Occurred()) {
+            goto done;
+        }
+    }
+    if (stream_window_size_threshold_py != Py_None) {
+        http2_options.stream_window_size_threshold = PyLong_AsSize_t(stream_window_size_threshold_py);
+        if (PyErr_Occurred()) {
+            goto done;
+        }
+    }
+
     /* proxy options are optional */
     struct aws_http_proxy_options proxy_options_storage;
     struct aws_http_proxy_options *proxy_options = NULL;
@@ -310,7 +339,24 @@ PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args) {
         .on_setup = s_on_client_connection_setup,
         .on_shutdown = s_on_connection_shutdown,
         .http2_options = &http2_options,
+        .manual_window_management = manual_window_management,
     };
+
+    /* Set initial window size if provided */
+    if (initial_window_size_py != Py_None) {
+        http_options.initial_window_size = PyLong_AsSize_t(initial_window_size_py);
+        if (PyErr_Occurred()) {
+            goto done;
+        }
+    }
+
+    /* Set read buffer capacity if provided */
+    if (read_buffer_capacity_py != Py_None) {
+        http_options.read_buffer_capacity = PyLong_AsSize_t(read_buffer_capacity_py);
+        if (PyErr_Occurred()) {
+            goto done;
+        }
+    }
 
     connection->py_core = py_core;
     Py_INCREF(connection->py_core);
@@ -364,4 +410,46 @@ PyObject *aws_py_http_connection_is_open(PyObject *self, PyObject *args) {
         Py_RETURN_TRUE;
     }
     Py_RETURN_FALSE;
+}
+
+PyObject *aws_py_http2_connection_update_window(PyObject *self, PyObject *args) {
+    (void)self;
+    PyObject *capsule;
+    uint32_t increment_size;
+    if (!PyArg_ParseTuple(args, "OI", &capsule, &increment_size)) {
+        return NULL;
+    }
+
+    struct http_connection_binding *connection = PyCapsule_GetPointer(capsule, s_capsule_name_http_connection);
+    if (!connection) {
+        return NULL;
+    }
+
+    if (aws_http2_connection_update_window(connection->native, increment_size)) {
+        PyErr_SetAwsLastError();
+        return NULL;
+    }
+
+    Py_RETURN_NONE;
+}
+
+PyObject *aws_py_http_stream_update_window(PyObject *self, PyObject *args) {
+    (void)self;
+    PyObject *stream_capsule;
+    uint32_t increment_size;
+    if (!PyArg_ParseTuple(args, "OI", &stream_capsule, &increment_size)) {
+        return NULL;
+    }
+
+    struct aws_http_stream *stream = aws_py_get_http_stream(stream_capsule);
+    if (!stream) {
+        return NULL;
+    }
+
+    if (aws_http_stream_update_window(stream, increment_size)) {
+        PyErr_SetAwsLastError();
+        return NULL;
+    }
+
+    Py_RETURN_NONE;
 }
