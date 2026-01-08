@@ -722,6 +722,6 @@ class AwsCborDecoder(NativeResource):
         - `AwsCborType.ArrayStart` or `AwsCborType.IndefArray` and all the followed data items in the array -> list
         - `AwsCborType.MapStart` or `AwsCborType.IndefMap` and all the followed data items in the map -> dict
         - `AwsCborType.Tag`: For tag with id 1, as the epoch time, it invokes the _on_epoch_time for python to convert to expected type.
-                             For the reset tag, exception will be raised.
+                             For the other tags, exception will be raised.
         """
         return _awscrt.cbor_decoder_pop_next_data_item(self._binding)
