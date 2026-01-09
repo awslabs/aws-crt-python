@@ -303,13 +303,13 @@ PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args) {
         http2_options.conn_manual_window_management = true;
     }
     if (conn_window_size_threshold_py != Py_None) {
-        http2_options.conn_window_size_threshold = PyLong_AsSize_t(conn_window_size_threshold_py);
+        http2_options.conn_window_size_threshold_to_send_update = PyLong_AsUnsignedLong(conn_window_size_threshold_py);
         if (PyErr_Occurred()) {
             goto done;
         }
     }
     if (stream_window_size_threshold_py != Py_None) {
-        http2_options.stream_window_size_threshold = PyLong_AsSize_t(stream_window_size_threshold_py);
+        http2_options.stream_window_size_threshold_to_send_update = PyLong_AsUnsignedLong(stream_window_size_threshold_py);
         if (PyErr_Occurred()) {
             goto done;
         }
@@ -321,6 +321,15 @@ PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args) {
     if (proxy_options_py != Py_None) {
         proxy_options = &proxy_options_storage;
         if (!aws_py_http_proxy_options_init(proxy_options, proxy_options_py)) {
+            goto done;
+        }
+    }
+
+    /* Set up HTTP/1.1 options if needed */
+    struct aws_http1_connection_options http1_options = {0};
+    if (read_buffer_capacity_py != Py_None) {
+        http1_options.read_buffer_capacity = PyLong_AsSize_t(read_buffer_capacity_py);
+        if (PyErr_Occurred()) {
             goto done;
         }
     }
@@ -339,20 +348,13 @@ PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args) {
         .on_setup = s_on_client_connection_setup,
         .on_shutdown = s_on_connection_shutdown,
         .http2_options = &http2_options,
+        .http1_options = (read_buffer_capacity_py != Py_None) ? &http1_options : NULL,
         .manual_window_management = manual_window_management,
     };
 
     /* Set initial window size if provided */
     if (initial_window_size_py != Py_None) {
         http_options.initial_window_size = PyLong_AsSize_t(initial_window_size_py);
-        if (PyErr_Occurred()) {
-            goto done;
-        }
-    }
-
-    /* Set read buffer capacity if provided */
-    if (read_buffer_capacity_py != Py_None) {
-        http_options.read_buffer_capacity = PyLong_AsSize_t(read_buffer_capacity_py);
         if (PyErr_Occurred()) {
             goto done;
         }
@@ -425,10 +427,7 @@ PyObject *aws_py_http2_connection_update_window(PyObject *self, PyObject *args) 
         return NULL;
     }
 
-    if (aws_http2_connection_update_window(connection->native, increment_size)) {
-        PyErr_SetAwsLastError();
-        return NULL;
-    }
+    aws_http2_connection_update_window(connection->native, increment_size);
 
     Py_RETURN_NONE;
 }
@@ -446,10 +445,7 @@ PyObject *aws_py_http_stream_update_window(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    if (aws_http_stream_update_window(stream, increment_size)) {
-        PyErr_SetAwsLastError();
-        return NULL;
-    }
+    aws_http_stream_update_window(stream, increment_size);
 
     Py_RETURN_NONE;
 }
