@@ -554,7 +554,7 @@ class HttpClientStreamBase(HttpStreamBase):
         Args:
             increment_size (int): Number of bytes to increment the window by.
         """
-        _awscrt.http_stream_update_window(self._binding, increment_size)
+        _awscrt.http_stream_update_window(self, increment_size)
 
 
 class HttpClientStream(HttpClientStreamBase):

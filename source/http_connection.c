@@ -309,7 +309,8 @@ PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args) {
         }
     }
     if (stream_window_size_threshold_py != Py_None) {
-        http2_options.stream_window_size_threshold_to_send_update = PyLong_AsUnsignedLong(stream_window_size_threshold_py);
+        http2_options.stream_window_size_threshold_to_send_update =
+            PyLong_AsUnsignedLong(stream_window_size_threshold_py);
         if (PyErr_Occurred()) {
             goto done;
         }
