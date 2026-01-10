@@ -31,6 +31,16 @@ PyObject *aws_py_http_connection_close(PyObject *self, PyObject *args);
 PyObject *aws_py_http_connection_is_open(PyObject *self, PyObject *args);
 
 /**
+ * Update HTTP/2 connection window size.
+ */
+PyObject *aws_py_http2_connection_update_window(PyObject *self, PyObject *args);
+
+/**
+ * Update HTTP stream window size.
+ */
+PyObject *aws_py_http_stream_update_window(PyObject *self, PyObject *args);
+
+/**
  * Create a new connection. returns void. The on_setup callback will be invoked
  * upon either success or failure of the connection.
  */

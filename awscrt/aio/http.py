@@ -38,7 +38,13 @@ class AIOHttpClientConnectionUnified(HttpClientConnectionBase):
                   bootstrap: Optional[ClientBootstrap] = None,
                   socket_options: Optional[SocketOptions] = None,
                   tls_connection_options: Optional[TlsConnectionOptions] = None,
-                  proxy_options: Optional[HttpProxyOptions] = None) -> "AIOHttpClientConnectionUnified":
+                  proxy_options: Optional[HttpProxyOptions] = None,
+                  manual_window_management: bool = False,
+                  initial_window_size: Optional[int] = None,
+                  read_buffer_capacity: Optional[int] = None,
+                  conn_manual_window_management: bool = False,
+                  conn_window_size_threshold: Optional[int] = None,
+                  stream_window_size_threshold: Optional[int] = None) -> "AIOHttpClientConnectionUnified":
         """
         Asynchronously establish a new AIOHttpClientConnectionUnified.
 
@@ -60,6 +66,24 @@ class AIOHttpClientConnectionUnified(HttpClientConnectionBase):
             proxy_options (Optional[HttpProxyOptions]): Optional proxy options.
                 If None is provided then a proxy is not used.
 
+            manual_window_management (bool): If True, enables manual flow control window management.
+                Default is False.
+
+            initial_window_size (Optional[int]): Initial window size for flow control.
+                If None, uses default value.
+
+            read_buffer_capacity (Optional[int]): Read buffer capacity for the connection.
+                If None, uses default value.
+
+            conn_manual_window_management (bool): If True, enables manual connection-level window management.
+                Default is False.
+
+            conn_window_size_threshold (Optional[int]): Connection window size threshold.
+                If None, uses default value.
+
+            stream_window_size_threshold (Optional[int]): Stream window size threshold.
+                If None, uses default value.
+
         Returns:
             AIOHttpClientConnectionUnified: A new unified HTTP client connection.
         """
@@ -70,7 +94,13 @@ class AIOHttpClientConnectionUnified(HttpClientConnectionBase):
             socket_options,
             tls_connection_options,
             proxy_options,
-            asyncio_connection=True)
+            asyncio_connection=True,
+            manual_window_management=manual_window_management,
+            initial_window_size=initial_window_size,
+            read_buffer_capacity=read_buffer_capacity,
+            conn_manual_window_management=conn_manual_window_management,
+            conn_window_size_threshold=conn_window_size_threshold,
+            stream_window_size_threshold=stream_window_size_threshold)
         return await asyncio.wrap_future(future)
 
     async def close(self) -> None:
@@ -118,7 +148,10 @@ class AIOHttpClientConnection(AIOHttpClientConnectionUnified):
                   bootstrap: Optional[ClientBootstrap] = None,
                   socket_options: Optional[SocketOptions] = None,
                   tls_connection_options: Optional[TlsConnectionOptions] = None,
-                  proxy_options: Optional[HttpProxyOptions] = None) -> "AIOHttpClientConnection":
+                  proxy_options: Optional[HttpProxyOptions] = None,
+                  manual_window_management: bool = False,
+                  initial_window_size: Optional[int] = None,
+                  read_buffer_capacity: Optional[int] = None) -> "AIOHttpClientConnection":
         """
         Asynchronously establish a new AIOHttpClientConnection.
 
@@ -140,6 +173,15 @@ class AIOHttpClientConnection(AIOHttpClientConnectionUnified):
             proxy_options (Optional[HttpProxyOptions]): Optional proxy options.
                 If None is provided then a proxy is not used.
 
+            manual_window_management (bool): If True, enables manual flow control window management.
+                Default is False.
+
+            initial_window_size (Optional[int]): Initial window size for flow control.
+                If None, uses default value.
+
+            read_buffer_capacity (Optional[int]): Read buffer capacity for the connection.
+                If None, uses default value.
+
         Returns:
             AIOHttpClientConnection: A new HTTP client connection.
         """
@@ -151,7 +193,10 @@ class AIOHttpClientConnection(AIOHttpClientConnectionUnified):
             tls_connection_options,
             proxy_options,
             expected_version=HttpVersion.Http1_1,
-            asyncio_connection=True)
+            asyncio_connection=True,
+            manual_window_management=manual_window_management,
+            initial_window_size=initial_window_size,
+            read_buffer_capacity=read_buffer_capacity)
         return await asyncio.wrap_future(future)
 
     def request(self,
@@ -189,8 +234,12 @@ class AIOHttp2ClientConnection(AIOHttpClientConnectionUnified):
                   tls_connection_options: Optional[TlsConnectionOptions] = None,
                   proxy_options: Optional[HttpProxyOptions] = None,
                   initial_settings: Optional[List[Http2Setting]] = None,
-                  on_remote_settings_changed: Optional[Callable[[List[Http2Setting]],
-                                                                None]] = None) -> "AIOHttp2ClientConnection":
+                  on_remote_settings_changed: Optional[Callable[[List[Http2Setting]], None]] = None,
+                  manual_window_management: bool = False,
+                  initial_window_size: Optional[int] = None,
+                  conn_manual_window_management: bool = False,
+                  conn_window_size_threshold: Optional[int] = None,
+                  stream_window_size_threshold: Optional[int] = None) -> "AIOHttp2ClientConnection":
         """
         Asynchronously establish an HTTP/2 client connection.
         Notes: to set up the connection, the server must support HTTP/2 and TlsConnectionOptions
@@ -205,6 +254,21 @@ class AIOHttp2ClientConnection(AIOHttpClientConnectionUnified):
                 The function should take the following arguments and return nothing:
 
                     *   `settings` (List[Http2Setting]): List of settings that were changed.
+
+            manual_window_management (bool): If True, enables manual flow control window management.
+                Default is False.
+
+            initial_window_size (Optional[int]): Initial window size for flow control.
+                If None, uses default value.
+
+            conn_manual_window_management (bool): If True, enables manual connection-level window management.
+                Default is False.
+
+            conn_window_size_threshold (Optional[int]): Connection window size threshold.
+                If None, uses default value.
+
+            stream_window_size_threshold (Optional[int]): Stream window size threshold.
+                If None, uses default value.
         """
         future = cls._generic_new(
             host_name,
@@ -216,7 +280,12 @@ class AIOHttp2ClientConnection(AIOHttpClientConnectionUnified):
             expected_version=HttpVersion.Http2,
             initial_settings=initial_settings,
             on_remote_settings_changed=on_remote_settings_changed,
-            asyncio_connection=True)
+            asyncio_connection=True,
+            manual_window_management=manual_window_management,
+            initial_window_size=initial_window_size,
+            conn_manual_window_management=conn_manual_window_management,
+            conn_window_size_threshold=conn_window_size_threshold,
+            stream_window_size_threshold=stream_window_size_threshold)
         return await asyncio.wrap_future(future)
 
     def request(self,
