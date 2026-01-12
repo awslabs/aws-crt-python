@@ -679,7 +679,7 @@ class FlowControlTest(NativeResourceTest):
             try:
                 connection = future.result(timeout=1)
                 connection.close()
-            except:
+            except BaseException:
                 future.cancel()
         except Exception as e:
             self.fail(f"HTTP/1.1 flow control parameters rejected: {e}")
@@ -688,7 +688,7 @@ class FlowControlTest(NativeResourceTest):
         """Test HTTP/2 connection accepts flow control parameters"""
         try:
             future = Http2ClientConnection.new(
-                host_name="httpbin.org", 
+                host_name="httpbin.org",
                 port=443,
                 tls_connection_options=self.tls_options,
                 manual_window_management=True,
@@ -701,7 +701,7 @@ class FlowControlTest(NativeResourceTest):
             try:
                 connection = future.result(timeout=1)
                 connection.close()
-            except:
+            except BaseException:
                 future.cancel()
         except Exception as e:
             self.fail(f"HTTP/2 flow control parameters rejected: {e}")
@@ -716,21 +716,21 @@ class FlowControlTest(NativeResourceTest):
 
         try:
             connection = future.result(timeout=self.timeout)
-            self.assertTrue(hasattr(connection, 'update_window'), 
-                          "Connection missing update_window method")
-            self.assertTrue(callable(getattr(connection, 'update_window')), 
-                          "update_window is not callable")
+            self.assertTrue(hasattr(connection, 'update_window'),
+                            "Connection missing update_window method")
+            self.assertTrue(callable(getattr(connection, 'update_window')),
+                            "update_window is not callable")
             connection.close()
         except Exception as e:
             self.assertTrue(hasattr(HttpClientConnectionBase, 'update_window'),
-                          "HttpClientConnectionBase missing update_window method")
+                            "HttpClientConnectionBase missing update_window method")
 
     def test_stream_has_update_window_method(self):
         """Test stream has update_window method"""
         self.assertTrue(hasattr(HttpClientStreamBase, 'update_window'),
-                      "HttpClientStreamBase missing update_window method")
+                        "HttpClientStreamBase missing update_window method")
         self.assertTrue(callable(getattr(HttpClientStreamBase, 'update_window')),
-                      "Stream update_window is not callable")
+                        "Stream update_window is not callable")
 
     def test_h2_manual_window_management_happy_path(self):
         """Test HTTP/2 manual window management happy path"""
@@ -809,8 +809,8 @@ class FlowControlTest(NativeResourceTest):
             if len(response.body) > 0:
                 self.assertGreater(len(received_chunks), 0, "No data chunks received")
                 self.assertGreater(len(window_updates_sent), 0, "No window updates sent")
-                self.assertEqual(sum(received_chunks), sum(window_updates_sent), 
-                               "Window updates don't match received data")
+                self.assertEqual(sum(received_chunks), sum(window_updates_sent),
+                                 "Window updates don't match received data")
 
             connection.close()
         except Exception as e:

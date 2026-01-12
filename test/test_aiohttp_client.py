@@ -670,7 +670,7 @@ class AIOFlowControlTest(NativeResourceTest):
         tls_ctx = ClientTlsContext(tls_ctx_opt)
         tls_options = tls_ctx.new_connection_options()
         tls_options.set_server_name("httpbin.org")
-        
+
         connection = await AIOHttpClientConnection.new(
             host_name="httpbin.org",
             port=443,
@@ -692,7 +692,7 @@ class AIOFlowControlTest(NativeResourceTest):
         tls_ctx = ClientTlsContext(tls_ctx_opt)
         tls_options = tls_ctx.new_connection_options()
         tls_options.set_server_name("httpbin.org")
-        
+
         connection = await AIOHttp2ClientConnection.new(
             host_name="httpbin.org",
             port=443,
@@ -716,16 +716,16 @@ class AIOFlowControlTest(NativeResourceTest):
         tls_ctx = ClientTlsContext(tls_ctx_opt)
         tls_options = tls_ctx.new_connection_options()
         tls_options.set_server_name("httpbin.org")
-        
+
         connection = await AIOHttpClientConnection.new(
             host_name="httpbin.org",
             port=443,
             tls_connection_options=tls_options
         )
-        self.assertTrue(hasattr(connection, 'update_window'), 
-                      "Connection missing update_window method")
-        self.assertTrue(callable(getattr(connection, 'update_window')), 
-                      "update_window is not callable")
+        self.assertTrue(hasattr(connection, 'update_window'),
+                        "Connection missing update_window method")
+        self.assertTrue(callable(getattr(connection, 'update_window')),
+                        "update_window is not callable")
         await connection.close()
 
     def test_connection_has_update_window_method(self):
