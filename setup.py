@@ -199,6 +199,18 @@ def forcing_static_libs():
     return os.getenv('AWS_CRT_BUILD_FORCE_STATIC_LIBS') == '1'
 
 
+def get_extra_library_dirs():
+    """Return list of additional library directories from AWS_EXTRA_LIB_DIR env var.
+
+    Supports multiple directories separated by os.pathsep (: on Unix, ; on Windows).
+    Returns empty list if not set.
+    """
+    extra_dirs = os.getenv('AWS_EXTRA_LIB_DIR', '')
+    if not extra_dirs:
+        return []
+    return [d for d in extra_dirs.split(os.pathsep) if d]
+
+
 class AwsLib:
     def __init__(self, name, extra_cmake_args=[], libname=None):
         self.name = name
@@ -532,6 +544,7 @@ def awscrt_ext():
     return setuptools.Extension(
         '_awscrt',
         language='c',
+        library_dirs=get_extra_library_dirs(),
         libraries=libraries,
         sources=glob.glob('source/*.c'),
         extra_compile_args=extra_compile_args,
