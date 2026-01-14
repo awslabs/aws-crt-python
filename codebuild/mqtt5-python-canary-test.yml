@@ -4,7 +4,7 @@ version: 0.2
 env:
   shell: bash
   variables:
-    CANARY_DURATION: 25200
+    CANARY_DURATION: 300
     CANARY_THREADS: 3
     CANARY_TPS: 50
     CANARY_CLIENT_COUNT: 10
@@ -24,9 +24,33 @@ phases:
   pre_build:
     commands:
       - export CC=gcc-7
+      # Retrieve the private key from Secrets Manager
+      - DEPLOY_KEY=$(aws secretsmanager get-secret-value --secret-id Aws-crt-canaries-deploy-key --query SecretString --output text)
+
+      # Set up SSH configuration
+      - mkdir -p ~/.ssh
+      - echo "$DEPLOY_KEY" > ~/.ssh/id_rsa
+      - chmod 600 ~/.ssh/id_rsa
+
+      # Add GitHub to known hosts to avoid host verification prompt
+      - ssh-keyscan -H github.com >> ~/.ssh/known_hosts
+
+      # Configure SSH to use the key for GitHub
+      - |
+        cat > ~/.ssh/config << EOF
+        Host github.com
+          HostName github.com
+          User git
+          IdentityFile ~/.ssh/id_rsa
+          StrictHostKeyChecking no
+        EOF
+      - chmod 600 ~/.ssh/config
   build:
     commands:
       - echo Build started on `date`
+      # pull and copy canary scripts
+      - git clone git@github.com:awslabs/aws-crt-canaries.git
+      - cp aws-crt-canaries/source/mqtt5/*.py ./codebuild
       - source ./codebuild/mqtt5_test_setup.sh s3://aws-crt-test-stuff/TestIotProdMQTT5EnvironmentVariables.txt us-east-1
       - export ENDPOINT=$(aws secretsmanager get-secret-value --secret-id "$CANARY_SERVER_ARN" --query "SecretString" | cut -f2 -d":" | sed -e 's/[\\\"\}]//g')
       - export GIT_HASH=$(git rev-parse HEAD)
@@ -34,3 +58,5 @@ phases:
   post_build:
     commands:
       - echo Build completed on `date`
+      # Clean up SSH keys for security
+      - rm -rf ~/.ssh/id_rsa ~/.ssh/config
