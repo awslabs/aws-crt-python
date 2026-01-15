@@ -117,5 +117,33 @@ AWS_CRT_BUILD_USE_SYSTEM_LIBS=1 python3 -m pip install .
 
 If these dependencies are available as both static and shared libs, you can force the static ones to be used by setting: `AWS_CRT_BUILD_FORCE_STATIC_LIBS=1`
 
+### AWS_EXTRA_LIB_DIR ###
+
+If you need to add additional library directories for the linker to search,
+set environment variable `AWS_EXTRA_LIB_DIR` while building from source.
+This sets the `library_dirs` parameter for the setuptools Extension, which tells the linker
+where to find libraries during the build process.
+These directories supplement (not replace) the linker's default search paths.
+This is useful when you have custom library installations in non-standard locations.
+
+For more details about `library_dirs` , see the [setuptools Extension documentation](https://setuptools.pypa.io/en/latest/userguide/ext_modules.html).
+
+For a single directory:
+
+```sh
+AWS_EXTRA_LIB_DIR=/path/to/libs python3 -m pip install .
+```
+
+For multiple directories, separate them with the OS path separator ( `:` on Unix/macOS, `;` on Windows):
+
+```sh
+# Unix/macOS
+AWS_EXTRA_LIB_DIR=/path/to/libs:/another/path python3 -m pip install .
+
+# Windows
+AWS_EXTRA_LIB_DIR=C:\path\to\libs;D:\another\path python3 -m pip install .
+```
+
 ### Windows SDK Version
-aws-crt-python builds against windows sdk version `10.0.17763.0`. This is the minimal version required for TLS  1.3 support on Windows. If you need a different Windows SDK version, you can set environment variable `AWS_CRT_WINDOWS_SDK_VERSION=<version>` while building from source:
+
+aws-crt-python builds against windows sdk version `10.0.17763.0` . This is the minimal version required for TLS  1.3 support on Windows. If you need a different Windows SDK version, you can set environment variable `AWS_CRT_WINDOWS_SDK_VERSION=<version>` while building from source:
