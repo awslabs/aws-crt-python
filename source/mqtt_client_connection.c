@@ -460,7 +460,7 @@ bool s_set_metrics(struct aws_mqtt_client_connection *connection, PyObject *metr
 
     if (aws_mqtt_client_connection_set_metrics(connection, &metrics_struct)) {
         PyErr_SetAwsLastError();
-        success = false;
+        goto done;
     }
 
     success = true;
