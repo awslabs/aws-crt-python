@@ -116,15 +116,6 @@ class HttpConnectionBase(NativeResource):
         """
         return _awscrt.http_connection_is_open(self._binding)
 
-    def update_window(self, increment_size: int) -> None:
-        """
-        Update the connection's flow control window.
-
-        Args:
-            increment_size (int): Number of bytes to increment the window by.
-        """
-        _awscrt.http2_connection_update_window(self._binding, increment_size)
-
 
 class HttpClientConnectionBase(HttpConnectionBase):
     __slots__ = ('_host_name', '_port')
@@ -457,6 +448,15 @@ class Http2ClientConnection(HttpClientConnectionBase):
         """
         _awscrt.http_connection_close(self._binding)
         return self.shutdown_future
+
+    def update_window(self, increment_size: int) -> None:
+        """
+        Update the connection's flow control window.
+
+        Args:
+            increment_size (int): Number of bytes to increment the window by.
+        """
+        _awscrt.http2_connection_update_window(self._binding, increment_size)
 
 
 class HttpStreamBase(NativeResource):

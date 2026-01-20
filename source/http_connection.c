@@ -418,8 +418,8 @@ PyObject *aws_py_http_connection_is_open(PyObject *self, PyObject *args) {
 PyObject *aws_py_http2_connection_update_window(PyObject *self, PyObject *args) {
     (void)self;
     PyObject *capsule;
-    uint32_t increment_size;
-    if (!PyArg_ParseTuple(args, "OI", &capsule, &increment_size)) {
+    size_t increment_size;
+    if (!PyArg_ParseTuple(args, "On", &capsule, &increment_size)) {
         return NULL;
     }
 

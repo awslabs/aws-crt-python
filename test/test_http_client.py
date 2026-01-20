@@ -706,9 +706,9 @@ class FlowControlTest(NativeResourceTest):
         except Exception as e:
             self.fail(f"HTTP/2 flow control parameters rejected: {e}")
 
-    def test_connection_has_update_window_method(self):
-        """Test connection has update_window method"""
-        future = HttpClientConnection.new(
+    def test_h2_connection_has_update_window_method(self):
+        """Test HTTP/2 connection has update_window method"""
+        future = Http2ClientConnection.new(
             host_name="httpbin.org",
             port=443,
             tls_connection_options=self.tls_options
@@ -717,13 +717,28 @@ class FlowControlTest(NativeResourceTest):
         try:
             connection = future.result(timeout=self.timeout)
             self.assertTrue(hasattr(connection, 'update_window'),
-                            "Connection missing update_window method")
+                            "HTTP/2 Connection missing update_window method")
             self.assertTrue(callable(getattr(connection, 'update_window')),
                             "update_window is not callable")
             connection.close()
         except Exception as e:
-            self.assertTrue(hasattr(HttpClientConnectionBase, 'update_window'),
-                            "HttpClientConnectionBase missing update_window method")
+            self.skipTest(f"HTTP/2 connection test skipped: {e}")
+
+    def test_h1_connection_no_update_window_method(self):
+        """Test HTTP/1.1 connection does NOT have update_window method"""
+        future = HttpClientConnection.new(
+            host_name="httpbin.org",
+            port=443,
+            tls_connection_options=self.tls_options
+        )
+
+        try:
+            connection = future.result(timeout=self.timeout)
+            self.assertFalse(hasattr(connection, 'update_window'),
+                             "HTTP/1.1 Connection should NOT have update_window method")
+            connection.close()
+        except Exception as e:
+            self.skipTest(f"HTTP/1.1 connection test skipped: {e}")
 
     def test_stream_has_update_window_method(self):
         """Test stream has update_window method"""

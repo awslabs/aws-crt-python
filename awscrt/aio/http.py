@@ -306,6 +306,15 @@ class AIOHttp2ClientConnection(AIOHttpClientConnectionUnified):
         """
         return AIOHttp2ClientStream(self, request, request_body_generator, loop)
 
+    def update_window(self, increment_size: int) -> None:
+        """
+        Update the connection's flow control window.
+
+        Args:
+            increment_size (int): Number of bytes to increment the window by.
+        """
+        _awscrt.http2_connection_update_window(self._binding, increment_size)
+
 
 class AIOHttpClientStreamUnified(HttpClientStreamBase):
     __slots__ = (

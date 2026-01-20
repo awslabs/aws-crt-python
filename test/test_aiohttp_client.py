@@ -708,8 +708,28 @@ class AIOFlowControlTest(NativeResourceTest):
     def test_http2_manual_window_management_parameters(self):
         asyncio.run(self._test_http2_manual_window_management_parameters())
 
-    async def _test_connection_has_update_window_method(self):
-        """Test connection has update_window method"""
+    async def _test_h2_connection_has_update_window_method(self):
+        """Test HTTP/2 connection has update_window method"""
+        tls_ctx_opt = TlsContextOptions()
+        tls_ctx_opt.verify_peer = False
+        tls_ctx_opt.alpn_list = ['h2']
+        tls_ctx = ClientTlsContext(tls_ctx_opt)
+        tls_options = tls_ctx.new_connection_options()
+        tls_options.set_server_name("httpbin.org")
+
+        connection = await AIOHttp2ClientConnection.new(
+            host_name="httpbin.org",
+            port=443,
+            tls_connection_options=tls_options
+        )
+        self.assertTrue(hasattr(connection, 'update_window'),
+                        "HTTP/2 Connection missing update_window method")
+        self.assertTrue(callable(getattr(connection, 'update_window')),
+                        "update_window is not callable")
+        await connection.close()
+
+    async def _test_h1_connection_no_update_window_method(self):
+        """Test HTTP/1.1 connection does NOT have update_window method"""
         tls_ctx_opt = TlsContextOptions()
         tls_ctx_opt.verify_peer = False
         tls_ctx_opt.alpn_list = ['http/1.1']
@@ -722,18 +742,21 @@ class AIOFlowControlTest(NativeResourceTest):
             port=443,
             tls_connection_options=tls_options
         )
-        self.assertTrue(hasattr(connection, 'update_window'),
-                        "Connection missing update_window method")
-        self.assertTrue(callable(getattr(connection, 'update_window')),
-                        "update_window is not callable")
+        self.assertFalse(hasattr(connection, 'update_window'),
+                         "HTTP/1.1 Connection should NOT have update_window method")
         await connection.close()
 
-    def test_connection_has_update_window_method(self):
-        asyncio.run(self._test_connection_has_update_window_method())
+    def test_h2_connection_has_update_window_method(self):
+        asyncio.run(self._test_h2_connection_has_update_window_method())
+
+    def test_h1_connection_no_update_window_method(self):
+        asyncio.run(self._test_h1_connection_no_update_window_method())
 
     def test_stream_has_update_window_method(self):
         """Test stream has update_window method"""
-        pass
+        from awscrt.http import HttpClientStreamBase
+        self.assertTrue(hasattr(HttpClientStreamBase, 'update_window'),
+                        "HttpClientStreamBase missing update_window method")
 
     async def _test_h2_manual_window_management_happy_path(self):
         """Test HTTP/2 manual window management happy path"""
