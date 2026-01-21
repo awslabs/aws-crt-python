@@ -739,7 +739,48 @@ class AIOFlowControlTest(NativeResourceTest):
             port=443,
             tls_connection_options=tls_options,
             manual_window_management=True,
-            initial_window_size=1  # Tiny window
+            initial_window_size=10  # Tiny window
+        )
+
+        request = HttpRequest('GET', '/bytes/100')
+        request.headers.add('host', 'httpbin.org')
+        stream = connection.request(request)
+
+        chunks_received = []
+        body = bytearray()
+
+        await stream.get_response_status_code()
+        while True:
+            chunk = await stream.get_next_response_chunk()
+            if not chunk:
+                break
+            chunks_received.append(len(chunk))
+            body.extend(chunk)
+            stream.update_window(len(chunk))
+
+        self.assertEqual(100, len(body))
+        self.assertEqual(len(chunks_received), 10, "Should receive exactly 10 chunks")
+        await connection.close()
+
+    def test_h2_stream_flow_control_blocks_and_resumes(self):
+        asyncio.run(self._test_h2_stream_flow_control_blocks_and_resumes())
+
+    async def _test_h1_stream_flow_control_blocks_and_resumes(self):
+        """Test that HTTP/1.1 stream flow control actually blocks and resumes"""
+        tls_ctx_opt = TlsContextOptions()
+        tls_ctx_opt.verify_peer = False
+        tls_ctx_opt.alpn_list = ['http/1.1']
+        tls_ctx = ClientTlsContext(tls_ctx_opt)
+        tls_options = tls_ctx.new_connection_options()
+        tls_options.set_server_name("httpbin.org")
+
+        connection = await AIOHttpClientConnection.new(
+            host_name="httpbin.org",
+            port=443,
+            tls_connection_options=tls_options,
+            manual_window_management=True,
+            initial_window_size=1,  # Tiny window
+            read_buffer_capacity=1000
         )
 
         request = HttpRequest('GET', '/bytes/100')
@@ -762,8 +803,8 @@ class AIOFlowControlTest(NativeResourceTest):
         self.assertEqual(len(chunks_received), 100, "Should receive exactly 100 chunks")
         await connection.close()
 
-    def test_h2_stream_flow_control_blocks_and_resumes(self):
-        asyncio.run(self._test_h2_stream_flow_control_blocks_and_resumes())
+    def test_h1_stream_flow_control_blocks_and_resumes(self):
+        asyncio.run(self._test_h1_stream_flow_control_blocks_and_resumes())
 
 
 if __name__ == '__main__':

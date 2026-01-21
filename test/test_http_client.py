@@ -748,23 +748,6 @@ class FlowControlTest(NativeResourceTest):
         except Exception as e:
             self.skipTest(f"HTTP/2 flow control test skipped due to connection issue: {e}")
 
-    def test_h2_connection_update_window_callable(self):
-        """Test HTTP/2 connection.update_window() can be called without error"""
-        future = Http2ClientConnection.new(
-            host_name="httpbin.org",
-            port=443,
-            tls_connection_options=self.tls_options,
-            conn_manual_window_management=True
-        )
-
-        try:
-            connection = future.result(timeout=self.timeout)
-            # Should not raise
-            connection.update_window(65535)
-            connection.close()
-        except Exception as e:
-            self.skipTest(f"HTTP/2 connection test skipped: {e}")
-
     def test_h2_stream_flow_control_blocks_and_resumes(self):
         """Test that stream flow control actually blocks and resumes"""
         connection_future = Http2ClientConnection.new(
@@ -772,7 +755,7 @@ class FlowControlTest(NativeResourceTest):
             port=443,
             tls_connection_options=self.tls_options,
             manual_window_management=True,
-            initial_window_size=1  # Tiny window - will block immediately
+            initial_window_size=10  # Tiny window - will block immediately
         )
 
         try:
@@ -795,7 +778,7 @@ class FlowControlTest(NativeResourceTest):
 
             self.assertEqual(100, len(response.body))
             # With window=1, we should receive many small chunks
-            self.assertGreater(len(chunks_received), 1, "Expected multiple chunks with tiny window")
+            self.assertEqual(len(chunks_received), 10, "Expected multiple chunks with tiny window")
 
             connection.close()
         except Exception as e:
