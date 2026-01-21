@@ -759,7 +759,7 @@ class AIOFlowControlTest(NativeResourceTest):
             stream.update_window(len(chunk))
 
         self.assertEqual(100, len(body))
-        self.assertGreater(len(chunks_received), 1, "Expected multiple chunks with tiny window")
+        self.assertEqual(len(chunks_received), 100, "Should receive exactly 100 chunks")
         await connection.close()
 
     def test_h2_stream_flow_control_blocks_and_resumes(self):

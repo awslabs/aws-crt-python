@@ -831,7 +831,7 @@ class FlowControlTest(NativeResourceTest):
 
             self.assertEqual(100, len(response.body))
             # With window=1, we should receive many small chunks
-            self.assertGreater(len(chunks_received), 1, "Expected multiple chunks with tiny window")
+            self.assertEqual(len(chunks_received), 100, "Should receive exactly 100 chunks")
 
             connection.close()
         except Exception as e:
