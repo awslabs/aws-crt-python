@@ -777,7 +777,7 @@ class FlowControlTest(NativeResourceTest):
             stream.completion_future.result(timeout=self.timeout)
 
             self.assertEqual(100, len(response.body))
-            # With window=1, we should receive many small chunks
+            # With window=10, we should receive many small chunks
             self.assertEqual(len(chunks_received), 10, "Expected multiple chunks with tiny window")
 
             connection.close()
