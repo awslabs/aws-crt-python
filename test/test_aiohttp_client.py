@@ -821,6 +821,68 @@ class AIOFlowControlTest(NativeResourceTest):
     def test_h1_manual_window_management_happy_path(self):
         asyncio.run(self._test_h1_manual_window_management_happy_path())
 
+    async def _test_h2_connection_update_window_callable(self):
+        """Test HTTP/2 connection.update_window() can be called without error"""
+        tls_ctx_opt = TlsContextOptions()
+        tls_ctx_opt.verify_peer = False
+        tls_ctx_opt.alpn_list = ['h2']
+        tls_ctx = ClientTlsContext(tls_ctx_opt)
+        tls_options = tls_ctx.new_connection_options()
+        tls_options.set_server_name("httpbin.org")
+
+        connection = await AIOHttp2ClientConnection.new(
+            host_name="httpbin.org",
+            port=443,
+            tls_connection_options=tls_options,
+            conn_manual_window_management=True
+        )
+        # Should not raise
+        connection.update_window(65535)
+        await connection.close()
+
+    def test_h2_connection_update_window_callable(self):
+        asyncio.run(self._test_h2_connection_update_window_callable())
+
+    async def _test_h2_stream_flow_control_blocks_and_resumes(self):
+        """Test that stream flow control actually blocks and resumes"""
+        tls_ctx_opt = TlsContextOptions()
+        tls_ctx_opt.verify_peer = False
+        tls_ctx_opt.alpn_list = ['h2']
+        tls_ctx = ClientTlsContext(tls_ctx_opt)
+        tls_options = tls_ctx.new_connection_options()
+        tls_options.set_server_name("httpbin.org")
+
+        connection = await AIOHttp2ClientConnection.new(
+            host_name="httpbin.org",
+            port=443,
+            tls_connection_options=tls_options,
+            manual_window_management=True,
+            initial_window_size=1  # Tiny window
+        )
+
+        request = HttpRequest('GET', '/bytes/100')
+        request.headers.add('host', 'httpbin.org')
+        stream = connection.request(request)
+
+        chunks_received = []
+        body = bytearray()
+
+        await stream.get_response_status_code()
+        while True:
+            chunk = await stream.get_next_response_chunk()
+            if not chunk:
+                break
+            chunks_received.append(len(chunk))
+            body.extend(chunk)
+            stream.update_window(len(chunk))
+
+        self.assertEqual(100, len(body))
+        self.assertGreater(len(chunks_received), 1, "Expected multiple chunks with tiny window")
+        await connection.close()
+
+    def test_h2_stream_flow_control_blocks_and_resumes(self):
+        asyncio.run(self._test_h2_stream_flow_control_blocks_and_resumes())
+
 
 if __name__ == '__main__':
     unittest.main()

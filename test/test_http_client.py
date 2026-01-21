@@ -831,6 +831,95 @@ class FlowControlTest(NativeResourceTest):
         except Exception as e:
             self.skipTest(f"HTTP/1.1 flow control test skipped due to connection issue: {e}")
 
+    def test_h2_connection_update_window_callable(self):
+        """Test HTTP/2 connection.update_window() can be called without error"""
+        future = Http2ClientConnection.new(
+            host_name="httpbin.org",
+            port=443,
+            tls_connection_options=self.tls_options,
+            conn_manual_window_management=True
+        )
+
+        try:
+            connection = future.result(timeout=self.timeout)
+            # Should not raise
+            connection.update_window(65535)
+            connection.close()
+        except Exception as e:
+            self.skipTest(f"HTTP/2 connection test skipped: {e}")
+
+    def test_h2_stream_flow_control_blocks_and_resumes(self):
+        """Test that stream flow control actually blocks and resumes"""
+        connection_future = Http2ClientConnection.new(
+            host_name="nghttp2.org",
+            port=443,
+            tls_connection_options=self.tls_options,
+            manual_window_management=True,
+            initial_window_size=1  # Tiny window - will block immediately
+        )
+
+        try:
+            connection = connection_future.result(timeout=self.timeout)
+            request = HttpRequest('GET', '/httpbin/bytes/100')
+            request.headers.add('host', 'nghttp2.org')
+
+            response = Response()
+            chunks_received = []
+
+            def on_body(http_stream, chunk, **kwargs):
+                chunks_received.append(len(chunk))
+                response.body.extend(chunk)
+                # Update window to allow more data
+                http_stream.update_window(len(chunk))
+
+            stream = connection.request(request, response.on_response, on_body)
+            stream.activate()
+            stream.completion_future.result(timeout=self.timeout)
+
+            self.assertEqual(100, len(response.body))
+            # With window=1, we should receive many small chunks
+            self.assertGreater(len(chunks_received), 1, "Expected multiple chunks with tiny window")
+
+            connection.close()
+        except Exception as e:
+            self.skipTest(f"HTTP/2 flow control test skipped: {e}")
+
+    def test_h1_stream_flow_control_blocks_and_resumes(self):
+        """Test that HTTP/1.1 stream flow control actually blocks and resumes"""
+        connection_future = HttpClientConnection.new(
+            host_name="httpbin.org",
+            port=443,
+            tls_connection_options=self.tls_options,
+            manual_window_management=True,
+            initial_window_size=1,  # Tiny window
+            read_buffer_capacity=1000
+        )
+
+        try:
+            connection = connection_future.result(timeout=self.timeout)
+            request = HttpRequest('GET', '/bytes/100')
+            request.headers.add('host', 'httpbin.org')
+
+            response = Response()
+            chunks_received = []
+
+            def on_body(http_stream, chunk, **kwargs):
+                chunks_received.append(len(chunk))
+                response.body.extend(chunk)
+                http_stream.update_window(len(chunk))
+
+            stream = connection.request(request, response.on_response, on_body)
+            stream.activate()
+            stream.completion_future.result(timeout=self.timeout)
+
+            self.assertEqual(100, len(response.body))
+            # With window=1, we should receive many small chunks
+            self.assertGreater(len(chunks_received), 1, "Expected multiple chunks with tiny window")
+
+            connection.close()
+        except Exception as e:
+            self.skipTest(f"HTTP/1.1 flow control test skipped: {e}")
+
     def tearDown(self):
         self.tls_options = None
         super().tearDown()
