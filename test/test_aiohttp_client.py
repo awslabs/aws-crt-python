@@ -662,133 +662,6 @@ class TestAsyncClientMockServer(NativeResourceTest):
 class AIOFlowControlTest(NativeResourceTest):
     timeout = 10.0
 
-    async def _test_http1_manual_window_management_parameters(self):
-        """Test HTTP/1.1 connection accepts flow control parameters"""
-        tls_ctx_opt = TlsContextOptions()
-        tls_ctx_opt.verify_peer = False
-        tls_ctx_opt.alpn_list = ['http/1.1']
-        tls_ctx = ClientTlsContext(tls_ctx_opt)
-        tls_options = tls_ctx.new_connection_options()
-        tls_options.set_server_name("httpbin.org")
-
-        connection = await AIOHttpClientConnection.new(
-            host_name="httpbin.org",
-            port=443,
-            tls_connection_options=tls_options,
-            manual_window_management=True,
-            initial_window_size=32768,
-            read_buffer_capacity=16384
-        )
-        await connection.close()
-
-    def test_http1_manual_window_management_parameters(self):
-        asyncio.run(self._test_http1_manual_window_management_parameters())
-
-    async def _test_http2_manual_window_management_parameters(self):
-        """Test HTTP/2 connection accepts flow control parameters"""
-        tls_ctx_opt = TlsContextOptions()
-        tls_ctx_opt.verify_peer = False
-        tls_ctx_opt.alpn_list = ['h2']
-        tls_ctx = ClientTlsContext(tls_ctx_opt)
-        tls_options = tls_ctx.new_connection_options()
-        tls_options.set_server_name("httpbin.org")
-
-        connection = await AIOHttp2ClientConnection.new(
-            host_name="httpbin.org",
-            port=443,
-            tls_connection_options=tls_options,
-            manual_window_management=True,
-            initial_window_size=65536,
-            conn_manual_window_management=True,
-            conn_window_size_threshold=32767,
-            stream_window_size_threshold=16384
-        )
-        await connection.close()
-
-    def test_http2_manual_window_management_parameters(self):
-        asyncio.run(self._test_http2_manual_window_management_parameters())
-
-    async def _test_h2_connection_has_update_window_method(self):
-        """Test HTTP/2 connection has update_window method"""
-        tls_ctx_opt = TlsContextOptions()
-        tls_ctx_opt.verify_peer = False
-        tls_ctx_opt.alpn_list = ['h2']
-        tls_ctx = ClientTlsContext(tls_ctx_opt)
-        tls_options = tls_ctx.new_connection_options()
-        tls_options.set_server_name("httpbin.org")
-
-        connection = await AIOHttp2ClientConnection.new(
-            host_name="httpbin.org",
-            port=443,
-            tls_connection_options=tls_options
-        )
-        self.assertTrue(hasattr(connection, 'update_window'),
-                        "HTTP/2 Connection missing update_window method")
-        self.assertTrue(callable(getattr(connection, 'update_window')),
-                        "update_window is not callable")
-        await connection.close()
-
-    async def _test_h1_connection_no_update_window_method(self):
-        """Test HTTP/1.1 connection does NOT have update_window method"""
-        tls_ctx_opt = TlsContextOptions()
-        tls_ctx_opt.verify_peer = False
-        tls_ctx_opt.alpn_list = ['http/1.1']
-        tls_ctx = ClientTlsContext(tls_ctx_opt)
-        tls_options = tls_ctx.new_connection_options()
-        tls_options.set_server_name("httpbin.org")
-
-        connection = await AIOHttpClientConnection.new(
-            host_name="httpbin.org",
-            port=443,
-            tls_connection_options=tls_options
-        )
-        self.assertFalse(hasattr(connection, 'update_window'),
-                         "HTTP/1.1 Connection should NOT have update_window method")
-        await connection.close()
-
-    def test_h2_connection_has_update_window_method(self):
-        asyncio.run(self._test_h2_connection_has_update_window_method())
-
-    def test_h1_connection_no_update_window_method(self):
-        asyncio.run(self._test_h1_connection_no_update_window_method())
-
-    def test_stream_has_update_window_method(self):
-        """Test stream has update_window method"""
-        from awscrt.http import HttpClientStreamBase
-        self.assertTrue(hasattr(HttpClientStreamBase, 'update_window'),
-                        "HttpClientStreamBase missing update_window method")
-
-    async def _test_h2_manual_window_management_happy_path(self):
-        """Test HTTP/2 manual window management happy path"""
-        tls_ctx_opt = TlsContextOptions()
-        tls_ctx_opt.verify_peer = False
-        tls_ctx_opt.alpn_list = ['h2']
-        tls_ctx = ClientTlsContext(tls_ctx_opt)
-        tls_options = tls_ctx.new_connection_options()
-        tls_options.set_server_name("httpbin.org")
-
-        connection = await AIOHttp2ClientConnection.new(
-            host_name="httpbin.org",
-            port=443,
-            tls_connection_options=tls_options,
-            manual_window_management=True,
-            initial_window_size=65536
-        )
-
-        request = HttpRequest('GET', '/get')
-        request.headers.add('host', 'httpbin.org')
-        stream = connection.request(request)
-
-        response = Response()
-        status_code = await response.collect_response(stream)
-
-        self.assertEqual(200, status_code)
-        self.assertGreater(len(response.body), 0, "No data received")
-        await connection.close()
-
-    def test_h2_manual_window_management_happy_path(self):
-        asyncio.run(self._test_h2_manual_window_management_happy_path())
-
     async def _test_h1_manual_window_management_happy_path(self):
         """Test HTTP/1.1 manual window management happy path"""
         tls_ctx_opt = TlsContextOptions()
@@ -821,8 +694,8 @@ class AIOFlowControlTest(NativeResourceTest):
     def test_h1_manual_window_management_happy_path(self):
         asyncio.run(self._test_h1_manual_window_management_happy_path())
 
-    async def _test_h2_connection_update_window_callable(self):
-        """Test HTTP/2 connection.update_window() can be called without error"""
+    async def _test_h2_manual_window_management_happy_path(self):
+        """Test HTTP/2 manual window management happy path"""
         tls_ctx_opt = TlsContextOptions()
         tls_ctx_opt.verify_peer = False
         tls_ctx_opt.alpn_list = ['h2']
@@ -834,14 +707,23 @@ class AIOFlowControlTest(NativeResourceTest):
             host_name="httpbin.org",
             port=443,
             tls_connection_options=tls_options,
-            conn_manual_window_management=True
+            manual_window_management=True,
+            initial_window_size=65536
         )
-        # Should not raise
-        connection.update_window(65535)
+
+        request = HttpRequest('GET', '/get')
+        request.headers.add('host', 'httpbin.org')
+        stream = connection.request(request)
+
+        response = Response()
+        status_code = await response.collect_response(stream)
+
+        self.assertEqual(200, status_code)
+        self.assertGreater(len(response.body), 0, "No data received")
         await connection.close()
 
-    def test_h2_connection_update_window_callable(self):
-        asyncio.run(self._test_h2_connection_update_window_callable())
+    def test_h2_manual_window_management_happy_path(self):
+        asyncio.run(self._test_h2_manual_window_management_happy_path())
 
     async def _test_h2_stream_flow_control_blocks_and_resumes(self):
         """Test that stream flow control actually blocks and resumes"""

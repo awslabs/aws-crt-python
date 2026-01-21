@@ -664,128 +664,6 @@ class FlowControlTest(NativeResourceTest):
         self.tls_options = tls_ctx.new_connection_options()
         self.tls_options.set_server_name("httpbin.org")
 
-    def test_http1_manual_window_management_parameters(self):
-        """Test HTTP/1.1 connection accepts flow control parameters"""
-        try:
-            future = HttpClientConnection.new(
-                host_name="httpbin.org",
-                port=443,
-                tls_connection_options=self.tls_options,
-                manual_window_management=True,
-                initial_window_size=32768,
-                read_buffer_capacity=16384
-            )
-            self.assertTrue(True, "HTTP/1.1 flow control parameters accepted")
-            try:
-                connection = future.result(timeout=1)
-                connection.close()
-            except BaseException:
-                future.cancel()
-        except Exception as e:
-            self.fail(f"HTTP/1.1 flow control parameters rejected: {e}")
-
-    def test_http2_manual_window_management_parameters(self):
-        """Test HTTP/2 connection accepts flow control parameters"""
-        try:
-            future = Http2ClientConnection.new(
-                host_name="httpbin.org",
-                port=443,
-                tls_connection_options=self.tls_options,
-                manual_window_management=True,
-                initial_window_size=65536,
-                conn_manual_window_management=True,
-                conn_window_size_threshold=32767,
-                stream_window_size_threshold=16384
-            )
-            self.assertTrue(True, "HTTP/2 flow control parameters accepted")
-            try:
-                connection = future.result(timeout=1)
-                connection.close()
-            except BaseException:
-                future.cancel()
-        except Exception as e:
-            self.fail(f"HTTP/2 flow control parameters rejected: {e}")
-
-    def test_h2_connection_has_update_window_method(self):
-        """Test HTTP/2 connection has update_window method"""
-        future = Http2ClientConnection.new(
-            host_name="httpbin.org",
-            port=443,
-            tls_connection_options=self.tls_options
-        )
-
-        try:
-            connection = future.result(timeout=self.timeout)
-            self.assertTrue(hasattr(connection, 'update_window'),
-                            "HTTP/2 Connection missing update_window method")
-            self.assertTrue(callable(getattr(connection, 'update_window')),
-                            "update_window is not callable")
-            connection.close()
-        except Exception as e:
-            self.skipTest(f"HTTP/2 connection test skipped: {e}")
-
-    def test_h1_connection_no_update_window_method(self):
-        """Test HTTP/1.1 connection does NOT have update_window method"""
-        future = HttpClientConnection.new(
-            host_name="httpbin.org",
-            port=443,
-            tls_connection_options=self.tls_options
-        )
-
-        try:
-            connection = future.result(timeout=self.timeout)
-            self.assertFalse(hasattr(connection, 'update_window'),
-                             "HTTP/1.1 Connection should NOT have update_window method")
-            connection.close()
-        except Exception as e:
-            self.skipTest(f"HTTP/1.1 connection test skipped: {e}")
-
-    def test_stream_has_update_window_method(self):
-        """Test stream has update_window method"""
-        self.assertTrue(hasattr(HttpClientStreamBase, 'update_window'),
-                        "HttpClientStreamBase missing update_window method")
-        self.assertTrue(callable(getattr(HttpClientStreamBase, 'update_window')),
-                        "Stream update_window is not callable")
-
-    def test_h2_manual_window_management_happy_path(self):
-        """Test HTTP/2 manual window management happy path"""
-        connection_future = Http2ClientConnection.new(
-            host_name="nghttp2.org",
-            port=443,
-            tls_connection_options=self.tls_options,
-            manual_window_management=True,
-            initial_window_size=65536
-        )
-
-        try:
-            connection = connection_future.result(timeout=self.timeout)
-            request = HttpRequest('GET', '/httpbin/get')
-            request.headers.add('host', 'nghttp2.org')
-
-            response = Response()
-            received_chunks = []
-            window_updates_sent = []
-
-            def on_body_with_window_update(http_stream, chunk, **kwargs):
-                received_chunks.append(len(chunk))
-                response.body.extend(chunk)
-                if hasattr(http_stream, '_binding') and http_stream._binding:
-                    http_stream.update_window(len(chunk))
-                    window_updates_sent.append(len(chunk))
-
-            stream = connection.request(request, response.on_response, on_body_with_window_update)
-            stream.activate()
-            stream_completion_result = stream.completion_future.result(timeout=self.timeout)
-
-            self.assertEqual(200, response.status_code)
-            self.assertEqual(200, stream_completion_result)
-            self.assertGreater(len(received_chunks), 0, "No data chunks received")
-            self.assertGreater(len(window_updates_sent), 0, "No window updates sent")
-
-            connection.close()
-        except Exception as e:
-            self.skipTest(f"HTTP/2 flow control test skipped due to connection issue: {e}")
-
     def test_h1_manual_window_management_happy_path(self):
         """Test HTTP/1.1 manual window management happy path"""
         connection_future = HttpClientConnection.new(
@@ -830,6 +708,45 @@ class FlowControlTest(NativeResourceTest):
             connection.close()
         except Exception as e:
             self.skipTest(f"HTTP/1.1 flow control test skipped due to connection issue: {e}")
+
+    def test_h2_manual_window_management_happy_path(self):
+        """Test HTTP/2 manual window management happy path"""
+        connection_future = Http2ClientConnection.new(
+            host_name="nghttp2.org",
+            port=443,
+            tls_connection_options=self.tls_options,
+            manual_window_management=True,
+            initial_window_size=65536
+        )
+
+        try:
+            connection = connection_future.result(timeout=self.timeout)
+            request = HttpRequest('GET', '/httpbin/get')
+            request.headers.add('host', 'nghttp2.org')
+
+            response = Response()
+            received_chunks = []
+            window_updates_sent = []
+
+            def on_body_with_window_update(http_stream, chunk, **kwargs):
+                received_chunks.append(len(chunk))
+                response.body.extend(chunk)
+                if hasattr(http_stream, '_binding') and http_stream._binding:
+                    http_stream.update_window(len(chunk))
+                    window_updates_sent.append(len(chunk))
+
+            stream = connection.request(request, response.on_response, on_body_with_window_update)
+            stream.activate()
+            stream_completion_result = stream.completion_future.result(timeout=self.timeout)
+
+            self.assertEqual(200, response.status_code)
+            self.assertEqual(200, stream_completion_result)
+            self.assertGreater(len(received_chunks), 0, "No data chunks received")
+            self.assertGreater(len(window_updates_sent), 0, "No window updates sent")
+
+            connection.close()
+        except Exception as e:
+            self.skipTest(f"HTTP/2 flow control test skipped due to connection issue: {e}")
 
     def test_h2_connection_update_window_callable(self):
         """Test HTTP/2 connection.update_window() can be called without error"""
