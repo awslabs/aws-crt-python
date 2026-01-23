@@ -240,14 +240,25 @@ class HttpClientConnection(HttpClientConnectionBase):
             proxy_options (Optional[HttpProxyOptions]): Optional proxy options.
                 If None is provided then a proxy is not used.
 
-            manual_window_management (bool): If True, enables manual flow control window management.
+            manual_window_management (bool): Set to True to manually manage the flow-control window
+                of each stream. If False, the connection maintains flow-control windows such that
+                no back-pressure is applied and data arrives as fast as possible. If True, the
+                flow-control window of each stream shrinks as body data is received (headers,
+                padding, and other metadata do not affect the window). `initial_window_size`
+                determines the starting size of each stream's window. When a stream's window
+                reaches 0, no further data is received until `update_window()` is called.
                 Default is False.
 
-            initial_window_size (Optional[int]): Initial window size for flow control.
-                If None, uses default value.
+            initial_window_size (Optional[int]): The starting size of each stream's flow-control
+                window. Required if `manual_window_management` is True, ignored otherwise.
+                Must be <= 2^31-1 or connection fails. If set to 0 with `manual_window_management`
+                True, streams start with zero window. If None, uses default value.
 
-            read_buffer_capacity (Optional[int]): Read buffer capacity for the connection.
-                If None, uses default value.
+            read_buffer_capacity (Optional[int]): Capacity in bytes of the HTTP/1.1 connection's
+                read buffer. The buffer grows when the flow-control window of the incoming stream
+                reaches zero. Ignored if `manual_window_management` is False. A capacity that is
+                too small may hinder throughput. A capacity that is too large may waste memory
+                without improving throughput. If None or zero, a default value is used.
 
         Returns:
             concurrent.futures.Future: A Future which completes when connection succeeds or fails.
@@ -365,14 +376,23 @@ class Http2ClientConnection(HttpClientConnectionBase):
             initial_window_size (Optional[int]): Initial window size for flow control.
                 If None, uses default value.
 
-            conn_manual_window_management (bool): If True, enables manual connection-level window management.
-                Default is False.
+            conn_manual_window_management (bool): If True, enables manual connection-level flow control
+                for the entire HTTP/2 connection. When enabled, the connection's flow-control window
+                shrinks as body data is received across all streams. The initial connection window is
+                65,535 bytes. When the window reaches 0, all streams stop receiving data until
+                `update_window()` is called to increment the connection's window.
+                Note: Padding in DATA frames counts against the window, but window updates for padding
+                are sent automatically even in manual mode. Default is False.
 
-            conn_window_size_threshold (Optional[int]): Connection window size threshold.
-                If None, uses default value.
+            conn_window_size_threshold (Optional[int]): Threshold for sending connection-level WINDOW_UPDATE
+                frames. Ignored if `conn_manual_window_management` is False. When the connection's window
+                is above this threshold, WINDOW_UPDATE frames are batched. When it drops below, the update
+                is sent. Default is 32,767 (half of the initial 65,535 window).
 
-            stream_window_size_threshold (Optional[int]): Stream window size threshold.
-                If None, uses default value.
+            stream_window_size_threshold (Optional[int]): Threshold for sending stream-level WINDOW_UPDATE
+                frames. Ignored if `manual_window_management` is False. When a stream's window is above
+                this threshold, WINDOW_UPDATE frames are batched. When it drops below, the update is sent.
+                Default is half of `initial_window_size`.
         """
         return cls._generic_new(
             host_name,

@@ -751,17 +751,17 @@ class FlowControlTest(NativeResourceTest):
     def test_h2_stream_flow_control_blocks_and_resumes(self):
         """Test that stream flow control actually blocks and resumes"""
         connection_future = Http2ClientConnection.new(
-            host_name="nghttp2.org",
+            host_name="httpbin.org",
             port=443,
             tls_connection_options=self.tls_options,
             manual_window_management=True,
-            initial_window_size=10  # Tiny window - will block immediately
+            initial_window_size=1  # Tiny window - will block immediately
         )
 
         try:
             connection = connection_future.result(timeout=self.timeout)
-            request = HttpRequest('GET', '/httpbin/bytes/100')
-            request.headers.add('host', 'nghttp2.org')
+            request = HttpRequest('GET', '/bytes/100')
+            request.headers.add('host', 'httpbin.org')
 
             response = Response()
             chunks_received = []
@@ -778,7 +778,7 @@ class FlowControlTest(NativeResourceTest):
 
             self.assertEqual(100, len(response.body))
             # With window=10, we should receive many small chunks
-            self.assertEqual(len(chunks_received), 10, "Expected multiple chunks with tiny window")
+            self.assertEqual(len(chunks_received), 100, "Expected multiple chunks with tiny window")
 
             connection.close()
         except Exception as e:

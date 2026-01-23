@@ -40,11 +40,7 @@ class AIOHttpClientConnectionUnified(HttpClientConnectionBase):
                   tls_connection_options: Optional[TlsConnectionOptions] = None,
                   proxy_options: Optional[HttpProxyOptions] = None,
                   manual_window_management: bool = False,
-                  initial_window_size: Optional[int] = None,
-                  read_buffer_capacity: Optional[int] = None,
-                  conn_manual_window_management: bool = False,
-                  conn_window_size_threshold: Optional[int] = None,
-                  stream_window_size_threshold: Optional[int] = None) -> "AIOHttpClientConnectionUnified":
+                  initial_window_size: Optional[int] = None) -> "AIOHttpClientConnectionUnified":
         """
         Asynchronously establish a new AIOHttpClientConnectionUnified.
 
@@ -66,23 +62,22 @@ class AIOHttpClientConnectionUnified(HttpClientConnectionBase):
             proxy_options (Optional[HttpProxyOptions]): Optional proxy options.
                 If None is provided then a proxy is not used.
 
-            manual_window_management (bool): If True, enables manual flow control window management.
-                Default is False.
+            manual_window_management (bool): Set to True to manually manage the flow-control window
+                of each stream. If False, the connection maintains flow-control windows such that
+                no back-pressure is applied and data arrives as fast as possible. If True, the
+                flow-control window of each stream shrinks as body data is received (headers,
+                padding, and other metadata do not affect the window). `initial_window_size`
+                determines the starting size of each stream's window. When a stream's window
+                reaches 0, no further data is received until `update_window()` is called.
+                For HTTP/2, this only controls stream windows; connection window is controlled
+                by `conn_manual_window_management`. Default is False.
 
-            initial_window_size (Optional[int]): Initial window size for flow control.
-                If None, uses default value.
-
-            read_buffer_capacity (Optional[int]): Read buffer capacity for the connection.
-                If None, uses default value.
-
-            conn_manual_window_management (bool): If True, enables manual connection-level window management.
-                Default is False.
-
-            conn_window_size_threshold (Optional[int]): Connection window size threshold.
-                If None, uses default value.
-
-            stream_window_size_threshold (Optional[int]): Stream window size threshold.
-                If None, uses default value.
+            initial_window_size (Optional[int]): The starting size of each stream's flow-control
+                window. Required if `manual_window_management` is True, ignored otherwise.
+                For HTTP/2, this becomes the `INITIAL_WINDOW_SIZE` setting and can be overridden
+                by `initial_settings`. Must be <= 2^31-1 or connection fails. If set to 0 with
+                `manual_window_management` True, streams start with zero window. If None, uses
+                default value.
 
         Returns:
             AIOHttpClientConnectionUnified: A new unified HTTP client connection.
@@ -96,11 +91,7 @@ class AIOHttpClientConnectionUnified(HttpClientConnectionBase):
             proxy_options,
             asyncio_connection=True,
             manual_window_management=manual_window_management,
-            initial_window_size=initial_window_size,
-            read_buffer_capacity=read_buffer_capacity,
-            conn_manual_window_management=conn_manual_window_management,
-            conn_window_size_threshold=conn_window_size_threshold,
-            stream_window_size_threshold=stream_window_size_threshold)
+            initial_window_size=initial_window_size)
         return await asyncio.wrap_future(future)
 
     async def close(self) -> None:
@@ -179,8 +170,11 @@ class AIOHttpClientConnection(AIOHttpClientConnectionUnified):
             initial_window_size (Optional[int]): Initial window size for flow control.
                 If None, uses default value.
 
-            read_buffer_capacity (Optional[int]): Read buffer capacity for the connection.
-                If None, uses default value.
+            read_buffer_capacity (Optional[int]): Capacity in bytes of the HTTP/1.1 connection's
+                read buffer. The buffer grows when the flow-control window of the incoming stream
+                reaches zero. Ignored if `manual_window_management` is False. A capacity that is
+                too small may hinder throughput. A capacity that is too large may waste memory
+                without improving throughput. If None or zero, a default value is used.
 
         Returns:
             AIOHttpClientConnection: A new HTTP client connection.
@@ -261,14 +255,23 @@ class AIOHttp2ClientConnection(AIOHttpClientConnectionUnified):
             initial_window_size (Optional[int]): Initial window size for flow control.
                 If None, uses default value.
 
-            conn_manual_window_management (bool): If True, enables manual connection-level window management.
-                Default is False.
+            conn_manual_window_management (bool): If True, enables manual connection-level flow control
+                for the entire HTTP/2 connection. When enabled, the connection's flow-control window
+                shrinks as body data is received across all streams. The initial connection window is
+                65,535 bytes. When the window reaches 0, all streams stop receiving data until
+                `update_window()` is called to increment the connection's window.
+                Note: Padding in DATA frames counts against the window, but window updates for padding
+                are sent automatically even in manual mode. Default is False.
 
-            conn_window_size_threshold (Optional[int]): Connection window size threshold.
-                If None, uses default value.
+            conn_window_size_threshold (Optional[int]): Threshold for sending connection-level WINDOW_UPDATE
+                frames. Ignored if `conn_manual_window_management` is False. When the connection's window
+                is above this threshold, WINDOW_UPDATE frames are batched. When it drops below, the update
+                is sent. Default is 32,767 (half of the initial 65,535 window).
 
-            stream_window_size_threshold (Optional[int]): Stream window size threshold.
-                If None, uses default value.
+            stream_window_size_threshold (Optional[int]): Threshold for sending stream-level WINDOW_UPDATE
+                frames. Ignored if `manual_window_management` is False. When a stream's window is above
+                this threshold, WINDOW_UPDATE frames are batched. When it drops below, the update is sent.
+                Default is half of `initial_window_size`.
         """
         future = cls._generic_new(
             host_name,
