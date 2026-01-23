@@ -866,6 +866,8 @@ static PyMethodDef s_module_methods[] = {
     /* HTTP */
     AWS_PY_METHOD_DEF(http_connection_close, METH_VARARGS),
     AWS_PY_METHOD_DEF(http_connection_is_open, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http2_connection_update_window, METH_VARARGS),
+    AWS_PY_METHOD_DEF(http_stream_update_window, METH_VARARGS),
     AWS_PY_METHOD_DEF(http_client_connection_new, METH_VARARGS),
     AWS_PY_METHOD_DEF(http_client_stream_new, METH_VARARGS),
     AWS_PY_METHOD_DEF(http_client_stream_activate, METH_VARARGS),
