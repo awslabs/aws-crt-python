@@ -59,9 +59,6 @@ jobs:
     permissions:
       id-token: write # This is required for requesting the JWT
     steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
       - name: configure AWS credentials (containers)
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -71,14 +68,6 @@ jobs:
         run: |
           aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
           ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-manylinux2014-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }} --python /opt/python/${{ matrix.python }}/bin/python
-      - name: Track skipped tests
-        run: |
-          if [ -d ".venv-builder" ]; then
-            source .venv-builder/bin/activate
-            python scripts/test_runner.py --top-level-directory . --verbose --start-directory test 2>/dev/null | grep -A 1000 "SKIPPED TESTS SUMMARY" || echo "No skipped tests found or test runner not available"
-          else
-            echo "Virtual environment not found, skipping skipped test tracking"
-          fi
 
   manylinux2014-arm64:
     runs-on: ubuntu-24.04-arm
@@ -95,9 +84,6 @@ jobs:
     permissions:
       id-token: write # This is required for requesting the JWT
     steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
       - name: configure AWS credentials (containers)
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -107,14 +93,6 @@ jobs:
         run: |
           aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
           ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-manylinux2014-aarch64 build -p ${{ env.PACKAGE_NAME }} --python /opt/python/${{ matrix.python }}/bin/python
-      - name: Track skipped tests
-        run: |
-          if [ -d ".venv-builder" ]; then
-            source .venv-builder/bin/activate
-            python scripts/test_runner.py --top-level-directory . --verbose --start-directory test 2>/dev/null | grep -A 1000 "SKIPPED TESTS SUMMARY" || echo "No skipped tests found or test runner not available"
-          else
-            echo "Virtual environment not found, skipping skipped test tracking"
-          fi
 
   musllinux-1-1:
     runs-on: ubuntu-24.04 # latest
@@ -248,9 +226,6 @@ jobs:
     permissions:
       id-token: write # This is required for requesting the JWT
     steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
       - name: configure AWS credentials (containers)
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -274,15 +249,6 @@ jobs:
 
           USES_LIBCRYPTO_SO=`echo "$LINKED_AGAINST" | grep 'libcrypto*.so' | head -1`
           test -n "$USES_LIBCRYPTO_SO"
-      - name: Track skipped tests
-        run: |
-          if [ -d "aws-crt-python/.venv-builder" ]; then
-            cd aws-crt-python
-            source .venv-builder/bin/activate
-            python ../scripts/test_runner.py --top-level-directory . --verbose --start-directory test 2>/dev/null | grep -A 1000 "SKIPPED TESTS SUMMARY" || echo "No skipped tests found or test runner not available"
-          else
-            echo "Virtual environment not found, skipping skipped test tracking"
-          fi
 
   windows:
     # Currently, setup.py explicitly tries to use Windows SDK 10.0.17763.0.
