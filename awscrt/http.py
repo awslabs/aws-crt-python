@@ -252,7 +252,8 @@ class HttpClientConnection(HttpClientConnectionBase):
             initial_window_size (Optional[int]): The starting size of each stream's flow-control
                 window. Required if `manual_window_management` is True, ignored otherwise.
                 Must be <= 2^31-1 or connection fails. If set to 0 with `manual_window_management`
-                True, streams start with zero window. If None, uses default value.
+                True, streams start with zero window.
+                Required if manual_window_management is True, ignored otherwise.
 
             read_buffer_capacity (Optional[int]): Capacity in bytes of the HTTP/1.1 connection's
                 read buffer. The buffer grows when the flow-control window of the incoming stream

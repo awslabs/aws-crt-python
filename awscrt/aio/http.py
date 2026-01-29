@@ -76,8 +76,8 @@ class AIOHttpClientConnectionUnified(HttpClientConnectionBase):
                 window. Required if `manual_window_management` is True, ignored otherwise.
                 For HTTP/2, this becomes the `INITIAL_WINDOW_SIZE` setting and can be overridden
                 by `initial_settings`. Must be <= 2^31-1 or connection fails. If set to 0 with
-                `manual_window_management` True, streams start with zero window. If None, uses
-                default value.
+                `manual_window_management` True, streams start with zero window.
+                Required if manual_window_management is True, ignored otherwise.
 
         Returns:
             AIOHttpClientConnectionUnified: A new unified HTTP client connection.
