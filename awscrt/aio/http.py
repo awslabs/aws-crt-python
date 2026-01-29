@@ -168,7 +168,7 @@ class AIOHttpClientConnection(AIOHttpClientConnectionUnified):
                 Default is False.
 
             initial_window_size (Optional[int]): Initial window size for flow control.
-                If None, uses default value.
+                Required if manual_window_management is True, ignored otherwise.
 
             read_buffer_capacity (Optional[int]): Capacity in bytes of the HTTP/1.1 connection's
                 read buffer. The buffer grows when the flow-control window of the incoming stream
@@ -253,7 +253,7 @@ class AIOHttp2ClientConnection(AIOHttpClientConnectionUnified):
                 Default is False.
 
             initial_window_size (Optional[int]): Initial window size for flow control.
-                If None, uses default value.
+                Required if manual_window_management is True, ignored otherwise.
 
             conn_manual_window_management (bool): If True, enables manual connection-level flow control
                 for the entire HTTP/2 connection. When enabled, the connection's flow-control window

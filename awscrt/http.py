@@ -374,7 +374,7 @@ class Http2ClientConnection(HttpClientConnectionBase):
                 Default is False.
 
             initial_window_size (Optional[int]): Initial window size for flow control.
-                If None, uses default value.
+                Required if manual_window_management is True, ignored otherwise.
 
             conn_manual_window_management (bool): If True, enables manual connection-level flow control
                 for the entire HTTP/2 connection. When enabled, the connection's flow-control window
