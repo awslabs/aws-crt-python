@@ -628,8 +628,8 @@ class Mqtt5ClientTest(NativeResourceTest):
     # test_websocket_handshake_failure : tested in the SDK
 
     def test_double_client_id_failure(self):
-        input_host_name = _get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_HOST")
-        input_port = int(_get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_PORT"))
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
+        input_port = int(8883)
         shared_client_id = create_client_id()
 
         connect_options = mqtt5.ConnectPacket(client_id=shared_client_id)
