@@ -109,17 +109,30 @@ MAX_RETRIES = 5
 
 class Mqtt5ClientTest(NativeResourceTest):
 
+    def _create_tls_context():
+        cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
+        key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
+        return io.ClientTlsContext(
+            io.TlsContextOptions.create_client_with_mtls_from_path(cert, key))
+
     def _create_client(
             self,
             client_options: mqtt5.ClientOptions = None,
             callbacks: Mqtt5TestCallbacks = None):
 
         default_host = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
+        
         if client_options is None:
             client_options = mqtt5.ClientOptions(
                 host_name=default_host,
-                port=8883
-            )
+                port=8883,
+                tls_ctx = _create_tls_context())
+        
+        if (client_options.host_name == _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST") and 
+            client_options.tls_ctx is None):
+            client_options.port = 8883
+            client_options.tls_ctx = _create_tls_context()
+
         if client_options.connect_options is None:
             client_options.connect_options = mqtt5.ConnectPacket()
             client_options.connect_options.client_id = create_client_id()
@@ -629,22 +642,13 @@ class Mqtt5ClientTest(NativeResourceTest):
 
     def test_double_client_id_failure(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
-        input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
-        input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
-        input_port = int(8883)
         shared_client_id = create_client_id()
 
         connect_options = mqtt5.ConnectPacket(client_id=shared_client_id)
         client_options = mqtt5.ClientOptions(
             host_name=input_host_name,
-            port=input_port,
             connect_options=connect_options
         )
-        tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(
-            input_cert,
-            input_key
-        )
-        client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
         callbacks = Mqtt5TestCallbacks()
         client1 = self._create_client(client_options=client_options, callbacks=callbacks)
 
