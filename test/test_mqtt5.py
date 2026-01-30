@@ -121,17 +121,19 @@ class Mqtt5ClientTest(NativeResourceTest):
             callbacks: Mqtt5TestCallbacks = None):
 
         default_host = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
-        
+
         if client_options is None:
             client_options = mqtt5.ClientOptions(
                 host_name=default_host,
                 port=8883,
-                tls_ctx = self._create_tls_context())
-        
+                    tls_ctx = self._create_tls_context())
+
         if (client_options.host_name == _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST") and 
-            client_options.tls_ctx is None):
-            client_options.port = 8883
+                client_options.tls_ctx is None):            
             client_options.tls_ctx = self._create_tls_context()
+        
+        if client_options.port is None:
+                client_options.port = 8883
 
         if client_options.connect_options is None:
             client_options.connect_options = mqtt5.ConnectPacket()
@@ -577,7 +579,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         callbacks.future_stopped.result(TIMEOUT)
 
     def test_connect_with_invalid_port(self):
-        input_host_name = _get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_HOST")
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         client_options = mqtt5.ClientOptions(
             host_name=input_host_name,
             port=444
