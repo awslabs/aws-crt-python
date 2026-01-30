@@ -918,7 +918,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         callbacks.future_connection_success.result(TIMEOUT)
 
         self.assertIsNotNone(callbacks.negotiated_settings)
-        self.assertEqual(callbacks.negotiated_settings.session_expiry_interval_sec, 600000)
+        self.assertEqual(callbacks.negotiated_settings.session_expiry_interval_sec, 3600)
 
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
