@@ -126,7 +126,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             client_options = mqtt5.ClientOptions(
                 host_name=default_host,
                 port=8883,
-                tls_ctx = self._create_tls_context())
+                tls_ctx=self._create_tls_context())
 
         if (client_options.host_name == _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST") and
                 client_options.tls_ctx is None):
