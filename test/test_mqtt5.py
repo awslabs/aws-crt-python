@@ -109,7 +109,7 @@ MAX_RETRIES = 5
 
 class Mqtt5ClientTest(NativeResourceTest):
 
-    def _create_tls_context():
+    def _create_tls_context(self):
         cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
         key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
         return io.ClientTlsContext(
@@ -126,12 +126,12 @@ class Mqtt5ClientTest(NativeResourceTest):
             client_options = mqtt5.ClientOptions(
                 host_name=default_host,
                 port=8883,
-                tls_ctx = _create_tls_context())
+                tls_ctx = self._create_tls_context())
         
         if (client_options.host_name == _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST") and 
             client_options.tls_ctx is None):
             client_options.port = 8883
-            client_options.tls_ctx = _create_tls_context()
+            client_options.tls_ctx = self._create_tls_context()
 
         if client_options.connect_options is None:
             client_options.connect_options = mqtt5.ConnectPacket()
