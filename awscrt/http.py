@@ -147,6 +147,7 @@ class HttpClientConnectionBase(HttpConnectionBase):
         assert isinstance(tls_connection_options, TlsConnectionOptions) or tls_connection_options is None
         assert isinstance(socket_options, SocketOptions) or socket_options is None
         assert isinstance(proxy_options, HttpProxyOptions) or proxy_options is None
+        assert not manual_window_management or initial_window_size is not None
 
         future = Future()
 

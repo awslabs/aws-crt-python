@@ -344,7 +344,7 @@ PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args) {
         .user_data = connection,
         .host_name = aws_byte_cursor_from_array((const uint8_t *)host_name, host_name_len),
         .port = port_number,
-        .initial_window_size = SIZE_MAX,
+        .initial_window_size = 0,
         .socket_options = &socket_options,
         .on_setup = s_on_client_connection_setup,
         .on_shutdown = s_on_connection_shutdown,
