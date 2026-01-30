@@ -1,0 +1,823 @@
+
+
+<!doctype html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>awscrt.s3 &#8212; awscrt  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d75fae25" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=93be7416" />
+    
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/bizstyle.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="awscrt.websocket" href="websocket.html" />
+    <link rel="prev" title="awscrt.mqtt_request_response" href="mqtt_request_response.html" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <!--[if lt IE 9]>
+    <script src="_static/css3-mediaqueries.js"></script>
+    <![endif]-->
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="websocket.html" title="awscrt.websocket"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="mqtt_request_response.html" title="awscrt.mqtt_request_response"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">awscrt  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">awscrt.s3</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="module-awscrt.s3">
+<span id="awscrt-s3"></span><h1>awscrt.s3<a class="headerlink" href="#module-awscrt.s3" title="Link to this heading">¶</a></h1>
+<p>S3 client</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.s3.CrossProcessLock">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.s3.</span></span><span class="sig-name descname"><span class="pre">CrossProcessLock</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lock_scope_name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.s3.CrossProcessLock" title="Link to this definition">¶</a></dt>
+<dd><p>Class representing an exclusive cross-process lock, scoped by <cite>lock_scope_name</cite></p>
+<p>Recommended usage is to either explicitly call acquire() followed by release() when the lock  is no longer required, or use this in a ‘with’ statement.</p>
+<p>acquire() will throw a RuntimeError with AWS_MUTEX_CALLER_NOT_OWNER as the error code, if the lock could not be acquired.</p>
+<p>If the lock has not been explicitly released when the process exits, it will be released by the operating system.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>lock_scope_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Unique string identifying the caller holding the lock.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.s3.S3RequestType">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.s3.</span></span><span class="sig-name descname"><span class="pre">S3RequestType</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.s3.S3RequestType" title="Link to this definition">¶</a></dt>
+<dd><p>The type of the AWS S3 request</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.s3.S3RequestType.DEFAULT">
+<span class="sig-name descname"><span class="pre">DEFAULT</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#awscrt.s3.S3RequestType.DEFAULT" title="Link to this definition">¶</a></dt>
+<dd><p>Default type, for all S3 request types other than
+<a class="reference internal" href="#awscrt.s3.S3RequestType.GET_OBJECT" title="awscrt.s3.S3RequestType.GET_OBJECT"><code class="xref py py-attr docutils literal notranslate"><span class="pre">GET_OBJECT</span></code></a>/<a class="reference internal" href="#awscrt.s3.S3RequestType.PUT_OBJECT" title="awscrt.s3.S3RequestType.PUT_OBJECT"><code class="xref py py-attr docutils literal notranslate"><span class="pre">PUT_OBJECT</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.s3.S3RequestType.GET_OBJECT">
+<span class="sig-name descname"><span class="pre">GET_OBJECT</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#awscrt.s3.S3RequestType.GET_OBJECT" title="Link to this definition">¶</a></dt>
+<dd><p>Get Object S3 request</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.s3.S3RequestType.PUT_OBJECT">
+<span class="sig-name descname"><span class="pre">PUT_OBJECT</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></em><a class="headerlink" href="#awscrt.s3.S3RequestType.PUT_OBJECT" title="Link to this definition">¶</a></dt>
+<dd><p>Put Object S3 request</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.s3.S3RequestTlsMode">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.s3.</span></span><span class="sig-name descname"><span class="pre">S3RequestTlsMode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.s3.S3RequestTlsMode" title="Link to this definition">¶</a></dt>
+<dd><p>TLS mode for S3 request</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.s3.S3RequestTlsMode.ENABLED">
+<span class="sig-name descname"><span class="pre">ENABLED</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#awscrt.s3.S3RequestTlsMode.ENABLED" title="Link to this definition">¶</a></dt>
+<dd><p>Enable TLS for S3 request.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.s3.S3RequestTlsMode.DISABLED">
+<span class="sig-name descname"><span class="pre">DISABLED</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#awscrt.s3.S3RequestTlsMode.DISABLED" title="Link to this definition">¶</a></dt>
+<dd><p>Disable TLS for S3 request.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.s3.S3ChecksumAlgorithm">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.s3.</span></span><span class="sig-name descname"><span class="pre">S3ChecksumAlgorithm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.s3.S3ChecksumAlgorithm" title="Link to this definition">¶</a></dt>
+<dd><p>Checksum algorithm used to verify object integrity.
+<a class="reference external" href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/checking-object-integrity.html">https://docs.aws.amazon.com/AmazonS3/latest/userguide/checking-object-integrity.html</a></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.s3.S3ChecksumAlgorithm.CRC32C">
+<span class="sig-name descname"><span class="pre">CRC32C</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#awscrt.s3.S3ChecksumAlgorithm.CRC32C" title="Link to this definition">¶</a></dt>
+<dd><p>CRC32C</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.s3.S3ChecksumAlgorithm.CRC32">
+<span class="sig-name descname"><span class="pre">CRC32</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></em><a class="headerlink" href="#awscrt.s3.S3ChecksumAlgorithm.CRC32" title="Link to this definition">¶</a></dt>
+<dd><p>CRC32</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.s3.S3ChecksumAlgorithm.SHA1">
+<span class="sig-name descname"><span class="pre">SHA1</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">3</span></em><a class="headerlink" href="#awscrt.s3.S3ChecksumAlgorithm.SHA1" title="Link to this definition">¶</a></dt>
+<dd><p>SHA-1</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.s3.S3ChecksumAlgorithm.SHA256">
+<span class="sig-name descname"><span class="pre">SHA256</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">4</span></em><a class="headerlink" href="#awscrt.s3.S3ChecksumAlgorithm.SHA256" title="Link to this definition">¶</a></dt>
+<dd><p>SHA-256</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.s3.S3ChecksumAlgorithm.CRC64NVME">
+<span class="sig-name descname"><span class="pre">CRC64NVME</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">5</span></em><a class="headerlink" href="#awscrt.s3.S3ChecksumAlgorithm.CRC64NVME" title="Link to this definition">¶</a></dt>
+<dd><p>CRC64NVME</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.s3.S3ChecksumLocation">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.s3.</span></span><span class="sig-name descname"><span class="pre">S3ChecksumLocation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.s3.S3ChecksumLocation" title="Link to this definition">¶</a></dt>
+<dd><p>Where to put the checksum.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.s3.S3ChecksumLocation.HEADER">
+<span class="sig-name descname"><span class="pre">HEADER</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#awscrt.s3.S3ChecksumLocation.HEADER" title="Link to this definition">¶</a></dt>
+<dd><p>Add checksum as a request header field.
+The checksum is calculated before any part of the request is sent to the server.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.s3.S3ChecksumLocation.TRAILER">
+<span class="sig-name descname"><span class="pre">TRAILER</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></em><a class="headerlink" href="#awscrt.s3.S3ChecksumLocation.TRAILER" title="Link to this definition">¶</a></dt>
+<dd><p>Add checksum as a request trailer field.
+The checksum is calculated as the body is streamed to the server, then
+added as a trailer field. This may be more efficient than HEADER, but
+can only be used with “streaming” requests that support it.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.s3.S3ChecksumConfig">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.s3.</span></span><span class="sig-name descname"><span class="pre">S3ChecksumConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">algorithm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#awscrt.s3.S3ChecksumAlgorithm" title="awscrt.s3.S3ChecksumAlgorithm"><span class="pre">S3ChecksumAlgorithm</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">location</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#awscrt.s3.S3ChecksumLocation" title="awscrt.s3.S3ChecksumLocation"><span class="pre">S3ChecksumLocation</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validate_response</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.s3.S3ChecksumConfig" title="Link to this definition">¶</a></dt>
+<dd><p>Configures how the S3Client calculates and verifies checksums.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.s3.S3ChecksumConfig.algorithm">
+<span class="sig-name descname"><span class="pre">algorithm</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#awscrt.s3.S3ChecksumAlgorithm" title="awscrt.s3.S3ChecksumAlgorithm"><span class="pre">S3ChecksumAlgorithm</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#awscrt.s3.S3ChecksumConfig.algorithm" title="Link to this definition">¶</a></dt>
+<dd><p>If set, the S3Client will calculate a checksum using this algorithm
+and add it to the request. If you set this, you must also set <cite>location</cite>.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.s3.S3ChecksumConfig.location">
+<span class="sig-name descname"><span class="pre">location</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#awscrt.s3.S3ChecksumLocation" title="awscrt.s3.S3ChecksumLocation"><span class="pre">S3ChecksumLocation</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#awscrt.s3.S3ChecksumConfig.location" title="Link to this definition">¶</a></dt>
+<dd><p>Where to put the request checksum.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.s3.S3ChecksumConfig.validate_response">
+<span class="sig-name descname"><span class="pre">validate_response</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></em><a class="headerlink" href="#awscrt.s3.S3ChecksumConfig.validate_response" title="Link to this definition">¶</a></dt>
+<dd><p>Whether to retrieve and validate response checksums.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.s3.S3FileIoOptions">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.s3.</span></span><span class="sig-name descname"><span class="pre">S3FileIoOptions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">should_stream</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">disk_throughput_gbps</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">direct_io</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.s3.S3FileIoOptions" title="Link to this definition">¶</a></dt>
+<dd><p>WARNING: experimental/unstable, the default behavior is subjected to change in the future.
+Controls how client performance file I/O operations.
+Only applies to the file based workload.
+Notes: only applies when <cite>send_filepath</cite> is set from the request.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.s3.S3FileIoOptions.should_stream">
+<span class="sig-name descname"><span class="pre">should_stream</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></em><a class="headerlink" href="#awscrt.s3.S3FileIoOptions.should_stream" title="Link to this definition">¶</a></dt>
+<dd><p>Skip buffering the part in memory before sending the request.</p>
+<p>Default to false on small objects, and true when the object size exceed a certain threshold.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.s3.S3FileIoOptions.disk_throughput_gbps">
+<span class="sig-name descname"><span class="pre">disk_throughput_gbps</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.0</span></em><a class="headerlink" href="#awscrt.s3.S3FileIoOptions.disk_throughput_gbps" title="Link to this definition">¶</a></dt>
+<dd><p>The estimated disk throughput. Only be applied when <cite>streaming_upload</cite> is true.
+in gigabits per second (Gbps).</p>
+<p>Notes: There are possibilities that cannot reach the all available disk throughput:
+1. Disk is busy with other applications
+2. OS Cache may cap the throughput, use <cite>direct_io</cite> to get around this.</p>
+<p>Default to <cite>throughput_target_gbps</cite>.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.s3.S3FileIoOptions.direct_io">
+<span class="sig-name descname"><span class="pre">direct_io</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></em><a class="headerlink" href="#awscrt.s3.S3FileIoOptions.direct_io" title="Link to this definition">¶</a></dt>
+<dd><p>Enable direct IO to bypass the OS cache. Helpful when the disk I/O outperforms the kernel cache.
+Notes:
+- Only supported on linux for now.
+- Only supports upload for now.
+- Check NOTES for O_DIRECT for additional info <a class="reference external" href="https://man7.org/linux/man-pages/man2/openat.2.html">https://man7.org/linux/man-pages/man2/openat.2.html</a>
+In summary, O_DIRECT is a potentially powerful tool that should be used with caution.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.s3.S3Client">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.s3.</span></span><span class="sig-name descname"><span class="pre">S3Client</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bootstrap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tls_mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">signing_config</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">credential_provider</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tls_connection_options</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">part_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">multipart_upload_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">throughput_target_gbps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enable_s3express</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">memory_limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">network_interface_names</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Sequence" title="(in Python v3.14)"><span class="pre">Sequence</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fio_options</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#awscrt.s3.S3FileIoOptions" title="awscrt.s3.S3FileIoOptions"><span class="pre">S3FileIoOptions</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_active_connections_override</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.s3.S3Client" title="Link to this definition">¶</a></dt>
+<dd><p>S3 client</p>
+<dl class="field-list simple">
+<dt class="field-odd">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>bootstrap</strong> (<em>Optional</em><em> [</em><a class="reference internal" href="io.html#awscrt.io.ClientBootstrap" title="awscrt.io.ClientBootstrap"><em>ClientBootstrap</em></a><em>]</em>) – Client bootstrap to use when initiating socket connection.
+If None is provided, the default singleton is used.</p></li>
+<li><p><strong>region</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Region that the S3 bucket lives in.</p></li>
+<li><p><strong>tls_mode</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="#awscrt.s3.S3RequestTlsMode" title="awscrt.s3.S3RequestTlsMode"><em>S3RequestTlsMode</em></a><em>]</em>) – <p>How TLS should be used while performing the request</p>
+<dl class="simple">
+<dt>If this is <a class="reference internal" href="#awscrt.s3.S3RequestTlsMode.ENABLED" title="awscrt.s3.S3RequestTlsMode.ENABLED"><code class="xref py py-attr docutils literal notranslate"><span class="pre">S3RequestTlsMode.ENABLED</span></code></a>:</dt><dd><p>If <cite>tls_connection_options</cite> is set, then those TLS options will be used
+If <cite>tls_connection_options</cite> is unset, then default TLS options will be used</p>
+</dd>
+<dt>If this is <a class="reference internal" href="#awscrt.s3.S3RequestTlsMode.DISABLED" title="awscrt.s3.S3RequestTlsMode.DISABLED"><code class="xref py py-attr docutils literal notranslate"><span class="pre">S3RequestTlsMode.DISABLED</span></code></a>:</dt><dd><p>No TLS options will be used, regardless of <cite>tls_connection_options</cite> value.</p>
+</dd>
+</dl>
+</p></li>
+<li><p><strong>signing_config</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="auth.html#awscrt.auth.AwsSigningConfig" title="awscrt.auth.AwsSigningConfig"><em>AwsSigningConfig</em></a><em>]</em>) – <p>Configuration for signing of the client.
+Use <a class="reference internal" href="#awscrt.s3.create_default_s3_signing_config" title="awscrt.s3.create_default_s3_signing_config"><code class="xref py py-func docutils literal notranslate"><span class="pre">create_default_s3_signing_config()</span></code></a> to create the default config.</p>
+<p>If not set, a default config will be used with anonymous credentials and skip signing the request.</p>
+<dl>
+<dt>If set:</dt><dd><dl class="simple">
+<dt>Credentials provider is required. Other configs are all optional, and will be default to what</dt><dd><p>needs to sign the request for S3, only overrides when Non-zero/Not-empty is set.</p>
+</dd>
+</dl>
+<p>S3 Client will derive the right config for signing process based on this.</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ol class="arabic simple">
+<li><dl class="simple">
+<dt>For SIGV4_S3EXPRESS, S3 client will use the credentials in the config to derive the S3 Express</dt><dd><p>credentials that are used in the signing process.</p>
+</dd>
+</dl>
+</li>
+<li><p>Client may make modifications to signing config before passing it on to signer.</p></li>
+</ol>
+</p></li>
+<li><p><strong>credential_provider</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="auth.html#awscrt.auth.AwsCredentialsProvider" title="awscrt.auth.AwsCredentialsProvider"><em>AwsCredentialsProvider</em></a><em>]</em>) – Deprecated, prefer <cite>signing_config</cite> instead.
+Credentials providers source the <a class="reference internal" href="auth.html#awscrt.auth.AwsCredentials" title="awscrt.auth.AwsCredentials"><code class="xref py py-class docutils literal notranslate"><span class="pre">AwsCredentials</span></code></a> needed to sign an authenticated AWS request.
+If None is provided, the request will not be signed.</p></li>
+<li><p><strong>tls_connection_options</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="io.html#awscrt.io.TlsConnectionOptions" title="awscrt.io.TlsConnectionOptions"><em>TlsConnectionOptions</em></a><em>]</em>) – Optional TLS Options to be used
+for each connection, unless <cite>tls_mode</cite> is <a class="reference internal" href="#awscrt.s3.S3RequestTlsMode.DISABLED" title="awscrt.s3.S3RequestTlsMode.DISABLED"><code class="xref py py-attr docutils literal notranslate"><span class="pre">S3RequestTlsMode.DISABLED</span></code></a></p></li>
+<li><p><strong>part_size</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em>]</em>) – Size, in bytes, of parts that files will be downloaded or uploaded in.
+If not set, a dynamic default part size will be used based on the throughput target, memory_limit_in_bytes.
+Note: for <a class="reference internal" href="#awscrt.s3.S3RequestType.PUT_OBJECT" title="awscrt.s3.S3RequestType.PUT_OBJECT"><code class="xref py py-attr docutils literal notranslate"><span class="pre">S3RequestType.PUT_OBJECT</span></code></a> request, client will adjust the part size to meet the service limits.
+(max number of parts per upload is 10,000, minimum upload part size is 5 MiB)</p></li>
+<li><p><strong>multipart_upload_threshold</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em>]</em>) – The size threshold in bytes, for when to use multipart uploads.
+This only affects <a class="reference internal" href="#awscrt.s3.S3RequestType.PUT_OBJECT" title="awscrt.s3.S3RequestType.PUT_OBJECT"><code class="xref py py-attr docutils literal notranslate"><span class="pre">S3RequestType.PUT_OBJECT</span></code></a> request.
+Uploads over this size will use the multipart upload strategy.
+Uploads this size or less will use a single request.
+If not set, maximal of <cite>part_size</cite> and 5 MiB will be used.</p></li>
+<li><p><strong>throughput_target_gbps</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em>]</em>) – Throughput target in
+Gigabits per second (Gbps) that we are trying to reach.
+You can also use <cite>get_recommended_throughput_target_gbps()</cite> to get recommended value for your system.
+10.0 Gbps by default (may change in future)</p></li>
+<li><p><strong>enable_s3express</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a><em>]</em>) – To enable S3 Express support for the client.
+The typical usage for a S3 Express request is to set this to true and let the request to be
+signed with <cite>AwsSigningAlgorithm.V4_S3EXPRESS</cite>, either from the client-level <cite>signing_config</cite>
+or the request-level override.</p></li>
+<li><p><strong>memory_limit</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em>]</em>) – Memory limit, in bytes, of how much memory
+client can use for buffering data for requests.
+If not set, client will try to pick up from environment variable before chose the default.
+Default values scale with target throughput and are currently
+between 2GiB and 24GiB (may change in future)</p></li>
+<li><p><strong>network_interface_names</strong> (<em>Optional</em><em>[</em><em>Sequence</em><em>(</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>)</em><em>]</em>) – <strong>THIS IS AN EXPERIMENTAL AND UNSTABLE API.</strong>
+A sequence of network interface names. The client will distribute the
+connections across network interfaces. If any interface name is invalid, goes down,
+or has any issues like network access, you will see connection failures.
+This option is only supported on Linux, MacOS, and platforms that have either SO_BINDTODEVICE or IP_BOUND_IF. It
+is not supported on Windows. <cite>AWS_ERROR_PLATFORM_NOT_SUPPORTED</cite> will be raised on unsupported platforms. On
+Linux, SO_BINDTODEVICE is used and requires kernel version &gt;= 5.7 or root privileges.</p></li>
+<li><p><strong>fio_options</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="#awscrt.s3.S3FileIoOptions" title="awscrt.s3.S3FileIoOptions"><em>S3FileIoOptions</em></a><em>]</em>) – If set, this controls how the client interact with file I/O.
+If not set, a default options will be created to avoid memory issue based on the size of file.
+Note: Only applies when the request created with <cite>send_filepath</cite></p></li>
+<li><p><strong>max_active_connections_override</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em>]</em>) – When set, this will cap the number of active connections for the meta request.
+When not set, the client will determine this value based on <cite>throughput_target_gbps</cite>. (Recommended)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.s3.S3Client.make_request">
+<span class="sig-name descname"><span class="pre">make_request</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">request</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">operation_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">recv_filepath</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">send_filepath</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">signing_config</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">credential_provider</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">checksum_config</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">part_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">multipart_upload_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fio_options</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_active_connections_override</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_headers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_body</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_done</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.s3.S3Client.make_request" title="Link to this definition">¶</a></dt>
+<dd><p>Create the Request to the the S3 server,
+<a class="reference internal" href="#awscrt.s3.S3RequestType.GET_OBJECT" title="awscrt.s3.S3RequestType.GET_OBJECT"><code class="xref py py-attr docutils literal notranslate"><span class="pre">GET_OBJECT</span></code></a>/<a class="reference internal" href="#awscrt.s3.S3RequestType.PUT_OBJECT" title="awscrt.s3.S3RequestType.PUT_OBJECT"><code class="xref py py-attr docutils literal notranslate"><span class="pre">PUT_OBJECT</span></code></a> requests are split it into multi-part
+requests under the hood for acceleration.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>type</strong> (<a class="reference internal" href="#awscrt.s3.S3RequestType" title="awscrt.s3.S3RequestType"><em>S3RequestType</em></a>) – The type of S3 request passed in,
+<a class="reference internal" href="#awscrt.s3.S3RequestType.GET_OBJECT" title="awscrt.s3.S3RequestType.GET_OBJECT"><code class="xref py py-attr docutils literal notranslate"><span class="pre">GET_OBJECT</span></code></a>/<a class="reference internal" href="#awscrt.s3.S3RequestType.PUT_OBJECT" title="awscrt.s3.S3RequestType.PUT_OBJECT"><code class="xref py py-attr docutils literal notranslate"><span class="pre">PUT_OBJECT</span></code></a> can be accelerated</p></li>
+<li><p><strong>request</strong> (<a class="reference internal" href="http.html#awscrt.http.HttpRequest" title="awscrt.http.HttpRequest"><em>HttpRequest</em></a>) – The overall outgoing API request for S3 operation.
+If the request body is a file, set send_filepath for better performance.</p></li>
+<li><p><strong>operation_name</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>]</em>) – <p>S3 operation name (e.g. “CreateBucket”).
+This MUST be set when <cite>type</cite> is <a class="reference internal" href="#awscrt.s3.S3RequestType.DEFAULT" title="awscrt.s3.S3RequestType.DEFAULT"><code class="xref py py-attr docutils literal notranslate"><span class="pre">DEFAULT</span></code></a>.
+It is ignored for other types, since the operation is implicitly known.
+See <a class="reference external" href="https://docs.aws.amazon.com/AmazonS3/latest/API/API_Operations_Amazon_Simple_Storage_Service.html">S3 API documentation</a>
+for the canonical list of names.</p>
+<p>This name is used to fill out details in metrics and error reports.
+It also drives some operation-specific behavior.
+If you pass the wrong name, you risk getting the wrong behavior.</p>
+<p>For example, every operation except “GetObject” has its response checked
+for error, even if the HTTP status-code was 200 OK
+(see <a class="reference external" href="https://repost.aws/knowledge-center/s3-resolve-200-internalerror">knowledge center</a>).
+If you used the <a class="reference internal" href="#awscrt.s3.S3RequestType.DEFAULT" title="awscrt.s3.S3RequestType.DEFAULT"><code class="xref py py-attr docutils literal notranslate"><span class="pre">DEFAULT</span></code></a> type to do
+<a class="reference external" href="https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObject.html">GetObject</a>,
+but mis-named it “Download”, and the object looked like XML with an error code,
+then the request would fail. You risk logging the full response body,
+and leaking sensitive data.</p>
+</p></li>
+<li><p><strong>recv_filepath</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>]</em>) – Optional file path. If set, the
+response body is written directly to a file and the
+<cite>on_body</cite> callback is not invoked. This should give better
+performance than writing to file from the <cite>on_body</cite> callback.</p></li>
+<li><p><strong>send_filepath</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>]</em>) – Optional file path. If set, the
+request body is read directly from a file and the
+request’s <cite>body_stream</cite> is ignored. This should give better
+performance than reading a file from a stream.</p></li>
+<li><p><strong>signing_config</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="auth.html#awscrt.auth.AwsSigningConfig" title="awscrt.auth.AwsSigningConfig"><em>AwsSigningConfig</em></a><em>]</em>) – <p>Configuration for signing of the request to override the configuration from client.
+Use <a class="reference internal" href="#awscrt.s3.create_default_s3_signing_config" title="awscrt.s3.create_default_s3_signing_config"><code class="xref py py-func docutils literal notranslate"><span class="pre">create_default_s3_signing_config()</span></code></a> to create the default config.</p>
+<p>If None is provided, the client configuration will be used.</p>
+<dl class="simple">
+<dt>If set:</dt><dd><p>All fields are optional. The credentials will be resolve from client if not set.
+S3 Client will derive the right config for signing process based on this.</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ol class="arabic simple">
+<li><dl class="simple">
+<dt>For SIGV4_S3EXPRESS, S3 client will use the credentials in the config to derive the S3 Express</dt><dd><p>credentials that are used in the signing process.</p>
+</dd>
+</dl>
+</li>
+<li><p>Client may make modifications to signing config before passing it on to signer.</p></li>
+</ol>
+</p></li>
+<li><p><strong>credential_provider</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="auth.html#awscrt.auth.AwsCredentialsProvider" title="awscrt.auth.AwsCredentialsProvider"><em>AwsCredentialsProvider</em></a><em>]</em>) – Deprecated, prefer <cite>signing_config</cite> instead.
+Credentials providers source the <a class="reference internal" href="auth.html#awscrt.auth.AwsCredentials" title="awscrt.auth.AwsCredentials"><code class="xref py py-class docutils literal notranslate"><span class="pre">AwsCredentials</span></code></a> needed to sign an authenticated AWS request, for this request only.
+If None is provided, the client configuration will be used.</p></li>
+<li><p><strong>checksum_config</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="#awscrt.s3.S3ChecksumConfig" title="awscrt.s3.S3ChecksumConfig"><em>S3ChecksumConfig</em></a><em>]</em>) – Optional checksum settings.</p></li>
+<li><p><strong>part_size</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em>]</em>) – Size, in bytes, of parts that files will be downloaded or uploaded in.
+If not set, the part size configured for the client will be used, which defaults to a dynamic value based on
+the throughput target, memory_limit_in_bytes and the requested object size.
+Note: for <a class="reference internal" href="#awscrt.s3.S3RequestType.PUT_OBJECT" title="awscrt.s3.S3RequestType.PUT_OBJECT"><code class="xref py py-attr docutils literal notranslate"><span class="pre">S3RequestType.PUT_OBJECT</span></code></a> request, client will adjust the part size to meet the service limits.
+(max number of parts per upload is 10,000, minimum upload part size is 5 MiB)</p></li>
+<li><p><strong>multipart_upload_threshold</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em>]</em>) – The size threshold in bytes, for when to use multipart uploads.
+This only affects <a class="reference internal" href="#awscrt.s3.S3RequestType.PUT_OBJECT" title="awscrt.s3.S3RequestType.PUT_OBJECT"><code class="xref py py-attr docutils literal notranslate"><span class="pre">S3RequestType.PUT_OBJECT</span></code></a> request.
+Uploads over this size will use the multipart upload strategy.
+Uploads this size or less will use a single request.
+If set, this should be at least <cite>part_size</cite>.
+If not set, <cite>part_size</cite> adjusted by client will be used as the threshold.
+If both <cite>part_size</cite> and <cite>multipart_upload_threshold</cite> are not set,
+the values from <cite>aws_s3_client_config</cite> are used.</p></li>
+<li><p><strong>fio_options</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="#awscrt.s3.S3FileIoOptions" title="awscrt.s3.S3FileIoOptions"><em>S3FileIoOptions</em></a><em>]</em>) – If set, this overrides the client fio_options to control how this request interact with file I/O.
+If not set, a default options will be created to avoid memory issue based on the size of file.
+Note: Only applies when the request created with <cite>send_filepath</cite></p></li>
+<li><p><strong>max_active_connections_override</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em>]</em>) – When set, this will cap the number of active connections for the meta request.
+When not set, the client will determine it based on client side settings. (Recommended)</p></li>
+<li><p><strong>on_headers</strong> – <p>Optional callback invoked as the response received, and even the API request
+has been split into multiple parts, this callback will only be invoked once as
+it’s just making one API request to S3.
+The function should take the following arguments and return nothing:</p>
+<blockquote>
+<div><ul>
+<li><p><cite>status_code</cite> (int): Response status code.</p></li>
+<li><p><cite>headers</cite> (List[Tuple[str, str]]): Response headers as a
+list of (name,value) pairs.</p></li>
+<li><p><cite>**kwargs</cite> (dict): Forward-compatibility kwargs.</p></li>
+</ul>
+</div></blockquote>
+</p></li>
+<li><p><strong>on_body</strong> – <p>Optional callback invoked 0+ times as the response body received from S3 server.
+If simply writing to a file, use <cite>recv_filepath</cite> instead of <cite>on_body</cite> for better performance.
+The function should take the following arguments and return nothing:</p>
+<blockquote>
+<div><ul>
+<li><p><cite>chunk</cite> (buffer): Response body data (not necessarily
+a whole “chunk” of chunked encoding).</p></li>
+<li><p><cite>offset</cite> (int): The offset of the chunk started in the whole body.</p></li>
+<li><p><cite>**kwargs</cite> (dict): Forward-compatibility kwargs.</p></li>
+</ul>
+</div></blockquote>
+</p></li>
+<li><p><strong>on_done</strong> – <p>Optional callback invoked when the request has finished the job.
+The function should take the following arguments and return nothing:</p>
+<blockquote>
+<div><ul>
+<li><p><cite>error</cite> (Optional[Exception]): None if the request was
+successfully sent and valid response received, or an Exception
+if it failed.</p></li>
+<li><p><cite>error_headers</cite> (Optional[List[Tuple[str, str]]]): If request
+failed because server side sent an unsuccessful response, the headers
+of the response is provided here. Else None will be returned.</p></li>
+<li><p><cite>error_body</cite> (Optional[bytes]): If request failed because server
+side sent an unsuccessful response, the body of the response is
+provided here. Else None will be returned.</p></li>
+<li><p><cite>error_operation_name</cite> (Optional[str]): If request failed
+because server side sent and unsuccessful response, this
+is the name of the S3 operation it was responding to.
+For example, if a <a class="reference internal" href="#awscrt.s3.S3RequestType.PUT_OBJECT" title="awscrt.s3.S3RequestType.PUT_OBJECT"><code class="xref py py-attr docutils literal notranslate"><span class="pre">PUT_OBJECT</span></code></a> fails
+this could be “PutObject”, “CreateMultipartUpload”, “UploadPart”,
+“CompleteMultipartUpload”, or others. For <a class="reference internal" href="#awscrt.s3.S3RequestType.DEFAULT" title="awscrt.s3.S3RequestType.DEFAULT"><code class="xref py py-attr docutils literal notranslate"><span class="pre">DEFAULT</span></code></a>,
+this is the <cite>operation_name</cite> passed to <a class="reference internal" href="#awscrt.s3.S3Client.make_request" title="awscrt.s3.S3Client.make_request"><code class="xref py py-meth docutils literal notranslate"><span class="pre">S3Client.make_request()</span></code></a>.
+This will be None if the request failed for another reason,
+or the S3 operation name is unknown.</p></li>
+<li><p><cite>status_code</cite> (Optional[int]): HTTP response status code (if available).
+If request failed because server side sent an unsuccessful response,
+this is its status code. If the operation was successful,
+this is the final response’s status code. If the operation
+failed for another reason, None is returned.</p></li>
+<li><dl class="simple">
+<dt><cite>did_validate_checksum</cite> (bool):</dt><dd><p>Was the server side checksum compared against a calculated checksum of the response body.
+This may be false even if <a class="reference internal" href="#awscrt.s3.S3ChecksumConfig.validate_response" title="awscrt.s3.S3ChecksumConfig.validate_response"><code class="xref py py-attr docutils literal notranslate"><span class="pre">S3ChecksumConfig.validate_response</span></code></a> was set because
+the object was uploaded without a checksum, or downloaded differently from how it’s uploaded.</p>
+</dd>
+</dl>
+</li>
+<li><p><cite>checksum_validation_algorithm</cite> (Optional[S3ChecksumAlgorithm]): The checksum algorithm used to validate the response.</p></li>
+<li><p><cite>**kwargs</cite> (dict): Forward-compatibility kwargs.</p></li>
+</ul>
+</div></blockquote>
+</p></li>
+<li><p><strong>on_progress</strong> – <p>Optional callback invoked when part of the transfer is done to report the progress.
+The function should take the following arguments and return nothing:</p>
+<blockquote>
+<div><ul>
+<li><p><cite>progress</cite> (int): Number of bytes of data that just get transferred</p></li>
+<li><p><cite>**kwargs</cite> (dict): Forward-compatibility kwargs.</p></li>
+</ul>
+</div></blockquote>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>S3Request</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.s3.S3Request">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.s3.</span></span><span class="sig-name descname"><span class="pre">S3Request</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">client</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">request</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">operation_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">recv_filepath</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">send_filepath</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">signing_config</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">credential_provider</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">checksum_config</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">part_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">multipart_upload_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fio_options</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_active_connections_override</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_headers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_body</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_done</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.s3.S3Request" title="Link to this definition">¶</a></dt>
+<dd><p>S3 request
+Create a new S3Request with <a class="reference internal" href="#awscrt.s3.S3Client.make_request" title="awscrt.s3.S3Client.make_request"><code class="xref py py-meth docutils literal notranslate"><span class="pre">S3Client.make_request()</span></code></a></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.s3.S3Request.finished_future">
+<span class="sig-name descname"><span class="pre">finished_future</span></span><a class="headerlink" href="#awscrt.s3.S3Request.finished_future" title="Link to this definition">¶</a></dt>
+<dd><p>Future that will
+resolve when the s3 request has finished successfully.
+If the error happens, the Future will contain an exception
+indicating why it failed. Note: Future will set before on_done invoked</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Future" title="(in Python v3.14)">concurrent.futures.Future</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.s3.S3Request.shutdown_event">
+<span class="sig-name descname"><span class="pre">shutdown_event</span></span><a class="headerlink" href="#awscrt.s3.S3Request.shutdown_event" title="Link to this definition">¶</a></dt>
+<dd><p>Signals when underlying threads and
+structures have all finished shutting down. Shutdown begins when the
+S3Request object is destroyed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/threading.html#threading.Event" title="(in Python v3.14)">threading.Event</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="awscrt.s3.S3ResponseError">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.s3.</span></span><span class="sig-name descname"><span class="pre">S3ResponseError</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">code</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">message</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">status_code</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.14)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.14)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">headers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.14)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.14)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">body</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">operation_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.s3.S3ResponseError" title="Link to this definition">¶</a></dt>
+<dd><p>An error response from S3.</p>
+<p>Subclasses <a class="reference internal" href="exceptions.html#awscrt.exceptions.AwsCrtError" title="awscrt.exceptions.AwsCrtError"><code class="xref py py-class docutils literal notranslate"><span class="pre">awscrt.exceptions.AwsCrtError</span></code></a>.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.s3.S3ResponseError.status_code">
+<span class="sig-name descname"><span class="pre">status_code</span></span><a class="headerlink" href="#awscrt.s3.S3ResponseError.status_code" title="Link to this definition">¶</a></dt>
+<dd><p>HTTP response status code.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)">int</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.s3.S3ResponseError.headers">
+<span class="sig-name descname"><span class="pre">headers</span></span><a class="headerlink" href="#awscrt.s3.S3ResponseError.headers" title="Link to this definition">¶</a></dt>
+<dd><p>Headers from HTTP response.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)">list</a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)">tuple</a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a>, <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a>]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.s3.S3ResponseError.body">
+<span class="sig-name descname"><span class="pre">body</span></span><a class="headerlink" href="#awscrt.s3.S3ResponseError.body" title="Link to this definition">¶</a></dt>
+<dd><p>Body of HTTP response (if any).
+This is usually XML. It may be None in the case of a HEAD response.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Optional[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)">bytes</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.s3.S3ResponseError.operation_name">
+<span class="sig-name descname"><span class="pre">operation_name</span></span><a class="headerlink" href="#awscrt.s3.S3ResponseError.operation_name" title="Link to this definition">¶</a></dt>
+<dd><p>Name of the S3 operation that failed.
+For example, if a <a class="reference internal" href="#awscrt.s3.S3RequestType.PUT_OBJECT" title="awscrt.s3.S3RequestType.PUT_OBJECT"><code class="xref py py-attr docutils literal notranslate"><span class="pre">PUT_OBJECT</span></code></a> fails
+this could be “PutObject”, “CreateMultipartUpload”, “UploadPart”,
+“CompleteMultipartUpload”, or others. For <a class="reference internal" href="#awscrt.s3.S3RequestType.DEFAULT" title="awscrt.s3.S3RequestType.DEFAULT"><code class="xref py py-attr docutils literal notranslate"><span class="pre">DEFAULT</span></code></a>,
+this is the <cite>operation_name</cite> passed to <a class="reference internal" href="#awscrt.s3.S3Client.make_request" title="awscrt.s3.S3Client.make_request"><code class="xref py py-meth docutils literal notranslate"><span class="pre">S3Client.make_request()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.s3.S3ResponseError.code">
+<span class="sig-name descname"><span class="pre">code</span></span><a class="headerlink" href="#awscrt.s3.S3ResponseError.code" title="Link to this definition">¶</a></dt>
+<dd><p>CRT error code.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)">int</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.s3.S3ResponseError.name">
+<span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#awscrt.s3.S3ResponseError.name" title="Link to this definition">¶</a></dt>
+<dd><p>CRT error name.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.s3.S3ResponseError.message">
+<span class="sig-name descname"><span class="pre">message</span></span><a class="headerlink" href="#awscrt.s3.S3ResponseError.message" title="Link to this definition">¶</a></dt>
+<dd><p>CRT error message.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="awscrt.s3.create_default_s3_signing_config">
+<span class="sig-prename descclassname"><span class="pre">awscrt.s3.</span></span><span class="sig-name descname"><span class="pre">create_default_s3_signing_config</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">credential_provider</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="auth.html#awscrt.auth.AwsCredentialsProvider" title="awscrt.auth.AwsCredentialsProvider"><span class="pre">AwsCredentialsProvider</span></a></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.s3.create_default_s3_signing_config" title="Link to this definition">¶</a></dt>
+<dd><p>Create a default <cite>AwsSigningConfig</cite> for S3 service.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.s3.region">
+<span class="sig-prename descclassname"><span class="pre">awscrt.s3.</span></span><span class="sig-name descname"><span class="pre">region</span></span><a class="headerlink" href="#awscrt.s3.region" title="Link to this definition">¶</a></dt>
+<dd><p>The region to sign against.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.s3.credential_provider">
+<span class="sig-prename descclassname"><span class="pre">awscrt.s3.</span></span><span class="sig-name descname"><span class="pre">credential_provider</span></span><a class="headerlink" href="#awscrt.s3.credential_provider" title="Link to this definition">¶</a></dt>
+<dd><p>Credentials provider
+to fetch signing credentials with.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="auth.html#awscrt.auth.AwsCredentialsProvider" title="awscrt.auth.AwsCredentialsProvider">AwsCredentialsProvider</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">`**kwargs`</span></span></dt>
+<dd><p>Forward compatibility kwargs.</p>
+</dd></dl>
+
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>AwsSigningConfig</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="awscrt.s3.get_ec2_instance_type">
+<span class="sig-prename descclassname"><span class="pre">awscrt.s3.</span></span><span class="sig-name descname"><span class="pre">get_ec2_instance_type</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.s3.get_ec2_instance_type" title="Link to this definition">¶</a></dt>
+<dd><p>First this function will check it’s running on EC2 via. attempting to read DMI info to avoid making IMDS calls.</p>
+<p>If the function detects it’s on EC2, and it was able to detect the instance type without a call to IMDS
+it will return it.</p>
+<p>Finally, it will call IMDS and return the instance type from there.
+Note that in the case of the IMDS call, a new client stack is spun up using 1 background thread. The call is made
+synchronously with a 1 second timeout: It’s not cheap. To make this easier, the underlying result is cached
+internally and will be freed when this module is unloaded is called.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A string indicating the instance type or None if it could not be determined.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="awscrt.s3.is_optimized_for_system">
+<span class="sig-prename descclassname"><span class="pre">awscrt.s3.</span></span><span class="sig-name descname"><span class="pre">is_optimized_for_system</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.s3.is_optimized_for_system" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>true if the current build of this module has an optimized configuration
+for the current system.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="awscrt.s3.get_optimized_platforms">
+<span class="sig-prename descclassname"><span class="pre">awscrt.s3.</span></span><span class="sig-name descname"><span class="pre">get_optimized_platforms</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.s3.get_optimized_platforms" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A list[str] of platform identifiers, such as EC2 instance types, for which S3 client is pre-optimized
+and have a recommended throughput_target_gbps. You can use <cite>get_recommended_throughput_target_gbps()</cite>
+to obtain the recommended throughput_target_gbps for those platforms.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="awscrt.s3.get_recommended_throughput_target_gbps">
+<span class="sig-prename descclassname"><span class="pre">awscrt.s3.</span></span><span class="sig-name descname"><span class="pre">get_recommended_throughput_target_gbps</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#awscrt.s3.get_recommended_throughput_target_gbps" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Recommended throughput, in gigabits per second, based on detected system configuration.
+If the best throughput configuration is unknown, returns None.
+Use this as the S3Client’s <cite>throughput_target_gbps</cite>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div>
+    <h3><a href="../index.html">Table of Contents</a></h3>
+    <ul>
+<li><a class="reference internal" href="#">awscrt.s3</a><ul>
+<li><a class="reference internal" href="#awscrt.s3.CrossProcessLock"><code class="docutils literal notranslate"><span class="pre">CrossProcessLock</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.s3.S3RequestType"><code class="docutils literal notranslate"><span class="pre">S3RequestType</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.s3.S3RequestType.DEFAULT"><code class="docutils literal notranslate"><span class="pre">DEFAULT</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.s3.S3RequestType.GET_OBJECT"><code class="docutils literal notranslate"><span class="pre">GET_OBJECT</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.s3.S3RequestType.PUT_OBJECT"><code class="docutils literal notranslate"><span class="pre">PUT_OBJECT</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#awscrt.s3.S3RequestTlsMode"><code class="docutils literal notranslate"><span class="pre">S3RequestTlsMode</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.s3.S3RequestTlsMode.ENABLED"><code class="docutils literal notranslate"><span class="pre">ENABLED</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.s3.S3RequestTlsMode.DISABLED"><code class="docutils literal notranslate"><span class="pre">DISABLED</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#awscrt.s3.S3ChecksumAlgorithm"><code class="docutils literal notranslate"><span class="pre">S3ChecksumAlgorithm</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.s3.S3ChecksumAlgorithm.CRC32C"><code class="docutils literal notranslate"><span class="pre">CRC32C</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.s3.S3ChecksumAlgorithm.CRC32"><code class="docutils literal notranslate"><span class="pre">CRC32</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.s3.S3ChecksumAlgorithm.SHA1"><code class="docutils literal notranslate"><span class="pre">SHA1</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.s3.S3ChecksumAlgorithm.SHA256"><code class="docutils literal notranslate"><span class="pre">SHA256</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.s3.S3ChecksumAlgorithm.CRC64NVME"><code class="docutils literal notranslate"><span class="pre">CRC64NVME</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#awscrt.s3.S3ChecksumLocation"><code class="docutils literal notranslate"><span class="pre">S3ChecksumLocation</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.s3.S3ChecksumLocation.HEADER"><code class="docutils literal notranslate"><span class="pre">HEADER</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.s3.S3ChecksumLocation.TRAILER"><code class="docutils literal notranslate"><span class="pre">TRAILER</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#awscrt.s3.S3ChecksumConfig"><code class="docutils literal notranslate"><span class="pre">S3ChecksumConfig</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.s3.S3ChecksumConfig.algorithm"><code class="docutils literal notranslate"><span class="pre">algorithm</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.s3.S3ChecksumConfig.location"><code class="docutils literal notranslate"><span class="pre">location</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.s3.S3ChecksumConfig.validate_response"><code class="docutils literal notranslate"><span class="pre">validate_response</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#awscrt.s3.S3FileIoOptions"><code class="docutils literal notranslate"><span class="pre">S3FileIoOptions</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.s3.S3FileIoOptions.should_stream"><code class="docutils literal notranslate"><span class="pre">should_stream</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.s3.S3FileIoOptions.disk_throughput_gbps"><code class="docutils literal notranslate"><span class="pre">disk_throughput_gbps</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.s3.S3FileIoOptions.direct_io"><code class="docutils literal notranslate"><span class="pre">direct_io</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#awscrt.s3.S3Client"><code class="docutils literal notranslate"><span class="pre">S3Client</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.s3.S3Client.make_request"><code class="docutils literal notranslate"><span class="pre">make_request()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#awscrt.s3.S3Request"><code class="docutils literal notranslate"><span class="pre">S3Request</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.s3.S3Request.finished_future"><code class="docutils literal notranslate"><span class="pre">finished_future</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.s3.S3Request.shutdown_event"><code class="docutils literal notranslate"><span class="pre">shutdown_event</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#awscrt.s3.S3ResponseError"><code class="docutils literal notranslate"><span class="pre">S3ResponseError</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.s3.S3ResponseError.status_code"><code class="docutils literal notranslate"><span class="pre">status_code</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.s3.S3ResponseError.headers"><code class="docutils literal notranslate"><span class="pre">headers</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.s3.S3ResponseError.body"><code class="docutils literal notranslate"><span class="pre">body</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.s3.S3ResponseError.operation_name"><code class="docutils literal notranslate"><span class="pre">operation_name</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.s3.S3ResponseError.code"><code class="docutils literal notranslate"><span class="pre">code</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.s3.S3ResponseError.name"><code class="docutils literal notranslate"><span class="pre">name</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.s3.S3ResponseError.message"><code class="docutils literal notranslate"><span class="pre">message</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#awscrt.s3.create_default_s3_signing_config"><code class="docutils literal notranslate"><span class="pre">create_default_s3_signing_config()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.s3.region"><code class="docutils literal notranslate"><span class="pre">region</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.s3.credential_provider"><code class="docutils literal notranslate"><span class="pre">credential_provider</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.s3.get_ec2_instance_type"><code class="docutils literal notranslate"><span class="pre">get_ec2_instance_type()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.s3.is_optimized_for_system"><code class="docutils literal notranslate"><span class="pre">is_optimized_for_system()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.s3.get_optimized_platforms"><code class="docutils literal notranslate"><span class="pre">get_optimized_platforms()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.s3.get_recommended_throughput_target_gbps"><code class="docutils literal notranslate"><span class="pre">get_recommended_throughput_target_gbps()</span></code></a></li>
+</ul>
+</li>
+</ul>
+
+  </div>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="mqtt_request_response.html"
+                          title="previous chapter">awscrt.mqtt_request_response</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="websocket.html"
+                          title="next chapter">awscrt.websocket</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/api/s3.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="websocket.html" title="awscrt.websocket"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="mqtt_request_response.html" title="awscrt.mqtt_request_response"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">awscrt  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">awscrt.s3</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2020, Amazon Web Services, Inc.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.2.6.
+    </div>
+  </body>
+</html>
