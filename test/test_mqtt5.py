@@ -367,7 +367,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         )
         client_options = mqtt5.ClientOptions(
             host_name=input_host_name,
-            port=input_port,
+            port=8883,
             connect_options=connect_options,
             session_behavior=mqtt5.ClientSessionBehaviorType.CLEAN,
             extended_validation_and_flow_control_options=mqtt5.ExtendedValidationAndFlowControlOptions.AWS_IOT_CORE_DEFAULTS,
