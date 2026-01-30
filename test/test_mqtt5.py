@@ -213,12 +213,10 @@ class Mqtt5ClientTest(NativeResourceTest):
     # ==============================================================
 
     def _test_direct_connect_minimum(self):
-        input_host_name = _get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_HOST")
-        input_port = int(_get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_PORT"))
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
 
         client_options = mqtt5.ClientOptions(
-            host_name=input_host_name,
-            port=input_port
+            host_name=input_host_name
         )
         callbacks = Mqtt5TestCallbacks()
         client = self._create_client(client_options=client_options, callbacks=callbacks)
@@ -336,8 +334,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         test_retry_wrapper(self._test_direct_connect_http_proxy_tls)
 
     def _test_direct_connect_maximum(self):
-        input_host_name = _get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_HOST")
-        input_port = int(_get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_PORT"))
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
 
         user_properties = []
         user_properties.append(mqtt5.UserProperty(name="name1", value="value1"))
@@ -592,7 +589,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         callbacks.future_stopped.result(TIMEOUT)
 
     def test_connect_with_invalid_port_for_websocket_connection(self):
-        input_host_name = _get_env_variable("AWS_TEST_MQTT5_WS_MQTT_HOST")
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         client_options = mqtt5.ClientOptions(
             host_name=input_host_name,
             port=1883
@@ -906,15 +903,13 @@ class Mqtt5ClientTest(NativeResourceTest):
     # ==============================================================
 
     def _test_negotiated_settings_minimal_settings(self):
-        input_host_name = _get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_HOST")
-        input_port = int(_get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_PORT"))
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
 
         connect_options = mqtt5.ConnectPacket(
             session_expiry_interval_sec=600000
         )
         client_options = mqtt5.ClientOptions(
             host_name=input_host_name,
-            port=input_port,
             connect_options=connect_options
         )
         callbacks = Mqtt5TestCallbacks()
@@ -932,8 +927,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         test_retry_wrapper(self._test_negotiated_settings_minimal_settings)
 
     def _test_negotiated_settings_maximum_settings(self):
-        input_host_name = _get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_HOST")
-        input_port = int(_get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_PORT"))
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
 
         client_id = create_client_id()
         connect_options = mqtt5.ConnectPacket(
@@ -944,7 +938,6 @@ class Mqtt5ClientTest(NativeResourceTest):
 
         client_options = mqtt5.ClientOptions(
             host_name=input_host_name,
-            port=input_port,
             connect_options=connect_options
         )
         callbacks = Mqtt5TestCallbacks()
@@ -976,8 +969,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         test_retry_wrapper(self._test_negotiated_settings_maximum_settings)
 
     def _test_negotiated_settings_server_limit(self):
-        input_host_name = _get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_HOST")
-        input_port = int(_get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_PORT"))
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
 
         uint32_max = 4294967295
         uint16_max = 65535
@@ -991,7 +983,6 @@ class Mqtt5ClientTest(NativeResourceTest):
 
         client_options = mqtt5.ClientOptions(
             host_name=input_host_name,
-            port=input_port,
             connect_options=connect_options
         )
         callbacks = Mqtt5TestCallbacks()
@@ -1413,12 +1404,10 @@ class Mqtt5ClientTest(NativeResourceTest):
     # ==============================================================
 
     def _test_operation_error_null_publish(self):
-        input_host_name = _get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_HOST")
-        input_port = int(_get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_PORT"))
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
 
         client_options = mqtt5.ClientOptions(
-            host_name=input_host_name,
-            port=input_port
+            host_name=input_host_name
         )
         callbacks = Mqtt5TestCallbacks()
         client = self._create_client(client_options=client_options, callbacks=callbacks)
@@ -1435,12 +1424,10 @@ class Mqtt5ClientTest(NativeResourceTest):
         test_retry_wrapper(self._test_operation_error_null_publish)
 
     def _test_operation_error_null_subscribe(self):
-        input_host_name = _get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_HOST")
-        input_port = int(_get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_PORT"))
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
 
         client_options = mqtt5.ClientOptions(
-            host_name=input_host_name,
-            port=input_port
+            host_name=input_host_name
         )
         callbacks = Mqtt5TestCallbacks()
         client = self._create_client(client_options=client_options, callbacks=callbacks)
@@ -1457,12 +1444,10 @@ class Mqtt5ClientTest(NativeResourceTest):
         test_retry_wrapper(self._test_operation_error_null_subscribe)
 
     def _test_operation_error_null_unsubscribe(self):
-        input_host_name = _get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_HOST")
-        input_port = int(_get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_PORT"))
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
 
         client_options = mqtt5.ClientOptions(
-            host_name=input_host_name,
-            port=input_port
+            host_name=input_host_name
         )
         callbacks = Mqtt5TestCallbacks()
         client = self._create_client(client_options=client_options, callbacks=callbacks)
