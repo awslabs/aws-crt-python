@@ -629,6 +629,8 @@ class Mqtt5ClientTest(NativeResourceTest):
 
     def test_double_client_id_failure(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
+        input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
+        input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
         input_port = int(8883)
         shared_client_id = create_client_id()
 
@@ -638,6 +640,11 @@ class Mqtt5ClientTest(NativeResourceTest):
             port=input_port,
             connect_options=connect_options
         )
+        tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(
+            input_cert,
+            input_key
+        )
+        client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
         callbacks = Mqtt5TestCallbacks()
         client1 = self._create_client(client_options=client_options, callbacks=callbacks)
 
