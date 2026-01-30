@@ -993,8 +993,8 @@ class Mqtt5ClientTest(NativeResourceTest):
         self.assertIsNotNone(callbacks.negotiated_settings)
         self.assertNotEqual(callbacks.negotiated_settings.receive_maximum_from_server, uint16_max)
         self.assertNotEqual(callbacks.negotiated_settings.maximum_packet_size_to_server, uint32_max)
-        self.assertEqual(callbacks.negotiated_settings.server_keep_alive_sec, uint16_max)
-        self.assertEqual(callbacks.negotiated_settings.session_expiry_interval_sec, uint32_max)
+        self.assertEqual(callbacks.negotiated_settings.server_keep_alive_sec, 1200)
+        self.assertEqual(callbacks.negotiated_settings.session_expiry_interval_sec, 3600)
 
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
