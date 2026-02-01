@@ -376,7 +376,8 @@ class AIOHttpClientStreamUnified(HttpClientStreamBase):
         """Process body chunk on the correct event loop thread."""
         if self._chunk_futures:
             future = self._chunk_futures.popleft()
-            future.set_result(chunk)
+            if not future.done():
+                future.set_result(chunk)
         else:
             self._received_chunks.append(chunk)
 
@@ -390,7 +391,8 @@ class AIOHttpClientStreamUnified(HttpClientStreamBase):
         # Resolve all pending chunk futures with an empty string to indicate end of stream
         while self._chunk_futures:
             future = self._chunk_futures.popleft()
-            future.set_result("")
+            if not future.done():
+                future.set_result("")
 
     async def _set_request_body_generator(self, body_iterator: AsyncIterator[bytes]):
         ...
