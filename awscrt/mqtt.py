@@ -16,6 +16,7 @@ from awscrt.http import HttpProxyOptions, HttpRequest
 from awscrt.io import ClientBootstrap, ClientTlsContext, SocketOptions
 from dataclasses import dataclass
 from awscrt.mqtt5 import Client as Mqtt5Client
+from awscrt.common import deprecated
 
 
 class QoS(IntEnum):
@@ -168,8 +169,22 @@ class OnConnectionClosedData:
     pass
 
 
+@deprecated(
+    """
+    We strongly recommend using mqtt5.Client. There are no current plans to fully deprecate
+    the MQTT 3.1.1 client but it is highly recommended customers migrate to the MQTT5 client to access
+    a more robust feature set, clearer error handling, and lifetime management. More details can be found
+    in the GitHub Repo FAQ
+    """,
+    since="9.9.9")
 class Client(NativeResource):
-    """MQTT client.
+    """
+    Deprecated: We strongly recommend using mqtt5.Client. There are no current plans to fully deprecate
+    the MQTT 3.1.1 client but it is highly recommended customers migrate to the MQTT5 client to access
+    a more robust feature set, clearer error handling, and lifetime management. More details can be found
+    in the GitHub Repo FAQ
+
+    MQTT client.
 
     Args:
         bootstrap (Optional [ClientBootstrap]): Client bootstrap to use when initiating new socket connections.
@@ -208,8 +223,22 @@ class OperationStatisticsData:
     unacked_operation_size: int = 0
 
 
+@deprecated(
+    """
+    We strongly recommend using mqtt5.Client. There are no current plans to fully deprecate
+    the MQTT 3.1.1 client but it is highly recommended customers migrate to the MQTT5 client to access
+    a more robust feature set, clearer error handling, and lifetime management. More details can be found
+    in the GitHub Repo FAQ
+    """,
+    since="9.9.9")
 class Connection(NativeResource):
-    """MQTT client connection.
+    """
+    Deprecated: We strongly recommend using mqtt5.Client. There are no current plans to fully deprecate
+    the MQTT 3.1.1 client but it is highly recommended customers migrate to the MQTT5 client to access
+    a more robust feature set, clearer error handling, and lifetime management. More details can be found
+    in the GitHub Repo FAQ
+
+    MQTT client connection.
 
     Args:
         client (Client): MQTT client to spawn connection from.
