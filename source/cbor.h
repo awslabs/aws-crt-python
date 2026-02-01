@@ -29,6 +29,7 @@ PyObject *aws_py_cbor_encoder_write_simple_types(PyObject *self, PyObject *args)
 PyObject *aws_py_cbor_encoder_write_py_list(PyObject *self, PyObject *args);
 PyObject *aws_py_cbor_encoder_write_py_dict(PyObject *self, PyObject *args);
 PyObject *aws_py_cbor_encoder_write_data_item(PyObject *self, PyObject *args);
+PyObject *aws_py_cbor_encoder_write_data_item_shaped(PyObject *self, PyObject *args);
 
 /*******************************************************************************
  * DECODE

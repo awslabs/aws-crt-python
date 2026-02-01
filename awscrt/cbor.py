@@ -5,7 +5,7 @@ import _awscrt
 
 from awscrt import NativeResource
 from enum import IntEnum
-from typing import Callable, Any, Union
+from typing import Callable, Any, Union, Dict
 
 
 class AwsCborType(IntEnum):
@@ -51,6 +51,105 @@ class AwsCborType(IntEnum):
     IndefStr = 14
     IndefArray = 15
     IndefMap = 16
+
+
+class ShapeBase:
+    """
+    Base class for shape objects used by CRT CBOR encoding.
+
+    This class defines the interface that shape implementations should follow.
+    Libraries can extend this class directly to provide shape information
+    to the CBOR encoder without requiring intermediate conversions.
+
+    Subclasses must implement the type_name property and can override other
+    properties as needed based on their shape type.
+    """
+
+    @property
+    def type_name(self) -> str:
+        """
+        Return the shape type name.
+        TODO: maybe return the `AwsCborType` instead?
+
+        Returns:
+            str: One of: 'structure', 'list', 'map', 'string', 'integer', 'long',
+                 'float', 'double', 'boolean', 'blob', 'timestamp'
+
+        Note:
+            Subclasses must implement this property.
+        """
+        raise NotImplementedError("Subclasses must implement type_name property")
+
+    @property
+    def members(self) -> Dict[str, 'ShapeBase']:
+        """
+        For structure types, return dict of member name -> ShapeBase.
+
+        Returns:
+            Dict[str, ShapeBase]: Dictionary mapping member names to their shapes
+
+        Raises:
+            AttributeError: If called on non-structure type
+        """
+        raise AttributeError(f"Shape type {self.type_name} has no members")
+
+    @property
+    def member(self) -> 'ShapeBase':
+        """
+        For list types, return the ShapeBase of list elements.
+
+        Returns:
+            ShapeBase: Shape of list elements
+
+        Raises:
+            AttributeError: If called on non-list type
+        """
+        raise AttributeError(f"Shape type {self.type_name} has no member")
+
+    @property
+    def key(self) -> 'ShapeBase':
+        """
+        For map types, return the ShapeBase of map keys.
+
+        Returns:
+            ShapeBase: Shape of map keys
+
+        Raises:
+            AttributeError: If called on non-map type
+        """
+        raise AttributeError(f"Shape type {self.type_name} has no key")
+
+    @property
+    def value(self) -> 'ShapeBase':
+        """
+        For map types, return the ShapeBase of map values.
+
+        Returns:
+            ShapeBase: Shape of map values
+
+        Raises:
+            AttributeError: If called on non-map type
+        """
+        raise AttributeError(f"Shape type {self.type_name} has no value")
+
+    def get_serialization_name(self, member_name: str) -> str:
+        """
+        Get the serialization name for a structure member.
+
+        For structure types, returns the name to use in CBOR encoding.
+        This allows for custom field name mappings (e.g., 'user_id' -> 'UserId').
+
+        Args:
+            member_name: The member name as it appears in the structure
+
+        Returns:
+            str: The name to use in CBOR encoding (may be same as member_name)
+
+        Raises:
+            AttributeError: If called on non-structure type
+            ValueError: If member_name is not found in the structure
+        """
+        raise AttributeError(f"Shape type {self.type_name} has no serialization_name")
 
 
 class AwsCborEncoder(NativeResource):
@@ -282,6 +381,61 @@ class AwsCborEncoder(NativeResource):
             data_item (Any): any type of data_item. If the type is not supported to be converted to cbor format, ValueError will be raised.
         """
         return _awscrt.cbor_encoder_write_data_item(self._binding, data_item)
+
+    def write_data_item_shaped(self,
+                               data_item: Any,
+                               shape: 'ShapeBase',
+                               timestamp_converter: Callable[[Any],
+                                                             float] = None):
+        """Generic API to write any type of data_item as cbor formatted, using shape information.
+
+        The shape parameter must be a CRTShape wrapper object - a lightweight wrapper around
+        botocore Shape objects that exposes only the properties needed by the CRT CBOR encoder.
+
+        Supported shape types:
+        - integer/long: Integer values
+        - float/double: Floating point values
+        - boolean: Boolean values
+        - blob: Byte strings
+        - string: Text strings
+        - list: Lists with typed members
+        - map: Maps with typed keys and values
+        - structure: Structures with named members (None values filtered)
+        - timestamp: Timestamps (with optional converter callback)
+
+        Args:
+            data_item (Any): The data to encode
+            shape (CRTShape): A CRTShape wrapper object that wraps a botocore Shape
+            timestamp_converter (Callable[[Any], float], optional): Optional callback to convert
+                timestamp values to epoch seconds (float). If not provided, assumes data_item
+                is already a numeric timestamp for timestamp shapes.
+
+        Example:
+            ```python
+            from awscrt.cbor_shape import CRTShape
+
+            encoder = AwsCborEncoder()
+
+            # Wrap the botocore shape
+            crt_shape = CRTShape(botocore_shape)
+
+            # Encode data with shape information
+            data = {"id": 123, "name": "Alice"}
+
+            def timestamp_converter(dt):
+                return dt.timestamp()
+
+            encoder.write_data_item_shaped(data, crt_shape, timestamp_converter)
+            cbor_bytes = encoder.get_encoded_data()
+            ```
+
+        For complete specification, see CRT_SHAPE_WRAPPER_APPROACH.md
+
+        Note:
+            The CRTShape wrapper provides lazy initialization and caching for optimal performance.
+            Shape objects are typically cached by the serializer for reuse across multiple requests.
+        """
+        return _awscrt.cbor_encoder_write_data_item_shaped(self._binding, data_item, shape, timestamp_converter)
 
 
 class AwsCborDecoder(NativeResource):
@@ -568,6 +722,6 @@ class AwsCborDecoder(NativeResource):
         - `AwsCborType.ArrayStart` or `AwsCborType.IndefArray` and all the followed data items in the array -> list
         - `AwsCborType.MapStart` or `AwsCborType.IndefMap` and all the followed data items in the map -> dict
         - `AwsCborType.Tag`: For tag with id 1, as the epoch time, it invokes the _on_epoch_time for python to convert to expected type.
-                             For the reset tag, exception will be raised.
+                             For the other tags, exception will be raised.
         """
         return _awscrt.cbor_decoder_pop_next_data_item(self._binding)
