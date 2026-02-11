@@ -131,6 +131,7 @@ PyObject *aws_py_xxhash64_compute(PyObject *self, PyObject *args) {
     aws_byte_buf_init(&buf, allocator, 8);
 
     if (aws_xxhash64_compute(seed, input, &buf)) {
+        aws_byte_buf_clean_up_secure(&buf);
         return PyErr_AwsLastError();
     }
 
@@ -158,6 +159,7 @@ PyObject *aws_py_xxhash3_64_compute(PyObject *self, PyObject *args) {
     aws_byte_buf_init(&buf, allocator, 8);
 
     if (aws_xxhash3_64_compute(seed, input, &buf)) {
+        aws_byte_buf_clean_up_secure(&buf);
         return PyErr_AwsLastError();
     }
 
@@ -185,6 +187,7 @@ PyObject *aws_py_xxhash3_128_compute(PyObject *self, PyObject *args) {
     aws_byte_buf_init(&buf, allocator, 16);
 
     if (aws_xxhash3_128_compute(seed, input, &buf)) {
+        aws_byte_buf_clean_up_secure(&buf);
         return PyErr_AwsLastError();
     }
 
