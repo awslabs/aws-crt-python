@@ -116,7 +116,7 @@ PyObject *aws_py_xxhash64_compute(PyObject *self, PyObject *args) {
     (void)self;
     struct aws_byte_cursor input;
     PyObject *py_seed;
-    if (!PyArg_ParseTuple(args, "y#0", &input.ptr, &input.len, py_seed)) {
+    if (!PyArg_ParseTuple(args, "y#0", &input.ptr, &input.len, &py_seed)) {
         return NULL;
     }
 
@@ -143,7 +143,7 @@ PyObject *aws_py_xxhash3_64_compute(PyObject *self, PyObject *args) {
     (void)self;
     struct aws_byte_cursor input;
     PyObject *py_seed;
-    if (!PyArg_ParseTuple(args, "y#0", &input.ptr, &input.len, py_seed)) {
+    if (!PyArg_ParseTuple(args, "y#0", &input.ptr, &input.len, &py_seed)) {
         return NULL;
     }
 
@@ -170,7 +170,7 @@ PyObject *aws_py_xxhash3_128_compute(PyObject *self, PyObject *args) {
     (void)self;
     struct aws_byte_cursor input;
     PyObject *py_seed;
-    if (!PyArg_ParseTuple(args, "y#0", &input.ptr, &input.len, py_seed)) {
+    if (!PyArg_ParseTuple(args, "y#0", &input.ptr, &input.len, &py_seed)) {
         return NULL;
     }
 
@@ -197,7 +197,7 @@ PyObject *aws_py_xxhash_update(PyObject *self, PyObject *args) {
     (void)self;
     struct aws_byte_cursor input;
     PyObject *xxhash_capsule = NULL;
-    if (!PyArg_ParseTuple(args, "y#0", &input.ptr, &input.len, xxhash_capsule)) {
+    if (!PyArg_ParseTuple(args, "y#0", &input.ptr, &input.len, &xxhash_capsule)) {
         return NULL;
     }
 
@@ -214,7 +214,7 @@ PyObject *aws_py_xxhash_update(PyObject *self, PyObject *args) {
 PyObject *aws_py_xxhash_finalize(PyObject *self, PyObject *args) {
     (void)self;
     PyObject *xxhash_capsule = NULL;
-    if (!PyArg_ParseTuple(args, "0", xxhash_capsule)) {
+    if (!PyArg_ParseTuple(args, "0", &xxhash_capsule)) {
         return NULL;
     }
 
