@@ -176,7 +176,7 @@ PyObject *aws_py_xxhash3_128_compute(PyObject *self, PyObject *args) {
 
     struct aws_allocator *allocator = aws_py_get_allocator();
     struct aws_byte_buf buf;
-    aws_byte_buf_init(&buf, allocator, 8);
+    aws_byte_buf_init(&buf, allocator, 16);
 
     if (aws_xxhash3_128_compute(seed, input, &buf)) {
         return PyErr_AwsLastError();
