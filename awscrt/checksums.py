@@ -111,3 +111,63 @@ def combine_crc64nvme(crc64nvme_result1: int, crc64nvme_result2: int, data_lengt
         The combined CRC64-NVME checksum as if computed over the concatenated data
     """
     return _awscrt.checksums_crc64nvme_combine(crc64nvme_result1, crc64nvme_result2, data_length2)
+
+class XXHash(NativeResource):
+    def __init__(self, binding):
+        super().__init__()
+        self._binding = binding
+
+    @staticmethod
+    def new_xxhash64(seed: int = 0) -> 'XXHash':
+        """
+        Generates a new instance of XXHash64 hash.
+        """
+        return XXHash(binding=_awscrt.xxhash64_new(seed))
+    
+    @staticmethod
+    def new_xxhash3_64(seed: int = 0) -> 'XXHash':
+        """
+        Generates a new instance of XXHash3_64 hash.
+        """
+        return XXHash(binding=_awscrt.xxhash3_64_new(seed))
+    
+    @staticmethod
+    def new_xxhash3_128(seed: int = 0) -> 'XXHash':
+        """
+        Generates a new instance of XXHash3_128 hash.
+        """
+        return XXHash(binding=_awscrt.xxhash3_128_new(seed))
+    
+    @staticmethod
+    def compute_xxhash64(input: Union[bytes, bytearray, memoryview], seed: int = 0) -> bytes:
+        """
+        One-shot compute of xxhash64
+        """
+        return _awscrt.xxhash64_compute(input, seed)
+    
+    @staticmethod
+    def compute_xxhash3_64(input: Union[bytes, bytearray, memoryview], seed: int = 0) -> bytes:
+        """
+        One-shot compute of xxhash3_64
+        """
+        return _awscrt.xxhash3_64_compute(input, seed)
+    
+    @staticmethod
+    def compute_xxhash3_128(input: Union[bytes, bytearray, memoryview], seed: int = 0) -> bytes:
+        """
+        One-shot compute of xxhash3_128
+        """
+        return _awscrt.xxhash3_128_compute(input, seed)
+    
+    def update(self, input: Union[bytes, bytearray, memoryview]):
+        """
+        Updates hash with the provided input.
+        """
+        _awscrt.xxhash_update(self._binding, input)
+    
+    def finalize(self) -> bytes:
+        """
+        Finalizes hash.
+        """
+        return _awscrt.xxhash_finalize(self._binding, input)
+
