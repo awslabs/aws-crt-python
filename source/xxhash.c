@@ -33,7 +33,7 @@ PyObject *aws_py_xxhash64_new(PyObject *self, PyObject *args) {
     PyObject *capsule = NULL;
     struct aws_allocator *allocator = aws_py_get_allocator();
 
-    struct aws_xxhash *hash = aws_xxhash3_128_new(allocator, seed);
+    struct aws_xxhash *hash = aws_xxhash64_new(allocator, seed);
 
     if (hash == NULL) {
         return PyErr_AwsLastError();
@@ -65,7 +65,7 @@ PyObject *aws_py_xxhash3_64_new(PyObject *self, PyObject *args) {
     PyObject *capsule = NULL;
     struct aws_allocator *allocator = aws_py_get_allocator();
 
-    struct aws_xxhash *hash = aws_xxhash3_128_new(allocator, seed);
+    struct aws_xxhash *hash = aws_xxhash3_64_new(allocator, seed);
 
     if (hash == NULL) {
         return PyErr_AwsLastError();
