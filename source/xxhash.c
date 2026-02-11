@@ -193,7 +193,7 @@ PyObject *aws_py_xxhash3_128_compute(PyObject *self, PyObject *args) {
     return ret;
 }
 
-PyObject * aws_py_xxhash_update(PyObject *self, PyObject *args) {
+PyObject *aws_py_xxhash_update(PyObject *self, PyObject *args) {
     (void)self;
     struct aws_byte_cursor input;
     PyObject *xxhash_capsule = NULL;

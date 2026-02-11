@@ -172,4 +172,4 @@ class XXHash(NativeResource):
         """
         Finalizes hash.
         """
-        return _awscrt.xxhash_finalize(self._binding, input)
+        return _awscrt.xxhash_finalize(self._binding)
