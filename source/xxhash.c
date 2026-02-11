@@ -204,7 +204,7 @@ PyObject *aws_py_xxhash_update(PyObject *self, PyObject *args) {
     }
 }
 
-PyObject *aws_py_xxhash3_finalize(PyObject *self, PyObject *args) {
+PyObject *aws_py_xxhash_finalize(PyObject *self, PyObject *args) {
     PyObject *xxhash_capsule = NULL;
     if (!PyArg_ParseTuple(args, "0", xxhash_capsule)) {
         return NULL;
