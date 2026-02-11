@@ -7,6 +7,7 @@ from awscrt import checksums
 import unittest
 import sys
 
+
 class TestChecksums(NativeResourceTest):
 
     def test_crc32_zeros_one_shot(self):
