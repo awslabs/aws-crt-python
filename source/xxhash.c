@@ -220,7 +220,7 @@ PyObject *aws_py_xxhash_finalize(PyObject *self, PyObject *args) {
     aws_byte_buf_init(&buf, allocator, 16);
 
     if (aws_xxhash_finalize(hash, &buf)) {
-        aws_byte_buf_clean_up_secure(buf);
+        aws_byte_buf_clean_up_secure(&buf);
         return PyErr_AwsLastError();
     }
 
