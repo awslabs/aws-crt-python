@@ -197,7 +197,7 @@ PyObject * aws_py_xxhash_update(PyObject *self, PyObject *args) {
     (void)self;
     struct aws_byte_cursor input;
     PyObject *xxhash_capsule = NULL;
-    if (!PyArg_ParseTuple(args, "Oy#", &input.ptr, &input.len, &xxhash_capsule)) {
+    if (!PyArg_ParseTuple(args, "Oy#", &xxhash_capsule, &input.ptr, &input.len)) {
         return NULL;
     }
 
