@@ -255,8 +255,8 @@ class TestChecksums(NativeResourceTest):
 
         out = XXHash.compute_xxhash3_128(data)
 
-        expected = bytes([0x73, 0x51, 0xf8, 0x98, 0x12, 0xf9, 0x73, 0x82, 
-            0xb9, 0x1d, 0x05, 0xb3, 0x1e, 0x04, 0xdd, 0x7f])
+        expected = bytes([0x73, 0x51, 0xf8, 0x98, 0x12, 0xf9, 0x73, 0x82,
+                          0xb9, 0x1d, 0x05, 0xb3, 0x1e, 0x04, 0xdd, 0x7f])
 
         self.assertEqual(out, expected)
 
@@ -264,6 +264,7 @@ class TestChecksums(NativeResourceTest):
         hash.update(data)
         out2 = hash.finalize()
         self.assertEqual(out2, expected)
+
 
 if __name__ == '__main__':
     unittest.main()
