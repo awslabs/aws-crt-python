@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0.
 
 import _awscrt
+from awscrt import NativeResource
+from typing import Union
 
 
 def crc32(input: bytes, previous_crc32: int = 0) -> int:
