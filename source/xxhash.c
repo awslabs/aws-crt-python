@@ -10,7 +10,7 @@
 const char *s_capsule_name_xxhash = "aws_xxhash";
 
 static void s_xxhash_destructor(PyObject *xxhash_capsule) {
-    struct xxhash *hash = PyCapsule_GetPointer(xxhash_capsule, s_capsule_name_xxhash);
+    struct aws_xxhash *hash = PyCapsule_GetPointer(xxhash_capsule, s_capsule_name_xxhash);
     assert(hash);
 
     aws_xxhash_destroy(hash);
@@ -32,7 +32,7 @@ PyObject *aws_py_xxhash64_new(PyObject *self, PyObject *args) {
     PyObject *capsule = NULL;
     struct aws_allocator *allocator = aws_py_get_allocator();
 
-    struct xxhash *hash = aws_xxhash3_128_new(allocator, seed);
+    struct aws_xxhash *hash = aws_xxhash3_128_new(allocator, seed);
 
     if (hash == NULL) {
         return PyErr_AwsLastError();
@@ -63,7 +63,7 @@ PyObject *aws_py_xxhash3_64_new(PyObject *self, PyObject *args) {
     PyObject *capsule = NULL;
     struct aws_allocator *allocator = aws_py_get_allocator();
 
-    struct xxhash *hash = aws_xxhash3_128_new(allocator, seed);
+    struct aws_xxhash *hash = aws_xxhash3_128_new(allocator, seed);
 
     if (hash == NULL) {
         return PyErr_AwsLastError();
@@ -94,7 +94,7 @@ PyObject *aws_py_xxhash3_128_new(PyObject *self, PyObject *args) {
     PyObject *capsule = NULL;
     struct aws_allocator *allocator = aws_py_get_allocator();
 
-    struct xxhash *hash = aws_xxhash3_128_new(allocator, seed);
+    struct aws_xxhash *hash = aws_xxhash3_128_new(allocator, seed);
 
     if (hash == NULL) {
         return PyErr_AwsLastError();
