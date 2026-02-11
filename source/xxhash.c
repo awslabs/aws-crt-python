@@ -210,7 +210,7 @@ PyObject * aws_py_xxhash_update(PyObject *self, PyObject *args) {
         PyErr_AwsLastError();
     }
 
-    return Py_RETURN_NONE;
+    Py_RETURN_NONE;
 }
 
 PyObject *aws_py_xxhash_finalize(PyObject *self, PyObject *args) {
