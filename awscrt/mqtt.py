@@ -331,9 +331,7 @@ class Connection(NativeResource):
         proxy_options (Optional[awscrt.http.HttpProxyOptions]):
             Optional proxy options for all connections.
 
-        enable_metrics (bool): If true, enable IoT SDK metrics in CONNECT packet username field, otherwise, disabled.
-            Default to True.  You may set it to false if you are not using AWS IoT services, and
-            using a custom authentication mechanism.
+        enable_metrics (bool): Enable IoT SDK metrics in MQTT CONNECT packet username field. Default to True.
         """
 
     def __init__(self,

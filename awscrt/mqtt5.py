@@ -20,7 +20,7 @@ from inspect import signature
 @dataclass
 class SdkMetrics:
     """
-    Configuration for IoT SDK metrics that are embedded in MQTT username field.
+    Configuration for IoT SDK metrics that are embedded in MQTT Connect Packet username field.
 
     Args:
         library_name (str): The SDK library name (e.g., "IoTDeviceSDK/Python")
@@ -1351,8 +1351,7 @@ class ClientOptions:
         on_lifecycle_event_connection_success_fn (Callable[[LifecycleConnectSuccessData],]): Callback for Lifecycle Event Connection Success.
         on_lifecycle_event_connection_failure_fn (Callable[[LifecycleConnectFailureData],]): Callback for Lifecycle Event Connection Failure.
         on_lifecycle_event_disconnection_fn (Callable[[LifecycleDisconnectData],]): Callback for Lifecycle Event Disconnection.
-        enable_metrics (bool): If true, enable IoT SDK metrics in CONNECT packet username field, otherwise, disabled. Default to True. You may set it to false if you are not using AWS IoT services, and using a custom authentication mechanism.
-
+        enable_metrics (bool): Enable IoT SDK metrics in MQTT CONNECT packet username field. Default to True.
     """
     host_name: str
     port: int = None
@@ -1809,8 +1808,6 @@ class Client(NativeResource):
                                                  will.correlation_data_bytes or will.correlation_data,
                                                  will.content_type,
                                                  will.user_properties,
-                                                 client_options.enable_metrics,
-                                                 self.metrics.library_name if self.metrics else None,
                                                  client_options.session_behavior,
                                                  client_options.extended_validation_and_flow_control_options,
                                                  client_options.offline_queue_behavior,
@@ -1823,6 +1820,8 @@ class Client(NativeResource):
                                                  client_options.ack_timeout_sec,
                                                  client_options.topic_aliasing_options,
                                                  websocket_is_none,
+                                                 client_options.enable_metrics,
+                                                 self.metrics.library_name if self.metrics else None,
                                                  core)
 
         # Store the options for adapter

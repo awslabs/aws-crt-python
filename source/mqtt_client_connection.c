@@ -808,10 +808,10 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
         }
     }
 
-    // If metrics is None, we do not set metrics at all.
+    /* Set metrics if provided */
     if (metrics_py != Py_None) {
         if (!s_set_metrics(py_connection->native, metrics_py)) {
-            goto done;
+            AWS_LOGF_DEBUG(AWS_LS_MQTT_CLIENT, "MQTT connection failed to set AWS IoT metrics.");
         }
     }
 

@@ -831,10 +831,6 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
     PyObject *will_delay_interval_sec_py;      /* optional uint32_t */
     PyObject *user_properties_py;              /* optional */
 
-    /* Metrics */
-    PyObject *is_metrics_enabled_py;             /* optional enable metrics */
-    struct aws_byte_cursor metrics_library_name; /* optional IoT SDK metrics username */
-
     /* Will */
     PyObject *is_will_none_py; /* optional PublishPacket */
     PyObject *will_qos_val_py;
@@ -863,10 +859,13 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
     /* Callbacks */
     PyObject *is_websocket_none_py;
     PyObject *client_core_py;
+    /* Metrics */
+    PyObject *is_metrics_enabled_py;             /* optional enable metrics */
+    struct aws_byte_cursor metrics_library_name; /* optional IoT SDK metrics username */
 
     if (!PyArg_ParseTuple(
             args,
-            "Os#IOOOOz#Oz#z#OOOOOOOOOz*Oz#OOOz#z*z#OOz#OOOOOOOOOOOOO",
+            "Os#IOOOOz#Oz#z#OOOOOOOOOz*Oz#OOOz#z*z#OOOOOOOOOOOOOOs#O",
             /* O */ &self_py,
             /* s */ &host_name.ptr,
             /* # */ &host_name.len,
@@ -908,11 +907,6 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
             /* # */ &will_content_type.len,
             /* O */ &will_user_properties_py,
 
-            /* Metrics */
-            /* O */ &is_metrics_enabled_py,
-            /* z */ &metrics_library_name.ptr,
-            /* # */ &metrics_library_name.len,
-
             /* O */ &session_behavior_py,
             /* O */ &extended_validation_and_flow_control_options_py,
             /* O */ &offline_queue_behavior_py,
@@ -926,6 +920,12 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
             /* O */ &topic_aliasing_options_py,
 
             /* O */ &is_websocket_none_py,
+
+            /* Metrics */
+            /* O */ &is_metrics_enabled_py,
+            /* z */ &metrics_library_name.ptr,
+            /* # */ &metrics_library_name.len,
+
             /* O */ &client_core_py)) {
         return NULL;
     }
