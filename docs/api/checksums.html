@@ -1,0 +1,308 @@
+
+
+<!doctype html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>awscrt.checksums &#8212; awscrt  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d75fae25" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=93be7416" />
+    
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/bizstyle.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="awscrt.common" href="common.html" />
+    <link rel="prev" title="awscrt.auth" href="auth.html" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <!--[if lt IE 9]>
+    <script src="_static/css3-mediaqueries.js"></script>
+    <![endif]-->
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="common.html" title="awscrt.common"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="auth.html" title="awscrt.auth"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">awscrt  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">awscrt.checksums</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="module-awscrt.checksums">
+<span id="awscrt-checksums"></span><h1>awscrt.checksums<a class="headerlink" href="#module-awscrt.checksums" title="Link to this heading">¶</a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="awscrt.checksums.crc32">
+<span class="sig-prename descclassname"><span class="pre">awscrt.checksums.</span></span><span class="sig-name descname"><span class="pre">crc32</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">previous_crc32</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></span><a class="headerlink" href="#awscrt.checksums.crc32" title="Link to this definition">¶</a></dt>
+<dd><p>Perform a CRC32 (Ethernet, gzip) computation.</p>
+<p>If continuing to update a running CRC, pass its value into <cite>previous_crc32</cite>.
+Returns an unsigned 32-bit integer.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="awscrt.checksums.crc32c">
+<span class="sig-prename descclassname"><span class="pre">awscrt.checksums.</span></span><span class="sig-name descname"><span class="pre">crc32c</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">previous_crc32c</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></span><a class="headerlink" href="#awscrt.checksums.crc32c" title="Link to this definition">¶</a></dt>
+<dd><p>Perform a Castagnoli CRC32c (iSCSI) computation.
+If continuing to update a running CRC, pass its value into <cite>previous_crc32c</cite>.
+Returns an unsigned 32-bit integer.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="awscrt.checksums.crc64nvme">
+<span class="sig-prename descclassname"><span class="pre">awscrt.checksums.</span></span><span class="sig-name descname"><span class="pre">crc64nvme</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">previous_crc64nvme</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></span><a class="headerlink" href="#awscrt.checksums.crc64nvme" title="Link to this definition">¶</a></dt>
+<dd><p>Perform a CRC64 NVME computation.
+If continuing to update a running CRC, pass its value into <cite>previous_crc64nvme</cite>.
+Returns an unsigned 64-bit integer.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="awscrt.checksums.combine_crc32">
+<span class="sig-prename descclassname"><span class="pre">awscrt.checksums.</span></span><span class="sig-name descname"><span class="pre">combine_crc32</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">crc32_result1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">crc32_result2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_length2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></span><a class="headerlink" href="#awscrt.checksums.combine_crc32" title="Link to this definition">¶</a></dt>
+<dd><p>Combine two CRC32 (Ethernet, gzip) checksums computed over separate data blocks.</p>
+<p>This is equivalent to computing the CRC32 of the concatenated data blocks without
+having to re-scan the data.</p>
+<dl class="simple">
+<dt>Given:</dt><dd><p>crc1 = CRC32(data_block_A)
+crc2 = CRC32(data_block_B)</p>
+</dd>
+<dt>This function computes:</dt><dd><p>result = CRC32(data_block_A || data_block_B)</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>crc32_result1</strong> – The CRC32 checksum of the first data block</p></li>
+<li><p><strong>crc32_result2</strong> – The CRC32 checksum of the second data block</p></li>
+<li><p><strong>data_length2</strong> – The length (in bytes) of the original data that produced crc32_result2.
+This is NOT the size of the checksum (which is always 4 bytes),
+but rather the size of the data block that was checksummed.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The combined CRC32 checksum as if computed over the concatenated data</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="awscrt.checksums.combine_crc32c">
+<span class="sig-prename descclassname"><span class="pre">awscrt.checksums.</span></span><span class="sig-name descname"><span class="pre">combine_crc32c</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">crc32c_result1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">crc32c_result2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_length2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></span><a class="headerlink" href="#awscrt.checksums.combine_crc32c" title="Link to this definition">¶</a></dt>
+<dd><p>Combine two CRC32C (Castagnoli, iSCSI) checksums computed over separate data blocks.</p>
+<p>This is equivalent to computing the CRC32C of the concatenated data blocks without
+having to re-scan the data.</p>
+<dl class="simple">
+<dt>Given:</dt><dd><p>crc1 = CRC32C(data_block_A)
+crc2 = CRC32C(data_block_B)</p>
+</dd>
+<dt>This function computes:</dt><dd><p>result = CRC32C(data_block_A || data_block_B)</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>crc32c_result1</strong> – The CRC32C checksum of the first data block</p></li>
+<li><p><strong>crc32c_result2</strong> – The CRC32C checksum of the second data block</p></li>
+<li><p><strong>data_length2</strong> – The length (in bytes) of the original data that produced crc32c_result2.
+This is NOT the size of the checksum (which is always 4 bytes),
+but rather the size of the data block that was checksummed.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The combined CRC32C checksum as if computed over the concatenated data</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="awscrt.checksums.combine_crc64nvme">
+<span class="sig-prename descclassname"><span class="pre">awscrt.checksums.</span></span><span class="sig-name descname"><span class="pre">combine_crc64nvme</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">crc64nvme_result1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">crc64nvme_result2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_length2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></span><a class="headerlink" href="#awscrt.checksums.combine_crc64nvme" title="Link to this definition">¶</a></dt>
+<dd><p>Combine two CRC64-NVME (CRC64-Rocksoft) checksums computed over separate data blocks.</p>
+<p>This is equivalent to computing the CRC64-NVME of the concatenated data blocks without
+having to re-scan the data.</p>
+<dl class="simple">
+<dt>Given:</dt><dd><p>crc1 = CRC64_NVME(data_block_A)
+crc2 = CRC64_NVME(data_block_B)</p>
+</dd>
+<dt>This function computes:</dt><dd><p>result = CRC64_NVME(data_block_A || data_block_B)</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>crc64nvme_result1</strong> – The CRC64-NVME checksum of the first data block</p></li>
+<li><p><strong>crc64nvme_result2</strong> – The CRC64-NVME checksum of the second data block</p></li>
+<li><p><strong>data_length2</strong> – The length (in bytes) of the original data that produced crc64nvme_result2.
+This is NOT the size of the checksum (which is always 8 bytes),
+but rather the size of the data block that was checksummed.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The combined CRC64-NVME checksum as if computed over the concatenated data</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.checksums.XXHash">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.checksums.</span></span><span class="sig-name descname"><span class="pre">XXHash</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">binding</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.checksums.XXHash" title="Link to this definition">¶</a></dt>
+<dd><dl class="py method">
+<dt class="sig sig-object py" id="awscrt.checksums.XXHash.new_xxhash64">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">new_xxhash64</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#awscrt.checksums.XXHash" title="awscrt.checksums.XXHash"><span class="pre">XXHash</span></a></span></span><a class="headerlink" href="#awscrt.checksums.XXHash.new_xxhash64" title="Link to this definition">¶</a></dt>
+<dd><p>Generates a new instance of XXHash64 hash.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.checksums.XXHash.new_xxhash3_64">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">new_xxhash3_64</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#awscrt.checksums.XXHash" title="awscrt.checksums.XXHash"><span class="pre">XXHash</span></a></span></span><a class="headerlink" href="#awscrt.checksums.XXHash.new_xxhash3_64" title="Link to this definition">¶</a></dt>
+<dd><p>Generates a new instance of XXHash3_64 hash.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.checksums.XXHash.new_xxhash3_128">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">new_xxhash3_128</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#awscrt.checksums.XXHash" title="awscrt.checksums.XXHash"><span class="pre">XXHash</span></a></span></span><a class="headerlink" href="#awscrt.checksums.XXHash.new_xxhash3_128" title="Link to this definition">¶</a></dt>
+<dd><p>Generates a new instance of XXHash3_128 hash.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.checksums.XXHash.compute_xxhash64">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">compute_xxhash64</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.14)"><span class="pre">bytearray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.14)"><span class="pre">memoryview</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></span><a class="headerlink" href="#awscrt.checksums.XXHash.compute_xxhash64" title="Link to this definition">¶</a></dt>
+<dd><p>One-shot compute of xxhash64</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.checksums.XXHash.compute_xxhash3_64">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">compute_xxhash3_64</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.14)"><span class="pre">bytearray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.14)"><span class="pre">memoryview</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></span><a class="headerlink" href="#awscrt.checksums.XXHash.compute_xxhash3_64" title="Link to this definition">¶</a></dt>
+<dd><p>One-shot compute of xxhash3_64</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.checksums.XXHash.compute_xxhash3_128">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">compute_xxhash3_128</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.14)"><span class="pre">bytearray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.14)"><span class="pre">memoryview</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></span><a class="headerlink" href="#awscrt.checksums.XXHash.compute_xxhash3_128" title="Link to this definition">¶</a></dt>
+<dd><p>One-shot compute of xxhash3_128</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.checksums.XXHash.update">
+<span class="sig-name descname"><span class="pre">update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.14)"><span class="pre">bytearray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.14)"><span class="pre">memoryview</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.checksums.XXHash.update" title="Link to this definition">¶</a></dt>
+<dd><p>Updates hash with the provided input.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.checksums.XXHash.finalize">
+<span class="sig-name descname"><span class="pre">finalize</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></span><a class="headerlink" href="#awscrt.checksums.XXHash.finalize" title="Link to this definition">¶</a></dt>
+<dd><p>Finalizes hash.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div>
+    <h3><a href="../index.html">Table of Contents</a></h3>
+    <ul>
+<li><a class="reference internal" href="#">awscrt.checksums</a><ul>
+<li><a class="reference internal" href="#awscrt.checksums.crc32"><code class="docutils literal notranslate"><span class="pre">crc32()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.checksums.crc32c"><code class="docutils literal notranslate"><span class="pre">crc32c()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.checksums.crc64nvme"><code class="docutils literal notranslate"><span class="pre">crc64nvme()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.checksums.combine_crc32"><code class="docutils literal notranslate"><span class="pre">combine_crc32()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.checksums.combine_crc32c"><code class="docutils literal notranslate"><span class="pre">combine_crc32c()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.checksums.combine_crc64nvme"><code class="docutils literal notranslate"><span class="pre">combine_crc64nvme()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.checksums.XXHash"><code class="docutils literal notranslate"><span class="pre">XXHash</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.checksums.XXHash.new_xxhash64"><code class="docutils literal notranslate"><span class="pre">new_xxhash64()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.checksums.XXHash.new_xxhash3_64"><code class="docutils literal notranslate"><span class="pre">new_xxhash3_64()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.checksums.XXHash.new_xxhash3_128"><code class="docutils literal notranslate"><span class="pre">new_xxhash3_128()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.checksums.XXHash.compute_xxhash64"><code class="docutils literal notranslate"><span class="pre">compute_xxhash64()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.checksums.XXHash.compute_xxhash3_64"><code class="docutils literal notranslate"><span class="pre">compute_xxhash3_64()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.checksums.XXHash.compute_xxhash3_128"><code class="docutils literal notranslate"><span class="pre">compute_xxhash3_128()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.checksums.XXHash.update"><code class="docutils literal notranslate"><span class="pre">update()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.checksums.XXHash.finalize"><code class="docutils literal notranslate"><span class="pre">finalize()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  </div>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="auth.html"
+                          title="previous chapter">awscrt.auth</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="common.html"
+                          title="next chapter">awscrt.common</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/api/checksums.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="common.html" title="awscrt.common"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="auth.html" title="awscrt.auth"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">awscrt  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">awscrt.checksums</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2020, Amazon Web Services, Inc.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.2.6.
+    </div>
+  </body>
+</html>
