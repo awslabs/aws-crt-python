@@ -863,6 +863,16 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(checksums_crc32c_combine, METH_VARARGS),
     AWS_PY_METHOD_DEF(checksums_crc64nvme_combine, METH_VARARGS),
 
+    /* XXHash Checksum primitives */
+    AWS_PY_METHOD_DEF(xxhash64_new, METH_VARARGS),
+    AWS_PY_METHOD_DEF(xxhash3_64_new, METH_VARARGS),
+    AWS_PY_METHOD_DEF(xxhash3_128_new, METH_VARARGS),
+    AWS_PY_METHOD_DEF(xxhash64_compute, METH_VARARGS),
+    AWS_PY_METHOD_DEF(xxhash3_64_compute, METH_VARARGS),
+    AWS_PY_METHOD_DEF(xxhash3_128_compute, METH_VARARGS),
+    AWS_PY_METHOD_DEF(xxhash_update, METH_VARARGS),
+    AWS_PY_METHOD_DEF(xxhash_finalize, METH_VARARGS),
+
     /* HTTP */
     AWS_PY_METHOD_DEF(http_connection_close, METH_VARARGS),
     AWS_PY_METHOD_DEF(http_connection_is_open, METH_VARARGS),
