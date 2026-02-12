@@ -210,7 +210,7 @@ PyObject *aws_py_xxhash_update(PyObject *self, PyObject *args) {
     }
 
     if (aws_xxhash_update(hash, input)) {
-        PyErr_AwsLastError();
+        return PyErr_AwsLastError();
     }
 
     Py_RETURN_NONE;
