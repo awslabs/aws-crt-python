@@ -13,4 +13,13 @@ PyObject *aws_py_checksums_crc32_combine(PyObject *self, PyObject *args);
 PyObject *aws_py_checksums_crc32c_combine(PyObject *self, PyObject *args);
 PyObject *aws_py_checksums_crc64nvme_combine(PyObject *self, PyObject *args);
 
+PyObject *aws_py_xxhash64_new(PyObject *self, PyObject *args);
+PyObject *aws_py_xxhash3_64_new(PyObject *self, PyObject *args);
+PyObject *aws_py_xxhash3_128_new(PyObject *self, PyObject *args);
+PyObject *aws_py_xxhash64_compute(PyObject *self, PyObject *args);
+PyObject *aws_py_xxhash3_64_compute(PyObject *self, PyObject *args);
+PyObject *aws_py_xxhash3_128_compute(PyObject *self, PyObject *args);
+PyObject *aws_py_xxhash_update(PyObject *self, PyObject *args);
+PyObject *aws_py_xxhash_finalize(PyObject *self, PyObject *args);
+
 #endif /* AWS_CRT_PYTHON_CHECKSUMS_H */

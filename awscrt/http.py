@@ -131,7 +131,13 @@ class HttpClientConnectionBase(HttpConnectionBase):
             expected_version: Optional[HttpVersion] = None,
             initial_settings: Optional[List[Http2Setting]] = None,
             on_remote_settings_changed: Optional[Callable[[List[Http2Setting]], None]] = None,
-            asyncio_connection=False) -> "concurrent.futures.Future":
+            asyncio_connection=False,
+            manual_window_management: bool = False,
+            initial_window_size: Optional[int] = None,
+            read_buffer_capacity: Optional[int] = None,
+            conn_manual_window_management: bool = False,
+            conn_window_size_threshold: Optional[int] = None,
+            stream_window_size_threshold: Optional[int] = None) -> "concurrent.futures.Future":
         """
         Initialize the generic part of the HttpClientConnection class.
         """
@@ -141,6 +147,7 @@ class HttpClientConnectionBase(HttpConnectionBase):
         assert isinstance(tls_connection_options, TlsConnectionOptions) or tls_connection_options is None
         assert isinstance(socket_options, SocketOptions) or socket_options is None
         assert isinstance(proxy_options, HttpProxyOptions) or proxy_options is None
+        assert not manual_window_management or initial_window_size is not None
 
         future = Future()
 
@@ -170,7 +177,13 @@ class HttpClientConnectionBase(HttpConnectionBase):
                 proxy_options,
                 initial_settings,
                 on_remote_settings_changed,
-                connection_core)
+                connection_core,
+                manual_window_management,
+                initial_window_size,
+                read_buffer_capacity,
+                conn_manual_window_management,
+                conn_window_size_threshold,
+                stream_window_size_threshold)
 
         except Exception as e:
             future.set_exception(e)
@@ -203,7 +216,10 @@ class HttpClientConnection(HttpClientConnectionBase):
             bootstrap: Optional[ClientBootstrap] = None,
             socket_options: Optional[SocketOptions] = None,
             tls_connection_options: Optional[TlsConnectionOptions] = None,
-            proxy_options: Optional['HttpProxyOptions'] = None) -> "concurrent.futures.Future":
+            proxy_options: Optional['HttpProxyOptions'] = None,
+            manual_window_management: bool = False,
+            initial_window_size: Optional[int] = None,
+            read_buffer_capacity: Optional[int] = None) -> "concurrent.futures.Future":
         """
         Asynchronously establish a new HttpClientConnection.
 
@@ -225,6 +241,27 @@ class HttpClientConnection(HttpClientConnectionBase):
             proxy_options (Optional[HttpProxyOptions]): Optional proxy options.
                 If None is provided then a proxy is not used.
 
+            manual_window_management (bool): Set to True to manually manage the flow-control window
+                of each stream. If False, the connection maintains flow-control windows such that
+                no back-pressure is applied and data arrives as fast as possible. If True, the
+                flow-control window of each stream shrinks as body data is received (headers,
+                padding, and other metadata do not affect the window). `initial_window_size`
+                determines the starting size of each stream's window. When a stream's window
+                reaches 0, no further data is received until `update_window()` is called.
+                Default is False.
+
+            initial_window_size (Optional[int]): The starting size of each stream's flow-control
+                window. Required if `manual_window_management` is True, ignored otherwise.
+                Must be <= 2^31-1 or connection fails. If set to 0 with `manual_window_management`
+                True, streams start with zero window.
+                Required if manual_window_management is True, ignored otherwise.
+
+            read_buffer_capacity (Optional[int]): Capacity in bytes of the HTTP/1.1 connection's
+                read buffer. The buffer grows when the flow-control window of the incoming stream
+                reaches zero. Ignored if `manual_window_management` is False. A capacity that is
+                too small may hinder throughput. A capacity that is too large may waste memory
+                without improving throughput. If None or zero, a default value is used.
+
         Returns:
             concurrent.futures.Future: A Future which completes when connection succeeds or fails.
             If successful, the Future will contain a new :class:`HttpClientConnection`.
@@ -236,7 +273,10 @@ class HttpClientConnection(HttpClientConnectionBase):
             bootstrap,
             socket_options,
             tls_connection_options,
-            proxy_options)
+            proxy_options,
+            manual_window_management=manual_window_management,
+            initial_window_size=initial_window_size,
+            read_buffer_capacity=read_buffer_capacity)
 
     def request(self,
                 request: 'HttpRequest',
@@ -311,7 +351,12 @@ class Http2ClientConnection(HttpClientConnectionBase):
             proxy_options: Optional['HttpProxyOptions'] = None,
             initial_settings: Optional[List[Http2Setting]] = None,
             on_remote_settings_changed: Optional[Callable[[List[Http2Setting]],
-                                                          None]] = None) -> "concurrent.futures.Future":
+                                                          None]] = None,
+            manual_window_management: bool = False,
+            initial_window_size: Optional[int] = None,
+            conn_manual_window_management: bool = False,
+            conn_window_size_threshold: Optional[int] = None,
+            stream_window_size_threshold: Optional[int] = None) -> "concurrent.futures.Future":
         """
         Asynchronously establish an HTTP/2 client connection.
         Notes: to set up the connection, the server must support HTTP/2 and TlsConnectionOptions
@@ -326,6 +371,30 @@ class Http2ClientConnection(HttpClientConnectionBase):
                 The function should take the following arguments and return nothing:
 
                     *   `settings` (List[Http2Setting]): List of settings that were changed.
+
+            manual_window_management (bool): If True, enables manual flow control window management.
+                Default is False.
+
+            initial_window_size (Optional[int]): Initial window size for flow control.
+                Required if manual_window_management is True, ignored otherwise.
+
+            conn_manual_window_management (bool): If True, enables manual connection-level flow control
+                for the entire HTTP/2 connection. When enabled, the connection's flow-control window
+                shrinks as body data is received across all streams. The initial connection window is
+                65,535 bytes. When the window reaches 0, all streams stop receiving data until
+                `update_window()` is called to increment the connection's window.
+                Note: Padding in DATA frames counts against the window, but window updates for padding
+                are sent automatically even in manual mode. Default is False.
+
+            conn_window_size_threshold (Optional[int]): Threshold for sending connection-level WINDOW_UPDATE
+                frames. Ignored if `conn_manual_window_management` is False. When the connection's window
+                is above this threshold, WINDOW_UPDATE frames are batched. When it drops below, the update
+                is sent. Default is 32,767 (half of the initial 65,535 window).
+
+            stream_window_size_threshold (Optional[int]): Threshold for sending stream-level WINDOW_UPDATE
+                frames. Ignored if `manual_window_management` is False. When a stream's window is above
+                this threshold, WINDOW_UPDATE frames are batched. When it drops below, the update is sent.
+                Default is half of `initial_window_size`.
         """
         return cls._generic_new(
             host_name,
@@ -336,7 +405,12 @@ class Http2ClientConnection(HttpClientConnectionBase):
             proxy_options,
             HttpVersion.Http2,
             initial_settings,
-            on_remote_settings_changed)
+            on_remote_settings_changed,
+            manual_window_management=manual_window_management,
+            initial_window_size=initial_window_size,
+            conn_manual_window_management=conn_manual_window_management,
+            conn_window_size_threshold=conn_window_size_threshold,
+            stream_window_size_threshold=stream_window_size_threshold)
 
     def request(self,
                 request: 'HttpRequest',
@@ -396,6 +470,15 @@ class Http2ClientConnection(HttpClientConnectionBase):
         """
         _awscrt.http_connection_close(self._binding)
         return self.shutdown_future
+
+    def update_window(self, increment_size: int) -> None:
+        """
+        Update the connection's flow control window.
+
+        Args:
+            increment_size (int): Number of bytes to increment the window by.
+        """
+        _awscrt.http2_connection_update_window(self._binding, increment_size)
 
 
 class HttpStreamBase(NativeResource):
@@ -485,6 +568,15 @@ class HttpClientStreamBase(HttpStreamBase):
             self._completion_future.set_result(self._response_status_code)
         else:
             self._completion_future.set_exception(awscrt.exceptions.from_code(error_code))
+
+    def update_window(self, increment_size: int) -> None:
+        """
+        Update the stream's flow control window.
+
+        Args:
+            increment_size (int): Number of bytes to increment the window by.
+        """
+        _awscrt.http_stream_update_window(self, increment_size)
 
 
 class HttpClientStream(HttpClientStreamBase):
