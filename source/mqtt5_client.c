@@ -1289,7 +1289,7 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
     }
 
     /* METRICS */
-    struct aws_mqtt_iot_sdk_metrics metrics_tmp;
+    struct aws_mqtt_iot_metrics metrics_tmp;
     AWS_ZERO_STRUCT(metrics_tmp);
     if (PyObject_IsTrue(is_metrics_enabled_py)) {
         metrics_tmp.library_name = metrics_library_name;

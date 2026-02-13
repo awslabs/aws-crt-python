@@ -454,7 +454,7 @@ bool s_set_metrics(struct aws_mqtt_client_connection *connection, PyObject *metr
         goto done;
     }
 
-    struct aws_mqtt_iot_sdk_metrics metrics_struct = {
+    struct aws_mqtt_iot_metrics metrics_struct = {
         .library_name = library_name,
     };
 
