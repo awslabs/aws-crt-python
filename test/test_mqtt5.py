@@ -216,7 +216,8 @@ class Mqtt5ClientTest(NativeResourceTest):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
 
         client_options = mqtt5.ClientOptions(
-            host_name=input_host_name
+            host_name=input_host_name,
+            enable_metrics=False
         )
         callbacks = Mqtt5TestCallbacks()
         client = self._create_client(client_options=client_options, callbacks=callbacks)
@@ -242,7 +243,8 @@ class Mqtt5ClientTest(NativeResourceTest):
         client_options = mqtt5.ClientOptions(
             host_name=input_host_name,
             port=input_port,
-            connect_options=connect_options
+            connect_options=connect_options,
+            enable_metrics=False
         )
         callbacks = Mqtt5TestCallbacks()
         client = self._create_client(client_options=client_options, callbacks=callbacks)
@@ -428,7 +430,8 @@ class Mqtt5ClientTest(NativeResourceTest):
         client_options = mqtt5.ClientOptions(
             host_name=input_host_name,
             port=input_port,
-            connect_options=connect_options
+            connect_options=connect_options,
+            enable_metrics=False
         )
         callbacks = Mqtt5TestCallbacks()
         client_options.websocket_handshake_transform = callbacks.ws_handshake_transform
@@ -1842,6 +1845,74 @@ class Mqtt5ClientTest(NativeResourceTest):
 
     def test_operation_statistics_uc1(self):
         test_retry_wrapper(self._test_operation_statistics_uc1)
+
+    # ==============================================================
+    #             METRICS TEST CASES
+    # ==============================================================
+
+    def _test_metrics_enabled_default(self):
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
+        input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
+        input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
+
+        tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(
+            input_cert,
+            input_key
+        )
+        client_options = mqtt5.ClientOptions(
+            host_name=input_host_name,
+            port=8883
+        )
+        client_options.connect_options = mqtt5.ConnectPacket(client_id=create_client_id())
+        client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
+        callbacks = Mqtt5TestCallbacks()
+        client = self._create_client(client_options=client_options, callbacks=callbacks)
+
+        # Verify metrics are enabled by default
+        self.assertTrue(client_options.enable_metrics)
+        self.assertIsNotNone(client.metrics)
+        self.assertEqual(client.metrics.library_name, "IoTDeviceSDK/Python")
+
+        client.start()
+        callbacks.future_connection_success.result(TIMEOUT)
+        client.stop()
+        callbacks.future_stopped.result(TIMEOUT)
+
+    def test_metrics_enabled_default(self):
+        test_retry_wrapper(self._test_metrics_enabled_default)
+
+    def _test_metrics_disabled(self):
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
+        input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
+        input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
+
+        tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(
+            input_cert,
+            input_key
+        )
+        client_options = mqtt5.ClientOptions(
+            host_name=input_host_name,
+            port=8883,
+            enable_metrics=False
+        )
+        client_options.connect_options = mqtt5.ConnectPacket(
+            client_id=create_client_id()
+        )
+        client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
+        callbacks = Mqtt5TestCallbacks()
+        client = self._create_client(client_options=client_options, callbacks=callbacks)
+
+        # Verify metrics are disabled
+        self.assertFalse(client_options.enable_metrics)
+        self.assertIsNone(client.metrics)
+
+        client.start()
+        callbacks.future_connection_success.result(TIMEOUT)
+        client.stop()
+        callbacks.future_stopped.result(TIMEOUT)
+
+    def test_metrics_disabled(self):
+        test_retry_wrapper(self._test_metrics_disabled)
 
 
 if __name__ == 'main':

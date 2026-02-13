@@ -438,6 +438,39 @@ static void s_on_connect(
 }
 
 /* If unsuccessful, false is returned and a Python error has been set */
+bool s_set_metrics(struct aws_mqtt_client_connection *connection, PyObject *metrics) {
+    assert(metrics && (metrics != Py_None));
+
+    if (connection == NULL) {
+        return false;
+    }
+
+    bool success = false;
+
+    PyObject *library_name_py = PyObject_GetAttrString(metrics, "library_name");
+    struct aws_byte_cursor library_name = aws_byte_cursor_from_pyunicode(library_name_py);
+    if (!library_name.ptr) {
+        PyErr_SetString(PyExc_TypeError, "metrics.library_name must be str type");
+        goto done;
+    }
+
+    struct aws_mqtt_iot_metrics metrics_struct = {
+        .library_name = library_name,
+    };
+
+    if (aws_mqtt_client_connection_set_metrics(connection, &metrics_struct)) {
+        PyErr_SetAwsLastError();
+        goto done;
+    }
+
+    success = true;
+
+done:
+    Py_DECREF(library_name_py);
+    return success;
+}
+
+/* If unsuccessful, false is returned and a Python error has been set */
 bool s_set_will(struct aws_mqtt_client_connection *connection, PyObject *will) {
     assert(will && (will != Py_None));
 
@@ -668,9 +701,10 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
     PyObject *is_clean_session;
     PyObject *on_connect;
     PyObject *proxy_options_py;
+    PyObject *metrics_py;
     if (!PyArg_ParseTuple(
             args,
-            "Os#s#IOOKKHIIOz#z#OOO",
+            "Os#s#IOOKKHIIOz#z#OOOO",
             &impl_capsule,
             &client_id,
             &client_id_len,
@@ -691,7 +725,8 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
             &password_len,
             &is_clean_session,
             &on_connect,
-            &proxy_options_py)) {
+            &proxy_options_py,
+            &metrics_py)) {
         return NULL;
     }
 
@@ -770,6 +805,13 @@ PyObject *aws_py_mqtt_client_connection_connect(PyObject *self, PyObject *args) 
         if (aws_tls_connection_options_set_server_name(&tls_options, allocator, &server_name_cur)) {
             PyErr_SetAwsLastError();
             goto done;
+        }
+    }
+
+    /* Set metrics if provided */
+    if (metrics_py != Py_None) {
+        if (!s_set_metrics(py_connection->native, metrics_py)) {
+            AWS_LOGF_DEBUG(AWS_LS_MQTT_CLIENT, "MQTT connection failed to set AWS IoT metrics.");
         }
     }
 

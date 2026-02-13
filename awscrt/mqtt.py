@@ -15,7 +15,7 @@ import awscrt.exceptions
 from awscrt.http import HttpProxyOptions, HttpRequest
 from awscrt.io import ClientBootstrap, ClientTlsContext, SocketOptions
 from dataclasses import dataclass
-from awscrt.mqtt5 import Client as Mqtt5Client
+from awscrt.mqtt5 import Client as Mqtt5Client, SdkMetrics
 
 
 class QoS(IntEnum):
@@ -330,6 +330,8 @@ class Connection(NativeResource):
 
         proxy_options (Optional[awscrt.http.HttpProxyOptions]):
             Optional proxy options for all connections.
+
+        enable_metrics (bool): Enable IoT SDK metrics in MQTT CONNECT packet username field. Default to True.
         """
 
     def __init__(self,
@@ -355,7 +357,8 @@ class Connection(NativeResource):
                  proxy_options=None,
                  on_connection_success=None,
                  on_connection_failure=None,
-                 on_connection_closed=None
+                 on_connection_closed=None,
+                 enable_metrics=True,
                  ):
 
         assert isinstance(client, Client) or isinstance(client, Mqtt5Client)
@@ -408,6 +411,10 @@ class Connection(NativeResource):
         self.password = password
         self.socket_options = socket_options if socket_options else SocketOptions()
         self.proxy_options = proxy_options if proxy_options else websocket_proxy_options
+        if enable_metrics:
+            self.metrics = SdkMetrics()
+        else:
+            self.metrics = None
 
         self._binding = _awscrt.mqtt_client_connection_new(
             self,
@@ -524,7 +531,8 @@ class Connection(NativeResource):
                 self.password,
                 self.clean_session,
                 on_connect,
-                self.proxy_options
+                self.proxy_options,
+                self.metrics
             )
 
         except Exception as e:
