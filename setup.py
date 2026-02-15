@@ -445,6 +445,7 @@ def awscrt_ext():
     extra_objects = []
     define_macros = []
     py_limited_api = False
+    has_gil = True
 
     libraries = [x.libname for x in AWS_LIBS]
 
@@ -531,8 +532,15 @@ def awscrt_ext():
                 else:
                     extra_link_args += ['-Wl,--fatal-warnings']
 
+    if hasattr(sys, '_is_gil_enabled'):
+        has_gil = sys._is_gil_enabled()
+
     # prefer building with stable ABI, so a wheel can work with multiple major versions
-    if sys.version_info >= (3, 13):
+    if not has_gil and sys.version_info == (3, 14):
+        # 3.14 free threaded (aka no gil) does not support limited api.
+        # disable it for now. 3.15 promises to support limited api + free threading combo
+        py_limited_api = False
+    elif sys.version_info >= (3, 13):
         # 3.13 deprecates PyWeakref_GetObject(), adds alternative
         define_macros.append(('Py_LIMITED_API', '0x030D0000'))
         py_limited_api = True
