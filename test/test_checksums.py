@@ -218,6 +218,52 @@ class TestChecksums(NativeResourceTest):
             # Result should be an integer
             self.assertIsInstance(result, int)
 
+    def test_xxhash64_piping(self):
+        """Test xxhash64 piping from native side"""
+        data = b"Hello world"
+
+        out = checksums.XXHash.compute_xxhash64(data)
+
+        expected = bytes([0xc5, 0x00, 0xb0, 0xc9, 0x12, 0xb3, 0x76, 0xd8])
+
+        self.assertEqual(out, expected)
+
+        hash = checksums.XXHash.new_xxhash64()
+        hash.update(data)
+        out2 = hash.finalize()
+        self.assertEqual(out2, expected)
+
+    def test_xxhash3_64_piping(self):
+        """Test xxhash3_64 piping from native side"""
+        data = b"Hello world"
+
+        out = checksums.XXHash.compute_xxhash3_64(data)
+
+        expected = bytes([0xb6, 0xac, 0xb9, 0xd8, 0x4a, 0x38, 0xff, 0x74])
+
+        self.assertEqual(out, expected)
+
+        hash = checksums.XXHash.new_xxhash3_64()
+        hash.update(data)
+        out2 = hash.finalize()
+        self.assertEqual(out2, expected)
+
+    def test_xxhash3_128_piping(self):
+        """Test xxhash3_128 piping from native side"""
+        data = b"Hello world"
+
+        out = checksums.XXHash.compute_xxhash3_128(data)
+
+        expected = bytes([0x73, 0x51, 0xf8, 0x98, 0x12, 0xf9, 0x73, 0x82,
+                          0xb9, 0x1d, 0x05, 0xb3, 0x1e, 0x04, 0xdd, 0x7f])
+
+        self.assertEqual(out, expected)
+
+        hash = checksums.XXHash.new_xxhash3_128()
+        hash.update(data)
+        out2 = hash.finalize()
+        self.assertEqual(out2, expected)
+
 
 if __name__ == '__main__':
     unittest.main()
