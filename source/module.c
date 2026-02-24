@@ -1023,6 +1023,10 @@ PyMODINIT_FUNC PyInit__awscrt(void) {
         return NULL;
     }
 
+#ifdef Py_GIL_DISABLED
+    PyUnstable_Module_SetGIL(m, Py_MOD_GIL_NOT_USED);
+#endif
+
     s_init_allocator();
 
     /* Don't report this memory when dumping possible leaks. */
