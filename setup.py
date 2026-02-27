@@ -89,18 +89,32 @@ def determine_cross_compile_args():
 
 
 def get_windows_sdk_versions():
-    """Return a list of installed Windows SDK versions, sorted from newest to oldest."""
+    """Return a list of installed Windows SDK versions, sorted from newest to oldest.
+
+    Uses the Windows registry to find the SDK installation path.
+    """
     if sys.platform != 'win32':
         return []
 
+    import winreg
+
     sdk_versions = []
-    # Windows SDK is typically installed in these locations
-    sdk_paths = [
-        os.path.join(os.environ.get('ProgramFiles(x86)', 'C:\\Program Files (x86)'),
-                     'Windows Kits', '10', 'Include'),
-        os.path.join(os.environ.get('ProgramFiles', 'C:\\Program Files'),
-                     'Windows Kits', '10', 'Include'),
-    ]
+    sdk_paths = []
+
+    # Try to get SDK path from registry
+    try:
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
+                            r"SOFTWARE\Microsoft\Windows Kits\Installed Roots") as key:
+            sdk_root = winreg.QueryValueEx(key, "KitsRoot10")[0]
+            sdk_paths.append(os.path.join(sdk_root, "Include"))
+    except (OSError, FileNotFoundError):
+        # Registry key not found, fall back to common installation paths
+        sdk_paths = [
+            os.path.join(os.environ.get('ProgramFiles(x86)', 'C:\\Program Files (x86)'),
+                         'Windows Kits', '10', 'Include'),
+            os.path.join(os.environ.get('ProgramFiles', 'C:\\Program Files'),
+                         'Windows Kits', '10', 'Include'),
+        ]
 
     for sdk_path in sdk_paths:
         if os.path.exists(sdk_path):
@@ -122,7 +136,7 @@ def get_best_windows_sdk_version():
     """Return the best Windows SDK version to use for TLS 1.3 support.
 
     Returns the latest installed SDK version that is >= WINDOWS_SDK_MIN_VERSION_TLS1_3_SUPPORT.
-    If no suitable SDK is found, returns the minimum required version (build may fail if not installed).
+    Raises RuntimeError if no suitable SDK is found.
     """
     min_version = parse_version(WINDOWS_SDK_MIN_VERSION_TLS1_3_SUPPORT)
     installed_versions = get_windows_sdk_versions()
@@ -132,11 +146,16 @@ def get_best_windows_sdk_version():
             print(f"Found Windows SDK {version} (>= {WINDOWS_SDK_MIN_VERSION_TLS1_3_SUPPORT} required for TLS 1.3)")
             return version
 
-    # No suitable SDK found, return minimum required version
-    # CMake will fail if this version is not installed
-    print(f"Warning: No Windows SDK >= {WINDOWS_SDK_MIN_VERSION_TLS1_3_SUPPORT} found. "
-          f"Using minimum required version. Build may fail if SDK is not installed.")
-    return WINDOWS_SDK_MIN_VERSION_TLS1_3_SUPPORT
+    # No suitable SDK found
+    if installed_versions:
+        raise RuntimeError(
+            f"No Windows SDK >= {WINDOWS_SDK_MIN_VERSION_TLS1_3_SUPPORT} found. "
+            f"Installed versions: {', '.join(installed_versions)}. "
+            f"Please install Windows SDK {WINDOWS_SDK_MIN_VERSION_TLS1_3_SUPPORT} or later for TLS 1.3 support.")
+    else:
+        raise RuntimeError(
+            f"No Windows SDK found. "
+            f"Please install Windows SDK {WINDOWS_SDK_MIN_VERSION_TLS1_3_SUPPORT} or later for TLS 1.3 support.")
 
 
 def determine_generator_args(cmake_version=None, windows_sdk_version=None):
