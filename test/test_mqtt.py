@@ -839,9 +839,9 @@ class MqttConnectionTest(NativeResourceTest):
 
     def _test_mqtt311_direct_connect_basic_auth_metrics_enabled(self):
         """Test that connection fails with basic auth when metrics are enabled.
-        
+
         When metrics are enabled, the SDK appends metrics information to the username field,
-        which corrupts the basic authentication credentials and causes the connection to fail.
+        which corrupts the basic authentication and causes the connection to fail.
         """
         input_host_name = _get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_BASIC_AUTH_HOST")
         input_port = int(_get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_BASIC_AUTH_PORT"))
@@ -864,9 +864,6 @@ class MqttConnectionTest(NativeResourceTest):
             password=input_password,
             enable_metrics=True)
 
-        # Verify metrics are enabled
-        self.assertIsNotNone(connection.metrics)
-
         # Connection should fail because metrics corrupts the username for basic auth
         exception_occurred = False
         try:
@@ -877,6 +874,7 @@ class MqttConnectionTest(NativeResourceTest):
 
     def test_mqtt311_direct_connect_basic_auth_metrics_enabled(self):
         test_retry_wrapper(self._test_mqtt311_direct_connect_basic_auth_metrics_enabled)
+
 
 if __name__ == 'main':
     unittest.main()

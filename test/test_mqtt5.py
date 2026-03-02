@@ -1852,7 +1852,7 @@ class Mqtt5ClientTest(NativeResourceTest):
 
     def _test_direct_connect_basic_auth_metrics_enabled(self):
         """Test that connection fails with basic auth when metrics are enabled.
-        
+
         When metrics are enabled, the SDK appends metrics information to the username field,
         which corrupts the basic authentication and causes the connection to fail.
         """
@@ -1886,6 +1886,7 @@ class Mqtt5ClientTest(NativeResourceTest):
 
     def test_direct_connect_basic_auth_metrics_enabled(self):
         test_retry_wrapper(self._test_direct_connect_basic_auth_metrics_enabled)
+
 
 if __name__ == 'main':
     unittest.main()
