@@ -495,27 +495,6 @@ def _try_puback_reason_code(value):
     except Exception:
         return None
 
-class ManualPubackResult(IntEnum):
-    """Result for a manually invoked PUBACK operation."""
-
-    SUCCESS = 0
-    """The PUBACK was successfully sent."""
-
-    PUBACK_CANCELLED = 1
-    """The PUBACK was cancelled and will not be sent."""
-
-    PUBACK_INVALID = 2
-    """The PUBACK attempting to be sent is invalid."""
-
-    CRT_FAILURE = 3
-    """The PUBACK failed to send due to a CRT failure."""
-
-
-def _try_manual_puback_result(value):
-    try:
-        return ManualPubackResult(value)
-    except Exception:
-        return None
 
 class SubackReasonCode(IntEnum):
     """Reason code inside SUBACK packet payloads.
@@ -1160,15 +1139,6 @@ class PubackPacket:
     reason_code: PubackReasonCode = None
     reason_string: str = None
     user_properties: 'Sequence[UserProperty]' = None
-
-@dataclass
-class InvokePubackCompletion:
-    """dataclass containing results of a manually invoked PUBACK
-
-    Args:
-        puback_result (ManualPubackResult): Result of manually invoked PUBACK
-    """
-    puback_result: ManualPubackResult = None
 
 
 @dataclass
@@ -1999,24 +1969,11 @@ class Client(NativeResource):
 
         Args:
             puback_control_handle: An opaque handle obtained from acquire_puback_control(). This handle cannot be created manually and must come from the acquire_puback_control() Callable within PublishReceivedData.
-        
-        Returns:
-            A future with InvokePubackCompletion that completes when invoked PUBACK is sent or fails to send. A successfully sent PUBACK only confirms the requested PUBACK has been sent, not that the broker has received it and/or it hasn't re-sent the PUBLISH message being acknowledged.
         """
-
-        future = Future()
-
-        def invokePubackComplete(puback_result):
-            invokePubackCompletion = InvokePubackCompletion(puback_result=_try_manual_puback_result(puback_result))
-            future.set_result(invokePubackCompletion)
         
         _awscrt.mqtt5_client_invoke_puback(
             self._binding,
-            puback_control_handle,
-            invokePubackComplete
-        )
-
-        return future
+            puback_control_handle)
 
     def new_connection(self, on_connection_interrupted=None, on_connection_resumed=None,
                        on_connection_success=None, on_connection_failure=None, on_connection_closed=None):
