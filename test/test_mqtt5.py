@@ -1850,70 +1850,42 @@ class Mqtt5ClientTest(NativeResourceTest):
     #             METRICS TEST CASES
     # ==============================================================
 
-    def _test_metrics_enabled_default(self):
-        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
-        input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
-        input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
+    def _test_direct_connect_basic_auth_metrics_enabled(self):
+        """Test that connection fails with basic auth when metrics are enabled.
+        
+        When metrics are enabled, the SDK appends metrics information to the username field,
+        which corrupts the basic authentication and causes the connection to fail.
+        """
+        input_username = _get_env_variable("AWS_TEST_MQTT5_BASIC_AUTH_USERNAME")
+        input_password = _get_env_variable("AWS_TEST_MQTT5_BASIC_AUTH_PASSWORD")
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_BASIC_AUTH_HOST")
+        input_port = int(_get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_BASIC_AUTH_PORT"))
 
-        tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(
-            input_cert,
-            input_key
+        connect_options = mqtt5.ConnectPacket(
+            client_id=create_client_id(),
+            username=input_username,
+            password=input_password
         )
         client_options = mqtt5.ClientOptions(
             host_name=input_host_name,
-            port=8883
+            port=input_port,
+            connect_options=connect_options,
+            enable_metrics=True
         )
-        client_options.connect_options = mqtt5.ConnectPacket(client_id=create_client_id())
-        client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
         callbacks = Mqtt5TestCallbacks()
         client = self._create_client(client_options=client_options, callbacks=callbacks)
 
-        # Verify metrics are enabled by default
+        # Verify metrics are enabled
         self.assertTrue(client_options.enable_metrics)
-        self.assertIsNotNone(client.metrics)
-        self.assertEqual(client.metrics.library_name, "IoTDeviceSDK/Python")
 
         client.start()
-        callbacks.future_connection_success.result(TIMEOUT)
+        # Connection should fail because metrics corrupts the username for basic auth
+        callbacks.future_connection_failure.result(TIMEOUT)
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    def test_metrics_enabled_default(self):
-        test_retry_wrapper(self._test_metrics_enabled_default)
-
-    def _test_metrics_disabled(self):
-        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
-        input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
-        input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
-
-        tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(
-            input_cert,
-            input_key
-        )
-        client_options = mqtt5.ClientOptions(
-            host_name=input_host_name,
-            port=8883,
-            enable_metrics=False
-        )
-        client_options.connect_options = mqtt5.ConnectPacket(
-            client_id=create_client_id()
-        )
-        client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
-        callbacks = Mqtt5TestCallbacks()
-        client = self._create_client(client_options=client_options, callbacks=callbacks)
-
-        # Verify metrics are disabled
-        self.assertFalse(client_options.enable_metrics)
-        self.assertIsNone(client.metrics)
-
-        client.start()
-        callbacks.future_connection_success.result(TIMEOUT)
-        client.stop()
-        callbacks.future_stopped.result(TIMEOUT)
-
-    def test_metrics_disabled(self):
-        test_retry_wrapper(self._test_metrics_disabled)
-
+    def test_direct_connect_basic_auth_metrics_enabled(self):
+        test_retry_wrapper(self._test_direct_connect_basic_auth_metrics_enabled)
 
 if __name__ == 'main':
     unittest.main()

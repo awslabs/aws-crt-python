@@ -412,9 +412,9 @@ class Connection(NativeResource):
         self.socket_options = socket_options if socket_options else SocketOptions()
         self.proxy_options = proxy_options if proxy_options else websocket_proxy_options
         if enable_metrics:
-            self.metrics = SdkMetrics()
+            self._metrics = SdkMetrics()
         else:
-            self.metrics = None
+            self._metrics = None
 
         self._binding = _awscrt.mqtt_client_connection_new(
             self,
@@ -532,7 +532,7 @@ class Connection(NativeResource):
                 self.clean_session,
                 on_connect,
                 self.proxy_options,
-                self.metrics
+                self._metrics
             )
 
         except Exception as e:

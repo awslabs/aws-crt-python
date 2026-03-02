@@ -1765,9 +1765,9 @@ class Client(NativeResource):
 
         # Handle metrics configuration
         if client_options.enable_metrics:
-            self.metrics = SdkMetrics()
+            self._metrics = SdkMetrics()
         else:
-            self.metrics = None
+            self._metrics = None
 
         if not connect_options.will:
             is_will_none = True
@@ -1821,7 +1821,7 @@ class Client(NativeResource):
                                                  client_options.topic_aliasing_options,
                                                  websocket_is_none,
                                                  client_options.enable_metrics,
-                                                 self.metrics.library_name if self.metrics else None,
+                                                 self._metrics.library_name if self._metrics else None,
                                                  core)
 
         # Store the options for adapter
