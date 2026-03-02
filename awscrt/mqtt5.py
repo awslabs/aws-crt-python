@@ -1473,7 +1473,7 @@ class _ClientCore:
 
         # Create PublishReceivedData with the manual control callback
         publish_data = PublishReceivedData(
-            publish_packet=publish_packet, 
+            publish_packet=publish_packet,
             acquire_puback_control=acquire_puback_control_fn
         )
 
@@ -1970,7 +1970,7 @@ class Client(NativeResource):
         Args:
             puback_control_handle: An opaque handle obtained from acquire_puback_control(). This handle cannot be created manually and must come from the acquire_puback_control() Callable within PublishReceivedData.
         """
-        
+
         _awscrt.mqtt5_client_invoke_puback(
             self._binding,
             puback_control_handle)
