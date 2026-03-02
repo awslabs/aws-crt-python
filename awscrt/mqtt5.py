@@ -1228,8 +1228,10 @@ class PublishReceivedData:
 
     Args:
         publish_packet (PublishPacket): Data model of an `MQTT5 PUBLISH <https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901100>`_ packet.
+        acquire_puback_control (Callable): Call this function to prevent automatic PUBACK and take manual control of this PUBLISH message's PUBACK. Returns an opaque handle object that can be passed to Client.invoke_puback().
     """
     publish_packet: PublishPacket = None
+    acquire_puback_control: Callable = None
 
 
 @dataclass
@@ -1434,7 +1436,8 @@ class _ClientCore:
             correlation_data,
             subscription_identifiers_tuples,
             content_type,
-            user_properties_tuples):
+            user_properties_tuples,
+            acquire_puback_control_fn):
         if self._on_publish_cb is None:
             return
 
@@ -1468,9 +1471,13 @@ class _ClientCore:
         publish_packet.content_type = content_type
         publish_packet.user_properties = _init_user_properties(user_properties_tuples)
 
-        self._on_publish_cb(PublishReceivedData(publish_packet=publish_packet))
+        # Create PublishReceivedData with the manual control callback
+        publish_data = PublishReceivedData(
+            publish_packet=publish_packet,
+            acquire_puback_control=acquire_puback_control_fn
+        )
 
-        return
+        self._on_publish_cb(publish_data)
 
     def _on_lifecycle_stopped(self):
         if self._on_lifecycle_stopped_cb:
@@ -1956,6 +1963,17 @@ class Client(NativeResource):
 
         result = _awscrt.mqtt5_client_get_stats(self._binding)
         return OperationStatisticsData(result[0], result[1], result[2], result[3])
+
+    def invoke_puback(self, puback_control_handle):
+        """Sends a PUBACK packet for the given puback control handle.
+
+        Args:
+            puback_control_handle: An opaque handle obtained from acquire_puback_control(). This handle cannot be created manually and must come from the acquire_puback_control() Callable within PublishReceivedData.
+        """
+
+        _awscrt.mqtt5_client_invoke_puback(
+            self._binding,
+            puback_control_handle)
 
     def new_connection(self, on_connection_interrupted=None, on_connection_resumed=None,
                        on_connection_success=None, on_connection_failure=None, on_connection_closed=None):
