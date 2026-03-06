@@ -1,0 +1,1205 @@
+
+
+<!doctype html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>awscrt.http &#8212; awscrt  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d75fae25" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=93be7416" />
+    
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/bizstyle.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="awscrt.io" href="io.html" />
+    <link rel="prev" title="awscrt.eventstream" href="eventstream.html" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <!--[if lt IE 9]>
+    <script src="_static/css3-mediaqueries.js"></script>
+    <![endif]-->
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="io.html" title="awscrt.io"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="eventstream.html" title="awscrt.eventstream"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">awscrt  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">awscrt.http</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="module-awscrt.http">
+<span id="awscrt-http"></span><h1>awscrt.http<a class="headerlink" href="#module-awscrt.http" title="Link to this heading">¶</a></h1>
+<p>HTTP</p>
+<p>All network operations in <cite>awscrt.http</cite> are asynchronous.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.http.HttpVersion">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.http.</span></span><span class="sig-name descname"><span class="pre">HttpVersion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpVersion" title="Link to this definition">¶</a></dt>
+<dd><p>HTTP protocol version enumeration</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.http.HttpVersion.Unknown">
+<span class="sig-name descname"><span class="pre">Unknown</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#awscrt.http.HttpVersion.Unknown" title="Link to this definition">¶</a></dt>
+<dd><p>Unknown</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.http.HttpVersion.Http1_0">
+<span class="sig-name descname"><span class="pre">Http1_0</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#awscrt.http.HttpVersion.Http1_0" title="Link to this definition">¶</a></dt>
+<dd><p>HTTP/1.0</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.http.HttpVersion.Http1_1">
+<span class="sig-name descname"><span class="pre">Http1_1</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></em><a class="headerlink" href="#awscrt.http.HttpVersion.Http1_1" title="Link to this definition">¶</a></dt>
+<dd><p>HTTP/1.1</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.http.HttpVersion.Http2">
+<span class="sig-name descname"><span class="pre">Http2</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">3</span></em><a class="headerlink" href="#awscrt.http.HttpVersion.Http2" title="Link to this definition">¶</a></dt>
+<dd><p>HTTP/2</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.http.Http2SettingID">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.http.</span></span><span class="sig-name descname"><span class="pre">Http2SettingID</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.Http2SettingID" title="Link to this definition">¶</a></dt>
+<dd><p>HTTP/2 Predefined settings(RFC-9113 6.5.2).</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.http.Http2Setting">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.http.</span></span><span class="sig-name descname"><span class="pre">Http2Setting</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#awscrt.http.Http2SettingID" title="awscrt.http.Http2SettingID"><span class="pre">Http2SettingID</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.Http2Setting" title="Link to this definition">¶</a></dt>
+<dd><p>HTTP/2 Setting.
+Settings are very complicated in HTTP/2.
+Each end has its own settings, and the local settings cannot be applied
+until the remote end acknowledges it.
+Each end can change its settings at any time, while the order of the settings
+changed may also result in different behavior.</p>
+<p>Each setting has its boundary and initial values defined in RFC-9113 6.5.2:
+Initial values are listed below, while the range can be found in VALID_RANGES:
+HEADER_TABLE_SIZE: 4096
+ENABLE_PUSH: 1
+MAX_CONCURRENT_STREAMS: 2^32-1
+INITIAL_WINDOW_SIZE: 2^16-1
+MAX_FRAME_SIZE: 2^14
+MAX_HEADER_LIST_SIZE: 2^32-1</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>id</strong> (<a class="reference internal" href="#awscrt.http.Http2SettingID" title="awscrt.http.Http2SettingID"><em>Http2SettingID</em></a>) – Setting ID.</p></li>
+<li><p><strong>value</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Setting value.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.http.HttpClientConnectionBase">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.http.</span></span><span class="sig-name descname"><span class="pre">HttpClientConnectionBase</span></span><a class="headerlink" href="#awscrt.http.HttpClientConnectionBase" title="Link to this definition">¶</a></dt>
+<dd><dl class="py property">
+<dt class="sig sig-object py" id="awscrt.http.HttpClientConnectionBase.host_name">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">host_name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></em><a class="headerlink" href="#awscrt.http.HttpClientConnectionBase.host_name" title="Link to this definition">¶</a></dt>
+<dd><p>Remote hostname</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="awscrt.http.HttpClientConnectionBase.port">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">port</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></em><a class="headerlink" href="#awscrt.http.HttpClientConnectionBase.port" title="Link to this definition">¶</a></dt>
+<dd><p>Remote port</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.http.HttpClientConnectionBase.is_open">
+<span class="sig-name descname"><span class="pre">is_open</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span></span><a class="headerlink" href="#awscrt.http.HttpClientConnectionBase.is_open" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>bool</em> – True if this connection is open and usable, False otherwise.
+Check <a class="reference internal" href="#awscrt.http.HttpClientConnectionBase.shutdown_future" title="awscrt.http.HttpClientConnectionBase.shutdown_future"><code class="xref py py-attr docutils literal notranslate"><span class="pre">shutdown_future</span></code></a> to know when the connection is completely
+finished shutting down.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="awscrt.http.HttpClientConnectionBase.shutdown_future">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">shutdown_future</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Future" title="(in Python v3.14)"><span class="pre">concurrent.futures.Future</span></a></em><a class="headerlink" href="#awscrt.http.HttpClientConnectionBase.shutdown_future" title="Link to this definition">¶</a></dt>
+<dd><p>Completes when this connection has finished shutting down.
+Future will contain a result of None, or an exception indicating why shutdown occurred.
+Note that the connection may have been garbage-collected before this future completes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Future" title="(in Python v3.14)">concurrent.futures.Future</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="awscrt.http.HttpClientConnectionBase.version">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">version</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#awscrt.http.HttpVersion" title="awscrt.http.HttpVersion"><span class="pre">HttpVersion</span></a></em><a class="headerlink" href="#awscrt.http.HttpClientConnectionBase.version" title="Link to this definition">¶</a></dt>
+<dd><p>Protocol used by this connection</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#awscrt.http.HttpVersion" title="awscrt.http.HttpVersion">HttpVersion</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.http.HttpClientConnection">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.http.</span></span><span class="sig-name descname"><span class="pre">HttpClientConnection</span></span><a class="headerlink" href="#awscrt.http.HttpClientConnection" title="Link to this definition">¶</a></dt>
+<dd><p>An HTTP client connection.</p>
+<p>Use <a class="reference internal" href="#awscrt.http.HttpClientConnection.new" title="awscrt.http.HttpClientConnection.new"><code class="xref py py-meth docutils literal notranslate"><span class="pre">HttpClientConnection.new()</span></code></a> to establish a new connection.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.http.HttpClientConnection.new">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">new</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">host_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">port</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">bootstrap</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="io.html#awscrt.io.ClientBootstrap" title="awscrt.io.ClientBootstrap"><span class="pre">ClientBootstrap</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">socket_options</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="io.html#awscrt.io.SocketOptions" title="awscrt.io.SocketOptions"><span class="pre">SocketOptions</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tls_connection_options</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="io.html#awscrt.io.TlsConnectionOptions" title="awscrt.io.TlsConnectionOptions"><span class="pre">TlsConnectionOptions</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">proxy_options</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#awscrt.http.HttpProxyOptions" title="awscrt.http.HttpProxyOptions"><span class="pre">HttpProxyOptions</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manual_window_management</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_window_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">read_buffer_capacity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Future" title="(in Python v3.14)"><span class="pre">concurrent.futures.Future</span></a></span></span><a class="headerlink" href="#awscrt.http.HttpClientConnection.new" title="Link to this definition">¶</a></dt>
+<dd><p>Asynchronously establish a new HttpClientConnection.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>host_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Connect to host.</p></li>
+<li><p><strong>port</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Connect to port.</p></li>
+<li><p><strong>bootstrap</strong> (<em>Optional</em><em> [</em><a class="reference internal" href="io.html#awscrt.io.ClientBootstrap" title="awscrt.io.ClientBootstrap"><em>ClientBootstrap</em></a><em>]</em>) – Client bootstrap to use when initiating socket connection.
+If None is provided, the default singleton is used.</p></li>
+<li><p><strong>socket_options</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="io.html#awscrt.io.SocketOptions" title="awscrt.io.SocketOptions"><em>SocketOptions</em></a><em>]</em>) – Optional socket options.
+If None is provided, then default options are used.</p></li>
+<li><p><strong>tls_connection_options</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="io.html#awscrt.io.TlsConnectionOptions" title="awscrt.io.TlsConnectionOptions"><em>TlsConnectionOptions</em></a><em>]</em>) – Optional TLS
+connection options. If None is provided, then the connection will
+be attempted over plain-text.</p></li>
+<li><p><strong>proxy_options</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="#awscrt.http.HttpProxyOptions" title="awscrt.http.HttpProxyOptions"><em>HttpProxyOptions</em></a><em>]</em>) – Optional proxy options.
+If None is provided then a proxy is not used.</p></li>
+<li><p><strong>manual_window_management</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – Set to True to manually manage the flow-control window
+of each stream. If False, the connection maintains flow-control windows such that
+no back-pressure is applied and data arrives as fast as possible. If True, the
+flow-control window of each stream shrinks as body data is received (headers,
+padding, and other metadata do not affect the window). <cite>initial_window_size</cite>
+determines the starting size of each stream’s window. When a stream’s window
+reaches 0, no further data is received until <cite>update_window()</cite> is called.
+Default is False.</p></li>
+<li><p><strong>initial_window_size</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em>]</em>) – The starting size of each stream’s flow-control
+window. Required if <cite>manual_window_management</cite> is True, ignored otherwise.
+Must be &lt;= 2^31-1 or connection fails. If set to 0 with <cite>manual_window_management</cite>
+True, streams start with zero window.
+Required if manual_window_management is True, ignored otherwise.</p></li>
+<li><p><strong>read_buffer_capacity</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em>]</em>) – Capacity in bytes of the HTTP/1.1 connection’s
+read buffer. The buffer grows when the flow-control window of the incoming stream
+reaches zero. Ignored if <cite>manual_window_management</cite> is False. A capacity that is
+too small may hinder throughput. A capacity that is too large may waste memory
+without improving throughput. If None or zero, a default value is used.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>concurrent.futures.Future</em> – A Future which completes when connection succeeds or fails.
+If successful, the Future will contain a new <a class="reference internal" href="#awscrt.http.HttpClientConnection" title="awscrt.http.HttpClientConnection"><code class="xref py py-class docutils literal notranslate"><span class="pre">HttpClientConnection</span></code></a>.
+Otherwise, it will contain an exception.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.http.HttpClientConnection.request">
+<span class="sig-name descname"><span class="pre">request</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#awscrt.http.HttpRequest" title="awscrt.http.HttpRequest"><span class="pre">HttpRequest</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_response</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.14)"><span class="pre">Callable</span></a><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_body</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.14)"><span class="pre">Callable</span></a><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#awscrt.http.HttpClientStream" title="awscrt.http.HttpClientStream"><span class="pre">HttpClientStream</span></a></span></span><a class="headerlink" href="#awscrt.http.HttpClientConnection.request" title="Link to this definition">¶</a></dt>
+<dd><p>Create <a class="reference internal" href="#awscrt.http.HttpClientStream" title="awscrt.http.HttpClientStream"><code class="xref py py-class docutils literal notranslate"><span class="pre">HttpClientStream</span></code></a> to carry out the request/response exchange.</p>
+<p>NOTE: The HTTP stream sends no data until <a class="reference internal" href="#awscrt.http.HttpClientStream.activate" title="awscrt.http.HttpClientStream.activate"><code class="xref py py-meth docutils literal notranslate"><span class="pre">HttpClientStream.activate()</span></code></a>
+is called. Call activate() when you’re ready for callbacks and events to fire.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>request</strong> (<a class="reference internal" href="#awscrt.http.HttpRequest" title="awscrt.http.HttpRequest"><em>HttpRequest</em></a>) – Definition for outgoing request.</p></li>
+<li><p><strong>on_response</strong> – <p>Optional callback invoked once main response headers are received.
+The function should take the following arguments and return nothing:</p>
+<blockquote>
+<div><ul>
+<li><p><cite>http_stream</cite> (<a class="reference internal" href="#awscrt.http.HttpClientStream" title="awscrt.http.HttpClientStream"><code class="xref py py-class docutils literal notranslate"><span class="pre">HttpClientStream</span></code></a>): HTTP stream carrying
+out this request/response exchange.</p></li>
+<li><p><cite>status_code</cite> (int): Response status code.</p></li>
+<li><p><cite>headers</cite> (List[Tuple[str, str]]): Response headers as a
+list of (name,value) pairs.</p></li>
+<li><p><cite>**kwargs</cite> (dict): Forward compatibility kwargs.</p></li>
+</ul>
+</div></blockquote>
+<p>An exception raise by this function will cause the HTTP stream to end in error.
+This callback is always invoked on the connection’s event-loop thread.</p>
+</p></li>
+<li><p><strong>on_body</strong> – <p>Optional callback invoked 0+ times as response body data is received.
+The function should take the following arguments and return nothing:</p>
+<blockquote>
+<div><ul>
+<li><p><cite>http_stream</cite> (<a class="reference internal" href="#awscrt.http.HttpClientStream" title="awscrt.http.HttpClientStream"><code class="xref py py-class docutils literal notranslate"><span class="pre">HttpClientStream</span></code></a>): HTTP stream carrying
+out this request/response exchange.</p></li>
+<li><p><cite>chunk</cite> (buffer): Response body data (not necessarily
+a whole “chunk” of chunked encoding).</p></li>
+<li><p><cite>**kwargs</cite> (dict): Forward-compatibility kwargs.</p></li>
+</ul>
+</div></blockquote>
+<p>An exception raise by this function will cause the HTTP stream to end in error.
+This callback is always invoked on the connection’s event-loop thread.</p>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>HttpClientStream</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.http.HttpClientConnection.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Future" title="(in Python v3.14)"><span class="pre">concurrent.futures.Future</span></a></span></span><a class="headerlink" href="#awscrt.http.HttpClientConnection.close" title="Link to this definition">¶</a></dt>
+<dd><p>Close the connection.</p>
+<p>Shutdown is asynchronous. This call has no effect if the connection is already
+closing.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>concurrent.futures.Future</em> – This connection’s <a class="reference internal" href="#awscrt.http.HttpClientConnection.shutdown_future" title="awscrt.http.HttpClientConnection.shutdown_future"><code class="xref py py-attr docutils literal notranslate"><span class="pre">shutdown_future</span></code></a>,
+which completes when shutdown has finished.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="awscrt.http.HttpClientConnection.host_name">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">host_name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></em><a class="headerlink" href="#awscrt.http.HttpClientConnection.host_name" title="Link to this definition">¶</a></dt>
+<dd><p>Remote hostname</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.http.HttpClientConnection.is_open">
+<span class="sig-name descname"><span class="pre">is_open</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span></span><a class="headerlink" href="#awscrt.http.HttpClientConnection.is_open" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>bool</em> – True if this connection is open and usable, False otherwise.
+Check <a class="reference internal" href="#awscrt.http.HttpClientConnection.shutdown_future" title="awscrt.http.HttpClientConnection.shutdown_future"><code class="xref py py-attr docutils literal notranslate"><span class="pre">shutdown_future</span></code></a> to know when the connection is completely
+finished shutting down.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="awscrt.http.HttpClientConnection.port">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">port</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></em><a class="headerlink" href="#awscrt.http.HttpClientConnection.port" title="Link to this definition">¶</a></dt>
+<dd><p>Remote port</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="awscrt.http.HttpClientConnection.shutdown_future">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">shutdown_future</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Future" title="(in Python v3.14)"><span class="pre">concurrent.futures.Future</span></a></em><a class="headerlink" href="#awscrt.http.HttpClientConnection.shutdown_future" title="Link to this definition">¶</a></dt>
+<dd><p>Completes when this connection has finished shutting down.
+Future will contain a result of None, or an exception indicating why shutdown occurred.
+Note that the connection may have been garbage-collected before this future completes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Future" title="(in Python v3.14)">concurrent.futures.Future</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="awscrt.http.HttpClientConnection.version">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">version</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#awscrt.http.HttpVersion" title="awscrt.http.HttpVersion"><span class="pre">HttpVersion</span></a></em><a class="headerlink" href="#awscrt.http.HttpClientConnection.version" title="Link to this definition">¶</a></dt>
+<dd><p>Protocol used by this connection</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#awscrt.http.HttpVersion" title="awscrt.http.HttpVersion">HttpVersion</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.http.Http2ClientConnection">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.http.</span></span><span class="sig-name descname"><span class="pre">Http2ClientConnection</span></span><a class="headerlink" href="#awscrt.http.Http2ClientConnection" title="Link to this definition">¶</a></dt>
+<dd><dl class="py method">
+<dt class="sig sig-object py" id="awscrt.http.Http2ClientConnection.new">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">new</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">host_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">port</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">bootstrap</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="io.html#awscrt.io.ClientBootstrap" title="awscrt.io.ClientBootstrap"><span class="pre">ClientBootstrap</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">socket_options</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="io.html#awscrt.io.SocketOptions" title="awscrt.io.SocketOptions"><span class="pre">SocketOptions</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tls_connection_options</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="io.html#awscrt.io.TlsConnectionOptions" title="awscrt.io.TlsConnectionOptions"><span class="pre">TlsConnectionOptions</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">proxy_options</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#awscrt.http.HttpProxyOptions" title="awscrt.http.HttpProxyOptions"><span class="pre">HttpProxyOptions</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_settings</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.14)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#awscrt.http.Http2Setting" title="awscrt.http.Http2Setting"><span class="pre">Http2Setting</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_remote_settings_changed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.14)"><span class="pre">Callable</span></a><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.14)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#awscrt.http.Http2Setting" title="awscrt.http.Http2Setting"><span class="pre">Http2Setting</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manual_window_management</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_window_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">conn_manual_window_management</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">conn_window_size_threshold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stream_window_size_threshold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Future" title="(in Python v3.14)"><span class="pre">concurrent.futures.Future</span></a></span></span><a class="headerlink" href="#awscrt.http.Http2ClientConnection.new" title="Link to this definition">¶</a></dt>
+<dd><p>Asynchronously establish an HTTP/2 client connection.
+Notes: to set up the connection, the server must support HTTP/2 and TlsConnectionOptions</p>
+<p>This class extends HttpClientConnection with HTTP/2 specific functionality.</p>
+<dl>
+<dt>HTTP/2 specific args:</dt><dd><p>initial_settings (List[Http2Setting]): The initial settings to change for the connection.</p>
+<dl>
+<dt>on_remote_settings_changed: Optional callback invoked once the remote peer changes its settings.</dt><dd><p>And the settings are acknowledged by the local connection.
+The function should take the following arguments and return nothing:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><cite>settings</cite> (List[Http2Setting]): List of settings that were changed.</p></li>
+</ul>
+</div></blockquote>
+</dd>
+<dt>manual_window_management (bool): If True, enables manual flow control window management.</dt><dd><p>Default is False.</p>
+</dd>
+<dt>initial_window_size (Optional[int]): Initial window size for flow control.</dt><dd><p>Required if manual_window_management is True, ignored otherwise.</p>
+</dd>
+<dt>conn_manual_window_management (bool): If True, enables manual connection-level flow control</dt><dd><p>for the entire HTTP/2 connection. When enabled, the connection’s flow-control window
+shrinks as body data is received across all streams. The initial connection window is
+65,535 bytes. When the window reaches 0, all streams stop receiving data until
+<cite>update_window()</cite> is called to increment the connection’s window.
+Note: Padding in DATA frames counts against the window, but window updates for padding
+are sent automatically even in manual mode. Default is False.</p>
+</dd>
+<dt>conn_window_size_threshold (Optional[int]): Threshold for sending connection-level WINDOW_UPDATE</dt><dd><p>frames. Ignored if <cite>conn_manual_window_management</cite> is False. When the connection’s window
+is above this threshold, WINDOW_UPDATE frames are batched. When it drops below, the update
+is sent. Default is 32,767 (half of the initial 65,535 window).</p>
+</dd>
+<dt>stream_window_size_threshold (Optional[int]): Threshold for sending stream-level WINDOW_UPDATE</dt><dd><p>frames. Ignored if <cite>manual_window_management</cite> is False. When a stream’s window is above
+this threshold, WINDOW_UPDATE frames are batched. When it drops below, the update is sent.
+Default is half of <cite>initial_window_size</cite>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.http.Http2ClientConnection.request">
+<span class="sig-name descname"><span class="pre">request</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#awscrt.http.HttpRequest" title="awscrt.http.HttpRequest"><span class="pre">HttpRequest</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_response</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.14)"><span class="pre">Callable</span></a><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_body</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.14)"><span class="pre">Callable</span></a><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manual_write</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#awscrt.http.Http2ClientStream" title="awscrt.http.Http2ClientStream"><span class="pre">Http2ClientStream</span></a></span></span><a class="headerlink" href="#awscrt.http.Http2ClientConnection.request" title="Link to this definition">¶</a></dt>
+<dd><p>Create <cite>Http2ClientStream</cite> to carry out the request/response exchange.</p>
+<p>NOTE: The HTTP stream sends no data until <cite>Http2ClientStream.activate()</cite>
+is called. Call activate() when you’re ready for callbacks and events to fire.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>request</strong> (<a class="reference internal" href="#awscrt.http.HttpRequest" title="awscrt.http.HttpRequest"><em>HttpRequest</em></a>) – Definition for outgoing request.</p></li>
+<li><p><strong>on_response</strong> – <p>Optional callback invoked once main response headers are received.
+The function should take the following arguments and return nothing:</p>
+<blockquote>
+<div><ul>
+<li><p><cite>http_stream</cite> (<cite>Http2ClientStream</cite>): HTTP/2 stream carrying
+out this request/response exchange.</p></li>
+<li><p><cite>status_code</cite> (int): Response status code.</p></li>
+<li><p><cite>headers</cite> (List[Tuple[str, str]]): Response headers as a
+list of (name,value) pairs.</p></li>
+<li><p><cite>**kwargs</cite> (dict): Forward compatibility kwargs.</p></li>
+</ul>
+</div></blockquote>
+</p></li>
+<li><p><strong>on_body</strong> – <p>Optional callback invoked 0+ times as response body data is received.
+The function should take the following arguments and return nothing:</p>
+<blockquote>
+<div><ul>
+<li><p><cite>http_stream</cite> (<cite>Http2ClientStream</cite>): HTTP/2 stream carrying
+out this request/response exchange.</p></li>
+<li><p><cite>chunk</cite> (buffer): Response body data (not necessarily
+a whole “chunk” of chunked encoding).</p></li>
+<li><p><cite>**kwargs</cite> (dict): Forward-compatibility kwargs.</p></li>
+</ul>
+</div></blockquote>
+</p></li>
+<li><p><strong>manual_write</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – If True, enables manual data writing on the stream.
+This allows calling <cite>write_data()</cite> to stream the request body in chunks.
+Note: In the asyncio version, this is replaced by the async_body parameter.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>Http2ClientStream</em> – Stream for the HTTP/2 request/response exchange.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.http.Http2ClientConnection.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Future" title="(in Python v3.14)"><span class="pre">concurrent.futures.Future</span></a></span></span><a class="headerlink" href="#awscrt.http.Http2ClientConnection.close" title="Link to this definition">¶</a></dt>
+<dd><p>Close the connection.</p>
+<p>Shutdown is asynchronous. This call has no effect if the connection is already
+closing.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>concurrent.futures.Future</em> – This connection’s <a class="reference internal" href="#awscrt.http.Http2ClientConnection.shutdown_future" title="awscrt.http.Http2ClientConnection.shutdown_future"><code class="xref py py-attr docutils literal notranslate"><span class="pre">shutdown_future</span></code></a>,
+which completes when shutdown has finished.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.http.Http2ClientConnection.update_window">
+<span class="sig-name descname"><span class="pre">update_window</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">increment_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#awscrt.http.Http2ClientConnection.update_window" title="Link to this definition">¶</a></dt>
+<dd><p>Update the connection’s flow control window.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>increment_size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Number of bytes to increment the window by.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="awscrt.http.Http2ClientConnection.host_name">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">host_name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></em><a class="headerlink" href="#awscrt.http.Http2ClientConnection.host_name" title="Link to this definition">¶</a></dt>
+<dd><p>Remote hostname</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.http.Http2ClientConnection.is_open">
+<span class="sig-name descname"><span class="pre">is_open</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span></span><a class="headerlink" href="#awscrt.http.Http2ClientConnection.is_open" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>bool</em> – True if this connection is open and usable, False otherwise.
+Check <a class="reference internal" href="#awscrt.http.Http2ClientConnection.shutdown_future" title="awscrt.http.Http2ClientConnection.shutdown_future"><code class="xref py py-attr docutils literal notranslate"><span class="pre">shutdown_future</span></code></a> to know when the connection is completely
+finished shutting down.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="awscrt.http.Http2ClientConnection.port">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">port</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></em><a class="headerlink" href="#awscrt.http.Http2ClientConnection.port" title="Link to this definition">¶</a></dt>
+<dd><p>Remote port</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="awscrt.http.Http2ClientConnection.shutdown_future">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">shutdown_future</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Future" title="(in Python v3.14)"><span class="pre">concurrent.futures.Future</span></a></em><a class="headerlink" href="#awscrt.http.Http2ClientConnection.shutdown_future" title="Link to this definition">¶</a></dt>
+<dd><p>Completes when this connection has finished shutting down.
+Future will contain a result of None, or an exception indicating why shutdown occurred.
+Note that the connection may have been garbage-collected before this future completes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Future" title="(in Python v3.14)">concurrent.futures.Future</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="awscrt.http.Http2ClientConnection.version">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">version</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#awscrt.http.HttpVersion" title="awscrt.http.HttpVersion"><span class="pre">HttpVersion</span></a></em><a class="headerlink" href="#awscrt.http.Http2ClientConnection.version" title="Link to this definition">¶</a></dt>
+<dd><p>Protocol used by this connection</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#awscrt.http.HttpVersion" title="awscrt.http.HttpVersion">HttpVersion</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.http.HttpClientStreamBase">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.http.</span></span><span class="sig-name descname"><span class="pre">HttpClientStreamBase</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">connection</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_body</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.14)"><span class="pre">Callable</span></a><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpClientStreamBase" title="Link to this definition">¶</a></dt>
+<dd><p>Base for HTTP client stream classes.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.http.HttpClientStreamBase.connection">
+<span class="sig-name descname"><span class="pre">connection</span></span><a class="headerlink" href="#awscrt.http.HttpClientStreamBase.connection" title="Link to this definition">¶</a></dt>
+<dd><p>This stream’s connection.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.http.HttpClientStreamBase.completion_future">
+<span class="sig-name descname"><span class="pre">completion_future</span></span><a class="headerlink" href="#awscrt.http.HttpClientStreamBase.completion_future" title="Link to this definition">¶</a></dt>
+<dd><p>Future that completes when
+the request/response exchange is finished.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="awscrt.http.HttpClientStreamBase.version">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">version</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#awscrt.http.HttpVersion" title="awscrt.http.HttpVersion"><span class="pre">HttpVersion</span></a></em><a class="headerlink" href="#awscrt.http.HttpClientStreamBase.version" title="Link to this definition">¶</a></dt>
+<dd><p>Protocol used by this stream</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#awscrt.http.HttpVersion" title="awscrt.http.HttpVersion">HttpVersion</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="awscrt.http.HttpClientStreamBase.response_status_code">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">response_status_code</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><a class="headerlink" href="#awscrt.http.HttpClientStreamBase.response_status_code" title="Link to this definition">¶</a></dt>
+<dd><p>The response status code.</p>
+<p>This is None until a response arrives.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)">int</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.http.HttpClientStreamBase.update_window">
+<span class="sig-name descname"><span class="pre">update_window</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">increment_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#awscrt.http.HttpClientStreamBase.update_window" title="Link to this definition">¶</a></dt>
+<dd><p>Update the stream’s flow control window.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>increment_size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Number of bytes to increment the window by.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.http.HttpClientStream">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.http.</span></span><span class="sig-name descname"><span class="pre">HttpClientStream</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">connection</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#awscrt.http.HttpClientConnection" title="awscrt.http.HttpClientConnection"><span class="pre">HttpClientConnection</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">request</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#awscrt.http.HttpRequest" title="awscrt.http.HttpRequest"><span class="pre">HttpRequest</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_response</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.14)"><span class="pre">Callable</span></a><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_body</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.14)"><span class="pre">Callable</span></a><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpClientStream" title="Link to this definition">¶</a></dt>
+<dd><p>HTTP stream that sends a request and receives a response.</p>
+<p>Create an HttpClientStream with <a class="reference internal" href="#awscrt.http.HttpClientConnection.request" title="awscrt.http.HttpClientConnection.request"><code class="xref py py-meth docutils literal notranslate"><span class="pre">HttpClientConnection.request()</span></code></a>.</p>
+<p>NOTE: The HTTP stream sends no data until <a class="reference internal" href="#awscrt.http.HttpClientStream.activate" title="awscrt.http.HttpClientStream.activate"><code class="xref py py-meth docutils literal notranslate"><span class="pre">HttpClientStream.activate()</span></code></a>
+is called. Call activate() when you’re ready for callbacks and events to fire.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.http.HttpClientStream.connection">
+<span class="sig-name descname"><span class="pre">connection</span></span><a class="headerlink" href="#awscrt.http.HttpClientStream.connection" title="Link to this definition">¶</a></dt>
+<dd><p>This stream’s connection.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#awscrt.http.HttpClientConnection" title="awscrt.http.HttpClientConnection">HttpClientConnection</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.http.HttpClientStream.completion_future">
+<span class="sig-name descname"><span class="pre">completion_future</span></span><a class="headerlink" href="#awscrt.http.HttpClientStream.completion_future" title="Link to this definition">¶</a></dt>
+<dd><p>Future that will contain
+the response status code (int) when the request/response exchange
+completes. If the exchange fails to complete, the Future will
+contain an exception indicating why it failed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Future" title="(in Python v3.14)">concurrent.futures.Future</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.http.HttpClientStream.activate">
+<span class="sig-name descname"><span class="pre">activate</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#awscrt.http.HttpClientStream.activate" title="Link to this definition">¶</a></dt>
+<dd><p>Begin sending the request.</p>
+<p>The HTTP stream does nothing until this is called. Call activate() when you
+are ready for its callbacks and events to fire.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="awscrt.http.HttpClientStream.response_status_code">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">response_status_code</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><a class="headerlink" href="#awscrt.http.HttpClientStream.response_status_code" title="Link to this definition">¶</a></dt>
+<dd><p>The response status code.</p>
+<p>This is None until a response arrives.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)">int</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.http.HttpClientStream.update_window">
+<span class="sig-name descname"><span class="pre">update_window</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">increment_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#awscrt.http.HttpClientStream.update_window" title="Link to this definition">¶</a></dt>
+<dd><p>Update the stream’s flow control window.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>increment_size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Number of bytes to increment the window by.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="awscrt.http.HttpClientStream.version">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">version</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#awscrt.http.HttpVersion" title="awscrt.http.HttpVersion"><span class="pre">HttpVersion</span></a></em><a class="headerlink" href="#awscrt.http.HttpClientStream.version" title="Link to this definition">¶</a></dt>
+<dd><p>Protocol used by this stream</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#awscrt.http.HttpVersion" title="awscrt.http.HttpVersion">HttpVersion</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.http.Http2ClientStream">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.http.</span></span><span class="sig-name descname"><span class="pre">Http2ClientStream</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">connection</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#awscrt.http.HttpClientConnection" title="awscrt.http.HttpClientConnection"><span class="pre">HttpClientConnection</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">request</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#awscrt.http.HttpRequest" title="awscrt.http.HttpRequest"><span class="pre">HttpRequest</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_response</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.14)"><span class="pre">Callable</span></a><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_body</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.14)"><span class="pre">Callable</span></a><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manual_write</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.Http2ClientStream" title="Link to this definition">¶</a></dt>
+<dd><dl class="py method">
+<dt class="sig sig-object py" id="awscrt.http.Http2ClientStream.activate">
+<span class="sig-name descname"><span class="pre">activate</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#awscrt.http.Http2ClientStream.activate" title="Link to this definition">¶</a></dt>
+<dd><p>Begin sending the request.</p>
+<p>The HTTP stream does nothing until this is called. Call activate() when you
+are ready for its callbacks and events to fire.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.http.Http2ClientStream.write_data">
+<span class="sig-name descname"><span class="pre">write_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_stream</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="io.html#awscrt.io.InputStream" title="awscrt.io.InputStream"><span class="pre">InputStream</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_stream</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Future" title="(in Python v3.14)"><span class="pre">concurrent.futures.Future</span></a></span></span><a class="headerlink" href="#awscrt.http.Http2ClientStream.write_data" title="Link to this definition">¶</a></dt>
+<dd><p>Write a chunk of data to the request body stream.</p>
+<p>This method is only available when the stream was created with
+manual_write=True. This allows incremental writing of request data.</p>
+<p>Note: In the asyncio version, this is replaced by the request_body_generator parameter
+which accepts an async generator.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data_stream</strong> (<em>Union</em><em>[</em><a class="reference internal" href="io.html#awscrt.io.InputStream" title="awscrt.io.InputStream"><em>InputStream</em></a><em>, </em><em>Any</em><em>]</em>) – Data to write. If not an InputStream,
+it will be wrapped in one. Can be None to send an empty chunk.</p></li>
+<li><p><strong>end_stream</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – True to indicate this is the last chunk and no more data
+will be sent. False if more chunks will follow.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p><em>concurrent.futures.Future</em> –</p>
+<dl class="simple">
+<dt>Future that completes when the write operation</dt><dd><p>is done. The future will contain None on success, or an exception on failure.</p>
+</dd>
+</dl>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="awscrt.http.Http2ClientStream.response_status_code">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">response_status_code</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><a class="headerlink" href="#awscrt.http.Http2ClientStream.response_status_code" title="Link to this definition">¶</a></dt>
+<dd><p>The response status code.</p>
+<p>This is None until a response arrives.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)">int</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.http.Http2ClientStream.update_window">
+<span class="sig-name descname"><span class="pre">update_window</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">increment_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#awscrt.http.Http2ClientStream.update_window" title="Link to this definition">¶</a></dt>
+<dd><p>Update the stream’s flow control window.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>increment_size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Number of bytes to increment the window by.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="awscrt.http.Http2ClientStream.version">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">version</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#awscrt.http.HttpVersion" title="awscrt.http.HttpVersion"><span class="pre">HttpVersion</span></a></em><a class="headerlink" href="#awscrt.http.Http2ClientStream.version" title="Link to this definition">¶</a></dt>
+<dd><p>Protocol used by this stream</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#awscrt.http.HttpVersion" title="awscrt.http.HttpVersion">HttpVersion</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.http.HttpRequest">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.http.</span></span><span class="sig-name descname"><span class="pre">HttpRequest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'GET'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'/'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">headers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#awscrt.http.HttpHeaders" title="awscrt.http.HttpHeaders"><span class="pre">HttpHeaders</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">body_stream</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="io.html#awscrt.io.InputStream" title="awscrt.io.InputStream"><span class="pre">InputStream</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpRequest" title="Link to this definition">¶</a></dt>
+<dd><p>Definition for an outgoing HTTP request.</p>
+<p>The request may be transformed (ex: signing the request) before its data is eventually sent.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>method</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – HTTP request method (verb). Default value is “GET”.</p></li>
+<li><p><strong>path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – HTTP path-and-query value. Default value is “/”.</p></li>
+<li><p><strong>headers</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="#awscrt.http.HttpHeaders" title="awscrt.http.HttpHeaders"><em>HttpHeaders</em></a><em>]</em>) – Optional headers. If None specified,
+an empty <a class="reference internal" href="#awscrt.http.HttpHeaders" title="awscrt.http.HttpHeaders"><code class="xref py py-class docutils literal notranslate"><span class="pre">HttpHeaders</span></code></a> is created.</p></li>
+<li><p><strong>body_stream</strong> (<em>Optional</em><em>[</em><em>Union</em><em>[</em><a class="reference internal" href="io.html#awscrt.io.InputStream" title="awscrt.io.InputStream"><em>InputStream</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/io.html#io.IOBase" title="(in Python v3.14)"><em>io.IOBase</em></a><em>]</em><em>]</em>) – Optional body as binary stream.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py property">
+<dt class="sig sig-object py" id="awscrt.http.HttpRequest.method">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">method</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></em><a class="headerlink" href="#awscrt.http.HttpRequest.method" title="Link to this definition">¶</a></dt>
+<dd><p>HTTP request method (verb).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="awscrt.http.HttpRequest.path">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">path</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></em><a class="headerlink" href="#awscrt.http.HttpRequest.path" title="Link to this definition">¶</a></dt>
+<dd><p>HTTP path-and-query value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="awscrt.http.HttpRequest.headers">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">headers</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#awscrt.http.HttpHeaders" title="awscrt.http.HttpHeaders"><span class="pre">HttpHeaders</span></a></em><a class="headerlink" href="#awscrt.http.HttpRequest.headers" title="Link to this definition">¶</a></dt>
+<dd><p>Headers to send.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#awscrt.http.HttpHeaders" title="awscrt.http.HttpHeaders">HttpHeaders</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.http.HttpHeaders">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.http.</span></span><span class="sig-name descname"><span class="pre">HttpHeaders</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name_value_pairs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.14)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.14)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpHeaders" title="Link to this definition">¶</a></dt>
+<dd><p>Collection of HTTP headers.</p>
+<p>A given header name may have multiple values.
+Header names are always treated in a case-insensitive manner.
+HttpHeaders can be iterated over as (name,value) pairs.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>name_value_pairs</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><em>Tuple</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>]</em><em>]</em><em>]</em>) – Construct from a
+collection of (name,value) pairs.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.http.HttpHeaders.add">
+<span class="sig-name descname"><span class="pre">add</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#awscrt.http.HttpHeaders.add" title="Link to this definition">¶</a></dt>
+<dd><p>Add a name-value pair.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Name.</p></li>
+<li><p><strong>value</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Value.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.http.HttpHeaders.add_pairs">
+<span class="sig-name descname"><span class="pre">add_pairs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name_value_pairs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.14)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.14)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#awscrt.http.HttpHeaders.add_pairs" title="Link to this definition">¶</a></dt>
+<dd><p>Add list of (name,value) pairs.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>name_value_pairs</strong> (<em>List</em><em>[</em><em>Tuple</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>]</em><em>]</em>) – List of (name,value) pairs.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.http.HttpHeaders.set">
+<span class="sig-name descname"><span class="pre">set</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#awscrt.http.HttpHeaders.set" title="Link to this definition">¶</a></dt>
+<dd><p>Set a name-value pair, any existing values for the name are removed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Name.</p></li>
+<li><p><strong>value</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Value.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.http.HttpHeaders.get_values">
+<span class="sig-name descname"><span class="pre">get_values</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.14)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#awscrt.http.HttpHeaders.get_values" title="Link to this definition">¶</a></dt>
+<dd><p>Return an iterator over the values for this name.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Name.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>Iterator[str]</em> – Iterator over values for this header name</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.http.HttpHeaders.get">
+<span class="sig-name descname"><span class="pre">get</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">default</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#awscrt.http.HttpHeaders.get" title="Link to this definition">¶</a></dt>
+<dd><p>Get the first value for this name, ignoring any additional values.
+Returns <cite>default</cite> if no values exist.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Name.</p></li>
+<li><p><strong>default</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>]</em>) – If <cite>name</cite> not found, this value is returned.
+Defaults to None.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>Optional[str]</em> – Header value or default</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.http.HttpHeaders.remove">
+<span class="sig-name descname"><span class="pre">remove</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#awscrt.http.HttpHeaders.remove" title="Link to this definition">¶</a></dt>
+<dd><p>Remove all values for this name.
+Raises a KeyError if name not found.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Header name.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.http.HttpHeaders.remove_value">
+<span class="sig-name descname"><span class="pre">remove_value</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#awscrt.http.HttpHeaders.remove_value" title="Link to this definition">¶</a></dt>
+<dd><p>Remove a specific value for this name.
+Raises a ValueError if value not found.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Name.</p></li>
+<li><p><strong>value</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Value.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.http.HttpHeaders.clear">
+<span class="sig-name descname"><span class="pre">clear</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#awscrt.http.HttpHeaders.clear" title="Link to this definition">¶</a></dt>
+<dd><p>Clear all headers.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.http.HttpProxyConnectionType">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.http.</span></span><span class="sig-name descname"><span class="pre">HttpProxyConnectionType</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpProxyConnectionType" title="Link to this definition">¶</a></dt>
+<dd><p>Proxy connection type enumeration</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.http.HttpProxyConnectionType.Legacy">
+<span class="sig-name descname"><span class="pre">Legacy</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#awscrt.http.HttpProxyConnectionType.Legacy" title="Link to this definition">¶</a></dt>
+<dd><p>Use the old connection establishment logic that would use:</p>
+<ol class="arabic simple">
+<li><p>Forwarding if not using TLS</p></li>
+<li><p>Tunneling if using TLS</p></li>
+</ol>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.http.HttpProxyConnectionType.Forwarding">
+<span class="sig-name descname"><span class="pre">Forwarding</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#awscrt.http.HttpProxyConnectionType.Forwarding" title="Link to this definition">¶</a></dt>
+<dd><p>Establish a request forwarding connection to the proxy.</p>
+<p>In this case, TLS is not a valid option.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.http.HttpProxyConnectionType.Tunneling">
+<span class="sig-name descname"><span class="pre">Tunneling</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></em><a class="headerlink" href="#awscrt.http.HttpProxyConnectionType.Tunneling" title="Link to this definition">¶</a></dt>
+<dd><p>Establish a tunneling connection through the proxy to the ultimate endpoint.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.http.HttpProxyAuthenticationType">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.http.</span></span><span class="sig-name descname"><span class="pre">HttpProxyAuthenticationType</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpProxyAuthenticationType" title="Link to this definition">¶</a></dt>
+<dd><p>Proxy authentication type enumeration.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.http.HttpProxyAuthenticationType.Nothing">
+<span class="sig-name descname"><span class="pre">Nothing</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#awscrt.http.HttpProxyAuthenticationType.Nothing" title="Link to this definition">¶</a></dt>
+<dd><p>No authentication</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.http.HttpProxyAuthenticationType.Basic">
+<span class="sig-name descname"><span class="pre">Basic</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#awscrt.http.HttpProxyAuthenticationType.Basic" title="Link to this definition">¶</a></dt>
+<dd><p>Username and password</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.http.HttpProxyOptions">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.http.</span></span><span class="sig-name descname"><span class="pre">HttpProxyOptions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">host_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">port</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">tls_connection_options</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="io.html#awscrt.io.TlsConnectionOptions" title="awscrt.io.TlsConnectionOptions"><span class="pre">TlsConnectionOptions</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auth_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#awscrt.http.HttpProxyAuthenticationType" title="awscrt.http.HttpProxyAuthenticationType"><span class="pre">HttpProxyAuthenticationType</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">HttpProxyAuthenticationType.Nothing</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auth_username</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auth_password</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">connection_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#awscrt.http.HttpProxyConnectionType" title="awscrt.http.HttpProxyConnectionType"><span class="pre">HttpProxyConnectionType</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">HttpProxyConnectionType.Legacy</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.http.HttpProxyOptions" title="Link to this definition">¶</a></dt>
+<dd><p>Proxy options for HTTP clients.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>host_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Name of the proxy server to connect through.</p></li>
+<li><p><strong>port</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Port number of the proxy server to connect through.</p></li>
+<li><p><strong>tls_connection_options</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="io.html#awscrt.io.TlsConnectionOptions" title="awscrt.io.TlsConnectionOptions"><em>TlsConnectionOptions</em></a><em>]</em>) – Optional
+<cite>TlsConnectionOptions</cite> for the Local to Proxy connection.
+Must be distinct from the <cite>TlsConnectionOptions</cite>
+provided to the HTTP connection.</p></li>
+<li><p><strong>auth_type</strong> (<a class="reference internal" href="#awscrt.http.HttpProxyAuthenticationType" title="awscrt.http.HttpProxyAuthenticationType"><em>HttpProxyAuthenticationType</em></a>) – Type of proxy authentication to use.
+Default is <a class="reference internal" href="#awscrt.http.HttpProxyAuthenticationType.Nothing" title="awscrt.http.HttpProxyAuthenticationType.Nothing"><code class="xref py py-const docutils literal notranslate"><span class="pre">HttpProxyAuthenticationType.Nothing</span></code></a>.</p></li>
+<li><p><strong>auth_username</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>]</em>) – Username to use when <cite>auth_type</cite> is
+<a class="reference internal" href="#awscrt.http.HttpProxyAuthenticationType.Basic" title="awscrt.http.HttpProxyAuthenticationType.Basic"><code class="xref py py-const docutils literal notranslate"><span class="pre">HttpProxyAuthenticationType.Basic</span></code></a>.</p></li>
+<li><p><strong>auth_password</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>]</em>) – Username to use when <cite>auth_type</cite> is
+<a class="reference internal" href="#awscrt.http.HttpProxyAuthenticationType.Basic" title="awscrt.http.HttpProxyAuthenticationType.Basic"><code class="xref py py-const docutils literal notranslate"><span class="pre">HttpProxyAuthenticationType.Basic</span></code></a>.</p></li>
+<li><p><strong>connection_type</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="#awscrt.http.HttpProxyConnectionType" title="awscrt.http.HttpProxyConnectionType"><em>HttpProxyConnectionType</em></a>) – Type of proxy connection to make.
+Default is <a class="reference internal" href="#awscrt.http.HttpProxyConnectionType.Legacy" title="awscrt.http.HttpProxyConnectionType.Legacy"><code class="xref py py-const docutils literal notranslate"><span class="pre">HttpProxyConnectionType.Legacy</span></code></a>.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.http.HttpProxyOptions.host_name">
+<span class="sig-name descname"><span class="pre">host_name</span></span><a class="headerlink" href="#awscrt.http.HttpProxyOptions.host_name" title="Link to this definition">¶</a></dt>
+<dd><p>Name of the proxy server to connect through.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.http.HttpProxyOptions.port">
+<span class="sig-name descname"><span class="pre">port</span></span><a class="headerlink" href="#awscrt.http.HttpProxyOptions.port" title="Link to this definition">¶</a></dt>
+<dd><p>Port number of the proxy server to connect through.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)">int</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.http.HttpProxyOptions.tls_connection_options">
+<span class="sig-name descname"><span class="pre">tls_connection_options</span></span><a class="headerlink" href="#awscrt.http.HttpProxyOptions.tls_connection_options" title="Link to this definition">¶</a></dt>
+<dd><p>Optional
+<cite>TlsConnectionOptions</cite> for the Local to Proxy connection.
+Must be distinct from the <cite>TlsConnectionOptions</cite>
+provided to the HTTP connection.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Optional[<a class="reference internal" href="io.html#awscrt.io.TlsConnectionOptions" title="awscrt.io.TlsConnectionOptions">TlsConnectionOptions</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.http.HttpProxyOptions.auth_type">
+<span class="sig-name descname"><span class="pre">auth_type</span></span><a class="headerlink" href="#awscrt.http.HttpProxyOptions.auth_type" title="Link to this definition">¶</a></dt>
+<dd><p>Type of proxy authentication to use.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#awscrt.http.HttpProxyAuthenticationType" title="awscrt.http.HttpProxyAuthenticationType">HttpProxyAuthenticationType</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.http.HttpProxyOptions.auth_username">
+<span class="sig-name descname"><span class="pre">auth_username</span></span><a class="headerlink" href="#awscrt.http.HttpProxyOptions.auth_username" title="Link to this definition">¶</a></dt>
+<dd><p>Username to use when <cite>auth_type</cite> is
+<a class="reference internal" href="#awscrt.http.HttpProxyAuthenticationType.Basic" title="awscrt.http.HttpProxyAuthenticationType.Basic"><code class="xref py py-const docutils literal notranslate"><span class="pre">HttpProxyAuthenticationType.Basic</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Optional[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.http.HttpProxyOptions.auth_password">
+<span class="sig-name descname"><span class="pre">auth_password</span></span><a class="headerlink" href="#awscrt.http.HttpProxyOptions.auth_password" title="Link to this definition">¶</a></dt>
+<dd><p>Username to use when <cite>auth_type</cite> is
+<a class="reference internal" href="#awscrt.http.HttpProxyAuthenticationType.Basic" title="awscrt.http.HttpProxyAuthenticationType.Basic"><code class="xref py py-const docutils literal notranslate"><span class="pre">HttpProxyAuthenticationType.Basic</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Optional[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.http.HttpProxyOptions.connection_type">
+<span class="sig-name descname"><span class="pre">connection_type</span></span><a class="headerlink" href="#awscrt.http.HttpProxyOptions.connection_type" title="Link to this definition">¶</a></dt>
+<dd><p>Type of proxy connection to make.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#awscrt.http.HttpProxyConnectionType" title="awscrt.http.HttpProxyConnectionType">HttpProxyConnectionType</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div>
+    <h3><a href="../index.html">Table of Contents</a></h3>
+    <ul>
+<li><a class="reference internal" href="#">awscrt.http</a><ul>
+<li><a class="reference internal" href="#awscrt.http.HttpVersion"><code class="docutils literal notranslate"><span class="pre">HttpVersion</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.http.HttpVersion.Unknown"><code class="docutils literal notranslate"><span class="pre">Unknown</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpVersion.Http1_0"><code class="docutils literal notranslate"><span class="pre">Http1_0</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpVersion.Http1_1"><code class="docutils literal notranslate"><span class="pre">Http1_1</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpVersion.Http2"><code class="docutils literal notranslate"><span class="pre">Http2</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#awscrt.http.Http2SettingID"><code class="docutils literal notranslate"><span class="pre">Http2SettingID</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.Http2Setting"><code class="docutils literal notranslate"><span class="pre">Http2Setting</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpClientConnectionBase"><code class="docutils literal notranslate"><span class="pre">HttpClientConnectionBase</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.http.HttpClientConnectionBase.host_name"><code class="docutils literal notranslate"><span class="pre">host_name</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpClientConnectionBase.port"><code class="docutils literal notranslate"><span class="pre">port</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpClientConnectionBase.is_open"><code class="docutils literal notranslate"><span class="pre">is_open()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpClientConnectionBase.shutdown_future"><code class="docutils literal notranslate"><span class="pre">shutdown_future</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpClientConnectionBase.version"><code class="docutils literal notranslate"><span class="pre">version</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#awscrt.http.HttpClientConnection"><code class="docutils literal notranslate"><span class="pre">HttpClientConnection</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.http.HttpClientConnection.new"><code class="docutils literal notranslate"><span class="pre">new()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpClientConnection.request"><code class="docutils literal notranslate"><span class="pre">request()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpClientConnection.close"><code class="docutils literal notranslate"><span class="pre">close()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpClientConnection.host_name"><code class="docutils literal notranslate"><span class="pre">host_name</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpClientConnection.is_open"><code class="docutils literal notranslate"><span class="pre">is_open()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpClientConnection.port"><code class="docutils literal notranslate"><span class="pre">port</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpClientConnection.shutdown_future"><code class="docutils literal notranslate"><span class="pre">shutdown_future</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpClientConnection.version"><code class="docutils literal notranslate"><span class="pre">version</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#awscrt.http.Http2ClientConnection"><code class="docutils literal notranslate"><span class="pre">Http2ClientConnection</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.http.Http2ClientConnection.new"><code class="docutils literal notranslate"><span class="pre">new()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.Http2ClientConnection.request"><code class="docutils literal notranslate"><span class="pre">request()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.Http2ClientConnection.close"><code class="docutils literal notranslate"><span class="pre">close()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.Http2ClientConnection.update_window"><code class="docutils literal notranslate"><span class="pre">update_window()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.Http2ClientConnection.host_name"><code class="docutils literal notranslate"><span class="pre">host_name</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.Http2ClientConnection.is_open"><code class="docutils literal notranslate"><span class="pre">is_open()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.Http2ClientConnection.port"><code class="docutils literal notranslate"><span class="pre">port</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.Http2ClientConnection.shutdown_future"><code class="docutils literal notranslate"><span class="pre">shutdown_future</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.Http2ClientConnection.version"><code class="docutils literal notranslate"><span class="pre">version</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#awscrt.http.HttpClientStreamBase"><code class="docutils literal notranslate"><span class="pre">HttpClientStreamBase</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.http.HttpClientStreamBase.connection"><code class="docutils literal notranslate"><span class="pre">connection</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpClientStreamBase.completion_future"><code class="docutils literal notranslate"><span class="pre">completion_future</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpClientStreamBase.version"><code class="docutils literal notranslate"><span class="pre">version</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpClientStreamBase.response_status_code"><code class="docutils literal notranslate"><span class="pre">response_status_code</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpClientStreamBase.update_window"><code class="docutils literal notranslate"><span class="pre">update_window()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#awscrt.http.HttpClientStream"><code class="docutils literal notranslate"><span class="pre">HttpClientStream</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.http.HttpClientStream.connection"><code class="docutils literal notranslate"><span class="pre">connection</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpClientStream.completion_future"><code class="docutils literal notranslate"><span class="pre">completion_future</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpClientStream.activate"><code class="docutils literal notranslate"><span class="pre">activate()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpClientStream.response_status_code"><code class="docutils literal notranslate"><span class="pre">response_status_code</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpClientStream.update_window"><code class="docutils literal notranslate"><span class="pre">update_window()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpClientStream.version"><code class="docutils literal notranslate"><span class="pre">version</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#awscrt.http.Http2ClientStream"><code class="docutils literal notranslate"><span class="pre">Http2ClientStream</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.http.Http2ClientStream.activate"><code class="docutils literal notranslate"><span class="pre">activate()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.Http2ClientStream.write_data"><code class="docutils literal notranslate"><span class="pre">write_data()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.Http2ClientStream.response_status_code"><code class="docutils literal notranslate"><span class="pre">response_status_code</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.Http2ClientStream.update_window"><code class="docutils literal notranslate"><span class="pre">update_window()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.Http2ClientStream.version"><code class="docutils literal notranslate"><span class="pre">version</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#awscrt.http.HttpRequest"><code class="docutils literal notranslate"><span class="pre">HttpRequest</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.http.HttpRequest.method"><code class="docutils literal notranslate"><span class="pre">method</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpRequest.path"><code class="docutils literal notranslate"><span class="pre">path</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpRequest.headers"><code class="docutils literal notranslate"><span class="pre">headers</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#awscrt.http.HttpHeaders"><code class="docutils literal notranslate"><span class="pre">HttpHeaders</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.http.HttpHeaders.add"><code class="docutils literal notranslate"><span class="pre">add()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpHeaders.add_pairs"><code class="docutils literal notranslate"><span class="pre">add_pairs()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpHeaders.set"><code class="docutils literal notranslate"><span class="pre">set()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpHeaders.get_values"><code class="docutils literal notranslate"><span class="pre">get_values()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpHeaders.get"><code class="docutils literal notranslate"><span class="pre">get()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpHeaders.remove"><code class="docutils literal notranslate"><span class="pre">remove()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpHeaders.remove_value"><code class="docutils literal notranslate"><span class="pre">remove_value()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpHeaders.clear"><code class="docutils literal notranslate"><span class="pre">clear()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#awscrt.http.HttpProxyConnectionType"><code class="docutils literal notranslate"><span class="pre">HttpProxyConnectionType</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.http.HttpProxyConnectionType.Legacy"><code class="docutils literal notranslate"><span class="pre">Legacy</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpProxyConnectionType.Forwarding"><code class="docutils literal notranslate"><span class="pre">Forwarding</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpProxyConnectionType.Tunneling"><code class="docutils literal notranslate"><span class="pre">Tunneling</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#awscrt.http.HttpProxyAuthenticationType"><code class="docutils literal notranslate"><span class="pre">HttpProxyAuthenticationType</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.http.HttpProxyAuthenticationType.Nothing"><code class="docutils literal notranslate"><span class="pre">Nothing</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpProxyAuthenticationType.Basic"><code class="docutils literal notranslate"><span class="pre">Basic</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#awscrt.http.HttpProxyOptions"><code class="docutils literal notranslate"><span class="pre">HttpProxyOptions</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.http.HttpProxyOptions.host_name"><code class="docutils literal notranslate"><span class="pre">host_name</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpProxyOptions.port"><code class="docutils literal notranslate"><span class="pre">port</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpProxyOptions.tls_connection_options"><code class="docutils literal notranslate"><span class="pre">tls_connection_options</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpProxyOptions.auth_type"><code class="docutils literal notranslate"><span class="pre">auth_type</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpProxyOptions.auth_username"><code class="docutils literal notranslate"><span class="pre">auth_username</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpProxyOptions.auth_password"><code class="docutils literal notranslate"><span class="pre">auth_password</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.http.HttpProxyOptions.connection_type"><code class="docutils literal notranslate"><span class="pre">connection_type</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  </div>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="eventstream.html"
+                          title="previous chapter">awscrt.eventstream</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="io.html"
+                          title="next chapter">awscrt.io</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/api/http.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="io.html" title="awscrt.io"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="eventstream.html" title="awscrt.eventstream"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">awscrt  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">awscrt.http</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2020, Amazon Web Services, Inc.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.2.6.
+    </div>
+  </body>
+</html>
