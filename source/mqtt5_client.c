@@ -220,6 +220,7 @@ static PyObject *s_aws_set_user_properties_to_PyObject(
 
 static const char *s_capsule_name_puback_control_handle = "aws_puback_control_handle";
 
+/* An opaque handle representing manual control over a QoS 1 PUBACK for a received PUBLISH packet. */
 struct puback_control_handle {
     uint64_t control_id;
 };

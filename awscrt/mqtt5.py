@@ -1228,7 +1228,7 @@ class PublishReceivedData:
 
     Args:
         publish_packet (PublishPacket): Data model of an `MQTT5 PUBLISH <https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901100>`_ packet.
-        acquire_puback_control (Callable): Call this function to prevent automatic PUBACK and take manual control of this PUBLISH message's PUBACK. Returns an opaque handle object that can be passed to Client.invoke_puback().
+        acquire_puback_control (Callable): Acquires manual control over the PUBACK for this QoS 1 PUBLISH message, preventing the client from automatically sending a PUBACK. The returned handle can be passed to invoke_puback() to send the PUBACK to the broker. This method MUST be called within the message received callback.
     """
     publish_packet: PublishPacket = None
     acquire_puback_control: Callable = None
@@ -1965,7 +1965,10 @@ class Client(NativeResource):
         return OperationStatisticsData(result[0], result[1], result[2], result[3])
 
     def invoke_puback(self, puback_control_handle):
-        """Sends a PUBACK packet for the given puback control handle.
+        """Sends a PUBACK packet for a QoS 1 PUBLISH that was previously acquired for manual control.
+        To use manual PUBACK control, call acquire_puback_control() within the on_publish_callback_fn 
+        callback to obtain an opaque handle object. Then call this method with the opaque handle object
+        to send the PUBACK.
 
         Args:
             puback_control_handle: An opaque handle obtained from acquire_puback_control(). This handle cannot be created manually and must come from the acquire_puback_control() Callable within PublishReceivedData.
