@@ -1966,7 +1966,7 @@ class Client(NativeResource):
 
     def invoke_puback(self, puback_control_handle):
         """Sends a PUBACK packet for a QoS 1 PUBLISH that was previously acquired for manual control.
-        To use manual PUBACK control, call acquire_puback_control() within the on_publish_callback_fn 
+        To use manual PUBACK control, call acquire_puback_control() within the on_publish_callback_fn
         callback to obtain an opaque handle object. Then call this method with the opaque handle object
         to send the PUBACK.
 
