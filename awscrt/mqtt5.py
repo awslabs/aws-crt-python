@@ -495,6 +495,7 @@ def _try_puback_reason_code(value):
     except Exception:
         return None
 
+
 class ManualPubackResult(IntEnum):
     """Result for a manually invoked PUBACK operation."""
 
@@ -516,6 +517,7 @@ def _try_manual_puback_result(value):
         return ManualPubackResult(value)
     except Exception:
         return None
+
 
 class SubackReasonCode(IntEnum):
     """Reason code inside SUBACK packet payloads.
@@ -1161,6 +1163,7 @@ class PubackPacket:
     reason_string: str = None
     user_properties: 'Sequence[UserProperty]' = None
 
+
 @dataclass
 class InvokePubackCompletion:
     """dataclass containing results of a manually invoked PUBACK
@@ -1503,7 +1506,7 @@ class _ClientCore:
 
         # Create PublishReceivedData with the manual control callback
         publish_data = PublishReceivedData(
-            publish_packet=publish_packet, 
+            publish_packet=publish_packet,
             acquire_puback_control=acquire_puback_control_fn
         )
 
@@ -1999,7 +2002,7 @@ class Client(NativeResource):
 
         Args:
             puback_control_handle: An opaque handle obtained from acquire_puback_control(). This handle cannot be created manually and must come from the acquire_puback_control() Callable within PublishReceivedData.
-        
+
         Returns:
             A future with InvokePubackCompletion that completes when invoked PUBACK is sent or fails to send. A successfully sent PUBACK only confirms the requested PUBACK has been sent, not that the broker has received it and/or it hasn't re-sent the PUBLISH message being acknowledged.
         """
@@ -2009,7 +2012,7 @@ class Client(NativeResource):
         def invokePubackComplete(puback_result):
             invokePubackCompletion = InvokePubackCompletion(puback_result=_try_manual_puback_result(puback_result))
             future.set_result(invokePubackCompletion)
-        
+
         _awscrt.mqtt5_client_invoke_puback(
             self._binding,
             puback_control_handle,
