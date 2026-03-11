@@ -495,6 +495,27 @@ def _try_puback_reason_code(value):
     except Exception:
         return None
 
+class ManualPubackResult(IntEnum):
+    """Result for a manually invoked PUBACK operation."""
+
+    SUCCESS = 0
+    """The PUBACK was successfully sent."""
+
+    PUBACK_CANCELLED = 1
+    """The PUBACK was cancelled and will not be sent."""
+
+    PUBACK_INVALID = 2
+    """The PUBACK attempting to be sent is invalid."""
+
+    CRT_FAILURE = 3
+    """The PUBACK failed to send due to a CRT failure."""
+
+
+def _try_manual_puback_result(value):
+    try:
+        return ManualPubackResult(value)
+    except Exception:
+        return None
 
 class SubackReasonCode(IntEnum):
     """Reason code inside SUBACK packet payloads.
@@ -1140,6 +1161,15 @@ class PubackPacket:
     reason_string: str = None
     user_properties: 'Sequence[UserProperty]' = None
 
+@dataclass
+class InvokePubackCompletion:
+    """dataclass containing results of a manually invoked PUBACK
+
+    Args:
+        puback_result (ManualPubackResult): Result of manually invoked PUBACK
+    """
+    puback_result: ManualPubackResult = None
+
 
 @dataclass
 class ConnectPacket:
@@ -1228,7 +1258,7 @@ class PublishReceivedData:
 
     Args:
         publish_packet (PublishPacket): Data model of an `MQTT5 PUBLISH <https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901100>`_ packet.
-        acquire_puback_control (Callable): Acquires manual control over the PUBACK for this QoS 1 PUBLISH message, preventing the client from automatically sending a PUBACK. The returned handle can be passed to invoke_puback() at a later time to send the PUBACK to the broker. This method MUST be called within the message received callback. If this method is not called, the client will automatically send a PUBACK for QoS 1 messages when the callback returns.
+        acquire_puback_control (Callable): Call this function to prevent automatic PUBACK and take manual control of this PUBLISH message's PUBACK. Returns an opaque handle object that can be passed to Client.invoke_puback().
     """
     publish_packet: PublishPacket = None
     acquire_puback_control: Callable = None
@@ -1473,7 +1503,7 @@ class _ClientCore:
 
         # Create PublishReceivedData with the manual control callback
         publish_data = PublishReceivedData(
-            publish_packet=publish_packet,
+            publish_packet=publish_packet, 
             acquire_puback_control=acquire_puback_control_fn
         )
 
@@ -1965,18 +1995,28 @@ class Client(NativeResource):
         return OperationStatisticsData(result[0], result[1], result[2], result[3])
 
     def invoke_puback(self, puback_control_handle):
-        """Sends a PUBACK packet for a QoS 1 PUBLISH that was previously acquired for manual control.
-        To use manual PUBACK control, call acquire_puback_control() within the on_publish_callback_fn
-        callback to obtain an opaque handle object. Then call this method with the opaque handle object
-        to send the PUBACK.
+        """Sends a PUBACK packet for the given puback control handle.
 
         Args:
             puback_control_handle: An opaque handle obtained from acquire_puback_control(). This handle cannot be created manually and must come from the acquire_puback_control() Callable within PublishReceivedData.
+        
+        Returns:
+            A future with InvokePubackCompletion that completes when invoked PUBACK is sent or fails to send. A successfully sent PUBACK only confirms the requested PUBACK has been sent, not that the broker has received it and/or it hasn't re-sent the PUBLISH message being acknowledged.
         """
 
+        future = Future()
+
+        def invokePubackComplete(puback_result):
+            invokePubackCompletion = InvokePubackCompletion(puback_result=_try_manual_puback_result(puback_result))
+            future.set_result(invokePubackCompletion)
+        
         _awscrt.mqtt5_client_invoke_puback(
             self._binding,
-            puback_control_handle)
+            puback_control_handle,
+            invokePubackComplete
+        )
+
+        return future
 
     def new_connection(self, on_connection_interrupted=None, on_connection_resumed=None,
                        on_connection_success=None, on_connection_failure=None, on_connection_closed=None):

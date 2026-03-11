@@ -220,7 +220,6 @@ static PyObject *s_aws_set_user_properties_to_PyObject(
 
 static const char *s_capsule_name_puback_control_handle = "aws_puback_control_handle";
 
-/* An opaque handle representing manual control over a QoS 1 PUBACK for a received PUBLISH packet. */
 struct puback_control_handle {
     uint64_t control_id;
 };
@@ -1782,18 +1781,50 @@ done:
  * Invoke Puback
  ******************************************************************************/
 
+struct invoke_puback_complete_userdata {
+    PyObject *callback;
+};
+
+static void s_on_invoke_puback_complete_fn(enum aws_mqtt5_manual_puback_result puback_result, void *complete_ctx) {
+    struct invoke_puback_complete_userdata *metadata = complete_ctx;
+    assert(metadata);
+
+    PyObject *result = NULL;
+
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
+
+    result = PyObject_CallFunction(metadata->callback, "(i)", (int)puback_result);
+
+    if (!result) {
+        PyErr_WriteUnraisable(PyErr_Occurred());
+    }
+
+    // cleanup
+    Py_XDECREF(metadata->callback);
+    Py_XDECREF(result);
+
+    PyGILState_Release(state);
+
+    aws_mem_release(aws_py_get_allocator(), metadata);
+}
+
 PyObject *aws_py_mqtt5_client_invoke_puback(PyObject *self, PyObject *args) {
     (void)self;
-    bool success = true;
+    bool success = false;
 
     PyObject *impl_capsule;
     PyObject *puback_handle_capsule;
+    PyObject *manual_puback_callback_fn_py;
 
     if (!PyArg_ParseTuple(
             args,
-            "OO",
+            "OOO",
             /* O */ &impl_capsule,
-            /* O */ &puback_handle_capsule)) {
+            /* O */ &puback_handle_capsule,
+            /* O */ &manual_puback_callback_fn_py)) {
         return NULL;
     }
 
@@ -1810,11 +1841,28 @@ PyObject *aws_py_mqtt5_client_invoke_puback(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    if (aws_mqtt5_client_invoke_puback(client->native, handle->control_id, NULL)) {
+    /* callback related must be cleaned up after this point */
+    struct invoke_puback_complete_userdata *metadata =
+        aws_mem_calloc(aws_py_get_allocator(), 1, sizeof(struct invoke_puback_complete_userdata));
+    metadata->callback = manual_puback_callback_fn_py;
+    Py_INCREF(metadata->callback);
+
+    struct aws_mqtt5_manual_puback_completion_options manual_puback_completion_options = {
+        .completion_callback = &s_on_invoke_puback_complete_fn, .completion_user_data = metadata};
+
+    if (aws_mqtt5_client_invoke_puback(client->native, handle->control_id, &manual_puback_completion_options)) {
         PyErr_SetAwsLastError();
-        success = false;
+        goto manual_puback_failed;
     }
 
+    success = true;
+    goto done;
+
+manual_puback_failed:
+    Py_XDECREF(manual_puback_callback_fn_py);
+    aws_mem_release(aws_py_get_allocator(), metadata);
+
+done:
     if (success) {
         Py_RETURN_NONE;
     }
