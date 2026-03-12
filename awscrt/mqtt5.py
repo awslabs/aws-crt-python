@@ -1228,14 +1228,17 @@ class PublishReceivedData:
 
     Args:
         publish_packet (PublishPacket): Data model of an `MQTT5 PUBLISH <https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901100>`_ packet.
-        acquire_puback_control (Callable): Call this function within the on_publish_callback_fn callback to take manual
-            control of the PUBACK for this QoS 1 message, preventing the client from automatically sending a PUBACK.
-            Returns an opaque handle that can be passed to Client.invoke_puback() to send the PUBACK to the broker.
+        acquire_puback_control (Callable): For QoS 1 messages only: call this function within the
+            on_publish_callback_fn callback to take manual control of the PUBACK for this message, preventing
+            the client from automatically sending a PUBACK. Returns an opaque handle that can be passed to
+            Client.invoke_puback() to send the PUBACK to the broker.
 
             Important: This function must be called within the on_publish_callback_fn callback. Calling it after the
-            callback returns will result in an error. This function may only be called once per received PUBLISH.
-            If this function is not called, the client will automatically send a PUBACK for QoS 1 messages when
-            the callback returns. Only relevant for QoS 1 messages.
+            callback returns will raise a RuntimeError. This function may only be called once per received PUBLISH;
+            calling it a second time will also raise a RuntimeError. If this function is not called, the client will
+            automatically send a PUBACK for QoS 1 messages when the callback returns.
+
+            For QoS 0 messages, this field is None.
     """
     publish_packet: PublishPacket = None
     acquire_puback_control: Callable = None

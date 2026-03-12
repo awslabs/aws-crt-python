@@ -249,12 +249,25 @@ PyObject *aws_py_mqtt5_client_acquire_puback(PyObject *self, PyObject *args) {
     (void)args;
 
     struct manual_puback_control_context *context = PyCapsule_GetPointer(self, "manual_puback_control_context");
-    if (!context || !context->publish_packet) {
+    if (!context) {
         PyErr_SetString(PyExc_ValueError, "Invalid manual PUBACK control context");
         return NULL;
     }
 
+    /* If the publish_packet pointer has been zeroed out, the callback has already returned (post-callback call)
+     * or this function was already called once (double-call). Both are usage errors. */
+    if (!context->publish_packet) {
+        PyErr_SetString(
+            PyExc_RuntimeError,
+            "acquire_puback_control() must be called within the on_publish_callback_fn callback "
+            "and may only be called once.");
+        return NULL;
+    }
+
     uint64_t puback_control_id = aws_mqtt5_client_acquire_puback(context->client, context->publish_packet);
+
+    /* Zero out the publish_packet pointer to prevent double-calls. */
+    context->publish_packet = NULL;
 
     /* Create handle struct */
     struct puback_control_handle *handle =
@@ -321,11 +334,15 @@ static void s_on_publish_received(const struct aws_mqtt5_packet_publish_view *pu
         METH_NOARGS,
         "Take manual control of PUBACK for this message"};
 
-    /* Create the manual control callback function */
-    manual_control_callback = PyCFunction_New(&method_def, control_context_capsule);
-    if (!manual_control_callback) {
-        PyErr_WriteUnraisable(PyErr_Occurred());
-        goto cleanup;
+    /* Only create the manual control callback for QoS 1 messages.
+     * For QoS 0, acquire_puback_control is passed as None.
+     * acquirePubackControl is only set for QoS 1). */
+    if (publish_packet->qos == AWS_MQTT5_QOS_AT_LEAST_ONCE) {
+        manual_control_callback = PyCFunction_New(&method_def, control_context_capsule);
+        if (!manual_control_callback) {
+            PyErr_WriteUnraisable(PyErr_Occurred());
+            goto cleanup;
+        }
     }
 
     /* Create list of uint32_t subscription identifier tuples */
@@ -375,11 +392,15 @@ static void s_on_publish_received(const struct aws_mqtt5_packet_publish_view *pu
         /* s */ publish_packet->content_type ? publish_packet->content_type->ptr : NULL,
         /* # */ publish_packet->content_type ? publish_packet->content_type->len : 0,
         /* O */ user_property_count > 0 ? user_properties_list : Py_None,
-        /* O */ manual_control_callback);
+        /* O */ manual_control_callback ? manual_control_callback : Py_None);
 
     if (!result) {
         PyErr_WriteUnraisable(PyErr_Occurred());
     }
+
+    /* Invalidate the publish_packet pointer now that the callback has returned.
+     * This prevents use-after-free if acquire_puback_control() is called after the callback. */
+    control_context->publish_packet = NULL;
 
 cleanup:
     Py_XDECREF(result);
