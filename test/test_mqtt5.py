@@ -1574,6 +1574,175 @@ class Mqtt5ClientTest(NativeResourceTest):
     def test_qos1_happy_path(self):
         test_retry_wrapper(self._test_qos1_happy_path)
 
+    def _test_manual_puback_hold(self):
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
+        input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
+        input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
+
+        client_id = create_client_id()
+        topic_filter = "test/MQTT5_ManualPuback_Python_" + client_id
+        payload = str(uuid.uuid4())
+        payload_bytes = payload.encode("utf-8")
+
+        PUBACK_HOLD_TIMEOUT = 60.0
+
+        future_first_delivery = Future()
+        future_redelivery = Future()
+        puback_handle_holder = [None]  # mutable container so the closure can write to it
+
+        def on_publish_received(publish_received_data: mqtt5.PublishReceivedData):
+            received_payload = publish_received_data.publish_packet.payload
+            if not future_first_delivery.done():
+                # First delivery: acquire manual PUBACK control to hold the PUBACK
+                puback_handle_holder[0] = publish_received_data.acquire_puback_control()
+                future_first_delivery.set_result(received_payload)
+            elif not future_redelivery.done():
+                # Second delivery: broker re-sent because no PUBACK was received
+                future_redelivery.set_result(received_payload)
+
+        tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(
+            input_cert,
+            input_key
+        )
+        client_options = mqtt5.ClientOptions(
+            host_name=input_host_name,
+            port=8883
+        )
+        client_options.connect_options = mqtt5.ConnectPacket(client_id=client_id)
+        client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
+
+        callbacks = Mqtt5TestCallbacks()
+        callbacks.on_publish_received = on_publish_received
+
+        client = self._create_client(client_options=client_options, callbacks=callbacks)
+        client.start()
+        callbacks.future_connection_success.result(TIMEOUT)
+
+        # Subscribe to the topic with QoS 1
+        subscriptions = [mqtt5.Subscription(topic_filter=topic_filter, qos=mqtt5.QoS.AT_LEAST_ONCE)]
+        subscribe_packet = mqtt5.SubscribePacket(subscriptions=subscriptions)
+        subscribe_future = client.subscribe(subscribe_packet=subscribe_packet)
+        suback_packet = subscribe_future.result(TIMEOUT)
+        self.assertIsInstance(suback_packet, mqtt5.SubackPacket)
+
+        # Publish a QoS 1 message with a unique UUID payload
+        publish_packet = mqtt5.PublishPacket(
+            payload=payload,
+            topic=topic_filter,
+            qos=mqtt5.QoS.AT_LEAST_ONCE)
+        publish_future = client.publish(publish_packet=publish_packet)
+        publish_completion_data = publish_future.result(TIMEOUT)
+        self.assertIsInstance(publish_completion_data.puback, mqtt5.PubackPacket)
+
+        # Wait for the first delivery and confirm PUBACK was held
+        first_payload = future_first_delivery.result(TIMEOUT)
+        self.assertEqual(first_payload, payload_bytes)
+        self.assertIsNotNone(puback_handle_holder[0], "acquire_puback_control() should have returned a handle")
+
+        # Wait up to 60 seconds for the broker to re-deliver the message (no PUBACK was sent)
+        redelivered_payload = future_redelivery.result(PUBACK_HOLD_TIMEOUT)
+        self.assertEqual(redelivered_payload, payload_bytes,
+                         "Re-delivered payload should match the original UUID payload")
+
+        # Release the held PUBACK now that we've confirmed re-delivery
+        client.invoke_puback(puback_handle_holder[0])
+
+        client.stop()
+        callbacks.future_stopped.result(TIMEOUT)
+
+    def test_manual_puback_hold(self):
+        test_retry_wrapper(self._test_manual_puback_hold)
+
+    def _test_manual_puback_invoke(self):
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
+        input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
+        input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
+
+        client_id = create_client_id()
+        topic_filter = "test/MQTT5_ManualPuback_Python_" + client_id
+        payload = str(uuid.uuid4())
+        payload_bytes = payload.encode("utf-8")
+
+        NO_REDELIVERY_WAIT = 60.0
+
+        future_first_delivery = Future()
+        future_unexpected_redelivery = Future()
+        puback_handle_holder = [None]  # mutable container so the closure can write to it
+
+        def on_publish_received(publish_received_data: mqtt5.PublishReceivedData):
+            received_payload = publish_received_data.publish_packet.payload
+            if not future_first_delivery.done():
+                # First delivery: acquire manual PUBACK control, then immediately invoke it
+                puback_handle_holder[0] = publish_received_data.acquire_puback_control()
+                future_first_delivery.set_result(received_payload)
+            elif received_payload == payload_bytes and not future_unexpected_redelivery.done():
+                # A second delivery of the same payload means the broker re-sent — this should NOT happen
+                future_unexpected_redelivery.set_result(received_payload)
+
+        tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(
+            input_cert,
+            input_key
+        )
+        client_options = mqtt5.ClientOptions(
+            host_name=input_host_name,
+            port=8883
+        )
+        client_options.connect_options = mqtt5.ConnectPacket(client_id=client_id)
+        client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
+
+        callbacks = Mqtt5TestCallbacks()
+        callbacks.on_publish_received = on_publish_received
+
+        client = self._create_client(client_options=client_options, callbacks=callbacks)
+        client.start()
+        callbacks.future_connection_success.result(TIMEOUT)
+
+        # Subscribe to the topic with QoS 1
+        subscriptions = [mqtt5.Subscription(topic_filter=topic_filter, qos=mqtt5.QoS.AT_LEAST_ONCE)]
+        subscribe_packet = mqtt5.SubscribePacket(subscriptions=subscriptions)
+        subscribe_future = client.subscribe(subscribe_packet=subscribe_packet)
+        suback_packet = subscribe_future.result(TIMEOUT)
+        self.assertIsInstance(suback_packet, mqtt5.SubackPacket)
+
+        # Publish a QoS 1 message with a unique UUID payload
+        publish_packet = mqtt5.PublishPacket(
+            payload=payload,
+            topic=topic_filter,
+            qos=mqtt5.QoS.AT_LEAST_ONCE)
+        publish_future = client.publish(publish_packet=publish_packet)
+        publish_completion_data = publish_future.result(TIMEOUT)
+        self.assertIsInstance(publish_completion_data.puback, mqtt5.PubackPacket)
+
+        # Wait for the first delivery and confirm PUBACK handle was acquired
+        first_payload = future_first_delivery.result(TIMEOUT)
+        self.assertEqual(first_payload, payload_bytes)
+        self.assertIsNotNone(puback_handle_holder[0], "acquire_puback_control() should have returned a handle")
+
+        # Immediately invoke the PUBACK using the acquired handle
+        client.invoke_puback(puback_handle_holder[0])
+
+        # Wait 60 seconds and confirm the broker does NOT re-deliver the message
+        # (because we sent the PUBACK via invoke_puback)
+        redelivered = future_unexpected_redelivery.done() or \
+            (not future_unexpected_redelivery.done() and
+             self._wait_for_future_timeout(future_unexpected_redelivery, NO_REDELIVERY_WAIT))
+        self.assertFalse(redelivered,
+                         "Broker should NOT re-deliver the message after invoke_puback() was called")
+
+        client.stop()
+        callbacks.future_stopped.result(TIMEOUT)
+
+    def _wait_for_future_timeout(self, future, timeout_sec):
+        """Returns True if the future completed within timeout_sec, False if it timed out."""
+        try:
+            future.result(timeout_sec)
+            return True
+        except Exception:
+            return False
+
+    def test_manual_puback_invoke(self):
+        test_retry_wrapper(self._test_manual_puback_invoke)
+
     # ==============================================================
     #             RETAIN TEST CASES
     # ==============================================================
