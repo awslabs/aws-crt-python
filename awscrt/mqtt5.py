@@ -1980,6 +1980,9 @@ class Client(NativeResource):
         Args:
             puback_control_handle: An opaque handle obtained from acquire_puback_control() within
                 PublishReceivedData. This handle cannot be created manually.
+
+        Raises:
+            Exception: If the native client returns an error when invoking the PUBACK.
         """
 
         _awscrt.mqtt5_client_invoke_puback(
