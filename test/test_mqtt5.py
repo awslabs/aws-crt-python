@@ -1743,6 +1743,166 @@ class Mqtt5ClientTest(NativeResourceTest):
     def test_manual_puback_invoke(self):
         test_retry_wrapper(self._test_manual_puback_invoke)
 
+    def _test_manual_puback_acquire_double_call_raises(self):
+        """Verify that calling acquire_puback_control() twice on the same QoS 1 PUBLISH raises RuntimeError."""
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
+        input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
+        input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
+
+        client_id = create_client_id()
+        topic_filter = "test/MQTT5_Binding_Python_" + client_id
+        payload = str(uuid.uuid4())
+
+        future_result = Future()
+
+        def on_publish_received(publish_received_data: mqtt5.PublishReceivedData):
+            try:
+                # First call should succeed
+                handle = publish_received_data.acquire_puback_control()
+                # Second call on the same message should raise RuntimeError
+                try:
+                    publish_received_data.acquire_puback_control()
+                    future_result.set_result("no_error")  # Should not reach here
+                except RuntimeError:
+                    future_result.set_result("double_call_raised")
+                except Exception as e:
+                    future_result.set_result(f"unexpected_error: {e}")
+                # Release the handle we acquired
+                # (handle is valid, invoke it to clean up)
+            except Exception as e:
+                future_result.set_result(f"first_call_failed: {e}")
+
+        tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(input_cert, input_key)
+        client_options = mqtt5.ClientOptions(host_name=input_host_name, port=8883)
+        client_options.connect_options = mqtt5.ConnectPacket(client_id=client_id)
+        client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
+
+        callbacks = Mqtt5TestCallbacks()
+        callbacks.on_publish_received = on_publish_received
+
+        client = self._create_client(client_options=client_options, callbacks=callbacks)
+        client.start()
+        callbacks.future_connection_success.result(TIMEOUT)
+
+        subscriptions = [mqtt5.Subscription(topic_filter=topic_filter, qos=mqtt5.QoS.AT_LEAST_ONCE)]
+        subscribe_future = client.subscribe(mqtt5.SubscribePacket(subscriptions=subscriptions))
+        subscribe_future.result(TIMEOUT)
+
+        publish_future = client.publish(mqtt5.PublishPacket(
+            payload=payload, topic=topic_filter, qos=mqtt5.QoS.AT_LEAST_ONCE))
+        publish_future.result(TIMEOUT)
+
+        result = future_result.result(TIMEOUT)
+        self.assertEqual(result, "double_call_raised",
+                         f"Expected RuntimeError on double-call, got: {result}")
+
+        client.stop()
+        callbacks.future_stopped.result(TIMEOUT)
+
+    def test_manual_puback_acquire_double_call_raises(self):
+        test_retry_wrapper(self._test_manual_puback_acquire_double_call_raises)
+
+    def _test_manual_puback_acquire_post_callback_raises(self):
+        """Verify that calling acquire_puback_control() after the callback has returned raises RuntimeError."""
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
+        input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
+        input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
+
+        client_id = create_client_id()
+        topic_filter = "test/MQTT5_Binding_Python_" + client_id
+        payload = str(uuid.uuid4())
+
+        future_callback_done = Future()
+        saved_acquire_fn_holder = [None]
+
+        def on_publish_received(publish_received_data: mqtt5.PublishReceivedData):
+            # Save the callable but do NOT call it within the callback
+            saved_acquire_fn_holder[0] = publish_received_data.acquire_puback_control
+            future_callback_done.set_result(True)
+
+        tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(input_cert, input_key)
+        client_options = mqtt5.ClientOptions(host_name=input_host_name, port=8883)
+        client_options.connect_options = mqtt5.ConnectPacket(client_id=client_id)
+        client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
+
+        callbacks = Mqtt5TestCallbacks()
+        callbacks.on_publish_received = on_publish_received
+
+        client = self._create_client(client_options=client_options, callbacks=callbacks)
+        client.start()
+        callbacks.future_connection_success.result(TIMEOUT)
+
+        subscriptions = [mqtt5.Subscription(topic_filter=topic_filter, qos=mqtt5.QoS.AT_LEAST_ONCE)]
+        subscribe_future = client.subscribe(mqtt5.SubscribePacket(subscriptions=subscriptions))
+        subscribe_future.result(TIMEOUT)
+
+        publish_future = client.publish(mqtt5.PublishPacket(
+            payload=payload, topic=topic_filter, qos=mqtt5.QoS.AT_LEAST_ONCE))
+        publish_future.result(TIMEOUT)
+
+        # Wait for the callback to complete
+        future_callback_done.result(TIMEOUT)
+
+        # Now call acquire_puback_control() after the callback has returned — should raise RuntimeError
+        acquire_fn = saved_acquire_fn_holder[0]
+        self.assertIsNotNone(acquire_fn, "acquire_puback_control should have been saved")
+        with self.assertRaises(RuntimeError):
+            acquire_fn()
+
+        client.stop()
+        callbacks.future_stopped.result(TIMEOUT)
+
+    def test_manual_puback_acquire_post_callback_raises(self):
+        test_retry_wrapper(self._test_manual_puback_acquire_post_callback_raises)
+
+    def _test_manual_puback_qos0_acquire_is_none(self):
+        """Verify that acquire_puback_control is None for QoS 0 messages."""
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
+        input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
+        input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
+
+        client_id = create_client_id()
+        topic_filter = "test/MQTT5_Binding_Python_" + client_id
+        payload = str(uuid.uuid4())
+
+        future_acquire_value = Future()
+
+        def on_publish_received(publish_received_data: mqtt5.PublishReceivedData):
+            # For QoS 0, acquire_puback_control should be None
+            future_acquire_value.set_result(publish_received_data.acquire_puback_control)
+
+        tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(input_cert, input_key)
+        client_options = mqtt5.ClientOptions(host_name=input_host_name, port=8883)
+        client_options.connect_options = mqtt5.ConnectPacket(client_id=client_id)
+        client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
+
+        callbacks = Mqtt5TestCallbacks()
+        callbacks.on_publish_received = on_publish_received
+
+        client = self._create_client(client_options=client_options, callbacks=callbacks)
+        client.start()
+        callbacks.future_connection_success.result(TIMEOUT)
+
+        # Subscribe with QoS 1 so the broker delivers at QoS 0 (publish at QoS 0)
+        subscriptions = [mqtt5.Subscription(topic_filter=topic_filter, qos=mqtt5.QoS.AT_LEAST_ONCE)]
+        subscribe_future = client.subscribe(mqtt5.SubscribePacket(subscriptions=subscriptions))
+        subscribe_future.result(TIMEOUT)
+
+        # Publish at QoS 0 — no PUBACK involved
+        publish_future = client.publish(mqtt5.PublishPacket(
+            payload=payload, topic=topic_filter, qos=mqtt5.QoS.AT_MOST_ONCE))
+        publish_future.result(TIMEOUT)
+
+        acquire_value = future_acquire_value.result(TIMEOUT)
+        self.assertIsNone(acquire_value,
+                          "acquire_puback_control should be None for QoS 0 messages")
+
+        client.stop()
+        callbacks.future_stopped.result(TIMEOUT)
+
+    def test_manual_puback_qos0_acquire_is_none(self):
+        test_retry_wrapper(self._test_manual_puback_qos0_acquire_is_none)
+
     # ==============================================================
     #             RETAIN TEST CASES
     # ==============================================================
