@@ -1574,6 +1574,11 @@ class Mqtt5ClientTest(NativeResourceTest):
     def test_qos1_happy_path(self):
         test_retry_wrapper(self._test_qos1_happy_path)
 
+    # ==============================================================
+    #             MANUAL PUBACK TEST CASES
+    # ==============================================================
+
+    # Manual PUBACK hold test: hold PUBACK and verify broker re-delivers the message
     def _test_manual_puback_hold(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
@@ -1653,6 +1658,7 @@ class Mqtt5ClientTest(NativeResourceTest):
     def test_manual_puback_hold(self):
         test_retry_wrapper(self._test_manual_puback_hold)
 
+    # Manual PUBACK invoke test: acquire and immediately invoke PUBACK, verify no re-delivery
     def _test_manual_puback_invoke(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
@@ -1676,7 +1682,7 @@ class Mqtt5ClientTest(NativeResourceTest):
                 puback_handle_holder[0] = publish_received_data.acquire_puback_control()
                 future_first_delivery.set_result(received_payload)
             elif received_payload == payload_bytes and not future_unexpected_redelivery.done():
-                # A second delivery of the same payload means the broker re-sent — this should NOT happen
+                # A second delivery of the same payload means the broker re-sent, this should NOT happen
                 future_unexpected_redelivery.set_result(received_payload)
 
         tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(
@@ -1743,6 +1749,7 @@ class Mqtt5ClientTest(NativeResourceTest):
     def test_manual_puback_invoke(self):
         test_retry_wrapper(self._test_manual_puback_invoke)
 
+    # Manual PUBACK double-call test: calling acquirePubackControl() twice raises IllegalStateException
     def _test_manual_puback_acquire_double_call_raises(self):
         """Verify that calling acquire_puback_control() twice on the same QoS 1 PUBLISH raises RuntimeError."""
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
@@ -1802,6 +1809,7 @@ class Mqtt5ClientTest(NativeResourceTest):
     def test_manual_puback_acquire_double_call_raises(self):
         test_retry_wrapper(self._test_manual_puback_acquire_double_call_raises)
 
+    # Manual PUBACK post-callback test: calling acquire_puback_control() after callback returns raises RuntimeError
     def _test_manual_puback_acquire_post_callback_raises(self):
         """Verify that calling acquire_puback_control() after the callback has returned raises RuntimeError."""
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
@@ -1843,7 +1851,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         # Wait for the callback to complete
         future_callback_done.result(TIMEOUT)
 
-        # Now call acquire_puback_control() after the callback has returned — should raise RuntimeError
+        # Now call acquire_puback_control() after the callback has returned, this should raise RuntimeError
         acquire_fn = saved_acquire_fn_holder[0]
         self.assertIsNotNone(acquire_fn, "acquire_puback_control should have been saved")
         with self.assertRaises(RuntimeError):
@@ -1855,6 +1863,7 @@ class Mqtt5ClientTest(NativeResourceTest):
     def test_manual_puback_acquire_post_callback_raises(self):
         test_retry_wrapper(self._test_manual_puback_acquire_post_callback_raises)
 
+    # Manual PUBACK QoS 0 test: acquirePubackControl() throws IllegalStateException for QoS 0 messages
     def _test_manual_puback_qos0_acquire_is_none(self):
         """Verify that acquire_puback_control is None for QoS 0 messages."""
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
@@ -1888,7 +1897,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         subscribe_future = client.subscribe(mqtt5.SubscribePacket(subscriptions=subscriptions))
         subscribe_future.result(TIMEOUT)
 
-        # Publish at QoS 0 — no PUBACK involved
+        # Publish at QoS 0, there's no PUBACK involved
         publish_future = client.publish(mqtt5.PublishPacket(
             payload=payload, topic=topic_filter, qos=mqtt5.QoS.AT_MOST_ONCE))
         publish_future.result(TIMEOUT)
