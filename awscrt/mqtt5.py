@@ -1228,8 +1228,20 @@ class PublishReceivedData:
 
     Args:
         publish_packet (PublishPacket): Data model of an `MQTT5 PUBLISH <https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901100>`_ packet.
+        acquire_puback_control (Callable): For QoS 1 messages only: call this function within the
+            on_publish_callback_fn callback to take manual control of the PUBACK for this message, preventing
+            the client from automatically sending a PUBACK. Returns an opaque handle that can be passed to
+            Client.invoke_puback() to send the PUBACK to the broker.
+
+            Important: This function must be called within the on_publish_callback_fn callback. Calling it after the
+            callback returns will raise a RuntimeError. This function may only be called once per received PUBLISH;
+            calling it a second time will also raise a RuntimeError. If this function is not called, the client will
+            automatically send a PUBACK for QoS 1 messages when the callback returns.
+
+            For QoS 0 messages, this field is None.
     """
     publish_packet: PublishPacket = None
+    acquire_puback_control: Callable = None
 
 
 @dataclass
@@ -1434,7 +1446,8 @@ class _ClientCore:
             correlation_data,
             subscription_identifiers_tuples,
             content_type,
-            user_properties_tuples):
+            user_properties_tuples,
+            acquire_puback_control_fn):
         if self._on_publish_cb is None:
             return
 
@@ -1468,9 +1481,13 @@ class _ClientCore:
         publish_packet.content_type = content_type
         publish_packet.user_properties = _init_user_properties(user_properties_tuples)
 
-        self._on_publish_cb(PublishReceivedData(publish_packet=publish_packet))
+        # Create PublishReceivedData with the manual control callback
+        publish_data = PublishReceivedData(
+            publish_packet=publish_packet,
+            acquire_puback_control=acquire_puback_control_fn
+        )
 
-        return
+        self._on_publish_cb(publish_data)
 
     def _on_lifecycle_stopped(self):
         if self._on_lifecycle_stopped_cb:
@@ -1956,6 +1973,25 @@ class Client(NativeResource):
 
         result = _awscrt.mqtt5_client_get_stats(self._binding)
         return OperationStatisticsData(result[0], result[1], result[2], result[3])
+
+    def invoke_puback(self, puback_control_handle):
+        """Sends a PUBACK packet for a QoS 1 PUBLISH that was previously acquired for manual control.
+
+        To use manual PUBACK control, call acquire_puback_control() within the on_publish_callback_fn
+        callback to obtain a handle. Then call this method to send the PUBACK.
+
+        Args:
+            puback_control_handle: An opaque handle obtained from acquire_puback_control() within
+                PublishReceivedData. This handle cannot be created manually.
+
+        Raises:
+            Exception: If the native client returns an error when invoking the PUBACK.
+        """
+
+        _awscrt.mqtt5_client_invoke_puback(
+            self._binding,
+            puback_control_handle
+        )
 
     def new_connection(self, on_connection_interrupted=None, on_connection_resumed=None,
                        on_connection_success=None, on_connection_failure=None, on_connection_closed=None):
