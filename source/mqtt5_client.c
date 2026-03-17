@@ -218,19 +218,6 @@ static PyObject *s_aws_set_user_properties_to_PyObject(
  * Publish Handler
  ******************************************************************************/
 
-static const char *s_capsule_name_puback_control_handle = "aws_puback_control_handle";
-
-struct puback_control_handle {
-    uint64_t control_id;
-};
-
-static void s_puback_control_handle_destructor(PyObject *capsule) {
-    struct puback_control_handle *handle = PyCapsule_GetPointer(capsule, s_capsule_name_puback_control_handle);
-    if (handle) {
-        aws_mem_release(aws_py_get_allocator(), handle);
-    }
-}
-
 static void s_on_publish_received(const struct aws_mqtt5_packet_publish_view *publish_packet, void *user_data) {
 
     if (!user_data) {
@@ -1727,38 +1714,6 @@ done:
 }
 
 /*******************************************************************************
- * Wrap Puback Handle
- ******************************************************************************/
-
-/* Wraps a raw puback_control_id (uint64_t) into an opaque capsule handle for use with invoke_puback.
- * Called from Python as: _awscrt.mqtt5_client_wrap_puback_handle(puback_control_id) */
-PyObject *aws_py_mqtt5_client_wrap_puback_handle(PyObject *self, PyObject *args) {
-    (void)self;
-
-    unsigned long long control_id_ull = 0;
-    if (!PyArg_ParseTuple(args, "K", &control_id_ull)) {
-        return NULL;
-    }
-
-    struct puback_control_handle *handle =
-        aws_mem_calloc(aws_py_get_allocator(), 1, sizeof(struct puback_control_handle));
-    if (!handle) {
-        PyErr_NoMemory();
-        return NULL;
-    }
-
-    handle->control_id = (uint64_t)control_id_ull;
-
-    PyObject *capsule = PyCapsule_New(handle, s_capsule_name_puback_control_handle, s_puback_control_handle_destructor);
-    if (!capsule) {
-        aws_mem_release(aws_py_get_allocator(), handle);
-        return NULL;
-    }
-
-    return capsule;
-}
-
-/*******************************************************************************
  * Invoke Puback
  ******************************************************************************/
 
@@ -1767,13 +1722,13 @@ PyObject *aws_py_mqtt5_client_invoke_puback(PyObject *self, PyObject *args) {
     bool success = true;
 
     PyObject *impl_capsule;
-    PyObject *puback_handle_capsule;
+    unsigned long long control_id_ull = 0;
 
     if (!PyArg_ParseTuple(
             args,
-            "OO",
+            "OK",
             /* O */ &impl_capsule,
-            /* O */ &puback_handle_capsule)) {
+            /* K */ &control_id_ull)) {
         return NULL;
     }
 
@@ -1782,15 +1737,7 @@ PyObject *aws_py_mqtt5_client_invoke_puback(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    /* Extract handle from capsule */
-    struct puback_control_handle *handle =
-        PyCapsule_GetPointer(puback_handle_capsule, s_capsule_name_puback_control_handle);
-    if (!handle) {
-        PyErr_SetString(PyExc_TypeError, "Invalid PUBACK control handle");
-        return NULL;
-    }
-
-    if (aws_mqtt5_client_invoke_puback(client->native, handle->control_id, NULL)) {
+    if (aws_mqtt5_client_invoke_puback(client->native, (uint64_t)control_id_ull, NULL)) {
         PyErr_SetAwsLastError();
         success = false;
     }
