@@ -1447,9 +1447,9 @@ class _ClientCore:
             subscription_identifiers_tuples,
             content_type,
             user_properties_tuples,
-            acquire_puback_control_fn):
+            puback_control_id):
         if self._on_publish_cb is None:
-            return
+            return False # Indicates that manual puback control was not taken and puback should be invoked automatically.
 
         publish_packet = PublishPacket()
         publish_packet.topic = topic
@@ -1481,13 +1481,34 @@ class _ClientCore:
         publish_packet.content_type = content_type
         publish_packet.user_properties = _init_user_properties(user_properties_tuples)
 
-        # Create PublishReceivedData with the manual control callback
+        # For QoS 1 messages, set up the acquire_puback_control callable.
+        # The native side has already called aws_mqtt5_client_acquire_puback and passed us the
+        # puback_control_id. We wrap it in an opaque capsule handle and provide a callable that
+        # returns that handle. The callable may only be called once; calling it marks the PUBACK
+        # as "taken" so the native side will not auto-invoke it after this callback returns.
+        puback_taken = False
+        acquire_puback_control = None
+
+        if puback_control_id != 0:
+            def acquire_puback_control():
+                nonlocal puback_taken
+                if puback_taken:
+                    raise RuntimeError(
+                        "acquire_puback_control() may only be called once per received PUBLISH.")
+                puback_taken = True
+                return _awscrt.mqtt5_client_wrap_puback_handle(puback_control_id)
+
+        # Create PublishReceivedData with the acquire_puback_control callable (or None for QoS 0)
         publish_data = PublishReceivedData(
             publish_packet=publish_packet,
-            acquire_puback_control=acquire_puback_control_fn
+            acquire_puback_control=acquire_puback_control
         )
 
         self._on_publish_cb(publish_data)
+
+        # Return True if the user called acquire_puback_control(), signalling to the native side
+        # that it should NOT auto-invoke the PUBACK (the user is responsible for calling invoke_puback).
+        return puback_taken
 
     def _on_lifecycle_stopped(self):
         if self._on_lifecycle_stopped_cb:
