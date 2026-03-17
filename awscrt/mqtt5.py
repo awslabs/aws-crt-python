@@ -1449,7 +1449,8 @@ class _ClientCore:
             user_properties_tuples,
             puback_control_id):
         if self._on_publish_cb is None:
-            return False # Indicates that manual puback control was not taken and puback should be invoked automatically.
+            # Indicates that manual puback control was not taken and puback should be invoked automatically.
+            return False
 
         publish_packet = PublishPacket()
         publish_packet.topic = topic
@@ -1497,7 +1498,8 @@ class _ClientCore:
                     raise RuntimeError(
                         "acquire_puback_control() may only be called once per received PUBLISH.")
                 if not callback_active:
-                    raise RuntimeError("acquire_puback_control() must be called within the on_publish_callback_fn callback.")
+                    raise RuntimeError(
+                        "acquire_puback_control() must be called within the on_publish_callback_fn callback.")
                 puback_taken = True
                 return _awscrt.mqtt5_client_wrap_puback_handle(puback_control_id)
 
@@ -1509,7 +1511,7 @@ class _ClientCore:
 
         self._on_publish_cb(publish_data)
 
-        callback_active = False 
+        callback_active = False
         # Return True if the user called acquire_puback_control(), signalling to the native side
         # that it should NOT auto-invoke the PUBACK (the user is responsible for calling invoke_puback).
         return puback_taken
