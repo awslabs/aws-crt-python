@@ -1487,6 +1487,7 @@ class _ClientCore:
         # returns that handle. The callable may only be called once; calling it marks the PUBACK
         # as "taken" so the native side will not auto-invoke it after this callback returns.
         puback_taken = False
+        callback_active = True
         acquire_puback_control = None
 
         if puback_control_id != 0:
@@ -1495,6 +1496,8 @@ class _ClientCore:
                 if puback_taken:
                     raise RuntimeError(
                         "acquire_puback_control() may only be called once per received PUBLISH.")
+                if not callback_active:
+                    raise RuntimeError("acquire_puback_control() must be called within the on_publish_callback_fn callback.")
                 puback_taken = True
                 return _awscrt.mqtt5_client_wrap_puback_handle(puback_control_id)
 
@@ -1506,6 +1509,7 @@ class _ClientCore:
 
         self._on_publish_cb(publish_data)
 
+        callback_active = False 
         # Return True if the user called acquire_puback_control(), signalling to the native side
         # that it should NOT auto-invoke the PUBACK (the user is responsible for calling invoke_puback).
         return puback_taken
