@@ -1725,7 +1725,8 @@ class Mqtt5ClientTest(NativeResourceTest):
         # Wait for the first delivery and confirm publish acknowledgement handle was acquired
         first_payload = future_first_delivery.result(TIMEOUT)
         self.assertEqual(first_payload, payload_bytes)
-        self.assertIsNotNone(puback_handle_holder[0], "acquire_publish_acknowledgement_control() should have returned a handle")
+        self.assertIsNotNone(puback_handle_holder[0],
+                             "acquire_publish_acknowledgement_control() should have returned a handle")
 
         # Immediately invoke the publish acknowledgement using the acquired handle
         client.invoke_publish_acknowledgement(puback_handle_holder[0])
