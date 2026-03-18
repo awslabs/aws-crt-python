@@ -4,6 +4,7 @@
 from concurrent.futures import Future
 from awscrt import mqtt5
 from awscrt.io import ClientBootstrap, EventLoopGroup, DefaultHostResolver
+from awscrt._test import native_memory_usage
 import os
 import uuid
 import time
@@ -241,18 +242,39 @@ Client Stats:
     total operations:       {self.canary_core.stat_total_operations}""", file=sys.stdout)
 
 
+MEMORY_PRINT_INTERVAL_SECONDS = 600  # Print memory usage every 10 minutes
+
+
+def print_memory_usage():
+    """Print current native memory usage from CRT allocator.
+    
+    Note: AWS_CRT_MEMORY_TRACING environment variable must be set to 1 or 2
+    before the module is loaded for this to return non-zero values.
+    """
+    mem_bytes = native_memory_usage()
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+    print(f"[{timestamp}] CRT Native Memory Usage: {mem_bytes} bytes ({mem_bytes / 1024 / 1024:.2f} MB)", file=sys.stdout)
+    sys.stdout.flush()
+
+
 if __name__ == '__main__':
     client = CanaryClient()
     time_end = time.time() + float(seconds)
     tpsdelay = 1.0 / float(tps)
     time_next_operation = time.time()
+    time_next_memory_print = time.time() + MEMORY_PRINT_INTERVAL_SECONDS
 
     print(f"""\n
     Canary running for {seconds} seconds
     TPS: {tps}
     Clients: {client_count}
     Threads: {threads}
+    Memory print interval: {MEMORY_PRINT_INTERVAL_SECONDS} seconds (10 minutes)
+    Note: Set AWS_CRT_MEMORY_TRACING=1 or AWS_CRT_MEMORY_TRACING=2 env var for memory tracking
     """, file=sys.stdout)
+
+    # Print initial memory usage
+    print_memory_usage()
 
     clients = []
     for i in range(int(client_count)):
@@ -269,13 +291,26 @@ if __name__ == '__main__':
             time_next_operation += tpsdelay
             random.choice(clients).random_operation()
 
+        # Print memory usage every 10 minutes
+        if time.time() >= time_next_memory_print:
+            print_memory_usage()
+            time_next_memory_print = time.time() + MEMORY_PRINT_INTERVAL_SECONDS
+
     for client in clients:
         client.final_stop()
 
     for client in clients:
         client.print_stats()
 
+    # Print final memory usage before cleanup
+    print("\n=== Final Memory Usage (before cleanup) ===")
+    print_memory_usage()
+
     for client in clients:
         del client
 
     time.sleep(0.1)
+
+    # Print memory usage after cleanup
+    print("\n=== Memory Usage (after cleanup) ===")
+    print_memory_usage()
