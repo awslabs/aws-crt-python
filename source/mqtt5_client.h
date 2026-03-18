@@ -14,7 +14,7 @@ PyObject *aws_py_mqtt5_client_publish(PyObject *self, PyObject *args);
 PyObject *aws_py_mqtt5_client_subscribe(PyObject *self, PyObject *args);
 PyObject *aws_py_mqtt5_client_unsubscribe(PyObject *self, PyObject *args);
 PyObject *aws_py_mqtt5_client_get_stats(PyObject *self, PyObject *args);
-PyObject *aws_py_mqtt5_client_invoke_puback(PyObject *self, PyObject *args);
+PyObject *aws_py_mqtt5_client_invoke_publish_acknowledgement(PyObject *self, PyObject *args);
 
 PyObject *aws_py_mqtt5_ws_handshake_transform_complete(PyObject *self, PyObject *args);
 

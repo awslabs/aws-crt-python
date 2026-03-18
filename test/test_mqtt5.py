@@ -1575,11 +1575,11 @@ class Mqtt5ClientTest(NativeResourceTest):
         test_retry_wrapper(self._test_qos1_happy_path)
 
     # ==============================================================
-    #             MANUAL PUBACK TEST CASES
+    #             MANUAL PUBLISH ACKNOWLEDGEMENT TEST CASES
     # ==============================================================
 
-    # Manual PUBACK hold test: hold PUBACK and verify broker re-delivers the message
-    def _test_manual_puback_hold(self):
+    # Manual publish acknowledgement hold test: hold publish acknowledgement and verify broker re-delivers the message
+    def _test_manual_publish_acknowledgement_hold(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
         input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
@@ -1598,11 +1598,11 @@ class Mqtt5ClientTest(NativeResourceTest):
         def on_publish_received(publish_received_data: mqtt5.PublishReceivedData):
             received_payload = publish_received_data.publish_packet.payload
             if not future_first_delivery.done():
-                # First delivery: acquire manual PUBACK control to hold the PUBACK
-                puback_handle_holder[0] = publish_received_data.acquire_puback_control()
+                # First delivery: acquire manual publish acknowledgement control to hold the publish acknowledgement
+                puback_handle_holder[0] = publish_received_data.acquire_publish_acknowledgement_control()
                 future_first_delivery.set_result(received_payload)
             elif not future_redelivery.done():
-                # Second delivery: broker re-sent because no PUBACK was received
+                # Second delivery: broker re-sent because no publish acknowledgement was received
                 future_redelivery.set_result(received_payload)
 
         tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(
@@ -1639,27 +1639,27 @@ class Mqtt5ClientTest(NativeResourceTest):
         publish_completion_data = publish_future.result(TIMEOUT)
         self.assertIsInstance(publish_completion_data.puback, mqtt5.PubackPacket)
 
-        # Wait for the first delivery and confirm PUBACK was held
+        # Wait for the first delivery and confirm publish acknowledgement was held
         first_payload = future_first_delivery.result(TIMEOUT)
         self.assertEqual(first_payload, payload_bytes)
-        self.assertIsNotNone(puback_handle_holder[0], "acquire_puback_control() should have returned a handle")
+        self.assertIsNotNone(puback_handle_holder[0], "acquire_publish_acknowledgement_control() should have returned a handle")
 
-        # Wait up to 60 seconds for the broker to re-deliver the message (no PUBACK was sent)
+        # Wait up to 60 seconds for the broker to re-deliver the message (no publish acknowledgement was sent)
         redelivered_payload = future_redelivery.result(PUBACK_HOLD_TIMEOUT)
         self.assertEqual(redelivered_payload, payload_bytes,
                          "Re-delivered payload should match the original UUID payload")
 
-        # Release the held PUBACK now that we've confirmed re-delivery
-        client.invoke_puback(puback_handle_holder[0])
+        # Release the held publish acknowledgement now that we've confirmed re-delivery
+        client.invoke_publish_acknowledgement(puback_handle_holder[0])
 
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    def test_manual_puback_hold(self):
-        test_retry_wrapper(self._test_manual_puback_hold)
+    def test_manual_publish_acknowledgement_hold(self):
+        test_retry_wrapper(self._test_manual_publish_acknowledgement_hold)
 
-    # Manual PUBACK invoke test: acquire and immediately invoke PUBACK, verify no re-delivery
-    def _test_manual_puback_invoke(self):
+    # Manual publish acknowledgement invoke test: acquire and immediately invoke publish acknowledgement, verify no re-delivery
+    def _test_manual_publish_acknowledgement_invoke(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
         input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
@@ -1678,8 +1678,8 @@ class Mqtt5ClientTest(NativeResourceTest):
         def on_publish_received(publish_received_data: mqtt5.PublishReceivedData):
             received_payload = publish_received_data.publish_packet.payload
             if not future_first_delivery.done():
-                # First delivery: acquire manual PUBACK control, then immediately invoke it
-                puback_handle_holder[0] = publish_received_data.acquire_puback_control()
+                # First delivery: acquire manual publish acknowledgement control, then immediately invoke it
+                puback_handle_holder[0] = publish_received_data.acquire_publish_acknowledgement_control()
                 future_first_delivery.set_result(received_payload)
             elif received_payload == payload_bytes and not future_unexpected_redelivery.done():
                 # A second delivery of the same payload means the broker re-sent, this should NOT happen
@@ -1724,16 +1724,16 @@ class Mqtt5ClientTest(NativeResourceTest):
         self.assertEqual(first_payload, payload_bytes)
         self.assertIsNotNone(puback_handle_holder[0], "acquire_puback_control() should have returned a handle")
 
-        # Immediately invoke the PUBACK using the acquired handle
-        client.invoke_puback(puback_handle_holder[0])
+        # Immediately invoke the publish acknowledgement using the acquired handle
+        client.invoke_publish_acknowledgement(puback_handle_holder[0])
 
         # Wait 60 seconds and confirm the broker does NOT re-deliver the message
-        # (because we sent the PUBACK via invoke_puback)
+        # (because we sent the publish acknowledgement via invoke_publish_acknowledgement)
         redelivered = future_unexpected_redelivery.done() or \
             (not future_unexpected_redelivery.done() and
              self._wait_for_future_timeout(future_unexpected_redelivery, NO_REDELIVERY_WAIT))
         self.assertFalse(redelivered,
-                         "Broker should NOT re-deliver the message after invoke_puback() was called")
+                         "Broker should NOT re-deliver the message after invoke_publish_acknowledgement() was called")
 
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
@@ -1746,12 +1746,12 @@ class Mqtt5ClientTest(NativeResourceTest):
         except Exception:
             return False
 
-    def test_manual_puback_invoke(self):
-        test_retry_wrapper(self._test_manual_puback_invoke)
+    def test_manual_publish_acknowledgement_invoke(self):
+        test_retry_wrapper(self._test_manual_publish_acknowledgement_invoke)
 
-    # Manual PUBACK double-call test: calling acquirePubackControl() twice raises IllegalStateException
-    def _test_manual_puback_acquire_double_call_raises(self):
-        """Verify that calling acquire_puback_control() twice on the same QoS 1 PUBLISH raises RuntimeError."""
+    # Manual publish acknowledgement double-call test: calling acquire_publish_acknowledgement_control() twice raises RuntimeError
+    def _test_manual_publish_acknowledgement_acquire_double_call_raises(self):
+        """Verify that calling acquire_publish_acknowledgement_control() twice on the same QoS 1 PUBLISH raises RuntimeError."""
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
         input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
@@ -1765,10 +1765,10 @@ class Mqtt5ClientTest(NativeResourceTest):
         def on_publish_received(publish_received_data: mqtt5.PublishReceivedData):
             try:
                 # First call should succeed
-                handle = publish_received_data.acquire_puback_control()
+                handle = publish_received_data.acquire_publish_acknowledgement_control()
                 # Second call on the same message should raise RuntimeError
                 try:
-                    publish_received_data.acquire_puback_control()
+                    publish_received_data.acquire_publish_acknowledgement_control()
                     future_result.set_result("no_error")  # Should not reach here
                 except RuntimeError:
                     future_result.set_result("double_call_raised")
@@ -1806,12 +1806,12 @@ class Mqtt5ClientTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    def test_manual_puback_acquire_double_call_raises(self):
-        test_retry_wrapper(self._test_manual_puback_acquire_double_call_raises)
+    def test_manual_publish_acknowledgement_acquire_double_call_raises(self):
+        test_retry_wrapper(self._test_manual_publish_acknowledgement_acquire_double_call_raises)
 
-    # Manual PUBACK post-callback test: calling acquire_puback_control() after callback returns raises RuntimeError
-    def _test_manual_puback_acquire_post_callback_raises(self):
-        """Verify that calling acquire_puback_control() after the callback has returned raises RuntimeError."""
+    # Manual publish acknowledgement post-callback test: calling acquire_publish_acknowledgement_control() after callback returns raises RuntimeError
+    def _test_manual_publish_acknowledgement_acquire_post_callback_raises(self):
+        """Verify that calling acquire_publish_acknowledgement_control() after the callback has returned raises RuntimeError."""
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
         input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
@@ -1825,7 +1825,7 @@ class Mqtt5ClientTest(NativeResourceTest):
 
         def on_publish_received(publish_received_data: mqtt5.PublishReceivedData):
             # Save the callable but do NOT call it within the callback
-            saved_acquire_fn_holder[0] = publish_received_data.acquire_puback_control
+            saved_acquire_fn_holder[0] = publish_received_data.acquire_publish_acknowledgement_control
             future_callback_done.set_result(True)
 
         tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(input_cert, input_key)
@@ -1851,21 +1851,21 @@ class Mqtt5ClientTest(NativeResourceTest):
         # Wait for the callback to complete
         future_callback_done.result(TIMEOUT)
 
-        # Now call acquire_puback_control() after the callback has returned, this should raise RuntimeError
+        # Now call acquire_publish_acknowledgement_control() after the callback has returned, this should raise RuntimeError
         acquire_fn = saved_acquire_fn_holder[0]
-        self.assertIsNotNone(acquire_fn, "acquire_puback_control should have been saved")
+        self.assertIsNotNone(acquire_fn, "acquire_publish_acknowledgement_control should have been saved")
         with self.assertRaises(RuntimeError):
             acquire_fn()
 
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    def test_manual_puback_acquire_post_callback_raises(self):
-        test_retry_wrapper(self._test_manual_puback_acquire_post_callback_raises)
+    def test_manual_publish_acknowledgement_acquire_post_callback_raises(self):
+        test_retry_wrapper(self._test_manual_publish_acknowledgement_acquire_post_callback_raises)
 
-    # Manual PUBACK QoS 0 test: acquirePubackControl() throws IllegalStateException for QoS 0 messages
-    def _test_manual_puback_qos0_acquire_is_none(self):
-        """Verify that acquire_puback_control is None for QoS 0 messages."""
+    # Manual publish acknowledgement QoS 0 test: acquire_publish_acknowledgement_control is None for QoS 0 messages
+    def _test_manual_publish_acknowledgement_qos0_acquire_is_none(self):
+        """Verify that acquire_publish_acknowledgement_control is None for QoS 0 messages."""
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
         input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
@@ -1877,8 +1877,8 @@ class Mqtt5ClientTest(NativeResourceTest):
         future_acquire_value = Future()
 
         def on_publish_received(publish_received_data: mqtt5.PublishReceivedData):
-            # For QoS 0, acquire_puback_control should be None
-            future_acquire_value.set_result(publish_received_data.acquire_puback_control)
+            # For QoS 0, acquire_publish_acknowledgement_control should be None
+            future_acquire_value.set_result(publish_received_data.acquire_publish_acknowledgement_control)
 
         tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(input_cert, input_key)
         client_options = mqtt5.ClientOptions(host_name=input_host_name, port=8883)
@@ -1904,13 +1904,13 @@ class Mqtt5ClientTest(NativeResourceTest):
 
         acquire_value = future_acquire_value.result(TIMEOUT)
         self.assertIsNone(acquire_value,
-                          "acquire_puback_control should be None for QoS 0 messages")
+                          "acquire_publish_acknowledgement_control should be None for QoS 0 messages")
 
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
-    def test_manual_puback_qos0_acquire_is_none(self):
-        test_retry_wrapper(self._test_manual_puback_qos0_acquire_is_none)
+    def test_manual_publish_acknowledgement_qos0_acquire_is_none(self):
+        test_retry_wrapper(self._test_manual_publish_acknowledgement_qos0_acquire_is_none)
 
     # ==============================================================
     #             RETAIN TEST CASES

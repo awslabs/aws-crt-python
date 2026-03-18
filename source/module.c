@@ -810,7 +810,7 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(mqtt5_client_subscribe, METH_VARARGS),
     AWS_PY_METHOD_DEF(mqtt5_client_unsubscribe, METH_VARARGS),
     AWS_PY_METHOD_DEF(mqtt5_client_get_stats, METH_VARARGS),
-    AWS_PY_METHOD_DEF(mqtt5_client_invoke_puback, METH_VARARGS),
+    AWS_PY_METHOD_DEF(mqtt5_client_invoke_publish_acknowledgement, METH_VARARGS),
     AWS_PY_METHOD_DEF(mqtt5_ws_handshake_transform_complete, METH_VARARGS),
 
     /* MQTT Request Response Client */

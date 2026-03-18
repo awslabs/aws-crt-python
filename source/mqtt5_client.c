@@ -239,14 +239,14 @@ static void s_on_publish_received(const struct aws_mqtt5_packet_publish_view *pu
     size_t subscription_identifier_count = publish_packet->subscription_identifier_count;
     size_t user_property_count = publish_packet->user_property_count;
 
-    /* For QoS 1 messages, take manual control of the PUBACK immediately.
-     * This gives us a puback_control_id that we pass to Python as an opaque integer.
-     * Python's _on_publish will return True if the user called acquire_puback_control(),
-     * in which case the user is responsible for calling invoke_puback() later.
-     * If _on_publish returns False/None, we auto-invoke the PUBACK here. */
+    /* For QoS 1 messages, take manual control of the publish acknowledgement immediately.
+     * This gives us a pub_ack_control_id that we pass to Python as an opaque integer.
+     * Python's _on_publish will return True if the user called acquire_publish_acknowledgement_control(),
+     * in which case the user is responsible for calling invoke_publish_acknowledgement() later.
+     * If _on_publish returns False/None, we auto-invoke the publish acknowledgement here. */
     uint64_t puback_control_id = 0;
     if (publish_packet->qos == AWS_MQTT5_QOS_AT_LEAST_ONCE) {
-        puback_control_id = aws_mqtt5_client_acquire_puback(client->native, publish_packet);
+        puback_control_id = aws_mqtt5_client_acquire_publish_acknowledgement(client->native, publish_packet);
         puback_control_id_py = PyLong_FromUnsignedLongLong((unsigned long long)puback_control_id);
         if (!puback_control_id_py) {
             PyErr_WriteUnraisable(PyErr_Occurred());
@@ -305,17 +305,17 @@ static void s_on_publish_received(const struct aws_mqtt5_packet_publish_view *pu
 
     if (!result) {
         PyErr_WriteUnraisable(PyErr_Occurred());
-        /* On error, auto-invoke the PUBACK so it is not lost */
+        /* On error, auto-invoke the publish acknowledgement so it is not lost */
         if (puback_control_id != 0) {
-            aws_mqtt5_client_invoke_puback(client->native, puback_control_id, NULL);
+            aws_mqtt5_client_invoke_publish_acknowledgement(client->native, puback_control_id, NULL);
         }
         goto cleanup;
     }
 
-    /* If _on_publish returned False/None, the user did not take control of the PUBACK.
+    /* If _on_publish returned False/None, the user did not take control of the publish acknowledgement.
      * Auto-invoke it now. */
     if (puback_control_id != 0 && !PyObject_IsTrue(result)) {
-        aws_mqtt5_client_invoke_puback(client->native, puback_control_id, NULL);
+        aws_mqtt5_client_invoke_publish_acknowledgement(client->native, puback_control_id, NULL);
     }
 
 cleanup:
@@ -1714,10 +1714,10 @@ done:
 }
 
 /*******************************************************************************
- * Invoke Puback
+ * Invoke Publish Acknowledgement
  ******************************************************************************/
 
-PyObject *aws_py_mqtt5_client_invoke_puback(PyObject *self, PyObject *args) {
+PyObject *aws_py_mqtt5_client_invoke_publish_acknowledgement(PyObject *self, PyObject *args) {
     (void)self;
     bool success = true;
 
@@ -1737,7 +1737,7 @@ PyObject *aws_py_mqtt5_client_invoke_puback(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    if (aws_mqtt5_client_invoke_puback(client->native, (uint64_t)control_id_ull, NULL)) {
+    if (aws_mqtt5_client_invoke_publish_acknowledgement(client->native, (uint64_t)control_id_ull, NULL)) {
         PyErr_SetAwsLastError();
         success = false;
     }
