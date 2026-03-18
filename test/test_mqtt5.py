@@ -1642,7 +1642,9 @@ class Mqtt5ClientTest(NativeResourceTest):
         # Wait for the first delivery and confirm publish acknowledgement was held
         first_payload = future_first_delivery.result(TIMEOUT)
         self.assertEqual(first_payload, payload_bytes)
-        self.assertIsNotNone(puback_handle_holder[0], "acquire_publish_acknowledgement_control() should have returned a handle")
+        self.assertIsNotNone(
+            puback_handle_holder[0],
+            "acquire_publish_acknowledgement_control() should have returned a handle")
 
         # Wait up to 60 seconds for the broker to re-deliver the message (no publish acknowledgement was sent)
         redelivered_payload = future_redelivery.result(PUBACK_HOLD_TIMEOUT)
@@ -1658,7 +1660,8 @@ class Mqtt5ClientTest(NativeResourceTest):
     def test_manual_publish_acknowledgement_hold(self):
         test_retry_wrapper(self._test_manual_publish_acknowledgement_hold)
 
-    # Manual publish acknowledgement invoke test: acquire and immediately invoke publish acknowledgement, verify no re-delivery
+    # Manual publish acknowledgement invoke test: acquire and immediately
+    # invoke publish acknowledgement, verify no re-delivery
     def _test_manual_publish_acknowledgement_invoke(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
         input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
@@ -1719,10 +1722,10 @@ class Mqtt5ClientTest(NativeResourceTest):
         publish_completion_data = publish_future.result(TIMEOUT)
         self.assertIsInstance(publish_completion_data.puback, mqtt5.PubackPacket)
 
-        # Wait for the first delivery and confirm PUBACK handle was acquired
+        # Wait for the first delivery and confirm publish acknowledgement handle was acquired
         first_payload = future_first_delivery.result(TIMEOUT)
         self.assertEqual(first_payload, payload_bytes)
-        self.assertIsNotNone(puback_handle_holder[0], "acquire_puback_control() should have returned a handle")
+        self.assertIsNotNone(puback_handle_holder[0], "acquire_publish_acknowledgement_control() should have returned a handle")
 
         # Immediately invoke the publish acknowledgement using the acquired handle
         client.invoke_publish_acknowledgement(puback_handle_holder[0])
@@ -1749,7 +1752,8 @@ class Mqtt5ClientTest(NativeResourceTest):
     def test_manual_publish_acknowledgement_invoke(self):
         test_retry_wrapper(self._test_manual_publish_acknowledgement_invoke)
 
-    # Manual publish acknowledgement double-call test: calling acquire_publish_acknowledgement_control() twice raises RuntimeError
+    # Manual publish acknowledgement double-call test: calling
+    # acquire_publish_acknowledgement_control() twice raises RuntimeError
     def _test_manual_publish_acknowledgement_acquire_double_call_raises(self):
         """Verify that calling acquire_publish_acknowledgement_control() twice on the same QoS 1 PUBLISH raises RuntimeError."""
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
@@ -1809,7 +1813,9 @@ class Mqtt5ClientTest(NativeResourceTest):
     def test_manual_publish_acknowledgement_acquire_double_call_raises(self):
         test_retry_wrapper(self._test_manual_publish_acknowledgement_acquire_double_call_raises)
 
-    # Manual publish acknowledgement post-callback test: calling acquire_publish_acknowledgement_control() after callback returns raises RuntimeError
+    # Manual publish acknowledgement post-callback test: calling
+    # acquire_publish_acknowledgement_control() after callback returns raises
+    # RuntimeError
     def _test_manual_publish_acknowledgement_acquire_post_callback_raises(self):
         """Verify that calling acquire_publish_acknowledgement_control() after the callback has returned raises RuntimeError."""
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
@@ -1851,7 +1857,8 @@ class Mqtt5ClientTest(NativeResourceTest):
         # Wait for the callback to complete
         future_callback_done.result(TIMEOUT)
 
-        # Now call acquire_publish_acknowledgement_control() after the callback has returned, this should raise RuntimeError
+        # Now call acquire_publish_acknowledgement_control() after the callback
+        # has returned, this should raise RuntimeError
         acquire_fn = saved_acquire_fn_holder[0]
         self.assertIsNotNone(acquire_fn, "acquire_publish_acknowledgement_control should have been saved")
         with self.assertRaises(RuntimeError):

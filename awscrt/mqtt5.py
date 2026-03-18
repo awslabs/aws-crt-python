@@ -2014,7 +2014,8 @@ class Client(NativeResource):
         result = _awscrt.mqtt5_client_get_stats(self._binding)
         return OperationStatisticsData(result[0], result[1], result[2], result[3])
 
-    def invoke_publish_acknowledgement(self, publish_acknowledgement_control_handle: 'PublishAcknowledgementControlHandle'):
+    def invoke_publish_acknowledgement(
+            self, publish_acknowledgement_control_handle: 'PublishAcknowledgementControlHandle'):
         """Sends a publish acknowledgement for a QoS 1 PUBLISH that was previously acquired for manual control.
 
         To use manual publish acknowledgement control, call acquire_publish_acknowledgement_control() within
