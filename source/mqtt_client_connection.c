@@ -438,7 +438,7 @@ static void s_on_connect(
 }
 
 /* If unsuccessful, false is returned and a Python error has been set */
-bool s_set_metrics(struct aws_mqtt_client_connection *connection, PyObject *metrics) {
+static bool s_set_metrics(struct aws_mqtt_client_connection *connection, PyObject *metrics) {
     assert(metrics && (metrics != Py_None));
 
     if (connection == NULL) {

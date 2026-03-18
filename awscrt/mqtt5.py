@@ -1351,7 +1351,8 @@ class ClientOptions:
         on_lifecycle_event_connection_success_fn (Callable[[LifecycleConnectSuccessData],]): Callback for Lifecycle Event Connection Success.
         on_lifecycle_event_connection_failure_fn (Callable[[LifecycleConnectFailureData],]): Callback for Lifecycle Event Connection Failure.
         on_lifecycle_event_disconnection_fn (Callable[[LifecycleDisconnectData],]): Callback for Lifecycle Event Disconnection.
-        enable_metrics (bool): Enable IoT SDK metrics in MQTT CONNECT packet username field. Default to True.
+        enable_metrics (bool): Enable IoT SDK metrics in MQTT CONNECT packet username field, including SDK name, version, and platform. Default to True.
+
     """
     host_name: str
     port: int = None
