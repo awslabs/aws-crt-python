@@ -1506,6 +1506,7 @@ class _ClientCore:
         if puback_control_id != 0:
             def acquire_publish_acknowledgement_control():
                 nonlocal puback_taken
+                nonlocal callback_active
                 if puback_taken:
                     raise RuntimeError(
                         "acquire_publish_acknowledgement_control() may only be called once per received PUBLISH.")
