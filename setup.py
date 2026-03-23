@@ -431,8 +431,8 @@ class bdist_wheel_abi3(bdist_wheel):
     def get_tag(self):
         python, abi, plat = super().get_tag()
         # on CPython, our wheels are abi3 and compatible back to 3.11
-        # but free-threaded builds don't use limited API, so skip abi3 tag
         if FREE_THREADED_BUILD:
+            # free-threaded builds don't use limited API, so skip abi3 tag
             return python, abi, plat
         elif python.startswith("cp") and sys.version_info >= (3, 13):
             # 3.13 deprecates PyWeakref_GetObject(), adds alternative
@@ -538,7 +538,7 @@ def awscrt_ext():
                     extra_link_args += ['-Wl,--fatal-warnings']
 
     # prefer building with stable ABI, so a wheel can work with multiple major versions
-    if FREE_THREADED_BUILD and sys.version_info[:2] == (3, 14):
+    if FREE_THREADED_BUILD and sys.version_info[:2] <= (3, 14):
         # 3.14 free threaded (aka no gil) does not support limited api.
         # disable it for now. 3.15 promises to support limited api + free threading combo
         py_limited_api = False
