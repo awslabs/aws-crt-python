@@ -705,7 +705,7 @@ class FlowControlTest(NativeResourceTest):
                 self.assertEqual(sum(received_chunks), sum(window_updates_sent),
                                  "Window updates don't match received data")
 
-            connection.close()
+            self.assertEqual(None, connection.close().result(self.timeout))
         except Exception as e:
             self.skipTest(f"HTTP/1.1 flow control test skipped due to connection issue: {e}")
 
@@ -744,7 +744,7 @@ class FlowControlTest(NativeResourceTest):
             self.assertGreater(len(received_chunks), 0, "No data chunks received")
             self.assertGreater(len(window_updates_sent), 0, "No window updates sent")
 
-            connection.close()
+            self.assertEqual(None, connection.close().result(self.timeout))
         except Exception as e:
             self.skipTest(f"HTTP/2 flow control test skipped due to connection issue: {e}")
 
@@ -780,7 +780,7 @@ class FlowControlTest(NativeResourceTest):
             # With window=10, we should receive many small chunks
             self.assertEqual(len(chunks_received), 100, "Expected multiple chunks with tiny window")
 
-            connection.close()
+            self.assertEqual(None, connection.close().result(self.timeout))
         except Exception as e:
             self.skipTest(f"HTTP/2 flow control test skipped: {e}")
 
@@ -816,7 +816,7 @@ class FlowControlTest(NativeResourceTest):
             # With window=1, we should receive many small chunks
             self.assertEqual(len(chunks_received), 100, "Should receive exactly 100 chunks")
 
-            connection.close()
+            self.assertEqual(None, connection.close().result(self.timeout))
         except Exception as e:
             self.skipTest(f"HTTP/1.1 flow control test skipped: {e}")
 
