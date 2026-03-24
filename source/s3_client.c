@@ -365,15 +365,17 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
         network_interface_names =
             aws_mem_calloc(allocator, num_network_interface_names, sizeof(struct aws_byte_cursor));
         for (size_t i = 0; i < num_network_interface_names; ++i) {
-            PyObject *str_obj = PyList_GetItem(network_interface_names_py, i); /* Borrowed reference */
+            PyObject *str_obj = PyList_GetItemRef(network_interface_names_py, i);
             if (!str_obj) {
                 goto cleanup;
             }
             network_interface_names[i] = aws_byte_cursor_from_pyunicode(str_obj);
             if (network_interface_names[i].ptr == NULL) {
+                Py_DECREF(str_object);
                 PyErr_SetString(PyExc_TypeError, "Expected all network_interface_names elements to be strings.");
                 goto cleanup;
             }
+            Py_DECREF(str_object);
         }
     }
     struct aws_s3_file_io_options fio_opts = {
