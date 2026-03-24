@@ -147,3 +147,6 @@ AWS_EXTRA_LIB_DIR=C:\path\to\libs;D:\another\path python3 -m pip install .
 ### Windows SDK Version
 
 aws-crt-python builds against windows sdk version `10.0.17763.0` . This is the minimal version required for TLS  1.3 support on Windows. If you need a different Windows SDK version, you can set environment variable `AWS_CRT_WINDOWS_SDK_VERSION=<version>` while building from source:
+
+### Attribution
+This library exposes native XXHash implementation (https://github.com/Cyan4973/xxHash).
