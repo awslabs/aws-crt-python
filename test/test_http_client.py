@@ -775,7 +775,7 @@ class FlowControlTest(LocalServerTestBase):
                 self.assertEqual(sum(received_chunks), sum(window_updates_sent),
                                  "Window updates don't match received data")
 
-                connection.close()
+                self.assertEqual(None, connection.close().result(self.timeout))
             finally:
                 # Clean up test file
                 if os.path.exists(test_file_path):
@@ -820,7 +820,7 @@ class FlowControlTest(LocalServerTestBase):
                 # With window=1, we should receive many small chunks
                 self.assertGreater(len(chunks_received), 1, "Should receive multiple chunks with tiny window")
 
-                connection.close()
+                self.assertEqual(None, connection.close().result(self.timeout))
             finally:
                 # Clean up test file
                 if os.path.exists(test_file_path):
@@ -867,7 +867,7 @@ class FlowControlH2Test(MockServerTestBase):
         self.assertGreater(len(received_chunks), 0, "No data chunks received")
         self.assertGreater(len(window_updates_sent), 0, "No window updates sent")
 
-        connection.close()
+        self.assertEqual(None, connection.close().result(self.timeout))
 
     def test_h2_stream_flow_control_blocks_and_resumes(self):
         """Test that HTTP/2 stream flow control actually blocks and resumes"""
@@ -900,7 +900,7 @@ class FlowControlH2Test(MockServerTestBase):
         # With small window, we should receive multiple chunks
         self.assertGreater(len(chunks_received), 1, "Should receive multiple chunks with small window")
 
-        connection.close()
+        self.assertEqual(None, connection.close().result(self.timeout))
 
 
 if __name__ == '__main__':
