@@ -621,10 +621,8 @@ PyObject *aws_py_weakref_get_ref(PyObject *ref) {
 int aws_py_gilstate_ensure(PyGILState_STATE *out_state) {
     /* If Python >= 3.13 */
 #if PY_VERSION_HEX >= 0x030D0000
-    printf("NEW PYTHON!!!!!\n");
     // Py_IsFinalizing is part of the Stable ABI since version 3.13.
     if (AWS_LIKELY(!Py_IsFinalizing())) {
-        printf("NEW Py_IsFinalizing!!!!!\n");
 #else
     if (AWS_LIKELY(Py_IsInitialized())) {
 #endif
