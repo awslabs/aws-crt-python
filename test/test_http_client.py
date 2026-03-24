@@ -705,9 +705,10 @@ class FlowControlTest(NativeResourceTest):
                 self.assertEqual(sum(received_chunks), sum(window_updates_sent),
                                  "Window updates don't match received data")
 
-            self.assertEqual(None, connection.close().result(self.timeout))
         except Exception as e:
             self.skipTest(f"HTTP/1.1 flow control test skipped due to connection issue: {e}")
+        finally:
+            self.assertEqual(None, connection.close().result(self.timeout))
 
     def test_h2_manual_window_management_happy_path(self):
         """Test HTTP/2 manual window management happy path"""
@@ -744,9 +745,10 @@ class FlowControlTest(NativeResourceTest):
             self.assertGreater(len(received_chunks), 0, "No data chunks received")
             self.assertGreater(len(window_updates_sent), 0, "No window updates sent")
 
-            self.assertEqual(None, connection.close().result(self.timeout))
         except Exception as e:
             self.skipTest(f"HTTP/2 flow control test skipped due to connection issue: {e}")
+        finally:
+            self.assertEqual(None, connection.close().result(self.timeout))
 
     def test_h2_stream_flow_control_blocks_and_resumes(self):
         """Test that stream flow control actually blocks and resumes"""
@@ -780,9 +782,10 @@ class FlowControlTest(NativeResourceTest):
             # With window=10, we should receive many small chunks
             self.assertEqual(len(chunks_received), 100, "Expected multiple chunks with tiny window")
 
-            self.assertEqual(None, connection.close().result(self.timeout))
         except Exception as e:
             self.skipTest(f"HTTP/2 flow control test skipped: {e}")
+        finally:
+            self.assertEqual(None, connection.close().result(self.timeout))
 
     def test_h1_stream_flow_control_blocks_and_resumes(self):
         """Test that HTTP/1.1 stream flow control actually blocks and resumes"""
@@ -816,9 +819,10 @@ class FlowControlTest(NativeResourceTest):
             # With window=1, we should receive many small chunks
             self.assertEqual(len(chunks_received), 100, "Should receive exactly 100 chunks")
 
-            self.assertEqual(None, connection.close().result(self.timeout))
         except Exception as e:
             self.skipTest(f"HTTP/1.1 flow control test skipped: {e}")
+        finally:
+            self.assertEqual(None, connection.close().result(self.timeout))
 
     def tearDown(self):
         self.tls_options = None
