@@ -371,7 +371,6 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
             strong_ref = true;
 #else
             PyObject *str_obj = PyList_GetItem(network_interface_names_py, i); // Borrowed Reference
-
 #endif
             if (!str_obj) {
                 goto cleanup;
@@ -379,13 +378,13 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
             network_interface_names[i] = aws_byte_cursor_from_pyunicode(str_obj);
             if (network_interface_names[i].ptr == NULL) {
                 if (strong_ref) {
-                    Py_DECREF(str_object);
+                    Py_DECREF(str_obj);
                 }
                 PyErr_SetString(PyExc_TypeError, "Expected all network_interface_names elements to be strings.");
                 goto cleanup;
             }
             if (strong_ref) {
-                Py_DECREF(str_object);
+                Py_DECREF(str_obj);
             }
         }
     }
