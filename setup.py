@@ -26,7 +26,7 @@ if sys.platform == 'win32':
 MACOS_DEPLOYMENT_TARGET_MIN = "10.15"
 
 # True if this is a free-threaded Python build.
-FREE_THREADED_BUILD = sysconfig.get_config_var("Py_GIL_DISABLED")
+FREE_THREADED_BUILD = sysconfig.get_config_var("Py_GIL_DISABLED") == 1
 
 # This is the minimum version of the Windows SDK needed for schannel.h with SCH_CREDENTIALS and
 # TLS_PARAMETERS. These are required to build Windows Binaries with TLS 1.3 support.
