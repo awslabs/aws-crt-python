@@ -62,13 +62,11 @@ class TestRequestHandler(SimpleHTTPRequestHandler):
         self.end_headers()
 
 
-class AsyncLocalServerTestBase(NativeResourceTest):
-    """Base class for async tests that use local HTTP/1.x server"""
+class TestAsyncClient(NativeResourceTest):
     hostname = 'localhost'
     timeout = 5  # seconds
 
     def _start_server(self, secure, http_1_0=False):
-        """Start local HTTP server"""
         # HTTP/1.0 closes the connection at the end of each request
         # HTTP/1.1 will keep the connection alive
         if http_1_0:
@@ -91,13 +89,9 @@ class AsyncLocalServerTestBase(NativeResourceTest):
         self.server_thread.start()
 
     def _stop_server(self):
-        """Stop local HTTP server"""
         self.server.shutdown()
         self.server.server_close()
         self.server_thread.join()
-
-
-class TestAsyncClient(AsyncLocalServerTestBase):
 
     async def _new_client_connection(self, secure, proxy_options=None):
         if secure:
@@ -479,8 +473,8 @@ class TestAsyncClient(AsyncLocalServerTestBase):
         asyncio.run(self._test_cross_thread_http2_client())
 
 
-class AsyncMockServerTestBase(NativeResourceTest):
-    """Base class for async tests that use the H2 mock server"""
+@unittest.skipUnless(os.environ.get('AWS_TEST_LOCALHOST'), 'set env var to run test: AWS_TEST_LOCALHOST')
+class TestAsyncClientMockServer(NativeResourceTest):
     timeout = 5  # seconds
     p_server = None
     mock_server_url = None
@@ -505,6 +499,7 @@ class AsyncMockServerTestBase(NativeResourceTest):
     def _wait_for_server_ready(self):
         """Wait until server is accepting connections."""
         max_attempts = 20
+
         for attempt in range(max_attempts):
             try:
                 with socket.create_connection(("127.0.0.1", self.mock_server_url.port), timeout=1):
@@ -524,47 +519,6 @@ class AsyncMockServerTestBase(NativeResourceTest):
         except subprocess.TimeoutExpired:
             self.p_server.kill()
         super().tearDown()
-
-    async def _new_mock_h2_connection(
-            self,
-            manual_window_management=False,
-            initial_window_size=None,
-            initial_settings=None):
-        """Create HTTP/2 async client connection to local mock server"""
-        event_loop_group = EventLoopGroup()
-        host_resolver = DefaultHostResolver(event_loop_group)
-        bootstrap = ClientBootstrap(event_loop_group, host_resolver)
-
-        port = self.mock_server_url.port
-        if port is None:
-            port = 443
-
-        tls_ctx_options = TlsContextOptions()
-        tls_ctx_options.verify_peer = False
-        tls_ctx = ClientTlsContext(tls_ctx_options)
-        tls_conn_opt = tls_ctx.new_connection_options()
-        tls_conn_opt.set_server_name(self.mock_server_url.hostname)
-        tls_conn_opt.set_alpn_list(["h2"])
-
-        if initial_settings is None:
-            initial_settings = [Http2Setting(Http2SettingID.ENABLE_PUSH, 0)]
-
-        kwargs = {
-            'host_name': self.mock_server_url.hostname,
-            'port': port,
-            'bootstrap': bootstrap,
-            'tls_connection_options': tls_conn_opt,
-            'initial_settings': initial_settings,
-            'manual_window_management': manual_window_management
-        }
-        if initial_window_size is not None:
-            kwargs['initial_window_size'] = initial_window_size
-
-        return await AIOHttp2ClientConnection.new(**kwargs)
-
-
-@unittest.skipUnless(os.environ.get('AWS_TEST_LOCALHOST'), 'set env var to run test: AWS_TEST_LOCALHOST')
-class TestAsyncClientMockServer(AsyncMockServerTestBase):
 
     def _on_remote_settings_changed(self, settings):
         # The mock server has the default settings with
@@ -705,193 +659,91 @@ class TestAsyncClientMockServer(AsyncMockServerTestBase):
         asyncio.run(self._test_h2_mock_server_settings())
 
 
-class AIOFlowControlTest(AsyncLocalServerTestBase):
-    """HTTP/1.1 async flow control tests using local server"""
+class AIOFlowControlTest(NativeResourceTest):
     timeout = 10.0
-
-    async def _new_h1_client_connection(
-            self,
-            secure,
-            manual_window_management=False,
-            initial_window_size=None,
-            read_buffer_capacity=None):
-        """Create HTTP/1.1 async client connection to local server"""
-        if secure:
-            tls_ctx_opt = TlsContextOptions()
-            tls_ctx_opt.verify_peer = False
-            tls_ctx = ClientTlsContext(tls_ctx_opt)
-            tls_conn_opt = tls_ctx.new_connection_options()
-            tls_conn_opt.set_server_name(self.hostname)
-        else:
-            tls_conn_opt = None
-
-        event_loop_group = EventLoopGroup()
-        host_resolver = DefaultHostResolver(event_loop_group)
-        bootstrap = ClientBootstrap(event_loop_group, host_resolver)
-
-        kwargs = {
-            'host_name': self.hostname,
-            'port': self.port,
-            'bootstrap': bootstrap,
-            'tls_connection_options': tls_conn_opt,
-            'manual_window_management': manual_window_management
-        }
-        if initial_window_size is not None:
-            kwargs['initial_window_size'] = initial_window_size
-        if read_buffer_capacity is not None:
-            kwargs['read_buffer_capacity'] = read_buffer_capacity
-
-        return await AIOHttpClientConnection.new(**kwargs)
 
     async def _test_h1_manual_window_management_happy_path(self):
         """Test HTTP/1.1 manual window management happy path"""
-        self._start_server(secure=True)
-        try:
-            connection = await self._new_h1_client_connection(
-                secure=True,
-                manual_window_management=True,
-                initial_window_size=5,
-                read_buffer_capacity=1000
-            )
+        tls_ctx_opt = TlsContextOptions()
+        tls_ctx_opt.verify_peer = False
+        tls_ctx_opt.alpn_list = ['http/1.1']
+        tls_ctx = ClientTlsContext(tls_ctx_opt)
+        tls_options = tls_ctx.new_connection_options()
+        tls_options.set_server_name("httpbin.org")
 
-            # Create a file with known size for testing
-            test_data = b'0123456789'  # 10 bytes
-            test_file_path = 'test_aio_flow_control_data.txt'
-            with open(test_file_path, 'wb') as f:
-                f.write(test_data)
+        connection = await AIOHttpClientConnection.new(
+            host_name="httpbin.org",
+            port=443,
+            tls_connection_options=tls_options,
+            manual_window_management=True,
+            initial_window_size=5,
+            read_buffer_capacity=1000
+        )
 
-            try:
-                request = HttpRequest('GET', '/' + test_file_path)
-                request.headers.add('host', self.hostname)
-                stream = connection.request(request)
+        request = HttpRequest('GET', '/bytes/10')
+        request.headers.add('host', 'httpbin.org')
+        stream = connection.request(request)
 
-                chunks_received = []
-                body = bytearray()
+        response = Response()
+        status_code = await response.collect_response(stream)
 
-                await stream.get_response_status_code()
-                while True:
-                    chunk = await stream.get_next_response_chunk()
-                    if not chunk:
-                        break
-                    chunks_received.append(len(chunk))
-                    body.extend(chunk)
-                    stream.update_window(len(chunk))
-
-                self.assertEqual(test_data, bytes(body))
-                self.assertGreater(len(chunks_received), 0, "No data chunks received")
-
-                await connection.close()
-            finally:
-                # Clean up test file
-                if os.path.exists(test_file_path):
-                    os.remove(test_file_path)
-        finally:
-            self._stop_server()
+        self.assertEqual(200, status_code)
+        self.assertEqual(10, len(response.body))
+        await connection.close()
 
     def test_h1_manual_window_management_happy_path(self):
         asyncio.run(self._test_h1_manual_window_management_happy_path())
 
-    async def _test_h1_stream_flow_control_blocks_and_resumes(self):
-        """Test that HTTP/1.1 stream flow control actually blocks and resumes"""
-        self._start_server(secure=True)
-        try:
-            connection = await self._new_h1_client_connection(
-                secure=True,
-                manual_window_management=True,
-                initial_window_size=1,
-                read_buffer_capacity=1000
-            )
-
-            # Create a file with 100 bytes for testing
-            test_data = bytes(range(100))
-            test_file_path = 'test_aio_flow_control_100.txt'
-            with open(test_file_path, 'wb') as f:
-                f.write(test_data)
-
-            try:
-                request = HttpRequest('GET', '/' + test_file_path)
-                request.headers.add('host', self.hostname)
-                stream = connection.request(request)
-
-                chunks_received = []
-                body = bytearray()
-
-                await stream.get_response_status_code()
-                while True:
-                    chunk = await stream.get_next_response_chunk()
-                    if not chunk:
-                        break
-                    chunks_received.append(len(chunk))
-                    body.extend(chunk)
-                    stream.update_window(len(chunk))
-
-                self.assertEqual(test_data, bytes(body))
-                # With window=1, we should receive many small chunks
-                self.assertGreater(len(chunks_received), 1, "Should receive multiple chunks with tiny window")
-
-                await connection.close()
-            finally:
-                # Clean up test file
-                if os.path.exists(test_file_path):
-                    os.remove(test_file_path)
-        finally:
-            self._stop_server()
-
-    def test_h1_stream_flow_control_blocks_and_resumes(self):
-        asyncio.run(self._test_h1_stream_flow_control_blocks_and_resumes())
-
-
-@unittest.skipUnless(os.environ.get('AWS_TEST_LOCALHOST'), 'set env var to run test: AWS_TEST_LOCALHOST')
-class AIOFlowControlH2Test(AsyncMockServerTestBase):
-    """HTTP/2 async flow control tests using local mock server"""
-    timeout = 10.0
-
     async def _test_h2_manual_window_management_happy_path(self):
         """Test HTTP/2 manual window management happy path"""
-        connection = await self._new_mock_h2_connection(
+        tls_ctx_opt = TlsContextOptions()
+        tls_ctx_opt.verify_peer = False
+        tls_ctx_opt.alpn_list = ['h2']
+        tls_ctx = ClientTlsContext(tls_ctx_opt)
+        tls_options = tls_ctx.new_connection_options()
+        tls_options.set_server_name("httpbin.org")
+
+        connection = await AIOHttp2ClientConnection.new(
+            host_name="httpbin.org",
+            port=443,
+            tls_connection_options=tls_options,
             manual_window_management=True,
             initial_window_size=65536
         )
 
-        # GET request with x-repeat-data header to download data
-        request = HttpRequest('GET', self.mock_server_url.path)
-        request.headers.add('host', self.mock_server_url.hostname)
-        request.headers.add('x-repeat-data', '100')  # Request 100 bytes of data
-
+        request = HttpRequest('GET', '/get')
+        request.headers.add('host', 'httpbin.org')
         stream = connection.request(request)
 
-        chunks_received = []
-        body = bytearray()
+        response = Response()
+        status_code = await response.collect_response(stream)
 
-        await stream.get_response_status_code()
-        while True:
-            chunk = await stream.get_next_response_chunk()
-            if not chunk:
-                break
-            chunks_received.append(len(chunk))
-            body.extend(chunk)
-            stream.update_window(len(chunk))
-
-        self.assertGreater(len(body), 0, "No response body received")
-        self.assertGreater(len(chunks_received), 0, "No data chunks received")
-
+        self.assertEqual(200, status_code)
+        self.assertGreater(len(response.body), 0, "No data received")
         await connection.close()
 
     def test_h2_manual_window_management_happy_path(self):
         asyncio.run(self._test_h2_manual_window_management_happy_path())
 
     async def _test_h2_stream_flow_control_blocks_and_resumes(self):
-        """Test that HTTP/2 stream flow control actually blocks and resumes"""
-        connection = await self._new_mock_h2_connection(
+        """Test that stream flow control actually blocks and resumes"""
+        tls_ctx_opt = TlsContextOptions()
+        tls_ctx_opt.verify_peer = False
+        tls_ctx_opt.alpn_list = ['h2']
+        tls_ctx = ClientTlsContext(tls_ctx_opt)
+        tls_options = tls_ctx.new_connection_options()
+        tls_options.set_server_name("httpbin.org")
+
+        connection = await AIOHttp2ClientConnection.new(
+            host_name="httpbin.org",
+            port=443,
+            tls_connection_options=tls_options,
             manual_window_management=True,
-            initial_window_size=10  # Small window to force multiple chunks
+            initial_window_size=10  # Tiny window
         )
 
-        # GET request with x-repeat-data header to download data
-        request = HttpRequest('GET', self.mock_server_url.path)
-        request.headers.add('host', self.mock_server_url.hostname)
-        request.headers.add('x-repeat-data', '100')  # Request 100 bytes of data
-
+        request = HttpRequest('GET', '/bytes/100')
+        request.headers.add('host', 'httpbin.org')
         stream = connection.request(request)
 
         chunks_received = []
@@ -906,14 +758,53 @@ class AIOFlowControlH2Test(AsyncMockServerTestBase):
             body.extend(chunk)
             stream.update_window(len(chunk))
 
-        self.assertGreater(len(body), 0, "No response body received")
-        # With small window, we should receive multiple chunks
-        self.assertGreater(len(chunks_received), 1, "Should receive multiple chunks with small window")
-
+        self.assertEqual(100, len(body))
+        self.assertEqual(len(chunks_received), 10, "Should receive exactly 10 chunks")
         await connection.close()
 
     def test_h2_stream_flow_control_blocks_and_resumes(self):
         asyncio.run(self._test_h2_stream_flow_control_blocks_and_resumes())
+
+    async def _test_h1_stream_flow_control_blocks_and_resumes(self):
+        """Test that HTTP/1.1 stream flow control actually blocks and resumes"""
+        tls_ctx_opt = TlsContextOptions()
+        tls_ctx_opt.verify_peer = False
+        tls_ctx_opt.alpn_list = ['http/1.1']
+        tls_ctx = ClientTlsContext(tls_ctx_opt)
+        tls_options = tls_ctx.new_connection_options()
+        tls_options.set_server_name("httpbin.org")
+
+        connection = await AIOHttpClientConnection.new(
+            host_name="httpbin.org",
+            port=443,
+            tls_connection_options=tls_options,
+            manual_window_management=True,
+            initial_window_size=1,  # Tiny window
+            read_buffer_capacity=1000
+        )
+
+        request = HttpRequest('GET', '/bytes/100')
+        request.headers.add('host', 'httpbin.org')
+        stream = connection.request(request)
+
+        chunks_received = []
+        body = bytearray()
+
+        await stream.get_response_status_code()
+        while True:
+            chunk = await stream.get_next_response_chunk()
+            if not chunk:
+                break
+            chunks_received.append(len(chunk))
+            body.extend(chunk)
+            stream.update_window(len(chunk))
+
+        self.assertEqual(100, len(body))
+        self.assertEqual(len(chunks_received), 100, "Should receive exactly 100 chunks")
+        await connection.close()
+
+    def test_h1_stream_flow_control_blocks_and_resumes(self):
+        asyncio.run(self._test_h1_stream_flow_control_blocks_and_resumes())
 
 
 if __name__ == '__main__':
