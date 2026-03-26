@@ -22,6 +22,7 @@ from collections import deque
 from io import BytesIO
 from concurrent.futures import Future
 from typing import List, Tuple, Optional, Callable, AsyncIterator
+import threading
 
 
 class AIOHttpClientConnectionUnified(HttpClientConnectionBase):
@@ -328,7 +329,8 @@ class AIOHttpClientStreamUnified(HttpClientStreamBase):
         '_completion_future',
         '_stream_completed',
         '_status_code',
-        '_loop')
+        '_loop',
+        '_deque_lock')
 
     def __init__(self,
                  connection: AIOHttpClientConnection,
@@ -347,8 +349,8 @@ class AIOHttpClientStreamUnified(HttpClientStreamBase):
             raise TypeError("loop must be an instance of asyncio.AbstractEventLoop")
         self._loop = loop
 
-        # deque is thread-safe for appending and popping, so that we don't need
-        # locks to handle the callbacks from the C thread
+        # Lock to protect check-then-act sequences on deques for thread safety in free-threaded Python
+        self._deque_lock = threading.Lock()
         self._chunk_futures = deque()
         self._received_chunks = deque()
         self._stream_completed = False
@@ -373,12 +375,16 @@ class AIOHttpClientStreamUnified(HttpClientStreamBase):
         self._response_headers_future.set_result(name_value_pairs)
 
     def _on_body(self, chunk: bytes) -> None:
-        """Process body chunk on the correct event loop thread."""
-        if self._chunk_futures:
-            future = self._chunk_futures.popleft()
-            future.set_result(chunk)
-        else:
-            self._received_chunks.append(chunk)
+        """Process body chunk - called from C thread."""
+        with self._deque_lock:
+            if self._chunk_futures:
+                future = self._chunk_futures.popleft()
+            else:
+                self._received_chunks.append(chunk)
+                return
+
+        # Set result outside lock (Future is thread-safe)
+        future.set_result(chunk)
 
     def _on_complete(self, error_code: int) -> None:
         """Set the completion status of the stream."""
@@ -387,10 +393,14 @@ class AIOHttpClientStreamUnified(HttpClientStreamBase):
         else:
             self._completion_future.set_exception(awscrt.exceptions.from_code(error_code))
 
-        # Resolve all pending chunk futures with an empty string to indicate end of stream
-        while self._chunk_futures:
-            future = self._chunk_futures.popleft()
-            future.set_result("")
+        # Resolve all pending chunk futures with lock protection
+        with self._deque_lock:
+            pending_futures = list(self._chunk_futures)
+            self._chunk_futures.clear()
+
+        # Set results outside lock (Future is thread-safe)
+        for future in pending_futures:
+            future.set_result(b"")
 
     async def _set_request_body_generator(self, body_iterator: AsyncIterator[bytes]):
         ...
@@ -418,14 +428,17 @@ class AIOHttpClientStreamUnified(HttpClientStreamBase):
             bytes: The next chunk of data from the response body.
                 Returns empty bytes when the stream is completed and no more chunks are left.
         """
-        if self._received_chunks:
-            return self._received_chunks.popleft()
-        elif self._completion_future.done():
-            return b""
-        else:
-            future = Future()
-            self._chunk_futures.append(future)
-            return await asyncio.wrap_future(future, loop=self._loop)
+        with self._deque_lock:
+            if self._received_chunks:
+                return self._received_chunks.popleft()
+            elif self._completion_future.done():
+                return b""
+            else:
+                future = Future()
+                self._chunk_futures.append(future)
+
+        # Await outside lock
+        return await asyncio.wrap_future(future, loop=self._loop)
 
     async def wait_for_completion(self) -> int:
         """Wait asynchronously for the stream to complete.
