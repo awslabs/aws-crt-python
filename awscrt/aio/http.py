@@ -337,6 +337,7 @@ class AIOHttpClientStreamUnified(HttpClientStreamBase):
                  request: HttpRequest,
                  request_body_generator: AsyncIterator[bytes] = None,
                  loop: Optional[asyncio.AbstractEventLoop] = None) -> None:
+
         # Initialize the parent class
         http2_manual_write = request_body_generator is not None and connection.version is HttpVersion.Http2
         super()._init_common(connection, request, http2_manual_write=http2_manual_write)
@@ -357,6 +358,7 @@ class AIOHttpClientStreamUnified(HttpClientStreamBase):
 
         # Create futures for async operations
         self._completion_future = Future()
+        self._remote_completion_future = Future()
         self._response_status_future = Future()
         self._response_headers_future = Future()
         self._status_code = None
@@ -386,13 +388,12 @@ class AIOHttpClientStreamUnified(HttpClientStreamBase):
         # Set result outside lock (Future is thread-safe)
         future.set_result(chunk)
 
-    def _on_complete(self, error_code: int) -> None:
-        """Set the completion status of the stream."""
-        if error_code == 0:
-            self._completion_future.set_result(self._status_code)
-        else:
-            self._completion_future.set_exception(awscrt.exceptions.from_code(error_code))
+    def _resolve_pending_chunk_futures(self) -> None:
+        """Helper to resolve all pending chunk futures with empty bytes.
 
+        This indicates end of stream to any waiting get_next_response_chunk() calls.
+        Must be called when either the stream completes or remote peer sends END_STREAM.
+        """
         # Resolve all pending chunk futures with lock protection
         with self._deque_lock:
             pending_futures = list(self._chunk_futures)
@@ -401,6 +402,20 @@ class AIOHttpClientStreamUnified(HttpClientStreamBase):
         # Set results outside lock (Future is thread-safe)
         for future in pending_futures:
             future.set_result(b"")
+
+    def _on_complete(self, error_code: int) -> None:
+        """Set the completion status of the stream."""
+        if error_code == 0:
+            self._completion_future.set_result(self._status_code)
+        else:
+            self._completion_future.set_exception(awscrt.exceptions.from_code(error_code))
+
+        self._resolve_pending_chunk_futures()
+
+    def _on_h2_remote_end_stream(self) -> None:
+        """Called when the remote peer has finished sending (HTTP/2 only)."""
+        self._remote_completion_future.set_result(None)
+        self._resolve_pending_chunk_futures()
 
     async def _set_request_body_generator(self, body_iterator: AsyncIterator[bytes]):
         ...
@@ -431,7 +446,7 @@ class AIOHttpClientStreamUnified(HttpClientStreamBase):
         with self._deque_lock:
             if self._received_chunks:
                 return self._received_chunks.popleft()
-            elif self._completion_future.done():
+            elif self._completion_future.done() or self._remote_completion_future.done():
                 return b""
             else:
                 future = Future()

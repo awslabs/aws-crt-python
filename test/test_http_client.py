@@ -903,5 +903,63 @@ class FlowControlH2Test(MockServerTestBase):
         self.assertEqual(None, connection.close().result(self.timeout))
 
 
+class Http2RemoteEndStreamTest(NativeResourceTest):
+    """Test suite for HTTP/2 on_h2_remote_end_stream callback"""
+    timeout = 10  # seconds
+
+    def _new_httpbin_h2_connection(self):
+        """Create HTTP/2 connection to httpbin.org"""
+        event_loop_group = EventLoopGroup()
+        host_resolver = DefaultHostResolver(event_loop_group)
+        bootstrap = ClientBootstrap(event_loop_group, host_resolver)
+
+        tls_ctx_options = TlsContextOptions()
+        tls_ctx = ClientTlsContext(tls_ctx_options)
+        tls_conn_opt = tls_ctx.new_connection_options()
+        tls_conn_opt.set_server_name("httpbin.org")
+        tls_conn_opt.set_alpn_list(["h2"])
+
+        connection_future = Http2ClientConnection.new(
+            host_name="httpbin.org",
+            port=443,
+            bootstrap=bootstrap,
+            tls_connection_options=tls_conn_opt)
+
+        return connection_future.result(self.timeout)
+
+    def test_h2_remote_end_stream_ordering(self):
+        """Test that on_h2_remote_end_stream fires before on_complete when server finishes first"""
+        connection = self._new_httpbin_h2_connection()
+
+        # Use httpbin.org 404 path - server responds immediately
+        request = HttpRequest('POST', '/this-path-does-not-exist-deliberately-404')
+        request.headers.add('host', 'httpbin.org')
+        response = Response()
+
+        stream = connection.request(request, response.on_response, response.on_body, manual_write=True)
+        stream.activate()
+
+        # Send first chunk WITHOUT end_stream - keeping the client side open
+        stream.write_data(BytesIO(b'chunk1'), end_stream=False).result(self.timeout)
+
+        # Wait for server to finish (remote_end_stream_future completes)
+        # Server will respond immediately with 404 and send END_STREAM
+        remote_result = stream.remote_end_stream_future.result(self.timeout)
+        self.assertIsNone(remote_result, "remote_end_stream_future should complete with None")
+
+        # Verify completion_future has NOT completed yet (stream still open)
+        self.assertFalse(stream.completion_future.done(),
+                         "completion_future should not be done until client closes")
+
+        # Now send final chunk WITH end_stream to close client side
+        stream.write_data(BytesIO(b'chunk2'), end_stream=True).result(self.timeout)
+
+        # Wait for stream completion
+        completion_result = stream.completion_future.result(self.timeout)
+        self.assertEqual(404, completion_result, "Should get 404 status code")
+
+        connection.close().result(self.timeout)
+
+
 if __name__ == '__main__':
     unittest.main()

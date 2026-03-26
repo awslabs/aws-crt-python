@@ -916,5 +916,80 @@ class AIOFlowControlH2Test(AsyncMockServerTestBase):
         asyncio.run(self._test_h2_stream_flow_control_blocks_and_resumes())
 
 
+class AIOHttp2RemoteEndStreamTest(NativeResourceTest):
+    """Test suite for HTTP/2 on_h2_remote_end_stream callback in asyncio"""
+    timeout = 10.0
+
+    async def _new_httpbin_h2_connection(self):
+        """Create HTTP/2 connection to httpbin.org"""
+        event_loop_group = EventLoopGroup()
+        host_resolver = DefaultHostResolver(event_loop_group)
+        bootstrap = ClientBootstrap(event_loop_group, host_resolver)
+
+        tls_ctx_options = TlsContextOptions()
+        tls_ctx = ClientTlsContext(tls_ctx_options)
+        tls_conn_opt = tls_ctx.new_connection_options()
+        tls_conn_opt.set_server_name("httpbin.org")
+        tls_conn_opt.set_alpn_list(["h2"])
+
+        connection = await AIOHttp2ClientConnection.new(
+            host_name="httpbin.org",
+            port=443,
+            bootstrap=bootstrap,
+            tls_connection_options=tls_conn_opt)
+
+        return connection
+
+    async def _test_h2_remote_end_stream_ordering(self):
+        """Test that on_h2_remote_end_stream fires before on_complete when server finishes first"""
+        connection = await self._new_httpbin_h2_connection()
+
+        # Use httpbin.org 404 path - server responds immediately
+        request = HttpRequest('POST', '/this-path-does-not-exist-deliberately-404')
+        request.headers.add('host', 'httpbin.org')
+
+        complete_success = asyncio.Event()
+        remote_finished = asyncio.Event()
+        complete_fired = asyncio.Event()
+
+        async def slow_body_generator():
+            # Send first chunk WITHOUT end_stream
+            yield b'chunk1'
+            # Wait for server to finish
+            await remote_finished.wait()
+            if not complete_fired.is_set():
+                # Verify complete hasn't fired yet
+                complete_success.set()
+            # Now finish sending
+            yield b'chunk2'
+
+        stream = connection.request(request, request_body_generator=slow_body_generator())
+
+        # Read response
+        status_code = await stream.get_response_status_code()
+        self.assertEqual(404, status_code)
+
+        # Read all response body
+        while True:
+            chunk = await stream.get_next_response_chunk()
+            if not chunk:
+                break
+
+        # set remove stream
+        remote_finished.set()
+
+        # Wait for stream to complete successfully
+        await stream.wait_for_completion()
+        complete_fired.set()
+
+        self.assertTrue(complete_success.is_set())
+
+        await connection.close()
+
+    def test_h2_remote_end_stream_ordering(self):
+        """Test callback ordering with early server response"""
+        asyncio.run(self._test_h2_remote_end_stream_ordering())
+
+
 if __name__ == '__main__':
     unittest.main()
