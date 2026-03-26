@@ -916,5 +916,107 @@ class AIOFlowControlH2Test(AsyncMockServerTestBase):
         asyncio.run(self._test_h2_stream_flow_control_blocks_and_resumes())
 
 
+class AIOHttp2RemoteEndStreamTest(NativeResourceTest):
+    """Test suite for HTTP/2 on_h2_remote_end_stream callback in asyncio"""
+    timeout = 10.0
+
+    async def _new_httpbin_h2_connection(self):
+        """Create HTTP/2 connection to httpbin.org"""
+        event_loop_group = EventLoopGroup()
+        host_resolver = DefaultHostResolver(event_loop_group)
+        bootstrap = ClientBootstrap(event_loop_group, host_resolver)
+
+        tls_ctx_options = TlsContextOptions()
+        tls_ctx = ClientTlsContext(tls_ctx_options)
+        tls_conn_opt = tls_ctx.new_connection_options()
+        tls_conn_opt.set_server_name("httpbin.org")
+        tls_conn_opt.set_alpn_list(["h2"])
+
+        connection = await AIOHttp2ClientConnection.new(
+            host_name="httpbin.org",
+            port=443,
+            bootstrap=bootstrap,
+            tls_connection_options=tls_conn_opt)
+
+        return connection
+
+    async def _test_h2_remote_end_stream_ordering(self):
+        """Test that on_h2_remote_end_stream fires before on_complete when server finishes first"""
+        connection = await self._new_httpbin_h2_connection()
+
+        # Use httpbin.org 404 path - server responds immediately
+        request = HttpRequest('POST', '/this-path-does-not-exist-deliberately-404')
+        request.headers.add('host', 'httpbin.org')
+
+        # Track callback order and when remote finishes
+        callback_order = []
+        remote_finished = asyncio.Event()
+        complete_fired = asyncio.Event()
+
+        # Monkey-patch to track callbacks
+        original_on_h2_remote_end_stream = None
+        original_on_complete = None
+
+        async def slow_body_generator():
+            # Send first chunk WITHOUT end_stream
+            yield b'chunk1'
+            # Wait for server to finish
+            await remote_finished.wait()
+            # Verify complete hasn't fired yet
+            if not complete_fired.is_set():
+                callback_order.append('verified_complete_not_fired_yet')
+            # Now finish sending
+            yield b'chunk2'
+
+        stream = connection.request(request, request_body_generator=slow_body_generator())
+
+        # Monkey-patch to track callbacks
+        original_on_h2_remote_end_stream = stream._on_h2_remote_end_stream
+        original_on_complete = stream._on_complete
+
+        def tracked_on_h2_remote_end_stream():
+            callback_order.append('remote_end_stream')
+            remote_finished.set()
+            original_on_h2_remote_end_stream()
+
+        def tracked_on_complete(error_code):
+            callback_order.append('complete')
+            complete_fired.set()
+            original_on_complete(error_code)
+
+        stream._on_h2_remote_end_stream = tracked_on_h2_remote_end_stream
+        stream._on_complete = tracked_on_complete
+
+        # Read response
+        status_code = await stream.get_response_status_code()
+        self.assertEqual(404, status_code)
+
+        # Read all response body
+        while True:
+            chunk = await stream.get_next_response_chunk()
+            if not chunk:
+                break
+
+        # Wait for stream completion
+        await stream.wait_for_completion()
+
+        # Verify ordering
+        self.assertIn('remote_end_stream', callback_order)
+        self.assertIn('verified_complete_not_fired_yet', callback_order)
+        self.assertIn('complete', callback_order)
+
+        # Ensure remote_end_stream came before complete
+        remote_idx = callback_order.index('remote_end_stream')
+        complete_idx = callback_order.index('complete')
+        self.assertLess(remote_idx, complete_idx,
+                        "remote_end_stream must fire before complete")
+
+        await connection.close()
+
+    def test_h2_remote_end_stream_ordering(self):
+        """Test callback ordering with early server response"""
+        asyncio.run(self._test_h2_remote_end_stream_ordering())
+
+
 if __name__ == '__main__':
     unittest.main()

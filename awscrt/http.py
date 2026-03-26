@@ -569,6 +569,14 @@ class HttpClientStreamBase(HttpStreamBase):
         else:
             self._completion_future.set_exception(awscrt.exceptions.from_code(error_code))
 
+    def _on_h2_remote_end_stream(self) -> None:
+        """Called when remote peer sends END_STREAM (HTTP/2 only).
+
+        This callback is only invoked for HTTP/2 connections. HTTP/1.x streams
+        will never receive this callback. Base implementation does nothing.
+        """
+        pass
+
     def update_window(self, increment_size: int) -> None:
         """
         Update the stream's flow control window.
@@ -613,13 +621,56 @@ class HttpClientStream(HttpClientStreamBase):
 
 
 class Http2ClientStream(HttpClientStreamBase):
+    __slots__ = ('_remote_end_stream_future',)
+
     def __init__(self,
                  connection: HttpClientConnection,
                  request: 'HttpRequest',
                  on_response: Optional[Callable[..., None]] = None,
                  on_body: Optional[Callable[..., None]] = None,
                  manual_write: bool = False) -> None:
+        self._remote_end_stream_future = Future()
         self._init_common(connection, request, on_response, on_body, manual_write)
+
+    @property
+    def remote_end_stream_future(self) -> "concurrent.futures.Future":
+        """
+        concurrent.futures.Future: Future that completes when the remote peer has finished
+        sending (HTTP/2 only). This occurs when the server sends an END_STREAM flag.
+
+        The future will contain a result of None on success, or an exception if the stream
+        encounters an error before END_STREAM is received (e.g., RST_STREAM).
+
+        This is different from `completion_future` which completes when both the
+        client and server have finished (bidirectional stream closure).
+
+        Note: This future only applies to HTTP/2 connections. It will complete when the
+        server sends END_STREAM, which may occur before the client finishes sending.
+        In case of stream completed without END_STREAM received, this future will complete
+        with exception.
+        """
+        return self._remote_end_stream_future
+
+    def _on_h2_remote_end_stream(self) -> None:
+        """Internal callback when remote peer sends END_STREAM (HTTP/2 only)."""
+        if not self._remote_end_stream_future.done():
+            self._remote_end_stream_future.set_result(None)
+
+    def _on_complete(self, error_code: int) -> None:
+        # done with HttpRequest, drop reference
+        self._request = None  # type: ignore
+
+        # Ensure remote_completion_future is always resolved
+        if not self._remote_completion_future.done():
+            # Stream completed successfully but END_STREAM was never received,
+            # complete `remote_completion_future` with exception.
+            self._remote_completion_future.set_exception(
+                RuntimeError("Stream completed without receiving remote END_STREAM"))
+
+        if error_code == 0:
+            self._completion_future.set_result(self._response_status_code)
+        else:
+            self._completion_future.set_exception(awscrt.exceptions.from_code(error_code))
 
     def activate(self) -> None:
         """Begin sending the request.

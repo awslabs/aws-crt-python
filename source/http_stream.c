@@ -213,6 +213,24 @@ static void s_on_stream_complete(struct aws_http_stream *native_stream, int erro
     /*************** GIL RELEASE ***************/
 }
 
+static void s_on_h2_remote_end_stream(struct aws_http_stream *native_stream, void *user_data) {
+    (void)native_stream;
+    struct http_stream_binding *stream = user_data;
+
+    /*************** GIL ACQUIRE ***************/
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
+
+    PyObject *result = PyObject_CallMethod(stream->self_proxy, "_on_h2_remote_end_stream", "()");
+    if (result) {
+        Py_DECREF(result);
+    }
+    PyGILState_Release(state);
+    /*************** GIL RELEASE ***************/
+}
+
 static void s_stream_capsule_destructor(PyObject *http_stream_capsule) {
     struct http_stream_binding *stream = PyCapsule_GetPointer(http_stream_capsule, s_capsule_name_http_stream);
 
@@ -283,6 +301,7 @@ PyObject *aws_py_http_client_stream_new(PyObject *self, PyObject *args) {
         .on_response_header_block_done = s_on_incoming_header_block_done,
         .on_response_body = s_on_incoming_body,
         .on_complete = s_on_stream_complete,
+        .on_h2_remote_end_stream = s_on_h2_remote_end_stream,
         .user_data = stream,
         .http2_use_manual_data_writes = http2_manual_write,
     };
