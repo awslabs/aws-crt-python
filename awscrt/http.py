@@ -661,10 +661,10 @@ class Http2ClientStream(HttpClientStreamBase):
         self._request = None  # type: ignore
 
         # Ensure remote_completion_future is always resolved
-        if not self._remote_completion_future.done():
+        if not self._remote_end_stream_future.done():
             # Stream completed successfully but END_STREAM was never received,
             # complete `remote_completion_future` with exception.
-            self._remote_completion_future.set_exception(
+            self._remote_end_stream_future.set_exception(
                 RuntimeError("Stream completed without receiving remote END_STREAM"))
 
         if error_code == 0:
