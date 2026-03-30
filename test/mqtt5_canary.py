@@ -10,6 +10,8 @@ import uuid
 import time
 import random
 import sys
+import resource
+import gc
 
 
 def create_client_id():
@@ -127,9 +129,9 @@ class CanaryClient():
 
         if self.stopped:
             self.start()
-        elif operation < 10:
+        elif operation < 25:
             self.subscribe()
-        elif operation < 20:
+        elif operation < 50:
             self.unsubscribe()
         elif operation < 99:
             self.publish()
@@ -245,15 +247,68 @@ Client Stats:
 MEMORY_PRINT_INTERVAL_SECONDS = 600  # Print memory usage every 10 minutes
 
 
+def get_current_rss():
+    """Get current RSS (Resident Set Size) of the process.
+    
+    On Linux, we read from /proc/self/statm because resource.getrusage().ru_maxrss
+    only provides the MAXIMUM RSS ever used, not the current RSS. The ru_maxrss field
+    is defined by POSIX as "maximum resident set size" and Linux implements it as
+    the high-water mark of memory usage.
+    
+    On macOS, ru_maxrss from getrusage() represents the current RSS (Apple's implementation
+    differs from the POSIX definition).
+    
+    Returns:
+        int: Current RSS in bytes
+    """
+    if sys.platform == 'linux':
+        # On Linux, read from /proc/self/statm because getrusage().ru_maxrss
+        # only tracks the PEAK memory usage, not current usage.
+        # Format: size resident shared text lib data dt (all in pages)
+        try:
+            with open('/proc/self/statm', 'r') as f:
+                parts = f.read().split()
+                resident_pages = int(parts[1])
+                page_size = os.sysconf('SC_PAGE_SIZE')
+                return resident_pages * page_size
+        except (IOError, IndexError, ValueError):
+            pass
+    elif sys.platform == 'darwin':
+        # On macOS, ru_maxrss from getrusage() gives current RSS
+        # (Apple's implementation differs from POSIX definition)
+        usage = resource.getrusage(resource.RUSAGE_SELF)
+        return usage.ru_maxrss
+    
+    # Fallback: return 0 if we can't determine
+    return 0
+
+
 def print_memory_usage():
-    """Print current native memory usage from CRT allocator.
+    """Print comprehensive memory usage including:
+    - Current RSS (Resident Set Size) - current memory used by the process
+    - Max RSS - maximum memory ever used by the process
+    - CRT Native Memory - memory allocated by AWS CRT native code
     
     Note: AWS_CRT_MEMORY_TRACING environment variable must be set to 1 or 2
-    before the module is loaded for this to return non-zero values.
+    before the module is loaded for CRT native memory to return non-zero values.
     """
-    mem_bytes = native_memory_usage()
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-    print(f"[{timestamp}] CRT Native Memory Usage: {mem_bytes} bytes ({mem_bytes / 1024 / 1024:.2f} MB)", file=sys.stdout)
+    
+    # Force garbage collection and get Python object counts
+    gc.collect()
+
+    # Get process memory (RSS)
+    current_rss = get_current_rss()
+    
+    # Get CRT native memory
+    crt_mem_bytes = native_memory_usage()
+    
+    print(f"""
+[{timestamp}] Memory Usage Report:
+    Current RSS:             {current_rss:,} bytes ({current_rss / 1024 / 1024:.2f} MB)
+    CRT Native Memory:       {crt_mem_bytes:,} bytes ({crt_mem_bytes / 1024 / 1024:.2f} MB)
+    Python Objects:          {len(gc.get_objects()):,} objects
+""", file=sys.stdout)
     sys.stdout.flush()
 
 
@@ -269,8 +324,6 @@ if __name__ == '__main__':
     TPS: {tps}
     Clients: {client_count}
     Threads: {threads}
-    Memory print interval: {MEMORY_PRINT_INTERVAL_SECONDS} seconds (10 minutes)
-    Note: Set AWS_CRT_MEMORY_TRACING=1 or AWS_CRT_MEMORY_TRACING=2 env var for memory tracking
     """, file=sys.stdout)
 
     # Print initial memory usage
