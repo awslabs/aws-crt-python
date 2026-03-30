@@ -15,7 +15,8 @@ import awscrt.exceptions
 from awscrt.http import HttpProxyOptions, HttpRequest
 from awscrt.io import ClientBootstrap, ClientTlsContext, SocketOptions
 from dataclasses import dataclass
-from awscrt.mqtt5 import Client as Mqtt5Client, SdkMetrics
+from awscrt.mqtt5 import Client as Mqtt5Client
+from aws_iot_metrics import AWSIoTMetrics
 
 
 class QoS(IntEnum):
@@ -412,7 +413,7 @@ class Connection(NativeResource):
         self.socket_options = socket_options if socket_options else SocketOptions()
         self.proxy_options = proxy_options if proxy_options else websocket_proxy_options
         if enable_metrics:
-            self._metrics = SdkMetrics()
+            self._metrics = AWSIoTMetrics()
         else:
             self._metrics = None
 

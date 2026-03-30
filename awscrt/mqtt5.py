@@ -15,18 +15,7 @@ from awscrt.io import ClientBootstrap, SocketOptions, ClientTlsContext
 from dataclasses import dataclass
 from collections.abc import Sequence
 from inspect import signature
-
-
-@dataclass
-class SdkMetrics:
-    """
-    Configuration for IoT SDK metrics that are embedded in MQTT Connect Packet username field.
-
-    Args:
-        library_name (str): The SDK library name (e.g., "IoTDeviceSDK/Python")
-
-    """
-    library_name: str = "IoTDeviceSDK/Python"
+from aws_iot_metrics import AWSIoTMetrics
 
 
 class QoS(IntEnum):
@@ -1766,7 +1755,7 @@ class Client(NativeResource):
 
         # Handle metrics configuration
         if client_options.enable_metrics:
-            self._metrics = SdkMetrics()
+            self._metrics = AWSIoTMetrics()
         else:
             self._metrics = None
 
