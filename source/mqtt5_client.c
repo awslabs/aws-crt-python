@@ -218,6 +218,60 @@ static PyObject *s_aws_set_user_properties_to_PyObject(
  * Publish Handler
  ******************************************************************************/
 
+static const char *s_capsule_name_puback_control_handle = "aws_puback_control_handle";
+
+struct puback_control_handle {
+    uint64_t control_id;
+};
+
+static void s_puback_control_handle_destructor(PyObject *capsule) {
+    struct puback_control_handle *handle = PyCapsule_GetPointer(capsule, s_capsule_name_puback_control_handle);
+    if (handle) {
+        aws_mem_release(aws_py_get_allocator(), handle);
+    }
+}
+
+/* Callback context for manual PUBACK control */
+struct manual_puback_control_context {
+    struct aws_mqtt5_client *client;
+    struct aws_mqtt5_packet_publish_view *publish_packet;
+};
+
+static void s_manual_puback_control_context_destructor(PyObject *capsule) {
+    struct manual_puback_control_context *context = PyCapsule_GetPointer(capsule, "manual_puback_control_context");
+    if (context) {
+        aws_mem_release(aws_py_get_allocator(), context);
+    }
+}
+
+/* Function called from Python to set manual PUBACK control and return puback_control_id */
+PyObject *aws_py_mqtt5_client_acquire_puback(PyObject *self, PyObject *args) {
+    (void)args;
+
+    struct manual_puback_control_context *context = PyCapsule_GetPointer(self, "manual_puback_control_context");
+    if (!context || !context->publish_packet) {
+        PyErr_SetString(PyExc_ValueError, "Invalid manual PUBACK control context");
+        return NULL;
+    }
+
+    uint64_t puback_control_id = aws_mqtt5_client_acquire_puback(context->client, context->publish_packet);
+
+    /* Create handle struct */
+    struct puback_control_handle *handle =
+        aws_mem_calloc(aws_py_get_allocator(), 1, sizeof(struct puback_control_handle));
+
+    handle->control_id = puback_control_id;
+
+    /* Wrap in capsule */
+    PyObject *capsule = PyCapsule_New(handle, s_capsule_name_puback_control_handle, s_puback_control_handle_destructor);
+    if (!capsule) {
+        aws_mem_release(aws_py_get_allocator(), handle);
+        return NULL;
+    }
+
+    return capsule;
+}
+
 static void s_on_publish_received(const struct aws_mqtt5_packet_publish_view *publish_packet, void *user_data) {
 
     if (!user_data) {

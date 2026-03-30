@@ -160,6 +160,8 @@ static PyObject *s_cbor_encoder_write_pydict(struct aws_cbor_encoder *encoder, P
     PyObject *value = NULL;
     Py_ssize_t pos = 0;
 
+    /* Accessing the pydict without lock, since the cbor_decoder and encoder are not thread-safe. It's user's
+     * responsibility to not modifying the map from another thread. */
     while (PyDict_Next(py_dict, &pos, &key, &value)) {
         PyObject *key_result = s_cbor_encoder_write_pyobject(encoder, key);
         if (!key_result) {

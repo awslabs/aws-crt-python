@@ -152,10 +152,17 @@ static int s_convert_http2_settings(
     }
 
     *out_settings = aws_mem_calloc(allocator, py_list_size, sizeof(struct aws_http2_setting));
+    PyObject *setting_py = NULL;
+    bool strong_ref = false;
 
     for (Py_ssize_t i = 0; i < py_list_size; i++) {
-        PyObject *setting_py = PyList_GetItem(initial_settings_py, i);
+#ifdef Py_GIL_DISABLED
+        setting_py = PyList_GetItemRef(initial_settings_py, i);
+        strong_ref = true;
+#else
+        setting_py = PyList_GetItem(initial_settings_py, i); // Borrowed Reference
 
+#endif
         /* Get id attribute */
         enum aws_http2_settings_id id = PyObject_GetAttrAsIntEnum(setting_py, "Http2Setting", "id");
         if (PyErr_Occurred()) {
@@ -169,11 +176,17 @@ static int s_convert_http2_settings(
         }
         (*out_settings)[i].id = id;
         (*out_settings)[i].value = value;
+        if (strong_ref) {
+            Py_DECREF(setting_py);
+        }
     }
 
     *out_size = (size_t)py_list_size;
     return AWS_OP_SUCCESS;
 error:
+    if (setting_py && strong_ref) {
+        Py_DECREF(setting_py);
+    }
     *out_size = 0;
     aws_mem_release(allocator, *out_settings);
     *out_settings = NULL;
