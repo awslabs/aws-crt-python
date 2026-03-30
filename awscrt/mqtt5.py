@@ -1140,6 +1140,7 @@ class PubackPacket:
     reason_string: str = None
     user_properties: 'Sequence[UserProperty]' = None
 
+
 @dataclass
 class InvokePubackCompletion:
     """dataclass containing results of a manually invoked PUBACK
