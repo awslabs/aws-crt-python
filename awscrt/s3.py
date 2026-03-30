@@ -392,6 +392,7 @@ class S3Client(NativeResource):
             max_active_connections_override=None,
             on_headers=None,
             on_body=None,
+            on_body_mem_view=None,
             on_done=None,
             on_progress=None):
         """Create the Request to the the S3 server,
@@ -494,10 +495,32 @@ class S3Client(NativeResource):
 
             on_body: Optional callback invoked 0+ times as the response body received from S3 server.
                 If simply writing to a file, use `recv_filepath` instead of `on_body` for better performance.
+                Cannot be used together with `on_body_mem_view`.
                 The function should take the following arguments and return nothing:
 
                     *   `chunk` (buffer): Response body data (not necessarily
                         a whole "chunk" of chunked encoding).
+
+                    *   `offset` (int): The offset of the chunk started in the whole body.
+
+                    *   `**kwargs` (dict): Forward-compatibility kwargs.
+
+            on_body_mem_view: Optional callback invoked 0+ times as the response body received from S3 server.
+                **ZERO-COPY OPTIMIZATION**: This callback receives a memoryview instead of bytes for better performance.
+
+                **CRITICAL WARNING**: The memoryview is only valid during the callback execution.
+                You MUST NOT store the memoryview for later use. If you need to retain the data,
+                explicitly copy it: `data = bytes(chunk)`
+
+                Cannot be used together with `on_body`. Use this callback when:
+                - Writing directly to a file or socket (zero-copy)
+                - Processing data immediately without storing it
+                - High-throughput scenarios where memory efficiency matters
+
+                The function should take the following arguments and return nothing:
+
+                    *   `chunk` (memoryview): Response body data as a read-only memoryview.
+                        Only valid during this callback. Do NOT store for later use.
 
                     *   `offset` (int): The offset of the chunk started in the whole body.
 
@@ -569,6 +592,7 @@ class S3Client(NativeResource):
             max_active_connections_override=max_active_connections_override,
             on_headers=on_headers,
             on_body=on_body,
+            on_body_mem_view=on_body_mem_view,
             on_done=on_done,
             on_progress=on_progress,
             region=self._region)
@@ -608,6 +632,7 @@ class S3Request(NativeResource):
             max_active_connections_override=None,
             on_headers=None,
             on_body=None,
+            on_body_mem_view=None,
             on_done=None,
             on_progress=None,
             region=None):
@@ -615,6 +640,7 @@ class S3Request(NativeResource):
         assert isinstance(request, HttpRequest)
         assert callable(on_headers) or on_headers is None
         assert callable(on_body) or on_body is None
+        assert callable(on_body_mem_view) or on_body_mem_view is None
         assert callable(on_done) or on_done is None
         assert isinstance(part_size, int) or part_size is None
         assert isinstance(multipart_upload_threshold, int) or multipart_upload_threshold is None
@@ -623,6 +649,9 @@ class S3Request(NativeResource):
 
         if type == S3RequestType.DEFAULT and not operation_name:
             raise ValueError("'operation_name' must be set when using S3RequestType.DEFAULT")
+
+        if on_body and on_body_mem_view:
+            raise ValueError("'on_body' and 'on_body_mem_view' cannot both be set. Use one or the other.")
 
         super().__init__()
 
@@ -663,6 +692,7 @@ class S3Request(NativeResource):
             credential_provider,
             on_headers,
             on_body,
+            on_body_mem_view,
             on_done,
             on_progress)
 
@@ -762,6 +792,7 @@ class _S3RequestCore:
             credential_provider=None,
             on_headers=None,
             on_body=None,
+            on_body_mem_view=None,
             on_done=None,
             on_progress=None):
 
@@ -773,11 +804,19 @@ class _S3RequestCore:
 
         self._on_headers_cb = on_headers
         self._on_body_cb = on_body
+        self._on_body_mem_view_cb = on_body_mem_view
         self._on_done_cb = on_done
         self._on_progress_cb = on_progress
 
         self._finished_future = finish_future
         self._shutdown_event = shutdown_event
+
+        # Store which body callback type to use (for C layer)
+        self._use_mem_view_callback = on_body_mem_view is not None
+
+    def _has_mem_view_callback(self):
+        """Called by C layer to check if memoryview callback should be used."""
+        return self._use_mem_view_callback
 
     def _on_headers(self, status_code, headers):
         if self._on_headers_cb:
@@ -792,6 +831,15 @@ class _S3RequestCore:
         if self._on_body_cb:
             try:
                 self._on_body_cb(chunk=chunk, offset=offset)
+                return True
+            except BaseException as e:
+                self._python_callback_exception = e
+                return False
+
+    def _on_body_mem_view(self, chunk, offset):
+        if self._on_body_mem_view_cb:
+            try:
+                self._on_body_mem_view_cb(chunk=chunk, offset=offset)
                 return True
             except BaseException as e:
                 self._python_callback_exception = e

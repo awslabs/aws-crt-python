@@ -28,6 +28,9 @@ struct s3_meta_request_binding {
     uint64_t size_transferred;
     /* The time stamp when the progress reported */
     uint64_t last_sampled_time;
+
+    /* Whether to use memoryview callback (true) or bytes callback (false) */
+    bool use_memoryview_callback;
 };
 
 struct aws_s3_meta_request *aws_py_get_s3_meta_request(PyObject *meta_request) {
@@ -147,14 +150,30 @@ static int s_s3_request_on_body(
         return AWS_OP_ERR; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
 
-    result = PyObject_CallMethod(
-        request_binding->py_core, "_on_body", "(y#K)", (const char *)(body->ptr), (Py_ssize_t)body->len, range_start);
+    /* Call the appropriate callback based on the cached flag */
+    if (request_binding->use_memoryview_callback) {
+        /* Create a read-only memoryview from the C buffer */
+        PyObject *memview = PyMemoryView_FromMemory((char *)body->ptr, (Py_ssize_t)body->len, PyBUF_READ);
+        if (!memview) {
+            PyErr_WriteUnraisable(request_binding->py_core);
+            goto done;
+        }
+        result = PyObject_CallMethod(request_binding->py_core, "_on_body_mem_view", "(NK)", memview, range_start);
+    } else {
+        result = PyObject_CallMethod(
+            request_binding->py_core,
+            "_on_body",
+            "(y#K)",
+            (const char *)(body->ptr),
+            (Py_ssize_t)body->len,
+            range_start);
+    }
 
     if (!result) {
         PyErr_WriteUnraisable(request_binding->py_core);
         goto done;
     }
-    /* If user's callback raises an exception, _S3RequestCore._on_body
+    /* If user's callback raises an exception, _S3RequestCore._on_body/_on_body_mem_view
      * stores it to throw later and returns False */
     error = (result == Py_False);
     Py_DECREF(result);
@@ -425,6 +444,17 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
 
     meta_request->py_core = py_core;
     Py_INCREF(meta_request->py_core);
+
+    /* Check once at initialization which callback type to use */
+    PyObject *has_mem_view = PyObject_CallMethod(py_core, "_has_mem_view_callback", NULL);
+    if (has_mem_view != NULL) {
+        meta_request->use_memoryview_callback = PyObject_IsTrue(has_mem_view);
+        Py_DECREF(has_mem_view);
+    } else {
+        /* If method doesn't exist, clear error and default to bytes callback */
+        PyErr_Clear();
+        meta_request->use_memoryview_callback = false;
+    }
 
     struct aws_s3_meta_request_options s3_meta_request_opt = {
         .type = type,
