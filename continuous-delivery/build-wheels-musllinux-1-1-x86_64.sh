@@ -22,6 +22,11 @@ auditwheel repair --plat musllinux_1_1_x86_64 dist/awscrt-*cp311*.whl
 /opt/python/cp313-cp313/bin/python -m build
 auditwheel repair --plat musllinux_1_1_x86_64 dist/awscrt-*cp313*.whl
 
+# The free-threaded build does not currently support the Limited C API or the stable ABI. Built them separately
+/opt/python/cp313-cp313t/bin/python -m build
+auditwheel repair --plat musllinux_1_1_x86_64 dist/awscrt-*cp313t*.whl
+# Musllinux-1-1 is EOL without python>3.13
+
 rm dist/*.whl
 cp -rv wheelhouse/* dist/
 
