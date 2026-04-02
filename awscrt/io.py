@@ -51,6 +51,11 @@ def set_log_level(log_level):
     _awscrt.set_log_level(log_level)
 
 
+def cleanup_logging():
+    """Clean up the CRT logger, allowing re-initialization."""
+    _awscrt.cleanup_logging()
+
+
 class EventLoopGroup(NativeResource):
     """A collection of event-loops.
 

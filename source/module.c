@@ -107,6 +107,21 @@ PyObject *aws_py_set_log_level(PyObject *self, PyObject *args) {
     Py_RETURN_NONE;
 }
 
+PyObject *aws_py_cleanup_logging(PyObject *self, PyObject *args) {
+    (void)self;
+    (void)args;
+
+    if (!s_logger_init) {
+        Py_RETURN_NONE;
+    }
+
+    aws_logger_set(NULL);
+    aws_logger_clean_up(&s_logger);
+    s_logger_init = false;
+
+    Py_RETURN_NONE;
+}
+
 struct aws_byte_cursor aws_byte_cursor_from_pyunicode(PyObject *str) {
     Py_ssize_t len;
     const char *ptr = PyUnicode_AsUTF8AndSize(str, &len);
@@ -789,6 +804,7 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(tls_connection_options_set_server_name, METH_VARARGS),
     AWS_PY_METHOD_DEF(init_logging, METH_VARARGS),
     AWS_PY_METHOD_DEF(set_log_level, METH_VARARGS),
+    AWS_PY_METHOD_DEF(cleanup_logging, METH_NOARGS),
     AWS_PY_METHOD_DEF(input_stream_new, METH_VARARGS),
     AWS_PY_METHOD_DEF(pkcs11_lib_new, METH_VARARGS),
 
