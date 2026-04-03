@@ -451,7 +451,6 @@ def awscrt_ext():
     extra_objects = []
     define_macros = []
     py_limited_api = False
-    has_gil = True
 
     libraries = [x.libname for x in AWS_LIBS]
 
@@ -537,9 +536,6 @@ def awscrt_ext():
                     extra_link_args += ['-Wl,-fatal-warnings']
                 else:
                     extra_link_args += ['-Wl,--fatal-warnings']
-
-    if hasattr(sys, '_is_gil_enabled'):
-        has_gil = sys._is_gil_enabled()
 
     # prefer building with stable ABI, so a wheel can work with multiple major versions
     if FREE_THREADED_BUILD and sys.version_info[:2] <= (3, 14):
