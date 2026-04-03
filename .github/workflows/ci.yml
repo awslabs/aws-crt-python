@@ -56,6 +56,9 @@ jobs:
           - cp311-cp311
           - cp312-cp312
           - cp313-cp313
+          - cp313-cp313t
+          - cp314-cp314
+          - cp314-cp314t
     permissions:
       id-token: write # This is required for requesting the JWT
     steps:
@@ -81,6 +84,9 @@ jobs:
           - cp311-cp311
           - cp312-cp312
           - cp313-cp313
+          - cp313-cp313t
+          - cp314-cp314
+          - cp314-cp314t
     permissions:
       id-token: write # This is required for requesting the JWT
     steps:
@@ -108,6 +114,7 @@ jobs:
           - cp311-cp311
           - cp312-cp312
           - cp313-cp313
+          - cp313-cp313t
     permissions:
       id-token: write # This is required for requesting the JWT
     steps:
@@ -133,6 +140,7 @@ jobs:
           - cp311-cp311
           - cp312-cp312
           - cp313-cp313
+          - cp313-cp313t
     permissions:
       id-token: write # This is required for requesting the JWT
     steps:
