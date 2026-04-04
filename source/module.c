@@ -31,10 +31,120 @@
 #include <aws/mqtt/mqtt.h>
 #include <aws/s3/s3.h>
 
+#include <aws/common/atomics.h>
+#include <aws/common/log_channel.h>
+#include <aws/common/log_formatter.h>
+#include <aws/common/log_writer.h>
+
 #include <memoryobject.h>
 
 static struct aws_logger s_logger;
 static bool s_logger_init = false;
+
+/* Pipeline-based Python logging bridge */
+struct s_py_writer_impl {
+    PyObject *callback;
+};
+
+static int s_py_formatter_format(
+    struct aws_log_formatter *formatter,
+    struct aws_string **dest,
+    enum aws_log_level level,
+    aws_log_subject_t subject,
+    const char *format,
+    va_list args) {
+
+    (void)formatter;
+    const char *subject_name = aws_log_subject_name(subject);
+    if (!subject_name) {
+        subject_name = "";
+    }
+
+    va_list args_copy;
+    va_copy(args_copy, args);
+    int msg_len = vsnprintf(NULL, 0, format, args_copy);
+    va_end(args_copy);
+    if (msg_len < 0) {
+        return aws_raise_error(AWS_ERROR_INVALID_ARGUMENT);
+    }
+
+    int prefix_len = snprintf(NULL, 0, "%d\x1f%s\x1f", (int)level, subject_name);
+    size_t total = (size_t)prefix_len + (size_t)msg_len + 1;
+
+    char *buf = aws_mem_calloc(aws_default_allocator(), 1, total);
+    if (!buf) {
+        return AWS_OP_ERR;
+    }
+
+    int written = snprintf(buf, total, "%d\x1f%s\x1f", (int)level, subject_name);
+    vsnprintf(buf + written, total - (size_t)written, format, args);
+
+    *dest = aws_string_new_from_array(aws_default_allocator(), (const uint8_t *)buf, strlen(buf));
+    aws_mem_release(aws_default_allocator(), buf);
+
+    if (!*dest) {
+        return AWS_OP_ERR;
+    }
+    return AWS_OP_SUCCESS;
+}
+
+static void s_py_formatter_clean_up(struct aws_log_formatter *formatter) {
+    (void)formatter;
+}
+
+static struct aws_log_formatter_vtable s_py_formatter_vtable = {
+    .format = s_py_formatter_format,
+    .clean_up = s_py_formatter_clean_up,
+};
+
+static int s_py_writer_write(struct aws_log_writer *writer, const struct aws_string *output) {
+    struct s_py_writer_impl *impl = writer->impl;
+    const char *str = aws_string_c_str(output);
+
+    /* Parse "level\x1fsubject\x1fmessage" */
+    int level = 0;
+    const char *p = str;
+    while (*p >= '0' && *p <= '9') {
+        level = level * 10 + (*p - '0');
+        p++;
+    }
+    if (*p == '\x1f') p++;
+
+    const char *subject_start = p;
+    while (*p && *p != '\x1f') p++;
+    size_t subject_len = (size_t)(p - subject_start);
+    if (*p == '\x1f') p++;
+
+    const char *message = p;
+
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return AWS_OP_ERR;
+    }
+
+    char subject_buf[256];
+    size_t copy_len = subject_len < sizeof(subject_buf) - 1 ? subject_len : sizeof(subject_buf) - 1;
+    memcpy(subject_buf, subject_start, copy_len);
+    subject_buf[copy_len] = '\0';
+
+    PyObject *result = PyObject_CallFunction(impl->callback, "(iss)", level, subject_buf, message);
+    Py_XDECREF(result);
+    if (PyErr_Occurred()) {
+        PyErr_WriteUnraisable(PyErr_Occurred());
+    }
+
+    PyGILState_Release(state);
+    return AWS_OP_SUCCESS;
+}
+
+static void s_py_writer_clean_up(struct aws_log_writer *writer) {
+    (void)writer;
+}
+
+static struct aws_log_writer_vtable s_py_writer_vtable = {
+    .write = s_py_writer_write,
+    .clean_up = s_py_writer_clean_up,
+};
 
 PyObject *aws_py_init_logging(PyObject *self, PyObject *args) {
     (void)self;
@@ -103,6 +213,67 @@ PyObject *aws_py_set_log_level(PyObject *self, PyObject *args) {
     if (aws_logger_set_log_level(&s_logger, log_level) != AWS_OP_SUCCESS) {
         return PyErr_AwsLastError();
     }
+
+    Py_RETURN_NONE;
+}
+
+PyObject *aws_py_init_python_logging(PyObject *self, PyObject *args) {
+    (void)self;
+
+    int log_level;
+    PyObject *py_callback;
+    if (!PyArg_ParseTuple(args, "iO", &log_level, &py_callback)) {
+        return NULL;
+    }
+
+    if (s_logger_init) {
+        aws_raise_error(AWS_ERROR_INVALID_STATE);
+        return PyErr_AwsLastError();
+    }
+
+    if (!PyCallable_Check(py_callback)) {
+        PyErr_SetString(PyExc_TypeError, "callback must be callable");
+        return NULL;
+    }
+
+    struct aws_allocator *allocator = aws_default_allocator();
+
+    struct aws_log_formatter *formatter = aws_mem_calloc(allocator, 1, sizeof(struct aws_log_formatter));
+    struct aws_log_writer *writer = aws_mem_calloc(allocator, 1, sizeof(struct aws_log_writer));
+    struct aws_log_channel *channel = aws_mem_calloc(allocator, 1, sizeof(struct aws_log_channel));
+    struct s_py_writer_impl *writer_impl = aws_mem_calloc(allocator, 1, sizeof(struct s_py_writer_impl));
+
+    formatter->vtable = &s_py_formatter_vtable;
+    formatter->allocator = allocator;
+    formatter->impl = NULL;
+
+    Py_INCREF(py_callback);
+    writer_impl->callback = py_callback;
+    writer->vtable = &s_py_writer_vtable;
+    writer->allocator = allocator;
+    writer->impl = writer_impl;
+
+    if (aws_log_channel_init_background(channel, allocator, writer)) {
+        Py_DECREF(py_callback);
+        aws_mem_release(allocator, writer_impl);
+        aws_mem_release(allocator, writer);
+        aws_mem_release(allocator, channel);
+        aws_mem_release(allocator, formatter);
+        return PyErr_AwsLastError();
+    }
+
+    if (aws_logger_init_from_external(&s_logger, allocator, formatter, channel, writer, (enum aws_log_level)log_level)) {
+        aws_log_channel_clean_up(channel);
+        Py_DECREF(py_callback);
+        aws_mem_release(allocator, writer_impl);
+        aws_mem_release(allocator, writer);
+        aws_mem_release(allocator, channel);
+        aws_mem_release(allocator, formatter);
+        return PyErr_AwsLastError();
+    }
+
+    aws_logger_set(&s_logger);
+    s_logger_init = true;
 
     Py_RETURN_NONE;
 }
@@ -789,6 +960,7 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(tls_connection_options_set_server_name, METH_VARARGS),
     AWS_PY_METHOD_DEF(init_logging, METH_VARARGS),
     AWS_PY_METHOD_DEF(set_log_level, METH_VARARGS),
+    AWS_PY_METHOD_DEF(init_python_logging, METH_VARARGS),
     AWS_PY_METHOD_DEF(input_stream_new, METH_VARARGS),
     AWS_PY_METHOD_DEF(pkcs11_lib_new, METH_VARARGS),
 

@@ -13,6 +13,7 @@ from awscrt import NativeResource
 from enum import IntEnum
 import threading
 from typing import Union
+import logging
 
 
 class LogLevel(IntEnum):
@@ -49,6 +50,47 @@ def set_log_level(log_level):
     assert log_level is not None
 
     _awscrt.set_log_level(log_level)
+
+
+_CRT_TO_PY_LEVEL = {
+    0: logging.NOTSET,
+    1: logging.CRITICAL,
+    2: logging.ERROR,
+    3: logging.WARNING,
+    4: logging.INFO,
+    5: logging.DEBUG,
+    6: logging.DEBUG,
+}
+
+
+def _python_logging_callback(crt_level, subject_name, message):
+    """Called from C for each CRT log message."""
+    logger = logging.getLogger('awscrt.{}'.format(subject_name))
+    py_level = _CRT_TO_PY_LEVEL.get(crt_level, logging.DEBUG)
+    logger.log(py_level, '%s', message)
+
+
+def init_logging_to_python_logger(log_level=LogLevel.Warn):
+    """Initialize CRT logging, routing output through Python's logging module.
+
+    Log messages appear under the 'awscrt' logger hierarchy, with each CRT
+    subsystem as a child logger (e.g. 'awscrt.http_connection',
+    'awscrt.socket', 'awscrt.mqtt_client').
+
+    This is mutually exclusive with :func:`init_logging` -- call one or the
+    other, not both. Calling either function a second time will raise an error.
+
+    Note: This routes CRT log messages through Python, which involves acquiring
+    the GIL for each message. For high-throughput scenarios at Debug or Trace
+    level, consider using :func:`init_logging` with a file destination instead.
+
+    Args:
+        log_level (LogLevel): Maximum verbosity to capture from CRT.
+            Messages are further filtered by Python logger levels.
+    """
+    assert log_level is not None
+
+    _awscrt.init_python_logging(int(log_level), _python_logging_callback)
 
 
 class EventLoopGroup(NativeResource):
