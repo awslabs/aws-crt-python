@@ -40,18 +40,6 @@ def init_logging(log_level, file_name):
     _awscrt.init_logging(log_level, file_name)
 
 
-def set_log_level(log_level):
-    """Change the log level of `awscrt`. init_logging() must have been called
-    before using this function or else an exception will be raised.
-
-    Args:
-        log_level (LogLevel): Display messages of this importance and higher.
-    """
-    assert log_level is not None
-
-    _awscrt.set_log_level(log_level)
-
-
 _CRT_TO_PY_LEVEL = {
     0: logging.NOTSET,
     1: logging.CRITICAL,
@@ -62,6 +50,29 @@ _CRT_TO_PY_LEVEL = {
     6: logging.DEBUG,
 }
 
+_PY_TO_CRT_LEVEL = {
+    logging.NOTSET: LogLevel.NoLogs,
+    logging.CRITICAL: LogLevel.Fatal,
+    logging.ERROR: LogLevel.Error,
+    logging.WARNING: LogLevel.Warn,
+    logging.INFO: LogLevel.Info,
+    logging.DEBUG: LogLevel.Trace,
+}
+
+
+def set_log_level(log_level: int):
+    """Change the log level of `awscrt`. init_logging() or
+    init_logging_to_python_logger() must have been called before using
+    this function or else an exception will be raised.
+
+    Args:
+        log_level (int): Python logging level (e.g. logging.DEBUG, logging.INFO).
+    """
+    assert log_level is not None
+
+    crt_level = _PY_TO_CRT_LEVEL.get(log_level, LogLevel.Warn)
+    _awscrt.set_log_level(crt_level)
+
 
 def _python_logging_callback(crt_level, subject_name, message):
     """Called from C for each CRT log message."""
@@ -70,7 +81,7 @@ def _python_logging_callback(crt_level, subject_name, message):
     logger.log(py_level, '%s', message)
 
 
-def init_logging_to_python_logger(log_level=LogLevel.Warn):
+def init_logging_to_python_logger(log_level: int = logging.WARNING):
     """Initialize CRT logging, routing output through Python's logging module.
 
     This logger bridges the AWS CRT's native logging system to Python's logging
@@ -106,12 +117,13 @@ def init_logging_to_python_logger(log_level=LogLevel.Warn):
     level, consider using :func:`init_logging` with a file destination instead.
 
     Args:
-        log_level (LogLevel): Maximum verbosity to capture from CRT.
-            Messages are further filtered by Python logger levels.
+        log_level (int): Python logging level (e.g. logging.DEBUG, logging.INFO).
+            Defaults to logging.WARNING.
     """
     assert log_level is not None
 
-    _awscrt.init_python_logging(int(log_level), _python_logging_callback)
+    crt_level = _PY_TO_CRT_LEVEL.get(log_level, LogLevel.Warn)
+    _awscrt.init_python_logging(int(crt_level), _python_logging_callback)
 
 
 class EventLoopGroup(NativeResource):

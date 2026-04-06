@@ -251,7 +251,7 @@ class Pkcs11LibTest(NativeResourceTest):
 class PythonLoggingTest(NativeResourceTest):
     @classmethod
     def setUpClass(cls):
-        init_logging_to_python_logger(LogLevel.Trace)
+        init_logging_to_python_logger(logging.DEBUG)
 
     def test_crt_logs_route_to_python_logging(self):
         handler = logging.Handler()
