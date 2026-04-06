@@ -301,6 +301,10 @@ class PythonLoggingTest(NativeResourceTest):
         finally:
             logger.removeHandler(handler)
 
+    @classmethod
+    def tearDown(cls):
+        set_log_level(LogLevel.NoLogs)
+
 
 if __name__ == '__main__':
     unittest.main()
