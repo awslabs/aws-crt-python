@@ -629,7 +629,8 @@ class MqttConnectionTest(NativeResourceTest):
             host_name=input_host_name,
             port=input_port,
             username=input_username,
-            password=input_password)
+            password=input_password,
+            enable_metrics=False)
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
@@ -760,7 +761,8 @@ class MqttConnectionTest(NativeResourceTest):
             username=input_username,
             password=input_password,
             use_websockets=True,
-            websocket_handshake_transform=sign_function)
+            websocket_handshake_transform=sign_function,
+            enable_metrics=False)
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
@@ -830,6 +832,48 @@ class MqttConnectionTest(NativeResourceTest):
 
     def test_mqtt311_websocket_connect_http_proxy_tls(self):
         test_retry_wrapper(self._test_mqtt311_websocket_connect_http_proxy_tls)
+
+    # ==============================================================
+    #             METRICS TEST CASES
+    # ==============================================================
+
+    def _test_mqtt311_direct_connect_basic_auth_metrics_enabled(self):
+        """Test that connection fails with basic auth when metrics are enabled.
+
+        When metrics are enabled, the SDK appends metrics information to the username field,
+        which corrupts the basic authentication and causes the connection to fail.
+        """
+        input_host_name = _get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_BASIC_AUTH_HOST")
+        input_port = int(_get_env_variable("AWS_TEST_MQTT311_DIRECT_MQTT_BASIC_AUTH_PORT"))
+        input_username = _get_env_variable("AWS_TEST_MQTT311_BASIC_AUTH_USERNAME")
+        input_password = _get_env_variable("AWS_TEST_MQTT311_BASIC_AUTH_PASSWORD")
+
+        elg = EventLoopGroup()
+        resolver = DefaultHostResolver(elg)
+        bootstrap = ClientBootstrap(elg, resolver)
+        client = Client(bootstrap, None)
+
+        # Create connection with enable_metrics=True explicitly
+        # This should fail because metrics appends to username, corrupting basic auth
+        connection = Connection(
+            client=client,
+            client_id=create_client_id(),
+            host_name=input_host_name,
+            port=input_port,
+            username=input_username,
+            password=input_password,
+            enable_metrics=True)
+
+        # Connection should fail because metrics corrupts the username for basic auth
+        exception_occurred = False
+        try:
+            connection.connect().result(TIMEOUT)
+        except Exception:
+            exception_occurred = True
+        self.assertTrue(exception_occurred, "Connection should fail when metrics are enabled with basic auth!")
+
+    def test_mqtt311_direct_connect_basic_auth_metrics_enabled(self):
+        test_retry_wrapper(self._test_mqtt311_direct_connect_basic_auth_metrics_enabled)
 
 
 if __name__ == 'main':
