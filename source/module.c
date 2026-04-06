@@ -51,36 +51,74 @@ static int s_py_writer_write(struct aws_log_writer *writer, const struct aws_str
     struct s_py_writer_impl *impl = writer->impl;
     const char *str = aws_string_c_str(output);
 
-    /* Parse "level\x1fsubject\x1fmessage" */
-    int level = 0;
+    /* Parse "[LEVEL] [timestamp] [thread] [subject] - message" */
+    int level = AWS_LL_INFO;
     const char *p = str;
-    while (*p >= '0' && *p <= '9') {
-        level = level * 10 + (*p - '0');
+
+    /* Parse level: [LEVEL] */
+    if (*p == '[') {
         p++;
+        if (strncmp(p, "TRACE", 5) == 0)
+            level = AWS_LL_TRACE;
+        else if (strncmp(p, "DEBUG", 5) == 0)
+            level = AWS_LL_DEBUG;
+        else if (strncmp(p, "INFO", 4) == 0)
+            level = AWS_LL_INFO;
+        else if (strncmp(p, "WARN", 4) == 0)
+            level = AWS_LL_WARN;
+        else if (strncmp(p, "ERROR", 5) == 0)
+            level = AWS_LL_ERROR;
+        else if (strncmp(p, "FATAL", 5) == 0)
+            level = AWS_LL_FATAL;
+        while (*p && *p != ']')
+            p++;
+        if (*p == ']')
+            p++;
+        if (*p == ' ')
+            p++;
     }
-    if (*p == '\x1f')
-        p++;
 
-    const char *subject_start = p;
-    while (*p && *p != '\x1f')
-        p++;
-    size_t subject_len = (size_t)(p - subject_start);
-    if (*p == '\x1f')
-        p++;
+    /* Skip timestamp: [timestamp] */
+    if (*p == '[') {
+        while (*p && *p != ']')
+            p++;
+        if (*p == ']')
+            p++;
+        if (*p == ' ')
+            p++;
+    }
 
-    const char *message = p;
+    /* Skip thread: [thread] */
+    if (*p == '[') {
+        while (*p && *p != ']')
+            p++;
+        if (*p == ']')
+            p++;
+        if (*p == ' ')
+            p++;
+    }
+
+    /* Parse subject: [subject] */
+    char subject_buf[256] = "";
+    if (*p == '[') {
+        p++;
+        const char *subject_start = p;
+        while (*p && *p != ']')
+            p++;
+        size_t subject_len = (size_t)(p - subject_start);
+        size_t copy_len = subject_len < sizeof(subject_buf) - 1 ? subject_len : sizeof(subject_buf) - 1;
+        memcpy(subject_buf, subject_start, copy_len);
+        subject_buf[copy_len] = '\0';
+        if (*p == ']')
+            p++;
+    }
 
     PyGILState_STATE state;
     if (aws_py_gilstate_ensure(&state)) {
         return AWS_OP_ERR;
     }
 
-    char subject_buf[256];
-    size_t copy_len = subject_len < sizeof(subject_buf) - 1 ? subject_len : sizeof(subject_buf) - 1;
-    memcpy(subject_buf, subject_start, copy_len);
-    subject_buf[copy_len] = '\0';
-
-    PyObject *result = PyObject_CallFunction(impl->callback, "(iss)", level, subject_buf, message);
+    PyObject *result = PyObject_CallFunction(impl->callback, "(iss)", level, subject_buf, str);
     Py_XDECREF(result);
     if (PyErr_Occurred()) {
         PyErr_WriteUnraisable(PyErr_Occurred());
@@ -200,7 +238,14 @@ PyObject *aws_py_init_python_logging(PyObject *self, PyObject *args) {
         .date_format = AWS_DATE_FORMAT_ISO_8601,
     };
 
-    ASSERT_TRUE(aws_log_formatter_init_default(formatter, allocator, &options));
+    if (aws_log_formatter_init_default(formatter, allocator, &options)) {
+        Py_DECREF(py_callback);
+        aws_mem_release(allocator, writer_impl);
+        aws_mem_release(allocator, writer);
+        aws_mem_release(allocator, channel);
+        aws_mem_release(allocator, formatter);
+        return PyErr_AwsLastError();
+    }
 
     Py_INCREF(py_callback);
     writer_impl->callback = py_callback;

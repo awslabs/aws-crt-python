@@ -264,12 +264,20 @@ class PythonLoggingTest(NativeResourceTest):
 
         try:
             elg = EventLoopGroup()
+            shutdown_event = elg.shutdown_event
             del elg
+            shutdown_event.wait(timeout=5.0)
 
             self.assertGreater(len(handler.records), 0)
             for record in handler.records:
                 self.assertTrue(record.name.startswith('awscrt.'))
-                self.assertIn(record.levelno, (logging.DEBUG, logging.INFO, logging.WARNING, logging.ERROR, logging.CRITICAL))
+                self.assertIn(
+                    record.levelno,
+                    (logging.DEBUG,
+                     logging.INFO,
+                     logging.WARNING,
+                     logging.ERROR,
+                     logging.CRITICAL))
                 self.assertTrue(len(record.getMessage()) > 0)
         finally:
             logger.removeHandler(handler)
