@@ -184,7 +184,7 @@ class CanaryClient():
         publish_packet = mqtt5.PublishPacket(
             topic=topic_filter,
             qos=random.randint(0, 1),
-            payload=bytearray(os.urandom(random.randint(0, 10000)))
+            payload=bytearray(os.urandom(random.randint(0, 65535)))
         )
 
         if random.getrandbits(1):
