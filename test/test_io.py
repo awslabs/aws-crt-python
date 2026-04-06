@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0.
 
 from awscrt.io import *
-from test import NativeResourceTest, TIMEOUT
+from test import NativeResourceTest, TIMEOUT, emit_test_log
 import io
 import os
 import sys
@@ -246,6 +246,52 @@ class Pkcs11LibTest(NativeResourceTest):
 
     def test_is_tls_cipher_supported(self):
         self.assertEqual(True, TlsCipherPref.DEFAULT.is_supported())
+
+
+class PythonLoggingTest(NativeResourceTest):
+    @classmethod
+    def setUpClass(cls):
+        init_logging_to_python_logger(LogLevel.Trace)
+
+    def test_crt_logs_route_to_python_logging(self):
+        handler = logging.Handler()
+        handler.records = []
+        handler.emit = lambda record: handler.records.append(record)
+
+        logger = logging.getLogger('awscrt')
+        logger.setLevel(logging.DEBUG)
+        logger.addHandler(handler)
+
+        try:
+            elg = EventLoopGroup()
+            del elg
+
+            self.assertGreater(len(handler.records), 0)
+            for record in handler.records:
+                self.assertTrue(record.name.startswith('awscrt.'))
+                self.assertIn(record.levelno, (logging.DEBUG, logging.INFO, logging.WARNING, logging.ERROR, logging.CRITICAL))
+                self.assertTrue(len(record.getMessage()) > 0)
+        finally:
+            logger.removeHandler(handler)
+
+    def test_python_logging_callback(self):
+        handler = logging.Handler()
+        handler.records = []
+        handler.emit = lambda record: handler.records.append(record)
+
+        logger = logging.getLogger('awscrt')
+        logger.setLevel(logging.DEBUG)
+        logger.addHandler(handler)
+
+        try:
+            emit_test_log(5, "test-subject", "hello from test")
+
+            self.assertEqual(len(handler.records), 1)
+            self.assertEqual(handler.records[0].name, "awscrt.test-subject")
+            self.assertEqual(handler.records[0].levelno, logging.DEBUG)
+            self.assertIn("hello from test", handler.records[0].getMessage())
+        finally:
+            logger.removeHandler(handler)
 
 
 if __name__ == '__main__':

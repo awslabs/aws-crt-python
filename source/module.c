@@ -108,12 +108,15 @@ static int s_py_writer_write(struct aws_log_writer *writer, const struct aws_str
         level = level * 10 + (*p - '0');
         p++;
     }
-    if (*p == '\x1f') p++;
+    if (*p == '\x1f')
+        p++;
 
     const char *subject_start = p;
-    while (*p && *p != '\x1f') p++;
+    while (*p && *p != '\x1f')
+        p++;
     size_t subject_len = (size_t)(p - subject_start);
-    if (*p == '\x1f') p++;
+    if (*p == '\x1f')
+        p++;
 
     const char *message = p;
 
@@ -262,7 +265,8 @@ PyObject *aws_py_init_python_logging(PyObject *self, PyObject *args) {
         return PyErr_AwsLastError();
     }
 
-    if (aws_logger_init_from_external(&s_logger, allocator, formatter, channel, writer, (enum aws_log_level)log_level)) {
+    if (aws_logger_init_from_external(
+            &s_logger, allocator, formatter, channel, writer, (enum aws_log_level)log_level)) {
         aws_log_channel_clean_up(channel);
         Py_DECREF(py_callback);
         aws_mem_release(allocator, writer_impl);
