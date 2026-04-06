@@ -196,7 +196,7 @@ PyObject *aws_py_init_python_logging(PyObject *self, PyObject *args) {
     struct aws_log_channel *channel = aws_mem_calloc(allocator, 1, sizeof(struct aws_log_channel));
     struct s_py_writer_impl *writer_impl = aws_mem_calloc(allocator, 1, sizeof(struct s_py_writer_impl));
 
-    struct aws_log_formatter_standard_options options = { 
+    struct aws_log_formatter_standard_options options = {
         .date_format = AWS_DATE_FORMAT_ISO_8601,
     };
 
