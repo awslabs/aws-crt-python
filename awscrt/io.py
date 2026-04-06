@@ -73,9 +73,30 @@ def _python_logging_callback(crt_level, subject_name, message):
 def init_logging_to_python_logger(log_level=LogLevel.Warn):
     """Initialize CRT logging, routing output through Python's logging module.
 
+    This logger bridges the AWS CRT's native logging system to Python's logging
+    module, enabling integration with existing Python logging configurations.
+
     Log messages appear under the 'awscrt' logger hierarchy, with each CRT
-    subsystem as a child logger (e.g. 'awscrt.http_connection',
-    'awscrt.socket', 'awscrt.mqtt_client').
+    subsystem as a child logger (e.g. 'awscrt.event-loop', 'awscrt.socket',
+    'awscrt.http-connection', 'awscrt.task-scheduler').
+
+    Log Format:
+        The message portion passed to Python loggers contains the original CRT
+        log format::
+
+            [<CRT_LEVEL>] [<TIMESTAMP>] [<THREAD_ID>] [<SUBJECT>] - <MESSAGE>
+
+        Where:
+            - CRT_LEVEL: Original CRT log level (TRACE, DEBUG, INFO, WARN, ERROR, FATAL).
+              Note: Both TRACE and DEBUG map to Python's DEBUG level.
+            - TIMESTAMP: ISO 8601 UTC timestamp (e.g. 2026-04-06T20:47:17Z)
+            - THREAD_ID: Hex thread identifier from the native layer
+            - SUBJECT: CRT subsystem name (e.g. event-loop, task-scheduler)
+            - MESSAGE: The actual log message
+
+        Example with default Python formatter::
+
+            awscrt.event-loop INFO [INFO] [2026-04-06T20:47:17Z] [00007f05981fae00] [event-loop] - id=0x55b293f44ed0: main loop started
 
     This is mutually exclusive with :func:`init_logging` -- call one or the
     other, not both. Calling either function a second time will raise an error.
