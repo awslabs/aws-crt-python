@@ -21,6 +21,7 @@
 
 #include <aws/auth/auth.h>
 #include <aws/common/byte_buf.h>
+#include <aws/common/date_time.h>
 #include <aws/common/environment.h>
 #include <aws/common/system_info.h>
 #include <aws/event-stream/event_stream.h>
@@ -44,57 +45,6 @@ static bool s_logger_init = false;
 /* Pipeline-based Python logging bridge */
 struct s_py_writer_impl {
     PyObject *callback;
-};
-
-static int s_py_formatter_format(
-    struct aws_log_formatter *formatter,
-    struct aws_string **dest,
-    enum aws_log_level level,
-    aws_log_subject_t subject,
-    const char *format,
-    va_list args) {
-
-    (void)formatter;
-    const char *subject_name = aws_log_subject_name(subject);
-    if (!subject_name) {
-        subject_name = "";
-    }
-
-    va_list args_copy;
-    va_copy(args_copy, args);
-    int msg_len = vsnprintf(NULL, 0, format, args_copy);
-    va_end(args_copy);
-    if (msg_len < 0) {
-        return aws_raise_error(AWS_ERROR_INVALID_ARGUMENT);
-    }
-
-    int prefix_len = snprintf(NULL, 0, "%d\x1f%s\x1f", (int)level, subject_name);
-    size_t total = (size_t)prefix_len + (size_t)msg_len + 1;
-
-    char *buf = aws_mem_calloc(aws_default_allocator(), 1, total);
-    if (!buf) {
-        return AWS_OP_ERR;
-    }
-
-    int written = snprintf(buf, total, "%d\x1f%s\x1f", (int)level, subject_name);
-    vsnprintf(buf + written, total - (size_t)written, format, args);
-
-    *dest = aws_string_new_from_array(aws_default_allocator(), (const uint8_t *)buf, strlen(buf));
-    aws_mem_release(aws_default_allocator(), buf);
-
-    if (!*dest) {
-        return AWS_OP_ERR;
-    }
-    return AWS_OP_SUCCESS;
-}
-
-static void s_py_formatter_clean_up(struct aws_log_formatter *formatter) {
-    (void)formatter;
-}
-
-static struct aws_log_formatter_vtable s_py_formatter_vtable = {
-    .format = s_py_formatter_format,
-    .clean_up = s_py_formatter_clean_up,
 };
 
 static int s_py_writer_write(struct aws_log_writer *writer, const struct aws_string *output) {
@@ -246,9 +196,11 @@ PyObject *aws_py_init_python_logging(PyObject *self, PyObject *args) {
     struct aws_log_channel *channel = aws_mem_calloc(allocator, 1, sizeof(struct aws_log_channel));
     struct s_py_writer_impl *writer_impl = aws_mem_calloc(allocator, 1, sizeof(struct s_py_writer_impl));
 
-    formatter->vtable = &s_py_formatter_vtable;
-    formatter->allocator = allocator;
-    formatter->impl = NULL;
+    struct aws_log_formatter_standard_options options = { 
+        .date_format = AWS_DATE_FORMAT_ISO_8601,
+    };
+
+    ASSERT_TRUE(aws_log_formatter_init_default(formatter, allocator, &options));
 
     Py_INCREF(py_callback);
     writer_impl->callback = py_callback;
