@@ -239,7 +239,6 @@ PyObject *aws_py_init_python_logging(PyObject *self, PyObject *args) {
     };
 
     if (aws_log_formatter_init_default(formatter, allocator, &options)) {
-        Py_DECREF(py_callback);
         aws_mem_release(allocator, writer_impl);
         aws_mem_release(allocator, writer);
         aws_mem_release(allocator, channel);
@@ -275,6 +274,21 @@ PyObject *aws_py_init_python_logging(PyObject *self, PyObject *args) {
 
     aws_logger_set(&s_logger);
     s_logger_init = true;
+
+    Py_RETURN_NONE;
+}
+
+PyObject *aws_py_logger_log(PyObject *self, PyObject *args) {
+    (void)self;
+
+    int log_level;
+    int subject;
+    const char *message;
+    if (!PyArg_ParseTuple(args, "iis", &log_level, &subject, &message)) {
+        return NULL;
+    }
+
+    AWS_LOGF((enum aws_log_level)log_level, subject, "%s", message);
 
     Py_RETURN_NONE;
 }
@@ -962,6 +976,7 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(init_logging, METH_VARARGS),
     AWS_PY_METHOD_DEF(set_log_level, METH_VARARGS),
     AWS_PY_METHOD_DEF(init_python_logging, METH_VARARGS),
+    AWS_PY_METHOD_DEF(logger_log, METH_VARARGS),
     AWS_PY_METHOD_DEF(input_stream_new, METH_VARARGS),
     AWS_PY_METHOD_DEF(pkcs11_lib_new, METH_VARARGS),
 

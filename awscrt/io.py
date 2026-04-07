@@ -13,7 +13,6 @@ from awscrt import NativeResource
 from enum import IntEnum
 import threading
 from typing import Union
-import logging
 
 
 class LogLevel(IntEnum):
@@ -40,90 +39,16 @@ def init_logging(log_level, file_name):
     _awscrt.init_logging(log_level, file_name)
 
 
-_CRT_TO_PY_LEVEL = {
-    0: logging.NOTSET,
-    1: logging.CRITICAL,
-    2: logging.ERROR,
-    3: logging.WARNING,
-    4: logging.INFO,
-    5: logging.DEBUG,
-    6: logging.DEBUG,
-}
-
-_PY_TO_CRT_LEVEL = {
-    logging.NOTSET: LogLevel.NoLogs,
-    logging.CRITICAL: LogLevel.Fatal,
-    logging.ERROR: LogLevel.Error,
-    logging.WARNING: LogLevel.Warn,
-    logging.INFO: LogLevel.Info,
-    logging.DEBUG: LogLevel.Trace,
-}
-
-
-def set_log_level(log_level: int):
-    """Change the log level of `awscrt`. init_logging() or
-    init_logging_to_python_logger() must have been called before using
-    this function or else an exception will be raised.
+def set_log_level(log_level):
+    """Change the log level of `awscrt`. init_logging() must have been called
+    before using this function or else an exception will be raised.
 
     Args:
-        log_level (int): Python logging level (e.g. logging.DEBUG, logging.INFO).
+        log_level (LogLevel): Display messages of this importance and higher.
     """
     assert log_level is not None
 
-    crt_level = _PY_TO_CRT_LEVEL.get(log_level, LogLevel.Warn)
-    _awscrt.set_log_level(crt_level)
-
-
-def _python_logging_callback(crt_level, subject_name, message):
-    """Called from C for each CRT log message."""
-    logger = logging.getLogger('awscrt.{}'.format(subject_name))
-    py_level = _CRT_TO_PY_LEVEL.get(crt_level, logging.DEBUG)
-    logger.log(py_level, '%s', message)
-
-
-def init_logging_to_python_logger(log_level: int = logging.WARNING):
-    """Initialize CRT logging, routing output through Python's logging module.
-
-    This logger bridges the AWS CRT's native logging system to Python's logging
-    module, enabling integration with existing Python logging configurations.
-
-    Log messages appear under the 'awscrt' logger hierarchy, with each CRT
-    subsystem as a child logger (e.g. 'awscrt.event-loop', 'awscrt.socket',
-    'awscrt.http-connection', 'awscrt.task-scheduler').
-
-    Log Format:
-        The message portion passed to Python loggers contains the original CRT
-        log format::
-
-            [<CRT_LEVEL>] [<TIMESTAMP>] [<THREAD_ID>] [<SUBJECT>] - <MESSAGE>
-
-        Where:
-            - CRT_LEVEL: Original CRT log level (TRACE, DEBUG, INFO, WARN, ERROR, FATAL).
-              Note: Both TRACE and DEBUG map to Python's DEBUG level.
-            - TIMESTAMP: ISO 8601 UTC timestamp (e.g. 2026-04-06T20:47:17Z)
-            - THREAD_ID: Hex thread identifier from the native layer
-            - SUBJECT: CRT subsystem name (e.g. event-loop, task-scheduler)
-            - MESSAGE: The actual log message
-
-        Example with default Python formatter::
-
-            awscrt.event-loop INFO [INFO] [2026-04-06T20:47:17Z] [00007f05981fae00] [event-loop] - id=0x55b293f44ed0: main loop started
-
-    This is mutually exclusive with :func:`init_logging` -- call one or the
-    other, not both. Calling either function a second time will raise an error.
-
-    Note: This routes CRT log messages through Python, which involves acquiring
-    the GIL for each message. For high-throughput scenarios at Debug or Trace
-    level, consider using :func:`init_logging` with a file destination instead.
-
-    Args:
-        log_level (int): Python logging level (e.g. logging.DEBUG, logging.INFO).
-            Defaults to logging.WARNING.
-    """
-    assert log_level is not None
-
-    crt_level = _PY_TO_CRT_LEVEL.get(log_level, LogLevel.Warn)
-    _awscrt.init_python_logging(int(crt_level), _python_logging_callback)
+    _awscrt.set_log_level(log_level)
 
 
 class EventLoopGroup(NativeResource):

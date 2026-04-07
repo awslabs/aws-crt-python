@@ -2,8 +2,10 @@
 # SPDX-License-Identifier: Apache-2.0.
 
 from awscrt.io import *
-from test import NativeResourceTest, TIMEOUT, emit_test_log
+from awscrt.logging import init_logging, set_log_level, logf, LogSubject
+from test import NativeResourceTest, TIMEOUT
 import io
+import logging
 import os
 import sys
 import unittest
@@ -251,9 +253,10 @@ class Pkcs11LibTest(NativeResourceTest):
 class PythonLoggingTest(NativeResourceTest):
     @classmethod
     def setUpClass(cls):
-        init_logging_to_python_logger(logging.DEBUG)
+        init_logging(logging.DEBUG)
 
-    def test_crt_logs_route_to_python_logging(self):
+    def test_logf_level_and_message(self):
+        import time
         handler = logging.Handler()
         handler.records = []
         handler.emit = lambda record: handler.records.append(record)
@@ -263,26 +266,17 @@ class PythonLoggingTest(NativeResourceTest):
         logger.addHandler(handler)
 
         try:
-            elg = EventLoopGroup()
-            shutdown_event = elg.shutdown_event
-            del elg
-            shutdown_event.wait(timeout=5.0)
+            logf(logging.INFO, LogSubject.CommonGeneral, "test message")
+            time.sleep(0.1)
 
-            self.assertGreater(len(handler.records), 0)
-            for record in handler.records:
-                self.assertTrue(record.name.startswith('awscrt.'))
-                self.assertIn(
-                    record.levelno,
-                    (logging.DEBUG,
-                     logging.INFO,
-                     logging.WARNING,
-                     logging.ERROR,
-                     logging.CRITICAL))
-                self.assertTrue(len(record.getMessage()) > 0)
+            self.assertEqual(len(handler.records), 1)
+            self.assertEqual(handler.records[0].levelno, logging.INFO)
+            self.assertIn("test message", handler.records[0].getMessage())
         finally:
             logger.removeHandler(handler)
 
-    def test_python_logging_callback(self):
+    def test_logf_subject(self):
+        import time
         handler = logging.Handler()
         handler.records = []
         handler.emit = lambda record: handler.records.append(record)
@@ -292,18 +286,18 @@ class PythonLoggingTest(NativeResourceTest):
         logger.addHandler(handler)
 
         try:
-            emit_test_log(5, "test-subject", "hello from test")
+            logf(logging.DEBUG, LogSubject.IoEventLoop, "event loop test")
+            time.sleep(0.1)
 
             self.assertEqual(len(handler.records), 1)
-            self.assertEqual(handler.records[0].name, "awscrt.test-subject")
-            self.assertEqual(handler.records[0].levelno, logging.DEBUG)
-            self.assertIn("hello from test", handler.records[0].getMessage())
+            self.assertEqual(handler.records[0].name, "awscrt.event-loop")
+            self.assertIn("event loop test", handler.records[0].getMessage())
         finally:
             logger.removeHandler(handler)
 
     @classmethod
-    def tearDown(cls):
-        set_log_level(LogLevel.NoLogs)
+    def tearDownClass(cls):
+        set_log_level(logging.NOTSET)
 
 
 if __name__ == '__main__':
