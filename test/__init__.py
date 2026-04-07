@@ -9,7 +9,7 @@ os.environ['AWS_CRT_MEMORY_TRACING'] = '2'  # noqa
 os.environ['AWS_CRT_CRASH_HANDLER'] = '1'   # noqa
 
 from awscrt import NativeResource
-from awscrt._test import check_for_leaks, emit_test_log
+from awscrt._test import check_for_leaks
 import time
 import unittest
 

@@ -145,8 +145,3 @@ def check_for_leaks(*, timeout_sec=10.0):
 
     raise RuntimeError("awscrt leak check failed. {} NativeResource objects. {} bytes native memory".format(
         num_living_resources, mem_bytes))
-
-
-def emit_test_log(level, subject, message):
-    from awscrt.io import _python_logging_callback
-    _python_logging_callback(level, subject, message)
