@@ -497,22 +497,6 @@ def _try_puback_reason_code(value):
         return None
 
 
-class ManualPubackResult(IntEnum):
-    """Result for a manually invoked PUBACK operation."""
-
-    SUCCESS = 0
-    """The PUBACK was successfully sent."""
-
-    PUBACK_CANCELLED = 1
-    """The PUBACK was cancelled and will not be sent."""
-
-    PUBACK_INVALID = 2
-    """The PUBACK attempting to be sent is invalid."""
-
-    CRT_FAILURE = 3
-    """The PUBACK failed to send due to a CRT failure."""
-
-
 def _try_manual_puback_result(value):
     try:
         return ManualPubackResult(value)
@@ -1163,16 +1147,6 @@ class PubackPacket:
     reason_code: PubackReasonCode = None
     reason_string: str = None
     user_properties: 'Sequence[UserProperty]' = None
-
-
-@dataclass
-class InvokePubackCompletion:
-    """dataclass containing results of a manually invoked PUBACK
-
-    Args:
-        puback_result (ManualPubackResult): Result of manually invoked PUBACK
-    """
-    puback_result: ManualPubackResult = None
 
 
 @dataclass
