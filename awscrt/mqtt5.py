@@ -496,6 +496,7 @@ def _try_puback_reason_code(value):
     except Exception:
         return None
 
+
 class ManualPubackResult(IntEnum):
     """Result for a manually invoked PUBACK operation."""
 
@@ -517,6 +518,7 @@ def _try_manual_puback_result(value):
         return ManualPubackResult(value)
     except Exception:
         return None
+
 
 class SubackReasonCode(IntEnum):
     """Reason code inside SUBACK packet payloads.
@@ -1161,6 +1163,7 @@ class PubackPacket:
     reason_code: PubackReasonCode = None
     reason_string: str = None
     user_properties: 'Sequence[UserProperty]' = None
+
 
 @dataclass
 class InvokePubackCompletion:
