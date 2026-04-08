@@ -29,6 +29,18 @@ _PY_TO_CRT_LEVEL = {
     logging.DEBUG: LogLevel.Trace,
 }
 
+#: Recommended format string for CRT log output. Includes timestamp, CRT thread
+#: name, level, logger name, and message. Use with a :class:`logging.Handler`::
+#:
+#:     import logging
+#:     from awscrt.logging import init_logging, CRT_LOG_FORMAT
+#:
+#:     handler = logging.StreamHandler()
+#:     handler.setFormatter(logging.Formatter(CRT_LOG_FORMAT))
+#:     logging.getLogger('awscrt').addHandler(handler)
+#:     init_logging(logging.DEBUG)
+CRT_LOG_FORMAT = '%(asctime)s [%(threadName)s] %(levelname)s %(name)s - %(message)s'
+
 
 class LogSubject(IntEnum):
     """Log subject identifiers for CRT subsystems."""
@@ -75,11 +87,17 @@ class LogSubject(IntEnum):
     S3Client = 0x4001
 
 
-def _python_logging_callback(crt_level, subject_name, message):
-    """Called from C for each CRT log message."""
+def _python_logging_callback(crt_level, subject_name, message, thread_name, timestamp):
+    """Called from C writer thread for each CRT log message."""
     logger = logging.getLogger('awscrt.{}'.format(subject_name))
     py_level = _CRT_TO_PY_LEVEL.get(crt_level, logging.DEBUG)
-    logger.log(py_level, '%s', message)
+    record = logger.makeRecord(
+        logger.name, py_level, '', 0, '%s', (message,), None
+    )
+    record.created = timestamp
+    record.threadName = thread_name
+    record.msecs = (timestamp - int(timestamp)) * 1000
+    logger.handle(record)
 
 
 def init_logging(level: int):
@@ -88,6 +106,9 @@ def init_logging(level: int):
     Log messages appear under the ``awscrt`` logger hierarchy, with each CRT
     subsystem as a child logger (e.g. ``awscrt.event-loop``,
     ``awscrt.task-scheduler``).
+
+    A default handler with timestamp and thread name formatting is attached
+    to the ``awscrt`` logger if it has no handlers yet.
 
     This is mutually exclusive with :func:`~awscrt.io.init_logging` -- use one
     or the other, not both. Can only be called once.
@@ -104,7 +125,13 @@ def init_logging(level: int):
         level (int): Python logging level (e.g. ``logging.DEBUG``,
             ``logging.WARNING``).
     """
+    root_logger = logging.getLogger('awscrt')
+
     crt_level = _PY_TO_CRT_LEVEL.get(level, LogLevel.Warn)
+
+    if root_logger.level == logging.NOTSET:
+        root_logger.setLevel(_CRT_TO_PY_LEVEL.get(int(crt_level), logging.DEBUG))
+
     _awscrt.init_python_logging(int(crt_level), _python_logging_callback)
 
 
