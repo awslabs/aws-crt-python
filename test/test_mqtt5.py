@@ -216,7 +216,8 @@ class Mqtt5ClientTest(NativeResourceTest):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
 
         client_options = mqtt5.ClientOptions(
-            host_name=input_host_name
+            host_name=input_host_name,
+            enable_metrics=False
         )
         callbacks = Mqtt5TestCallbacks()
         client = self._create_client(client_options=client_options, callbacks=callbacks)
@@ -242,7 +243,8 @@ class Mqtt5ClientTest(NativeResourceTest):
         client_options = mqtt5.ClientOptions(
             host_name=input_host_name,
             port=input_port,
-            connect_options=connect_options
+            connect_options=connect_options,
+            enable_metrics=False
         )
         callbacks = Mqtt5TestCallbacks()
         client = self._create_client(client_options=client_options, callbacks=callbacks)
@@ -428,7 +430,8 @@ class Mqtt5ClientTest(NativeResourceTest):
         client_options = mqtt5.ClientOptions(
             host_name=input_host_name,
             port=input_port,
-            connect_options=connect_options
+            connect_options=connect_options,
+            enable_metrics=False
         )
         callbacks = Mqtt5TestCallbacks()
         client_options.websocket_handshake_transform = callbacks.ws_handshake_transform
@@ -2188,6 +2191,47 @@ class Mqtt5ClientTest(NativeResourceTest):
 
     def test_operation_statistics_uc1(self):
         test_retry_wrapper(self._test_operation_statistics_uc1)
+
+    # ==============================================================
+    #             METRICS TEST CASES
+    # ==============================================================
+
+    def _test_direct_connect_basic_auth_metrics_enabled(self):
+        """Test that connection fails with basic auth when metrics are enabled.
+
+        When metrics are enabled, the SDK appends metrics information to the username field,
+        which corrupts the basic authentication and causes the connection to fail.
+        """
+        input_username = _get_env_variable("AWS_TEST_MQTT5_BASIC_AUTH_USERNAME")
+        input_password = _get_env_variable("AWS_TEST_MQTT5_BASIC_AUTH_PASSWORD")
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_BASIC_AUTH_HOST")
+        input_port = int(_get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_BASIC_AUTH_PORT"))
+
+        connect_options = mqtt5.ConnectPacket(
+            client_id=create_client_id(),
+            username=input_username,
+            password=input_password
+        )
+        client_options = mqtt5.ClientOptions(
+            host_name=input_host_name,
+            port=input_port,
+            connect_options=connect_options,
+            enable_metrics=True
+        )
+        callbacks = Mqtt5TestCallbacks()
+        client = self._create_client(client_options=client_options, callbacks=callbacks)
+
+        # Verify metrics are enabled
+        self.assertTrue(client_options.enable_metrics)
+
+        client.start()
+        # Connection should fail because metrics corrupts the username for basic auth
+        callbacks.future_connection_failure.result(TIMEOUT)
+        client.stop()
+        callbacks.future_stopped.result(TIMEOUT)
+
+    def test_direct_connect_basic_auth_metrics_enabled(self):
+        test_retry_wrapper(self._test_direct_connect_basic_auth_metrics_enabled)
 
 
 if __name__ == 'main':
