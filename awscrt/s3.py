@@ -288,7 +288,6 @@ class S3Client(NativeResource):
             network_interface_names: Optional[Sequence[str]] = None,
             fio_options: Optional['S3FileIoOptions'] = None,
             max_active_connections_override: Optional[int] = None):
-        print("Using CRT Client")
         assert isinstance(bootstrap, ClientBootstrap) or bootstrap is None
         assert isinstance(region, str)
         assert isinstance(signing_config, AwsSigningConfig) or signing_config is None

@@ -33,10 +33,10 @@
 #include <aws/s3/s3.h>
 
 #include <aws/common/atomics.h>
+#include <aws/common/date_time.h>
 #include <aws/common/log_channel.h>
 #include <aws/common/log_formatter.h>
 #include <aws/common/log_writer.h>
-#include <aws/common/date_time.h>
 
 #include <memoryobject.h>
 
@@ -64,8 +64,7 @@ static int s_py_writer_write(struct aws_log_writer *writer, const struct aws_str
 
     const struct s_py_log_header *header = (const struct s_py_log_header *)output->bytes;
     struct aws_byte_cursor payload = aws_byte_cursor_from_array(
-        output->bytes + sizeof(struct s_py_log_header),
-        output->len - sizeof(struct s_py_log_header));
+        output->bytes + sizeof(struct s_py_log_header), output->len - sizeof(struct s_py_log_header));
 
     struct aws_byte_cursor thread_name = aws_byte_cursor_advance(&payload, header->thread_name_len + 1);
     struct aws_byte_cursor subject_name = aws_byte_cursor_advance(&payload, header->subject_len + 1);
@@ -80,9 +79,12 @@ static int s_py_writer_write(struct aws_log_writer *writer, const struct aws_str
         impl->callback,
         "(is#s#s#d)",
         (int)header->level,
-        subject_name.ptr, (Py_ssize_t)header->subject_len,
-        message.ptr, (Py_ssize_t)(message.len > 0 ? message.len - 1 : 0),
-        thread_name.ptr, (Py_ssize_t)header->thread_name_len,
+        subject_name.ptr,
+        (Py_ssize_t)header->subject_len,
+        message.ptr,
+        (Py_ssize_t)(message.len > 0 ? message.len - 1 : 0),
+        thread_name.ptr,
+        (Py_ssize_t)header->thread_name_len,
         header->timestamp);
     Py_XDECREF(result);
     if (PyErr_Occurred()) {
@@ -115,9 +117,8 @@ static int s_py_formatter_format(
     /* Get thread name */
     struct aws_string *thread_name_str = NULL;
     aws_thread_current_name(allocator, &thread_name_str);
-    struct aws_byte_cursor thread_name = thread_name_str
-        ? aws_byte_cursor_from_string(thread_name_str)
-        : aws_byte_cursor_from_c_str("main");
+    struct aws_byte_cursor thread_name =
+        thread_name_str ? aws_byte_cursor_from_string(thread_name_str) : aws_byte_cursor_from_c_str("main");
 
     /* Get subject name */
     struct aws_byte_cursor subject_name = aws_byte_cursor_from_c_str(aws_log_subject_name(subject));
@@ -136,10 +137,7 @@ static int s_py_formatter_format(
     }
 
     /* Layout: header | thread_name\0 | subject\0 | message\0 */
-    size_t total = sizeof(struct s_py_log_header) +
-                   thread_name.len + 1 +
-                   subject_name.len + 1 +
-                   (size_t)msg_len + 1;
+    size_t total = sizeof(struct s_py_log_header) + thread_name.len + 1 + subject_name.len + 1 + (size_t)msg_len + 1;
 
     struct aws_string *output = aws_mem_calloc(allocator, 1, sizeof(struct aws_string) + total);
     if (!output) {
@@ -159,8 +157,7 @@ static int s_py_formatter_format(
 
     /* Fill payload */
     struct aws_byte_buf buf = aws_byte_buf_from_empty_array(
-        (uint8_t *)output->bytes + sizeof(struct s_py_log_header),
-        total - sizeof(struct s_py_log_header));
+        (uint8_t *)output->bytes + sizeof(struct s_py_log_header), total - sizeof(struct s_py_log_header));
 
     aws_byte_buf_write_from_whole_cursor(&buf, thread_name);
     aws_byte_buf_write_u8(&buf, 0);
