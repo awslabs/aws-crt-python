@@ -87,9 +87,20 @@ class LogSubject(IntEnum):
     S3_CLIENT = 0x4001
 
 
-def _python_logging_callback(crt_level, message, subject_name, thread_name):
+_PACKAGE_ID_TO_MODULE = {
+    0: 'common',
+    1: 'io',
+    2: 'http',
+    5: 'mqtt',
+    6: 'auth',
+    14: 's3',
+}
+
+
+def _python_logging_callback(crt_level, message, subject_id, subject_name, thread_name):
     """Called from C for each CRT log message."""
-    logger = logging.getLogger('awscrt.{}'.format(subject_name))
+    module = _PACKAGE_ID_TO_MODULE.get(subject_id >> 10, 'unknown')
+    logger = logging.getLogger('awscrt.{}.{}'.format(module, subject_name))
     py_level = _CRT_TO_PY_LEVEL.get(crt_level, logging.DEBUG)
     record = logger.makeRecord(
         logger.name, py_level, '', 0, '%s', (message,), None
