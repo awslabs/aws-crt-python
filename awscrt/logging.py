@@ -45,58 +45,56 @@ CRT_LOG_FORMAT = '%(asctime)s [%(threadName)s] %(levelname)s %(name)s - %(messag
 class LogSubject(IntEnum):
     """Log subject identifiers for CRT subsystems."""
     # aws-c-common
-    CommonGeneral = 0x000
-    CommonTaskScheduler = 0x001
+    COMMON_GENERAL = 0x000
+    COMMON_TASK_SCHEDULER = 0x001
 
     # aws-c-io
-    IoGeneral = 0x400
-    IoEventLoop = 0x401
-    IoSocket = 0x402
-    IoSocketHandler = 0x403
-    IoTls = 0x404
-    IoAlpn = 0x405
-    IoDns = 0x406
-    IoPki = 0x407
-    IoChannel = 0x408
-    IoChannelBootstrap = 0x409
-    IoFileUtils = 0x40A
-    IoSharedLibrary = 0x40B
+    IO_GENERAL = 0x400
+    IO_EVENT_LOOP = 0x401
+    IO_SOCKET = 0x402
+    IO_SOCKET_HANDLER = 0x403
+    IO_TLS = 0x404
+    IO_ALPN = 0x405
+    IO_DNS = 0x406
+    IO_PKI = 0x407
+    IO_CHANNEL = 0x408
+    IO_CHANNEL_BOOTSTRAP = 0x409
+    IO_FILE_UTILS = 0x40A
+    IO_SHARED_LIBRARY = 0x40B
 
     # aws-c-http
-    HttpGeneral = 0x800
-    HttpConnection = 0x801
-    HttpServer = 0x802
-    HttpStream = 0x803
-    HttpConnectionManager = 0x804
-    HttpWebsocket = 0x805
-    HttpWebsocketSetup = 0x806
+    HTTP_GENERAL = 0x800
+    HTTP_CONNECTION = 0x801
+    HTTP_SERVER = 0x802
+    HTTP_STREAM = 0x803
+    HTTP_CONNECTION_MANAGER = 0x804
+    HTTP_WEBSOCKET = 0x805
+    HTTP_WEBSOCKET_SETUP = 0x806
 
     # aws-c-mqtt
-    MqttGeneral = 0x1400
-    MqttClient = 0x1401
-    MqttTopicTree = 0x1402
+    MQTT_GENERAL = 0x1400
+    MQTT_CLIENT = 0x1401
+    MQTT_TOPIC_TREE = 0x1402
 
     # aws-c-auth
-    AuthGeneral = 0x1800
-    AuthProfile = 0x1801
-    AuthCredentialsProvider = 0x1802
-    AuthSigning = 0x1803
+    AUTH_GENERAL = 0x1800
+    AUTH_PROFILE = 0x1801
+    AUTH_CREDENTIALS_PROVIDER = 0x1802
+    AUTH_SIGNING = 0x1803
 
     # aws-c-s3
-    S3General = 0x4000
-    S3Client = 0x4001
+    S3_GENERAL = 0x4000
+    S3_CLIENT = 0x4001
 
 
-def _python_logging_callback(crt_level, subject_name, message, thread_name, timestamp):
-    """Called from C writer thread for each CRT log message."""
+def _python_logging_callback(crt_level, message, subject_name, thread_name):
+    """Called from C for each CRT log message."""
     logger = logging.getLogger('awscrt.{}'.format(subject_name))
     py_level = _CRT_TO_PY_LEVEL.get(crt_level, logging.DEBUG)
     record = logger.makeRecord(
         logger.name, py_level, '', 0, '%s', (message,), None
     )
-    record.created = timestamp
     record.threadName = thread_name
-    record.msecs = (timestamp - int(timestamp)) * 1000
     logger.handle(record)
 
 

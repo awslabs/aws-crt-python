@@ -256,7 +256,6 @@ class PythonLoggingTest(NativeResourceTest):
         init_logging(logging.DEBUG)
 
     def test_logf_level_and_message(self):
-        import time
         handler = logging.Handler()
         handler.records = []
         handler.emit = lambda record: handler.records.append(record)
@@ -267,7 +266,6 @@ class PythonLoggingTest(NativeResourceTest):
 
         try:
             logf(logging.INFO, LogSubject.CommonGeneral, "test message")
-            time.sleep(0.1)
 
             self.assertEqual(len(handler.records), 1)
             self.assertEqual(handler.records[0].levelno, logging.INFO)
@@ -276,7 +274,6 @@ class PythonLoggingTest(NativeResourceTest):
             logger.removeHandler(handler)
 
     def test_logf_subject(self):
-        import time
         handler = logging.Handler()
         handler.records = []
         handler.emit = lambda record: handler.records.append(record)
@@ -287,7 +284,6 @@ class PythonLoggingTest(NativeResourceTest):
 
         try:
             logf(logging.DEBUG, LogSubject.IoEventLoop, "event loop test")
-            time.sleep(0.1)
 
             self.assertEqual(len(handler.records), 1)
             self.assertEqual(handler.records[0].name, "awscrt.event-loop")

@@ -21,7 +21,6 @@
 
 #include <aws/auth/auth.h>
 #include <aws/common/byte_buf.h>
-#include <aws/common/date_time.h>
 #include <aws/common/environment.h>
 #include <aws/common/system_info.h>
 #include <aws/event-stream/event_stream.h>
@@ -33,156 +32,96 @@
 #include <aws/s3/s3.h>
 
 #include <aws/common/atomics.h>
-#include <aws/common/date_time.h>
-#include <aws/common/log_channel.h>
-#include <aws/common/log_formatter.h>
-#include <aws/common/log_writer.h>
 
 #include <memoryobject.h>
 
 static struct aws_logger s_logger;
 static bool s_logger_init = false;
 
-/* Python logging bridge: structured data packing */
-struct s_py_writer_impl {
+/* Python logging bridge: direct vtable override */
+struct s_py_logger_impl {
     PyObject *callback;
+    struct aws_atomic_var level;
 };
 
-struct s_py_log_header {
-    enum aws_log_level level;
-    double timestamp;
-    size_t thread_name_len;
-    size_t subject_len;
-};
+static int s_py_logger_log(
+    struct aws_logger *logger,
+    enum aws_log_level log_level,
+    aws_log_subject_t subject,
+    const char *format,
+    ...) {
 
-static int s_py_writer_write(struct aws_log_writer *writer, const struct aws_string *output) {
-    struct s_py_writer_impl *impl = writer->impl;
+    struct s_py_logger_impl *impl = logger->p_impl;
 
-    if (output->len < sizeof(struct s_py_log_header)) {
-        return AWS_OP_SUCCESS;
+    va_list args;
+    va_start(args, format);
+    va_list tmp;
+    va_copy(tmp, args);
+    int len = vsnprintf(NULL, 0, format, tmp);
+    va_end(tmp);
+    if (len < 0) {
+        va_end(args);
+        return AWS_OP_ERR;
     }
 
-    const struct s_py_log_header *header = (const struct s_py_log_header *)output->bytes;
-    struct aws_byte_cursor payload = aws_byte_cursor_from_array(
-        output->bytes + sizeof(struct s_py_log_header), output->len - sizeof(struct s_py_log_header));
+    char *buf = aws_mem_acquire(logger->allocator, (size_t)len + 1);
+    if (!buf) {
+        va_end(args);
+        return AWS_OP_ERR;
+    }
+    vsnprintf(buf, (size_t)len + 1, format, args);
+    va_end(args);
 
-    struct aws_byte_cursor thread_name = aws_byte_cursor_advance(&payload, header->thread_name_len + 1);
-    struct aws_byte_cursor subject_name = aws_byte_cursor_advance(&payload, header->subject_len + 1);
-    struct aws_byte_cursor message = payload;
+    const char *subject_name = aws_log_subject_name(subject);
+    if (!subject_name) {
+        subject_name = "";
+    }
+
+    struct aws_string *thread_name_str = NULL;
+    aws_thread_current_name(logger->allocator, &thread_name_str);
+    const char *thread_name = thread_name_str ? aws_string_c_str(thread_name_str) : "main";
 
     PyGILState_STATE state;
     if (aws_py_gilstate_ensure(&state)) {
+        aws_string_destroy(thread_name_str);
+        aws_mem_release(logger->allocator, buf);
         return AWS_OP_ERR;
     }
 
     PyObject *result = PyObject_CallFunction(
-        impl->callback,
-        "(is#s#s#d)",
-        (int)header->level,
-        subject_name.ptr,
-        (Py_ssize_t)header->subject_len,
-        message.ptr,
-        (Py_ssize_t)(message.len > 0 ? message.len - 1 : 0),
-        thread_name.ptr,
-        (Py_ssize_t)header->thread_name_len,
-        header->timestamp);
+        impl->callback, "(is#ss)", (int)log_level, buf, (Py_ssize_t)len, subject_name, thread_name);
     Py_XDECREF(result);
     if (PyErr_Occurred()) {
         PyErr_WriteUnraisable(PyErr_Occurred());
     }
 
     PyGILState_Release(state);
-    return AWS_OP_SUCCESS;
-}
-
-static void s_py_writer_clean_up(struct aws_log_writer *writer) {
-    (void)writer;
-}
-
-static struct aws_log_writer_vtable s_py_writer_vtable = {
-    .write = s_py_writer_write,
-    .clean_up = s_py_writer_clean_up,
-};
-
-static int s_py_formatter_format(
-    struct aws_log_formatter *formatter,
-    struct aws_string **formatted_output,
-    enum aws_log_level level,
-    aws_log_subject_t subject,
-    const char *format,
-    va_list args) {
-
-    struct aws_allocator *allocator = formatter->allocator;
-
-    /* Get thread name */
-    struct aws_string *thread_name_str = NULL;
-    aws_thread_current_name(allocator, &thread_name_str);
-    struct aws_byte_cursor thread_name =
-        thread_name_str ? aws_byte_cursor_from_string(thread_name_str) : aws_byte_cursor_from_c_str("main");
-
-    /* Get subject name */
-    struct aws_byte_cursor subject_name = aws_byte_cursor_from_c_str(aws_log_subject_name(subject));
-    if (!subject_name.ptr) {
-        subject_name = aws_byte_cursor_from_c_str("");
-    }
-
-    /* Calculate message length */
-    va_list tmp_args;
-    va_copy(tmp_args, args);
-    int msg_len = vsnprintf(NULL, 0, format, tmp_args);
-    va_end(tmp_args);
-    if (msg_len < 0) {
-        aws_string_destroy(thread_name_str);
-        return aws_raise_error(AWS_ERROR_INVALID_ARGUMENT);
-    }
-
-    /* Layout: header | thread_name\0 | subject\0 | message\0 */
-    size_t total = sizeof(struct s_py_log_header) + thread_name.len + 1 + subject_name.len + 1 + (size_t)msg_len + 1;
-
-    struct aws_string *output = aws_mem_calloc(allocator, 1, sizeof(struct aws_string) + total);
-    if (!output) {
-        aws_string_destroy(thread_name_str);
-        return AWS_OP_ERR;
-    }
-
-    /* Fill header */
-    struct s_py_log_header *header = (struct s_py_log_header *)output->bytes;
-    header->level = level;
-    header->thread_name_len = thread_name.len;
-    header->subject_len = subject_name.len;
-
-    struct aws_date_time now;
-    aws_date_time_init_now(&now);
-    header->timestamp = aws_date_time_as_epoch_secs(&now);
-
-    /* Fill payload */
-    struct aws_byte_buf buf = aws_byte_buf_from_empty_array(
-        (uint8_t *)output->bytes + sizeof(struct s_py_log_header), total - sizeof(struct s_py_log_header));
-
-    aws_byte_buf_write_from_whole_cursor(&buf, thread_name);
-    aws_byte_buf_write_u8(&buf, 0);
-
-    aws_byte_buf_write_from_whole_cursor(&buf, subject_name);
-    aws_byte_buf_write_u8(&buf, 0);
-
-    vsnprintf((char *)(buf.buffer + buf.len), (size_t)msg_len + 1, format, args);
-    buf.len += (size_t)msg_len + 1;
-
-    *(struct aws_allocator **)(&output->allocator) = allocator;
-    *(size_t *)(&output->len) = total;
-
-    *formatted_output = output;
     aws_string_destroy(thread_name_str);
+    aws_mem_release(logger->allocator, buf);
     return AWS_OP_SUCCESS;
 }
 
-static void s_py_formatter_clean_up(struct aws_log_formatter *formatter) {
-    (void)formatter;
+static enum aws_log_level s_py_logger_get_log_level(struct aws_logger *logger, aws_log_subject_t subject) {
+    (void)subject;
+    struct s_py_logger_impl *impl = logger->p_impl;
+    return (enum aws_log_level)aws_atomic_load_int(&impl->level);
 }
 
-static struct aws_log_formatter_vtable s_py_formatter_vtable = {
-    .format = s_py_formatter_format,
-    .clean_up = s_py_formatter_clean_up,
+static int s_py_logger_set_log_level(struct aws_logger *logger, enum aws_log_level level) {
+    struct s_py_logger_impl *impl = logger->p_impl;
+    aws_atomic_store_int(&impl->level, (size_t)level);
+    return AWS_OP_SUCCESS;
+}
+
+static void s_py_logger_clean_up(struct aws_logger *logger) {
+    (void)logger;
+}
+
+static struct aws_logger_vtable s_py_logger_vtable = {
+    .log = s_py_logger_log,
+    .get_log_level = s_py_logger_get_log_level,
+    .set_log_level = s_py_logger_set_log_level,
+    .clean_up = s_py_logger_clean_up,
 };
 
 PyObject *aws_py_init_logging(PyObject *self, PyObject *args) {
@@ -277,40 +216,18 @@ PyObject *aws_py_init_python_logging(PyObject *self, PyObject *args) {
 
     struct aws_allocator *allocator = aws_default_allocator();
 
-    struct aws_log_formatter *formatter = aws_mem_calloc(allocator, 1, sizeof(struct aws_log_formatter));
-    struct aws_log_writer *writer = aws_mem_calloc(allocator, 1, sizeof(struct aws_log_writer));
-    struct aws_log_channel *channel = aws_mem_calloc(allocator, 1, sizeof(struct aws_log_channel));
-    struct s_py_writer_impl *writer_impl = aws_mem_calloc(allocator, 1, sizeof(struct s_py_writer_impl));
-
-    formatter->vtable = &s_py_formatter_vtable;
-    formatter->allocator = allocator;
-    formatter->impl = NULL;
+    struct s_py_logger_impl *impl = aws_mem_calloc(allocator, 1, sizeof(struct s_py_logger_impl));
+    if (!impl) {
+        return PyErr_AwsLastError();
+    }
 
     Py_INCREF(py_callback);
-    writer_impl->callback = py_callback;
-    writer->vtable = &s_py_writer_vtable;
-    writer->allocator = allocator;
-    writer->impl = writer_impl;
+    impl->callback = py_callback;
+    aws_atomic_store_int(&impl->level, (size_t)log_level);
 
-    if (aws_log_channel_init_background(channel, allocator, writer)) {
-        Py_DECREF(py_callback);
-        aws_mem_release(allocator, writer_impl);
-        aws_mem_release(allocator, writer);
-        aws_mem_release(allocator, channel);
-        aws_mem_release(allocator, formatter);
-        return PyErr_AwsLastError();
-    }
-
-    if (aws_logger_init_from_external(
-            &s_logger, allocator, formatter, channel, writer, (enum aws_log_level)log_level)) {
-        aws_log_channel_clean_up(channel);
-        Py_DECREF(py_callback);
-        aws_mem_release(allocator, writer_impl);
-        aws_mem_release(allocator, writer);
-        aws_mem_release(allocator, channel);
-        aws_mem_release(allocator, formatter);
-        return PyErr_AwsLastError();
-    }
+    s_logger.vtable = &s_py_logger_vtable;
+    s_logger.allocator = allocator;
+    s_logger.p_impl = impl;
 
     aws_logger_set(&s_logger);
     s_logger_init = true;
