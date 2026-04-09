@@ -83,8 +83,8 @@ class LogSubject(IntEnum):
     AUTH_SIGNING = 0x1803
 
     # aws-c-s3
-    S3_GENERAL = 0x4000
-    S3_CLIENT = 0x4001
+    S3_GENERAL = 0x3800
+    S3_CLIENT = 0x3801
 
 
 _PACKAGE_ID_TO_MODULE = {

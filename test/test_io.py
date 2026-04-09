@@ -286,8 +286,40 @@ class PythonLoggingTest(NativeResourceTest):
             logf(logging.DEBUG, LogSubject.IO_EVENT_LOOP, "event loop test")
 
             self.assertEqual(len(handler.records), 1)
-            self.assertEqual(handler.records[0].name, "awscrt.event-loop")
+            self.assertEqual(handler.records[0].name, "awscrt.io.event-loop")
             self.assertIn("event loop test", handler.records[0].getMessage())
+        finally:
+            logger.removeHandler(handler)
+
+    def test_logf_subject_hierarchy(self):
+        """Verify that log subjects from different CRT packages produce correct hierarchical logger names."""
+        cases = [
+            (LogSubject.COMMON_GENERAL, "awscrt.common."),
+            (LogSubject.IO_EVENT_LOOP, "awscrt.io."),
+            (LogSubject.HTTP_GENERAL, "awscrt.http."),
+            (LogSubject.MQTT_GENERAL, "awscrt.mqtt."),
+            (LogSubject.AUTH_GENERAL, "awscrt.auth."),
+            (LogSubject.S3_GENERAL, "awscrt.s3."),
+        ]
+
+        handler = logging.Handler()
+        handler.records = []
+        handler.emit = lambda record: handler.records.append(record)
+
+        logger = logging.getLogger('awscrt')
+        logger.setLevel(logging.DEBUG)
+        logger.addHandler(handler)
+
+        try:
+            for subject, expected_prefix in cases:
+                handler.records.clear()
+                logf(logging.DEBUG, subject, "test")
+                self.assertEqual(len(handler.records), 1)
+                self.assertTrue(
+                    handler.records[0].name.startswith(expected_prefix),
+                    f"Subject {subject.name}: expected logger starting with "
+                    f"'{expected_prefix}', got '{handler.records[0].name}'"
+                )
         finally:
             logger.removeHandler(handler)
 
