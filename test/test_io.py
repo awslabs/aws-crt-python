@@ -265,7 +265,7 @@ class PythonLoggingTest(NativeResourceTest):
         logger.addHandler(handler)
 
         try:
-            logf(logging.INFO, LogSubject.CommonGeneral, "test message")
+            logf(logging.INFO, LogSubject.COMMON_GENERAL, "test message")
 
             self.assertEqual(len(handler.records), 1)
             self.assertEqual(handler.records[0].levelno, logging.INFO)
@@ -283,7 +283,7 @@ class PythonLoggingTest(NativeResourceTest):
         logger.addHandler(handler)
 
         try:
-            logf(logging.DEBUG, LogSubject.IoEventLoop, "event loop test")
+            logf(logging.DEBUG, LogSubject.IO_EVENT_LOOP, "event loop test")
 
             self.assertEqual(len(handler.records), 1)
             self.assertEqual(handler.records[0].name, "awscrt.event-loop")
