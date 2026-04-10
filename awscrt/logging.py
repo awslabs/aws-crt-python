@@ -4,6 +4,7 @@
 """Python logging integration for the AWS CRT."""
 
 import logging
+import threading
 from enum import IntEnum
 
 import _awscrt
@@ -93,11 +94,8 @@ def _python_logging_callback(crt_level, message, subject_id, subject_name, threa
     module = _PACKAGE_ID_TO_MODULE.get(subject_id >> 10, 'unknown')
     logger = logging.getLogger('awscrt.{}.{}'.format(module, subject_name))
     py_level = _CRT_TO_PY_LEVEL.get(crt_level, logging.DEBUG)
-    record = logger.makeRecord(
-        logger.name, py_level, '', 0, '%s', (message,), None
-    )
-    record.threadName = thread_name
-    logger.handle(record)
+    threading.current_thread().name = thread_name
+    logger.log(py_level, '%s', message)
 
 
 def init_logging(level: int):
