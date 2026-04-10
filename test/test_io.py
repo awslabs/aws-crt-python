@@ -323,6 +323,37 @@ class PythonLoggingTest(NativeResourceTest):
         finally:
             logger.removeHandler(handler)
 
+    def test_callback_exception_does_not_crash(self):
+        """If a logging handler raises, CRT should not crash and subsequent logging should still work."""
+
+        class BrokenHandler(logging.Handler):
+            def emit(self, record):
+                raise RuntimeError("handler exploded")
+
+        logger = logging.getLogger('awscrt')
+        logger.setLevel(logging.DEBUG)
+        broken = BrokenHandler()
+        logger.addHandler(broken)
+
+        try:
+            # This triggers the C callback -> Python callback -> handler.emit -> raise
+            # Should not crash or leave the process in a bad state
+            logf(logging.INFO, LogSubject.COMMON_GENERAL, "this should not crash")
+        finally:
+            logger.removeHandler(broken)
+
+        # Verify logging still works after the error
+        good = logging.Handler()
+        good.records = []
+        good.emit = lambda record: good.records.append(record)
+        logger.addHandler(good)
+        try:
+            logf(logging.INFO, LogSubject.COMMON_GENERAL, "after error")
+            self.assertEqual(len(good.records), 1)
+            self.assertIn("after error", good.records[0].getMessage())
+        finally:
+            logger.removeHandler(good)
+
     @classmethod
     def tearDownClass(cls):
         set_log_level(logging.NOTSET)
