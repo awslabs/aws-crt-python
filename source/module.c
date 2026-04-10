@@ -114,7 +114,15 @@ static int s_py_logger_set_log_level(struct aws_logger *logger, enum aws_log_lev
 }
 
 static void s_py_logger_clean_up(struct aws_logger *logger) {
-    (void)logger;
+    struct s_py_logger_impl *impl = logger->p_impl;
+    if (impl) {
+        PyGILState_STATE state;
+        if (!aws_py_gilstate_ensure(&state)) {
+            Py_XDECREF(impl->callback);
+            PyGILState_Release(state);
+        }
+        aws_mem_release(logger->allocator, impl);
+    }
 }
 
 static struct aws_logger_vtable s_py_logger_vtable = {
