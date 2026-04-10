@@ -29,16 +29,7 @@ _PY_TO_CRT_LEVEL = {
     logging.DEBUG: LogLevel.Trace,
 }
 
-#: Recommended format string for CRT log output. Includes timestamp, CRT thread
-#: name, level, logger name, and message. Use with a :class:`logging.Handler`::
-#:
-#:     import logging
-#:     from awscrt.logging import init_logging, CRT_LOG_FORMAT
-#:
-#:     handler = logging.StreamHandler()
-#:     handler.setFormatter(logging.Formatter(CRT_LOG_FORMAT))
-#:     logging.getLogger('awscrt').addHandler(handler)
-#:     init_logging(logging.DEBUG)
+# Default Format supported by native loggers.
 CRT_LOG_FORMAT = '%(asctime)s [%(threadName)s] %(levelname)s %(name)s - %(message)s'
 
 
