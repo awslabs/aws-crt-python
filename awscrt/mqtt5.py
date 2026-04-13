@@ -497,6 +497,13 @@ def _try_puback_reason_code(value):
         return None
 
 
+def _try_manual_puback_result(value):
+    try:
+        return ManualPubackResult(value)
+    except Exception:
+        return None
+
+
 class SubackReasonCode(IntEnum):
     """Reason code inside SUBACK packet payloads.
 
@@ -1224,14 +1231,38 @@ class WebsocketHandshakeTransformArgs:
             self._done_future.set_exception(exception)
 
 
+class PublishAcknowledgementControlHandle:
+    """Opaque handle for manually controlling the publish acknowledgement for a received QoS 1 PUBLISH.
+
+    Obtained by calling acquire_publish_acknowledgement_control() within the on_publish_callback_fn callback.
+    Pass to Client.invoke_publish_acknowledgement() to send the publish acknowledgement to the broker.
+    """
+
+    def __init__(self, control_id: int):
+        self._control_id = control_id
+
+
 @dataclass
 class PublishReceivedData:
     """Dataclass containing data related to a Publish Received Callback
 
     Args:
         publish_packet (PublishPacket): Data model of an `MQTT5 PUBLISH <https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901100>`_ packet.
+        acquire_publish_acknowledgement_control (Callable): For QoS 1 messages only: call this function within the
+            on_publish_callback_fn callback to take manual control of the publish acknowledgement for this message,
+            preventing the client from automatically sending a publish acknowledgement. Returns a
+            :class:`PublishAcknowledgementControlHandle` that can be passed to
+            Client.invoke_publish_acknowledgement() to send the publish acknowledgement to the broker.
+
+            Important: This function must be called within the on_publish_callback_fn callback. Calling it after the
+            callback returns will raise a RuntimeError. This function may only be called once per received PUBLISH;
+            calling it a second time will also raise a RuntimeError. If this function is not called, the client will
+            automatically send a publish acknowledgement for QoS 1 messages when the callback returns.
+
+            For QoS 0 messages, this field is None.
     """
     publish_packet: PublishPacket = None
+    acquire_publish_acknowledgement_control: Callable = None
 
 
 @dataclass
@@ -1440,9 +1471,11 @@ class _ClientCore:
             correlation_data,
             subscription_identifiers_tuples,
             content_type,
-            user_properties_tuples):
+            user_properties_tuples,
+            puback_control_id):
         if self._on_publish_cb is None:
-            return
+            # Indicates that manual puback control was not taken and puback should be invoked automatically.
+            return False
 
         publish_packet = PublishPacket()
         publish_packet.topic = topic
@@ -1474,9 +1507,41 @@ class _ClientCore:
         publish_packet.content_type = content_type
         publish_packet.user_properties = _init_user_properties(user_properties_tuples)
 
-        self._on_publish_cb(PublishReceivedData(publish_packet=publish_packet))
+        # For QoS 1 messages, set up the acquire_publish_acknowledgement_control callable.
+        # The native side has already called aws_mqtt5_client_acquire_publish_acknowledgement and passed us the
+        # puback_control_id. We wrap it in an opaque capsule handle and provide a callable that
+        # returns that handle. The callable may only be called once; calling it marks the publish
+        # acknowledgement as "taken" so the native side will not auto-invoke it after this callback returns.
+        puback_taken = False
+        callback_active = True
+        acquire_publish_acknowledgement_control = None
 
-        return
+        if puback_control_id != 0:
+            def acquire_publish_acknowledgement_control():
+                nonlocal puback_taken
+                nonlocal callback_active
+                if puback_taken:
+                    raise RuntimeError(
+                        "acquire_publish_acknowledgement_control() may only be called once per received PUBLISH.")
+                if not callback_active:
+                    raise RuntimeError(
+                        "acquire_publish_acknowledgement_control() must be called within the on_publish_callback_fn callback.")
+                puback_taken = True
+                return PublishAcknowledgementControlHandle(puback_control_id)
+
+        # Create PublishReceivedData with the acquire_publish_acknowledgement_control callable (or None for QoS 0)
+        publish_data = PublishReceivedData(
+            publish_packet=publish_packet,
+            acquire_publish_acknowledgement_control=acquire_publish_acknowledgement_control
+        )
+
+        self._on_publish_cb(publish_data)
+
+        callback_active = False
+        # Return True if the user called acquire_publish_acknowledgement_control(), signalling to the native side
+        # that it should NOT auto-invoke the publish acknowledgement (the user is responsible for calling
+        # invoke_publish_acknowledgement).
+        return puback_taken
 
     def _on_lifecycle_stopped(self):
         if self._on_lifecycle_stopped_cb:
@@ -1972,6 +2037,27 @@ class Client(NativeResource):
 
         result = _awscrt.mqtt5_client_get_stats(self._binding)
         return OperationStatisticsData(result[0], result[1], result[2], result[3])
+
+    def invoke_publish_acknowledgement(
+            self, publish_acknowledgement_control_handle: 'PublishAcknowledgementControlHandle'):
+        """Sends a publish acknowledgement for a QoS 1 PUBLISH that was previously acquired for manual control.
+
+        To use manual publish acknowledgement control, call acquire_publish_acknowledgement_control() within
+        the on_publish_callback_fn callback to obtain a :class:`PublishAcknowledgementControlHandle`. Then call
+        this method to send the publish acknowledgement.
+
+        Args:
+            publish_acknowledgement_control_handle (PublishAcknowledgementControlHandle): An opaque handle obtained
+                from acquire_publish_acknowledgement_control() within PublishReceivedData.
+
+        Raises:
+            Exception: If the native client returns an error when invoking the publish acknowledgement.
+        """
+
+        _awscrt.mqtt5_client_invoke_publish_acknowledgement(
+            self._binding,
+            publish_acknowledgement_control_handle._control_id
+        )
 
     def new_connection(self, on_connection_interrupted=None, on_connection_resumed=None,
                        on_connection_success=None, on_connection_failure=None, on_connection_closed=None):
