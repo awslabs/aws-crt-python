@@ -297,9 +297,12 @@ class PythonLoggingTest(NativeResourceTest):
             (LogSubject.COMMON_GENERAL, "awscrt.common."),
             (LogSubject.IO_EVENT_LOOP, "awscrt.io."),
             (LogSubject.HTTP_GENERAL, "awscrt.http."),
+            (LogSubject.EVENT_STREAM_GENERAL, "awscrt.event-stream."),
             (LogSubject.MQTT_GENERAL, "awscrt.mqtt."),
             (LogSubject.AUTH_GENERAL, "awscrt.auth."),
+            (LogSubject.CAL_GENERAL, "awscrt.cal."),
             (LogSubject.S3_GENERAL, "awscrt.s3."),
+            (LogSubject.SDKUTILS_GENERAL, "awscrt.sdkutils."),
         ]
 
         handler = logging.Handler()
@@ -353,6 +356,68 @@ class PythonLoggingTest(NativeResourceTest):
             self.assertIn("after error", good.records[0].getMessage())
         finally:
             logger.removeHandler(good)
+
+    def _emit_all_subjects_and_levels(self):
+        """Emit logs across all subjects at INFO and DEBUG levels."""
+        for subject in (LogSubject.IO_EVENT_LOOP, LogSubject.HTTP_GENERAL,
+                        LogSubject.EVENT_STREAM_GENERAL, LogSubject.MQTT_GENERAL,
+                        LogSubject.S3_GENERAL, LogSubject.AUTH_GENERAL,
+                        LogSubject.CAL_GENERAL, LogSubject.SDKUTILS_GENERAL,
+                        LogSubject.COMMON_GENERAL):
+            logf(logging.INFO, subject, f"{subject.name} info")
+            logf(logging.DEBUG, subject, f"{subject.name} debug")
+
+    def test_logging_filters(self):
+        """Verify level and subject filtering across different logger configurations."""
+        handler = logging.Handler()
+        handler.records = []
+        handler.emit = lambda record: handler.records.append(record)
+
+        root = logging.getLogger('awscrt')
+        root.addHandler(handler)
+
+        try:
+            # All at DEBUG: should get all 18 records (9 subjects x 2 levels)
+            root.setLevel(logging.DEBUG)
+            self._emit_all_subjects_and_levels()
+            self.assertEqual(len(handler.records), 18)
+            handler.records.clear()
+
+            # All at INFO: should get only 9 INFO records
+            root.setLevel(logging.INFO)
+            self._emit_all_subjects_and_levels()
+            self.assertEqual(len(handler.records), 9)
+            self.assertTrue(all(r.levelno == logging.INFO for r in handler.records))
+            handler.records.clear()
+
+            # All at WARNING: nothing should pass
+            root.setLevel(logging.WARNING)
+            self._emit_all_subjects_and_levels()
+            self.assertEqual(len(handler.records), 0)
+
+            # Enable only HTTP at DEBUG: should get 2 HTTP records
+            logging.getLogger('awscrt.http').setLevel(logging.DEBUG)
+            self._emit_all_subjects_and_levels()
+            self.assertEqual(len(handler.records), 2)
+            self.assertTrue(all(r.name.startswith("awscrt.http.") for r in handler.records))
+            handler.records.clear()
+
+            # Also enable S3 at INFO: should get 2 HTTP + 1 S3 INFO
+            logging.getLogger('awscrt.s3').setLevel(logging.INFO)
+            self._emit_all_subjects_and_levels()
+            http_records = [r for r in handler.records if r.name.startswith("awscrt.http.")]
+            s3_records = [r for r in handler.records if r.name.startswith("awscrt.s3.")]
+            self.assertEqual(len(http_records), 2)
+            self.assertEqual(len(s3_records), 1)
+            self.assertEqual(s3_records[0].levelno, logging.INFO)
+            self.assertEqual(len(handler.records), 3)
+            handler.records.clear()
+
+        finally:
+            root.setLevel(logging.DEBUG)
+            logging.getLogger('awscrt.http').setLevel(logging.NOTSET)
+            logging.getLogger('awscrt.s3').setLevel(logging.NOTSET)
+            root.removeHandler(handler)
 
     @classmethod
     def tearDownClass(cls):
