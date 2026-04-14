@@ -36,7 +36,7 @@
 #include <memoryobject.h>
 
 static struct aws_logger s_logger;
-static bool s_logger_init = false;
+static struct aws_atomic_var s_logger_init;
 
 /* Python logging bridge: direct vtable override */
 struct s_py_logger_impl {
@@ -164,18 +164,18 @@ PyObject *aws_py_init_logging(PyObject *self, PyObject *args) {
         log_options.filename = file_path;
     }
 
-    /* It is not safe to clean up a running logger */
-    if (s_logger_init) {
+    /* Atomically claim the init slot (0 → 1). Only one thread can win. */
+    size_t expected = 0;
+    if (!aws_atomic_compare_exchange_int(&s_logger_init, &expected, 1)) {
         aws_raise_error(AWS_ERROR_INVALID_STATE);
         return PyErr_AwsLastError();
     }
 
-    if (aws_logger_init_standard(&s_logger, allocator, &log_options) == AWS_OP_SUCCESS) {
-        aws_logger_set(&s_logger);
-        s_logger_init = true;
-    } else {
+    if (aws_logger_init_standard(&s_logger, allocator, &log_options) != AWS_OP_SUCCESS) {
+        aws_atomic_store_int(&s_logger_init, 0); /* rollback on failure */
         return PyErr_AwsLastError();
     }
+    aws_logger_set(&s_logger);
 
     Py_RETURN_NONE;
 }
@@ -183,7 +183,7 @@ PyObject *aws_py_init_logging(PyObject *self, PyObject *args) {
 PyObject *aws_py_set_log_level(PyObject *self, PyObject *args) {
     (void)self;
 
-    if (!s_logger_init) {
+    if (!aws_atomic_load_int(&s_logger_init)) {
         aws_raise_error(AWS_ERROR_INVALID_STATE);
         return PyErr_AwsLastError();
     }
@@ -210,12 +210,15 @@ PyObject *aws_py_init_python_logging(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    if (s_logger_init) {
+    /* Atomically claim the init slot (0 → 1). Only one thread can win. */
+    size_t expected = 0;
+    if (!aws_atomic_compare_exchange_int(&s_logger_init, &expected, 1)) {
         aws_raise_error(AWS_ERROR_INVALID_STATE);
         return PyErr_AwsLastError();
     }
 
     if (!PyCallable_Check(py_callback)) {
+        aws_atomic_store_int(&s_logger_init, 0); /* rollback */
         PyErr_SetString(PyExc_TypeError, "callback must be callable");
         return NULL;
     }
@@ -233,7 +236,6 @@ PyObject *aws_py_init_python_logging(PyObject *self, PyObject *args) {
     s_logger.p_impl = impl;
 
     aws_logger_set(&s_logger);
-    s_logger_init = true;
 
     Py_RETURN_NONE;
 }
