@@ -55,6 +55,8 @@ static int s_py_logger_log(
 
     va_list args;
     va_start(args, format);
+    /* Calculate how much room we'll need to build the full log line.
+       You cannot consume a va_list twice, so we have to copy it. */
     va_list tmp;
     va_copy(tmp, args);
     int len = vsnprintf(NULL, 0, format, tmp);
@@ -65,10 +67,6 @@ static int s_py_logger_log(
     }
 
     char *buf = aws_mem_acquire(logger->allocator, (size_t)len + 1);
-    if (!buf) {
-        va_end(args);
-        return AWS_OP_ERR;
-    }
     vsnprintf(buf, (size_t)len + 1, format, args);
     va_end(args);
 
@@ -225,9 +223,6 @@ PyObject *aws_py_init_python_logging(PyObject *self, PyObject *args) {
     struct aws_allocator *allocator = aws_default_allocator();
 
     struct s_py_logger_impl *impl = aws_mem_calloc(allocator, 1, sizeof(struct s_py_logger_impl));
-    if (!impl) {
-        return PyErr_AwsLastError();
-    }
 
     Py_INCREF(py_callback);
     impl->callback = py_callback;

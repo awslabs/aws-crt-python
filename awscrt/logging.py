@@ -168,6 +168,9 @@ def init_logging(level: int = logging.DEBUG):
 def set_log_level(level: int):
     """Change the CRT log level. :func:`init_logging` must have been called first.
 
+    Set log level to logging.NOTSET to disable the logger. Cleaning up the logger
+    is dangerous in a multi-threaded environment.
+
     Args:
         level (int): Python logging level (e.g. ``logging.DEBUG``,
             ``logging.WARNING``).
