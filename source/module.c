@@ -77,7 +77,6 @@ static int s_py_logger_log(
 
     struct aws_string *thread_name_str = NULL;
     aws_thread_current_name(logger->allocator, &thread_name_str);
-    const char *thread_name = thread_name_str ? aws_string_c_str(thread_name_str) : "main";
 
     PyGILState_STATE state;
     if (aws_py_gilstate_ensure(&state)) {
@@ -87,7 +86,7 @@ static int s_py_logger_log(
     }
 
     PyObject *result = PyObject_CallFunction(
-        impl->callback, "(is#iss)", (int)log_level, buf, (Py_ssize_t)len, (int)subject, subject_name, thread_name);
+        impl->callback, "(is#iss)", (int)log_level, buf, (Py_ssize_t)len, (int)subject, subject_name, aws_string_c_str(thread_name_str));
     Py_XDECREF(result);
     if (PyErr_Occurred()) {
         PyErr_WriteUnraisable(PyErr_Occurred());

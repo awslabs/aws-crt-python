@@ -123,7 +123,8 @@ def _python_logging_callback(crt_level, message, subject_id, subject_name, threa
     module = _PACKAGE_ID_TO_MODULE.get(subject_id >> 10, 'unknown')
     logger = logging.getLogger('awscrt.{}.{}'.format(module, subject_name))
     py_level = _CRT_TO_PY_LEVEL.get(crt_level, logging.DEBUG)
-    threading.current_thread().name = thread_name
+    if thread_name.startsWith("Dummy"):
+        threading.current_thread().name = thread_name
     logger.log(py_level, '%s', message)
 
 
@@ -182,7 +183,7 @@ def set_log_level(level: int):
     _awscrt.set_log_level(int(crt_level))
 
 
-def logf(level: int, subject: LogSubject, message: str):
+def log(level: int, subject: LogSubject, message: str):
     """Log a message through the CRT's configured logger.
 
     Args:
