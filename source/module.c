@@ -85,8 +85,14 @@ static int s_py_logger_log(
         return AWS_OP_ERR;
     }
 
-    PyObject *py_thread_name =
-        thread_name_str ? PyUnicode_FromString(aws_string_c_str(thread_name_str)) : Py_NewRef(Py_None);
+    PyObject *py_thread_name;
+
+    if (thread_name_str) {
+        py_thread_name = PyUnicode_FromAwsString(aws_string_c_str(thread_name_str));
+    else {
+        py_thread_name = Py_None;
+        Py_INCREF(py_thread_name);
+    }
 
     PyObject *result = PyObject_CallFunction(
         impl->callback, "(is#isO)", (int)log_level, buf, (Py_ssize_t)len, (int)subject, subject_name, py_thread_name);
