@@ -85,6 +85,10 @@ static int s_py_logger_log(
         return AWS_OP_ERR;
     }
 
+    PyObject *py_thread_name = thread_name_str ?
+        PyUnicode_FromString(aws_string_c_str(thread_name_str))
+        : Py_NewRef(Py_None);
+
     PyObject *result = PyObject_CallFunction(
         impl->callback,
         "(is#iss)",
@@ -93,7 +97,7 @@ static int s_py_logger_log(
         (Py_ssize_t)len,
         (int)subject,
         subject_name,
-        thread_name_str ? aws_string_c_str(thread_name_str) : Py_None);
+        py_thread_name);
     Py_XDECREF(result);
     if (PyErr_Occurred()) {
         PyErr_WriteUnraisable(PyErr_Occurred());
