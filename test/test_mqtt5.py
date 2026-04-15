@@ -216,7 +216,8 @@ class Mqtt5ClientTest(NativeResourceTest):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
 
         client_options = mqtt5.ClientOptions(
-            host_name=input_host_name
+            host_name=input_host_name,
+            enable_metrics=False
         )
         callbacks = Mqtt5TestCallbacks()
         client = self._create_client(client_options=client_options, callbacks=callbacks)
@@ -242,7 +243,8 @@ class Mqtt5ClientTest(NativeResourceTest):
         client_options = mqtt5.ClientOptions(
             host_name=input_host_name,
             port=input_port,
-            connect_options=connect_options
+            connect_options=connect_options,
+            enable_metrics=False
         )
         callbacks = Mqtt5TestCallbacks()
         client = self._create_client(client_options=client_options, callbacks=callbacks)
@@ -428,7 +430,8 @@ class Mqtt5ClientTest(NativeResourceTest):
         client_options = mqtt5.ClientOptions(
             host_name=input_host_name,
             port=input_port,
-            connect_options=connect_options
+            connect_options=connect_options,
+            enable_metrics=False
         )
         callbacks = Mqtt5TestCallbacks()
         client_options.websocket_handshake_transform = callbacks.ws_handshake_transform
@@ -1575,6 +1578,352 @@ class Mqtt5ClientTest(NativeResourceTest):
         test_retry_wrapper(self._test_qos1_happy_path)
 
     # ==============================================================
+    #             MANUAL PUBLISH ACKNOWLEDGEMENT TEST CASES
+    # ==============================================================
+
+    # Manual publish acknowledgement hold test: hold publish acknowledgement and verify broker re-delivers the message
+    def _test_manual_publish_acknowledgement_hold(self):
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
+        input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
+        input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
+
+        client_id = create_client_id()
+        topic_filter = "test/MQTT5_ManualPuback_Python_" + client_id
+        payload = str(uuid.uuid4())
+        payload_bytes = payload.encode("utf-8")
+
+        PUBACK_HOLD_TIMEOUT = 60.0
+
+        future_first_delivery = Future()
+        future_redelivery = Future()
+        puback_handle_holder = [None]  # mutable container so the closure can write to it
+
+        def on_publish_received(publish_received_data: mqtt5.PublishReceivedData):
+            received_payload = publish_received_data.publish_packet.payload
+            if not future_first_delivery.done():
+                # First delivery: acquire manual publish acknowledgement control to hold the publish acknowledgement
+                puback_handle_holder[0] = publish_received_data.acquire_publish_acknowledgement_control()
+                future_first_delivery.set_result(received_payload)
+            elif not future_redelivery.done():
+                # Second delivery: broker re-sent because no publish acknowledgement was received
+                future_redelivery.set_result(received_payload)
+
+        tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(
+            input_cert,
+            input_key
+        )
+        client_options = mqtt5.ClientOptions(
+            host_name=input_host_name,
+            port=8883
+        )
+        client_options.connect_options = mqtt5.ConnectPacket(client_id=client_id)
+        client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
+
+        callbacks = Mqtt5TestCallbacks()
+        callbacks.on_publish_received = on_publish_received
+
+        client = self._create_client(client_options=client_options, callbacks=callbacks)
+        client.start()
+        callbacks.future_connection_success.result(TIMEOUT)
+
+        # Subscribe to the topic with QoS 1
+        subscriptions = [mqtt5.Subscription(topic_filter=topic_filter, qos=mqtt5.QoS.AT_LEAST_ONCE)]
+        subscribe_packet = mqtt5.SubscribePacket(subscriptions=subscriptions)
+        subscribe_future = client.subscribe(subscribe_packet=subscribe_packet)
+        suback_packet = subscribe_future.result(TIMEOUT)
+        self.assertIsInstance(suback_packet, mqtt5.SubackPacket)
+
+        # Publish a QoS 1 message with a unique UUID payload
+        publish_packet = mqtt5.PublishPacket(
+            payload=payload,
+            topic=topic_filter,
+            qos=mqtt5.QoS.AT_LEAST_ONCE)
+        publish_future = client.publish(publish_packet=publish_packet)
+        publish_completion_data = publish_future.result(TIMEOUT)
+        self.assertIsInstance(publish_completion_data.puback, mqtt5.PubackPacket)
+
+        # Wait for the first delivery and confirm publish acknowledgement was held
+        first_payload = future_first_delivery.result(TIMEOUT)
+        self.assertEqual(first_payload, payload_bytes)
+        self.assertIsNotNone(
+            puback_handle_holder[0],
+            "acquire_publish_acknowledgement_control() should have returned a handle")
+
+        # Wait up to 60 seconds for the broker to re-deliver the message (no publish acknowledgement was sent)
+        redelivered_payload = future_redelivery.result(PUBACK_HOLD_TIMEOUT)
+        self.assertEqual(redelivered_payload, payload_bytes,
+                         "Re-delivered payload should match the original UUID payload")
+
+        # Release the held publish acknowledgement now that we've confirmed re-delivery
+        client.invoke_publish_acknowledgement(puback_handle_holder[0])
+
+        client.stop()
+        callbacks.future_stopped.result(TIMEOUT)
+
+    def test_manual_publish_acknowledgement_hold(self):
+        test_retry_wrapper(self._test_manual_publish_acknowledgement_hold)
+
+    # Manual publish acknowledgement invoke test: acquire and immediately
+    # invoke publish acknowledgement, verify no re-delivery
+    def _test_manual_publish_acknowledgement_invoke(self):
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
+        input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
+        input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
+
+        client_id = create_client_id()
+        topic_filter = "test/MQTT5_ManualPuback_Python_" + client_id
+        payload = str(uuid.uuid4())
+        payload_bytes = payload.encode("utf-8")
+
+        NO_REDELIVERY_WAIT = 60.0
+
+        future_first_delivery = Future()
+        future_unexpected_redelivery = Future()
+        puback_handle_holder = [None]  # mutable container so the closure can write to it
+
+        def on_publish_received(publish_received_data: mqtt5.PublishReceivedData):
+            received_payload = publish_received_data.publish_packet.payload
+            if not future_first_delivery.done():
+                # First delivery: acquire manual publish acknowledgement control, then immediately invoke it
+                puback_handle_holder[0] = publish_received_data.acquire_publish_acknowledgement_control()
+                future_first_delivery.set_result(received_payload)
+            elif received_payload == payload_bytes and not future_unexpected_redelivery.done():
+                # A second delivery of the same payload means the broker re-sent, this should NOT happen
+                future_unexpected_redelivery.set_result(received_payload)
+
+        tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(
+            input_cert,
+            input_key
+        )
+        client_options = mqtt5.ClientOptions(
+            host_name=input_host_name,
+            port=8883
+        )
+        client_options.connect_options = mqtt5.ConnectPacket(client_id=client_id)
+        client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
+
+        callbacks = Mqtt5TestCallbacks()
+        callbacks.on_publish_received = on_publish_received
+
+        client = self._create_client(client_options=client_options, callbacks=callbacks)
+        client.start()
+        callbacks.future_connection_success.result(TIMEOUT)
+
+        # Subscribe to the topic with QoS 1
+        subscriptions = [mqtt5.Subscription(topic_filter=topic_filter, qos=mqtt5.QoS.AT_LEAST_ONCE)]
+        subscribe_packet = mqtt5.SubscribePacket(subscriptions=subscriptions)
+        subscribe_future = client.subscribe(subscribe_packet=subscribe_packet)
+        suback_packet = subscribe_future.result(TIMEOUT)
+        self.assertIsInstance(suback_packet, mqtt5.SubackPacket)
+
+        # Publish a QoS 1 message with a unique UUID payload
+        publish_packet = mqtt5.PublishPacket(
+            payload=payload,
+            topic=topic_filter,
+            qos=mqtt5.QoS.AT_LEAST_ONCE)
+        publish_future = client.publish(publish_packet=publish_packet)
+        publish_completion_data = publish_future.result(TIMEOUT)
+        self.assertIsInstance(publish_completion_data.puback, mqtt5.PubackPacket)
+
+        # Wait for the first delivery and confirm publish acknowledgement handle was acquired
+        first_payload = future_first_delivery.result(TIMEOUT)
+        self.assertEqual(first_payload, payload_bytes)
+        self.assertIsNotNone(puback_handle_holder[0],
+                             "acquire_publish_acknowledgement_control() should have returned a handle")
+
+        # Immediately invoke the publish acknowledgement using the acquired handle
+        client.invoke_publish_acknowledgement(puback_handle_holder[0])
+
+        # Wait 60 seconds and confirm the broker does NOT re-deliver the message
+        # (because we sent the publish acknowledgement via invoke_publish_acknowledgement)
+        redelivered = future_unexpected_redelivery.done() or \
+            (not future_unexpected_redelivery.done() and
+             self._wait_for_future_timeout(future_unexpected_redelivery, NO_REDELIVERY_WAIT))
+        self.assertFalse(redelivered,
+                         "Broker should NOT re-deliver the message after invoke_publish_acknowledgement() was called")
+
+        client.stop()
+        callbacks.future_stopped.result(TIMEOUT)
+
+    def _wait_for_future_timeout(self, future, timeout_sec):
+        """Returns True if the future completed within timeout_sec, False if it timed out."""
+        try:
+            future.result(timeout_sec)
+            return True
+        except Exception:
+            return False
+
+    def test_manual_publish_acknowledgement_invoke(self):
+        test_retry_wrapper(self._test_manual_publish_acknowledgement_invoke)
+
+    # Manual publish acknowledgement double-call test: calling
+    # acquire_publish_acknowledgement_control() twice raises RuntimeError
+    def _test_manual_publish_acknowledgement_acquire_double_call_raises(self):
+        """Verify that calling acquire_publish_acknowledgement_control() twice on the same QoS 1 PUBLISH raises RuntimeError."""
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
+        input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
+        input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
+
+        client_id = create_client_id()
+        topic_filter = "test/MQTT5_Binding_Python_" + client_id
+        payload = str(uuid.uuid4())
+
+        future_result = Future()
+
+        def on_publish_received(publish_received_data: mqtt5.PublishReceivedData):
+            try:
+                # First call should succeed
+                handle = publish_received_data.acquire_publish_acknowledgement_control()
+                # Second call on the same message should raise RuntimeError
+                try:
+                    publish_received_data.acquire_publish_acknowledgement_control()
+                    future_result.set_result("no_error")  # Should not reach here
+                except RuntimeError:
+                    future_result.set_result("double_call_raised")
+                except Exception as e:
+                    future_result.set_result(f"unexpected_error: {e}")
+                # Release the handle we acquired
+                # (handle is valid, invoke it to clean up)
+            except Exception as e:
+                future_result.set_result(f"first_call_failed: {e}")
+
+        tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(input_cert, input_key)
+        client_options = mqtt5.ClientOptions(host_name=input_host_name, port=8883)
+        client_options.connect_options = mqtt5.ConnectPacket(client_id=client_id)
+        client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
+
+        callbacks = Mqtt5TestCallbacks()
+        callbacks.on_publish_received = on_publish_received
+
+        client = self._create_client(client_options=client_options, callbacks=callbacks)
+        client.start()
+        callbacks.future_connection_success.result(TIMEOUT)
+
+        subscriptions = [mqtt5.Subscription(topic_filter=topic_filter, qos=mqtt5.QoS.AT_LEAST_ONCE)]
+        subscribe_future = client.subscribe(mqtt5.SubscribePacket(subscriptions=subscriptions))
+        subscribe_future.result(TIMEOUT)
+
+        publish_future = client.publish(mqtt5.PublishPacket(
+            payload=payload, topic=topic_filter, qos=mqtt5.QoS.AT_LEAST_ONCE))
+        publish_future.result(TIMEOUT)
+
+        result = future_result.result(TIMEOUT)
+        self.assertEqual(result, "double_call_raised",
+                         f"Expected RuntimeError on double-call, got: {result}")
+
+        client.stop()
+        callbacks.future_stopped.result(TIMEOUT)
+
+    def test_manual_publish_acknowledgement_acquire_double_call_raises(self):
+        test_retry_wrapper(self._test_manual_publish_acknowledgement_acquire_double_call_raises)
+
+    # Manual publish acknowledgement post-callback test: calling
+    # acquire_publish_acknowledgement_control() after callback returns raises
+    # RuntimeError
+    def _test_manual_publish_acknowledgement_acquire_post_callback_raises(self):
+        """Verify that calling acquire_publish_acknowledgement_control() after the callback has returned raises RuntimeError."""
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
+        input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
+        input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
+
+        client_id = create_client_id()
+        topic_filter = "test/MQTT5_Binding_Python_" + client_id
+        payload = str(uuid.uuid4())
+
+        future_callback_done = Future()
+        saved_acquire_fn_holder = [None]
+
+        def on_publish_received(publish_received_data: mqtt5.PublishReceivedData):
+            # Save the callable but do NOT call it within the callback
+            saved_acquire_fn_holder[0] = publish_received_data.acquire_publish_acknowledgement_control
+            future_callback_done.set_result(True)
+
+        tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(input_cert, input_key)
+        client_options = mqtt5.ClientOptions(host_name=input_host_name, port=8883)
+        client_options.connect_options = mqtt5.ConnectPacket(client_id=client_id)
+        client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
+
+        callbacks = Mqtt5TestCallbacks()
+        callbacks.on_publish_received = on_publish_received
+
+        client = self._create_client(client_options=client_options, callbacks=callbacks)
+        client.start()
+        callbacks.future_connection_success.result(TIMEOUT)
+
+        subscriptions = [mqtt5.Subscription(topic_filter=topic_filter, qos=mqtt5.QoS.AT_LEAST_ONCE)]
+        subscribe_future = client.subscribe(mqtt5.SubscribePacket(subscriptions=subscriptions))
+        subscribe_future.result(TIMEOUT)
+
+        publish_future = client.publish(mqtt5.PublishPacket(
+            payload=payload, topic=topic_filter, qos=mqtt5.QoS.AT_LEAST_ONCE))
+        publish_future.result(TIMEOUT)
+
+        # Wait for the callback to complete
+        future_callback_done.result(TIMEOUT)
+
+        # Now call acquire_publish_acknowledgement_control() after the callback
+        # has returned, this should raise RuntimeError
+        acquire_fn = saved_acquire_fn_holder[0]
+        self.assertIsNotNone(acquire_fn, "acquire_publish_acknowledgement_control should have been saved")
+        with self.assertRaises(RuntimeError):
+            acquire_fn()
+
+        client.stop()
+        callbacks.future_stopped.result(TIMEOUT)
+
+    def test_manual_publish_acknowledgement_acquire_post_callback_raises(self):
+        test_retry_wrapper(self._test_manual_publish_acknowledgement_acquire_post_callback_raises)
+
+    # Manual publish acknowledgement QoS 0 test: acquire_publish_acknowledgement_control is None for QoS 0 messages
+    def _test_manual_publish_acknowledgement_qos0_acquire_is_none(self):
+        """Verify that acquire_publish_acknowledgement_control is None for QoS 0 messages."""
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
+        input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
+        input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
+
+        client_id = create_client_id()
+        topic_filter = "test/MQTT5_Binding_Python_" + client_id
+        payload = str(uuid.uuid4())
+
+        future_acquire_value = Future()
+
+        def on_publish_received(publish_received_data: mqtt5.PublishReceivedData):
+            # For QoS 0, acquire_publish_acknowledgement_control should be None
+            future_acquire_value.set_result(publish_received_data.acquire_publish_acknowledgement_control)
+
+        tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(input_cert, input_key)
+        client_options = mqtt5.ClientOptions(host_name=input_host_name, port=8883)
+        client_options.connect_options = mqtt5.ConnectPacket(client_id=client_id)
+        client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
+
+        callbacks = Mqtt5TestCallbacks()
+        callbacks.on_publish_received = on_publish_received
+
+        client = self._create_client(client_options=client_options, callbacks=callbacks)
+        client.start()
+        callbacks.future_connection_success.result(TIMEOUT)
+
+        # Subscribe with QoS 1 so the broker delivers at QoS 0 (publish at QoS 0)
+        subscriptions = [mqtt5.Subscription(topic_filter=topic_filter, qos=mqtt5.QoS.AT_LEAST_ONCE)]
+        subscribe_future = client.subscribe(mqtt5.SubscribePacket(subscriptions=subscriptions))
+        subscribe_future.result(TIMEOUT)
+
+        # Publish at QoS 0, there's no PUBACK involved
+        publish_future = client.publish(mqtt5.PublishPacket(
+            payload=payload, topic=topic_filter, qos=mqtt5.QoS.AT_MOST_ONCE))
+        publish_future.result(TIMEOUT)
+
+        acquire_value = future_acquire_value.result(TIMEOUT)
+        self.assertIsNone(acquire_value,
+                          "acquire_publish_acknowledgement_control should be None for QoS 0 messages")
+
+        client.stop()
+        callbacks.future_stopped.result(TIMEOUT)
+
+    def test_manual_publish_acknowledgement_qos0_acquire_is_none(self):
+        test_retry_wrapper(self._test_manual_publish_acknowledgement_qos0_acquire_is_none)
+
+    # ==============================================================
     #             RETAIN TEST CASES
     # ==============================================================
 
@@ -1842,6 +2191,47 @@ class Mqtt5ClientTest(NativeResourceTest):
 
     def test_operation_statistics_uc1(self):
         test_retry_wrapper(self._test_operation_statistics_uc1)
+
+    # ==============================================================
+    #             METRICS TEST CASES
+    # ==============================================================
+
+    def _test_direct_connect_basic_auth_metrics_enabled(self):
+        """Test that connection fails with basic auth when metrics are enabled.
+
+        When metrics are enabled, the SDK appends metrics information to the username field,
+        which corrupts the basic authentication and causes the connection to fail.
+        """
+        input_username = _get_env_variable("AWS_TEST_MQTT5_BASIC_AUTH_USERNAME")
+        input_password = _get_env_variable("AWS_TEST_MQTT5_BASIC_AUTH_PASSWORD")
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_BASIC_AUTH_HOST")
+        input_port = int(_get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_BASIC_AUTH_PORT"))
+
+        connect_options = mqtt5.ConnectPacket(
+            client_id=create_client_id(),
+            username=input_username,
+            password=input_password
+        )
+        client_options = mqtt5.ClientOptions(
+            host_name=input_host_name,
+            port=input_port,
+            connect_options=connect_options,
+            enable_metrics=True
+        )
+        callbacks = Mqtt5TestCallbacks()
+        client = self._create_client(client_options=client_options, callbacks=callbacks)
+
+        # Verify metrics are enabled
+        self.assertTrue(client_options.enable_metrics)
+
+        client.start()
+        # Connection should fail because metrics corrupts the username for basic auth
+        callbacks.future_connection_failure.result(TIMEOUT)
+        client.stop()
+        callbacks.future_stopped.result(TIMEOUT)
+
+    def test_direct_connect_basic_auth_metrics_enabled(self):
+        test_retry_wrapper(self._test_direct_connect_basic_auth_metrics_enabled)
 
 
 if __name__ == 'main':

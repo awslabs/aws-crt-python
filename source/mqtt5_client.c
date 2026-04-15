@@ -234,9 +234,25 @@ static void s_on_publish_received(const struct aws_mqtt5_packet_publish_view *pu
     PyObject *result = NULL;
     PyObject *subscription_identifier_list = NULL;
     PyObject *user_properties_list = NULL;
+    PyObject *puback_control_id_py = NULL;
 
     size_t subscription_identifier_count = publish_packet->subscription_identifier_count;
     size_t user_property_count = publish_packet->user_property_count;
+
+    /* For QoS 1 messages, take manual control of the publish acknowledgement immediately.
+     * This gives us a pub_ack_control_id that we pass to Python as an opaque integer.
+     * Python's _on_publish will return True if the user called acquire_publish_acknowledgement_control(),
+     * in which case the user is responsible for calling invoke_publish_acknowledgement() later.
+     * If _on_publish returns False/None, we auto-invoke the publish acknowledgement here. */
+    uint64_t puback_control_id = 0;
+    if (publish_packet->qos == AWS_MQTT5_QOS_AT_LEAST_ONCE) {
+        puback_control_id = aws_mqtt5_client_acquire_publish_acknowledgement(client->native, publish_packet);
+        puback_control_id_py = PyLong_FromUnsignedLongLong((unsigned long long)puback_control_id);
+        if (!puback_control_id_py) {
+            PyErr_WriteUnraisable(PyErr_Occurred());
+            goto cleanup;
+        }
+    }
 
     /* Create list of uint32_t subscription identifier tuples */
     subscription_identifier_list = PyList_New(subscription_identifier_count);
@@ -261,7 +277,7 @@ static void s_on_publish_received(const struct aws_mqtt5_packet_publish_view *pu
     result = PyObject_CallMethod(
         client->client_core,
         "_on_publish",
-        "(y#iOs#OiOIOHs#y#Os#O)",
+        "(y#iOs#OiOIOHs#y#Os#OK)",
         /* y */ publish_packet->payload.ptr,
         /* # */ publish_packet->payload.len,
         /* i */ (int)publish_packet->qos,
@@ -284,15 +300,29 @@ static void s_on_publish_received(const struct aws_mqtt5_packet_publish_view *pu
         /* O */ subscription_identifier_count > 0 ? subscription_identifier_list : Py_None,
         /* s */ publish_packet->content_type ? publish_packet->content_type->ptr : NULL,
         /* # */ publish_packet->content_type ? publish_packet->content_type->len : 0,
-        /* O */ user_property_count > 0 ? user_properties_list : Py_None);
+        /* O */ user_property_count > 0 ? user_properties_list : Py_None,
+        /* K */ (unsigned long long)puback_control_id);
+
     if (!result) {
         PyErr_WriteUnraisable(PyErr_Occurred());
+        /* On error, auto-invoke the publish acknowledgement so it is not lost */
+        if (puback_control_id != 0) {
+            aws_mqtt5_client_invoke_publish_acknowledgement(client->native, puback_control_id, NULL);
+        }
+        goto cleanup;
+    }
+
+    /* If _on_publish returned False/None, the user did not take control of the publish acknowledgement.
+     * Auto-invoke it now. */
+    if (puback_control_id != 0 && !PyObject_IsTrue(result)) {
+        aws_mqtt5_client_invoke_publish_acknowledgement(client->native, puback_control_id, NULL);
     }
 
 cleanup:
     Py_XDECREF(result);
     Py_XDECREF(subscription_identifier_list);
     Py_XDECREF(user_properties_list);
+    Py_XDECREF(puback_control_id_py);
     PyGILState_Release(state);
 }
 
@@ -859,10 +889,13 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
     /* Callbacks */
     PyObject *is_websocket_none_py;
     PyObject *client_core_py;
+    /* Metrics */
+    PyObject *is_metrics_enabled_py;             /* optional enable metrics */
+    struct aws_byte_cursor metrics_library_name; /* optional IoT SDK metrics username */
 
     if (!PyArg_ParseTuple(
             args,
-            "Os#IOOOOz#Oz#z#OOOOOOOOOz*Oz#OOOz#z*z#OOOOOOOOOOOOOO",
+            "Os#IOOOOz#Oz#z#OOOOOOOOOz*Oz#OOOz#z*z#OOOOOOOOOOOOOOz#O",
             /* O */ &self_py,
             /* s */ &host_name.ptr,
             /* # */ &host_name.len,
@@ -917,6 +950,12 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
             /* O */ &topic_aliasing_options_py,
 
             /* O */ &is_websocket_none_py,
+
+            /* Metrics */
+            /* O */ &is_metrics_enabled_py,
+            /* z */ &metrics_library_name.ptr,
+            /* # */ &metrics_library_name.len,
+
             /* O */ &client_core_py)) {
         return NULL;
     }
@@ -1277,6 +1316,14 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
         will.user_properties = will_user_properties_tmp;
 
         connect_options.will = &will;
+    }
+
+    /* METRICS */
+    struct aws_mqtt_iot_metrics metrics_tmp;
+    AWS_ZERO_STRUCT(metrics_tmp);
+    if (PyObject_IsTrue(is_metrics_enabled_py)) {
+        metrics_tmp.library_name = metrics_library_name;
+        client_options.metrics = &metrics_tmp;
     }
 
     /* CALLBACKS */
@@ -1677,6 +1724,41 @@ done:
     }
     PyBuffer_Release(&payload_stack);
     PyBuffer_Release(&correlation_data_stack);
+    if (success) {
+        Py_RETURN_NONE;
+    }
+    return NULL;
+}
+
+/*******************************************************************************
+ * Invoke Publish Acknowledgement
+ ******************************************************************************/
+
+PyObject *aws_py_mqtt5_client_invoke_publish_acknowledgement(PyObject *self, PyObject *args) {
+    (void)self;
+    bool success = true;
+
+    PyObject *impl_capsule;
+    unsigned long long control_id_ull = 0;
+
+    if (!PyArg_ParseTuple(
+            args,
+            "OK",
+            /* O */ &impl_capsule,
+            /* K */ &control_id_ull)) {
+        return NULL;
+    }
+
+    struct mqtt5_client_binding *client = PyCapsule_GetPointer(impl_capsule, s_capsule_name_mqtt5_client);
+    if (!client) {
+        return NULL;
+    }
+
+    if (aws_mqtt5_client_invoke_publish_acknowledgement(client->native, (uint64_t)control_id_ull, NULL)) {
+        PyErr_SetAwsLastError();
+        success = false;
+    }
+
     if (success) {
         Py_RETURN_NONE;
     }
