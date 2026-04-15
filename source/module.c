@@ -100,7 +100,7 @@ static int s_py_logger_log(
         PyGILState_Release(state);
         aws_string_destroy(thread_name_str);
         aws_mem_release(logger->allocator, buf);
-        return aws_py_raise_error(AWS_ERROR_CRT_CALLBACK_EXCEPTION);
+        return aws_py_raise_error();
     }
 
     PyGILState_Release(state);
