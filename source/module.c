@@ -97,6 +97,10 @@ static int s_py_logger_log(
     Py_XDECREF(result);
     if (PyErr_Occurred()) {
         PyErr_WriteUnraisable(PyErr_Occurred());
+        PyGILState_Release(state);
+        aws_string_destroy(thread_name_str);
+        aws_mem_release(logger->allocator, buf);
+        return aws_py_raise_error(AWS_ERROR_CRT_CALLBACK_EXCEPTION);
     }
 
     PyGILState_Release(state);

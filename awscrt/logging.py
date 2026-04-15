@@ -123,7 +123,14 @@ def _python_logging_callback(crt_level, message, subject_id, subject_name, threa
     module = _PACKAGE_ID_TO_MODULE.get(subject_id >> 10, 'unknown')
     logger = logging.getLogger('awscrt.{}.{}'.format(module, subject_name))
     py_level = _CRT_TO_PY_LEVEL.get(crt_level, logging.DEBUG)
-    if thread_name.startsWith("Dummy"):
+    # `There is the possibility that “dummy thread objects” are created. These are
+    # thread objects corresponding to “alien threads”, which are threads of control
+    # started outside the threading module, such as directly from C code.`
+    # https://docs.python.org/3/library/threading.html#thread-objects
+    #
+    # As per current conventions, dummy thread objects have thread names
+    # starting with "Dummy". Eg. Dummy-1, Dummy-8
+    if threading.current_thread().name.startsWith("Dummy") and thread_name is not None:
         threading.current_thread().name = thread_name
     logger.log(py_level, '%s', message)
 
