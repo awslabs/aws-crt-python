@@ -130,7 +130,7 @@ def _python_logging_callback(crt_level, message, subject_id, subject_name, threa
     #
     # As per current conventions, dummy thread objects have thread names
     # starting with "Dummy". Eg. Dummy-1, Dummy-8
-    if threading.current_thread().name.startsWith("Dummy") and thread_name is not None:
+    if threading.current_thread().name.startswith("Dummy") and thread_name is not None:
         threading.current_thread().name = thread_name
     logger.log(py_level, '%s', message)
 

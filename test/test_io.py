@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0.
 
 from awscrt.io import *
-from awscrt.logging import init_logging, set_log_level, logf, LogSubject
+from awscrt.logging import init_logging, set_log_level, log, LogSubject
 from test import NativeResourceTest, TIMEOUT
 import io
 import logging
@@ -255,7 +255,7 @@ class PythonLoggingTest(NativeResourceTest):
     def setUpClass(cls):
         init_logging(logging.DEBUG)
 
-    def test_logf_level_and_message(self):
+    def test_log_level_and_message(self):
         handler = logging.Handler()
         handler.records = []
         handler.emit = lambda record: handler.records.append(record)
@@ -265,7 +265,7 @@ class PythonLoggingTest(NativeResourceTest):
         logger.addHandler(handler)
 
         try:
-            logf(logging.INFO, LogSubject.COMMON_GENERAL, "test message")
+            log(logging.INFO, LogSubject.COMMON_GENERAL, "test message")
 
             self.assertEqual(len(handler.records), 1)
             self.assertEqual(handler.records[0].levelno, logging.INFO)
@@ -273,7 +273,7 @@ class PythonLoggingTest(NativeResourceTest):
         finally:
             logger.removeHandler(handler)
 
-    def test_logf_subject(self):
+    def test_log_subject(self):
         handler = logging.Handler()
         handler.records = []
         handler.emit = lambda record: handler.records.append(record)
@@ -283,7 +283,7 @@ class PythonLoggingTest(NativeResourceTest):
         logger.addHandler(handler)
 
         try:
-            logf(logging.DEBUG, LogSubject.IO_EVENT_LOOP, "event loop test")
+            log(logging.DEBUG, LogSubject.IO_EVENT_LOOP, "event loop test")
 
             self.assertEqual(len(handler.records), 1)
             self.assertEqual(handler.records[0].name, "awscrt.io.event-loop")
@@ -291,7 +291,7 @@ class PythonLoggingTest(NativeResourceTest):
         finally:
             logger.removeHandler(handler)
 
-    def test_logf_subject_hierarchy(self):
+    def test_log_subject_hierarchy(self):
         """Verify that log subjects from different CRT packages produce correct hierarchical logger names."""
         cases = [
             (LogSubject.COMMON_GENERAL, "awscrt.common."),
@@ -316,7 +316,7 @@ class PythonLoggingTest(NativeResourceTest):
         try:
             for subject, expected_prefix in cases:
                 handler.records.clear()
-                logf(logging.DEBUG, subject, "test")
+                log(logging.DEBUG, subject, "test")
                 self.assertEqual(len(handler.records), 1)
                 self.assertTrue(
                     handler.records[0].name.startswith(expected_prefix),
@@ -341,7 +341,7 @@ class PythonLoggingTest(NativeResourceTest):
         try:
             # This triggers the C callback -> Python callback -> handler.emit -> raise
             # Should not crash or leave the process in a bad state
-            logf(logging.INFO, LogSubject.COMMON_GENERAL, "this should not crash")
+            log(logging.INFO, LogSubject.COMMON_GENERAL, "this should not crash")
         finally:
             logger.removeHandler(broken)
 
@@ -351,7 +351,7 @@ class PythonLoggingTest(NativeResourceTest):
         good.emit = lambda record: good.records.append(record)
         logger.addHandler(good)
         try:
-            logf(logging.INFO, LogSubject.COMMON_GENERAL, "after error")
+            log(logging.INFO, LogSubject.COMMON_GENERAL, "after error")
             self.assertEqual(len(good.records), 1)
             self.assertIn("after error", good.records[0].getMessage())
         finally:
@@ -364,8 +364,8 @@ class PythonLoggingTest(NativeResourceTest):
                         LogSubject.S3_GENERAL, LogSubject.AUTH_GENERAL,
                         LogSubject.CAL_GENERAL, LogSubject.SDKUTILS_GENERAL,
                         LogSubject.COMMON_GENERAL):
-            logf(logging.INFO, subject, f"{subject.name} info")
-            logf(logging.DEBUG, subject, f"{subject.name} debug")
+            log(logging.INFO, subject, f"{subject.name} info")
+            log(logging.DEBUG, subject, f"{subject.name} debug")
 
     def test_logging_filters(self):
         """Verify level and subject filtering across different logger configurations."""
