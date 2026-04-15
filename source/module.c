@@ -88,11 +88,13 @@ static int s_py_logger_log(
     PyObject *py_thread_name;
 
     if (thread_name_str) {
-        py_thread_name = PyUnicode_FromAwsString(aws_string_c_str(thread_name_str));
-    else {
+        py_thread_name = PyUnicode_FromAwsString(thread_name_str);
+    } else {
         py_thread_name = Py_None;
         Py_INCREF(py_thread_name);
     }
+
+    aws_string_destroy(thread_name_str);
 
     PyObject *result = PyObject_CallFunction(
         impl->callback, "(is#isO)", (int)log_level, buf, (Py_ssize_t)len, (int)subject, subject_name, py_thread_name);
@@ -101,13 +103,11 @@ static int s_py_logger_log(
     if (PyErr_Occurred()) {
         PyErr_WriteUnraisable(PyErr_Occurred());
         PyGILState_Release(state);
-        aws_string_destroy(thread_name_str);
         aws_mem_release(logger->allocator, buf);
         return aws_py_raise_error();
     }
 
     PyGILState_Release(state);
-    aws_string_destroy(thread_name_str);
     aws_mem_release(logger->allocator, buf);
     return AWS_OP_SUCCESS;
 }
