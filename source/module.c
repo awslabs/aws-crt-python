@@ -181,7 +181,7 @@ PyObject *aws_py_init_logging(PyObject *self, PyObject *args) {
     size_t expected = 0;
     if (!aws_atomic_compare_exchange_int(&s_logger_init, &expected, 1)) {
         aws_raise_error(AWS_ERROR_INVALID_STATE);
-        return PyErr_AwsLastError();
+        return PyErr_Format(PyExc_RuntimeError, "Invalid state: logger cannot be initialized multiple times.");
     }
 
     if (aws_logger_init_standard(&s_logger, allocator, &log_options) != AWS_OP_SUCCESS) {
@@ -198,7 +198,7 @@ PyObject *aws_py_set_log_level(PyObject *self, PyObject *args) {
 
     if (!aws_atomic_load_int(&s_logger_init)) {
         aws_raise_error(AWS_ERROR_INVALID_STATE);
-        return PyErr_AwsLastError();
+        return PyErr_Format(PyExc_RuntimeError, "Invalid state: logger cannot be initialized multiple times.");
     }
 
     int log_level = 0;
