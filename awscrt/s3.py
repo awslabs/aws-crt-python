@@ -106,6 +106,18 @@ class S3ChecksumAlgorithm(IntEnum):
     CRC64NVME = 5
     """CRC64NVME"""
 
+    SHA512 = 6,
+    """SHA512"""
+
+    XXHASH64 = 7,
+    """XXHASH64"""
+
+    XXHASH3 = 8,
+    """XXHASH3"""
+
+    XXHASH128 = 9,
+    """XXHASH128"""
+
 
 class S3ChecksumLocation(IntEnum):
     """Where to put the checksum."""
