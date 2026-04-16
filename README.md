@@ -57,6 +57,50 @@ Please note that on Mac, once a private key is used with a certificate, that cer
 static: certificate has an existing certificate-key pair that was previously imported into the Keychain. Using key from Keychain instead of the one provided.
 ```
 
+## Logging
+
+aws-crt-python provides two ways to configure logging from the CRT's native C libraries.
+
+### Option 1: Python logging integration (recommended)
+
+Route CRT log messages through Python's standard `logging` module. Each CRT subsystem gets a hierarchical logger under `awscrt` (e.g. `awscrt.io.event-loop`, `awscrt.http.http-connection`, `awscrt.s3.S3Client`), so you can filter by package or subsystem.
+
+```python
+import logging
+from awscrt.logging import init_logging, CRT_LOG_FORMAT
+
+handler = logging.StreamHandler()
+handler.setFormatter(logging.Formatter(CRT_LOG_FORMAT))
+logging.getLogger('awscrt').addHandler(handler)
+init_logging(logging.DEBUG)
+```
+
+To filter to a specific CRT package:
+
+```python
+# Only show IO logs at DEBUG, silence everything else
+logging.getLogger('awscrt').setLevel(logging.WARNING)
+logging.getLogger('awscrt.io').setLevel(logging.DEBUG)
+```
+
+### Option 2: Direct file/stdout logging
+
+Write CRT log output directly to a file, stdout, or stderr. This bypasses Python's logging module and is useful for quick debugging.
+
+```python
+from awscrt.io import LogLevel, init_logging
+
+init_logging(LogLevel.Debug, 'stdout')   # or 'stderr', or a file path
+```
+
+### Which should I use?
+
+Use `awscrt.logging.init_logging` (Option 1) if you want CRT logs integrated with your application's existing Python logging setup, with per-subsystem filtering.
+
+Use `awscrt.io.init_logging` (Option 2) if you just want to dump all CRT logs to a file or console quickly.
+
+These are mutually exclusive — use one or the other, not both.
+
 ## Crash Handler
 
 You can enable the crash handler by setting the environment variable `AWS_CRT_CRASH_HANDLER=1` . This will print the callstack to `stderr` in the event of a fatal error.

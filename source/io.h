@@ -27,6 +27,7 @@ PyObject *aws_py_init_logging(PyObject *self, PyObject *args);
  * Change logging level of the global logger.
  */
 PyObject *aws_py_set_log_level(PyObject *self, PyObject *args);
+PyObject *aws_py_init_python_logging(PyObject *self, PyObject *args);
 
 /**
  * Returns True if ALPN is available, False if it is not.
