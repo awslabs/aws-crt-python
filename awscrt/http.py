@@ -281,7 +281,8 @@ class HttpClientConnection(HttpClientConnectionBase):
     def request(self,
                 request: 'HttpRequest',
                 on_response: Optional[Callable[..., None]] = None,
-                on_body: Optional[Callable[..., None]] = None) -> 'HttpClientStream':
+                on_body: Optional[Callable[..., None]] = None,
+                manual_write: bool = False) -> 'HttpClientStream':
         """Create :class:`HttpClientStream` to carry out the request/response exchange.
 
         NOTE: The HTTP stream sends no data until :meth:`HttpClientStream.activate()`
@@ -320,10 +321,14 @@ class HttpClientConnection(HttpClientConnectionBase):
                 An exception raise by this function will cause the HTTP stream to end in error.
                 This callback is always invoked on the connection's event-loop thread.
 
+            manual_write (bool): If True, enables manual data writing on the stream.
+                This allows calling :meth:`HttpClientStream.write_data()` to stream
+                the request body in chunks. Works for both HTTP/1.1 and HTTP/2.
+
         Returns:
             HttpClientStream:
         """
-        return HttpClientStream(self, request, on_response, on_body)
+        return HttpClientStream(self, request, on_response, on_body, manual_write)
 
     def close(self) -> "concurrent.futures.Future":
         """Close the connection.
@@ -586,6 +591,40 @@ class HttpClientStreamBase(HttpStreamBase):
         """
         _awscrt.http_stream_update_window(self, increment_size)
 
+    def write_data(self,
+                   data_stream: Union[InputStream, Any],
+                   end_stream: bool = False) -> "concurrent.futures.Future":
+        '''Write a chunk of data to the request body stream.
+
+        Works for both HTTP/1.1 and HTTP/2 streams.
+        The stream must have been created with ``manual_write=True``.
+        You must call :meth:`activate()` before using this method.
+
+        Args:
+            data_stream (InputStream): Data to write. If not an InputStream,
+                it will be wrapped in one. Can be None to write zero bytes.
+
+            end_stream (bool): True to indicate this is the last chunk and no more data
+                will be sent. False if more chunks will follow.
+
+        Returns:
+            concurrent.futures.Future: Future that completes when the write operation
+                is done. The future will contain None on success, or an exception on failure.
+        '''
+        future = Future()
+        body_stream = InputStream.wrap(data_stream, allow_none=True)
+
+        def on_write_complete(error_code: int) -> None:
+            if future.cancelled():
+                return
+            if error_code:
+                future.set_exception(awscrt.exceptions.from_code(error_code))
+            else:
+                future.set_result(None)
+
+        _awscrt.http_stream_write_data(self, body_stream, end_stream, on_write_complete)
+        return future
+
 
 class HttpClientStream(HttpClientStreamBase):
     """HTTP stream that sends a request and receives a response.
@@ -608,8 +647,9 @@ class HttpClientStream(HttpClientStreamBase):
                  connection: HttpClientConnection,
                  request: 'HttpRequest',
                  on_response: Optional[Callable[..., None]] = None,
-                 on_body: Optional[Callable[..., None]] = None) -> None:
-        self._init_common(connection, request, on_response, on_body)
+                 on_body: Optional[Callable[..., None]] = None,
+                 manual_write: bool = False) -> None:
+        self._init_common(connection, request, on_response, on_body, manual_write)
 
     def activate(self) -> None:
         """Begin sending the request.
@@ -683,16 +723,16 @@ class Http2ClientStream(HttpClientStreamBase):
     def write_data(self,
                    data_stream: Union[InputStream, Any],
                    end_stream: bool = False) -> "concurrent.futures.Future":
-        """Write a chunk of data to the request body stream.
+        '''Write a chunk of data to the request body stream.
 
         This method is only available when the stream was created with
         manual_write=True. This allows incremental writing of request data.
 
-        Note: In the asyncio version, this is replaced by the request_body_generator parameter
-        which accepts an async generator.
+        Note: This method is inherited from the base class and works for both
+        HTTP/1.1 and HTTP/2. It is kept here for backward compatibility.
 
         Args:
-            data_stream (Union[InputStream, Any]): Data to write. If not an InputStream,
+            data_stream (InputStream): Data to write. If not an InputStream,
                 it will be wrapped in one. Can be None to send an empty chunk.
 
             end_stream (bool): True to indicate this is the last chunk and no more data
@@ -701,21 +741,8 @@ class Http2ClientStream(HttpClientStreamBase):
         Returns:
             concurrent.futures.Future: Future that completes when the write operation
                 is done. The future will contain None on success, or an exception on failure.
-        """
-        future = Future()
-        body_stream = InputStream.wrap(data_stream, allow_none=True)
-
-        def on_write_complete(error_code: int) -> None:
-            if future.cancelled():
-                # the future was cancelled, so we don't need to set the result or exception
-                return
-            if error_code:
-                future.set_exception(awscrt.exceptions.from_code(error_code))
-            else:
-                future.set_result(None)
-
-        _awscrt.http2_client_stream_write_data(self, body_stream, end_stream, on_write_complete)
-        return future
+        '''
+        return super().write_data(data_stream, end_stream)
 
 
 class HttpMessageBase(NativeResource):
