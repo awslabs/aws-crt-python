@@ -594,11 +594,20 @@ class HttpClientStreamBase(HttpStreamBase):
     def write_data(self,
                    data_stream: Union[InputStream, Any],
                    end_stream: bool = False) -> "concurrent.futures.Future":
-        '''Write a chunk of data to the request body stream.
+        '''Write data to the request body.
 
         Works for both HTTP/1.1 and HTTP/2 streams.
         The stream must have been created with ``manual_write=True``.
         You must call :meth:`activate()` before using this method.
+
+        .. note::
+            This is the unified API for manual body writes, superseding the
+            C-level ``aws_http1_stream_write_chunk``. Use ``write_data()``
+            for all new code — the old chunked-write API is deprecated.
+
+            See :meth:`HttpClientStream.write_data` and
+            :meth:`Http2ClientStream.write_data` for protocol-specific
+            behaviour and constraints.
 
         Args:
             data_stream (InputStream): Data to write. If not an InputStream,
@@ -658,6 +667,50 @@ class HttpClientStream(HttpClientStreamBase):
         are ready for its callbacks and events to fire.
         """
         _awscrt.http_client_stream_activate(self)
+
+    def write_data(self,
+                   data_stream: Union[InputStream, Any],
+                   end_stream: bool = False) -> "concurrent.futures.Future":
+        '''Write data to the HTTP/1.1 request body.
+
+        The stream must have been created with ``manual_write=True`` and
+        :meth:`activate()` must have been called before using this method.
+
+        .. important::
+            HTTP/1.1 does **not** support combining a body stream with manual
+            writes. The underlying H1 encoder uses a modal state machine that
+            commits to a single body-delivery path at initialisation time.
+            If the :class:`HttpRequest` was created with a ``body_stream``,
+            calling this method will raise :class:`RuntimeError`.
+
+            HTTP/2 does not have this limitation — see
+            :meth:`Http2ClientStream.write_data`.
+
+        .. deprecated:: 0.x
+            This method supersedes the C-level ``aws_http1_stream_write_chunk``
+            API. Use ``write_data`` for all manual body writes on both HTTP/1.1
+            and HTTP/2 streams.
+
+        Args:
+            data_stream: Data to write. Wrapped in :class:`InputStream` if
+                needed. ``None`` sends zero bytes.
+            end_stream (bool): ``True`` if this is the last write.
+
+        Returns:
+            concurrent.futures.Future: Completes with ``None`` on success.
+
+        Raises:
+            RuntimeError: If the request has a ``body_stream`` set.
+        '''
+        if self._request and self._request.body_stream is not None:
+            raise RuntimeError(
+                "Cannot use write_data() on an HTTP/1.1 stream whose HttpRequest "
+                "has a body_stream set. The H1 encoder is modal — it picks one "
+                "body delivery path at init time and cannot switch mid-stream. "
+                "Either remove the body_stream and use write_data() exclusively, "
+                "or use the body_stream without calling write_data()."
+            )
+        return super().write_data(data_stream, end_stream)
 
 
 class Http2ClientStream(HttpClientStreamBase):
@@ -723,24 +776,34 @@ class Http2ClientStream(HttpClientStreamBase):
     def write_data(self,
                    data_stream: Union[InputStream, Any],
                    end_stream: bool = False) -> "concurrent.futures.Future":
-        '''Write a chunk of data to the request body stream.
+        '''Write data to the HTTP/2 request body.
 
-        This method is only available when the stream was created with
-        manual_write=True. This allows incremental writing of request data.
+        The stream must have been created with ``manual_write=True`` and
+        :meth:`activate()` must have been called before using this method.
 
-        Note: This method is inherited from the base class and works for both
-        HTTP/1.1 and HTTP/2. It is kept here for backward compatibility.
+        Unlike HTTP/1.1, HTTP/2 uses a queue-based write design
+        (``outgoing_writes`` queue of ``aws_h2_stream_data_write`` structs).
+        The body stream, if present, is simply the first item in the queue,
+        and manual writes append additional items. The connection scheduler
+        drains the queue and encodes DATA frames regardless of origin. This
+        means HTTP/2 **can** combine a ``body_stream`` with subsequent
+        ``write_data()`` calls — the two compose naturally.
+
+        This is a key design difference from HTTP/1.1, whose encoder is
+        *modal* (picks one body path at init) rather than *compositional*.
+
+        .. deprecated:: 0.x
+            This method supersedes the C-level ``aws_http1_stream_write_chunk``
+            API. Use ``write_data`` for all manual body writes on both HTTP/1.1
+            and HTTP/2 streams.
 
         Args:
-            data_stream (InputStream): Data to write. If not an InputStream,
-                it will be wrapped in one. Can be None to send an empty chunk.
-
-            end_stream (bool): True to indicate this is the last chunk and no more data
-                will be sent. False if more chunks will follow.
+            data_stream: Data to write. Wrapped in :class:`InputStream` if
+                needed. ``None`` sends zero bytes.
+            end_stream (bool): ``True`` if this is the last write.
 
         Returns:
-            concurrent.futures.Future: Future that completes when the write operation
-                is done. The future will contain None on success, or an exception on failure.
+            concurrent.futures.Future: Completes with ``None`` on success.
         '''
         return super().write_data(data_stream, end_stream)
 
