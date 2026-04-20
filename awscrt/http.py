@@ -598,7 +598,7 @@ class HttpClientStreamBase(HttpStreamBase):
 
         Works for both HTTP/1.1 and HTTP/2 streams.
         The stream must have been created with ``manual_write=True``.
-        You must call :meth:`activate()` before using this method.
+        You must call :meth:`HttpClientStream.activate()` before using this method.
 
         .. note::
             This is the unified API for manual body writes, superseding the
@@ -692,7 +692,7 @@ class HttpClientStream(HttpClientStreamBase):
             and HTTP/2 streams.
 
         Args:
-            data_stream: Data to write. Wrapped in :class:`InputStream` if
+            data_stream: Data to write. Wrapped in :class:`~awscrt.io.InputStream` if
                 needed. ``None`` sends zero bytes.
             end_stream (bool): ``True`` if this is the last write.
 
@@ -798,7 +798,7 @@ class Http2ClientStream(HttpClientStreamBase):
             and HTTP/2 streams.
 
         Args:
-            data_stream: Data to write. Wrapped in :class:`InputStream` if
+            data_stream: Data to write. Wrapped in :class:`~awscrt.io.InputStream` if
                 needed. ``None`` sends zero bytes.
             end_stream (bool): ``True`` if this is the last write.
 
