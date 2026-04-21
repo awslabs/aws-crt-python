@@ -1073,12 +1073,12 @@ class TestH1WriteData(LocalServerTestBase):
 
             request = HttpRequest('PUT', '/write_data_guard', body_stream=BytesIO(b'body'))
             request.headers.add('host', self.hostname)
-            request.headers.add('Content-Length', '4')
 
-            with self.assertRaises(ValueError) as ctx:
+            try:
                 connection.request(request, manual_write=True)
-
-            self.assertIn('body_stream', str(ctx.exception))
+                self.fail("Expected ValueError from request()")
+            except ValueError as e:
+                self.assertIn('manual data writes', str(e))
 
             connection.close().result(self.timeout)
         finally:

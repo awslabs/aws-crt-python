@@ -687,28 +687,6 @@ class HttpClientStream(HttpClientStreamBase):
         """
         _awscrt.http_client_stream_activate(self)
 
-    def write_data(self,
-                   data_stream: Union[InputStream, Any],
-                   end_stream: bool = False) -> "concurrent.futures.Future":
-        '''Write data to the HTTP/1.1 request body.
-
-        The stream must have been created with ``manual_write=True`` and
-        :meth:`activate()` must have been called before using this method.
-
-        This method supersedes the deprecated ``write_chunk`` API.
-        Use ``write_data()`` for all manual body writes on both HTTP/1.1
-        and HTTP/2 streams.
-
-        Args:
-            data_stream: Data to write. Wrapped in :class:`~awscrt.io.InputStream` if
-                needed. ``None`` sends zero bytes.
-            end_stream (bool): ``True`` if this is the last write.
-
-        Returns:
-            concurrent.futures.Future: Completes with ``None`` on success.
-        '''
-        return super().write_data(data_stream, end_stream)
-
 
 class Http2ClientStream(HttpClientStreamBase):
     __slots__ = ('_remote_end_stream_future',)
