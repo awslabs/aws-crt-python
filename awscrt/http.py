@@ -325,9 +325,28 @@ class HttpClientConnection(HttpClientConnectionBase):
                 This allows calling :meth:`HttpClientStream.write_data()` to stream
                 the request body in chunks. Works for both HTTP/1.1 and HTTP/2.
 
+                By design, CRT does not support setting both a body stream and
+                enabling manual writes for HTTP/1.1. Body streams are intended
+                for requests whose payload is available at the time of sending.
+                Manual writes let the caller control when data is sent. The two
+                cannot coexist on HTTP/1.1.
+
+                If ``manual_write`` is True and ``request`` has a ``body_stream``,
+                this method raises :class:`ValueError`.
+
+                HTTP/2 does not have this restriction.
+
         Returns:
             HttpClientStream:
+
+        Raises:
+            ValueError: If ``manual_write`` is True and the request has a
+                ``body_stream`` set (HTTP/1.1 only).
         """
+        if manual_write and request.body_stream is not None:
+            raise ValueError(
+                "Cannot use manual data writes with a body_stream on an HTTP/1.1 request. "
+                "Either remove the body_stream or set manual_write=False.")
         return HttpClientStream(self, request, on_response, on_body, manual_write)
 
     def close(self) -> "concurrent.futures.Future":
@@ -531,7 +550,7 @@ class HttpClientStreamBase(HttpStreamBase):
                      request: 'HttpRequest',
                      on_response: Optional[Callable[..., None]] = None,
                      on_body: Optional[Callable[..., None]] = None,
-                     http2_manual_write: bool = False) -> None:
+                     manual_write: bool = False) -> None:
         assert isinstance(connection, HttpClientConnectionBase)
         assert isinstance(request, HttpRequest)
         assert callable(on_response) or on_response is None
@@ -545,7 +564,7 @@ class HttpClientStreamBase(HttpStreamBase):
         # keep HttpRequest alive until stream completes
         self._request = request
         self._version = connection.version
-        self._binding = _awscrt.http_client_stream_new(self, connection, request, http2_manual_write)
+        self._binding = _awscrt.http_client_stream_new(self, connection, request, manual_write)
 
     @property
     def version(self) -> HttpVersion:
@@ -676,20 +695,9 @@ class HttpClientStream(HttpClientStreamBase):
         The stream must have been created with ``manual_write=True`` and
         :meth:`activate()` must have been called before using this method.
 
-        .. important::
-            HTTP/1.1 does **not** support combining a body stream with manual
-            writes. The underlying H1 encoder uses a modal state machine that
-            commits to a single body-delivery path at initialisation time.
-            If the :class:`HttpRequest` was created with a ``body_stream``,
-            calling this method will raise :class:`RuntimeError`.
-
-            HTTP/2 does not have this limitation — see
-            :meth:`Http2ClientStream.write_data`.
-
-        .. deprecated:: 0.x
-            This method supersedes the C-level ``aws_http1_stream_write_chunk``
-            API. Use ``write_data`` for all manual body writes on both HTTP/1.1
-            and HTTP/2 streams.
+        This method supersedes the deprecated ``write_chunk`` API.
+        Use ``write_data()`` for all manual body writes on both HTTP/1.1
+        and HTTP/2 streams.
 
         Args:
             data_stream: Data to write. Wrapped in :class:`~awscrt.io.InputStream` if
@@ -698,18 +706,7 @@ class HttpClientStream(HttpClientStreamBase):
 
         Returns:
             concurrent.futures.Future: Completes with ``None`` on success.
-
-        Raises:
-            RuntimeError: If the request has a ``body_stream`` set.
         '''
-        if self._request and self._request.body_stream is not None:
-            raise RuntimeError(
-                "Cannot use write_data() on an HTTP/1.1 stream whose HttpRequest "
-                "has a body_stream set. The H1 encoder is modal — it picks one "
-                "body delivery path at init time and cannot switch mid-stream. "
-                "Either remove the body_stream and use write_data() exclusively, "
-                "or use the body_stream without calling write_data()."
-            )
         return super().write_data(data_stream, end_stream)
 
 
@@ -781,21 +778,11 @@ class Http2ClientStream(HttpClientStreamBase):
         The stream must have been created with ``manual_write=True`` and
         :meth:`activate()` must have been called before using this method.
 
-        Unlike HTTP/1.1, HTTP/2 uses a queue-based write design
-        (``outgoing_writes`` queue of ``aws_h2_stream_data_write`` structs).
-        The body stream, if present, is simply the first item in the queue,
-        and manual writes append additional items. The connection scheduler
-        drains the queue and encodes DATA frames regardless of origin. This
-        means HTTP/2 **can** combine a ``body_stream`` with subsequent
-        ``write_data()`` calls — the two compose naturally.
-
-        This is a key design difference from HTTP/1.1, whose encoder is
-        *modal* (picks one body path at init) rather than *compositional*.
-
-        .. deprecated:: 0.x
-            This method supersedes the C-level ``aws_http1_stream_write_chunk``
-            API. Use ``write_data`` for all manual body writes on both HTTP/1.1
-            and HTTP/2 streams.
+        When both a body stream and manual writes are enabled, the body
+        stream is sent first and the connection then waits asynchronously
+        for subsequent ``write_data()`` calls. However, if the body stream
+        has not signalled end-of-stream, the event loop will keep getting
+        scheduled for requesting more data until it completes.
 
         Args:
             data_stream: Data to write. Wrapped in :class:`~awscrt.io.InputStream` if

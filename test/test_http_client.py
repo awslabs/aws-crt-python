@@ -961,5 +961,129 @@ class Http2RemoteEndStreamTest(NativeResourceTest):
         connection.close().result(self.timeout)
 
 
+@unittest.skipUnless(os.environ.get('AWS_TEST_LOCALHOST'), 'set env var to run test: AWS_TEST_LOCALHOST')
+class TestH1WriteData(LocalServerTestBase):
+    """HTTP/1.1 write_data() tests — mirrors Java WriteDataTest scenarios.
+    Uses the existing LocalServerTestBase and PUT echo pattern."""
+    timeout = 10
+
+    def _new_h1_tls_connection(self):
+        """Create HTTP/1.1 TLS connection to local server"""
+        tls_ctx_opt = TlsContextOptions()
+        tls_ctx_opt.verify_peer = False
+        tls_ctx = ClientTlsContext(tls_ctx_opt)
+        tls_conn_opt = tls_ctx.new_connection_options()
+        tls_conn_opt.set_server_name(self.hostname)
+
+        event_loop_group = EventLoopGroup()
+        host_resolver = DefaultHostResolver(event_loop_group)
+        bootstrap = ClientBootstrap(event_loop_group, host_resolver)
+
+        connection = HttpClientConnection.new(
+            host_name=self.hostname,
+            port=self.port,
+            bootstrap=bootstrap,
+            tls_connection_options=tls_conn_opt,
+        ).result(self.timeout)
+        self.assertEqual(connection.version, HttpVersion.Http1_1)
+        return connection
+
+    def test_h1_write_data(self):
+        """H1 PUT with manual write — mirrors Java testHttp1WriteData"""
+        self._start_server(secure=True)
+        try:
+            connection = self._new_h1_tls_connection()
+            payload = b'hello from writeData h1'
+
+            request = HttpRequest('PUT', '/write_data_test')
+            request.headers.add('host', self.hostname)
+            request.headers.add('Content-Length', str(len(payload)))
+
+            response = Response()
+            stream = connection.request(request, response.on_response, response.on_body, manual_write=True)
+            stream.activate()
+
+            stream.write_data(BytesIO(payload), end_stream=True).result(self.timeout)
+            status = stream.completion_future.result(self.timeout)
+
+            self.assertEqual(200, status)
+            self.assertEqual(payload, self.server.put_requests.get('/write_data_test'))
+
+            connection.close().result(self.timeout)
+        finally:
+            self._stop_server()
+
+    def test_h1_write_data_end_stream_only(self):
+        """H1 PUT with zero-byte body — mirrors Java testHttp1WriteDataEndStreamOnly"""
+        self._start_server(secure=True)
+        try:
+            connection = self._new_h1_tls_connection()
+
+            request = HttpRequest('PUT', '/write_data_empty')
+            request.headers.add('host', self.hostname)
+            request.headers.add('Content-Length', '0')
+
+            response = Response()
+            stream = connection.request(request, response.on_response, response.on_body, manual_write=True)
+            stream.activate()
+
+            stream.write_data(None, end_stream=True).result(self.timeout)
+            status = stream.completion_future.result(self.timeout)
+
+            self.assertEqual(200, status)
+            self.assertEqual(b'', self.server.put_requests.get('/write_data_empty'))
+
+            connection.close().result(self.timeout)
+        finally:
+            self._stop_server()
+
+    def test_h1_write_data_multi_chunk(self):
+        """H1 PUT with multiple write_data calls"""
+        self._start_server(secure=True)
+        try:
+            connection = self._new_h1_tls_connection()
+            chunks = [b'chunk1', b'chunk2', b'chunk3']
+            total = b''.join(chunks)
+
+            request = HttpRequest('PUT', '/write_data_multi')
+            request.headers.add('host', self.hostname)
+            request.headers.add('Content-Length', str(len(total)))
+
+            response = Response()
+            stream = connection.request(request, response.on_response, response.on_body, manual_write=True)
+            stream.activate()
+
+            for i, chunk in enumerate(chunks):
+                stream.write_data(BytesIO(chunk), end_stream=(i == len(chunks) - 1)).result(self.timeout)
+
+            status = stream.completion_future.result(self.timeout)
+
+            self.assertEqual(200, status)
+            self.assertEqual(total, self.server.put_requests.get('/write_data_multi'))
+
+            connection.close().result(self.timeout)
+        finally:
+            self._stop_server()
+
+    def test_h1_write_data_with_body_stream_raises(self):
+        """H1 request() must raise ValueError if manual_write=True and body_stream is set."""
+        self._start_server(secure=True)
+        try:
+            connection = self._new_h1_tls_connection()
+
+            request = HttpRequest('PUT', '/write_data_guard', body_stream=BytesIO(b'body'))
+            request.headers.add('host', self.hostname)
+            request.headers.add('Content-Length', '4')
+
+            with self.assertRaises(ValueError) as ctx:
+                connection.request(request, manual_write=True)
+
+            self.assertIn('body_stream', str(ctx.exception))
+
+            connection.close().result(self.timeout)
+        finally:
+            self._stop_server()
+
+
 if __name__ == '__main__':
     unittest.main()
