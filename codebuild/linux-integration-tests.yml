@@ -11,7 +11,6 @@ env:
 phases:
   install:
     commands:
-      - add-apt-repository ppa:ubuntu-toolchain-r/test
       - apt-get update -y
       - apt-get install gcc-7 cmake ninja-build python3 python3-pip python3-venv -y
   pre_build:

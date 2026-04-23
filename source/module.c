@@ -31,10 +31,117 @@
 #include <aws/mqtt/mqtt.h>
 #include <aws/s3/s3.h>
 
+#include <aws/common/atomics.h>
+
 #include <memoryobject.h>
 
 static struct aws_logger s_logger;
-static bool s_logger_init = false;
+static struct aws_atomic_var s_logger_init;
+
+/* Python logging bridge: direct vtable override */
+struct s_py_logger_impl {
+    PyObject *callback;
+    struct aws_atomic_var level;
+};
+
+static int s_py_logger_log(
+    struct aws_logger *logger,
+    enum aws_log_level log_level,
+    aws_log_subject_t subject,
+    const char *format,
+    ...) {
+
+    struct s_py_logger_impl *impl = logger->p_impl;
+
+    va_list args;
+    va_start(args, format);
+    /* Calculate how much room we'll need to build the full log line.
+       You cannot consume a va_list twice, so we have to copy it. */
+    va_list tmp;
+    va_copy(tmp, args);
+    int len = vsnprintf(NULL, 0, format, tmp);
+    va_end(tmp);
+    if (len < 0) {
+        va_end(args);
+        return AWS_OP_ERR;
+    }
+
+    char *buf = aws_mem_acquire(logger->allocator, (size_t)len + 1);
+    vsnprintf(buf, (size_t)len + 1, format, args);
+    va_end(args);
+
+    const char *subject_name = aws_log_subject_name(subject);
+    if (!subject_name) {
+        subject_name = "";
+    }
+
+    struct aws_string *thread_name_str = NULL;
+    aws_thread_current_name(logger->allocator, &thread_name_str);
+
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        aws_string_destroy(thread_name_str);
+        aws_mem_release(logger->allocator, buf);
+        return AWS_OP_ERR;
+    }
+
+    PyObject *py_thread_name;
+
+    if (thread_name_str) {
+        py_thread_name = PyUnicode_FromAwsString(thread_name_str);
+    } else {
+        py_thread_name = Py_None;
+        Py_INCREF(py_thread_name);
+    }
+
+    aws_string_destroy(thread_name_str);
+
+    PyObject *result = PyObject_CallFunction(
+        impl->callback, "(is#isO)", (int)log_level, buf, (Py_ssize_t)len, (int)subject, subject_name, py_thread_name);
+    Py_XDECREF(result);
+    Py_DECREF(py_thread_name);
+    if (PyErr_Occurred()) {
+        PyErr_WriteUnraisable(PyErr_Occurred());
+        PyGILState_Release(state);
+        aws_mem_release(logger->allocator, buf);
+        return aws_py_raise_error();
+    }
+
+    PyGILState_Release(state);
+    aws_mem_release(logger->allocator, buf);
+    return AWS_OP_SUCCESS;
+}
+
+static enum aws_log_level s_py_logger_get_log_level(struct aws_logger *logger, aws_log_subject_t subject) {
+    (void)subject;
+    struct s_py_logger_impl *impl = logger->p_impl;
+    return (enum aws_log_level)aws_atomic_load_int(&impl->level);
+}
+
+static int s_py_logger_set_log_level(struct aws_logger *logger, enum aws_log_level level) {
+    struct s_py_logger_impl *impl = logger->p_impl;
+    aws_atomic_store_int(&impl->level, (size_t)level);
+    return AWS_OP_SUCCESS;
+}
+
+static void s_py_logger_clean_up(struct aws_logger *logger) {
+    struct s_py_logger_impl *impl = logger->p_impl;
+    if (impl) {
+        PyGILState_STATE state;
+        if (!aws_py_gilstate_ensure(&state)) {
+            Py_XDECREF(impl->callback);
+            PyGILState_Release(state);
+        }
+        aws_mem_release(logger->allocator, impl);
+    }
+}
+
+static struct aws_logger_vtable s_py_logger_vtable = {
+    .log = s_py_logger_log,
+    .get_log_level = s_py_logger_get_log_level,
+    .set_log_level = s_py_logger_set_log_level,
+    .clean_up = s_py_logger_clean_up,
+};
 
 PyObject *aws_py_init_logging(PyObject *self, PyObject *args) {
     (void)self;
@@ -70,18 +177,18 @@ PyObject *aws_py_init_logging(PyObject *self, PyObject *args) {
         log_options.filename = file_path;
     }
 
-    /* It is not safe to clean up a running logger */
-    if (s_logger_init) {
+    /* Atomically claim the init slot (0 → 1). Only one thread can win. */
+    size_t expected = 0;
+    if (!aws_atomic_compare_exchange_int(&s_logger_init, &expected, 1)) {
         aws_raise_error(AWS_ERROR_INVALID_STATE);
-        return PyErr_AwsLastError();
+        return PyErr_Format(PyExc_RuntimeError, "Invalid state: logger cannot be initialized multiple times.");
     }
 
-    if (aws_logger_init_standard(&s_logger, allocator, &log_options) == AWS_OP_SUCCESS) {
-        aws_logger_set(&s_logger);
-        s_logger_init = true;
-    } else {
+    if (aws_logger_init_standard(&s_logger, allocator, &log_options) != AWS_OP_SUCCESS) {
+        aws_atomic_store_int(&s_logger_init, 0); /* rollback on failure */
         return PyErr_AwsLastError();
     }
+    aws_logger_set(&s_logger);
 
     Py_RETURN_NONE;
 }
@@ -89,9 +196,9 @@ PyObject *aws_py_init_logging(PyObject *self, PyObject *args) {
 PyObject *aws_py_set_log_level(PyObject *self, PyObject *args) {
     (void)self;
 
-    if (!s_logger_init) {
+    if (!aws_atomic_load_int(&s_logger_init)) {
         aws_raise_error(AWS_ERROR_INVALID_STATE);
-        return PyErr_AwsLastError();
+        return PyErr_Format(PyExc_RuntimeError, "Invalid state: logger cannot be initialized multiple times.");
     }
 
     int log_level = 0;
@@ -103,6 +210,60 @@ PyObject *aws_py_set_log_level(PyObject *self, PyObject *args) {
     if (aws_logger_set_log_level(&s_logger, log_level) != AWS_OP_SUCCESS) {
         return PyErr_AwsLastError();
     }
+
+    Py_RETURN_NONE;
+}
+
+PyObject *aws_py_init_python_logging(PyObject *self, PyObject *args) {
+    (void)self;
+
+    int log_level;
+    PyObject *py_callback;
+    if (!PyArg_ParseTuple(args, "iO", &log_level, &py_callback)) {
+        return NULL;
+    }
+
+    /* Atomically claim the init slot (0 → 1). Only one thread can win. */
+    size_t expected = 0;
+    if (!aws_atomic_compare_exchange_int(&s_logger_init, &expected, 1)) {
+        aws_raise_error(AWS_ERROR_INVALID_STATE);
+        return PyErr_AwsLastError();
+    }
+
+    if (!PyCallable_Check(py_callback)) {
+        aws_atomic_store_int(&s_logger_init, 0); /* rollback */
+        PyErr_SetString(PyExc_TypeError, "callback must be callable");
+        return NULL;
+    }
+
+    struct aws_allocator *allocator = aws_default_allocator();
+
+    struct s_py_logger_impl *impl = aws_mem_calloc(allocator, 1, sizeof(struct s_py_logger_impl));
+
+    Py_INCREF(py_callback);
+    impl->callback = py_callback;
+    aws_atomic_store_int(&impl->level, (size_t)log_level);
+
+    s_logger.vtable = &s_py_logger_vtable;
+    s_logger.allocator = allocator;
+    s_logger.p_impl = impl;
+
+    aws_logger_set(&s_logger);
+
+    Py_RETURN_NONE;
+}
+
+PyObject *aws_py_logger_log(PyObject *self, PyObject *args) {
+    (void)self;
+
+    int log_level;
+    int subject;
+    const char *message;
+    if (!PyArg_ParseTuple(args, "iis", &log_level, &subject, &message)) {
+        return NULL;
+    }
+
+    AWS_LOGF((enum aws_log_level)log_level, subject, "%s", message);
 
     Py_RETURN_NONE;
 }
@@ -619,7 +780,13 @@ PyObject *aws_py_weakref_get_ref(PyObject *ref) {
 }
 
 int aws_py_gilstate_ensure(PyGILState_STATE *out_state) {
+    /* If Python >= 3.13 */
+#if PY_VERSION_HEX >= 0x030D0000
+    // Py_IsFinalizing is part of the Stable ABI since version 3.13.
+    if (AWS_LIKELY(!Py_IsFinalizing())) {
+#else
     if (AWS_LIKELY(Py_IsInitialized())) {
+#endif
         *out_state = PyGILState_Ensure();
         return AWS_OP_SUCCESS;
     }
@@ -783,6 +950,8 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(tls_connection_options_set_server_name, METH_VARARGS),
     AWS_PY_METHOD_DEF(init_logging, METH_VARARGS),
     AWS_PY_METHOD_DEF(set_log_level, METH_VARARGS),
+    AWS_PY_METHOD_DEF(init_python_logging, METH_VARARGS),
+    AWS_PY_METHOD_DEF(logger_log, METH_VARARGS),
     AWS_PY_METHOD_DEF(input_stream_new, METH_VARARGS),
     AWS_PY_METHOD_DEF(pkcs11_lib_new, METH_VARARGS),
 
@@ -810,6 +979,7 @@ static PyMethodDef s_module_methods[] = {
     AWS_PY_METHOD_DEF(mqtt5_client_subscribe, METH_VARARGS),
     AWS_PY_METHOD_DEF(mqtt5_client_unsubscribe, METH_VARARGS),
     AWS_PY_METHOD_DEF(mqtt5_client_get_stats, METH_VARARGS),
+    AWS_PY_METHOD_DEF(mqtt5_client_invoke_publish_acknowledgement, METH_VARARGS),
     AWS_PY_METHOD_DEF(mqtt5_ws_handshake_transform_complete, METH_VARARGS),
 
     /* MQTT Request Response Client */
@@ -1022,6 +1192,10 @@ PyMODINIT_FUNC PyInit__awscrt(void) {
     if (!m) {
         return NULL;
     }
+
+#ifdef Py_GIL_DISABLED
+    PyUnstable_Module_SetGIL(m, Py_MOD_GIL_NOT_USED);
+#endif
 
     s_init_allocator();
 

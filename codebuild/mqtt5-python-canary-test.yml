@@ -16,7 +16,6 @@ env:
 phases:
   install:
     commands:
-      - add-apt-repository ppa:ubuntu-toolchain-r/test
       - apt-get update -y
       - apt-get install gcc-7 cmake ninja-build python3 -y
       - python3 -m pip install psutil

@@ -15,6 +15,7 @@ from awscrt.io import ClientBootstrap, SocketOptions, ClientTlsContext
 from dataclasses import dataclass
 from collections.abc import Sequence
 from inspect import signature
+from awscrt._aws_iot_metrics import AWSIoTMetrics
 
 
 class QoS(IntEnum):
@@ -492,6 +493,13 @@ class PubackReasonCode(IntEnum):
 def _try_puback_reason_code(value):
     try:
         return PubackReasonCode(value)
+    except Exception:
+        return None
+
+
+def _try_manual_puback_result(value):
+    try:
+        return ManualPubackResult(value)
     except Exception:
         return None
 
@@ -1158,6 +1166,7 @@ class ConnectPacket:
         will_delay_interval_sec (int): A time interval, in seconds, that the server should wait (for a session reconnection) before sending the will message associated with the connection's session.  If omitted or None, the server will send the will when the associated session is destroyed.  If the session is destroyed before a will delay interval has elapsed, then the will must be sent at the time of session destruction.
         will (PublishPacket): The definition of a message to be published when the connection's session is destroyed by the server or when the will delay interval has elapsed, whichever comes first.  If None, then nothing will be sent.
         user_properties (Sequence[UserProperty]): List of MQTT5 user properties included with the packet.
+
     """
     keep_alive_interval_sec: int = None
     client_id: str = None
@@ -1222,14 +1231,38 @@ class WebsocketHandshakeTransformArgs:
             self._done_future.set_exception(exception)
 
 
+class PublishAcknowledgementControlHandle:
+    """Opaque handle for manually controlling the publish acknowledgement for a received QoS 1 PUBLISH.
+
+    Obtained by calling acquire_publish_acknowledgement_control() within the on_publish_callback_fn callback.
+    Pass to Client.invoke_publish_acknowledgement() to send the publish acknowledgement to the broker.
+    """
+
+    def __init__(self, control_id: int):
+        self._control_id = control_id
+
+
 @dataclass
 class PublishReceivedData:
     """Dataclass containing data related to a Publish Received Callback
 
     Args:
         publish_packet (PublishPacket): Data model of an `MQTT5 PUBLISH <https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901100>`_ packet.
+        acquire_publish_acknowledgement_control (Callable): For QoS 1 messages only: call this function within the
+            on_publish_callback_fn callback to take manual control of the publish acknowledgement for this message,
+            preventing the client from automatically sending a publish acknowledgement. Returns a
+            :class:`PublishAcknowledgementControlHandle` that can be passed to
+            Client.invoke_publish_acknowledgement() to send the publish acknowledgement to the broker.
+
+            Important: This function must be called within the on_publish_callback_fn callback. Calling it after the
+            callback returns will raise a RuntimeError. This function may only be called once per received PUBLISH;
+            calling it a second time will also raise a RuntimeError. If this function is not called, the client will
+            automatically send a publish acknowledgement for QoS 1 messages when the callback returns.
+
+            For QoS 0 messages, this field is None.
     """
     publish_packet: PublishPacket = None
+    acquire_publish_acknowledgement_control: Callable = None
 
 
 @dataclass
@@ -1338,6 +1371,8 @@ class ClientOptions:
         on_lifecycle_event_connection_success_fn (Callable[[LifecycleConnectSuccessData],]): Callback for Lifecycle Event Connection Success.
         on_lifecycle_event_connection_failure_fn (Callable[[LifecycleConnectFailureData],]): Callback for Lifecycle Event Connection Failure.
         on_lifecycle_event_disconnection_fn (Callable[[LifecycleDisconnectData],]): Callback for Lifecycle Event Disconnection.
+        enable_metrics (bool): Enable IoT SDK metrics in MQTT CONNECT packet username field, including SDK name, version, and platform. Default to True.
+
     """
     host_name: str
     port: int = None
@@ -1364,6 +1399,7 @@ class ClientOptions:
     on_lifecycle_event_connection_success_fn: Callable[[LifecycleConnectSuccessData], None] = None
     on_lifecycle_event_connection_failure_fn: Callable[[LifecycleConnectFailureData], None] = None
     on_lifecycle_event_disconnection_fn: Callable[[LifecycleDisconnectData], None] = None
+    enable_metrics: bool = True
 
 
 def _check_callback(callback):
@@ -1392,6 +1428,7 @@ class _ClientCore:
         self._on_lifecycle_connection_failure_cb = _check_callback(
             client_options.on_lifecycle_event_connection_failure_fn)
         self._on_lifecycle_disconnection_cb = _check_callback(client_options.on_lifecycle_event_disconnection_fn)
+        self._enable_metrics = client_options.enable_metrics
 
     def _ws_handshake_transform(self, http_request_binding, http_headers_binding, native_userdata):
         if self._ws_handshake_transform_cb is None:
@@ -1434,9 +1471,11 @@ class _ClientCore:
             correlation_data,
             subscription_identifiers_tuples,
             content_type,
-            user_properties_tuples):
+            user_properties_tuples,
+            puback_control_id):
         if self._on_publish_cb is None:
-            return
+            # Indicates that manual puback control was not taken and puback should be invoked automatically.
+            return False
 
         publish_packet = PublishPacket()
         publish_packet.topic = topic
@@ -1468,9 +1507,41 @@ class _ClientCore:
         publish_packet.content_type = content_type
         publish_packet.user_properties = _init_user_properties(user_properties_tuples)
 
-        self._on_publish_cb(PublishReceivedData(publish_packet=publish_packet))
+        # For QoS 1 messages, set up the acquire_publish_acknowledgement_control callable.
+        # The native side has already called aws_mqtt5_client_acquire_publish_acknowledgement and passed us the
+        # puback_control_id. We wrap it in an opaque capsule handle and provide a callable that
+        # returns that handle. The callable may only be called once; calling it marks the publish
+        # acknowledgement as "taken" so the native side will not auto-invoke it after this callback returns.
+        puback_taken = False
+        callback_active = True
+        acquire_publish_acknowledgement_control = None
 
-        return
+        if puback_control_id != 0:
+            def acquire_publish_acknowledgement_control():
+                nonlocal puback_taken
+                nonlocal callback_active
+                if puback_taken:
+                    raise RuntimeError(
+                        "acquire_publish_acknowledgement_control() may only be called once per received PUBLISH.")
+                if not callback_active:
+                    raise RuntimeError(
+                        "acquire_publish_acknowledgement_control() must be called within the on_publish_callback_fn callback.")
+                puback_taken = True
+                return PublishAcknowledgementControlHandle(puback_control_id)
+
+        # Create PublishReceivedData with the acquire_publish_acknowledgement_control callable (or None for QoS 0)
+        publish_data = PublishReceivedData(
+            publish_packet=publish_packet,
+            acquire_publish_acknowledgement_control=acquire_publish_acknowledgement_control
+        )
+
+        self._on_publish_cb(publish_data)
+
+        callback_active = False
+        # Return True if the user called acquire_publish_acknowledgement_control(), signalling to the native side
+        # that it should NOT auto-invoke the publish acknowledgement (the user is responsible for calling
+        # invoke_publish_acknowledgement).
+        return puback_taken
 
     def _on_lifecycle_stopped(self):
         if self._on_lifecycle_stopped_cb:
@@ -1704,7 +1775,8 @@ class _Mqtt5to3AdapterOptions:
             ping_timeout_ms: int,
             keep_alive_secs: int,
             ack_timeout_secs: int,
-            clean_session: int):
+            clean_session: int,
+            enable_metrics: bool):
         self.host_name = host_name
         self.port = port
         self.client_id = "" if client_id is None else client_id
@@ -1715,6 +1787,7 @@ class _Mqtt5to3AdapterOptions:
         self.keep_alive_secs: int = 1200 if keep_alive_secs is None else keep_alive_secs
         self.ack_timeout_secs: int = 0 if ack_timeout_secs is None else ack_timeout_secs
         self.clean_session: bool = True if clean_session is None else clean_session
+        self.enable_metrics: bool = True if enable_metrics is None else enable_metrics
 
 
 class Client(NativeResource):
@@ -1728,7 +1801,6 @@ class Client(NativeResource):
     """
 
     def __init__(self, client_options: ClientOptions):
-
         super().__init__()
 
         core = _ClientCore(client_options)
@@ -1745,6 +1817,12 @@ class Client(NativeResource):
         socket_options = client_options.socket_options
         if not socket_options:
             socket_options = SocketOptions()
+
+        # Handle metrics configuration
+        if client_options.enable_metrics:
+            self._metrics = AWSIoTMetrics()
+        else:
+            self._metrics = None
 
         if not connect_options.will:
             is_will_none = True
@@ -1797,6 +1875,8 @@ class Client(NativeResource):
                                                  client_options.ack_timeout_sec,
                                                  client_options.topic_aliasing_options,
                                                  websocket_is_none,
+                                                 client_options.enable_metrics,
+                                                 self._metrics.library_name if self._metrics else None,
                                                  core)
 
         # Store the options for adapter
@@ -1811,7 +1891,8 @@ class Client(NativeResource):
             keep_alive_secs=connect_options.keep_alive_interval_sec,
             ack_timeout_secs=client_options.ack_timeout_sec,
             clean_session=(
-                client_options.session_behavior < ClientSessionBehaviorType.REJOIN_ALWAYS if client_options.session_behavior else True))
+                client_options.session_behavior < ClientSessionBehaviorType.REJOIN_ALWAYS if client_options.session_behavior else True),
+            enable_metrics=client_options.enable_metrics)
 
     def start(self):
         """Notifies the MQTT5 client that you want it maintain connectivity to the configured endpoint.
@@ -1957,6 +2038,27 @@ class Client(NativeResource):
         result = _awscrt.mqtt5_client_get_stats(self._binding)
         return OperationStatisticsData(result[0], result[1], result[2], result[3])
 
+    def invoke_publish_acknowledgement(
+            self, publish_acknowledgement_control_handle: 'PublishAcknowledgementControlHandle'):
+        """Sends a publish acknowledgement for a QoS 1 PUBLISH that was previously acquired for manual control.
+
+        To use manual publish acknowledgement control, call acquire_publish_acknowledgement_control() within
+        the on_publish_callback_fn callback to obtain a :class:`PublishAcknowledgementControlHandle`. Then call
+        this method to send the publish acknowledgement.
+
+        Args:
+            publish_acknowledgement_control_handle (PublishAcknowledgementControlHandle): An opaque handle obtained
+                from acquire_publish_acknowledgement_control() within PublishReceivedData.
+
+        Raises:
+            Exception: If the native client returns an error when invoking the publish acknowledgement.
+        """
+
+        _awscrt.mqtt5_client_invoke_publish_acknowledgement(
+            self._binding,
+            publish_acknowledgement_control_handle._control_id
+        )
+
     def new_connection(self, on_connection_interrupted=None, on_connection_resumed=None,
                        on_connection_success=None, on_connection_failure=None, on_connection_closed=None):
         from awscrt.mqtt import Connection
@@ -2043,5 +2145,6 @@ class Client(NativeResource):
             use_websockets=False,
             websocket_proxy_options=None,
             websocket_handshake_transform=None,
-            proxy_options=None
+            proxy_options=None,
+            enable_metrics=self.adapter_options.enable_metrics
         )

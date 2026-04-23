@@ -9,6 +9,7 @@ __all__ = [
     'crypto',
     'http',
     'io',
+    'logging',
     'mqtt',
     'mqtt5',
     'mqtt_request_response',
