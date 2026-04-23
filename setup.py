@@ -144,20 +144,19 @@ def get_best_windows_sdk_version():
     Returns the latest installed SDK version that is >= WINDOWS_SDK_MIN_VERSION_TLS1_3_SUPPORT.
     Raises RuntimeError if no suitable SDK is found.
     """
-    min_version = parse_version(WINDOWS_SDK_MIN_VERSION_TLS1_3_SUPPORT)
     installed_versions = get_windows_sdk_versions()
 
-    for version in installed_versions:
-        if parse_version(version) >= min_version:
+    if installed_versions:
+        # We only need to check against the newest available version.
+        if parse_version(installed_versions[0]) >= parse_version(WINDOWS_SDK_MIN_VERSION_TLS1_3_SUPPORT):
+            version = installed_versions[0]
             print(f"Found Windows SDK {version} (>= {WINDOWS_SDK_MIN_VERSION_TLS1_3_SUPPORT} required for TLS 1.3)")
             return version
-
-    # No suitable SDK found
-    if installed_versions:
-        raise RuntimeError(
-            f"No Windows SDK >= {WINDOWS_SDK_MIN_VERSION_TLS1_3_SUPPORT} found. "
-            f"Installed versions: {', '.join(installed_versions)}. "
-            f"Please install Windows SDK {WINDOWS_SDK_MIN_VERSION_TLS1_3_SUPPORT} or later for TLS 1.3 support.")
+        else:
+            raise RuntimeError(
+                f"No Windows SDK >= {WINDOWS_SDK_MIN_VERSION_TLS1_3_SUPPORT} found. "
+                f"Installed versions: {', '.join(installed_versions)}. "
+                f"Please install Windows SDK {WINDOWS_SDK_MIN_VERSION_TLS1_3_SUPPORT} or later for TLS 1.3 support.")
     else:
         raise RuntimeError(
             f"No Windows SDK found. "
