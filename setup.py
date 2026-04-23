@@ -32,6 +32,9 @@ FREE_THREADED_BUILD = sysconfig.get_config_var("Py_GIL_DISABLED") == 1
 # TLS_PARAMETERS. These are required to build Windows Binaries with TLS 1.3 support.
 WINDOWS_SDK_MIN_VERSION_TLS1_3_SUPPORT = "10.0.17763.0"
 
+# Regex to match a Windows SDK version directory name in the format of major.minor.build.revision
+SDK_VERSION_RE = re.compile(r'^(\d+)\.(\d+)\.(\d+)\.(\d+)$')
+
 
 def parse_version(version_string):
     return tuple(int(x) for x in version_string.split("."))
@@ -123,8 +126,8 @@ def get_windows_sdk_versions():
         if os.path.exists(sdk_path):
             try:
                 for entry in os.listdir(sdk_path):
-                    # SDK version directories look like "10.0.17763.0"
-                    if entry.startswith('10.0.') and os.path.isdir(os.path.join(sdk_path, entry)):
+                    # SDK version directories look like "major.minor.build.revision" (e.g. "10.0.17763.0")
+                    if SDK_VERSION_RE.match(entry) and os.path.isdir(os.path.join(sdk_path, entry)):
                         if entry not in sdk_versions:
                             sdk_versions.append(entry)
             except OSError:
