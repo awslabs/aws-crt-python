@@ -30,7 +30,10 @@ FREE_THREADED_BUILD = sysconfig.get_config_var("Py_GIL_DISABLED") == 1
 
 # This is the minimum version of the Windows SDK needed for schannel.h with SCH_CREDENTIALS and
 # TLS_PARAMETERS. These are required to build Windows Binaries with TLS 1.3 support.
-WINDOWS_SDK_VERSION_TLS1_3_SUPPORT = "10.0.17763.0"
+WINDOWS_SDK_MIN_VERSION_TLS1_3_SUPPORT = "10.0.17763.0"
+
+# Regex to match a Windows SDK version directory name in the format of major.minor.build.revision
+SDK_VERSION_RE = re.compile(r'^(\d+)\.(\d+)\.(\d+)\.(\d+)$')
 
 
 def parse_version(version_string):
@@ -89,6 +92,75 @@ def determine_cross_compile_args():
     if (host_arch == 'AMD64' or host_arch == 'x86_64') and is_32bit() and sys.platform != 'win32':
         return ['-DCMAKE_C_FLAGS=-m32']
     return []
+
+
+def get_windows_sdk_versions():
+    """Return a list of installed Windows SDK versions, sorted from newest to oldest.
+
+    Uses the Windows registry to find the SDK installation path.
+    """
+    if sys.platform != 'win32':
+        return []
+
+    import winreg
+
+    sdk_versions = []
+    sdk_paths = []
+
+    # Try to get SDK path from registry
+    try:
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
+                            r"SOFTWARE\Microsoft\Windows Kits\Installed Roots") as key:
+            sdk_root = winreg.QueryValueEx(key, "KitsRoot10")[0]
+            sdk_paths.append(os.path.join(sdk_root, "Include"))
+    except (OSError, FileNotFoundError):
+        # Registry key not found, fall back to common installation paths
+        sdk_paths = [
+            os.path.join(os.environ.get('ProgramFiles(x86)', 'C:\\Program Files (x86)'),
+                         'Windows Kits', '10', 'Include'),
+            os.path.join(os.environ.get('ProgramFiles', 'C:\\Program Files'),
+                         'Windows Kits', '10', 'Include'),
+        ]
+
+    for sdk_path in sdk_paths:
+        if os.path.exists(sdk_path):
+            try:
+                for entry in os.listdir(sdk_path):
+                    # SDK version directories look like "major.minor.build.revision" (e.g. "10.0.17763.0")
+                    if SDK_VERSION_RE.match(entry) and os.path.isdir(os.path.join(sdk_path, entry)):
+                        if entry not in sdk_versions:
+                            sdk_versions.append(entry)
+            except OSError:
+                continue
+
+    # Sort versions from newest to oldest
+    sdk_versions.sort(key=parse_version, reverse=True)
+    return sdk_versions
+
+
+def get_best_windows_sdk_version():
+    """Return the best Windows SDK version to use for TLS 1.3 support.
+
+    Returns the latest installed SDK version that is >= WINDOWS_SDK_MIN_VERSION_TLS1_3_SUPPORT.
+    Raises RuntimeError if no suitable SDK is found.
+    """
+    installed_versions = get_windows_sdk_versions()
+
+    if installed_versions:
+        # We only need to check against the newest available version.
+        if parse_version(installed_versions[0]) >= parse_version(WINDOWS_SDK_MIN_VERSION_TLS1_3_SUPPORT):
+            version = installed_versions[0]
+            print(f"Found Windows SDK {version} (>= {WINDOWS_SDK_MIN_VERSION_TLS1_3_SUPPORT} required for TLS 1.3)")
+            return version
+        else:
+            raise RuntimeError(
+                f"No Windows SDK >= {WINDOWS_SDK_MIN_VERSION_TLS1_3_SUPPORT} found. "
+                f"Installed versions: {', '.join(installed_versions)}. "
+                f"Please install Windows SDK {WINDOWS_SDK_MIN_VERSION_TLS1_3_SUPPORT} or later for TLS 1.3 support.")
+    else:
+        raise RuntimeError(
+            f"No Windows SDK found. "
+            f"Please install Windows SDK {WINDOWS_SDK_MIN_VERSION_TLS1_3_SUPPORT} or later for TLS 1.3 support.")
 
 
 def determine_generator_args(cmake_version=None, windows_sdk_version=None):
@@ -275,7 +347,7 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
         if sys.platform == 'win32':
             windows_sdk_version = os.getenv('AWS_CRT_WINDOWS_SDK_VERSION')
             if windows_sdk_version is None:
-                windows_sdk_version = WINDOWS_SDK_VERSION_TLS1_3_SUPPORT
+                windows_sdk_version = get_best_windows_sdk_version()
 
             cmake_version = get_cmake_version()
 
