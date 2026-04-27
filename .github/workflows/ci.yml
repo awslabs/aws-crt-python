@@ -7,7 +7,7 @@ on:
       - 'docs'
 
 env:
-  BUILDER_VERSION: v0.9.87
+  BUILDER_VERSION: v0.9.92
   BUILDER_SOURCE: releases
   BUILDER_HOST: https://d19elf31gohf1l.cloudfront.net
   PACKAGE_NAME: aws-crt-python
@@ -209,6 +209,7 @@ jobs:
           - clang-9
           - clang-10
           - clang-11
+          - clang-latest
           - gcc-5
           - gcc-6
           - gcc-7
