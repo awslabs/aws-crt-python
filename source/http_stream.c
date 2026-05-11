@@ -303,6 +303,7 @@ PyObject *aws_py_http_client_stream_new(PyObject *self, PyObject *args) {
         .on_complete = s_on_stream_complete,
         .on_h2_remote_end_stream = s_on_h2_remote_end_stream,
         .user_data = stream,
+        .use_manual_data_writes = http2_manual_write,
         .http2_use_manual_data_writes = http2_manual_write,
     };
 
@@ -404,6 +405,66 @@ PyObject *aws_py_http2_client_stream_write_data(PyObject *self, PyObject *args) 
     };
 
     int error = aws_http2_stream_write_data(http_stream, &write_options);
+    if (error) {
+        Py_DECREF(py_on_write_complete);
+        return PyErr_AwsLastError();
+    }
+    Py_RETURN_NONE;
+}
+
+static void s_on_http_stream_write_data_complete(struct aws_http_stream *stream, int error_code, void *user_data) {
+    (void)stream;
+    PyObject *py_on_write_complete = (PyObject *)user_data;
+    AWS_FATAL_ASSERT(py_on_write_complete);
+    PyGILState_STATE state;
+    if (aws_py_gilstate_ensure(&state)) {
+        return; /* Python has shut down. Nothing matters anymore, but don't crash */
+    }
+
+    PyObject *result = PyObject_CallFunction(py_on_write_complete, "(i)", error_code);
+    if (result) {
+        Py_DECREF(result);
+    } else {
+        PyErr_WriteUnraisable(PyErr_Occurred());
+    }
+    Py_DECREF(py_on_write_complete);
+    PyGILState_Release(state);
+}
+
+PyObject *aws_py_http_stream_write_data(PyObject *self, PyObject *args) {
+    (void)self;
+
+    PyObject *py_stream = NULL;
+    PyObject *py_body_stream = NULL;
+    int end_stream = false;
+    PyObject *py_on_write_complete = NULL;
+    if (!PyArg_ParseTuple(args, "OOpO", &py_stream, &py_body_stream, &end_stream, &py_on_write_complete)) {
+        return NULL;
+    }
+
+    struct aws_http_stream *http_stream = aws_py_get_http_stream(py_stream);
+    if (!http_stream) {
+        return NULL;
+    }
+
+    struct aws_input_stream *body_stream = NULL;
+    if (py_body_stream != Py_None) {
+        body_stream = aws_py_get_input_stream(py_body_stream);
+        if (!body_stream) {
+            return PyErr_AwsLastError();
+        }
+    }
+
+    Py_INCREF(py_on_write_complete);
+
+    struct aws_http_stream_write_data_options write_options = {
+        .data = body_stream,
+        .end_stream = end_stream,
+        .on_complete = s_on_http_stream_write_data_complete,
+        .user_data = py_on_write_complete,
+    };
+
+    int error = aws_http_stream_write_data(http_stream, &write_options);
     if (error) {
         Py_DECREF(py_on_write_complete);
         return PyErr_AwsLastError();
