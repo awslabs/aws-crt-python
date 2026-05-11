@@ -593,6 +593,17 @@ def awscrt_ext():
             if not is_macos_universal2():
                 if sys.platform == 'darwin':
                     extra_link_args += ['-Wl,-fatal_warnings']
+                    # xcode 15 introduced a new linker that generates a warning
+                    # when it sees duplicate libs or rpath during bundling.
+                    # pyenv installed from homebrew put duplicate rpath entries
+                    # into sysconfig, and setuptools happily passes them along
+                    # to xcode, resulting in a warning
+                    # (which is fatal in this branch).
+                    # ex. https://github.com/pyenv/pyenv/issues/2890
+                    # lets revert back to old linker on xcode >= 15 until one of
+                    # the involved parties fixes the issue.
+                    if get_xcode_major_version() >= 15:
+                        extra_link_args += ['-Wl,-ld_classic']
                 elif 'bsd' in sys.platform:
                     extra_link_args += ['-Wl,-fatal-warnings']
                 else:
