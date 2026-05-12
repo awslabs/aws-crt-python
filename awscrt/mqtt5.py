@@ -5,7 +5,7 @@ MQTT5
 
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
-from typing import Any, Callable, Union
+from typing import Any, Callable, Optional, Union
 import _awscrt
 from concurrent.futures import Future
 from enum import IntEnum
@@ -15,7 +15,8 @@ from awscrt.io import ClientBootstrap, SocketOptions, ClientTlsContext
 from dataclasses import dataclass
 from collections.abc import Sequence
 from inspect import signature
-from awscrt._aws_iot_metrics import AWSIoTMetrics
+from awscrt._aws_iot_metrics import AWSIoTMetrics, IoTMetricsMetadataEntry
+from awscrt import __version__ as crt_version
 
 
 class QoS(IntEnum):
@@ -1372,6 +1373,7 @@ class ClientOptions:
         on_lifecycle_event_connection_failure_fn (Callable[[LifecycleConnectFailureData],]): Callback for Lifecycle Event Connection Failure.
         on_lifecycle_event_disconnection_fn (Callable[[LifecycleDisconnectData],]): Callback for Lifecycle Event Disconnection.
         enable_metrics (bool): Enable IoT SDK metrics in MQTT CONNECT packet username field, including SDK name, version, and platform. Default to True.
+        metrics (Optional[AWSIoTMetrics]) :  Optional metrics configuration for IoT SDK metrics reporting. If provided, the CRT will use the given metrics. If None, a default AWSIoTMetrics will be created.
 
     """
     host_name: str
@@ -1400,6 +1402,7 @@ class ClientOptions:
     on_lifecycle_event_connection_failure_fn: Callable[[LifecycleConnectFailureData], None] = None
     on_lifecycle_event_disconnection_fn: Callable[[LifecycleDisconnectData], None] = None
     enable_metrics: bool = True
+    metrics: Optional[AWSIoTMetrics] = None
 
 
 def _check_callback(callback):
@@ -1820,7 +1823,16 @@ class Client(NativeResource):
 
         # Handle metrics configuration
         if client_options.enable_metrics:
-            self._metrics = AWSIoTMetrics()
+            if client_options.metrics:
+                self._metrics = client_options.metrics
+            else:
+                self._metrics = AWSIoTMetrics()
+
+            # CRT version injection
+            entries = self._metrics.metadata_entries or []
+            entries.append(IoTMetricsMetadataEntry(key="CRTVersion", value=crt_version))
+            self._metrics.metadata_entries = entries
+
         else:
             self._metrics = None
 
@@ -1876,7 +1888,7 @@ class Client(NativeResource):
                                                  client_options.topic_aliasing_options,
                                                  websocket_is_none,
                                                  client_options.enable_metrics,
-                                                 self._metrics.library_name if self._metrics else None,
+                                                 self._metrics,
                                                  core)
 
         # Store the options for adapter
