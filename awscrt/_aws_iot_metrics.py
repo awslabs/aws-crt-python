@@ -35,10 +35,13 @@ class AWSIoTMetrics:
     library_name: str = "IoTDeviceSDK/Python"
     metadata_entries: Optional[List[IoTMetricsMetadata]] = None
 
+
 # Metrics Version Constant
 IOT_SDK_METRICS_FEATURE_VERSION = 1
 
 # Feature ID Constants
+
+
 class MetricsFeatureId(str, Enum):
     """
     Feature IDs for IoT SDK metrics tracking.
@@ -57,12 +60,15 @@ class MetricsFeatureId(str, Enum):
     MINIMUM_TLS_VERSION = "K"
 
 # Feature Value Constants
-class MetricsProtocolVersionValue(str,Enum):
+
+
+class MetricsProtocolVersionValue(str, Enum):
     """
     Protocol version values for metrics
     """
     MQTT311 = "3"
     MQTT5 = "5"
+
 
 class MetricsSocketImplementationValue(str, Enum):
     """
@@ -70,6 +76,7 @@ class MetricsSocketImplementationValue(str, Enum):
     """
     POSIX = "A"
     WINSOCK = "B"
+
 
 class MetricsHttpProxyTypeValue(str, Enum):
     """
@@ -79,6 +86,7 @@ class MetricsHttpProxyTypeValue(str, Enum):
     HTTPS = "B"
 
 # Mappings from existing enums to metrics values
+
 
 def _retry_jitter_metrics_value(mode):
     """
@@ -93,6 +101,7 @@ def _retry_jitter_metrics_value(mode):
     }
     return mapping.get(mode)
 
+
 def _client_session_behavior_metrics_value(behavior):
     """
     Map ClientSessionBehaviorType to metrics value.
@@ -105,6 +114,7 @@ def _client_session_behavior_metrics_value(behavior):
         ClientSessionBehaviorType.REJOIN_ALWAYS: "C",
     }
     return mapping.get(behavior)
+
 
 def _client_operation_queue_behavior_metrics_value(behavior):
     """
@@ -120,6 +130,7 @@ def _client_operation_queue_behavior_metrics_value(behavior):
     }
     return mapping.get(behavior)
 
+
 def _outbound_topic_alias_behavior_metrics_value(behavior):
     """
     Map OutboundTopicAliasBehaviorType to metrics value.
@@ -133,6 +144,7 @@ def _outbound_topic_alias_behavior_metrics_value(behavior):
     }
     return mapping.get(behavior)
 
+
 def _inbound_topic_alias_behavior_metrics_value(behavior):
     """
     Map InboundTopicAliasBehaviorType to metrics value.
@@ -141,9 +153,10 @@ def _inbound_topic_alias_behavior_metrics_value(behavior):
     from awscrt.mqtt5 import InboundTopicAliasBehaviorType
     mapping = {
         InboundTopicAliasBehaviorType.ENABLED: "A",
-        InboundTopicAliasBehaviorType.DISABLED:"B",
+        InboundTopicAliasBehaviorType.DISABLED: "B",
     }
     return mapping.get(behavior)
+
 
 def _minimum_tls_version_metrics_value(version):
     """
@@ -160,6 +173,7 @@ def _minimum_tls_version_metrics_value(version):
     }
     return mapping.get(version)
 
+
 def _tls_cipher_preference_metrics_value(pref):
     """Map TlsCipherPref to metrics value.
     PQ_TLSv1_0_2021_05→A, PQ_DEFAULT→B, TLSv1_2_2025_07→C, DEFAULT→None (omitted)"""
@@ -171,6 +185,7 @@ def _tls_cipher_preference_metrics_value(pref):
     }
     return mapping.get(pref)
 
+
 def _detect_socket_implementation():
     """
     Helper function to detect socket implementation based on platform
@@ -181,7 +196,7 @@ def _detect_socket_implementation():
     return MetricsSocketImplementationValue.POSIX
 
 
-#MQTT5 encoding list
+# MQTT5 encoding list
 def get_encoded_feature_list(client_options):
     """
     Generates the encoded feature list string for metrics directly from client options.
@@ -236,7 +251,10 @@ def get_encoded_feature_list(client_options):
 
     # H: http_proxy_type - Determine based on whether proxy uses TLS
     if client_options.http_proxy_options is not None:
-        proxy_type = MetricsHttpProxyTypeValue.HTTPS  if getattr(client_options.http_proxy_options, 'tls_connection_options', None) is not None else MetricsHttpProxyTypeValue.HTTP
+        proxy_type = MetricsHttpProxyTypeValue.HTTPS if getattr(
+            client_options.http_proxy_options,
+            'tls_connection_options',
+            None) is not None else MetricsHttpProxyTypeValue.HTTP
         features.append(f"{MetricsFeatureId.HTTP_PROXY_TYPE}/{proxy_type}")
 
     # I: certificate_source - Would need to be tracked from TLS context setup. This is set at a IoT SDK level
@@ -244,11 +262,14 @@ def get_encoded_feature_list(client_options):
     # LOOK into it
     # J: tls_cipher_preference
 
-    # K: minimum_tls_version - The minimum TLS version is set on TLSContextOptions but not stored/accessible from TLSContext.
+    # K: minimum_tls_version - The minimum TLS version is set on
+    # TLSContextOptions but not stored/accessible from TLSContext.
 
     return ",".join(features)
 
 # MQTT3 encoding list
+
+
 def get_encoded_feature_list_mqtt3(proxy_options):
     """
     Generates encoded feature list for MQTT3 connections
@@ -262,7 +283,8 @@ def get_encoded_feature_list_mqtt3(proxy_options):
         f"{MetricsFeatureId.SOCKET_IMPLEMENTATION}/{_detect_socket_implementation()}"
     ]
     if proxy_options is not None:
-        proxy_type = MetricsHttpProxyTypeValue.HTTPS if getattr(proxy_options, 'tls_connection_options', None) is not None else MetricsHttpProxyTypeValue.HTTP
+        proxy_type = MetricsHttpProxyTypeValue.HTTPS if getattr(
+            proxy_options, 'tls_connection_options', None) is not None else MetricsHttpProxyTypeValue.HTTP
         features.append(f"{MetricsFeatureId.HTTP_PROXY_TYPE}/{proxy_type}")
 
     return ",".join(features)
@@ -282,7 +304,7 @@ def merge_feature_lists(crt_features, user_features):
     # Parse CRT Features
     for pair in crt_features.split(","):
         if "/" in pair:
-            fid, val = pair.split("/",1)
+            fid, val = pair.split("/", 1)
             merged[fid] = val
 
     #
@@ -290,9 +312,11 @@ def merge_feature_lists(crt_features, user_features):
         if "/" in pair:
             fid, val = pair.split("/", 1)
             merged[fid] = val
-    return ",".join(f"{k}/{v}" for k ,v in sorted(merged.items()))
+    return ",".join(f"{k}/{v}" for k, v in sorted(merged.items()))
 
 # Metrics creation
+
+
 def create_metrics(user_metrics, crt_feature_list):
     """
     Creates the final IoTDeviceSDKMetrics
@@ -312,14 +336,13 @@ def create_metrics(user_metrics, crt_feature_list):
     from awscrt import __version__ as crt_version
 
     final_metrics = AWSIoTMetrics(
-          library_name=user_metrics.library_name if user_metrics else "IoTDeviceSDK/Python"
+        library_name=user_metrics.library_name if user_metrics else "IoTDeviceSDK/Python"
     )
 
     # CRTVERSION: not modifiable by user, automatically set
     metadata = {"CRTVersion": crt_version}
 
-
-    #Extract user_metadata from IoT SDK
+    # Extract user_metadata from IoT SDK
     user_metrics_version = None
     user_feature = ""
     if user_metrics and user_metrics.metadata_entries:
@@ -332,15 +355,16 @@ def create_metrics(user_metrics, crt_feature_list):
                 metadata[entry.key] = entry.value
 
     # Merge features: if version matches, merge CRT + SDK; otherwise CRT only
-    if (user_metrics_version is not None and user_metrics_version.isdigit() and int(user_metrics_version) == IOT_SDK_METRICS_FEATURE_VERSION and user_feature):
-        metadata["IoTSDKFeature"] = merge_feature_lists(crt_feature_list,user_feature)
+    if (user_metrics_version is not None and user_metrics_version.isdigit() and int(
+            user_metrics_version) == IOT_SDK_METRICS_FEATURE_VERSION and user_feature):
+        metadata["IoTSDKFeature"] = merge_feature_lists(crt_feature_list, user_feature)
     else:
-        metadata["IoTSDKFeature"] = merge_feature_lists(crt_feature_list,"")
+        metadata["IoTSDKFeature"] = merge_feature_lists(crt_feature_list, "")
 
     # Always set current metrics version
     metadata["IoTSDKMetricsVersion"] = str(IOT_SDK_METRICS_FEATURE_VERSION)
 
-    final_metrics.metadata_entries = [IoTMetricsMetadata(key=k, value = v) for k,v in metadata.items()]
+    final_metrics.metadata_entries = [IoTMetricsMetadata(key=k, value=v) for k, v in metadata.items()]
     return final_metrics
 
 
@@ -355,7 +379,8 @@ def create_metrics_mqtt5(client_options):
     crt_feature_list = get_encoded_feature_list(client_options)
     return create_metrics(client_options.metrics, crt_feature_list)
 
-def create_metrics_mqtt3(user_metrics = None, proxy_options = None):
+
+def create_metrics_mqtt3(user_metrics=None, proxy_options=None):
     """
     Creates final metrics for MQTT3 connection.
     Args:

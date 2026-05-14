@@ -18,7 +18,6 @@ from inspect import signature
 from awscrt._aws_iot_metrics import AWSIoTMetrics, IoTMetricsMetadata, create_metrics_mqtt5
 
 
-
 class QoS(IntEnum):
     """MQTT message delivery quality of service.
 
