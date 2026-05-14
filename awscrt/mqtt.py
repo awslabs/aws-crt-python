@@ -16,8 +16,8 @@ from awscrt.http import HttpProxyOptions, HttpRequest
 from awscrt.io import ClientBootstrap, ClientTlsContext, SocketOptions
 from dataclasses import dataclass
 from awscrt.mqtt5 import Client as Mqtt5Client
-from awscrt._aws_iot_metrics import AWSIoTMetrics, IoTMetricsMetadataEntry
-from awscrt import __version__ as crt_version
+from awscrt._aws_iot_metrics import AWSIoTMetrics, IoTMetricsMetadata, create_metrics_mqtt3
+
 
 
 class QoS(IntEnum):
@@ -417,15 +417,7 @@ class Connection(NativeResource):
         self.socket_options = socket_options if socket_options else SocketOptions()
         self.proxy_options = proxy_options if proxy_options else websocket_proxy_options
         if enable_metrics:
-            if metrics:
-                self._metrics = metrics
-            else:
-                self._metrics = AWSIoTMetrics()
-
-            # CRT version injection
-            entries = self._metrics.metadata_entries or []
-            entries.append(IoTMetricsMetadataEntry(key="CRTVersion", value=crt_version))
-            self._metrics.metadata_entries = entries
+            self._metrics = create_metrics_mqtt3(metrics,self.proxy_options)
         else:
             self._metrics = None
 
