@@ -16,7 +16,7 @@ from awscrt.http import HttpProxyOptions, HttpRequest
 from awscrt.io import ClientBootstrap, ClientTlsContext, SocketOptions
 from dataclasses import dataclass
 from awscrt.mqtt5 import Client as Mqtt5Client
-from awscrt._aws_iot_metrics import AWSIoTMetrics, IoTMetricsMetadata, create_metrics_mqtt3
+from awscrt.aws_iot_metrics import AWSIoTMetrics, IoTMetricsMetadata, create_metrics_mqtt3
 
 
 class QoS(IntEnum):

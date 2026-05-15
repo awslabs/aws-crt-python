@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: Apache-2.0.
 
 from weakref import WeakSet
-from awscrt._aws_iot_metrics import AWSIoTMetrics, IoTMetricsMetadata
 
 
 __all__ = [
@@ -17,8 +16,7 @@ __all__ = [
     'mqtt_request_response',
     's3',
     'websocket',
-    'AWSIoTMetrics',
-    'IoTMetricsMetadata',
+    'aws_iot_metrics',
 ]
 
 __version__ = '1.0.0.dev0'

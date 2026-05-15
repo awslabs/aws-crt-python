@@ -197,7 +197,7 @@ def _detect_socket_implementation():
 
 
 # MQTT5 encoding list
-def get_encoded_feature_list(client_options):
+def _get_encoded_feature_list(client_options):
     """
     Generates the encoded feature list string for metrics directly from client options.
     Format: "ID/Value,ID/Value..."
@@ -276,7 +276,7 @@ def get_encoded_feature_list(client_options):
 # MQTT3 encoding list
 
 
-def get_encoded_feature_list_mqtt3(proxy_options, tls_ctx=None):
+def _get_encoded_feature_list_mqtt3(proxy_options, tls_ctx=None):
     """
     Generates encoded feature list for MQTT3 connections
     Args:
@@ -309,7 +309,7 @@ def get_encoded_feature_list_mqtt3(proxy_options, tls_ctx=None):
     return ",".join(features)
 
 
-def merge_feature_lists(crt_features, user_features):
+def _merge_feature_lists(crt_features, user_features):
     """Merges CRT features with user-provided (SDK) features.
       User features take precedence for the same feature ID.
 
@@ -376,9 +376,9 @@ def create_metrics(user_metrics, crt_feature_list):
     # Merge features: if version matches, merge CRT + SDK; otherwise CRT only
     if (user_metrics_version is not None and user_metrics_version.isdigit() and int(
             user_metrics_version) == IOT_SDK_METRICS_FEATURE_VERSION and user_feature):
-        metadata["IoTSDKFeature"] = merge_feature_lists(crt_feature_list, user_feature)
+        metadata["IoTSDKFeature"] = _merge_feature_lists(crt_feature_list, user_feature)
     else:
-        metadata["IoTSDKFeature"] = merge_feature_lists(crt_feature_list, "")
+        metadata["IoTSDKFeature"] = _merge_feature_lists(crt_feature_list, "")
 
     # Always set current metrics version
     metadata["IoTSDKMetricsVersion"] = str(IOT_SDK_METRICS_FEATURE_VERSION)
@@ -395,7 +395,7 @@ def create_metrics_mqtt5(client_options):
     Returns:
         AWSIoTMetrics: The final metrics object
     """
-    crt_feature_list = get_encoded_feature_list(client_options)
+    crt_feature_list = _get_encoded_feature_list(client_options)
     return create_metrics(client_options.metrics, crt_feature_list)
 
 
@@ -408,5 +408,5 @@ def create_metrics_mqtt3(user_metrics=None, proxy_options=None, tls_ctx=None):
     Returns:
         AWSIoTMetrics: The final metrics object
     """
-    crt_feature_list = get_encoded_feature_list_mqtt3(proxy_options, tls_ctx)
+    crt_feature_list = _get_encoded_feature_list_mqtt3(proxy_options, tls_ctx)
     return create_metrics(user_metrics, crt_feature_list)

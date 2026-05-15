@@ -15,7 +15,7 @@ from awscrt.io import ClientBootstrap, SocketOptions, ClientTlsContext
 from dataclasses import dataclass
 from collections.abc import Sequence
 from inspect import signature
-from awscrt._aws_iot_metrics import AWSIoTMetrics, IoTMetricsMetadata, create_metrics_mqtt5
+from awscrt.aws_iot_metrics import AWSIoTMetrics, IoTMetricsMetadata, create_metrics_mqtt5
 
 
 class QoS(IntEnum):
