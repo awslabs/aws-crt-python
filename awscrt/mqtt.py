@@ -332,7 +332,7 @@ class Connection(NativeResource):
         proxy_options (Optional[awscrt.http.HttpProxyOptions]):
             Optional proxy options for all connections.
 
-        enable_metrics (bool): Enable IoT SDK metrics in MQTT CONNECT packet username field, including SDK name, version, and platform. Default to True.
+        disable_metrics (bool): Disable IoT SDK metrics in MQTT CONNECT packet username field, including SDK name, version, and platform. Default to False.
 
         metrics (Optional[AWSIoTMetrics]) :  Optional metrics configuration for IoT SDK metrics reporting. If provided, the CRT will use the given metrics. If None, a default AWSIoTMetrics will be created.
         """
@@ -361,7 +361,7 @@ class Connection(NativeResource):
                  on_connection_success=None,
                  on_connection_failure=None,
                  on_connection_closed=None,
-                 enable_metrics=True,
+                 disable_metrics=False,
                  metrics=None,
                  ):
 
@@ -415,7 +415,7 @@ class Connection(NativeResource):
         self.password = password
         self.socket_options = socket_options if socket_options else SocketOptions()
         self.proxy_options = proxy_options if proxy_options else websocket_proxy_options
-        if enable_metrics:
+        if not disable_metrics:
             self._metrics = create_metrics_mqtt3(metrics, self.proxy_options, self.client.tls_ctx)
         else:
             self._metrics = None

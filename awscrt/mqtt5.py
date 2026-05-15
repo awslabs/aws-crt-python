@@ -1371,7 +1371,7 @@ class ClientOptions:
         on_lifecycle_event_connection_success_fn (Callable[[LifecycleConnectSuccessData],]): Callback for Lifecycle Event Connection Success.
         on_lifecycle_event_connection_failure_fn (Callable[[LifecycleConnectFailureData],]): Callback for Lifecycle Event Connection Failure.
         on_lifecycle_event_disconnection_fn (Callable[[LifecycleDisconnectData],]): Callback for Lifecycle Event Disconnection.
-        enable_metrics (bool): Enable IoT SDK metrics in MQTT CONNECT packet username field, including SDK name, version, and platform. Default to True.
+        disable_metrics (bool): Disable IoT SDK metrics in MQTT CONNECT packet username field, including SDK name, version, and platform. Default to False.
         metrics (Optional[AWSIoTMetrics]) :  Optional metrics configuration for IoT SDK metrics reporting. If provided, the CRT will use the given metrics. If None, a default AWSIoTMetrics will be created.
 
     """
@@ -1400,7 +1400,7 @@ class ClientOptions:
     on_lifecycle_event_connection_success_fn: Callable[[LifecycleConnectSuccessData], None] = None
     on_lifecycle_event_connection_failure_fn: Callable[[LifecycleConnectFailureData], None] = None
     on_lifecycle_event_disconnection_fn: Callable[[LifecycleDisconnectData], None] = None
-    enable_metrics: bool = True
+    disable_metrics: bool = False
     metrics: Optional[AWSIoTMetrics] = None
 
 
@@ -1430,7 +1430,7 @@ class _ClientCore:
         self._on_lifecycle_connection_failure_cb = _check_callback(
             client_options.on_lifecycle_event_connection_failure_fn)
         self._on_lifecycle_disconnection_cb = _check_callback(client_options.on_lifecycle_event_disconnection_fn)
-        self._enable_metrics = client_options.enable_metrics
+        self._disable_metrics = client_options.disable_metrics
 
     def _ws_handshake_transform(self, http_request_binding, http_headers_binding, native_userdata):
         if self._ws_handshake_transform_cb is None:
@@ -1778,7 +1778,7 @@ class _Mqtt5to3AdapterOptions:
             keep_alive_secs: int,
             ack_timeout_secs: int,
             clean_session: int,
-            enable_metrics: bool):
+            disable_metrics: bool):
         self.host_name = host_name
         self.port = port
         self.client_id = "" if client_id is None else client_id
@@ -1789,7 +1789,7 @@ class _Mqtt5to3AdapterOptions:
         self.keep_alive_secs: int = 1200 if keep_alive_secs is None else keep_alive_secs
         self.ack_timeout_secs: int = 0 if ack_timeout_secs is None else ack_timeout_secs
         self.clean_session: bool = True if clean_session is None else clean_session
-        self.enable_metrics: bool = True if enable_metrics is None else enable_metrics
+        self.disable_metrics: bool = False if disable_metrics is None else disable_metrics
 
 
 class Client(NativeResource):
@@ -1821,7 +1821,7 @@ class Client(NativeResource):
             socket_options = SocketOptions()
 
         # Handle metrics configuration
-        if client_options.enable_metrics:
+        if not client_options.disable_metrics:
             self._metrics = create_metrics_mqtt5(client_options)
         else:
             self._metrics = None
@@ -1877,7 +1877,7 @@ class Client(NativeResource):
                                                  client_options.ack_timeout_sec,
                                                  client_options.topic_aliasing_options,
                                                  websocket_is_none,
-                                                 client_options.enable_metrics,
+                                                 not client_options.disable_metrics,
                                                  self._metrics,
                                                  core)
 
@@ -1894,7 +1894,7 @@ class Client(NativeResource):
             ack_timeout_secs=client_options.ack_timeout_sec,
             clean_session=(
                 client_options.session_behavior < ClientSessionBehaviorType.REJOIN_ALWAYS if client_options.session_behavior else True),
-            enable_metrics=client_options.enable_metrics)
+            disable_metrics=client_options.disable_metrics)
 
     def start(self):
         """Notifies the MQTT5 client that you want it maintain connectivity to the configured endpoint.
@@ -2148,5 +2148,5 @@ class Client(NativeResource):
             websocket_proxy_options=None,
             websocket_handshake_transform=None,
             proxy_options=None,
-            enable_metrics=self.adapter_options.enable_metrics
+            disable_metrics=self.adapter_options.disable_metrics
         )
