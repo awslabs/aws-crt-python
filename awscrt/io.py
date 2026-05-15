@@ -612,7 +612,7 @@ class ClientTlsContext(NativeResource):
         assert isinstance(options, TlsContextOptions)
 
         super().__init__()
-        
+
         self.min_tls_ver = options.min_tls_ver
         self.cipher_pref = options.cipher_pref
 

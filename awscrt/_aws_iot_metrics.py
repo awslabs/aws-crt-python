@@ -399,7 +399,7 @@ def create_metrics_mqtt5(client_options):
     return create_metrics(client_options.metrics, crt_feature_list)
 
 
-def create_metrics_mqtt3(user_metrics=None, proxy_options=None, tls_ctx = None):
+def create_metrics_mqtt3(user_metrics=None, proxy_options=None, tls_ctx=None):
     """
     Creates final metrics for MQTT3 connection.
     Args:
