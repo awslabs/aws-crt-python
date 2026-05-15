@@ -447,16 +447,20 @@ static bool s_set_metrics(struct aws_mqtt_client_connection *connection, PyObjec
 
     bool success = false;
 
+    struct aws_mqtt_iot_metrics metrics_tmp;
+    AWS_ZERO_STRUCT(metrics_tmp);
+    PyObject *metadata_entries_py = NULL;
+    struct aws_mqtt_metadata_entry *metadata_entries = NULL;
+    size_t metadata_count = 0;
+
     PyObject *library_name_py = PyObject_GetAttrString(metrics, "library_name");
-    struct aws_byte_cursor library_name = aws_byte_cursor_from_pyunicode(library_name_py);
-    if (!library_name.ptr) {
+    metrics_tmp.library_name = aws_byte_cursor_from_pyunicode(library_name_py);
+    if (!metrics_tmp.library_name.ptr) {
         PyErr_SetString(PyExc_TypeError, "metrics.library_name must be str type");
         goto done;
     }
 
-    PyObject *metadata_entries_py = PyObject_GetAttrString(metrics, "metadata_entries");
-    struct aws_mqtt_metadata_entry *metadata_entries = NULL;
-    size_t metadata_count = 0;
+    metadata_entries_py = PyObject_GetAttrString(metrics, "metadata_entries");
 
     if (metadata_entries_py && metadata_entries_py != Py_None && PyList_Check(metadata_entries_py)) {
         Py_ssize_t count = PyList_Size(metadata_entries_py);
@@ -488,13 +492,10 @@ static bool s_set_metrics(struct aws_mqtt_client_connection *connection, PyObjec
         }
     }
 
-    struct aws_mqtt_iot_metrics metrics_struct = {
-        .library_name = library_name,
-        .metadata_count = metadata_count,
-        .metadata_entries = metadata_entries,
-    };
+    metrics_tmp.metadata_count = metadata_count;
+    metrics_tmp.metadata_entries = metadata_entries;
 
-    if (aws_mqtt_client_connection_set_metrics(connection, &metrics_struct)) {
+    if (aws_mqtt_client_connection_set_metrics(connection, &metrics_tmp)) {
         PyErr_SetAwsLastError();
         goto done;
     }
