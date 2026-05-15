@@ -334,7 +334,7 @@ class Connection(NativeResource):
 
         enable_metrics (bool): Enable IoT SDK metrics in MQTT CONNECT packet username field, including SDK name, version, and platform. Default to True.
 
-        metrics (Optional[:class:`AWSIoTMetrics`]) :  Optional metrics configuration for IoT SDK metrics reporting. If provided, the CRT will use the given metrics. If None, a default AWSIoTMetrics will be created.
+        metrics (Optional[AWSIoTMetrics]) :  Optional metrics configuration for IoT SDK metrics reporting. If provided, the CRT will use the given metrics. If None, a default AWSIoTMetrics will be created.
         """
 
     def __init__(self,
