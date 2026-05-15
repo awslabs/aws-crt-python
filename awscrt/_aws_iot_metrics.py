@@ -259,18 +259,24 @@ def get_encoded_feature_list(client_options):
 
     # I: certificate_source - Would need to be tracked from TLS context setup. This is set at a IoT SDK level
 
-    # LOOK into it
-    # J: tls_cipher_preference
+    # J: tls_cipher_preference - security policy
+    if client_options.tls_ctx is not None:
+        val = _tls_cipher_preference_metrics_value(client_options.tls_ctx.cipher_pref)
+        if val:
+            features.append(f"{MetricsFeatureId.TLS_CIPHER_PREFERENCE}/{val}")
 
-    # K: minimum_tls_version - The minimum TLS version is set on
-    # TLSContextOptions but not stored/accessible from TLSContext.
+    # K: minimum_tls_version - The minimum TLS version set on TLSContextOptions
+    if client_options.tls_ctx is not None:
+        val = _minimum_tls_version_metrics_value(client_options.tls_ctx.min_tls_ver)
+        if val:
+            features.append(f"{MetricsFeatureId.MINIMUM_TLS_VERSION}/{val}")
 
     return ",".join(features)
 
 # MQTT3 encoding list
 
 
-def get_encoded_feature_list_mqtt3(proxy_options):
+def get_encoded_feature_list_mqtt3(proxy_options, tls_ctx=None):
     """
     Generates encoded feature list for MQTT3 connections
     Args:
@@ -282,10 +288,23 @@ def get_encoded_feature_list_mqtt3(proxy_options):
         f"{MetricsFeatureId.PROTOCOL_VERSION}/{MetricsProtocolVersionValue.MQTT311}",
         f"{MetricsFeatureId.SOCKET_IMPLEMENTATION}/{_detect_socket_implementation()}"
     ]
+    # H: http_proxy_type - Determine based on whether proxy uses TLS
     if proxy_options is not None:
         proxy_type = MetricsHttpProxyTypeValue.HTTPS if getattr(
             proxy_options, 'tls_connection_options', None) is not None else MetricsHttpProxyTypeValue.HTTP
         features.append(f"{MetricsFeatureId.HTTP_PROXY_TYPE}/{proxy_type}")
+
+    # J: tls_cipher_preference - security policy
+    if tls_ctx is not None:
+        val = _tls_cipher_preference_metrics_value(tls_ctx.cipher_pref)
+        if val:
+            features.append(f"{MetricsFeatureId.TLS_CIPHER_PREFERENCE}/{val}")
+
+    # K: minimum_tls_version - the minimum TLS version set on TLSContextOptions
+    if tls_ctx is not None:
+        val = _minimum_tls_version_metrics_value(tls_ctx.min_tls_ver)
+        if val:
+            features.append(f"{MetricsFeatureId.MINIMUM_TLS_VERSION}/{val}")
 
     return ",".join(features)
 
@@ -380,7 +399,7 @@ def create_metrics_mqtt5(client_options):
     return create_metrics(client_options.metrics, crt_feature_list)
 
 
-def create_metrics_mqtt3(user_metrics=None, proxy_options=None):
+def create_metrics_mqtt3(user_metrics=None, proxy_options=None, tls_ctx = None):
     """
     Creates final metrics for MQTT3 connection.
     Args:
@@ -389,5 +408,5 @@ def create_metrics_mqtt3(user_metrics=None, proxy_options=None):
     Returns:
         AWSIoTMetrics: The final metrics object
     """
-    crt_feature_list = get_encoded_feature_list_mqtt3(proxy_options)
+    crt_feature_list = get_encoded_feature_list_mqtt3(proxy_options, tls_ctx)
     return create_metrics(user_metrics, crt_feature_list)
