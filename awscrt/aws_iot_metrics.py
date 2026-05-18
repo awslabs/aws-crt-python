@@ -43,9 +43,11 @@ IOT_SDK_METRICS_FEATURE_VERSION = 1
 
 
 class MetricsFeatureId(str, Enum):
-    """
-    Feature IDs for IoT SDK metrics tracking.
-    These IDs are used to encode feature usage in the metrics string. They are assigned sequentially and never reused to ensure historical data consistency
+    """Feature IDs for IoT SDK metrics tracking.
+
+    Each ID is a single character used to encode feature usage in the metrics
+    string with the format "ID/Value". IDs are assigned sequentially and never
+    reused to ensure historical data consistency across SDK versions.
     """
     RETRY_JITTER_MODE = "A"
     SESSION_BEHAVIOR = "B"
@@ -63,24 +65,28 @@ class MetricsFeatureId(str, Enum):
 
 
 class MetricsProtocolVersionValue(str, Enum):
-    """
-    Protocol version values for metrics
+    """Protocol version values for metrics encoding.
+
+    Maps MQTT protocol versions to their single-character metric representations.
     """
     MQTT311 = "3"
     MQTT5 = "5"
 
 
 class MetricsSocketImplementationValue(str, Enum):
-    """
-    Socket implementation values for metrics
+    """Socket implementation values for metrics encoding.
+
+    Maps the underlying platform socket layer to its metric representation.
+    POSIX covers macOS and Linux; WINSOCK covers Windows.
     """
     POSIX = "A"
     WINSOCK = "B"
 
 
 class MetricsHttpProxyTypeValue(str, Enum):
-    """
-    HTTP proxy type values for metrics
+    """HTTP proxy type values for metrics encoding.
+
+    Indicates whether the proxy connection uses plain HTTP or HTTPS (TLS).
     """
     HTTP = "A"
     HTTPS = "B"
@@ -89,9 +95,10 @@ class MetricsHttpProxyTypeValue(str, Enum):
 
 
 def _retry_jitter_metrics_value(mode):
-    """
-    Map ExponentialBackoffJitterMode to metrics value.
-    NONE->A, FULL->B, DECORRELATED->C, DEFAULT->None
+    """Map ExponentialBackoffJitterMode to its single-character metrics value.
+
+    Mapping: NONE->A, FULL->B, DECORRELATED->C.
+    Returns None for DEFAULT.
     """
     from awscrt.mqtt5 import ExponentialBackoffJitterMode
     mapping = {
@@ -103,9 +110,10 @@ def _retry_jitter_metrics_value(mode):
 
 
 def _client_session_behavior_metrics_value(behavior):
-    """
-    Map ClientSessionBehaviorType to metrics value.
-    CLEAN->A, REJOINPOSTSUCCESS->B, REJOINALWAYS->C, DEFAULT->None
+    """Map ClientSessionBehaviorType to its single-character metrics value.
+
+    Mapping: CLEAN->A, REJOIN_POST_SUCCESS->B, REJOIN_ALWAYS->C.
+    Returns None for DEFAULT.
     """
     from awscrt.mqtt5 import ClientSessionBehaviorType
     mapping = {
@@ -117,10 +125,11 @@ def _client_session_behavior_metrics_value(behavior):
 
 
 def _client_operation_queue_behavior_metrics_value(behavior):
-    """
-    Map ClientOperationQueueBehaviorType to metrics value.
-    FAIL_NON_QOS1_PUBLISH_ON_DISCONNECT->A, FAIL_QOS0_PUBLISH_ON_DISCONNECT->B,
-    FAIL_ALL_ON_DISCONNECT->C, DEFAULT->None.
+    """Map ClientOperationQueueBehaviorType to its single-character metrics value.
+
+    Mapping: FAIL_NON_QOS1_PUBLISH_ON_DISCONNECT->A,
+    FAIL_QOS0_PUBLISH_ON_DISCONNECT->B, FAIL_ALL_ON_DISCONNECT->C.
+    Returns None for DEFAULT.
     """
     from awscrt.mqtt5 import ClientOperationQueueBehaviorType
     mapping = {
@@ -132,9 +141,10 @@ def _client_operation_queue_behavior_metrics_value(behavior):
 
 
 def _outbound_topic_alias_behavior_metrics_value(behavior):
-    """
-    Map OutboundTopicAliasBehaviorType to metrics value.
-    MANUAL->A, LRU->B, DISABLED->C, DEFAULT->None.
+    """Map OutboundTopicAliasBehaviorType to its single-character metrics value.
+
+    Mapping: MANUAL->A, LRU->B, DISABLED->C.
+    Returns None for DEFAULT.
     """
     from awscrt.mqtt5 import OutboundTopicAliasBehaviorType
     mapping = {
@@ -146,9 +156,10 @@ def _outbound_topic_alias_behavior_metrics_value(behavior):
 
 
 def _inbound_topic_alias_behavior_metrics_value(behavior):
-    """
-    Map InboundTopicAliasBehaviorType to metrics value.
-    ENABLED->A, DISABLED->B, DEFAULT->None.
+    """Map InboundTopicAliasBehaviorType to its single-character metrics value.
+
+    Mapping: ENABLED->A, DISABLED->B.
+    Returns None for DEFAULT.
     """
     from awscrt.mqtt5 import InboundTopicAliasBehaviorType
     mapping = {
@@ -159,9 +170,10 @@ def _inbound_topic_alias_behavior_metrics_value(behavior):
 
 
 def _minimum_tls_version_metrics_value(version):
-    """
-    Map TlsVersion to metrics value.
-    SSLv3->A, TLSv1->B, TLSv1_1->C, TLSv1_2->D, TLSv1_3->E
+    """Map TlsVersion to its single-character metrics value.
+
+    Mapping: SSLv3->A, TLSv1->B, TLSv1_1->C, TLSv1_2->D, TLSv1_3->E.
+    Returns None for DEFAULT.
     """
     from awscrt.io import TlsVersion
     mapping = {
@@ -175,8 +187,11 @@ def _minimum_tls_version_metrics_value(version):
 
 
 def _tls_cipher_preference_metrics_value(pref):
-    """Map TlsCipherPref to metrics value.
-    PQ_TLSv1_0_2021_05→A, PQ_DEFAULT→B, TLSv1_2_2025_07→C, DEFAULT→None (omitted)"""
+    """Map TlsCipherPref to its single-character metrics value.
+
+    Mapping: PQ_TLSv1_0_2021_05->A, PQ_DEFAULT->B, TLSv1_2_2025_07->C.
+    Returns None for DEFAULT.
+    """
     from awscrt.io import TlsCipherPref
     mapping = {
         TlsCipherPref.PQ_TLSv1_0_2021_05: "A",
@@ -187,9 +202,11 @@ def _tls_cipher_preference_metrics_value(pref):
 
 
 def _detect_socket_implementation():
-    """
-    Helper function to detect socket implementation based on platform
-    Python CRT is built for macOS (POSIX), Linux (POSIX), and Windows (WINSOCK).
+    """Detect the socket implementation based on the current platform.
+
+    Returns MetricsSocketImplementationValue.WINSOCK on Windows,
+    MetricsSocketImplementationValue.POSIX on all other platforms
+    (macOS, Linux).
     """
     if sys.platform == "win32":
         return MetricsSocketImplementationValue.WINSOCK
@@ -198,15 +215,32 @@ def _detect_socket_implementation():
 
 # MQTT5 encoding list
 def _get_encoded_feature_list(client_options):
-    """
-    Generates the encoded feature list string for metrics directly from client options.
-    Format: "ID/Value,ID/Value..."
-    Example: "A/B,C/A" means Feature A (retry_jitter_mode) with value B (FULL),
-            and Feature C (offline_queue_behavior) with value A (FAIL_NON_QOS1_PUBLISH_ON_DISCONNECT)
+    """Generates the encoded feature list string for metrics from MQTT5 ClientOptions.
+
+    Format: "ID/Value,ID/Value,..."
+    Example: "A/B,C/A,F/5,G/A" means retry_jitter_mode=FULL, offline_queue_behavior=
+    FAIL_NON_QOS1_PUBLISH_ON_DISCONNECT, protocol=MQTT5, socket=POSIX.
+
+    MQTT5 connections always include:
+        - F (protocol_version): set to MQTT5
+        - G (socket_implementation): detected from platform (POSIX or WINSOCK)
+
+    Conditionally includes (only when the option is explicitly set and not DEFAULT):
+        - A (retry_jitter_mode): from client_options.retry_jitter_mode
+        - B (session_behavior): from client_options.session_behavior
+        - C (offline_queue_behavior): from client_options.offline_queue_behavior
+        - D (outbound_topic_alias_behavior): from topic_aliasing_options.outbound_behavior
+        - E (inbound_topic_alias_behavior): from topic_aliasing_options.inbound_behavior
+        - H (http_proxy_type): HTTP or HTTPS based on proxy TLS settings
+        - J (tls_cipher_preference): mapped from TlsCipherPref on the TLS context
+        - K (minimum_tls_version): mapped from TlsVersion on the TLS context
+
+    Feature I (certificate_source) is set at the IoT SDK level, not here.
+
     Args:
         client_options: MQTT5 ClientOptions dataclass.
     Returns:
-        str: The encoded feature list string
+        str: The encoded feature list string.
     """
 
     features = []
@@ -278,11 +312,23 @@ def _get_encoded_feature_list(client_options):
 
 def _get_encoded_feature_list_mqtt3(proxy_options, tls_ctx=None):
     """
-    Generates encoded feature list for MQTT3 connections
+    Generates the encoded feature list string for metrics from MQTT3 connection options.
+    Format: "ID/Value,ID/Value..."
+
+    MQTT3 connections always include:
+        - F (protocol_version): set to MQTT311
+        - G (socket_implementation): detected from platform (POSIX or WINSOCK)
+
+    Conditionally includes:
+        - H (http_proxy_type): HTTP or HTTPS based on proxy TLS settings
+        - J (tls_cipher_preference): mapped from TlsCipherPref on the TLS context
+        - K (minimum_tls_version): mapped from TlsVersion on the TLS context
+
     Args:
-        proxy_options: Optional proxy options from Connection
+        proxy_options: Optional HttpProxyOptions from the Connection.
+        tls_ctx: Optional ClientTlsContext used by the connection.
     Returns:
-        str: The encoded feature list string
+        str: The encoded feature list string.
     """
     features = [
         f"{MetricsFeatureId.PROTOCOL_VERSION}/{MetricsProtocolVersionValue.MQTT311}",
@@ -310,14 +356,17 @@ def _get_encoded_feature_list_mqtt3(proxy_options, tls_ctx=None):
 
 
 def _merge_feature_lists(crt_features, user_features):
-    """Merges CRT features with user-provided (SDK) features.
-      User features take precedence for the same feature ID.
+    """Merge CRT-generated features with user-provided (IoT SDK) features.
 
-      Args:
-          crt_features (str): CRT-generated feature list (e.g., "A/B,F/5,G/A")
-          user_features (str): User-provided feature list from IoT SDK
-      Returns:
-          str: The merged feature list string
+    When both lists contain the same feature ID, the user-provided value
+    takes precedence. The result is sorted alphabetically by feature ID.
+
+    Args:
+        crt_features (str): CRT-generated feature list.
+        user_features (str): User-provided feature list from the IoT SDK.
+            May be empty string if no SDK features are provided.
+    Returns:
+        str: The merged feature list string, sorted by feature ID.
     """
     merged = {}
     # Parse CRT Features
@@ -326,7 +375,6 @@ def _merge_feature_lists(crt_features, user_features):
             fid, val = pair.split("/", 1)
             merged[fid] = val
 
-    #
     for pair in user_features.split(","):
         if "/" in pair:
             fid, val = pair.split("/", 1)
@@ -337,19 +385,31 @@ def _merge_feature_lists(crt_features, user_features):
 
 
 def create_metrics(user_metrics, crt_feature_list):
-    """
-    Creates the final IoTDeviceSDKMetrics
-    The function sets the metrics according to following rules:
-    1. libraryName: - set to default SDK Name. If the libraryName field is not set.
-    2. metadata - CRTVersion : automatically set CRT version, not modifiable by user
-    3. metadata - IOTSDKMetricsVersion: validates whether the metrics version matches the library's metrics version and process IoTSDKFeature
-    4. metadata - IoTSDKFeature: merge the CRT feature and the input feature if the metrics version matches
+    """Create the final AWSIoTMetrics object by merging CRT and user-provided data.
+
+    Applies the following rules to produce the final metrics:
+
+    1. library_name: Uses the value from user_metrics if provided,
+       otherwise defaults to "IoTDeviceSDK/Python".
+    2. CRTVersion: Automatically set to the current awscrt
+       package version. Cannot be overridden by user input.
+    3. IoTSDKMetricsVersion: Always set to the current
+       IOT_SDK_METRICS_FEATURE_VERSION constant.
+    4. IoTSDKFeature: If the user-provided metrics version
+       matches IOT_SDK_METRICS_FEATURE_VERSION, the CRT feature list is
+       merged with the user's IoTSDKFeature (user values take precedence
+       for duplicate feature IDs). Otherwise, only CRT features are used.
+    5. Any additional user metadata entries (other than CRTVersion,
+       IoTSDKMetricsVersion, IoTSDKFeature) are passed through unchanged.
 
     Args:
-        user_metrics: Optional AWSIoTMetrics from IoT SDK
-        crt_feature_list (str): Encoded CRT feature list
+        user_metrics : Metrics configuration from
+            the IoT SDK. May be None if no SDK-level metrics are provided.
+        crt_feature_list : Encoded CRT feature list string generated
+            by _get_encoded_feature_list or _get_encoded_feature_list_mqtt3.
     Returns:
-        AWSIoTMetrics: The final metrics object
+        AWSIoTMetrics: The final metrics object ready to be embedded in the
+            MQTT CONNECT packet username field.
     """
 
     from awscrt import __version__ as crt_version
@@ -388,12 +448,15 @@ def create_metrics(user_metrics, crt_feature_list):
 
 
 def create_metrics_mqtt5(client_options):
-    """
-    Creates final metrics for MQTT5 client.
+    """Create the final AWSIoTMetrics object for an MQTT5 client.
+
+    Generates the CRT feature list from the full set of MQTT5 ClientOptions
+
     Args:
-        client_options: MQTT5 ClientOptions dataclass
+        client_options: MQTT5 ClientOptions dataclass containing all
+            connection configuration and optional user metrics.
     Returns:
-        AWSIoTMetrics: The final metrics object
+        AWSIoTMetrics: The final metrics object with merged CRT and SDK features.
     """
     crt_feature_list = _get_encoded_feature_list(client_options)
     return create_metrics(client_options.metrics, crt_feature_list)
@@ -401,12 +464,20 @@ def create_metrics_mqtt5(client_options):
 
 def create_metrics_mqtt3(user_metrics=None, proxy_options=None, tls_ctx=None):
     """
-    Creates final metrics for MQTT3 connection.
+    Creates the final AWSIoTMetrics object for an MQTT3 connection.
+
+    Generates the CRT feature list from the MQTT3 connection parameters
+
     Args:
-        user_metrics: Optional AWSIoTMetrics from IoT SDK
-        proxy_options: Optional proxy options from Connection
+        user_metrics : Optional metrics configuration
+            provided by the IoT SDK. If None, defaults are used.
+        proxy_options : Optional HTTP proxy options
+            from the Connection, used to determine proxy type feature.
+        tls_ctx : Optional TLS context from the
+            connection, used to determine cipher preference and minimum TLS
+            version features.
     Returns:
-        AWSIoTMetrics: The final metrics object
+        AWSIoTMetrics: The final metrics object with merged CRT and SDK features.
     """
     crt_feature_list = _get_encoded_feature_list_mqtt3(proxy_options, tls_ctx)
     return create_metrics(user_metrics, crt_feature_list)
