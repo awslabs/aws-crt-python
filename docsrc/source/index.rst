@@ -12,6 +12,7 @@ API Reference
    :maxdepth: 2
 
    api/auth
+   api/aws_iot_metrics
    api/checksums
    api/common
    api/crypto
