@@ -7,6 +7,7 @@
 #include "io.h"
 
 #include <aws/common/array_list.h>
+#include <aws/common/atomics.h>
 #include <aws/http/connection.h>
 #include <aws/http/proxy.h>
 #include <aws/http/request_response.h>
@@ -25,8 +26,12 @@ struct http_connection_binding {
     /* Reference to python object that reference to other related python object to keep it alive */
     PyObject *py_core;
 
-    bool release_called;
-    bool shutdown_called;
+    /**
+     * Ref-count starting at 2 (one for release, one for shutdown).
+     * Each path decrements atomically; whoever decrements to 0 calls s_connection_destroy().
+     * This is safe under Py_GIL_DISABLED where PyGILState_Ensure() provides no mutual exclusion.
+     */
+    struct aws_atomic_var ref_count;
 };
 
 static void s_connection_destroy(struct http_connection_binding *connection) {
@@ -41,14 +46,11 @@ struct aws_http_connection *aws_py_get_http_connection(PyObject *connection) {
 }
 
 static void s_connection_release(struct http_connection_binding *connection) {
-    AWS_FATAL_ASSERT(!connection->release_called);
-    connection->release_called = true;
-
-    bool destroy_after_release = connection->shutdown_called;
-
     aws_http_connection_release(connection->native);
 
-    if (destroy_after_release) {
+    size_t prev = aws_atomic_fetch_sub(&connection->ref_count, 1);
+    AWS_FATAL_ASSERT(prev != 0);
+    if (prev == 1) {
         s_connection_destroy(connection);
     }
 }
@@ -61,16 +63,11 @@ static void s_connection_capsule_destructor(PyObject *capsule) {
 static void s_on_connection_shutdown(struct aws_http_connection *native_connection, int error_code, void *user_data) {
     (void)native_connection;
     struct http_connection_binding *connection = user_data;
-    AWS_FATAL_ASSERT(!connection->shutdown_called);
 
     PyGILState_STATE state;
     if (aws_py_gilstate_ensure(&state)) {
         return; /* Python has shut down. Nothing matters anymore, but don't crash */
     }
-
-    connection->shutdown_called = true;
-
-    bool destroy_after_shutdown = connection->release_called;
 
     /* Invoke on_shutdown, then clear our reference to it */
     PyObject *result = PyObject_CallMethod(connection->py_core, "_on_shutdown", "(i)", error_code);
@@ -82,7 +79,9 @@ static void s_on_connection_shutdown(struct aws_http_connection *native_connecti
         PyErr_WriteUnraisable(PyErr_Occurred());
     }
 
-    if (destroy_after_shutdown) {
+    size_t prev = aws_atomic_fetch_sub(&connection->ref_count, 1);
+    AWS_FATAL_ASSERT(prev != 0);
+    if (prev == 1) {
         s_connection_destroy(connection);
     }
 
@@ -281,6 +280,7 @@ PyObject *aws_py_http_client_connection_new(PyObject *self, PyObject *args) {
     }
 
     struct http_connection_binding *connection = aws_mem_calloc(allocator, 1, sizeof(struct http_connection_binding));
+    aws_atomic_init_int(&connection->ref_count, 2);
     /* From hereon, we need to clean up if errors occur */
     struct aws_http2_setting *http2_settings = NULL;
     size_t http2_settings_count = 0;
