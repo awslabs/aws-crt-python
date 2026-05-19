@@ -141,12 +141,17 @@ class TestConnectionLifetime(NativeResourceTest):
                 stream = connection.request(request)
                 stream.activate()
                 stream.completion_future.result(self.timeout)
+                del stream
+                del request
 
                 shutdown_future = connection.shutdown_future
-                connection.close()
-                shutdown_future.result(self.timeout)
                 del connection
                 gc.collect()
+
+                try:
+                    shutdown_future.result(self.timeout)
+                except Exception:
+                    pass
         finally:
             self._stop_server()
 
