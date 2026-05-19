@@ -24,8 +24,7 @@ class IoTMetricsMetadata:
 
 @dataclass
 class AWSIoTMetrics:
-    """
-    Configuration for IoT SDK metrics that are embedded in MQTT Connect Packet username field.
+    """Configuration for IoT SDK metrics that are embedded in MQTT Connect Packet username field.
 
     Args:
         library_name (str): The SDK library name (e.g., "IoTDeviceSDK/Python")
@@ -311,8 +310,7 @@ def _get_encoded_feature_list(client_options):
 
 
 def _get_encoded_feature_list_mqtt3(proxy_options, tls_ctx=None):
-    """
-    Generates the encoded feature list string for metrics from MQTT3 connection options.
+    """Generates the encoded feature list string for metrics from MQTT3 connection options.
     Format: "ID/Value,ID/Value..."
 
     MQTT3 connections always include:
@@ -359,7 +357,7 @@ def _merge_feature_lists(crt_features, user_features):
     """Merge CRT-generated features with user-provided (IoT SDK) features.
 
     When both lists contain the same feature ID, the user-provided value
-    takes precedence. The result is sorted alphabetically by feature ID.
+    takes precedence. The result is sorted by feature ID.
 
     Args:
         crt_features (str): CRT-generated feature list.
@@ -463,8 +461,7 @@ def create_metrics_mqtt5(client_options):
 
 
 def create_metrics_mqtt3(user_metrics=None, proxy_options=None, tls_ctx=None):
-    """
-    Creates the final AWSIoTMetrics object for an MQTT3 connection.
+    """Creates the final AWSIoTMetrics object for an MQTT3 connection.
 
     Generates the CRT feature list from the MQTT3 connection parameters
 
