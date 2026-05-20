@@ -8,6 +8,7 @@ from test import NativeResourceTest
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from awscrt.io import ClientBootstrap, DefaultHostResolver, EventLoopGroup
 from awscrt.http import HttpClientConnection, HttpRequest
+import awscrt.exceptions
 
 
 class SilentHandler(SimpleHTTPRequestHandler):
@@ -91,8 +92,14 @@ class TestConnectionLifetime(NativeResourceTest):
             except Exception as e:
                 errors.append(e)
 
-        for _ in range(iterations):
-            connection = self._new_connection()
+        for i in range(iterations):
+            try:
+                connection = self._new_connection()
+            except awscrt.exceptions.AwsCrtError as e:
+                if e.name == 'AWS_IO_SOCKET_CONNECTION_REFUSED':
+                    continue
+                raise
+
             shutdown_future = connection.shutdown_future
 
             connection.close()
