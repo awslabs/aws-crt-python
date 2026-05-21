@@ -374,6 +374,32 @@ class TestClient(NativeResourceTest):
             # check that body is a valid string
             self.assertGreater(len(setup_data.handshake_response_body.decode()), 0)
 
+    def test_connect_response_header_with_invalid_name_is_protocol_error(self):
+        # A response header whose name contains a non-tchar byte (e.g. 0xE9) is
+        # rejected by aws-c-http's HTTP/1.1 decoder before reaching the binding.
+        # The connection should fail with AWS_ERROR_HTTP_PROTOCOL_ERROR.
+        response = (
+            b"HTTP/1.1 403 Forbidden\r\n"
+            b"Content-Length: 0\r\n"
+            b"X-Bad\xe9Name: whatever\r\n"
+            b"\r\n"
+        )
+        with MockHandshakeServer(self.host, response=response) as server:
+            setup_future = Future()
+            connect(
+                host=self.host,
+                port=server.port,
+                handshake_request=create_handshake_request(host=self.host),
+                on_connection_setup=lambda x: setup_future.set_result(x))
+
+            setup_data: OnConnectionSetupData = setup_future.result(TIMEOUT)
+
+        self.assertIsNone(setup_data.websocket)
+        self.assertIsNotNone(setup_data.exception)
+        self.assertEqual("AWS_ERROR_HTTP_PROTOCOL_ERROR", setup_data.exception.name)
+        # bad-name response is rejected at the parser, so no headers reach Python
+        self.assertIsNone(setup_data.handshake_response_headers)
+
     def test_connect_response_header_with_obs_text_does_not_abort(self):
         # A response header value containing a non-UTF-8 obs-text byte (e.g. lone 0xE9)
         # must not crash the process. Run the client in a subprocess so that an abort,
