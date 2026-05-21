@@ -13,6 +13,8 @@ from os import urandom
 from queue import Empty, Queue
 import secrets
 import socket
+import subprocess
+import sys
 from test import NativeResourceTest
 import threading
 from time import sleep, time
@@ -182,6 +184,54 @@ class WebSocketServer:
         asyncio.run_coroutine_threadsafe(self._current_connection.send(msg), self._server_loop)
 
 
+class MockHandshakeServer:
+    # A raw-socket server that accepts one connection, drains the client's
+    # HTTP handshake request, and sends back a caller-provided response.
+    # Use this when tests need to send byte sequences that the 3rdparty
+    # `websockets` library can't produce (e.g. malformed headers).
+    #
+    # Usage:
+    #     with MockHandshakeServer(host, response=b"HTTP/1.1 ...") as server:
+    #         # spawn a client that connects to (host, server.port)
+    #         ...
+
+    def __init__(self, host, response):
+        self._host = host
+        self._response = response
+        self._listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self._listener.bind((host, 0))
+        self._listener.listen(1)
+        self.port = self._listener.getsockname()[1]
+        self._thread = threading.Thread(target=self._serve, daemon=True)
+
+    def __enter__(self):
+        self._thread.start()
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        self._listener.close()
+        self._thread.join(TIMEOUT)
+
+    def _serve(self):
+        try:
+            conn, _ = self._listener.accept()
+        except OSError:
+            return
+        with closing(conn):
+            conn.settimeout(TIMEOUT)
+            try:
+                buf = b""
+                while b"\r\n\r\n" not in buf:
+                    chunk = conn.recv(4096)
+                    if not chunk:
+                        return
+                    buf += chunk
+                conn.sendall(self._response)
+            except OSError:
+                pass
+
+
 class TestClient(NativeResourceTest):
     def setUp(self):
         super().setUp()
@@ -323,6 +373,60 @@ class TestClient(NativeResourceTest):
             self.assertIsNotNone(setup_data.handshake_response_body)
             # check that body is a valid string
             self.assertGreater(len(setup_data.handshake_response_body.decode()), 0)
+
+    def test_connect_response_header_with_invalid_name_is_protocol_error(self):
+        # A response header whose name contains a non-tchar byte (e.g. 0xE9) is
+        # rejected by aws-c-http's HTTP/1.1 decoder before reaching the binding.
+        # The connection should fail with AWS_ERROR_HTTP_PROTOCOL_ERROR.
+        response = (
+            b"HTTP/1.1 403 Forbidden\r\n"
+            b"Content-Length: 0\r\n"
+            b"X-Bad\xe9Name: whatever\r\n"
+            b"\r\n"
+        )
+        with MockHandshakeServer(self.host, response=response) as server:
+            setup_future = Future()
+            connect(
+                host=self.host,
+                port=server.port,
+                handshake_request=create_handshake_request(host=self.host),
+                on_connection_setup=lambda x: setup_future.set_result(x))
+
+            setup_data: OnConnectionSetupData = setup_future.result(TIMEOUT)
+
+        self.assertIsNone(setup_data.websocket)
+        self.assertIsNotNone(setup_data.exception)
+        self.assertEqual("AWS_ERROR_HTTP_PROTOCOL_ERROR", setup_data.exception.name)
+        # bad-name response is rejected at the parser, so no headers reach Python
+        self.assertIsNone(setup_data.handshake_response_headers)
+
+    def test_connect_response_header_with_obs_text_does_not_abort(self):
+        # A response header value containing a non-UTF-8 obs-text byte (e.g. lone 0xE9)
+        # must not crash the process. Run the client in a subprocess so that an abort,
+        # if it happens, is observable as a non-zero exit code.
+        response = (
+            b"HTTP/1.1 403 Forbidden\r\n"
+            b"Content-Length: 0\r\n"
+            b"X-Reason: caf\xe9\r\n"
+            b"\r\n"
+        )
+        with MockHandshakeServer(self.host, response=response) as server:
+            proc = subprocess.Popen(
+                [sys.executable, '-m', 'test.ws_connect_helper', self.host, str(server.port)],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE)
+
+            try:
+                stdout, stderr = proc.communicate(timeout=TIMEOUT)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                stdout, stderr = proc.communicate()
+                self.fail("client subprocess hung")
+
+        self.assertEqual(
+            0, proc.returncode,
+            f"client subprocess crashed (returncode={proc.returncode}). "
+            f"stdout={stdout!r} stderr={stderr!r}")
 
     def test_exception_in_setup_callback_closes_websocket(self):
         with WebSocketServer(self.host, self.port) as server:
