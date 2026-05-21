@@ -6,6 +6,9 @@
 
 #include <aws/common/cbor.h>
 
+/* Maximum nesting depth for recursive CBOR decoding to prevent stack exhaustion */
+static const size_t s_cbor_max_decode_depth = 128;
+
 /*******************************************************************************
  * ENCODE
  ******************************************************************************/
@@ -185,30 +188,49 @@ static PyObject *s_cbor_encoder_write_pyobject(struct aws_cbor_encoder *encoder,
     /**
      * TODO: timestamp <-> datetime?? Decimal fraction <-> decimal??
      */
-    if (PyLong_CheckExact(py_object)) {
-        return s_cbor_encoder_write_pylong(encoder, py_object);
-    } else if (PyFloat_CheckExact(py_object)) {
-        return s_cbor_encoder_write_pyobject_as_float(encoder, py_object);
-    } else if (PyBool_Check(py_object)) {
-        return s_cbor_encoder_write_pyobject_as_bool(encoder, py_object);
-    } else if (PyBytes_CheckExact(py_object)) {
-        return s_cbor_encoder_write_pyobject_as_bytes(encoder, py_object);
-    } else if (PyUnicode_Check(py_object)) {
-        /* Allow subclasses of `str` */
-        return s_cbor_encoder_write_pyobject_as_text(encoder, py_object);
-    } else if (PyList_Check(py_object)) {
-        /* Write py_list, allow subclasses of `list` */
-        return s_cbor_encoder_write_pylist(encoder, py_object);
-    } else if (PyDict_Check(py_object)) {
-        /* Write py_dict, allow subclasses of `dict` */
-        return s_cbor_encoder_write_pydict(encoder, py_object);
-    } else if (py_object == Py_None) {
+
+    /* Handle None first as it's a singleton, not a type */
+    if (py_object == Py_None) {
         aws_cbor_encoder_write_null(encoder);
-    } else {
-        PyErr_Format(PyExc_ValueError, "Not supported type %R", (PyObject *)Py_TYPE(py_object));
+        Py_RETURN_NONE;
     }
 
-    Py_RETURN_NONE;
+    /* Get type once for efficiency - PyObject_Type returns a new reference */
+    /* https://docs.python.org/3/c-api/structures.html#c.Py_TYPE is not a stable API until 3.14, so that we cannot use
+     * it. */
+    PyObject *type = PyObject_Type(py_object);
+    if (!type) {
+        return NULL;
+    }
+
+    PyObject *result = NULL;
+
+    /* Exact type matches first (no subclasses) */
+    if (type == (PyObject *)&PyLong_Type) {
+        result = s_cbor_encoder_write_pylong(encoder, py_object);
+    } else if (type == (PyObject *)&PyFloat_Type) {
+        result = s_cbor_encoder_write_pyobject_as_float(encoder, py_object);
+    } else if (type == (PyObject *)&PyBool_Type) {
+        result = s_cbor_encoder_write_pyobject_as_bool(encoder, py_object);
+    } else if (type == (PyObject *)&PyBytes_Type) {
+        result = s_cbor_encoder_write_pyobject_as_bytes(encoder, py_object);
+    } else if (PyType_IsSubtype((PyTypeObject *)type, &PyUnicode_Type)) {
+        /* Allow subclasses of `str` */
+        result = s_cbor_encoder_write_pyobject_as_text(encoder, py_object);
+    } else if (PyType_IsSubtype((PyTypeObject *)type, &PyList_Type)) {
+        /* Write py_list, allow subclasses of `list` */
+        result = s_cbor_encoder_write_pylist(encoder, py_object);
+    } else if (PyType_IsSubtype((PyTypeObject *)type, &PyDict_Type)) {
+        /* Write py_dict, allow subclasses of `dict` */
+        result = s_cbor_encoder_write_pydict(encoder, py_object);
+    } else {
+        /* Unsupported type */
+        PyErr_Format(PyExc_ValueError, "Not supported type %R", type);
+    }
+
+    /* Release the type reference */
+    Py_DECREF(type);
+    return result;
 }
 
 /*********************************** BINDINGS ***********************************************/
@@ -290,6 +312,9 @@ struct decoder_binding {
 
     /* Encoder has simple lifetime, no async/multi-thread allowed. */
     PyObject *self_py;
+
+    /* Current recursion depth for pop_next_data_item */
+    size_t current_depth;
 };
 
 static const char *s_capsule_name_cbor_decoder = "aws_cbor_decoder";
@@ -646,62 +671,85 @@ static PyObject *s_cbor_decoder_pop_next_tag_to_pyobject(struct decoder_binding 
  * Generic helper to convert a cbor encoded data to PyObject
  */
 static PyObject *s_cbor_decoder_pop_next_data_item_to_pyobject(struct decoder_binding *binding) {
+    if (binding->current_depth >= s_cbor_max_decode_depth) {
+        PyErr_SetString(PyExc_RecursionError, "CBOR nesting depth exceeds maximum allowed (128)");
+        return NULL;
+    }
+    ++binding->current_depth;
+
+    PyObject *result = NULL;
     struct aws_cbor_decoder *decoder = binding->native;
     enum aws_cbor_type out_type = AWS_CBOR_TYPE_UNKNOWN;
     if (aws_cbor_decoder_peek_type(decoder, &out_type)) {
-        return PyErr_AwsLastError();
+        result = PyErr_AwsLastError();
+        goto done;
     }
     switch (out_type) {
         case AWS_CBOR_TYPE_UINT:
-            return s_cbor_decoder_pop_next_unsigned_int_val_to_pyobject(decoder);
+            result = s_cbor_decoder_pop_next_unsigned_int_val_to_pyobject(decoder);
+            break;
         case AWS_CBOR_TYPE_NEGINT: {
             /* The value from native code is -1 - val. */
             PyObject *minus_one = PyLong_FromLong(-1);
             if (!minus_one) {
-                return NULL;
+                break;
             }
             PyObject *val = s_cbor_decoder_pop_next_negative_int_val_to_pyobject(decoder);
             if (!val) {
                 Py_DECREF(minus_one);
-                return NULL;
+                break;
             }
-            PyObject *ret_val = PyNumber_Subtract(minus_one, val);
+            result = PyNumber_Subtract(minus_one, val);
             Py_DECREF(minus_one);
             Py_DECREF(val);
-            return ret_val;
+            break;
         }
         case AWS_CBOR_TYPE_FLOAT:
-            return s_cbor_decoder_pop_next_float_val_to_pyobject(decoder);
+            result = s_cbor_decoder_pop_next_float_val_to_pyobject(decoder);
+            break;
         case AWS_CBOR_TYPE_BYTES:
-            return s_cbor_decoder_pop_next_bytes_val_to_pyobject(decoder);
+            result = s_cbor_decoder_pop_next_bytes_val_to_pyobject(decoder);
+            break;
         case AWS_CBOR_TYPE_TEXT:
-            return s_cbor_decoder_pop_next_text_val_to_pyobject(decoder);
+            result = s_cbor_decoder_pop_next_text_val_to_pyobject(decoder);
+            break;
         case AWS_CBOR_TYPE_BOOL:
-            return s_cbor_decoder_pop_next_boolean_val_to_pyobject(decoder);
+            result = s_cbor_decoder_pop_next_boolean_val_to_pyobject(decoder);
+            break;
         case AWS_CBOR_TYPE_NULL:
             /* fall through */
         case AWS_CBOR_TYPE_UNDEFINED:
             aws_cbor_decoder_consume_next_single_element(decoder);
-            Py_RETURN_NONE;
+            Py_INCREF(Py_None);
+            result = Py_None;
+            break;
         case AWS_CBOR_TYPE_MAP_START:
             /* fall through */
         case AWS_CBOR_TYPE_INDEF_MAP_START:
-            return s_cbor_decoder_pop_next_data_item_to_py_dict(binding);
+            result = s_cbor_decoder_pop_next_data_item_to_py_dict(binding);
+            break;
         case AWS_CBOR_TYPE_ARRAY_START:
             /* fall through */
         case AWS_CBOR_TYPE_INDEF_ARRAY_START:
-            return s_cbor_decoder_pop_next_data_item_to_py_list(binding);
+            result = s_cbor_decoder_pop_next_data_item_to_py_list(binding);
+            break;
         case AWS_CBOR_TYPE_INDEF_BYTES_START:
-            return s_cbor_decoder_pop_next_inf_bytes_to_py_bytes(decoder);
+            result = s_cbor_decoder_pop_next_inf_bytes_to_py_bytes(decoder);
+            break;
         case AWS_CBOR_TYPE_INDEF_TEXT_START:
-            return s_cbor_decoder_pop_next_inf_string_to_py_str(decoder);
+            result = s_cbor_decoder_pop_next_inf_string_to_py_str(decoder);
+            break;
         case AWS_CBOR_TYPE_TAG:
-            return s_cbor_decoder_pop_next_tag_to_pyobject(binding);
+            result = s_cbor_decoder_pop_next_tag_to_pyobject(binding);
+            break;
         default:
             aws_raise_error(AWS_ERROR_CBOR_UNEXPECTED_TYPE);
-            return PyErr_AwsLastError();
+            result = PyErr_AwsLastError();
+            break;
     }
-    return NULL;
+done:
+    --binding->current_depth;
+    return result;
 }
 
 /*********************************** BINDINGS ***********************************************/
