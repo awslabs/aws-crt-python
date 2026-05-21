@@ -151,6 +151,86 @@ class TestCBOR(NativeResourceTest):
             exception = e
         self.assertIsNotNone(exception)
 
+    def test_cbor_encode_decode_datetime(self):
+        """Test automatic datetime encoding/decoding"""
+        # Create a datetime object
+        dt = datetime.datetime(2024, 1, 1, 12, 0, 0)
+
+        # Encode datetime - should automatically convert to CBOR tag 1 + timestamp
+        encoder = AwsCborEncoder()
+        encoder.write_data_item(dt)
+
+        # Decode with callback to convert back to datetime
+        def on_epoch_time(epoch_secs):
+            return datetime.datetime.fromtimestamp(epoch_secs)
+
+        decoder = AwsCborDecoder(encoder.get_encoded_data(), on_epoch_time)
+        result = decoder.pop_next_data_item()
+
+        # Verify the result matches original datetime
+        self.assertEqual(dt, result)
+        self.assertIsInstance(result, datetime.datetime)
+
+        # Test datetime with microsecond precision (milliseconds)
+        dt_with_microseconds = datetime.datetime(2024, 1, 1, 12, 0, 0, 123456)  # 123.456 milliseconds
+        encoder3 = AwsCborEncoder()
+        encoder3.write_data_item(dt_with_microseconds)
+
+        decoder3 = AwsCborDecoder(encoder3.get_encoded_data(), on_epoch_time)
+        result_microseconds = decoder3.pop_next_data_item()
+
+        # Verify microsecond precision is preserved
+        self.assertEqual(dt_with_microseconds, result_microseconds)
+        self.assertEqual(dt_with_microseconds.microsecond, result_microseconds.microsecond)
+        self.assertIsInstance(result_microseconds, datetime.datetime)
+
+        # Test datetime in a list
+        encoder2 = AwsCborEncoder()
+        test_list = [dt, "text", 123, dt_with_microseconds]
+        encoder2.write_data_item(test_list)
+
+        decoder2 = AwsCborDecoder(encoder2.get_encoded_data(), on_epoch_time)
+        result_list = decoder2.pop_next_data_item()
+
+        self.assertEqual(len(result_list), 4)
+        self.assertEqual(result_list[0], dt)
+        self.assertEqual(result_list[1], "text")
+        self.assertEqual(result_list[2], 123)
+        self.assertEqual(result_list[3], dt_with_microseconds)
+        # Verify microsecond precision in list
+        self.assertEqual(result_list[3].microsecond, 123456)
+
+    def test_cbor_encode_unsupported_type(self):
+        """Test that encoding unsupported types raises ValueError"""
+        # Create a custom class that's not supported by CBOR encoder
+        class CustomClass:
+            def __init__(self, value):
+                self.value = value
+
+        # Try to encode an unsupported type
+        encoder = AwsCborEncoder()
+        unsupported_obj = CustomClass(42)
+
+        # Should raise ValueError with message about unsupported type
+        with self.assertRaises(ValueError) as context:
+            encoder.write_data_item(unsupported_obj)
+        # Verify the error message mentions "Not supported type"
+        self.assertIn("Not supported type", str(context.exception))
+
+        # Test unsupported type in a list (should also fail)
+        encoder2 = AwsCborEncoder()
+        with self.assertRaises(ValueError) as context2:
+            encoder2.write_data_item([1, 2, unsupported_obj, 3])
+
+        self.assertIn("Not supported type", str(context2.exception))
+
+        # Test unsupported type as dict key (should also fail)
+        encoder3 = AwsCborEncoder()
+        with self.assertRaises(ValueError) as context3:
+            encoder3.write_data_item({unsupported_obj: "value"})
+
+        self.assertIn("Not supported type", str(context3.exception))
+
     def _ieee754_bits_to_float(self, bits):
         return struct.unpack('>f', struct.pack('>I', bits))[0]
 
