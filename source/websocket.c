@@ -209,12 +209,24 @@ static void s_websocket_on_connection_setup(
             PyObject *tuple_py = PyTuple_New(2);
             AWS_FATAL_ASSERT(tuple_py && "header tuple allocation failed");
 
+            /* Header names are tokens as per RFC 7230 Section 3.2 (strict ASCII),
+             * which means aws-c-http rejects on the wire if they contain non-ASCII bytes.
+             * So errors related to http header decoding will be caught at the protocol level.
+             * We should never fail wrangling the header name. */
             PyObject *name_py = PyUnicode_FromAwsByteCursor(&header_i->name);
             AWS_FATAL_ASSERT(name_py && "header name wrangling failed");
             PyTuple_SetItem(tuple_py, 0, name_py); /* Steals a reference */
 
+            /* Header value can contain RFC 7230 obs-text (0x80-0xFF), which is
+             * not guaranteed valid UTF-8. On decode failure, log it and drop
+             * the whole header list rather than aborting the process. */
             PyObject *value_py = PyUnicode_FromAwsByteCursor(&header_i->value);
-            AWS_FATAL_ASSERT(value_py && "header value wrangling failed");
+            if (!value_py) {
+                PyErr_WriteUnraisable(websocket_core_py);
+                Py_DECREF(tuple_py);
+                Py_CLEAR(headers_py);
+                break;
+            }
             PyTuple_SetItem(tuple_py, 1, value_py); /* Steals a reference */
 
             PyList_SetItem(headers_py, i, tuple_py); /* Steals a reference */
