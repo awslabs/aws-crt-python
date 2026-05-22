@@ -7,15 +7,15 @@ from test import NativeResourceTest
 from awscrt.aws_iot_metrics import (
     AWSIoTMetrics,
     IoTMetricsMetadata,
-    MetricsFeatureId,
-    MetricsProtocolVersionValue,
-    MetricsSocketImplementationValue,
-    MetricsHttpProxyTypeValue,
+    _MetricsFeatureId,
+    _MetricsProtocolVersionValue,
+    _MetricsSocketImplementationValue,
+    _MetricsHttpProxyTypeValue,
     IOT_SDK_METRICS_FEATURE_VERSION,
     _get_encoded_feature_list,
     _get_encoded_feature_list_mqtt3,
     _merge_feature_lists,
-    create_metrics,
+    _create_metrics,
 )
 from awscrt.mqtt5 import (
     ClientOptions,
@@ -32,8 +32,8 @@ from awscrt.http import HttpProxyOptions
 
 def _expected_socket_value():
     if sys.platform == "win32":
-        return MetricsSocketImplementationValue.WINSOCK
-    return MetricsSocketImplementationValue.POSIX
+        return _MetricsSocketImplementationValue.WINSOCK
+    return _MetricsSocketImplementationValue.POSIX
 
 
 class TestMinimalOptionsEncoding(NativeResourceTest):
@@ -45,8 +45,8 @@ class TestMinimalOptionsEncoding(NativeResourceTest):
 
         result = _get_encoded_feature_list(options)
 
-        self.assertIn(f"{MetricsFeatureId.PROTOCOL_VERSION.value}/{MetricsProtocolVersionValue.MQTT5.value}", result)
-        self.assertIn(f"{MetricsFeatureId.SOCKET_IMPLEMENTATION.value}/{_expected_socket_value().value}", result)
+        self.assertIn(f"{_MetricsFeatureId.PROTOCOL_VERSION.value}/{_MetricsProtocolVersionValue.MQTT5.value}", result)
+        self.assertIn(f"{_MetricsFeatureId.SOCKET_IMPLEMENTATION.value}/{_expected_socket_value().value}", result)
         parts = result.split(",")
         self.assertEqual(2, len(parts))
 
@@ -54,8 +54,8 @@ class TestMinimalOptionsEncoding(NativeResourceTest):
         """MQTT3 with no proxy and no TLS should only have protocol version and socket."""
         result = _get_encoded_feature_list_mqtt3(proxy_options=None, tls_ctx=None)
 
-        self.assertIn(f"{MetricsFeatureId.PROTOCOL_VERSION.value}/{MetricsProtocolVersionValue.MQTT311.value}", result)
-        self.assertIn(f"{MetricsFeatureId.SOCKET_IMPLEMENTATION.value}/{_expected_socket_value().value}", result)
+        self.assertIn(f"{_MetricsFeatureId.PROTOCOL_VERSION.value}/{_MetricsProtocolVersionValue.MQTT311.value}", result)
+        self.assertIn(f"{_MetricsFeatureId.SOCKET_IMPLEMENTATION.value}/{_expected_socket_value().value}", result)
         parts = result.split(",")
         self.assertEqual(2, len(parts))
 
@@ -71,9 +71,9 @@ class TestMinimalOptionsEncoding(NativeResourceTest):
 
         result = _get_encoded_feature_list(options)
 
-        self.assertNotIn(f"{MetricsFeatureId.RETRY_JITTER_MODE.value}/", result)
-        self.assertNotIn(f"{MetricsFeatureId.SESSION_BEHAVIOR.value}/", result)
-        self.assertNotIn(f"{MetricsFeatureId.OFFLINE_QUEUE_BEHAVIOR.value}/", result)
+        self.assertNotIn(f"{_MetricsFeatureId.RETRY_JITTER_MODE.value}/", result)
+        self.assertNotIn(f"{_MetricsFeatureId.SESSION_BEHAVIOR.value}/", result)
+        self.assertNotIn(f"{_MetricsFeatureId.OFFLINE_QUEUE_BEHAVIOR.value}/", result)
 
 
 class TestOptionsWithMultipleNonDefaultFeaturesEncoding(NativeResourceTest):
@@ -195,7 +195,7 @@ class TestMergeFeatureLists(NativeResourceTest):
     def test_user_overrides_multiple_crt_features(self):
         """User can override multiple CRT features at once."""
         result = _merge_feature_lists("A/B,F/5,G/A,K/D", "A/C,F/3,K/E")
-        # User overrides A, F, K; G remains from CRT
+        # User overrides A, F, K; G remains from CRT; insertion order preserved
         self.assertEqual("A/C,F/3,G/A,K/E", result)
 
     def test_empty_user_features(self):
@@ -206,9 +206,9 @@ class TestMergeFeatureLists(NativeResourceTest):
         result = _merge_feature_lists("", "A/B")
         self.assertEqual("A/B", result)
 
-    def test_sorted_output(self):
+    def test_insertion_order_preserved(self):
         result = _merge_feature_lists("G/A,F/5", "A/B")
-        self.assertEqual("A/B,F/5,G/A", result)
+        self.assertEqual("G/A,F/5,A/B", result)
 
     def test_disjoint_features(self):
         result = _merge_feature_lists("F/5,G/A", "I/A,K/D")
@@ -223,7 +223,7 @@ class TestCreateMetricsWithDefaultOptions(NativeResourceTest):
     """Test create_metrics with no user metrics or default user metrics."""
 
     def test_none_user_metrics(self):
-        result = create_metrics(None, "F/5,G/A")
+        result = _create_metrics(None, "F/5,G/A")
 
         self.assertEqual("IoTDeviceSDK/Python", result.library_name)
         metadata_dict = {e.key: e.value for e in result.metadata_entries}
@@ -233,14 +233,14 @@ class TestCreateMetricsWithDefaultOptions(NativeResourceTest):
 
     def test_empty_user_metrics(self):
         user = AWSIoTMetrics()
-        result = create_metrics(user, "F/5,G/A")
+        result = _create_metrics(user, "F/5,G/A")
 
         self.assertEqual("IoTDeviceSDK/Python", result.library_name)
         metadata_dict = {e.key: e.value for e in result.metadata_entries}
         self.assertEqual("F/5,G/A", metadata_dict["IoTSDKFeature"])
 
     def test_version_always_set(self):
-        result = create_metrics(None, "F/5,G/A")
+        result = _create_metrics(None, "F/5,G/A")
         metadata_dict = {e.key: e.value for e in result.metadata_entries}
         self.assertEqual(str(IOT_SDK_METRICS_FEATURE_VERSION), metadata_dict["IoTSDKMetricsVersion"])
 
@@ -255,7 +255,7 @@ class TestCreateMetricsWithUserFeaturesMerged(NativeResourceTest):
             IoTMetricsMetadata(key="IoTSDKFeature", value="I/A"),
         ]
 
-        result = create_metrics(user, "F/5,G/A")
+        result = _create_metrics(user, "F/5,G/A")
         metadata_dict = {e.key: e.value for e in result.metadata_entries}
 
         self.assertIn("I/A", metadata_dict["IoTSDKFeature"])
@@ -270,7 +270,7 @@ class TestCreateMetricsWithUserFeaturesMerged(NativeResourceTest):
             IoTMetricsMetadata(key="IoTSDKFeature", value="F/3,I/B"),
         ]
 
-        result = create_metrics(user, "F/5,G/A")
+        result = _create_metrics(user, "F/5,G/A")
         metadata_dict = {e.key: e.value for e in result.metadata_entries}
 
         self.assertIn("F/3", metadata_dict["IoTSDKFeature"])
@@ -284,7 +284,7 @@ class TestCreateMetricsWithUserFeaturesMerged(NativeResourceTest):
             IoTMetricsMetadata(key="IoTSDKFeature", value=""),
         ]
 
-        result = create_metrics(user, "F/5,G/A")
+        result = _create_metrics(user, "F/5,G/A")
         metadata_dict = {e.key: e.value for e in result.metadata_entries}
 
         self.assertEqual("F/5,G/A", metadata_dict["IoTSDKFeature"])
@@ -300,7 +300,7 @@ class TestCreateMetricsWithVersionMismatch(NativeResourceTest):
             IoTMetricsMetadata(key="IoTSDKFeature", value="I/A"),
         ]
 
-        result = create_metrics(user, "F/5,G/A")
+        result = _create_metrics(user, "F/5,G/A")
         metadata_dict = {e.key: e.value for e in result.metadata_entries}
 
         self.assertNotIn("I/A", metadata_dict["IoTSDKFeature"])
@@ -313,7 +313,7 @@ class TestCreateMetricsWithVersionMismatch(NativeResourceTest):
             IoTMetricsMetadata(key="IoTSDKFeature", value="I/A"),
         ]
 
-        result = create_metrics(user, "F/5,G/A")
+        result = _create_metrics(user, "F/5,G/A")
         metadata_dict = {e.key: e.value for e in result.metadata_entries}
 
         self.assertNotIn("I/A", metadata_dict["IoTSDKFeature"])
@@ -325,7 +325,7 @@ class TestCreateMetricsWithVersionMismatch(NativeResourceTest):
             IoTMetricsMetadata(key="IoTSDKFeature", value="I/A"),
         ]
 
-        result = create_metrics(user, "F/5,G/A")
+        result = _create_metrics(user, "F/5,G/A")
         metadata_dict = {e.key: e.value for e in result.metadata_entries}
 
         self.assertNotIn("I/A", metadata_dict["IoTSDKFeature"])
@@ -336,7 +336,7 @@ class TestCreateMetricsWithVersionMismatch(NativeResourceTest):
             IoTMetricsMetadata(key="IoTSDKFeature", value="I/A"),
         ]
 
-        result = create_metrics(user, "F/5,G/A")
+        result = _create_metrics(user, "F/5,G/A")
         metadata_dict = {e.key: e.value for e in result.metadata_entries}
 
         self.assertNotIn("I/A", metadata_dict["IoTSDKFeature"])
@@ -353,7 +353,7 @@ class TestCreateMetricsCRTVersionNotModifiable(NativeResourceTest):
             IoTMetricsMetadata(key="CRTVersion", value="fake_version"),
         ]
 
-        result = create_metrics(user, "F/5,G/A")
+        result = _create_metrics(user, "F/5,G/A")
         metadata_dict = {e.key: e.value for e in result.metadata_entries}
 
         self.assertEqual(actual_version, metadata_dict["CRTVersion"])
@@ -367,7 +367,7 @@ class TestCreateMetricsCRTVersionNotModifiable(NativeResourceTest):
             IoTMetricsMetadata(key="CRTVersion", value=""),
         ]
 
-        result = create_metrics(user, "F/5,G/A")
+        result = _create_metrics(user, "F/5,G/A")
         metadata_dict = {e.key: e.value for e in result.metadata_entries}
 
         self.assertEqual(actual_version, metadata_dict["CRTVersion"])
@@ -382,7 +382,7 @@ class TestCreateMetricsPreservesOtherUserMetadata(NativeResourceTest):
             IoTMetricsMetadata(key="IoTSDKVersion", value="2.0.0"),
         ]
 
-        result = create_metrics(user, "F/5,G/A")
+        result = _create_metrics(user, "F/5,G/A")
         metadata_dict = {e.key: e.value for e in result.metadata_entries}
 
         self.assertEqual("2.0.0", metadata_dict["IoTSDKVersion"])
@@ -393,7 +393,7 @@ class TestCreateMetricsPreservesOtherUserMetadata(NativeResourceTest):
             IoTMetricsMetadata(key="CustomKey", value="custom_value"),
         ]
 
-        result = create_metrics(user, "F/5,G/A")
+        result = _create_metrics(user, "F/5,G/A")
         metadata_dict = {e.key: e.value for e in result.metadata_entries}
 
         self.assertEqual("custom_value", metadata_dict["CustomKey"])
@@ -406,7 +406,7 @@ class TestCreateMetricsPreservesOtherUserMetadata(NativeResourceTest):
             IoTMetricsMetadata(key="CustomKey", value="val"),
         ]
 
-        result = create_metrics(user, "F/5,G/A")
+        result = _create_metrics(user, "F/5,G/A")
         metadata_dict = {e.key: e.value for e in result.metadata_entries}
 
         self.assertNotEqual("should_be_ignored", metadata_dict["CRTVersion"])
@@ -416,7 +416,7 @@ class TestCreateMetricsPreservesOtherUserMetadata(NativeResourceTest):
     def test_custom_library_name(self):
         user = AWSIoTMetrics(library_name="MyCustomSDK/1.0")
 
-        result = create_metrics(user, "F/5,G/A")
+        result = _create_metrics(user, "F/5,G/A")
 
         self.assertEqual("MyCustomSDK/1.0", result.library_name)
 

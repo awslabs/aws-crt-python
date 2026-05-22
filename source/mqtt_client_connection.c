@@ -445,69 +445,18 @@ static bool s_set_metrics(struct aws_mqtt_client_connection *connection, PyObjec
         return false;
     }
 
-    bool success = false;
-
     struct aws_mqtt_iot_metrics metrics_tmp;
-    AWS_ZERO_STRUCT(metrics_tmp);
-    PyObject *metadata_entries_py = NULL;
-    struct aws_mqtt_metadata_entry *metadata_entries = NULL;
-    size_t metadata_count = 0;
-
-    PyObject *library_name_py = PyObject_GetAttrString(metrics, "library_name");
-    metrics_tmp.library_name = aws_byte_cursor_from_pyunicode(library_name_py);
-    if (!metrics_tmp.library_name.ptr) {
-        PyErr_SetString(PyExc_TypeError, "metrics.library_name must be str type");
-        goto done;
+    if (!aws_py_metrics_parse(metrics, &metrics_tmp)) {
+        return false;
     }
 
-    metadata_entries_py = PyObject_GetAttrString(metrics, "metadata_entries");
-
-    if (metadata_entries_py && metadata_entries_py != Py_None && PyList_Check(metadata_entries_py)) {
-        Py_ssize_t count = PyList_Size(metadata_entries_py);
-        if (count > 0) {
-            metadata_entries =
-                aws_mem_calloc(aws_py_get_allocator(), (size_t)count, sizeof(struct aws_mqtt_metadata_entry));
-            if (!metadata_entries) {
-                PyErr_SetAwsLastError();
-                goto done;
-            }
-
-            for (Py_ssize_t i = 0; i < count; ++i) {
-                PyObject *entry_py = PyList_GetItem(metadata_entries_py, i);
-                PyObject *key_py = PyObject_GetAttrString(entry_py, "key");
-                PyObject *value_py = PyObject_GetAttrString(entry_py, "value");
-
-                metadata_entries[i].key = aws_byte_cursor_from_pyunicode(key_py);
-                metadata_entries[i].value = aws_byte_cursor_from_pyunicode(value_py);
-
-                Py_XDECREF(key_py);
-                Py_XDECREF(value_py);
-
-                if (!metadata_entries[i].key.ptr || !metadata_entries[i].value.ptr) {
-                    PyErr_SetString(PyExc_TypeError, "metadata_entries items must have str key and value");
-                    goto done;
-                }
-            }
-            metadata_count = (size_t)count;
-        }
-    }
-
-    metrics_tmp.metadata_count = metadata_count;
-    metrics_tmp.metadata_entries = metadata_entries;
-
+    bool success = true;
     if (aws_mqtt_client_connection_set_metrics(connection, &metrics_tmp)) {
         PyErr_SetAwsLastError();
-        goto done;
+        success = false;
     }
 
-    success = true;
-
-done:
-    Py_XDECREF(library_name_py);
-    Py_XDECREF(metadata_entries_py);
-    if (metadata_entries) {
-        aws_mem_release(aws_py_get_allocator(), metadata_entries);
-    }
+    aws_py_metrics_clean_up(&metrics_tmp);
     return success;
 }
 

@@ -41,7 +41,7 @@ IOT_SDK_METRICS_FEATURE_VERSION = 1
 # Feature ID Constants
 
 
-class MetricsFeatureId(str, Enum):
+class _MetricsFeatureId(str, Enum):
     """Feature IDs for IoT SDK metrics tracking.
 
     Each ID is a single character used to encode feature usage in the metrics
@@ -63,7 +63,7 @@ class MetricsFeatureId(str, Enum):
 # Feature Value Constants
 
 
-class MetricsProtocolVersionValue(str, Enum):
+class _MetricsProtocolVersionValue(str, Enum):
     """Protocol version values for metrics encoding.
 
     Maps MQTT protocol versions to their single-character metric representations.
@@ -72,7 +72,7 @@ class MetricsProtocolVersionValue(str, Enum):
     MQTT5 = "5"
 
 
-class MetricsSocketImplementationValue(str, Enum):
+class _MetricsSocketImplementationValue(str, Enum):
     """Socket implementation values for metrics encoding.
 
     Maps the underlying platform socket layer to its metric representation.
@@ -82,7 +82,7 @@ class MetricsSocketImplementationValue(str, Enum):
     WINSOCK = "B"
 
 
-class MetricsHttpProxyTypeValue(str, Enum):
+class _MetricsHttpProxyTypeValue(str, Enum):
     """HTTP proxy type values for metrics encoding.
 
     Indicates whether the proxy connection uses plain HTTP or HTTPS (TLS).
@@ -203,13 +203,13 @@ def _tls_cipher_preference_metrics_value(pref):
 def _detect_socket_implementation():
     """Detect the socket implementation based on the current platform.
 
-    Returns MetricsSocketImplementationValue.WINSOCK on Windows,
-    MetricsSocketImplementationValue.POSIX on all other platforms
+    Returns _MetricsSocketImplementationValue.WINSOCK on Windows,
+    _MetricsSocketImplementationValue.POSIX on all other platforms
     (macOS, Linux).
     """
     if sys.platform == "win32":
-        return MetricsSocketImplementationValue.WINSOCK
-    return MetricsSocketImplementationValue.POSIX
+        return _MetricsSocketImplementationValue.WINSOCK
+    return _MetricsSocketImplementationValue.POSIX
 
 
 # MQTT5 encoding list
@@ -248,61 +248,61 @@ def _get_encoded_feature_list(client_options):
     if client_options.retry_jitter_mode is not None:
         val = _retry_jitter_metrics_value(client_options.retry_jitter_mode)
         if val:
-            features.append(f"{MetricsFeatureId.RETRY_JITTER_MODE.value}/{val}")
+            features.append(f"{_MetricsFeatureId.RETRY_JITTER_MODE.value}/{val}")
 
     # B: session_behavior
     if client_options.session_behavior is not None:
         val = _client_session_behavior_metrics_value(client_options.session_behavior)
         if val:
-            features.append(f"{MetricsFeatureId.SESSION_BEHAVIOR.value}/{val}")
+            features.append(f"{_MetricsFeatureId.SESSION_BEHAVIOR.value}/{val}")
 
     # C: offline_queue_behavior
     if client_options.offline_queue_behavior is not None:
         val = _client_operation_queue_behavior_metrics_value(client_options.offline_queue_behavior)
         if val:
-            features.append(f"{MetricsFeatureId.OFFLINE_QUEUE_BEHAVIOR.value}/{val}")
+            features.append(f"{_MetricsFeatureId.OFFLINE_QUEUE_BEHAVIOR.value}/{val}")
 
     # D: outbound_topic_alias_behavior
     if client_options.topic_aliasing_options is not None:
         if client_options.topic_aliasing_options.outbound_behavior is not None:
             val = _outbound_topic_alias_behavior_metrics_value(client_options.topic_aliasing_options.outbound_behavior)
             if val:
-                features.append(f"{MetricsFeatureId.OUTBOUND_TOPIC_ALIAS_BEHAVIOR.value}/{val}")
+                features.append(f"{_MetricsFeatureId.OUTBOUND_TOPIC_ALIAS_BEHAVIOR.value}/{val}")
 
     # E: inbound_topic_alias_behavior
     if client_options.topic_aliasing_options is not None:
         if client_options.topic_aliasing_options.inbound_behavior is not None:
             val = _inbound_topic_alias_behavior_metrics_value(client_options.topic_aliasing_options.inbound_behavior)
             if val:
-                features.append(f"{MetricsFeatureId.INBOUND_TOPIC_ALIAS_BEHAVIOR.value}/{val}")
+                features.append(f"{_MetricsFeatureId.INBOUND_TOPIC_ALIAS_BEHAVIOR.value}/{val}")
 
     # F: protocol_version - MQTT5 always uses client options
-    features.append(f"{MetricsFeatureId.PROTOCOL_VERSION.value}/{MetricsProtocolVersionValue.MQTT5.value}")
+    features.append(f"{_MetricsFeatureId.PROTOCOL_VERSION.value}/{_MetricsProtocolVersionValue.MQTT5.value}")
 
     # G: socket_implementation - Detect based on platform
-    features.append(f"{MetricsFeatureId.SOCKET_IMPLEMENTATION.value}/{_detect_socket_implementation().value}")
+    features.append(f"{_MetricsFeatureId.SOCKET_IMPLEMENTATION.value}/{_detect_socket_implementation().value}")
 
     # H: http_proxy_type - Determine based on whether proxy uses TLS
     if client_options.http_proxy_options is not None:
-        proxy_type = MetricsHttpProxyTypeValue.HTTPS if getattr(
+        proxy_type = _MetricsHttpProxyTypeValue.HTTPS if getattr(
             client_options.http_proxy_options,
             'tls_connection_options',
-            None) is not None else MetricsHttpProxyTypeValue.HTTP
-        features.append(f"{MetricsFeatureId.HTTP_PROXY_TYPE.value}/{proxy_type.value}")
+            None) is not None else _MetricsHttpProxyTypeValue.HTTP
+        features.append(f"{_MetricsFeatureId.HTTP_PROXY_TYPE.value}/{proxy_type.value}")
 
     # I: certificate_source - Would need to be tracked from TLS context setup. This is set at a IoT SDK level
 
     # J: tls_cipher_preference - security policy
     if client_options.tls_ctx is not None:
-        val = _tls_cipher_preference_metrics_value(client_options.tls_ctx.cipher_pref)
+        val = _tls_cipher_preference_metrics_value(client_options.tls_ctx._cipher_pref)
         if val:
-            features.append(f"{MetricsFeatureId.TLS_CIPHER_PREFERENCE.value}/{val}")
+            features.append(f"{_MetricsFeatureId.TLS_CIPHER_PREFERENCE.value}/{val}")
 
     # K: minimum_tls_version - The minimum TLS version set on TLSContextOptions
     if client_options.tls_ctx is not None:
-        val = _minimum_tls_version_metrics_value(client_options.tls_ctx.min_tls_ver)
+        val = _minimum_tls_version_metrics_value(client_options.tls_ctx._min_tls_ver)
         if val:
-            features.append(f"{MetricsFeatureId.MINIMUM_TLS_VERSION.value}/{val}")
+            features.append(f"{_MetricsFeatureId.MINIMUM_TLS_VERSION.value}/{val}")
 
     return ",".join(features)
 
@@ -329,26 +329,26 @@ def _get_encoded_feature_list_mqtt3(proxy_options, tls_ctx=None):
         str: The encoded feature list string.
     """
     features = [
-        f"{MetricsFeatureId.PROTOCOL_VERSION.value}/{MetricsProtocolVersionValue.MQTT311.value}",
-        f"{MetricsFeatureId.SOCKET_IMPLEMENTATION.value}/{_detect_socket_implementation().value}"
+        f"{_MetricsFeatureId.PROTOCOL_VERSION.value}/{_MetricsProtocolVersionValue.MQTT311.value}",
+        f"{_MetricsFeatureId.SOCKET_IMPLEMENTATION.value}/{_detect_socket_implementation().value}"
     ]
     # H: http_proxy_type - Determine based on whether proxy uses TLS
     if proxy_options is not None:
-        proxy_type = MetricsHttpProxyTypeValue.HTTPS if getattr(
-            proxy_options, 'tls_connection_options', None) is not None else MetricsHttpProxyTypeValue.HTTP
-        features.append(f"{MetricsFeatureId.HTTP_PROXY_TYPE.value}/{proxy_type.value}")
+        proxy_type = _MetricsHttpProxyTypeValue.HTTPS if getattr(
+            proxy_options, 'tls_connection_options', None) is not None else _MetricsHttpProxyTypeValue.HTTP
+        features.append(f"{_MetricsFeatureId.HTTP_PROXY_TYPE.value}/{proxy_type.value}")
 
     # J: tls_cipher_preference - security policy
     if tls_ctx is not None:
-        val = _tls_cipher_preference_metrics_value(tls_ctx.cipher_pref)
+        val = _tls_cipher_preference_metrics_value(tls_ctx._cipher_pref)
         if val:
-            features.append(f"{MetricsFeatureId.TLS_CIPHER_PREFERENCE.value}/{val}")
+            features.append(f"{_MetricsFeatureId.TLS_CIPHER_PREFERENCE.value}/{val}")
 
     # K: minimum_tls_version - the minimum TLS version set on TLSContextOptions
     if tls_ctx is not None:
-        val = _minimum_tls_version_metrics_value(tls_ctx.min_tls_ver)
+        val = _minimum_tls_version_metrics_value(tls_ctx._min_tls_ver)
         if val:
-            features.append(f"{MetricsFeatureId.MINIMUM_TLS_VERSION.value}/{val}")
+            features.append(f"{_MetricsFeatureId.MINIMUM_TLS_VERSION.value}/{val}")
 
     return ",".join(features)
 
@@ -357,14 +357,14 @@ def _merge_feature_lists(crt_features, user_features):
     """Merge CRT-generated features with user-provided (IoT SDK) features.
 
     When both lists contain the same feature ID, the user-provided value
-    takes precedence. The result is sorted by feature ID.
+    takes precedence.
 
     Args:
         crt_features (str): CRT-generated feature list.
         user_features (str): User-provided feature list from the IoT SDK.
             May be empty string if no SDK features are provided.
     Returns:
-        str: The merged feature list string, sorted by feature ID.
+        str: The merged feature list string.
     """
     merged = {}
     # Parse CRT Features
@@ -377,12 +377,12 @@ def _merge_feature_lists(crt_features, user_features):
         if "/" in pair:
             fid, val = pair.split("/", 1)
             merged[fid] = val
-    return ",".join(f"{k}/{v}" for k, v in sorted(merged.items()))
+    return ",".join(f"{k}/{v}" for k, v in merged.items())
 
 # Metrics creation
 
 
-def create_metrics(user_metrics, crt_feature_list):
+def _create_metrics(user_metrics, crt_feature_list):
     """Create the final AWSIoTMetrics object by merging CRT and user-provided data.
 
     Applies the following rules to produce the final metrics:
@@ -433,7 +433,7 @@ def create_metrics(user_metrics, crt_feature_list):
 
     # Merge features: if version matches, merge CRT + SDK; otherwise CRT only
     if (user_metrics_version is not None and user_metrics_version.isdigit() and int(
-            user_metrics_version) == IOT_SDK_METRICS_FEATURE_VERSION and user_feature):
+            user_metrics_version) == IOT_SDK_METRICS_FEATURE_VERSION):
         metadata["IoTSDKFeature"] = _merge_feature_lists(crt_feature_list, user_feature)
     else:
         metadata["IoTSDKFeature"] = _merge_feature_lists(crt_feature_list, "")
@@ -445,7 +445,7 @@ def create_metrics(user_metrics, crt_feature_list):
     return final_metrics
 
 
-def create_metrics_mqtt5(client_options):
+def _create_metrics_mqtt5(client_options):
     """Create the final AWSIoTMetrics object for an MQTT5 client.
 
     Generates the CRT feature list from the full set of MQTT5 ClientOptions
@@ -457,10 +457,10 @@ def create_metrics_mqtt5(client_options):
         AWSIoTMetrics: The final metrics object with merged CRT and SDK features.
     """
     crt_feature_list = _get_encoded_feature_list(client_options)
-    return create_metrics(client_options.metrics, crt_feature_list)
+    return _create_metrics(client_options.metrics, crt_feature_list)
 
 
-def create_metrics_mqtt3(user_metrics=None, proxy_options=None, tls_ctx=None):
+def _create_metrics_mqtt3(user_metrics=None, proxy_options=None, tls_ctx=None):
     """Creates the final AWSIoTMetrics object for an MQTT3 connection.
 
     Generates the CRT feature list from the MQTT3 connection parameters
@@ -477,4 +477,4 @@ def create_metrics_mqtt3(user_metrics=None, proxy_options=None, tls_ctx=None):
         AWSIoTMetrics: The final metrics object with merged CRT and SDK features.
     """
     crt_feature_list = _get_encoded_feature_list_mqtt3(proxy_options, tls_ctx)
-    return create_metrics(user_metrics, crt_feature_list)
+    return _create_metrics(user_metrics, crt_feature_list)

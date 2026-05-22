@@ -16,7 +16,7 @@ from awscrt.http import HttpProxyOptions, HttpRequest
 from awscrt.io import ClientBootstrap, ClientTlsContext, SocketOptions
 from dataclasses import dataclass
 from awscrt.mqtt5 import Client as Mqtt5Client
-from awscrt.aws_iot_metrics import AWSIoTMetrics, IoTMetricsMetadata, create_metrics_mqtt3
+from awscrt.aws_iot_metrics import AWSIoTMetrics, IoTMetricsMetadata, _create_metrics_mqtt3
 
 
 class QoS(IntEnum):
@@ -415,10 +415,10 @@ class Connection(NativeResource):
         self.password = password
         self.socket_options = socket_options if socket_options else SocketOptions()
         self.proxy_options = proxy_options if proxy_options else websocket_proxy_options
-        if not disable_metrics:
-            self._metrics = create_metrics_mqtt3(metrics, self.proxy_options, self.client.tls_ctx)
-        else:
+        if disable_metrics:
             self._metrics = None
+        else:
+            self._metrics = _create_metrics_mqtt3(metrics, self.proxy_options, self.client.tls_ctx)
 
         self._binding = _awscrt.mqtt_client_connection_new(
             self,

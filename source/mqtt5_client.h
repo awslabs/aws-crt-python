@@ -7,6 +7,22 @@
 
 #include "module.h"
 
+#include <aws/mqtt/mqtt.h>
+
+/**
+ * Parse a Python metrics object (with library_name and metadata_entries attrs)
+ * into an aws_mqtt_iot_metrics struct. On success, returns true and populates
+ * out_metrics. The caller must call aws_py_metrics_clean_up() when done.
+ *
+ * On failure, returns false and a Python error has been set.
+ */
+bool aws_py_metrics_parse(PyObject *metrics_py, struct aws_mqtt_iot_metrics *out_metrics);
+
+/**
+ * Clean up resources allocated by aws_py_metrics_parse().
+ */
+void aws_py_metrics_clean_up(struct aws_mqtt_iot_metrics *metrics);
+
 PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args);
 PyObject *aws_py_mqtt5_client_start(PyObject *self, PyObject *args);
 PyObject *aws_py_mqtt5_client_stop(PyObject *self, PyObject *args);

@@ -15,7 +15,7 @@ from awscrt.io import ClientBootstrap, SocketOptions, ClientTlsContext
 from dataclasses import dataclass
 from collections.abc import Sequence
 from inspect import signature
-from awscrt.aws_iot_metrics import AWSIoTMetrics, IoTMetricsMetadata, create_metrics_mqtt5
+from awscrt.aws_iot_metrics import AWSIoTMetrics, IoTMetricsMetadata, _create_metrics_mqtt5
 
 
 class QoS(IntEnum):
@@ -1821,10 +1821,10 @@ class Client(NativeResource):
             socket_options = SocketOptions()
 
         # Handle metrics configuration
-        if not client_options.disable_metrics:
-            self._metrics = create_metrics_mqtt5(client_options)
-        else:
+        if client_options.disable_metrics:
             self._metrics = None
+        else:
+            self._metrics = _create_metrics_mqtt5(client_options)
 
         if not connect_options.will:
             is_will_none = True
