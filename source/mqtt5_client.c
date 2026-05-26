@@ -1035,6 +1035,8 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
     AWS_ZERO_STRUCT(tls_options);
     struct aws_mqtt5_user_property *user_properties_tmp = NULL;
     struct aws_mqtt5_user_property *will_user_properties_tmp = NULL;
+    struct aws_mqtt_iot_metrics metrics_tmp;
+    AWS_ZERO_STRUCT(metrics_tmp);
 
     struct aws_mqtt5_client_options client_options;
     AWS_ZERO_STRUCT(client_options);
@@ -1379,9 +1381,6 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
     }
 
     /* METRICS */
-    struct aws_mqtt_iot_metrics metrics_tmp;
-    AWS_ZERO_STRUCT(metrics_tmp);
-
     if (PyObject_IsTrue(is_metrics_enabled_py) && metrics_py != Py_None) {
         if (!aws_py_metrics_parse(metrics_py, &metrics_tmp)) {
             goto done;
