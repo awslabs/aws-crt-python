@@ -73,6 +73,9 @@ if (UNIX OR AWS_USE_LIBCRYPTO_TO_SUPPORT_ED25519_EVERYWHERE)
 
 endif()
 
+# Build s2n-tls on all Unix platforms (Linux, BSD, macOS).
+# On macOS (Darwin), both Secure Transport and s2n are built; the TLS backend
+# is selected at runtime via the AWS_CRT_USE_NON_FIPS_TLS_13 environment variable.
 if(UNIX)
     # prebuild s2n-tls.
     aws_prebuild_dependency(
@@ -81,6 +84,10 @@ if(UNIX)
         CMAKE_ARGUMENTS
             -DUNSAFE_TREAT_WARNINGS_AS_ERRORS=OFF
             -DBUILD_TESTING=OFF
+            # On Intel Macs, Homebrew installs to /usr/local, which is in the default
+            # system header search path. Without this flag, s2n picks up Homebrew's OpenSSL
+            # headers instead of the bundled aws-lc headers. Not needed on ARM where Homebrew
+            # uses /opt/homebrew (not in default search paths), but harmless to set everywhere.
             -DCMAKE_NO_SYSTEM_FROM_IMPORTED=ON
     )
 endif()

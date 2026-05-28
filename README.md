@@ -49,9 +49,33 @@ If you **must** use fork with aws-crt-python, you may be able to avoid hangs and
 
 For an example, see `test.test_s3.py.S3RequestTest.test_fork_workaround` .
 
-## Mac-Only TLS Behavior
+## macOS TLS Configuration
 
-Please note that on Mac, once a private key is used with a certificate, that certificate-key pair is imported into the Mac Keychain. All subsequent uses of that certificate will use the stored private key and ignore anything passed in programmatically. Beginning in v0.6.2, when a stored private key from the Keychain is used, the following will be logged at the "info" log level:
+By default on macOS, aws-crt-cpp uses Apple Secure Transport for TLS. This provides FIPS-compliant cryptography
+and integration with the macOS Keychain (e.g. PKCS#12 credentials), but is limited to TLS 1.2.
+
+To enable TLS 1.3 on macOS, set the environment variable:
+
+```
+export AWS_CRT_USE_NON_FIPS_TLS_13=1
+```
+
+This switches the TLS backend from Apple Secure Transport to [s2n-tls](https://github.com/aws/s2n-tls) with
+[aws-lc](https://github.com/aws/aws-lc) as the underlying libcrypto. The tradeoffs are:
+
+| | Secure Transport (default) | s2n-tls (`AWS_CRT_USE_NON_FIPS_TLS_13=1`) |
+|---|---|---|
+| TLS versions | Up to TLS 1.2 | Up to TLS 1.3 |
+| FIPS compliance | Yes | No |
+| macOS Keychain integration | Yes (PKCS#12, system certs) | No |
+
+This variable is checked at runtime and only affects macOS. It has no effect on Linux (which always uses s2n-tls)
+or Windows (which always uses Schannel). Both TLS backends are compiled into the binary when building on macOS;
+the environment variable selects which one is used.
+
+### Keychain Behavior
+
+Please note that on Mac, once a private key is used with a certificate, that certificate-key pair is imported into the Mac Keychain.  All subsequent uses of that certificate will use the stored private key and ignore anything passed in programmatically.  Beginning in v0.8.10, when a stored private key from the Keychain is used, the following will be logged at the "info" log level:
 
 ```
 static: certificate has an existing certificate-key pair that was previously imported into the Keychain. Using key from Keychain instead of the one provided.
@@ -110,8 +134,9 @@ You can enable the crash handler by setting the environment variable `AWS_CRT_CR
 ### OpenSSL and LibCrypto
 
 aws-crt-python does not use OpenSSL for TLS.
-On Apple and Windows devices, the OS's default TLS library is used.
-On Unix devices, [s2n-tls](https://github.com/aws/s2n-tls) is used.
+On Windows, the OS's default TLS library (Schannel) is used.
+On Apple (macOS), both Secure Transport and s2n-tls are compiled in; the backend is selected at runtime (see [macOS TLS Backend](#macos-tls-backend) below).
+On other Unix devices, [s2n-tls](https://github.com/aws/s2n-tls) is used.
 But s2n-tls uses libcrypto, the cryptography math library bundled with OpenSSL.
 
 To simplify installation, aws-crt-python has its own copy of libcrypto.
