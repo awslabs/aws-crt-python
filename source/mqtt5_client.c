@@ -841,10 +841,6 @@ bool aws_py_metrics_parse(PyObject *metrics_py, struct aws_mqtt_iot_metrics *out
     PyObject *library_name_py = PyObject_GetAttrString(metrics_py, "library_name");
     out_metrics->library_name = aws_byte_cursor_from_pyunicode(library_name_py);
     Py_XDECREF(library_name_py);
-    if (!out_metrics->library_name.ptr) {
-        PyErr_SetString(PyExc_TypeError, "metrics.library_name must be str type");
-        return false;
-    }
 
     PyObject *metadata_entries_py = PyObject_GetAttrString(metrics_py, "metadata_entries");
 
@@ -853,11 +849,6 @@ bool aws_py_metrics_parse(PyObject *metrics_py, struct aws_mqtt_iot_metrics *out
         if (count > 0) {
             struct aws_mqtt_metadata_entry *entries =
                 aws_mem_calloc(aws_py_get_allocator(), (size_t)count, sizeof(struct aws_mqtt_metadata_entry));
-            if (!entries) {
-                Py_XDECREF(metadata_entries_py);
-                PyErr_SetAwsLastError();
-                return false;
-            }
 
             for (Py_ssize_t i = 0; i < count; ++i) {
                 PyObject *entry_py = PyList_GetItem(metadata_entries_py, i);
@@ -869,13 +860,6 @@ bool aws_py_metrics_parse(PyObject *metrics_py, struct aws_mqtt_iot_metrics *out
 
                 Py_XDECREF(key_py);
                 Py_XDECREF(value_py);
-
-                if (!entries[i].key.ptr || !entries[i].value.ptr) {
-                    Py_XDECREF(metadata_entries_py);
-                    aws_mem_release(aws_py_get_allocator(), entries);
-                    PyErr_SetString(PyExc_TypeError, "metadata_entries items must have str key and value");
-                    return false;
-                }
             }
             out_metrics->metadata_count = (size_t)count;
             out_metrics->metadata_entries = entries;

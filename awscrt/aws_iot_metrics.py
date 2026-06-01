@@ -63,32 +63,36 @@ class _MetricsFeatureId(str, Enum):
 # Feature Value Constants
 
 
-class _MetricsProtocolVersionValue(str, Enum):
-    """Protocol version values for metrics encoding.
+def _protocol_version_metrics_value(protocol):
+    """Map protocol version to its single-character metrics value.
 
-    Maps MQTT protocol versions to their single-character metric representations.
+    Mapping: MQTT311->3, MQTT5->5.
     """
-    MQTT311 = "3"
-    MQTT5 = "5"
+    mapping = {
+        "MQTT311": "3",
+        "MQTT5": "5",
+    }
+    return mapping.get(protocol)
 
 
-class _MetricsSocketImplementationValue(str, Enum):
-    """Socket implementation values for metrics encoding.
+def _socket_implementation_metrics_value():
+    """Detect the socket implementation and return its single-character metrics value.
 
-    Maps the underlying platform socket layer to its metric representation.
-    POSIX covers macOS and Linux; WINSOCK covers Windows.
+    Mapping: Windows (WINSOCK)->B, all other platforms (POSIX)->A.
     """
-    POSIX = "A"
-    WINSOCK = "B"
+    if sys.platform == "win32":
+        return "B"
+    return "A"
 
 
-class _MetricsHttpProxyTypeValue(str, Enum):
-    """HTTP proxy type values for metrics encoding.
+def _http_proxy_type_metrics_value(proxy_options):
+    """Map proxy options to the single-character metrics value for proxy type.
 
-    Indicates whether the proxy connection uses plain HTTP or HTTPS (TLS).
+    Mapping: HTTPS (has tls_connection_options)->B, HTTP->A.
     """
-    HTTP = "A"
-    HTTPS = "B"
+    if getattr(proxy_options, 'tls_connection_options', None) is not None:
+        return "B"
+    return "A"
 
 # Mappings from existing enums to metrics values
 
@@ -200,16 +204,6 @@ def _tls_cipher_preference_metrics_value(pref):
     return mapping.get(pref)
 
 
-def _detect_socket_implementation():
-    """Detect the socket implementation based on the current platform.
-
-    Returns _MetricsSocketImplementationValue.WINSOCK on Windows,
-    _MetricsSocketImplementationValue.POSIX on all other platforms
-    (macOS, Linux).
-    """
-    if sys.platform == "win32":
-        return _MetricsSocketImplementationValue.WINSOCK
-    return _MetricsSocketImplementationValue.POSIX
 
 
 # MQTT5 encoding list
@@ -277,18 +271,15 @@ def _get_encoded_feature_list(client_options):
                 features.append(f"{_MetricsFeatureId.INBOUND_TOPIC_ALIAS_BEHAVIOR.value}/{val}")
 
     # F: protocol_version - MQTT5 always uses client options
-    features.append(f"{_MetricsFeatureId.PROTOCOL_VERSION.value}/{_MetricsProtocolVersionValue.MQTT5.value}")
+    features.append(f"{_MetricsFeatureId.PROTOCOL_VERSION.value}/{_protocol_version_metrics_value('MQTT5')}")
 
     # G: socket_implementation - Detect based on platform
-    features.append(f"{_MetricsFeatureId.SOCKET_IMPLEMENTATION.value}/{_detect_socket_implementation().value}")
+    features.append(f"{_MetricsFeatureId.SOCKET_IMPLEMENTATION.value}/{_socket_implementation_metrics_value()}")
 
     # H: http_proxy_type - Determine based on whether proxy uses TLS
     if client_options.http_proxy_options is not None:
-        proxy_type = _MetricsHttpProxyTypeValue.HTTPS if getattr(
-            client_options.http_proxy_options,
-            'tls_connection_options',
-            None) is not None else _MetricsHttpProxyTypeValue.HTTP
-        features.append(f"{_MetricsFeatureId.HTTP_PROXY_TYPE.value}/{proxy_type.value}")
+        val = _http_proxy_type_metrics_value(client_options.http_proxy_options)
+        features.append(f"{_MetricsFeatureId.HTTP_PROXY_TYPE.value}/{val}")
 
     # I: certificate_source - Would need to be tracked from TLS context setup. This is set at a IoT SDK level
 
@@ -329,14 +320,13 @@ def _get_encoded_feature_list_mqtt3(proxy_options, tls_ctx=None):
         str: The encoded feature list string.
     """
     features = [
-        f"{_MetricsFeatureId.PROTOCOL_VERSION.value}/{_MetricsProtocolVersionValue.MQTT311.value}",
-        f"{_MetricsFeatureId.SOCKET_IMPLEMENTATION.value}/{_detect_socket_implementation().value}"
+        f"{_MetricsFeatureId.PROTOCOL_VERSION.value}/{_protocol_version_metrics_value('MQTT311')}",
+        f"{_MetricsFeatureId.SOCKET_IMPLEMENTATION.value}/{_socket_implementation_metrics_value()}"
     ]
     # H: http_proxy_type - Determine based on whether proxy uses TLS
     if proxy_options is not None:
-        proxy_type = _MetricsHttpProxyTypeValue.HTTPS if getattr(
-            proxy_options, 'tls_connection_options', None) is not None else _MetricsHttpProxyTypeValue.HTTP
-        features.append(f"{_MetricsFeatureId.HTTP_PROXY_TYPE.value}/{proxy_type.value}")
+        val = _http_proxy_type_metrics_value(proxy_options)
+        features.append(f"{_MetricsFeatureId.HTTP_PROXY_TYPE.value}/{val}")
 
     # J: tls_cipher_preference - security policy
     if tls_ctx is not None:

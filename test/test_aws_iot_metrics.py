@@ -8,9 +8,9 @@ from awscrt.aws_iot_metrics import (
     AWSIoTMetrics,
     IoTMetricsMetadata,
     _MetricsFeatureId,
-    _MetricsProtocolVersionValue,
-    _MetricsSocketImplementationValue,
-    _MetricsHttpProxyTypeValue,
+    _protocol_version_metrics_value,
+    _socket_implementation_metrics_value,
+    _http_proxy_type_metrics_value,
     IOT_SDK_METRICS_FEATURE_VERSION,
     _get_encoded_feature_list,
     _get_encoded_feature_list_mqtt3,
@@ -31,9 +31,7 @@ from awscrt.http import HttpProxyOptions
 
 
 def _expected_socket_value():
-    if sys.platform == "win32":
-        return _MetricsSocketImplementationValue.WINSOCK
-    return _MetricsSocketImplementationValue.POSIX
+    return _socket_implementation_metrics_value()
 
 
 class TestMinimalOptionsEncoding(NativeResourceTest):
@@ -45,8 +43,8 @@ class TestMinimalOptionsEncoding(NativeResourceTest):
 
         result = _get_encoded_feature_list(options)
 
-        self.assertIn(f"{_MetricsFeatureId.PROTOCOL_VERSION.value}/{_MetricsProtocolVersionValue.MQTT5.value}", result)
-        self.assertIn(f"{_MetricsFeatureId.SOCKET_IMPLEMENTATION.value}/{_expected_socket_value().value}", result)
+        self.assertIn(f"{_MetricsFeatureId.PROTOCOL_VERSION.value}/{_protocol_version_metrics_value('MQTT5')}", result)
+        self.assertIn(f"{_MetricsFeatureId.SOCKET_IMPLEMENTATION.value}/{_expected_socket_value()}", result)
         parts = result.split(",")
         self.assertEqual(2, len(parts))
 
@@ -54,8 +52,8 @@ class TestMinimalOptionsEncoding(NativeResourceTest):
         """MQTT3 with no proxy and no TLS should only have protocol version and socket."""
         result = _get_encoded_feature_list_mqtt3(proxy_options=None, tls_ctx=None)
 
-        self.assertIn(f"{_MetricsFeatureId.PROTOCOL_VERSION.value}/{_MetricsProtocolVersionValue.MQTT311.value}", result)
-        self.assertIn(f"{_MetricsFeatureId.SOCKET_IMPLEMENTATION.value}/{_expected_socket_value().value}", result)
+        self.assertIn(f"{_MetricsFeatureId.PROTOCOL_VERSION.value}/{_protocol_version_metrics_value('MQTT311')}", result)
+        self.assertIn(f"{_MetricsFeatureId.SOCKET_IMPLEMENTATION.value}/{_expected_socket_value()}", result)
         parts = result.split(",")
         self.assertEqual(2, len(parts))
 

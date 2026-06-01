@@ -1821,9 +1821,7 @@ class Client(NativeResource):
             socket_options = SocketOptions()
 
         # Handle metrics configuration
-        enable_metrics = True
         if client_options.disable_metrics:
-            enable_metrics = False
             self._metrics = None
         else:
             self._metrics = _create_metrics_mqtt5(client_options)
@@ -1879,7 +1877,7 @@ class Client(NativeResource):
                                                  client_options.ack_timeout_sec,
                                                  client_options.topic_aliasing_options,
                                                  websocket_is_none,
-                                                 enable_metrics,
+                                                 not client_options.disable_metrics,
                                                  self._metrics,
                                                  core)
 
