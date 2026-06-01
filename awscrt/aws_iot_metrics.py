@@ -94,8 +94,6 @@ def _http_proxy_type_metrics_value(proxy_options):
         return "B"
     return "A"
 
-# Mappings from existing enums to metrics values
-
 
 def _retry_jitter_metrics_value(mode):
     """Map ExponentialBackoffJitterMode to its single-character metrics value.
