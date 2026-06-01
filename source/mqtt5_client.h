@@ -20,7 +20,7 @@
  *
  * On success the caller is responsible for calling aws_py_metrics_clean_up()
  * to release any memory allocated here (metadata_entries).
- * 
+ *
  */
 bool aws_py_metrics_parse(PyObject *metrics_py, struct aws_mqtt_iot_metrics *out_metrics);
 

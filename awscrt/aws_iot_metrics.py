@@ -204,8 +204,6 @@ def _tls_cipher_preference_metrics_value(pref):
     return mapping.get(pref)
 
 
-
-
 # MQTT5 encoding list
 def _get_encoded_feature_list(client_options):
     """Generates the encoded feature list string for metrics from MQTT5 ClientOptions.
