@@ -7,7 +7,7 @@ on:
       - 'docs'
 
 env:
-  BUILDER_VERSION: v0.9.92
+  BUILDER_VERSION: v0.9.93
   BUILDER_SOURCE: releases
   BUILDER_HOST: https://d19elf31gohf1l.cloudfront.net
   PACKAGE_NAME: aws-crt-python
@@ -50,13 +50,11 @@ jobs:
           - x64
           - x86
         python:
-          - cp38-cp38
           - cp39-cp39
           - cp310-cp310
           - cp311-cp311
           - cp312-cp312
           - cp313-cp313
-          - cp313-cp313t
           - cp314-cp314
           - cp314-cp314t
     permissions:
@@ -78,13 +76,11 @@ jobs:
       fail-fast: false
       matrix:
         python:
-          - cp38-cp38
           - cp39-cp39
           - cp310-cp310
           - cp311-cp311
           - cp312-cp312
           - cp313-cp313
-          - cp313-cp313t
           - cp314-cp314
           - cp314-cp314t
     permissions:
