@@ -51,7 +51,7 @@ For an example, see `test.test_s3.py.S3RequestTest.test_fork_workaround` .
 
 ## macOS TLS Configuration
 
-By default on macOS, aws-crt-cpp uses Apple Secure Transport for TLS. This provides FIPS-compliant cryptography
+By default on macOS, aws-crt-python uses Apple Secure Transport for TLS. This provides FIPS-compliant cryptography
 and integration with the macOS Keychain (e.g. PKCS#12 credentials), but is limited to TLS 1.2.
 
 To enable TLS 1.3 on macOS, set the environment variable:
@@ -75,7 +75,7 @@ the environment variable selects which one is used.
 
 ### Keychain Behavior
 
-Please note that on Mac, once a private key is used with a certificate, that certificate-key pair is imported into the Mac Keychain.  All subsequent uses of that certificate will use the stored private key and ignore anything passed in programmatically.  Beginning in v0.8.10, when a stored private key from the Keychain is used, the following will be logged at the "info" log level:
+Please note that on Mac, once a private key is used with a certificate, that certificate-key pair is imported into the Mac Keychain.  All subsequent uses of that certificate will use the stored private key and ignore anything passed in programmatically.  Beginning in v0.6.2, when a stored private key from the Keychain is used, the following will be logged at the "info" log level:
 
 ```
 static: certificate has an existing certificate-key pair that was previously imported into the Keychain. Using key from Keychain instead of the one provided.
@@ -135,7 +135,7 @@ You can enable the crash handler by setting the environment variable `AWS_CRT_CR
 
 aws-crt-python does not use OpenSSL for TLS.
 On Windows, the OS's default TLS library (Schannel) is used.
-On Apple (macOS), both Secure Transport and s2n-tls are compiled in; the backend is selected at runtime (see [macOS TLS Backend](#macos-tls-backend) below).
+On Apple (macOS), both Secure Transport and s2n-tls are compiled in; the backend is selected at runtime (see [macOS TLS Configuration](#macos-tls-configuration) below).
 On other Unix devices, [s2n-tls](https://github.com/aws/s2n-tls) is used.
 But s2n-tls uses libcrypto, the cryptography math library bundled with OpenSSL.
 
