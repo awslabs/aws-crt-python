@@ -301,7 +301,7 @@ if using_libcrypto():
     # aws-lc produces libcrypto.a
     AWS_LIBS.append(AwsLib('aws-lc', libname='crypto'))
 
-if sys.platform != 'darwin' and sys.platform != 'win32':
+if sys.platform != 'win32':
     AWS_LIBS.append(AwsLib('s2n'))
 
 AWS_LIBS.append(AwsLib('aws-c-common'))

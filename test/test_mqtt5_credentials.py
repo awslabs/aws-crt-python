@@ -130,6 +130,9 @@ class MqttConnectionTest(NativeResourceTest):
         client.stop()
         callbacks.future_stopped.result(TIMEOUT)
 
+    # When AWS_CRT_USE_NON_FIPS_TLS_13 is set, the TLS backend on macOS switches from
+    # Secure Transport to s2n-tls, which doesn't support PKCS#12.
+    @unittest.skipIf(os.environ.get('AWS_CRT_USE_NON_FIPS_TLS_13'), "PKCS12 not supported with non-FIPS TLS 1.3")
     def test_mqtt5_cred_pkcs12(self):
         test_retry_wrapper(self._test_mqtt5_cred_pkcs12)
 

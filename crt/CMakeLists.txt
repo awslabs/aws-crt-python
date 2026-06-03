@@ -32,9 +32,10 @@ option(AWS_USE_LIBCRYPTO_TO_SUPPORT_ED25519_EVERYWHERE "Set this if you want to 
 string(REPLACE "-g" "-g1" CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
 string(REPLACE "-g" "-g1" CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO}")
 
-# On Unix we use S2N for TLS and AWS-LC crypto.
-# (On Windows and Apple we use the default OS libraries)
-if ((UNIX AND NOT APPLE) OR AWS_USE_LIBCRYPTO_TO_SUPPORT_ED25519_EVERYWHERE)
+# On Linux and BSD, we use S2N for TLS and AWS-LC crypto.
+# On Windows, we use the default OS libraries.
+# On Apple, we use the default OS libraries by default, but support S2N usage.
+if (UNIX OR AWS_USE_LIBCRYPTO_TO_SUPPORT_ED25519_EVERYWHERE)
     option(USE_OPENSSL "Set this if you want to use your system's OpenSSL compatible libcrypto" OFF)
     include(AwsPrebuildDependency)
 
@@ -48,7 +49,7 @@ if ((UNIX AND NOT APPLE) OR AWS_USE_LIBCRYPTO_TO_SUPPORT_ED25519_EVERYWHERE)
             -DCMAKE_BUILD_TYPE=RelWithDebInfo  # Use the same build type as the rest of the project
         )
 
-        if (APPLE OR WIN32)
+        if (WIN32)
             # Libcrypto implementations typically have several chunky pregenerated tables that add a lot
             # to artifact size. We dont really need them for ed25519 case on win/mac, so favor
             # smaller binary over perf here.
@@ -72,7 +73,10 @@ if ((UNIX AND NOT APPLE) OR AWS_USE_LIBCRYPTO_TO_SUPPORT_ED25519_EVERYWHERE)
 
 endif()
 
-if(UNIX AND NOT APPLE)
+# Build s2n-tls on all Unix platforms (Linux, BSD, macOS).
+# On macOS (Darwin), both Secure Transport and s2n are built; the TLS backend
+# is selected at runtime via the AWS_CRT_USE_NON_FIPS_TLS_13 environment variable.
+if(UNIX)
     # prebuild s2n-tls.
     aws_prebuild_dependency(
         DEPENDENCY_NAME S2N
@@ -80,6 +84,11 @@ if(UNIX AND NOT APPLE)
         CMAKE_ARGUMENTS
             -DUNSAFE_TREAT_WARNINGS_AS_ERRORS=OFF
             -DBUILD_TESTING=OFF
+            # On Intel Macs, Homebrew installs to /usr/local, which is in the default
+            # system header search path. Without this flag, s2n picks up Homebrew's OpenSSL
+            # headers instead of the bundled aws-lc headers. Not needed on ARM where Homebrew
+            # uses /opt/homebrew (not in default search paths), but harmless to set everywhere.
+            -DCMAKE_NO_SYSTEM_FROM_IMPORTED=ON
     )
 endif()
 
