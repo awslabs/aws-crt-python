@@ -4,9 +4,6 @@ set -ex
 
 /opt/python/cp39-cp39/bin/python ./continuous-delivery/update-version.py
 
-/opt/python/cp38-cp38/bin/python -m build
-auditwheel repair --plat manylinux2014_aarch64 dist/awscrt-*cp38*.whl
-
 /opt/python/cp39-cp39/bin/python -m build
 auditwheel repair --plat manylinux2014_aarch64 dist/awscrt-*cp39*.whl
 
@@ -23,8 +20,6 @@ auditwheel repair --plat manylinux2014_aarch64 dist/awscrt-*cp311*.whl
 auditwheel repair --plat manylinux2014_aarch64 dist/awscrt-*cp313*.whl
 
 # The free-threaded build does not currently support the Limited C API or the stable ABI. Built them separately
-/opt/python/cp313-cp313t/bin/python -m build
-auditwheel repair --plat manylinux2014_aarch64 dist/awscrt-*cp313t*.whl
 /opt/python/cp314-cp314t/bin/python -m build
 auditwheel repair --plat manylinux2014_aarch64 dist/awscrt-*cp314t*.whl
 
