@@ -606,12 +606,16 @@ class ClientTlsContext(NativeResource):
     Args:
         options (TlsContextOptions): Configuration options.
     """
-    __slots__ = ()
+    __slots__ = ('_min_tls_ver', '_cipher_pref')
 
     def __init__(self, options):
         assert isinstance(options, TlsContextOptions)
 
         super().__init__()
+
+        self._min_tls_ver = options.min_tls_ver
+        self._cipher_pref = options.cipher_pref
+
         self._binding = _awscrt.client_tls_ctx_new(
             options.min_tls_ver.value,
             options.cipher_pref.value,
