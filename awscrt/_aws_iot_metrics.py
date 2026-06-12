@@ -63,6 +63,22 @@ class _MetricsFeatureId(str, Enum):
 # Feature Value Constants
 
 
+def _certificate_source_metrics_value(source):
+    """Map _CertificateSource to its single-character metrics value.
+
+    Mapping: CERTIFICATE_FILES->A, PKCS11->B, WINDOWS_CERT_STORE->C, PKCS12_FILE->E.
+    "D" is reserved for Java KeyStore.
+    """
+    from awscrt.io import _CertificateSource
+    mapping = {
+        _CertificateSource.CERTIFICATE_FILES: "A",
+        _CertificateSource.PKCS11: "B",
+        _CertificateSource.WINDOWS_CERT_STORE: "C",
+        _CertificateSource.PKCS12_FILE: "E",
+    }
+    return mapping.get(source)
+
+
 def _protocol_version_metrics_value(protocol):
     """Map protocol version to its single-character metrics value.
 
@@ -221,10 +237,9 @@ def _get_encoded_feature_list(client_options):
         - D (outbound_topic_alias_behavior): from topic_aliasing_options.outbound_behavior
         - E (inbound_topic_alias_behavior): from topic_aliasing_options.inbound_behavior
         - H (http_proxy_type): HTTP or HTTPS based on proxy TLS settings
+        - I (certificate_source): auto-detected from TlsContextOptions factory method
         - J (tls_cipher_preference): mapped from TlsCipherPref on the TLS context
         - K (minimum_tls_version): mapped from TlsVersion on the TLS context
-
-    Feature I (certificate_source) is set at the IoT SDK level, not here.
 
     Args:
         client_options: MQTT5 ClientOptions dataclass.
@@ -277,7 +292,11 @@ def _get_encoded_feature_list(client_options):
         val = _http_proxy_type_metrics_value(client_options.http_proxy_options)
         features.append(f"{_MetricsFeatureId.HTTP_PROXY_TYPE.value}/{val}")
 
-    # I: certificate_source - Would need to be tracked from TLS context setup. This is set at a IoT SDK level
+    # I: certificate_source - Auto-detected from TlsContextOptions factory method
+    if client_options.tls_ctx is not None:
+        val = _certificate_source_metrics_value(getattr(client_options.tls_ctx, '_certificate_source', None))
+        if val:
+            features.append(f"{_MetricsFeatureId.CERTIFICATE_SOURCE.value}/{val}")
 
     # J: tls_cipher_preference - security policy
     if client_options.tls_ctx is not None:
@@ -306,6 +325,7 @@ def _get_encoded_feature_list_mqtt3(proxy_options, tls_ctx=None):
 
     Conditionally includes:
         - H (http_proxy_type): HTTP or HTTPS based on proxy TLS settings
+        - I (certificate_source): auto-detected from TlsContextOptions factory method
         - J (tls_cipher_preference): mapped from TlsCipherPref on the TLS context
         - K (minimum_tls_version): mapped from TlsVersion on the TLS context
 
@@ -323,6 +343,12 @@ def _get_encoded_feature_list_mqtt3(proxy_options, tls_ctx=None):
     if proxy_options is not None:
         val = _http_proxy_type_metrics_value(proxy_options)
         features.append(f"{_MetricsFeatureId.HTTP_PROXY_TYPE.value}/{val}")
+
+    # I: certificate_source - Auto-detected from TlsContextOptions factory method
+    if tls_ctx is not None:
+        val = _certificate_source_metrics_value(getattr(tls_ctx, '_certificate_source', None))
+        if val:
+            features.append(f"{_MetricsFeatureId.CERTIFICATE_SOURCE.value}/{val}")
 
     # J: tls_cipher_preference - security policy
     if tls_ctx is not None:
@@ -434,11 +460,12 @@ def _create_metrics(user_metrics, crt_feature_list):
 def _create_metrics_mqtt5(client_options):
     """Create the final AWSIoTMetrics object for an MQTT5 client.
 
-    Generates the CRT feature list from the full set of MQTT5 ClientOptions
+    Generates the CRT feature list from the full set of MQTT5 ClientOptions,
+    including auto-detected certificate source from the TLS context.
 
     Args:
         client_options: MQTT5 ClientOptions dataclass containing all
-            connection configuration and optional user metrics.
+            connection configuration and optional metrics (AWSIoTMetrics).
     Returns:
         AWSIoTMetrics: The final metrics object with merged CRT and SDK features.
     """
@@ -447,18 +474,15 @@ def _create_metrics_mqtt5(client_options):
 
 
 def _create_metrics_mqtt3(user_metrics=None, proxy_options=None, tls_ctx=None):
-    """Creates the final AWSIoTMetrics object for an MQTT3 connection.
+    """Create the final AWSIoTMetrics object for an MQTT3 connection.
 
-    Generates the CRT feature list from the MQTT3 connection parameters
+    Generates the CRT feature list from the MQTT3 connection parameters,
+    including auto-detected certificate source from the TLS context.
 
     Args:
-        user_metrics : Optional metrics configuration
-            provided by the IoT SDK. If None, defaults are used.
-        proxy_options : Optional HTTP proxy options
-            from the Connection, used to determine proxy type feature.
-        tls_ctx : Optional TLS context from the
-            connection, used to determine cipher preference and minimum TLS
-            version features.
+        user_metrics: Optional AWSIoTMetrics configuration provided by the IoT SDK.
+        proxy_options: Optional HTTP proxy options from the Connection.
+        tls_ctx: Optional ClientTlsContext from the connection.
     Returns:
         AWSIoTMetrics: The final metrics object with merged CRT and SDK features.
     """
