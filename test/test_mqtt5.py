@@ -218,7 +218,7 @@ class Mqtt5ClientTest(NativeResourceTest):
 
         client_options = mqtt5.ClientOptions(
             host_name=input_host_name,
-            disable_metrics=True
+            enable_metrics=False
         )
         callbacks = Mqtt5TestCallbacks()
         client = self._create_client(client_options=client_options, callbacks=callbacks)
@@ -245,7 +245,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             host_name=input_host_name,
             port=input_port,
             connect_options=connect_options,
-            disable_metrics=True
+            enable_metrics=False
         )
         callbacks = Mqtt5TestCallbacks()
         client = self._create_client(client_options=client_options, callbacks=callbacks)
@@ -464,7 +464,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             host_name=input_host_name,
             port=input_port,
             connect_options=connect_options,
-            disable_metrics=True
+            enable_metrics=False
         )
         callbacks = Mqtt5TestCallbacks()
         client_options.websocket_handshake_transform = callbacks.ws_handshake_transform
@@ -2249,13 +2249,13 @@ class Mqtt5ClientTest(NativeResourceTest):
             host_name=input_host_name,
             port=input_port,
             connect_options=connect_options,
-            disable_metrics=False
+            enable_metrics=True
         )
         callbacks = Mqtt5TestCallbacks()
         client = self._create_client(client_options=client_options, callbacks=callbacks)
 
         # Verify metrics are enabled
-        self.assertFalse(client_options.disable_metrics)
+        self.assertTrue(client_options.enable_metrics)
 
         client.start()
         # Connection should fail because metrics corrupts the username for basic auth

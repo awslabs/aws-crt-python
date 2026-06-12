@@ -7,28 +7,6 @@
 
 #include "module.h"
 
-#include <aws/mqtt/mqtt.h>
-
-/**
- * Parse a Python AWSIoTMetrics object into a C aws_mqtt_iot_metrics struct.
- *
- * WARNING: This function calls AWS_ZERO_STRUCT on out_metrics, which
- * unconditionally zeroes all fields. The caller must pass a pointer to an
- * uninitialized (or already cleaned-up) struct. If out_metrics currently owns
- * heap-allocated memory (e.g. a previous metadata_entries array), that memory
- * will be leaked because the pointer is overwritten without being freed.
- *
- * On success the caller is responsible for calling aws_py_metrics_clean_up()
- * to release any memory allocated here (metadata_entries).
- *
- */
-bool aws_py_metrics_parse(PyObject *metrics_py, struct aws_mqtt_iot_metrics *out_metrics);
-
-/**
- * Clean up resources allocated by aws_py_metrics_parse().
- */
-void aws_py_metrics_clean_up(struct aws_mqtt_iot_metrics *metrics);
-
 PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args);
 PyObject *aws_py_mqtt5_client_start(PyObject *self, PyObject *args);
 PyObject *aws_py_mqtt5_client_stop(PyObject *self, PyObject *args);

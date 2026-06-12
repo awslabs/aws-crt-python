@@ -630,7 +630,7 @@ class MqttConnectionTest(NativeResourceTest):
             port=input_port,
             username=input_username,
             password=input_password,
-            disable_metrics=True)
+            enable_metrics=False)
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
@@ -762,7 +762,7 @@ class MqttConnectionTest(NativeResourceTest):
             password=input_password,
             use_websockets=True,
             websocket_handshake_transform=sign_function,
-            disable_metrics=True)
+            enable_metrics=False)
         connection.connect().result(TIMEOUT)
         connection.disconnect().result(TIMEOUT)
 
@@ -853,7 +853,7 @@ class MqttConnectionTest(NativeResourceTest):
         bootstrap = ClientBootstrap(elg, resolver)
         client = Client(bootstrap, None)
 
-        # Create connection with disable_metrics=False explicitly
+        # Create connection with enable_metrics=True explicitly
         # This should fail because metrics appends to username, corrupting basic auth
         connection = Connection(
             client=client,
@@ -862,7 +862,7 @@ class MqttConnectionTest(NativeResourceTest):
             port=input_port,
             username=input_username,
             password=input_password,
-            disable_metrics=False)
+            enable_metrics=True)
 
         # Connection should fail because metrics corrupts the username for basic auth
         exception_occurred = False
