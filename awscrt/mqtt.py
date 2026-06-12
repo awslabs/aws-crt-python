@@ -16,7 +16,7 @@ from awscrt.http import HttpProxyOptions, HttpRequest
 from awscrt.io import ClientBootstrap, ClientTlsContext, SocketOptions
 from dataclasses import dataclass
 from awscrt.mqtt5 import Client as Mqtt5Client
-from awscrt.aws_iot_metrics import AWSIoTMetrics, IoTMetricsMetadata, _create_metrics_mqtt3
+from awscrt._aws_iot_metrics import _create_metrics_mqtt3
 
 
 class QoS(IntEnum):
@@ -334,7 +334,7 @@ class Connection(NativeResource):
 
         disable_metrics (bool): Disable IoT SDK metrics in MQTT CONNECT packet username field, including SDK name, version, and platform. Default to False.
 
-        metrics (Optional[AWSIoTMetrics]) :  Optional metrics configuration for IoT SDK metrics reporting. If provided, the CRT will use the given metrics. If None, a default AWSIoTMetrics will be created.
+        metrics: Optional metrics configuration (AWSIoTMetrics) for IoT SDK metrics reporting. If provided, the CRT will use the given metrics. If None, a default AWSIoTMetrics will be created.
         """
 
     def __init__(self,

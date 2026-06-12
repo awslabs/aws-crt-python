@@ -4,7 +4,7 @@
 import sys
 import unittest
 from test import NativeResourceTest
-from awscrt.aws_iot_metrics import (
+from awscrt._aws_iot_metrics import (
     AWSIoTMetrics,
     IoTMetricsMetadata,
     _MetricsFeatureId,
