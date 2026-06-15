@@ -19,12 +19,13 @@ class _CertificateSource(IntEnum):
     """Certificate source types for mTLS authentication.
 
     Used by TlsContextOptions to track which factory method created the
-    TLS configuration. The CRT reads this and encodes it as
+    TLS configuration. The metrics reads this and encodes it as
     feature ID "I" in the metrics string.
     """
     CERTIFICATE_FILES = 0  # PEM cert + key files
     PKCS11 = 1  # Hardware security module via PKCS11
-    WINDOWS_CERT_STORE = 2  # windows certificate source
+    WINDOWS_CERT_STORE = 2  # Windows certificate source
+    # 3 is reserved for Java keystore (not applicable to Python)
     PKCS12_FILE = 4  # PKCS#12 (.p12/.pfx) files
 
 
