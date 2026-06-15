@@ -426,8 +426,8 @@ PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args) {
     Py_ssize_t private_key_buffer_len;
     const char *pkcs12_filepath;
     const char *pkcs12_password;
-    int verify_peer; /* p - boolean predicate */
-    int no_certificate_revocation; /* p - boolean predicate */
+    int verify_peer;
+    int no_certificate_revocation;
     PyObject *py_pkcs11_lib;
     const char *pkcs11_user_pin;
     Py_ssize_t pkcs11_user_pin_len;
