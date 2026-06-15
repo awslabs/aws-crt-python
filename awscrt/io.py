@@ -19,7 +19,7 @@ class _CertificateSource(IntEnum):
     """Certificate source types for mTLS authentication.
 
     Used by TlsContextOptions to track which factory method created the
-    TLS configuration. The CRT auto-detects this and encodes it as
+    TLS configuration. The CRT detects this and encodes it as
     feature ID "I" in the metrics string.
     """
     CERTIFICATE_FILES = 0

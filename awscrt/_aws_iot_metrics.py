@@ -237,7 +237,7 @@ def _get_encoded_feature_list(client_options):
         - D (outbound_topic_alias_behavior): from topic_aliasing_options.outbound_behavior
         - E (inbound_topic_alias_behavior): from topic_aliasing_options.inbound_behavior
         - H (http_proxy_type): HTTP or HTTPS based on proxy TLS settings
-        - I (certificate_source): auto-detected from TlsContextOptions factory method
+        - I (certificate_source): Detected from TlsContextOptions
         - J (tls_cipher_preference): mapped from TlsCipherPref on the TLS context
         - K (minimum_tls_version): mapped from TlsVersion on the TLS context
 
@@ -465,7 +465,7 @@ def _create_metrics_mqtt5(client_options):
 
     Args:
         client_options: MQTT5 ClientOptions dataclass containing all
-            connection configuration and optional metrics (AWSIoTMetrics).
+            connection configuration and optional user (AWSIoTMetrics) metrics.
     Returns:
         AWSIoTMetrics: The final metrics object with merged CRT and SDK features.
     """
