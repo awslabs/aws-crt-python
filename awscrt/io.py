@@ -19,13 +19,13 @@ class _CertificateSource(IntEnum):
     """Certificate source types for mTLS authentication.
 
     Used by TlsContextOptions to track which factory method created the
-    TLS configuration. The CRT detects this and encodes it as
+    TLS configuration. The CRT reads this and encodes it as
     feature ID "I" in the metrics string.
     """
-    CERTIFICATE_FILES = 0
-    PKCS11 = 1
-    WINDOWS_CERT_STORE = 2
-    PKCS12_FILE = 3
+    CERTIFICATE_FILES = 0 # PEM cert + key files
+    PKCS11 = 1 # Hardware security module via PKCS11
+    WINDOWS_CERT_STORE = 2 # windows certificate source
+    PKCS12_FILE = 4 # PKCS#12 (.p12/.pfx) files
 
 
 class LogLevel(IntEnum):

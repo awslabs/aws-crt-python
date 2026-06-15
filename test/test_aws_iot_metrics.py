@@ -11,6 +11,7 @@ from awscrt.aws_iot_metrics import (
     _protocol_version_metrics_value,
     _socket_implementation_metrics_value,
     _http_proxy_type_metrics_value,
+    _certificate_source_metrics_value,
     IOT_SDK_METRICS_FEATURE_VERSION,
     _get_encoded_feature_list,
     _get_encoded_feature_list_mqtt3,
@@ -26,7 +27,7 @@ from awscrt.mqtt5 import (
     InboundTopicAliasBehaviorType,
     TopicAliasingOptions,
 )
-from awscrt.io import ClientTlsContext, TlsContextOptions, TlsConnectionOptions, TlsVersion, TlsCipherPref
+from awscrt.io import ClientTlsContext, TlsContextOptions, TlsConnectionOptions, TlsVersion, TlsCipherPref, _CertificateSource
 from awscrt.http import HttpProxyOptions
 
 
@@ -417,6 +418,31 @@ class TestCreateMetricsPreservesOtherUserMetadata(NativeResourceTest):
         result = _create_metrics(user, "F/5,G/A")
 
         self.assertEqual("MyCustomSDK/1.0", result.library_name)
+
+
+class TestCertificateSourceMetrics(NativeResourceTest):
+    """Test certificate source metrics encoding."""
+
+    def test_certificate_source_mapping_values(self):
+        """Verify each _CertificateSource maps to the correct metrics value."""
+        self.assertEqual("A", _certificate_source_metrics_value(_CertificateSource.CERTIFICATE_FILES))
+        self.assertEqual("B", _certificate_source_metrics_value(_CertificateSource.PKCS11))
+        self.assertEqual("C", _certificate_source_metrics_value(_CertificateSource.WINDOWS_CERT_STORE))
+        self.assertEqual("E", _certificate_source_metrics_value(_CertificateSource.PKCS12_FILE))
+        self.assertIsNone(_certificate_source_metrics_value(None))
+
+    def test_certificate_source_in_feature_list(self):
+        """TLS context with certificate source should include feature I in metrics."""
+        tls_options = TlsContextOptions()
+        tls_options._certificate_source = _CertificateSource.CERTIFICATE_FILES
+        tls_ctx = ClientTlsContext(tls_options)
+
+        options = ClientOptions(host_name="localhost", port=8883, tls_ctx=tls_ctx)
+        result = _get_encoded_feature_list(options)
+        self.assertIn(f"{_MetricsFeatureId.CERTIFICATE_SOURCE.value}/A", result)
+
+        result_mqtt3 = _get_encoded_feature_list_mqtt3(proxy_options=None, tls_ctx=tls_ctx)
+        self.assertIn(f"{_MetricsFeatureId.CERTIFICATE_SOURCE.value}/A", result_mqtt3)
 
 
 if __name__ == '__main__':
