@@ -22,10 +22,10 @@ class _CertificateSource(IntEnum):
     TLS configuration. The CRT reads this and encodes it as
     feature ID "I" in the metrics string.
     """
-    CERTIFICATE_FILES = 0 # PEM cert + key files
-    PKCS11 = 1 # Hardware security module via PKCS11
-    WINDOWS_CERT_STORE = 2 # windows certificate source
-    PKCS12_FILE = 4 # PKCS#12 (.p12/.pfx) files
+    CERTIFICATE_FILES = 0  # PEM cert + key files
+    PKCS11 = 1  # Hardware security module via PKCS11
+    WINDOWS_CERT_STORE = 2  # windows certificate source
+    PKCS12_FILE = 4  # PKCS#12 (.p12/.pfx) files
 
 
 class LogLevel(IntEnum):
