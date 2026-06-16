@@ -309,6 +309,12 @@ class TlsContextOptions:
             System defaults are used by default.
         cipher_pref (TlsCipherPref): The TLS Cipher Preference to use. System defaults are used by default.
         verify_peer (bool): Whether to validate the peer's x.509 certificate.
+        no_certificate_revocation (bool): Set to true to disable certificate revocation checking during TLS negotiation.
+            On Windows (SChannel), this prevents the TLS handshake from making outbound network calls
+            to CRL/OCSP revocation endpoints, which can block for minutes when the endpoints are unreachable
+            (e.g., in private subnets without internet access).
+            On Linux (s2n), this disables validation of OCSP stapled responses provided by the server.
+            On Apple platforms, this is a no-op as revocation checking is not enabled by default.
         alpn_list (Optional[List[str]]): If set, names to use in Application Layer
             Protocol Negotiation (ALPN). ALPN is not supported on all systems,
             see :meth:`is_alpn_available()`. This can be customized per connection,
@@ -325,6 +331,7 @@ class TlsContextOptions:
         'pkcs12_filepath',
         'pkcs12_password',
         'verify_peer',
+        'no_certificate_revocation',
         '_pkcs11_lib',
         '_pkcs11_user_pin',
         '_pkcs11_slot_id',
@@ -343,6 +350,7 @@ class TlsContextOptions:
         self.min_tls_ver = TlsVersion.DEFAULT
         self.cipher_pref = TlsCipherPref.DEFAULT
         self.verify_peer = True
+        self.no_certificate_revocation = False
 
     @staticmethod
     def create_client_with_mtls_from_path(cert_filepath, pk_filepath):
@@ -627,6 +635,7 @@ class ClientTlsContext(NativeResource):
             options.pkcs12_filepath,
             options.pkcs12_password,
             options.verify_peer,
+            options.no_certificate_revocation,
             options._pkcs11_lib,
             options._pkcs11_user_pin,
             options._pkcs11_slot_id,

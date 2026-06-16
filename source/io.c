@@ -426,7 +426,8 @@ PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args) {
     Py_ssize_t private_key_buffer_len;
     const char *pkcs12_filepath;
     const char *pkcs12_password;
-    int verify_peer; /* p - boolean predicate */
+    int verify_peer;
+    int no_certificate_revocation;
     PyObject *py_pkcs11_lib;
     const char *pkcs11_user_pin;
     Py_ssize_t pkcs11_user_pin_len;
@@ -443,7 +444,7 @@ PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args) {
 
     if (!PyArg_ParseTuple(
             args,
-            "iizz#zz#z#zzpOz#Oz#z#z#z#z",
+            "iizz#zz#z#zzppOz#Oz#z#z#z#z",
             /* i */ &min_tls_version,
             /* i */ &cipher_pref,
             /* z */ &ca_dirpath,
@@ -457,6 +458,7 @@ PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args) {
             /* z */ &pkcs12_filepath,
             /* z */ &pkcs12_password,
             /* p */ &verify_peer,
+            /* p */ &no_certificate_revocation,
             /* O */ &py_pkcs11_lib,
             /* z */ &pkcs11_user_pin,
             /* # */ &pkcs11_user_pin_len,
@@ -560,6 +562,8 @@ PyObject *aws_py_client_tls_ctx_new(PyObject *self, PyObject *args) {
     }
 
     ctx_options.verify_peer = (bool)verify_peer;
+    ctx_options.no_certificate_revocation = (bool)no_certificate_revocation;
+
     struct aws_tls_ctx *tls_ctx = aws_tls_client_ctx_new(allocator, &ctx_options);
     if (!tls_ctx) {
         PyErr_SetAwsLastError();
