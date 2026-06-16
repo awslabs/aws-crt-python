@@ -295,7 +295,7 @@ def _get_encoded_feature_list(client_options):
 
     # I: certificate_source - detected from TlsContextOptions factory method
     if client_options.tls_ctx is not None:
-        val = _certificate_source_metrics_value(getattr(client_options.tls_ctx, '_certificate_source', None))
+        val = _certificate_source_metrics_value(client_options.tls_ctx._certificate_source)
         if val:
             features.append(f"{_MetricsFeatureId.CERTIFICATE_SOURCE.value}/{val}")
 
@@ -347,7 +347,7 @@ def _get_encoded_feature_list_mqtt3(proxy_options, tls_ctx=None):
 
     # I: certificate_source - detected from TlsContextOptions factory method
     if tls_ctx is not None:
-        val = _certificate_source_metrics_value(getattr(tls_ctx, '_certificate_source', None))
+        val = _certificate_source_metrics_value(tls_ctx._certificate_source)
         if val:
             features.append(f"{_MetricsFeatureId.CERTIFICATE_SOURCE.value}/{val}")
 

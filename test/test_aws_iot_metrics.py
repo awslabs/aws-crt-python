@@ -11,7 +11,6 @@ from awscrt.aws_iot_metrics import (
     _protocol_version_metrics_value,
     _socket_implementation_metrics_value,
     _http_proxy_type_metrics_value,
-    _certificate_source_metrics_value,
     IOT_SDK_METRICS_FEATURE_VERSION,
     _get_encoded_feature_list,
     _get_encoded_feature_list_mqtt3,
@@ -421,21 +420,16 @@ class TestCreateMetricsPreservesOtherUserMetadata(NativeResourceTest):
 
 
 class TestCertificateSourceMetrics(NativeResourceTest):
-    """Test certificate source metrics encoding."""
+    """Test certificate source metrics encoding through the TLS context binding path."""
 
-    def test_certificate_source_mapping_values(self):
-        """Verify each _CertificateSource maps to the correct metrics value."""
-        self.assertEqual("A", _certificate_source_metrics_value(_CertificateSource.CERTIFICATE_FILES))
-        self.assertEqual("B", _certificate_source_metrics_value(_CertificateSource.PKCS11))
-        self.assertEqual("C", _certificate_source_metrics_value(_CertificateSource.WINDOWS_CERT_STORE))
-        self.assertEqual("E", _certificate_source_metrics_value(_CertificateSource.PKCS12_FILE))
-        self.assertIsNone(_certificate_source_metrics_value(None))
-
-    def test_certificate_source_in_feature_list(self):
-        """TLS context with certificate source should include feature I in metrics."""
+    def _make_tls_ctx_with_source(self, source):
         tls_options = TlsContextOptions()
-        tls_options._certificate_source = _CertificateSource.CERTIFICATE_FILES
-        tls_ctx = ClientTlsContext(tls_options)
+        tls_options._certificate_source = source
+        return ClientTlsContext(tls_options)
+
+    def test_certificate_source_certificate_files(self):
+        """CERTIFICATE_FILES source encodes as 'A' in feature list."""
+        tls_ctx = self._make_tls_ctx_with_source(_CertificateSource.CERTIFICATE_FILES)
 
         options = ClientOptions(host_name="localhost", port=8883, tls_ctx=tls_ctx)
         result = _get_encoded_feature_list(options)
@@ -443,6 +437,50 @@ class TestCertificateSourceMetrics(NativeResourceTest):
 
         result_mqtt3 = _get_encoded_feature_list_mqtt3(proxy_options=None, tls_ctx=tls_ctx)
         self.assertIn(f"{_MetricsFeatureId.CERTIFICATE_SOURCE.value}/A", result_mqtt3)
+
+    def test_certificate_source_pkcs11(self):
+        """PKCS11 source encodes as 'B' in feature list."""
+        tls_ctx = self._make_tls_ctx_with_source(_CertificateSource.PKCS11)
+
+        options = ClientOptions(host_name="localhost", port=8883, tls_ctx=tls_ctx)
+        result = _get_encoded_feature_list(options)
+        self.assertIn(f"{_MetricsFeatureId.CERTIFICATE_SOURCE.value}/B", result)
+
+        result_mqtt3 = _get_encoded_feature_list_mqtt3(proxy_options=None, tls_ctx=tls_ctx)
+        self.assertIn(f"{_MetricsFeatureId.CERTIFICATE_SOURCE.value}/B", result_mqtt3)
+
+    def test_certificate_source_windows_cert_store(self):
+        """WINDOWS_CERT_STORE source encodes as 'C' in feature list."""
+        tls_ctx = self._make_tls_ctx_with_source(_CertificateSource.WINDOWS_CERT_STORE)
+
+        options = ClientOptions(host_name="localhost", port=8883, tls_ctx=tls_ctx)
+        result = _get_encoded_feature_list(options)
+        self.assertIn(f"{_MetricsFeatureId.CERTIFICATE_SOURCE.value}/C", result)
+
+        result_mqtt3 = _get_encoded_feature_list_mqtt3(proxy_options=None, tls_ctx=tls_ctx)
+        self.assertIn(f"{_MetricsFeatureId.CERTIFICATE_SOURCE.value}/C", result_mqtt3)
+
+    def test_certificate_source_pkcs12(self):
+        """PKCS12_FILE source encodes as 'E' in feature list."""
+        tls_ctx = self._make_tls_ctx_with_source(_CertificateSource.PKCS12_FILE)
+
+        options = ClientOptions(host_name="localhost", port=8883, tls_ctx=tls_ctx)
+        result = _get_encoded_feature_list(options)
+        self.assertIn(f"{_MetricsFeatureId.CERTIFICATE_SOURCE.value}/E", result)
+
+        result_mqtt3 = _get_encoded_feature_list_mqtt3(proxy_options=None, tls_ctx=tls_ctx)
+        self.assertIn(f"{_MetricsFeatureId.CERTIFICATE_SOURCE.value}/E", result_mqtt3)
+
+    def test_no_certificate_source_omits_feature(self):
+        """No certificate source (None) should omit feature I from metrics."""
+        tls_ctx = self._make_tls_ctx_with_source(None)
+
+        options = ClientOptions(host_name="localhost", port=8883, tls_ctx=tls_ctx)
+        result = _get_encoded_feature_list(options)
+        self.assertNotIn(f"{_MetricsFeatureId.CERTIFICATE_SOURCE.value}/", result)
+
+        result_mqtt3 = _get_encoded_feature_list_mqtt3(proxy_options=None, tls_ctx=tls_ctx)
+        self.assertNotIn(f"{_MetricsFeatureId.CERTIFICATE_SOURCE.value}/", result_mqtt3)
 
 
 if __name__ == '__main__':
