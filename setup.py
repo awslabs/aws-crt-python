@@ -174,7 +174,7 @@ def determine_generator_args(cmake_version=None, windows_sdk_version=None):
             # This technique may not work with customized VS install paths.
             # An alternative would be to utilize private python calls:
             # (distutils._msvccompiler._find_vc2017() and _find_vc2015()).
-            if '\\Microsoft Visual Studio\\2026' in compiler.cc:
+            if '\\Microsoft Visual Studio\\18' in compiler.cc:
                 vs_version = 18
                 vs_year = 2026
             elif '\\Microsoft Visual Studio\\2022' in compiler.cc:
@@ -189,23 +189,6 @@ def determine_generator_args(cmake_version=None, windows_sdk_version=None):
             elif '\\Microsoft Visual Studio 14.0' in compiler.cc:
                 vs_version = 14
                 vs_year = 2015
-            else:
-                # Fallback: use vswhere.exe when distutils can't detect the VS version
-                # (e.g. Python 3.8 distutils doesn't know about VS2026)
-                import subprocess
-                vswhere = os.path.join(
-                    os.environ.get('ProgramFiles(x86)', r'C:\Program Files (x86)'),
-                    'Microsoft Visual Studio', 'Installer', 'vswhere.exe')
-                if os.path.exists(vswhere):
-                    result = subprocess.run(
-                        [vswhere, '-latest', '-property', 'installationVersion'],
-                        capture_output=True, text=True)
-                    if result.returncode == 0 and result.stdout.strip():
-                        major = int(result.stdout.strip().split('.')[0])
-                        # VS major version -> marketing year mapping
-                        major_to_year = {14: 2015, 15: 2017, 16: 2019, 17: 2022, 18: 2026}
-                        vs_version = major
-                        vs_year = major_to_year.get(major, 2022 + (major - 17) * 3)
             assert (vs_version and vs_year)
         except Exception:
             raise RuntimeError('No supported version of MSVC compiler could be found!')
