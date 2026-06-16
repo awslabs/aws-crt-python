@@ -7,6 +7,7 @@ from weakref import WeakSet
 __all__ = [
     'aio',
     'auth',
+    'aws_iot_metrics',
     'crypto',
     'http',
     'io',
@@ -16,7 +17,6 @@ __all__ = [
     'mqtt_request_response',
     's3',
     'websocket',
-    'aws_iot_metrics',
 ]
 
 __version__ = '1.0.0.dev0'

@@ -15,6 +15,20 @@ import threading
 from typing import Union
 
 
+class _CertificateSource(IntEnum):
+    """Certificate source types for mTLS authentication.
+
+    Used by TlsContextOptions to track which factory method created the
+    TLS configuration. The metrics reads this and encodes it as
+    feature ID "I" in the metrics string.
+    """
+    CERTIFICATE_FILES = 0  # PEM cert + key files
+    PKCS11 = 1  # Hardware security module via PKCS11
+    WINDOWS_CERT_STORE = 2  # Windows certificate source
+    # 3 is reserved for Java keystore (not applicable to Python)
+    PKCS12_FILE = 4  # PKCS#12 (.p12/.pfx) files
+
+
 class LogLevel(IntEnum):
     NoLogs = 0  #:
     Fatal = 1  #:
@@ -340,6 +354,7 @@ class TlsContextOptions:
         '_pkcs11_cert_file_path',
         '_pkcs11_cert_file_contents',
         '_windows_cert_store_path',
+        '_certificate_source',
     )
 
     def __init__(self):
@@ -396,6 +411,7 @@ class TlsContextOptions:
         opt = TlsContextOptions()
         opt.certificate_buffer = cert_buffer
         opt.private_key_buffer = key_buffer
+        opt._certificate_source = _CertificateSource.CERTIFICATE_FILES
 
         return opt
 
@@ -456,6 +472,7 @@ class TlsContextOptions:
         opt._pkcs11_private_key_label = private_key_label
         opt._pkcs11_cert_file_path = cert_file_path
         opt._pkcs11_cert_file_contents = cert_file_contents
+        opt._certificate_source = _CertificateSource.PKCS11
         return opt
 
     @staticmethod
@@ -480,6 +497,7 @@ class TlsContextOptions:
         opt = TlsContextOptions()
         opt.pkcs12_filepath = pkcs12_filepath
         opt.pkcs12_password = pkcs12_password
+        opt._certificate_source = _CertificateSource.PKCS12_FILE
         return opt
 
     @staticmethod
@@ -501,6 +519,7 @@ class TlsContextOptions:
         assert isinstance(cert_path, str)
         opt = TlsContextOptions()
         opt._windows_cert_store_path = cert_path
+        opt._certificate_source = _CertificateSource.WINDOWS_CERT_STORE
         return opt
 
     @staticmethod
@@ -614,7 +633,7 @@ class ClientTlsContext(NativeResource):
     Args:
         options (TlsContextOptions): Configuration options.
     """
-    __slots__ = ('_min_tls_ver', '_cipher_pref')
+    __slots__ = ('_min_tls_ver', '_cipher_pref', '_certificate_source')
 
     def __init__(self, options):
         assert isinstance(options, TlsContextOptions)
@@ -623,6 +642,7 @@ class ClientTlsContext(NativeResource):
 
         self._min_tls_ver = options.min_tls_ver
         self._cipher_pref = options.cipher_pref
+        self._certificate_source = options._certificate_source
 
         self._binding = _awscrt.client_tls_ctx_new(
             options.min_tls_ver.value,
