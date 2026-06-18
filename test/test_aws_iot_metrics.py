@@ -113,7 +113,7 @@ class TestOptionsWithMultipleNonDefaultFeaturesEncoding(NativeResourceTest):
         self.assertIn("H/A", result)  # HTTP proxy (no TLS on proxy)
         self.assertIn("K/D", result)  # TLSv1_2
         if cipher_pref.is_supported():
-            self.assertIn("J/B", result)  # PQ_DEFAULT
+            self.assertIn("J/H", result)  # PQ_DEFAULT
 
     def test_alternate_values(self):
         """MQTT5 with alternate non-default values."""
@@ -155,7 +155,7 @@ class TestOptionsWithMultipleNonDefaultFeaturesEncoding(NativeResourceTest):
         self.assertIn("H/B", result)  # HTTPS proxy
         self.assertIn("K/E", result)  # TLSv1_3
         if cipher_pref.is_supported():
-            self.assertIn("J/A", result)  # PQ_TLSv1_0_2021_05
+            self.assertIn("J/F", result)  # PQ_TLSv1_0_2021_05
 
     def test_mqtt3_with_proxy_and_tls(self):
         """MQTT3 with HTTPS proxy and TLS context."""
@@ -178,7 +178,7 @@ class TestOptionsWithMultipleNonDefaultFeaturesEncoding(NativeResourceTest):
         self.assertIn("H/B", result)  # HTTPS
         self.assertIn("K/D", result)  # TLSv1_2
         if cipher_pref.is_supported():
-            self.assertIn("J/C", result)  # TLSv1_2_2025_07
+            self.assertIn("J/I", result)  # TLSv1_2_2025_07
 
 
 class TestMergeFeatureLists(NativeResourceTest):
