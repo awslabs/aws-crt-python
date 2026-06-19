@@ -207,14 +207,16 @@ def _minimum_tls_version_metrics_value(version):
 def _tls_cipher_preference_metrics_value(pref):
     """Map TlsCipherPref to its single-character metrics value.
 
-    Mapping: PQ_TLSv1_0_2021_05->A, PQ_DEFAULT->B, TLSv1_2_2025_07->C.
-    Returns None for DEFAULT.
+    Mapping: PQ_TLSv1_0_2021_05->F, PQ_DEFAULT->H, TLSv1_2_2025_07->I.
+    Letters A-E, G, J, K are reserved for cipher preferences exposed by
+    other language SDKs but not by Python.
+    Returns None for DEFAULT or any unrecognized value.
     """
     from awscrt.io import TlsCipherPref
     mapping = {
-        TlsCipherPref.PQ_TLSv1_0_2021_05: "A",
-        TlsCipherPref.PQ_DEFAULT: "B",
-        TlsCipherPref.TLSv1_2_2025_07: "C",
+        TlsCipherPref.PQ_TLSv1_0_2021_05: "F",
+        TlsCipherPref.PQ_DEFAULT: "H",
+        TlsCipherPref.TLSv1_2_2025_07: "I",
     }
     return mapping.get(pref)
 
