@@ -832,6 +832,51 @@ done:
 }
 
 /*******************************************************************************
+ * Metrics Parsing
+ ******************************************************************************/
+
+bool aws_py_metrics_parse(PyObject *metrics_py, struct aws_mqtt_iot_metrics *out_metrics) {
+    AWS_ZERO_STRUCT(*out_metrics);
+
+    PyObject *library_name_py = PyObject_GetAttrString(metrics_py, "library_name");
+    out_metrics->library_name = aws_byte_cursor_from_pyunicode(library_name_py);
+    Py_XDECREF(library_name_py);
+
+    PyObject *metadata_entries_py = PyObject_GetAttrString(metrics_py, "metadata_entries");
+
+    if (metadata_entries_py && metadata_entries_py != Py_None && PyList_Check(metadata_entries_py)) {
+        Py_ssize_t count = PyList_Size(metadata_entries_py);
+        if (count > 0) {
+            struct aws_mqtt_metadata_entry *entries =
+                aws_mem_calloc(aws_py_get_allocator(), (size_t)count, sizeof(struct aws_mqtt_metadata_entry));
+
+            for (Py_ssize_t i = 0; i < count; ++i) {
+                PyObject *entry_py = PyList_GetItem(metadata_entries_py, i);
+                PyObject *key_py = PyObject_GetAttrString(entry_py, "key");
+                PyObject *value_py = PyObject_GetAttrString(entry_py, "value");
+
+                entries[i].key = aws_byte_cursor_from_pyunicode(key_py);
+                entries[i].value = aws_byte_cursor_from_pyunicode(value_py);
+
+                Py_XDECREF(key_py);
+                Py_XDECREF(value_py);
+            }
+            out_metrics->metadata_count = (size_t)count;
+            out_metrics->metadata_entries = entries;
+        }
+    }
+
+    Py_XDECREF(metadata_entries_py);
+    return true;
+}
+
+void aws_py_metrics_clean_up(struct aws_mqtt_iot_metrics *metrics) {
+    if (metrics->metadata_entries) {
+        aws_mem_release(aws_py_get_allocator(), (void *)metrics->metadata_entries);
+    }
+}
+
+/*******************************************************************************
  * Client Init
  ******************************************************************************/
 
@@ -890,12 +935,12 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
     PyObject *is_websocket_none_py;
     PyObject *client_core_py;
     /* Metrics */
-    PyObject *is_metrics_enabled_py;             /* optional enable metrics */
-    struct aws_byte_cursor metrics_library_name; /* optional IoT SDK metrics username */
+    PyObject *is_metrics_enabled_py; /* optional enable metrics */
+    PyObject *metrics_py;            /* optional AWSIoTMetrics object */
 
     if (!PyArg_ParseTuple(
             args,
-            "Os#IOOOOz#Oz#z#OOOOOOOOOz*Oz#OOOz#z*z#OOOOOOOOOOOOOOz#O",
+            "Os#IOOOOz#Oz#z#OOOOOOOOOz*Oz#OOOz#z*z#OOOOOOOOOOOOOOOO",
             /* O */ &self_py,
             /* s */ &host_name.ptr,
             /* # */ &host_name.len,
@@ -953,8 +998,7 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
 
             /* Metrics */
             /* O */ &is_metrics_enabled_py,
-            /* z */ &metrics_library_name.ptr,
-            /* # */ &metrics_library_name.len,
+            /* O */ &metrics_py,
 
             /* O */ &client_core_py)) {
         return NULL;
@@ -975,6 +1019,8 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
     AWS_ZERO_STRUCT(tls_options);
     struct aws_mqtt5_user_property *user_properties_tmp = NULL;
     struct aws_mqtt5_user_property *will_user_properties_tmp = NULL;
+    struct aws_mqtt_iot_metrics metrics_tmp;
+    AWS_ZERO_STRUCT(metrics_tmp);
 
     struct aws_mqtt5_client_options client_options;
     AWS_ZERO_STRUCT(client_options);
@@ -1319,10 +1365,10 @@ PyObject *aws_py_mqtt5_client_new(PyObject *self, PyObject *args) {
     }
 
     /* METRICS */
-    struct aws_mqtt_iot_metrics metrics_tmp;
-    AWS_ZERO_STRUCT(metrics_tmp);
-    if (PyObject_IsTrue(is_metrics_enabled_py)) {
-        metrics_tmp.library_name = metrics_library_name;
+    if (PyObject_IsTrue(is_metrics_enabled_py) && metrics_py != Py_None) {
+        if (!aws_py_metrics_parse(metrics_py, &metrics_tmp)) {
+            goto done;
+        }
         client_options.metrics = &metrics_tmp;
     }
 
@@ -1368,10 +1414,15 @@ done:
     }
     PyBuffer_Release(&will_payload_stack);
     PyBuffer_Release(&will_correlation_data_stack);
+
+    /* Cleanup metrics */
+    aws_py_metrics_clean_up(&metrics_tmp);
+
     if (success) {
         return capsule;
     }
     Py_XDECREF(capsule);
+
     return NULL;
 }
 

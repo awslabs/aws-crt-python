@@ -15,6 +15,20 @@ import threading
 from typing import Union
 
 
+class _CertificateSource(IntEnum):
+    """Certificate source types for mTLS authentication.
+
+    Used by TlsContextOptions to track which factory method created the
+    TLS configuration. The metrics reads this and encodes it as
+    feature ID "I" in the metrics string.
+    """
+    CERTIFICATE_FILES = 0  # PEM cert + key files
+    PKCS11 = 1  # Hardware security module via PKCS11
+    WINDOWS_CERT_STORE = 2  # Windows certificate source
+    # 3 is reserved for Java keystore (not applicable to Python)
+    PKCS12_FILE = 4  # PKCS#12 (.p12/.pfx) files
+
+
 class LogLevel(IntEnum):
     NoLogs = 0  #:
     Fatal = 1  #:
@@ -309,6 +323,12 @@ class TlsContextOptions:
             System defaults are used by default.
         cipher_pref (TlsCipherPref): The TLS Cipher Preference to use. System defaults are used by default.
         verify_peer (bool): Whether to validate the peer's x.509 certificate.
+        no_certificate_revocation (bool): Set to true to disable certificate revocation checking during TLS negotiation.
+            On Windows (SChannel), this prevents the TLS handshake from making outbound network calls
+            to CRL/OCSP revocation endpoints, which can block for minutes when the endpoints are unreachable
+            (e.g., in private subnets without internet access).
+            On Linux (s2n), this disables validation of OCSP stapled responses provided by the server.
+            On Apple platforms, this is a no-op as revocation checking is not enabled by default.
         alpn_list (Optional[List[str]]): If set, names to use in Application Layer
             Protocol Negotiation (ALPN). ALPN is not supported on all systems,
             see :meth:`is_alpn_available()`. This can be customized per connection,
@@ -325,6 +345,7 @@ class TlsContextOptions:
         'pkcs12_filepath',
         'pkcs12_password',
         'verify_peer',
+        'no_certificate_revocation',
         '_pkcs11_lib',
         '_pkcs11_user_pin',
         '_pkcs11_slot_id',
@@ -333,6 +354,7 @@ class TlsContextOptions:
         '_pkcs11_cert_file_path',
         '_pkcs11_cert_file_contents',
         '_windows_cert_store_path',
+        '_certificate_source',
     )
 
     def __init__(self):
@@ -343,6 +365,7 @@ class TlsContextOptions:
         self.min_tls_ver = TlsVersion.DEFAULT
         self.cipher_pref = TlsCipherPref.DEFAULT
         self.verify_peer = True
+        self.no_certificate_revocation = False
 
     @staticmethod
     def create_client_with_mtls_from_path(cert_filepath, pk_filepath):
@@ -388,6 +411,7 @@ class TlsContextOptions:
         opt = TlsContextOptions()
         opt.certificate_buffer = cert_buffer
         opt.private_key_buffer = key_buffer
+        opt._certificate_source = _CertificateSource.CERTIFICATE_FILES
 
         return opt
 
@@ -448,6 +472,7 @@ class TlsContextOptions:
         opt._pkcs11_private_key_label = private_key_label
         opt._pkcs11_cert_file_path = cert_file_path
         opt._pkcs11_cert_file_contents = cert_file_contents
+        opt._certificate_source = _CertificateSource.PKCS11
         return opt
 
     @staticmethod
@@ -472,6 +497,7 @@ class TlsContextOptions:
         opt = TlsContextOptions()
         opt.pkcs12_filepath = pkcs12_filepath
         opt.pkcs12_password = pkcs12_password
+        opt._certificate_source = _CertificateSource.PKCS12_FILE
         return opt
 
     @staticmethod
@@ -493,6 +519,7 @@ class TlsContextOptions:
         assert isinstance(cert_path, str)
         opt = TlsContextOptions()
         opt._windows_cert_store_path = cert_path
+        opt._certificate_source = _CertificateSource.WINDOWS_CERT_STORE
         return opt
 
     @staticmethod
@@ -606,12 +633,17 @@ class ClientTlsContext(NativeResource):
     Args:
         options (TlsContextOptions): Configuration options.
     """
-    __slots__ = ()
+    __slots__ = ('_min_tls_ver', '_cipher_pref', '_certificate_source')
 
     def __init__(self, options):
         assert isinstance(options, TlsContextOptions)
 
         super().__init__()
+
+        self._min_tls_ver = options.min_tls_ver
+        self._cipher_pref = options.cipher_pref
+        self._certificate_source = options._certificate_source
+
         self._binding = _awscrt.client_tls_ctx_new(
             options.min_tls_ver.value,
             options.cipher_pref.value,
@@ -623,6 +655,7 @@ class ClientTlsContext(NativeResource):
             options.pkcs12_filepath,
             options.pkcs12_password,
             options.verify_peer,
+            options.no_certificate_revocation,
             options._pkcs11_lib,
             options._pkcs11_user_pin,
             options._pkcs11_slot_id,

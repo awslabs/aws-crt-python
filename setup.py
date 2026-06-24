@@ -174,7 +174,10 @@ def determine_generator_args(cmake_version=None, windows_sdk_version=None):
             # This technique may not work with customized VS install paths.
             # An alternative would be to utilize private python calls:
             # (distutils._msvccompiler._find_vc2017() and _find_vc2015()).
-            if '\\Microsoft Visual Studio\\2022' in compiler.cc:
+            if '\\Microsoft Visual Studio\\18' in compiler.cc:
+                vs_version = 18
+                vs_year = 2026
+            elif '\\Microsoft Visual Studio\\2022' in compiler.cc:
                 vs_version = 17
                 vs_year = 2022
             elif '\\Microsoft Visual Studio\\2019' in compiler.cc:
@@ -301,7 +304,7 @@ if using_libcrypto():
     # aws-lc produces libcrypto.a
     AWS_LIBS.append(AwsLib('aws-lc', libname='crypto'))
 
-if sys.platform != 'darwin' and sys.platform != 'win32':
+if sys.platform != 'win32':
     AWS_LIBS.append(AwsLib('s2n'))
 
 AWS_LIBS.append(AwsLib('aws-c-common'))

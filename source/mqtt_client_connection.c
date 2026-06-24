@@ -445,28 +445,18 @@ static bool s_set_metrics(struct aws_mqtt_client_connection *connection, PyObjec
         return false;
     }
 
-    bool success = false;
-
-    PyObject *library_name_py = PyObject_GetAttrString(metrics, "library_name");
-    struct aws_byte_cursor library_name = aws_byte_cursor_from_pyunicode(library_name_py);
-    if (!library_name.ptr) {
-        PyErr_SetString(PyExc_TypeError, "metrics.library_name must be str type");
-        goto done;
+    struct aws_mqtt_iot_metrics metrics_tmp;
+    if (!aws_py_metrics_parse(metrics, &metrics_tmp)) {
+        return false;
     }
 
-    struct aws_mqtt_iot_metrics metrics_struct = {
-        .library_name = library_name,
-    };
-
-    if (aws_mqtt_client_connection_set_metrics(connection, &metrics_struct)) {
+    bool success = true;
+    if (aws_mqtt_client_connection_set_metrics(connection, &metrics_tmp)) {
         PyErr_SetAwsLastError();
-        goto done;
+        success = false;
     }
 
-    success = true;
-
-done:
-    Py_DECREF(library_name_py);
+    aws_py_metrics_clean_up(&metrics_tmp);
     return success;
 }
 

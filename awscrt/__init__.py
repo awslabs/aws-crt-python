@@ -3,9 +3,11 @@
 
 from weakref import WeakSet
 
+
 __all__ = [
     'aio',
     'auth',
+    'aws_iot_metrics',
     'crypto',
     'http',
     'io',

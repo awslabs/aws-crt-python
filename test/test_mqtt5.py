@@ -5,6 +5,7 @@ from concurrent.futures import Future
 from awscrt import mqtt5, io, http, exceptions
 from test import test_retry_wrapper, NativeResourceTest
 import os
+import sys
 import unittest
 import uuid
 import time
@@ -217,7 +218,7 @@ class Mqtt5ClientTest(NativeResourceTest):
 
         client_options = mqtt5.ClientOptions(
             host_name=input_host_name,
-            enable_metrics=False
+            disable_metrics=True
         )
         callbacks = Mqtt5TestCallbacks()
         client = self._create_client(client_options=client_options, callbacks=callbacks)
@@ -244,7 +245,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             host_name=input_host_name,
             port=input_port,
             connect_options=connect_options,
-            enable_metrics=False
+            disable_metrics=True
         )
         callbacks = Mqtt5TestCallbacks()
         client = self._create_client(client_options=client_options, callbacks=callbacks)
@@ -302,6 +303,38 @@ class Mqtt5ClientTest(NativeResourceTest):
 
     def test_direct_connect_mutual_tls(self):
         test_retry_wrapper(self._test_direct_connect_mutual_tls)
+
+    def _test_direct_connect_mutual_tls13(self):
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_TLS13_HOST")
+        input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
+        input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
+
+        client_options = mqtt5.ClientOptions(
+            host_name=input_host_name,
+            port=8883
+        )
+        tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(
+            input_cert,
+            input_key
+        )
+        client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
+
+        callbacks = Mqtt5TestCallbacks()
+        client = self._create_client(client_options=client_options, callbacks=callbacks)
+        client.start()
+
+        # On macOS with Secure Transport (the default), TLS 1.3 is not supported,
+        # so the connection to a TLS-1.3-only host must fail.
+        if sys.platform == 'darwin' and not os.environ.get('AWS_CRT_USE_NON_FIPS_TLS_13'):
+            callbacks.future_connection_failure.result(TIMEOUT)
+        else:
+            callbacks.future_connection_success.result(TIMEOUT)
+
+        client.stop()
+        callbacks.future_stopped.result(TIMEOUT)
+
+    def test_direct_connect_mutual_tls13(self):
+        test_retry_wrapper(self._test_direct_connect_mutual_tls13)
 
     def _test_direct_connect_http_proxy_tls(self):
         input_host_name = _get_env_variable("AWS_TEST_MQTT5_DIRECT_MQTT_TLS_HOST")
@@ -431,7 +464,7 @@ class Mqtt5ClientTest(NativeResourceTest):
             host_name=input_host_name,
             port=input_port,
             connect_options=connect_options,
-            enable_metrics=False
+            disable_metrics=True
         )
         callbacks = Mqtt5TestCallbacks()
         client_options.websocket_handshake_transform = callbacks.ws_handshake_transform
@@ -2216,13 +2249,13 @@ class Mqtt5ClientTest(NativeResourceTest):
             host_name=input_host_name,
             port=input_port,
             connect_options=connect_options,
-            enable_metrics=True
+            disable_metrics=False
         )
         callbacks = Mqtt5TestCallbacks()
         client = self._create_client(client_options=client_options, callbacks=callbacks)
 
         # Verify metrics are enabled
-        self.assertTrue(client_options.enable_metrics)
+        self.assertFalse(client_options.disable_metrics)
 
         client.start()
         # Connection should fail because metrics corrupts the username for basic auth
