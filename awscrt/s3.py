@@ -186,10 +186,11 @@ class S3FileIoOptions:
     """
     Enable direct IO to bypass the OS cache. Helpful when the disk I/O outperforms the kernel cache.
 
+    - Currently only Linux supports direct I/O. On unsupported platforms, the request transparently
+        falls back to buffered I/O and a warning is logged.
+    - Supported for both upload (send_filepath) and download (recv_filepath).
     - This is a BEST-EFFORT optimization. The request transparently falls back to
-      buffered I/O (logging a warning) on unsupported platforms or when alignment
-      preconditions are not met (part_size not page-aligned, last part has unaligned
-      length, etc).
+        buffered I/O (logging a warning) when direct io write fails.
     - Check NOTES for O_DIRECT for additional info https://man7.org/linux/man-pages/man2/openat.2.html
 
     In summary, O_DIRECT is a potentially powerful tool that should be used with caution.
