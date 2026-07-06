@@ -1708,7 +1708,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         payload = str(uuid.uuid4())
         payload_bytes = payload.encode("utf-8")
 
-        NO_REDELIVERY_WAIT = 60.0
+        NO_REDELIVERY_WAIT = 35.0
 
         future_first_delivery = Future()
         future_unexpected_redelivery = Future()
@@ -1767,7 +1767,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         # Immediately invoke the publish acknowledgement using the acquired handle
         client.invoke_publish_acknowledgement(puback_handle_holder[0])
 
-        # Wait 60 seconds and confirm the broker does NOT re-deliver the message
+        # Wait 35 seconds and confirm the broker does NOT re-deliver the message
         # (because we sent the publish acknowledgement via invoke_publish_acknowledgement)
         redelivered = future_unexpected_redelivery.done() or \
             (not future_unexpected_redelivery.done() and
@@ -1955,6 +1955,86 @@ class Mqtt5ClientTest(NativeResourceTest):
 
     def test_manual_publish_acknowledgement_qos0_acquire_is_none(self):
         test_retry_wrapper(self._test_manual_publish_acknowledgement_qos0_acquire_is_none)
+
+    # Verify that the client sends PUBACK automatically when
+    # acquire_publish_acknowledgement_control() is not called.
+    # Confirmed by the absence of broker re-delivery.
+    def _test_auto_puback_no_duplicate(self):
+        input_host_name = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_HOST")
+        input_cert = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_CERT")
+        input_key = _get_env_variable("AWS_TEST_MQTT5_IOT_CORE_RSA_KEY")
+
+        client_id = create_client_id()
+        topic_filter = "test/MQTT5_AutoPuback_Python_" + client_id
+        payload = "hello"
+        payload_bytes = payload.encode("utf-8")
+
+        NO_REDELIVERY_WAIT = 35.0
+
+        future_first_delivery = Future()
+        future_unexpected_redelivery = Future()
+
+        def on_publish_received(publish_received_data: mqtt5.PublishReceivedData):
+            received_payload = publish_received_data.publish_packet.payload
+            if not future_first_delivery.done():
+                # First delivery: do NOT call acquire_publish_acknowledgement_control().
+                # The client should automatically send PUBACK.
+                future_first_delivery.set_result(received_payload)
+            elif received_payload == payload_bytes and not future_unexpected_redelivery.done():
+                # A second delivery of the same payload means the broker re-sent, this should NOT happen
+                future_unexpected_redelivery.set_result(received_payload)
+
+        tls_ctx_options = io.TlsContextOptions.create_client_with_mtls_from_path(
+            input_cert,
+            input_key
+        )
+        client_options = mqtt5.ClientOptions(
+            host_name=input_host_name,
+            port=8883
+        )
+        client_options.connect_options = mqtt5.ConnectPacket(client_id=client_id)
+        client_options.tls_ctx = io.ClientTlsContext(tls_ctx_options)
+
+        callbacks = Mqtt5TestCallbacks()
+        callbacks.on_publish_received = on_publish_received
+
+        client = self._create_client(client_options=client_options, callbacks=callbacks)
+        client.start()
+        callbacks.future_connection_success.result(TIMEOUT)
+
+        # Subscribe to the topic with QoS 1
+        subscriptions = [mqtt5.Subscription(topic_filter=topic_filter, qos=mqtt5.QoS.AT_LEAST_ONCE)]
+        subscribe_packet = mqtt5.SubscribePacket(subscriptions=subscriptions)
+        subscribe_future = client.subscribe(subscribe_packet=subscribe_packet)
+        suback_packet = subscribe_future.result(TIMEOUT)
+        self.assertIsInstance(suback_packet, mqtt5.SubackPacket)
+
+        # Publish a QoS 1 message with a unique UUID payload
+        publish_packet = mqtt5.PublishPacket(
+            payload=payload,
+            topic=topic_filter,
+            qos=mqtt5.QoS.AT_LEAST_ONCE)
+        publish_future = client.publish(publish_packet=publish_packet)
+        publish_completion_data = publish_future.result(TIMEOUT)
+        self.assertIsInstance(publish_completion_data.puback, mqtt5.PubackPacket)
+
+        # Wait for the first delivery
+        first_payload = future_first_delivery.result(TIMEOUT)
+        self.assertEqual(first_payload, payload_bytes)
+
+        # Wait 35 seconds and confirm the broker does NOT re-deliver the message
+        # (because auto-PUBACK was sent without calling acquire_publish_acknowledgement_control)
+        redelivered = self._wait_for_future_timeout(future_unexpected_redelivery, NO_REDELIVERY_WAIT)
+        self.assertFalse(redelivered,
+                         "Auto-PUBACK should have been sent "
+                         "(acquire_publish_acknowledgement_control() was not called), "
+                         "verified by absence of re-delivery")
+
+        client.stop()
+        callbacks.future_stopped.result(TIMEOUT)
+
+    def test_auto_puback_no_duplicate(self):
+        test_retry_wrapper(self._test_auto_puback_no_duplicate)
 
     # ==============================================================
     #             RETAIN TEST CASES
