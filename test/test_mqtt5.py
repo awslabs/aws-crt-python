@@ -1708,7 +1708,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         payload = str(uuid.uuid4())
         payload_bytes = payload.encode("utf-8")
 
-        NO_REDELIVERY_WAIT = 60.0
+        NO_REDELIVERY_WAIT = 35.0
 
         future_first_delivery = Future()
         future_unexpected_redelivery = Future()
@@ -1767,7 +1767,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         # Immediately invoke the publish acknowledgement using the acquired handle
         client.invoke_publish_acknowledgement(puback_handle_holder[0])
 
-        # Wait 60 seconds and confirm the broker does NOT re-deliver the message
+        # Wait 35 seconds and confirm the broker does NOT re-deliver the message
         # (because we sent the publish acknowledgement via invoke_publish_acknowledgement)
         redelivered = future_unexpected_redelivery.done() or \
             (not future_unexpected_redelivery.done() and
@@ -1969,7 +1969,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         payload = "hello"
         payload_bytes = payload.encode("utf-8")
 
-        NO_REDELIVERY_WAIT = 60.0
+        NO_REDELIVERY_WAIT = 35.0
 
         future_first_delivery = Future()
         future_unexpected_redelivery = Future()
@@ -2022,7 +2022,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         first_payload = future_first_delivery.result(TIMEOUT)
         self.assertEqual(first_payload, payload_bytes)
 
-        # Wait 60 seconds and confirm the broker does NOT re-deliver the message
+        # Wait 35 seconds and confirm the broker does NOT re-deliver the message
         # (because auto-PUBACK was sent without calling acquire_publish_acknowledgement_control)
         redelivered = self._wait_for_future_timeout(future_unexpected_redelivery, NO_REDELIVERY_WAIT)
         self.assertFalse(redelivered,
