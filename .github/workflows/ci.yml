@@ -382,7 +382,7 @@ jobs:
       fail-fast: false
       matrix:
         # OpenBSD only supports the two most recent releases
-        version: ['7.4', '7.5']
+        version: ['7.8', '7.9']
     permissions:
       id-token: write # This is required for requesting the JWT
     steps:
@@ -396,7 +396,7 @@ jobs:
         with:
           submodules: true
       - name: Build ${{ env.PACKAGE_NAME }} + consumers
-        uses: cross-platform-actions/action@v0.24.0
+        uses: cross-platform-actions/action@v1.3.0
         with:
           operating_system: openbsd
           version: ${{ matrix.version }}
@@ -424,7 +424,7 @@ jobs:
           submodules: true
 
       - name: Build ${{ env.PACKAGE_NAME }} + consumers
-        uses: cross-platform-actions/action@v0.23.0
+        uses: cross-platform-actions/action@v1.3.0
         with:
           operating_system: freebsd
           version: '14.0'
