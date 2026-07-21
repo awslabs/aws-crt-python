@@ -272,6 +272,8 @@ jobs:
           python-version: '3.8.10'
           architecture: ${{ matrix.arch }}
       - uses: ilammy/setup-nasm@v1
+        with:
+          version: '2.16.03'
       - name: configure AWS credentials (containers)
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -298,6 +300,8 @@ jobs:
           python-version: '3.8.10'
           architecture: ${{ matrix.arch }}
       - uses: ilammy/setup-nasm@v1
+        with:
+          version: '2.16.03'
       - name: configure AWS credentials (containers)
         uses: aws-actions/configure-aws-credentials@v4
         with:
