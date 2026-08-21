@@ -370,24 +370,22 @@ jobs:
           Push-Location $env:RUNNER_TEMP
           try {
             # This test depends on httpbin.org returning 404, but the service currently returns 503.
-            @'
-            import unittest
-
-            excluded = 'test.test_aiohttp_client.AIOHttp2RemoteEndStreamTest.test_h2_remote_end_stream_ordering'
-            discovered = unittest.defaultTestLoader.discover('test')
-            filtered = unittest.TestSuite()
-
-            def add_tests(suite):
-              for test in suite:
-                if isinstance(test, unittest.TestSuite):
-                  add_tests(test)
-                elif test.id() != excluded:
-                  filtered.addTest(test)
-
-            add_tests(discovered)
-            result = unittest.TextTestRunner(verbosity=2, failfast=True).run(filtered)
-            raise SystemExit(0 if result.wasSuccessful() else 1)
-            '@ | & "$env:GITHUB_WORKSPACE\..\awscrt-test\Scripts\python.exe" -
+            $testScript = @(
+              'import unittest'
+              "excluded = 'test.test_aiohttp_client.AIOHttp2RemoteEndStreamTest.test_h2_remote_end_stream_ordering'"
+              "discovered = unittest.defaultTestLoader.discover('test')"
+              'filtered = unittest.TestSuite()'
+              'def add_tests(suite):'
+              '    for test in suite:'
+              '        if isinstance(test, unittest.TestSuite):'
+              '            add_tests(test)'
+              '        elif test.id() != excluded:'
+              '            filtered.addTest(test)'
+              'add_tests(discovered)'
+              'result = unittest.TextTestRunner(verbosity=2, failfast=True).run(filtered)'
+              'raise SystemExit(0 if result.wasSuccessful() else 1)'
+            ) -join "`n"
+            & "$env:GITHUB_WORKSPACE\..\awscrt-test\Scripts\python.exe" -c $testScript
           } finally {
             Pop-Location
           }
