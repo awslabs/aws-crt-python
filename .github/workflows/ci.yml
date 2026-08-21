@@ -361,7 +361,7 @@ jobs:
             throw 'Expected exactly one win_arm64 wheel'
           }
           ..\awscrt-test\Scripts\python.exe -m pip install $wheel[0].FullName
-          ..\awscrt-test\Scripts\python.exe -m pip install 'websockets>=13.1' 'h2==4.1.0' 'pytest>=8.4'
+          ..\awscrt-test\Scripts\python.exe -m pip install 'websockets>=13.1' 'h2==4.1.0'
           Copy-Item test "$env:RUNNER_TEMP\test" -Recurse
           $httpTests = "$env:RUNNER_TEMP\crt\aws-c-http\tests"
           New-Item $httpTests -ItemType Directory -Force | Out-Null
@@ -370,7 +370,24 @@ jobs:
           Push-Location $env:RUNNER_TEMP
           try {
             # This test depends on httpbin.org returning 404, but the service currently returns 503.
-            & "$env:GITHUB_WORKSPACE\..\awscrt-test\Scripts\python.exe" -m pytest test --maxfail=1 --verbose -k 'not test_h2_remote_end_stream_ordering'
+            @'
+            import unittest
+
+            excluded = 'test.test_aiohttp_client.AIOHttp2RemoteEndStreamTest.test_h2_remote_end_stream_ordering'
+            discovered = unittest.defaultTestLoader.discover('test')
+            filtered = unittest.TestSuite()
+
+            def add_tests(suite):
+              for test in suite:
+                if isinstance(test, unittest.TestSuite):
+                  add_tests(test)
+                elif test.id() != excluded:
+                  filtered.addTest(test)
+
+            add_tests(discovered)
+            result = unittest.TextTestRunner(verbosity=2, failfast=True).run(filtered)
+            raise SystemExit(0 if result.wasSuccessful() else 1)
+            '@ | & "$env:GITHUB_WORKSPACE\..\awscrt-test\Scripts\python.exe" -
           } finally {
             Pop-Location
           }
