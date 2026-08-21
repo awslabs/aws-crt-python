@@ -5,9 +5,10 @@ if not defined PYTHON313_ARM64 goto missing_python
 if not defined PYTHON313T_ARM64 goto missing_python
 if not defined PYTHON314T_ARM64 goto missing_python
 
-for %%P in ("%PYTHON311_ARM64%" "%PYTHON313_ARM64%" "%PYTHON313T_ARM64%" "%PYTHON314T_ARM64%") do (
-	"%%~P" -c "import sysconfig; raise SystemExit(0 if sysconfig.get_platform() == 'win-arm64' else 1)" || goto wrong_architecture
-)
+"%PYTHON311_ARM64%" -c "import sys, sysconfig; raise SystemExit(0 if sys.version_info[:2] == (3, 11) and sysconfig.get_platform() == 'win-arm64' and not sysconfig.get_config_var('Py_GIL_DISABLED') else 1)" || goto wrong_python
+"%PYTHON313_ARM64%" -c "import sys, sysconfig; raise SystemExit(0 if sys.version_info[:2] == (3, 13) and sysconfig.get_platform() == 'win-arm64' and not sysconfig.get_config_var('Py_GIL_DISABLED') else 1)" || goto wrong_python
+"%PYTHON313T_ARM64%" -c "import sys, sysconfig; raise SystemExit(0 if sys.version_info[:2] == (3, 13) and sysconfig.get_platform() == 'win-arm64' and sysconfig.get_config_var('Py_GIL_DISABLED') else 1)" || goto wrong_python
+"%PYTHON314T_ARM64%" -c "import sys, sysconfig; raise SystemExit(0 if sys.version_info[:2] == (3, 14) and sysconfig.get_platform() == 'win-arm64' and sysconfig.get_config_var('Py_GIL_DISABLED') else 1)" || goto wrong_python
 
 "%PYTHON313_ARM64%" continuous-delivery\update-version.py || goto error
 
@@ -27,8 +28,8 @@ goto :EOF
 echo PYTHON311_ARM64, PYTHON313_ARM64, PYTHON313T_ARM64, and PYTHON314T_ARM64 must point to native ARM64 Python executables.
 exit /b 1
 
-:wrong_architecture
-echo All configured Python executables must target win-arm64.
+:wrong_python
+echo Configured Python executables must have the expected version, win-arm64 platform, and free-threaded status.
 exit /b 1
 
 :error

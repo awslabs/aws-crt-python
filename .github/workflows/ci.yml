@@ -316,16 +316,22 @@ jobs:
         include:
           - build-python: '3.11'
             test-python: '3.11'
+            expected-tag: 'cp311-abi3-win_arm64'
           - build-python: '3.11'
             test-python: '3.12'
+            expected-tag: 'cp311-abi3-win_arm64'
           - build-python: '3.13'
             test-python: '3.13'
+            expected-tag: 'cp313-abi3-win_arm64'
           - build-python: '3.13'
             test-python: '3.14'
+            expected-tag: 'cp313-abi3-win_arm64'
           - build-python: '3.13t'
             test-python: '3.13t'
+            expected-tag: 'cp313-cp313t-win_arm64'
           - build-python: '3.14t'
             test-python: '3.14t'
+            expected-tag: 'cp314-cp314t-win_arm64'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -342,10 +348,12 @@ jobs:
         run: |
           python -m pip install --upgrade build
           python -m build --wheel
-          $wheel = @(Get-Item dist\*win_arm64.whl)
-          if ($wheel.Count -ne 1) {
-            throw 'Expected exactly one win_arm64 wheel'
+          $wheel = @(Get-Item "dist\awscrt-*-${{ matrix.expected-tag }}.whl")
+          $allWheels = @(Get-Item dist\*.whl)
+          if ($wheel.Count -ne 1 -or $allWheels.Count -ne 1) {
+            throw 'Expected exactly one wheel with tag ${{ matrix.expected-tag }}'
           }
+          python -c "import sys, zipfile; p=sys.argv[1]; expected='Tag: ' + sys.argv[2]; z=zipfile.ZipFile(p); wheel=z.read(next(n for n in z.namelist() if n.endswith('.dist-info/WHEEL'))).decode().splitlines(); assert expected in wheel, (expected, wheel)" $wheel[0].FullName '${{ matrix.expected-tag }}'
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.test-python }}
@@ -356,9 +364,9 @@ jobs:
           AWS_TEST_LOCALHOST: '1'
         run: |
           python -m venv ..\awscrt-test
-          $wheel = @(Get-Item dist\*win_arm64.whl)
+          $wheel = @(Get-Item "dist\awscrt-*-${{ matrix.expected-tag }}.whl")
           if ($wheel.Count -ne 1) {
-            throw 'Expected exactly one win_arm64 wheel'
+            throw 'Expected exactly one wheel with tag ${{ matrix.expected-tag }}'
           }
           ..\awscrt-test\Scripts\python.exe -m pip install $wheel[0].FullName
           ..\awscrt-test\Scripts\python.exe -m pip install 'websockets>=13.1' 'h2==4.1.0'
@@ -372,16 +380,21 @@ jobs:
             # These tests depend on httpbin.org returning 404, but the service currently returns 503.
             $testScript = @(
               'import unittest'
-              "excluded = ('.AIOHttp2RemoteEndStreamTest.test_h2_remote_end_stream_ordering', '.Http2RemoteEndStreamTest.test_h2_remote_end_stream_ordering')"
+              "excluded = {'test_aiohttp_client.AIOHttp2RemoteEndStreamTest.test_h2_remote_end_stream_ordering', 'test_http_client.Http2RemoteEndStreamTest.test_h2_remote_end_stream_ordering'}"
+              'excluded_found = set()'
               "discovered = unittest.defaultTestLoader.discover('test')"
               'filtered = unittest.TestSuite()'
               'def add_tests(suite):'
               '    for test in suite:'
               '        if isinstance(test, unittest.TestSuite):'
               '            add_tests(test)'
-              '        elif not any(test.id().endswith(test_id) for test_id in excluded):'
+              '        elif test.id() in excluded:'
+              '            excluded_found.add(test.id())'
+              '        else:'
               '            filtered.addTest(test)'
               'add_tests(discovered)'
+              "if excluded_found != excluded: raise RuntimeError(f'Expected exclusions {excluded}, found {excluded_found}')"
+              "if filtered.countTestCases() == 0: raise RuntimeError('No tests discovered')"
               'result = unittest.TextTestRunner(verbosity=2, failfast=True).run(filtered)'
               'raise SystemExit(0 if result.wasSuccessful() else 1)'
             ) -join "`n"
