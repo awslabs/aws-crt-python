@@ -363,6 +363,10 @@ jobs:
           ..\awscrt-test\Scripts\python.exe -m pip install $wheel[0].FullName
           ..\awscrt-test\Scripts\python.exe -m pip install 'websockets>=13.1' 'h2==4.1.0'
           Copy-Item test "$env:RUNNER_TEMP\test" -Recurse
+          $httpTests = "$env:RUNNER_TEMP\crt\aws-c-http\tests"
+          New-Item $httpTests -ItemType Directory -Force | Out-Null
+          Copy-Item crt\aws-c-http\tests\mock_server $httpTests -Recurse
+          Copy-Item crt\aws-c-http\tests\resources $httpTests -Recurse
           Push-Location $env:RUNNER_TEMP
           try {
             & "$env:GITHUB_WORKSPACE\..\awscrt-test\Scripts\python.exe" -m unittest discover --failfast --verbose
