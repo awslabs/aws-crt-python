@@ -308,6 +308,68 @@ jobs:
           python -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder.pyz')"
           python builder.pyz build -p ${{ env.PACKAGE_NAME }} --python "${{ steps.python38.outputs.python-path }}"
 
+  windows-arm64:
+    runs-on: windows-11-arm
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - build-python: '3.11'
+            test-python: '3.11'
+          - build-python: '3.11'
+            test-python: '3.12'
+          - build-python: '3.13'
+            test-python: '3.13'
+          - build-python: '3.13'
+            test-python: '3.14'
+          - build-python: '3.13t'
+            test-python: '3.13t'
+          - build-python: '3.14t'
+            test-python: '3.14t'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.build-python }}
+          architecture: arm64
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: arm64
+      - name: Build Windows ARM64 wheel
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade build
+          python -m build --wheel
+          $wheel = @(Get-Item dist\*win_arm64.whl)
+          if ($wheel.Count -ne 1) {
+            throw 'Expected exactly one win_arm64 wheel'
+          }
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.test-python }}
+          architecture: arm64
+      - name: Test installed wheel
+        shell: pwsh
+        env:
+          AWS_TEST_LOCALHOST: '1'
+        run: |
+          python -m venv ..\awscrt-test
+          $wheel = @(Get-Item dist\*win_arm64.whl)
+          if ($wheel.Count -ne 1) {
+            throw 'Expected exactly one win_arm64 wheel'
+          }
+          ..\awscrt-test\Scripts\python.exe -m pip install $wheel[0].FullName
+          ..\awscrt-test\Scripts\python.exe -m pip install 'websockets>=13.1' 'h2==4.1.0'
+          Copy-Item test "$env:RUNNER_TEMP\test" -Recurse
+          Push-Location $env:RUNNER_TEMP
+          try {
+            & "$env:GITHUB_WORKSPACE\..\awscrt-test\Scripts\python.exe" -m unittest discover --failfast --verbose
+          } finally {
+            Pop-Location
+          }
+
   macos:
     runs-on: macos-14 # latest
     permissions:
