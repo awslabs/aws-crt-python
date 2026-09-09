@@ -11,12 +11,11 @@ from concurrent.futures import Future
 from enum import IntEnum
 from awscrt import NativeResource, exceptions
 from awscrt.http import HttpProxyOptions, HttpRequest
-from awscrt.io import ClientBootstrap, SocketOptions, ClientTlsContext
+from awscrt.io import ClientBootstrap, SocketOptions, ClientTlsContext, ExponentialBackoffJitterMode
 from dataclasses import dataclass
 from collections.abc import Sequence
 from inspect import signature
 from awscrt.aws_iot_metrics import AWSIoTMetrics, _create_metrics_mqtt5
-
 
 class QoS(IntEnum):
     """MQTT message delivery quality of service.
@@ -796,36 +795,6 @@ class ClientOperationQueueBehaviorType(IntEnum):
     All operations that are not complete at the time of disconnection are failed, except operations that
     the MQTT5 spec requires to be retransmitted (un-acked QoS1+ publishes).
     """
-
-
-class ExponentialBackoffJitterMode(IntEnum):
-    """Controls how the reconnect delay is modified in order to smooth out the distribution of reconnection attempt
-    timepoints for a large set of reconnecting clients.
-
-    See `Exponential Backoff and Jitter <https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/>`_
-    """
-
-    DEFAULT = 0
-    """
-    Maps to Full
-    """
-
-    NONE = 1
-    """
-    Do not perform any randomization on the reconnect delay
-    """
-
-    FULL = 2
-    """
-    Fully random between no delay and the current exponential backoff value.
-    """
-
-    DECORRELATED = 3
-    """
-    Backoff is taken randomly from the interval between the base backoff
-    interval and a scaling (greater than 1) of the current backoff value
-    """
-
 
 @dataclass
 class UserProperty:

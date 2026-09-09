@@ -9,7 +9,7 @@ import _awscrt
 from concurrent.futures import Future
 from awscrt import NativeResource
 from awscrt.http import HttpRequest
-from awscrt.io import ClientBootstrap, TlsConnectionOptions
+from awscrt.io import ClientBootstrap, TlsConnectionOptions, ExponentialBackoffJitterMode
 from awscrt.auth import AwsCredentialsProvider, AwsSignatureType, AwsSignedBodyHeaderType, AwsSignedBodyValue, \
     AwsSigningAlgorithm, AwsSigningConfig
 import awscrt.exceptions
@@ -196,6 +196,42 @@ class S3FileIoOptions:
     In summary, O_DIRECT is a potentially powerful tool that should be used with caution.
     """
 
+@dataclass
+class S3RetryConfig:
+    """Configuration for the S3 client's retry strategy.
+
+    All fields are optional. None means "use S3 client default."
+
+    S3 client defaults:
+        max_retries = 5, backoff_scale_factor_ms = 500, max_backoff_secs = 20,
+        jitter_mode = FULL, initial_bucket_capacity = 500
+
+    If the S3Client is constructed with a custom retry_strategy object,
+    this configuration is ignored entirely.
+
+    Args:
+        max_retries (Optional[int]): Maximum number of retries per request.
+            Default is 5.
+
+        backoff_scale_factor_ms (Optional[int]): Base delay in milliseconds,
+            multiplied by 2^attempt for exponential backoff. Default is 500.
+
+        max_backoff_secs (Optional[int]): Maximum backoff delay in seconds
+            (ceiling on any single retry delay). Default is 20.
+
+        jitter_mode (Optional[ExponentialBackoffJitterMode]): Jitter mode for
+            retry backoff. Default is FULL.
+
+        initial_bucket_capacity (Optional[int]): Token bucket capacity per
+            host partition (circuit breaker). Controls how many concurrent
+            failures are tolerated before retries are rejected. Default is 500.
+    """
+    max_retries: Optional[int] = None
+    backoff_scale_factor_ms: Optional[int] = None
+    max_backoff_secs: Optional[int] = None
+    jitter_mode: Optional[ExponentialBackoffJitterMode] = None
+    initial_bucket_capacity: Optional[int] = None
+
 
 class S3Client(NativeResource):
     """S3 client
@@ -283,6 +319,9 @@ class S3Client(NativeResource):
         max_active_connections_override (Optional[int]):
             When set, this will cap the number of active connections for the meta request.
             When not set, the client will determine this value based on `throughput_target_gbps`. (Recommended)
+
+        retry_config (Optional[S3RetryConfig]): Configuration for the retry strategy.
+            See :class:`S3RetryConfig` for details. If not set, S3 client defaults are used.
     """
 
     __slots__ = ('shutdown_event', '_region')
@@ -303,7 +342,8 @@ class S3Client(NativeResource):
             memory_limit=None,
             network_interface_names: Optional[Sequence[str]] = None,
             fio_options: Optional['S3FileIoOptions'] = None,
-            max_active_connections_override: Optional[int] = None):
+            max_active_connections_override: Optional[int] = None,
+            retry_config: Optional[S3RetryConfig] = None):
         assert isinstance(bootstrap, ClientBootstrap) or bootstrap is None
         assert isinstance(region, str)
         assert isinstance(signing_config, AwsSigningConfig) or signing_config is None
@@ -360,6 +400,16 @@ class S3Client(NativeResource):
                 network_interface_names = list(network_interface_names)
         if max_active_connections_override is None:
             max_active_connections_override = 0
+
+        # Retry config: None -> 0 means "use S3 client defaults"
+        if retry_config is None:
+            retry_config = S3RetryConfig()
+        retry_max_retries = retry_config.max_retries if retry_config.max_retries is not None else 0
+        retry_backoff_scale_factor_ms = retry_config.backoff_scale_factor_ms if retry_config.backoff_scale_factor_ms is not None else 0
+        retry_max_backoff_secs = retry_config.max_backoff_secs if retry_config.max_backoff_secs is not None else 0
+        retry_jitter_mode = int(retry_config.jitter_mode) if retry_config.jitter_mode is not None else 0
+        retry_initial_bucket_capacity = retry_config.initial_bucket_capacity if retry_config.initial_bucket_capacity is not None else 0
+
         fio_options_set = False
         should_stream = False
         disk_throughput_gbps = 0.0
@@ -389,7 +439,12 @@ class S3Client(NativeResource):
             disk_throughput_gbps,
             direct_io,
             max_active_connections_override,
-            s3_client_core)
+            s3_client_core,
+            retry_max_retries,
+            retry_backoff_scale_factor_ms,
+            retry_max_backoff_secs,
+            retry_jitter_mode,
+            retry_initial_bucket_capacity)
 
     def make_request(
             self,
