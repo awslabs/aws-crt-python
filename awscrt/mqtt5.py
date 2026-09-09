@@ -17,6 +17,7 @@ from collections.abc import Sequence
 from inspect import signature
 from awscrt.aws_iot_metrics import AWSIoTMetrics, _create_metrics_mqtt5
 
+
 class QoS(IntEnum):
     """MQTT message delivery quality of service.
 
@@ -795,6 +796,7 @@ class ClientOperationQueueBehaviorType(IntEnum):
     All operations that are not complete at the time of disconnection are failed, except operations that
     the MQTT5 spec requires to be retransmitted (un-acked QoS1+ publishes).
     """
+
 
 @dataclass
 class UserProperty:
