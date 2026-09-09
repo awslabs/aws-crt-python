@@ -265,11 +265,11 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
     uint64_t max_active_connections_override; /* K */
     PyObject *py_core;                        /* O */
 
-    uint64_t retry_max_retries;               /* K */
-    uint64_t retry_backoff_scale_factor_ms;   /* K */
-    uint64_t retry_max_backoff_secs;          /* K */
-    int retry_jitter_mode;                    /* i */
-    uint64_t retry_initial_bucket_capacity;   /* K */
+    uint64_t retry_max_retries;             /* K */
+    uint64_t retry_backoff_scale_factor_ms; /* K */
+    uint64_t retry_max_backoff_secs;        /* K */
+    int retry_jitter_mode;                  /* i */
+    uint64_t retry_initial_bucket_capacity; /* K */
 
     if (!PyArg_ParseTuple(
             args,
