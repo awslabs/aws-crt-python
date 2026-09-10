@@ -201,7 +201,7 @@ class S3FileIoOptions:
 class S3RetryConfig:
     """Configuration for the S3 client's retry strategy.
 
-    All fields are optional. None means "use S3 client default."
+    All fields default to 0, which means "use S3 client default."
 
     S3 client defaults:
         max_retries = 5, backoff_scale_factor_ms = 500, max_backoff_secs = 20,
@@ -211,27 +211,27 @@ class S3RetryConfig:
     this configuration is ignored entirely.
 
     Args:
-        max_retries (Optional[int]): Maximum number of retries per request.
-            Default is 5.
+        max_retries (int): Maximum number of retries per request.
+            0 means use S3 client default (5).
 
-        backoff_scale_factor_ms (Optional[int]): Base delay in milliseconds,
-            multiplied by 2^attempt for exponential backoff. Default is 500.
+        backoff_scale_factor_ms (int): Base delay in milliseconds,
+            multiplied by 2^attempt for exponential backoff. 0 means use default (500).
 
-        max_backoff_secs (Optional[int]): Maximum backoff delay in seconds
-            (ceiling on any single retry delay). Default is 20.
+        max_backoff_secs (int): Maximum backoff delay in seconds
+            (ceiling on any single retry delay). 0 means use default (20).
 
-        jitter_mode (Optional[ExponentialBackoffJitterMode]): Jitter mode for
-            retry backoff. Default is FULL.
+        jitter_mode (int): Jitter mode for retry backoff.
+            0 means use default (FULL). See :class:`ExponentialBackoffJitterMode`.
 
-        initial_bucket_capacity (Optional[int]): Token bucket capacity per
+        initial_bucket_capacity (int): Token bucket capacity per
             host partition (circuit breaker). Controls how many concurrent
-            failures are tolerated before retries are rejected. Default is 500.
+            failures are tolerated before retries are rejected. 0 means use default (500).
     """
-    max_retries: Optional[int] = None
-    backoff_scale_factor_ms: Optional[int] = None
-    max_backoff_secs: Optional[int] = None
-    jitter_mode: Optional[ExponentialBackoffJitterMode] = None
-    initial_bucket_capacity: Optional[int] = None
+    max_retries: int = 0
+    backoff_scale_factor_ms: int = 0
+    max_backoff_secs: int = 0
+    jitter_mode: int = 0
+    initial_bucket_capacity: int = 0
 
 
 class S3Client(NativeResource):
@@ -402,14 +402,9 @@ class S3Client(NativeResource):
         if max_active_connections_override is None:
             max_active_connections_override = 0
 
-        # Retry config: None -> 0 means "use S3 client defaults"
+        # Retry config: 0 means "use S3 client defaults"
         if retry_config is None:
             retry_config = S3RetryConfig()
-        retry_max_retries = retry_config.max_retries if retry_config.max_retries is not None else 0
-        retry_backoff_scale_factor_ms = retry_config.backoff_scale_factor_ms if retry_config.backoff_scale_factor_ms is not None else 0
-        retry_max_backoff_secs = retry_config.max_backoff_secs if retry_config.max_backoff_secs is not None else 0
-        retry_jitter_mode = int(retry_config.jitter_mode) if retry_config.jitter_mode is not None else 0
-        retry_initial_bucket_capacity = retry_config.initial_bucket_capacity if retry_config.initial_bucket_capacity is not None else 0
 
         fio_options_set = False
         should_stream = False
@@ -441,11 +436,11 @@ class S3Client(NativeResource):
             direct_io,
             max_active_connections_override,
             s3_client_core,
-            retry_max_retries,
-            retry_backoff_scale_factor_ms,
-            retry_max_backoff_secs,
-            retry_jitter_mode,
-            retry_initial_bucket_capacity)
+            retry_config.max_retries,
+            retry_config.backoff_scale_factor_ms,
+            retry_config.max_backoff_secs,
+            int(retry_config.jitter_mode),
+            retry_config.initial_bucket_capacity)
 
     def make_request(
             self,
