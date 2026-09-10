@@ -221,7 +221,7 @@ class S3RetryConfig:
             (ceiling on any single retry delay). 0 means use default (20).
 
         jitter_mode (int): Jitter mode for retry backoff.
-            0 means use default (FULL). See :class:`ExponentialBackoffJitterMode`.
+            0 means use default (FULL). See :class:`~awscrt.io.ExponentialBackoffJitterMode`.
 
         initial_bucket_capacity (int): Token bucket capacity per
             host partition (circuit breaker). Controls how many concurrent
