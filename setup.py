@@ -48,6 +48,10 @@ def is_32bit():
     return is_64bit() == False
 
 
+def is_windows_arm64():
+    return sys.platform == 'win32' and sysconfig.get_platform() == 'win-arm64'
+
+
 # TODO: Fix this. Since adding pyproject.toml, it always returns False
 def is_development_mode():
     """Return whether we're building in Development Mode (a.k.a. “Editable Installs”).
@@ -196,6 +200,20 @@ def determine_generator_args(cmake_version=None, windows_sdk_version=None):
 
         print('Using Visual Studio', vs_version, vs_year)
 
+        if is_windows_arm64():
+            if not shutil.which('clang-cl'):
+                raise RuntimeError('clang-cl is required to build for Windows ARM64')
+            print('Using Ninja and clang-cl for Windows ARM64')
+            return [
+                '-G', 'Ninja',
+                f'-DCMAKE_SYSTEM_VERSION={windows_sdk_version}',
+                '-DCMAKE_C_COMPILER=clang-cl',
+                '-DCMAKE_CXX_COMPILER=clang-cl',
+                '-DCMAKE_ASM_COMPILER=clang-cl',
+                # The optimized ARM checksum sources do not compile with clang-cl.
+                '-DUSE_CPU_EXTENSIONS=OFF',
+            ]
+
         if vs_year <= 2017:
             # For VS2017 and earlier, architecture goes at end of generator string
             if is_64bit():
@@ -325,6 +343,16 @@ VERSION_RE = re.compile(r""".*__version__ = ["'](.*?)['"]""", re.S)
 
 
 class awscrt_build_ext(setuptools.command.build_ext.build_ext):
+    def build_extensions(self):
+        if is_windows_arm64():
+            if not self.compiler.initialized:
+                self.compiler.initialize()
+            clang_cl = shutil.which('clang-cl')
+            if not clang_cl:
+                raise RuntimeError('clang-cl is required to build for Windows ARM64')
+            self.compiler.cc = clang_cl
+        super().build_extensions()
+
     def _build_dependencies_impl(self, build_dir, install_path, osx_arch=None):
         cmake = get_cmake_path()
 
