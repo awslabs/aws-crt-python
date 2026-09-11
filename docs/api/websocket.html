@@ -1,0 +1,690 @@
+
+
+<!doctype html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>awscrt.websocket &#8212; awscrt  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d75fae25" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=93be7416" />
+    
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/bizstyle.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="awscrt.s3" href="s3.html" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <!--[if lt IE 9]>
+    <script src="_static/css3-mediaqueries.js"></script>
+    <![endif]-->
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="s3.html" title="awscrt.s3"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">awscrt  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">awscrt.websocket</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="module-awscrt.websocket">
+<span id="awscrt-websocket"></span><h1>awscrt.websocket<a class="headerlink" href="#module-awscrt.websocket" title="Link to this heading">¶</a></h1>
+<p>WebSocket - <a class="reference external" href="https://www.rfc-editor.org/rfc/rfc6455">RFC 6455</a></p>
+<p>Use the <a class="reference internal" href="#awscrt.websocket.connect" title="awscrt.websocket.connect"><code class="xref py py-func docutils literal notranslate"><span class="pre">connect()</span></code></a> to establish a <a class="reference internal" href="#awscrt.websocket.WebSocket" title="awscrt.websocket.WebSocket"><code class="xref py py-class docutils literal notranslate"><span class="pre">WebSocket</span></code></a> client connection.</p>
+<p>Note from the developer: This is a very low-level API, which forces the
+user to deal with things like data fragmentation.
+A higher-level API could easily be built on top of this.</p>
+<section id="authoring-callbacks">
+<span id="id1"></span><h2>Authoring Callbacks<a class="headerlink" href="#authoring-callbacks" title="Link to this heading">¶</a></h2>
+<p>All network operations in <cite>awscrt.websocket</cite> are asynchronous.
+Callbacks are always invoked on the WebSocket’s networking thread.
+You MUST NOT perform blocking network operations from any callback, or you will cause a deadlock.
+For example: do not send a frame, and then wait for that frame to complete,
+within a callback. The WebSocket cannot do work until your callback returns,
+so the thread will be stuck. You can send the frame from within the callback,
+just don’t wait for it to complete within the callback.</p>
+<p>If you want to do blocking waits, do it from a thread you control, like the main thread.
+It’s fine for the main thread to send a frame, and wait until it completes.</p>
+<p>All functions and methods in <cite>awscrt.websocket</cite> are thread-safe.
+They can be called from any mix of threads.</p>
+</section>
+<section id="flow-control-reading">
+<span id="id2"></span><h2>Flow Control (reading)<a class="headerlink" href="#flow-control-reading" title="Link to this heading">¶</a></h2>
+<p>By default, the WebSocket will read from the network as fast as it can hand you the data.
+You must prevent the WebSocket from reading data faster than you can process it,
+or memory usage could balloon until your application explodes.</p>
+<p>There are two ways to manage this.</p>
+<p>First, and simplest, is to process incoming data synchronously within the
+<cite>on_incoming_frame</cite> callbacks. Since callbacks are invoked on the WebSocket’s
+networking thread, the WebSocket cannot read more data until the callback returns.
+Therefore, processing the data in a synchronous manner
+(i.e. writing to disk, printing to screen, etc) will naturally
+affect <a class="reference external" href="https://en.wikipedia.org/wiki/Transmission_Control_Protocol#Flow_control">TCP flow control</a>,
+and prevent data from arriving too fast. However, you MUST NOT perform a blocking
+network operation from within the callback or you risk deadlock (see <a class="reference internal" href="#authoring-callbacks"><span class="std std-ref">Authoring Callbacks</span></a>).</p>
+<p>The second, more complex, way requires you to manage the size of the read window.
+Do this if you are processing the data asynchronously
+(i.e. sending the data along on another network connection).
+Create the WebSocket with <cite>manage_read_window</cite> set true,
+and set <cite>initial_read_window</cite> to the number of bytes you are ready to receive right away.
+Whenever the read window reaches 0, you will stop receiving anything.
+The read window shrinks as you receive the payload from “data” frames (TEXT, BINARY, CONTINUATION).
+Call <a class="reference internal" href="#awscrt.websocket.WebSocket.increment_read_window" title="awscrt.websocket.WebSocket.increment_read_window"><code class="xref py py-meth docutils literal notranslate"><span class="pre">WebSocket.increment_read_window()</span></code></a> to increase the window again keep frames flowing in.
+You only need to worry about the payload from “data” frames.
+The WebSocket automatically increments its window to account for any
+other incoming bytes, including other parts of a frame (opcode, payload-length, etc)
+and the payload of other frame types (PING, PONG, CLOSE).
+You’ll probably want to do it like this:
+Pick the max amount of memory to buffer, and set this as the <cite>initial_read_window</cite>.
+When data arrives, the window has shrunk by that amount.
+Send this data along on the other network connection.
+When that data is done sending, call <cite>increment_read_window()</cite>
+by the amount you just finished sending.
+If you don’t want to receive any data at first, set the <cite>initial_read_window</cite> to 0,
+and <cite>increment_read_window()</cite> when you’re ready.
+Maintaining a larger window is better for overall throughput.</p>
+</section>
+<section id="flow-control-writing">
+<span id="id3"></span><h2>Flow Control (writing)<a class="headerlink" href="#flow-control-writing" title="Link to this heading">¶</a></h2>
+<p>You must also ensure that you do not continually send frames faster than the other
+side can read them, or memory usage could balloon until your application explodes.</p>
+<p>The simplest approach is to only send 1 frame at a time.
+Use the <a class="reference internal" href="#awscrt.websocket.WebSocket.send_frame" title="awscrt.websocket.WebSocket.send_frame"><code class="xref py py-meth docutils literal notranslate"><span class="pre">WebSocket.send_frame()</span></code></a> <cite>on_complete</cite> callback to know when the send is complete.
+Then you can try and send another.</p>
+<p>A more complex, but higher throughput, way is to let multiple frames be in flight
+but have a cap. If the number of frames in flight, or bytes in flight, reaches
+your cap then wait until some frames complete before trying to send more.</p>
+</section>
+<section id="api">
+<span id="id4"></span><h2>API<a class="headerlink" href="#api" title="Link to this heading">¶</a></h2>
+</section>
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.websocket.Opcode">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.websocket.</span></span><span class="sig-name descname"><span class="pre">Opcode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.websocket.Opcode" title="Link to this definition">¶</a></dt>
+<dd><p>An opcode defines a frame’s type.</p>
+<p>RFC 6455 classifies TEXT and BINARY as <a class="reference external" href="https://www.rfc-editor.org/rfc/rfc6455#section-5.6">data frames</a>.
+A CONTINUATION frame “continues” the most recent data frame.
+All other opcodes are for <a class="reference external" href="https://www.rfc-editor.org/rfc/rfc6455#section-5.5">control frames</a>.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.websocket.Opcode.CONTINUATION">
+<span class="sig-name descname"><span class="pre">CONTINUATION</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#awscrt.websocket.Opcode.CONTINUATION" title="Link to this definition">¶</a></dt>
+<dd><p>Continues the most recent TEXT or BINARY data frame.</p>
+<p>See <a class="reference external" href="https://www.rfc-editor.org/rfc/rfc6455#section-5.4">RFC 6455 section 5.4 - Fragmentation</a>.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.websocket.Opcode.TEXT">
+<span class="sig-name descname"><span class="pre">TEXT</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#awscrt.websocket.Opcode.TEXT" title="Link to this definition">¶</a></dt>
+<dd><p>The data frame for sending text.</p>
+<p>The payload must contain UTF-8.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.websocket.Opcode.BINARY">
+<span class="sig-name descname"><span class="pre">BINARY</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></em><a class="headerlink" href="#awscrt.websocket.Opcode.BINARY" title="Link to this definition">¶</a></dt>
+<dd><p>The data frame for sending binary.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.websocket.Opcode.CLOSE">
+<span class="sig-name descname"><span class="pre">CLOSE</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">8</span></em><a class="headerlink" href="#awscrt.websocket.Opcode.CLOSE" title="Link to this definition">¶</a></dt>
+<dd><p>The control frame which is the final frame sent by an endpoint.</p>
+<p>The CLOSE frame may include a payload, but its format is very particular.
+See <a class="reference external" href="https://www.rfc-editor.org/rfc/rfc6455#section-5.5.1">RFC 6455 section 5.5.1</a>.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.websocket.Opcode.PING">
+<span class="sig-name descname"><span class="pre">PING</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">9</span></em><a class="headerlink" href="#awscrt.websocket.Opcode.PING" title="Link to this definition">¶</a></dt>
+<dd><p>A control frame that may serve as either a keepalive or as a means to verify
+that the remote endpoint is still responsive.</p>
+<p>DO NOT manually send a PONG frame in response to a PING,
+the implementation does this automatically.</p>
+<p>A PING frame may include a payload.
+See <a class="reference external" href="https://www.rfc-editor.org/rfc/rfc6455#section-5.5.2">RFC 6455 section 5.5.2</a>.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.websocket.Opcode.PONG">
+<span class="sig-name descname"><span class="pre">PONG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">10</span></em><a class="headerlink" href="#awscrt.websocket.Opcode.PONG" title="Link to this definition">¶</a></dt>
+<dd><p>The control frame that is the response to a PING frame.</p>
+<p>DO NOT manually send a PONG frame in response to a PING,
+the implementation does this automatically.</p>
+<p>See <a class="reference external" href="https://www.rfc-editor.org/rfc/rfc6455#section-5.5.3">RFC 6455 section 5.5.3</a>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.websocket.Opcode.is_data_frame">
+<span class="sig-name descname"><span class="pre">is_data_frame</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.websocket.Opcode.is_data_frame" title="Link to this definition">¶</a></dt>
+<dd><p>True if this is a “data frame” opcode.</p>
+<p>TEXT, BINARY, and CONTINUATION are “data frames”. The rest are “control” frames.</p>
+<p>If the WebSocket was created with <cite>manage_read_window</cite>,
+then the read window shrinks as “data frames” are received.
+See <a class="reference internal" href="#flow-control-reading"><span class="std std-ref">Flow Control (reading)</span></a> for a thorough explanation.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="awscrt.websocket.MAX_PAYLOAD_LENGTH">
+<span class="sig-prename descclassname"><span class="pre">awscrt.websocket.</span></span><span class="sig-name descname"><span class="pre">MAX_PAYLOAD_LENGTH</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">9223372036854775807</span></em><a class="headerlink" href="#awscrt.websocket.MAX_PAYLOAD_LENGTH" title="Link to this definition">¶</a></dt>
+<dd><p>The maximum frame payload length allowed by RFC 6455</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.websocket.OnConnectionSetupData">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.websocket.</span></span><span class="sig-name descname"><span class="pre">OnConnectionSetupData</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">exception</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.14)"><span class="pre">Exception</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">websocket</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#awscrt.websocket.WebSocket" title="awscrt.websocket.WebSocket"><span class="pre">WebSocket</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">handshake_response_status</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">handshake_response_headers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Sequence" title="(in Python v3.14)"><span class="pre">Sequence</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.14)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">handshake_response_body</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.websocket.OnConnectionSetupData" title="Link to this definition">¶</a></dt>
+<dd><p>Data passed to the <cite>on_connection_setup</cite> callback</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.websocket.OnConnectionSetupData.exception">
+<span class="sig-name descname"><span class="pre">exception</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.14)"><span class="pre">Exception</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#awscrt.websocket.OnConnectionSetupData.exception" title="Link to this definition">¶</a></dt>
+<dd><p>If the connection failed, this exception explains why.</p>
+<p>This is None if the connection succeeded.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.websocket.OnConnectionSetupData.websocket">
+<span class="sig-name descname"><span class="pre">websocket</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#awscrt.websocket.WebSocket" title="awscrt.websocket.WebSocket"><span class="pre">WebSocket</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#awscrt.websocket.OnConnectionSetupData.websocket" title="Link to this definition">¶</a></dt>
+<dd><p>If the connection succeeded, here’s the WebSocket.</p>
+<p>You should store this WebSocket somewhere
+(the connection will shut down if the class is garbage collected).</p>
+<p>This is None if the connection failed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.websocket.OnConnectionSetupData.handshake_response_status">
+<span class="sig-name descname"><span class="pre">handshake_response_status</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#awscrt.websocket.OnConnectionSetupData.handshake_response_status" title="Link to this definition">¶</a></dt>
+<dd><p>The HTTP response status-code, if you’re interested.</p>
+<p>This is present if an HTTP response was received, regardless of whether
+the handshake was accepted or rejected. This always has the value 101
+for successful connections.</p>
+<p>This is None if the connection failed before receiving an HTTP response.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.websocket.OnConnectionSetupData.handshake_response_headers">
+<span class="sig-name descname"><span class="pre">handshake_response_headers</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Sequence" title="(in Python v3.14)"><span class="pre">Sequence</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.14)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#awscrt.websocket.OnConnectionSetupData.handshake_response_headers" title="Link to this definition">¶</a></dt>
+<dd><p>The HTTP response headers, if you’re interested.</p>
+<p>These are present if an HTTP response was received, regardless of whether
+the handshake was accepted or rejected.</p>
+<p>This is None if the connection failed before receiving an HTTP response.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.websocket.OnConnectionSetupData.handshake_response_body">
+<span class="sig-name descname"><span class="pre">handshake_response_body</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#awscrt.websocket.OnConnectionSetupData.handshake_response_body" title="Link to this definition">¶</a></dt>
+<dd><p>The HTTP response body, if you’re interested.</p>
+<p>This is only present if the server sent a full HTTP response rejecting the handshake.
+It is not present if the connection succeeded,
+or the connection failed for other reasons.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.websocket.OnConnectionShutdownData">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.websocket.</span></span><span class="sig-name descname"><span class="pre">OnConnectionShutdownData</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">exception</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.14)"><span class="pre">Exception</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.websocket.OnConnectionShutdownData" title="Link to this definition">¶</a></dt>
+<dd><p>Data passed to the <cite>on_connection_shutdown</cite> callback</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.websocket.OnConnectionShutdownData.exception">
+<span class="sig-name descname"><span class="pre">exception</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.14)"><span class="pre">Exception</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#awscrt.websocket.OnConnectionShutdownData.exception" title="Link to this definition">¶</a></dt>
+<dd><p>If the connection shut down cleanly, this is None.</p>
+<p>If the connection shut down due to error, or an error occurs while
+shutting down, this exception explains why.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.websocket.IncomingFrame">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.websocket.</span></span><span class="sig-name descname"><span class="pre">IncomingFrame</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">opcode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#awscrt.websocket.Opcode" title="awscrt.websocket.Opcode"><span class="pre">Opcode</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">payload_length</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">fin</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.websocket.IncomingFrame" title="Link to this definition">¶</a></dt>
+<dd><p>Describes the frame you are receiving.</p>
+<p>Used in <cite>on_incoming_frame</cite> callbacks</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.websocket.IncomingFrame.opcode">
+<span class="sig-name descname"><span class="pre">opcode</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#awscrt.websocket.Opcode" title="awscrt.websocket.Opcode"><span class="pre">Opcode</span></a></em><a class="headerlink" href="#awscrt.websocket.IncomingFrame.opcode" title="Link to this definition">¶</a></dt>
+<dd><p>This frame’s opcode.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.websocket.IncomingFrame.payload_length">
+<span class="sig-name descname"><span class="pre">payload_length</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></em><a class="headerlink" href="#awscrt.websocket.IncomingFrame.payload_length" title="Link to this definition">¶</a></dt>
+<dd><p>This frame’s payload length (in bytes).</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.websocket.IncomingFrame.fin">
+<span class="sig-name descname"><span class="pre">fin</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></em><a class="headerlink" href="#awscrt.websocket.IncomingFrame.fin" title="Link to this definition">¶</a></dt>
+<dd><p>The FIN bit indicates whether this is the final fragment in a message.</p>
+<p>See <a class="reference external" href="https://www.rfc-editor.org/rfc/rfc6455#section-5.4">RFC 6455 section 5.4 - Fragmentation</a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.websocket.IncomingFrame.is_data_frame">
+<span class="sig-name descname"><span class="pre">is_data_frame</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.websocket.IncomingFrame.is_data_frame" title="Link to this definition">¶</a></dt>
+<dd><p>True if this is a “data frame”.</p>
+<p>TEXT, BINARY, and CONTINUATION are “data frames”. The rest are “control frames”.</p>
+<p>If the WebSocket was created with <cite>manage_read_window</cite>,
+then the read window shrinks as “data frames” are received.
+See <a class="reference internal" href="#flow-control-reading"><span class="std std-ref">Flow Control (reading)</span></a> for a thorough explanation.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.websocket.OnIncomingFrameBeginData">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.websocket.</span></span><span class="sig-name descname"><span class="pre">OnIncomingFrameBeginData</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">frame</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#awscrt.websocket.IncomingFrame" title="awscrt.websocket.IncomingFrame"><span class="pre">IncomingFrame</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.websocket.OnIncomingFrameBeginData" title="Link to this definition">¶</a></dt>
+<dd><p>Data passed to the <cite>on_incoming_frame_begin</cite> callback.</p>
+<p>Each <cite>on_incoming_frame_begin</cite> call will be followed by
+0+ <cite>on_incoming_frame_payload</cite> calls,
+followed by one <cite>on_incoming_frame_complete</cite> call.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.websocket.OnIncomingFrameBeginData.frame">
+<span class="sig-name descname"><span class="pre">frame</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#awscrt.websocket.IncomingFrame" title="awscrt.websocket.IncomingFrame"><span class="pre">IncomingFrame</span></a></em><a class="headerlink" href="#awscrt.websocket.OnIncomingFrameBeginData.frame" title="Link to this definition">¶</a></dt>
+<dd><p>Describes the frame you are starting to receive.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.websocket.OnIncomingFramePayloadData">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.websocket.</span></span><span class="sig-name descname"><span class="pre">OnIncomingFramePayloadData</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">frame</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#awscrt.websocket.IncomingFrame" title="awscrt.websocket.IncomingFrame"><span class="pre">IncomingFrame</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.websocket.OnIncomingFramePayloadData" title="Link to this definition">¶</a></dt>
+<dd><p>Data passed to the <cite>on_incoming_frame_payload</cite> callback.</p>
+<p>This callback will be invoked 0+ times.
+Each time, <cite>data</cite> will contain a bit more of the payload.
+Once all <cite>frame.payload_length</cite> bytes have been received
+(or the network connection is lost), the <cite>on_incoming_frame_complete</cite>
+callback will be invoked.</p>
+<p>If the WebSocket was created with <cite>manage_read_window</cite>,
+and this is a “data frame” (TEXT, BINARY, CONTINUATION),
+then the read window shrinks by <cite>len(data)</cite>.
+See <a class="reference internal" href="#flow-control-reading"><span class="std std-ref">Flow Control (reading)</span></a> for a thorough explanation.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.websocket.OnIncomingFramePayloadData.frame">
+<span class="sig-name descname"><span class="pre">frame</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#awscrt.websocket.IncomingFrame" title="awscrt.websocket.IncomingFrame"><span class="pre">IncomingFrame</span></a></em><a class="headerlink" href="#awscrt.websocket.OnIncomingFramePayloadData.frame" title="Link to this definition">¶</a></dt>
+<dd><p>Describes the frame whose payload you are receiving.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.websocket.OnIncomingFramePayloadData.data">
+<span class="sig-name descname"><span class="pre">data</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></em><a class="headerlink" href="#awscrt.websocket.OnIncomingFramePayloadData.data" title="Link to this definition">¶</a></dt>
+<dd><p>The next chunk of this frame’s payload.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.websocket.OnIncomingFrameCompleteData">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.websocket.</span></span><span class="sig-name descname"><span class="pre">OnIncomingFrameCompleteData</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">frame</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#awscrt.websocket.IncomingFrame" title="awscrt.websocket.IncomingFrame"><span class="pre">IncomingFrame</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">exception</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.14)"><span class="pre">Exception</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.websocket.OnIncomingFrameCompleteData" title="Link to this definition">¶</a></dt>
+<dd><p>Data passed to the <cite>on_incoming_frame_complete</cite> callback.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.websocket.OnIncomingFrameCompleteData.frame">
+<span class="sig-name descname"><span class="pre">frame</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#awscrt.websocket.IncomingFrame" title="awscrt.websocket.IncomingFrame"><span class="pre">IncomingFrame</span></a></em><a class="headerlink" href="#awscrt.websocket.OnIncomingFrameCompleteData.frame" title="Link to this definition">¶</a></dt>
+<dd><p>Describes the frame you are done receiving.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.websocket.OnIncomingFrameCompleteData.exception">
+<span class="sig-name descname"><span class="pre">exception</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.14)"><span class="pre">Exception</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#awscrt.websocket.OnIncomingFrameCompleteData.exception" title="Link to this definition">¶</a></dt>
+<dd><p>If <cite>exception</cite> is set, then something went wrong processing the frame
+or the connection was lost before the frame was fully received.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.websocket.OnSendFrameCompleteData">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.websocket.</span></span><span class="sig-name descname"><span class="pre">OnSendFrameCompleteData</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">exception</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.14)"><span class="pre">Exception</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.websocket.OnSendFrameCompleteData" title="Link to this definition">¶</a></dt>
+<dd><p>Data passed to the <a class="reference internal" href="#awscrt.websocket.WebSocket.send_frame" title="awscrt.websocket.WebSocket.send_frame"><code class="xref py py-meth docutils literal notranslate"><span class="pre">WebSocket.send_frame()</span></code></a> <cite>on_complete</cite> callback.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.websocket.OnSendFrameCompleteData.exception">
+<span class="sig-name descname"><span class="pre">exception</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.14)"><span class="pre">Exception</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#awscrt.websocket.OnSendFrameCompleteData.exception" title="Link to this definition">¶</a></dt>
+<dd><p>If <cite>exception</cite> is set, the connection was lost before this frame could be completely sent.</p>
+<p>If <cite>exception</cite> is None, the frame was successfully written to the OS socket.
+Note that this data may still be buffered in the OS, it has
+not necessarily left this machine or reached the other endpoint yet.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.websocket.WebSocket">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.websocket.</span></span><span class="sig-name descname"><span class="pre">WebSocket</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">binding</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.websocket.WebSocket" title="Link to this definition">¶</a></dt>
+<dd><p>A WebSocket connection.</p>
+<p>Use <a class="reference internal" href="#awscrt.websocket.connect" title="awscrt.websocket.connect"><code class="xref py py-meth docutils literal notranslate"><span class="pre">connect()</span></code></a> to establish a new client connection.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.websocket.WebSocket.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.websocket.WebSocket.close" title="Link to this definition">¶</a></dt>
+<dd><p>Close the WebSocket asynchronously.</p>
+<p>You should call this when you are done with a healthy WebSocket,
+to ensure that it shuts down and cleans up.
+You don’t need to call this on a WebSocket that has already shut
+down, or is in the middle of shutting down, but it is safe to do so.
+This function is idempotent.</p>
+<p>To determine when shutdown has completed, you can use the
+<cite>on_shutdown_complete</cite> callback (passed into <a class="reference internal" href="#awscrt.websocket.connect" title="awscrt.websocket.connect"><code class="xref py py-meth docutils literal notranslate"><span class="pre">connect()</span></code></a>).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.websocket.WebSocket.send_frame">
+<span class="sig-name descname"><span class="pre">send_frame</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">opcode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#awscrt.websocket.Opcode" title="awscrt.websocket.Opcode"><span class="pre">Opcode</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">payload</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.14)"><span class="pre">bytearray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.14)"><span class="pre">memoryview</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fin</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_complete</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.14)"><span class="pre">Callable</span></a><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#awscrt.websocket.OnSendFrameCompleteData" title="awscrt.websocket.OnSendFrameCompleteData"><span class="pre">OnSendFrameCompleteData</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.websocket.WebSocket.send_frame" title="Link to this definition">¶</a></dt>
+<dd><p>Send a WebSocket frame asynchronously.</p>
+<p>See <a class="reference external" href="https://www.rfc-editor.org/rfc/rfc6455#section-5">RFC 6455 section 5 - Data Framing</a>
+for details on all frame types.</p>
+<p>This is a low-level API, which requires you to send the appropriate payload for each type of opcode.
+If you are not an expert, stick to sending <a class="reference internal" href="#awscrt.websocket.Opcode.TEXT" title="awscrt.websocket.Opcode.TEXT"><code class="xref py py-attr docutils literal notranslate"><span class="pre">Opcode.TEXT</span></code></a> or <a class="reference internal" href="#awscrt.websocket.Opcode.BINARY" title="awscrt.websocket.Opcode.BINARY"><code class="xref py py-attr docutils literal notranslate"><span class="pre">Opcode.BINARY</span></code></a> frames,
+and don’t touch the FIN bit.</p>
+<p>See <a class="reference internal" href="#flow-control-writing"><span class="std std-ref">Flow Control (writing)</span></a> to learn about limiting the amount of
+unsent data buffered in memory.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>opcode</strong> – <a class="reference internal" href="#awscrt.websocket.Opcode" title="awscrt.websocket.Opcode"><code class="xref py py-class docutils literal notranslate"><span class="pre">Opcode</span></code></a> for this frame.</p></li>
+<li><p><strong>payload</strong> – Any <a class="reference external" href="https://docs.python.org/3/glossary.html#term-bytes-like-object">bytes-like object</a>.
+<cite>str</cite> will always be encoded as UTF-8. It is fine to pass a <cite>str</cite> for a BINARY frame.
+None will result in an empty payload, the same as passing empty <cite>bytes()</cite></p></li>
+<li><p><strong>fin</strong> – The FIN bit indicates that this is the final fragment in a message.
+Do not set this False unless you understand
+<a class="reference external" href="https://www.rfc-editor.org/rfc/rfc6455#section-5.4">WebSocket fragmentation</a></p></li>
+<li><p><strong>on_complete</strong> – <p>Optional callback, invoked when the frame has finished sending.
+Takes a single <a class="reference internal" href="#awscrt.websocket.OnSendFrameCompleteData" title="awscrt.websocket.OnSendFrameCompleteData"><code class="xref py py-class docutils literal notranslate"><span class="pre">OnSendFrameCompleteData</span></code></a> argument.</p>
+<p>If <a class="reference internal" href="#awscrt.websocket.OnSendFrameCompleteData.exception" title="awscrt.websocket.OnSendFrameCompleteData.exception"><code class="xref py py-attr docutils literal notranslate"><span class="pre">OnSendFrameCompleteData.exception</span></code></a> is set, the connection
+was lost before this frame could be completely sent.</p>
+<p>But if <cite>exception</cite> is None, the frame was successfully written to the OS socket.
+(This doesn’t mean the other endpoint has received the data yet,
+or even guarantee that the data has left the machine yet,
+but it’s on track to get there).</p>
+<p>Be sure to read about <a class="reference internal" href="#authoring-callbacks"><span class="std std-ref">Authoring Callbacks</span></a>.</p>
+</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.websocket.WebSocket.increment_read_window">
+<span class="sig-name descname"><span class="pre">increment_read_window</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.websocket.WebSocket.increment_read_window" title="Link to this definition">¶</a></dt>
+<dd><p>Manually increment the read window by this many bytes, to continue receiving frames.</p>
+<p>See <a class="reference internal" href="#flow-control-reading"><span class="std std-ref">Flow Control (reading)</span></a> for a thorough explanation.
+If the WebSocket was created without <cite>manage_read_window</cite>, this function does nothing.
+This function may be called from any thread.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>size</strong> – in bytes</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="awscrt.websocket.connect">
+<span class="sig-prename descclassname"><span class="pre">awscrt.websocket.</span></span><span class="sig-name descname"><span class="pre">connect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">host</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">port</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">handshake_request</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="http.html#awscrt.http.HttpRequest" title="awscrt.http.HttpRequest"><span class="pre">HttpRequest</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">bootstrap</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="io.html#awscrt.io.ClientBootstrap" title="awscrt.io.ClientBootstrap"><span class="pre">ClientBootstrap</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">socket_options</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="io.html#awscrt.io.SocketOptions" title="awscrt.io.SocketOptions"><span class="pre">SocketOptions</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tls_connection_options</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="io.html#awscrt.io.TlsConnectionOptions" title="awscrt.io.TlsConnectionOptions"><span class="pre">TlsConnectionOptions</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">proxy_options</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="http.html#awscrt.http.HttpProxyOptions" title="awscrt.http.HttpProxyOptions"><span class="pre">HttpProxyOptions</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manage_read_window</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_read_window</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_connection_setup</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.14)"><span class="pre">Callable</span></a><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#awscrt.websocket.OnConnectionSetupData" title="awscrt.websocket.OnConnectionSetupData"><span class="pre">OnConnectionSetupData</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_connection_shutdown</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.14)"><span class="pre">Callable</span></a><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#awscrt.websocket.OnConnectionShutdownData" title="awscrt.websocket.OnConnectionShutdownData"><span class="pre">OnConnectionShutdownData</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_incoming_frame_begin</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.14)"><span class="pre">Callable</span></a><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#awscrt.websocket.OnIncomingFrameBeginData" title="awscrt.websocket.OnIncomingFrameBeginData"><span class="pre">OnIncomingFrameBeginData</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_incoming_frame_payload</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.14)"><span class="pre">Callable</span></a><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#awscrt.websocket.OnIncomingFramePayloadData" title="awscrt.websocket.OnIncomingFramePayloadData"><span class="pre">OnIncomingFramePayloadData</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_incoming_frame_complete</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.14)"><span class="pre">Callable</span></a><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#awscrt.websocket.OnIncomingFrameCompleteData" title="awscrt.websocket.OnIncomingFrameCompleteData"><span class="pre">OnIncomingFrameCompleteData</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.websocket.connect" title="Link to this definition">¶</a></dt>
+<dd><p>Asynchronously establish a client WebSocket connection.</p>
+<p>The <cite>on_connection_setup</cite> callback is invoked once the connection
+has succeeded or failed.</p>
+<p>If successful, a <a class="reference internal" href="#awscrt.websocket.WebSocket" title="awscrt.websocket.WebSocket"><code class="xref py py-class docutils literal notranslate"><span class="pre">WebSocket</span></code></a> will be provided in the
+<a class="reference internal" href="#awscrt.websocket.OnConnectionSetupData" title="awscrt.websocket.OnConnectionSetupData"><code class="xref py py-class docutils literal notranslate"><span class="pre">OnConnectionSetupData</span></code></a>. You should store this WebSocket somewhere,
+so that you can continue using it (the connection will shut down
+if the class is garbage collected).</p>
+<dl class="simple">
+<dt>The WebSocket will shut down after one of these things occur:</dt><dd><ul class="simple">
+<li><p>You call <a class="reference internal" href="#awscrt.websocket.WebSocket.close" title="awscrt.websocket.WebSocket.close"><code class="xref py py-meth docutils literal notranslate"><span class="pre">WebSocket.close()</span></code></a></p></li>
+<li><p>You, or the server, sends a CLOSE frame.</p></li>
+<li><p>The underlying socket shuts down.</p></li>
+<li><p>All references to the WebSocket are dropped,
+causing it to be garbage collected. However, you should NOT
+rely on this behavior. You should call <a class="reference internal" href="#awscrt.websocket.WebSocket.close" title="awscrt.websocket.WebSocket.close"><code class="xref py py-meth docutils literal notranslate"><span class="pre">close()</span></code></a> when you are
+done with a healthy WebSocket, to ensure that it shuts down and cleans up.
+It is very easy to accidentally keep a reference around without realizing it.</p></li>
+</ul>
+</dd>
+</dl>
+<p>Be sure to read about <a class="reference internal" href="#authoring-callbacks"><span class="std std-ref">Authoring Callbacks</span></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>host</strong> – Hostname to connect to.</p></li>
+<li><p><strong>port</strong> – Port to connect to. If not specified, it defaults to port 443
+when <cite>tls_connection_options</cite> is present, and port 80 otherwise.</p></li>
+<li><p><strong>handshake_request</strong> – <p>HTTP request for the initial WebSocket handshake.</p>
+<p>The request’s method MUST be “GET”, and the following headers are
+required:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Host</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">host</span><span class="o">&gt;</span>
+<span class="n">Upgrade</span><span class="p">:</span> <span class="n">websocket</span>
+<span class="n">Connection</span><span class="p">:</span> <span class="n">Upgrade</span>
+<span class="n">Sec</span><span class="o">-</span><span class="n">WebSocket</span><span class="o">-</span><span class="n">Key</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">base64</span><span class="o">-</span><span class="n">encoding</span> <span class="n">of</span> <span class="mi">16</span> <span class="n">random</span> <span class="nb">bytes</span><span class="o">&gt;</span>
+<span class="n">Sec</span><span class="o">-</span><span class="n">WebSocket</span><span class="o">-</span><span class="n">Version</span><span class="p">:</span> <span class="mi">13</span>
+</pre></div>
+</div>
+<p>You can use <a class="reference internal" href="#awscrt.websocket.create_handshake_request" title="awscrt.websocket.create_handshake_request"><code class="xref py py-meth docutils literal notranslate"><span class="pre">create_handshake_request()</span></code></a> to make a valid WebSocket
+handshake request, modifying the path and headers to fit your needs,
+and then passing it here.</p>
+</p></li>
+<li><p><strong>bootstrap</strong> – Client bootstrap to use when initiating socket connection.
+If not specified, the default singleton is used.</p></li>
+<li><p><strong>socket_options</strong> – Socket options.
+If not specified, default options are used.</p></li>
+<li><p><strong>proxy_options</strong> – HTTP Proxy options.
+If not specified, no proxy is used.</p></li>
+<li><p><strong>manage_read_window</strong> – Set true to manually manage the flow-control read window.
+If false (the default), data arrives as fast as possible.
+See <a class="reference internal" href="#flow-control-reading"><span class="std std-ref">Flow Control (reading)</span></a> for a thorough explanation.</p></li>
+<li><p><strong>initial_read_window</strong> – The initial size of the read window, in bytes.
+This must be set if <cite>manage_read_window</cite> is true,
+otherwise it is ignored.
+See <a class="reference internal" href="#flow-control-reading"><span class="std std-ref">Flow Control (reading)</span></a> for a thorough explanation.
+An initial size of 0 will prevent any frames from arriving
+until <a class="reference internal" href="#awscrt.websocket.WebSocket.increment_read_window" title="awscrt.websocket.WebSocket.increment_read_window"><code class="xref py py-meth docutils literal notranslate"><span class="pre">WebSocket.increment_read_window()</span></code></a> is called.</p></li>
+<li><p><strong>on_connection_setup</strong> – <p>Callback invoked when the connect completes.
+Takes a single <a class="reference internal" href="#awscrt.websocket.OnConnectionSetupData" title="awscrt.websocket.OnConnectionSetupData"><code class="xref py py-class docutils literal notranslate"><span class="pre">OnConnectionSetupData</span></code></a> argument.</p>
+<p>If successful, <a class="reference internal" href="#awscrt.websocket.OnConnectionSetupData.websocket" title="awscrt.websocket.OnConnectionSetupData.websocket"><code class="xref py py-attr docutils literal notranslate"><span class="pre">OnConnectionSetupData.websocket</span></code></a> will be set.
+You should store the <a class="reference internal" href="#awscrt.websocket.WebSocket" title="awscrt.websocket.WebSocket"><code class="xref py py-class docutils literal notranslate"><span class="pre">WebSocket</span></code></a> somewhere, so you can
+use it to send data when you’re ready.
+The other callbacks will be invoked as events occur,
+until the final <cite>on_connection_shutdown</cite> callback.</p>
+<p>If unsuccessful, <a class="reference internal" href="#awscrt.websocket.OnConnectionSetupData.exception" title="awscrt.websocket.OnConnectionSetupData.exception"><code class="xref py py-attr docutils literal notranslate"><span class="pre">OnConnectionSetupData.exception</span></code></a> will be set,
+and no further callbacks will be invoked.</p>
+<p>If this callback raises an exception, the connection will shut down.</p>
+</p></li>
+<li><p><strong>on_connection_shutdown</strong> – <p>Optional callback, invoked when a connection shuts down.
+Takes a single <a class="reference internal" href="#awscrt.websocket.OnConnectionShutdownData" title="awscrt.websocket.OnConnectionShutdownData"><code class="xref py py-class docutils literal notranslate"><span class="pre">OnConnectionShutdownData</span></code></a> argument.</p>
+<p>This callback is never invoked if <cite>on_connection_setup</cite> reported an exception.</p>
+</p></li>
+<li><p><strong>on_incoming_frame_begin</strong> – <p>Optional callback, invoked once at the start of each incoming frame.
+Takes a single <a class="reference internal" href="#awscrt.websocket.OnIncomingFrameBeginData" title="awscrt.websocket.OnIncomingFrameBeginData"><code class="xref py py-class docutils literal notranslate"><span class="pre">OnIncomingFrameBeginData</span></code></a> argument.</p>
+<p>Each <cite>on_incoming_frame_begin</cite> call will be followed by 0+
+<cite>on_incoming_frame_payload</cite> calls, followed by one
+<cite>on_incoming_frame_complete</cite> call.</p>
+<p>The “frame complete” callback is guaranteed to be invoked
+once for each “frame begin” callback, even if the connection
+is lost before the whole frame has been received.</p>
+<p>If this callback raises an exception, the connection will shut down.</p>
+</p></li>
+<li><p><strong>on_incoming_frame_payload</strong> – <p>Optional callback, invoked 0+ times as payload data arrives.
+Takes a single <a class="reference internal" href="#awscrt.websocket.OnIncomingFramePayloadData" title="awscrt.websocket.OnIncomingFramePayloadData"><code class="xref py py-class docutils literal notranslate"><span class="pre">OnIncomingFramePayloadData</span></code></a> argument.</p>
+<p>If <cite>manage_read_window</cite> is on, and this is a “data frame”,
+then the read window shrinks accordingly.
+See <a class="reference internal" href="#flow-control-reading"><span class="std std-ref">Flow Control (reading)</span></a> for a thorough explanation.</p>
+<p>If this callback raises an exception, the connection will shut down.</p>
+</p></li>
+<li><p><strong>on_incoming_frame_complete</strong> – <p>Optional callback, invoked when the WebSocket
+is done processing an incoming frame.
+Takes a single <a class="reference internal" href="#awscrt.websocket.OnIncomingFrameCompleteData" title="awscrt.websocket.OnIncomingFrameCompleteData"><code class="xref py py-class docutils literal notranslate"><span class="pre">OnIncomingFrameCompleteData</span></code></a> argument.</p>
+<p>If <a class="reference internal" href="#awscrt.websocket.OnIncomingFrameCompleteData.exception" title="awscrt.websocket.OnIncomingFrameCompleteData.exception"><code class="xref py py-attr docutils literal notranslate"><span class="pre">OnIncomingFrameCompleteData.exception</span></code></a> is set,
+then something went wrong processing the frame
+or the connection was lost before the frame could be completed.</p>
+<p>If this callback raises an exception, the connection will shut down.</p>
+</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="awscrt.websocket.create_handshake_request">
+<span class="sig-prename descclassname"><span class="pre">awscrt.websocket.</span></span><span class="sig-name descname"><span class="pre">create_handshake_request</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">host</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'/'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="http.html#awscrt.http.HttpRequest" title="awscrt.http.HttpRequest"><span class="pre">HttpRequest</span></a></span></span><a class="headerlink" href="#awscrt.websocket.create_handshake_request" title="Link to this definition">¶</a></dt>
+<dd><p>Create an HTTP request with all the required fields for a WebSocket handshake.</p>
+<p>The method will be “GET”, and the following headers are added:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Host</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">host</span><span class="o">&gt;</span>
+<span class="n">Upgrade</span><span class="p">:</span> <span class="n">websocket</span>
+<span class="n">Connection</span><span class="p">:</span> <span class="n">Upgrade</span>
+<span class="n">Sec</span><span class="o">-</span><span class="n">WebSocket</span><span class="o">-</span><span class="n">Key</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">base64</span><span class="o">-</span><span class="n">encoding</span> <span class="n">of</span> <span class="mi">16</span> <span class="n">random</span> <span class="nb">bytes</span><span class="o">&gt;</span>
+<span class="n">Sec</span><span class="o">-</span><span class="n">WebSocket</span><span class="o">-</span><span class="n">Version</span><span class="p">:</span> <span class="mi">13</span>
+</pre></div>
+</div>
+<p>You may can add headers, or modify the path, before using this request.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>host</strong> – Value for “Host” header</p></li>
+<li><p><strong>path</strong> – Path (and query) string. Defaults to “/”.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div>
+    <h3><a href="../index.html">Table of Contents</a></h3>
+    <ul>
+<li><a class="reference internal" href="#">awscrt.websocket</a><ul>
+<li><a class="reference internal" href="#authoring-callbacks">Authoring Callbacks</a></li>
+<li><a class="reference internal" href="#flow-control-reading">Flow Control (reading)</a></li>
+<li><a class="reference internal" href="#flow-control-writing">Flow Control (writing)</a></li>
+<li><a class="reference internal" href="#api">API</a></li>
+<li><a class="reference internal" href="#awscrt.websocket.Opcode"><code class="docutils literal notranslate"><span class="pre">Opcode</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.websocket.Opcode.CONTINUATION"><code class="docutils literal notranslate"><span class="pre">CONTINUATION</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.websocket.Opcode.TEXT"><code class="docutils literal notranslate"><span class="pre">TEXT</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.websocket.Opcode.BINARY"><code class="docutils literal notranslate"><span class="pre">BINARY</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.websocket.Opcode.CLOSE"><code class="docutils literal notranslate"><span class="pre">CLOSE</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.websocket.Opcode.PING"><code class="docutils literal notranslate"><span class="pre">PING</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.websocket.Opcode.PONG"><code class="docutils literal notranslate"><span class="pre">PONG</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.websocket.Opcode.is_data_frame"><code class="docutils literal notranslate"><span class="pre">is_data_frame()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#awscrt.websocket.MAX_PAYLOAD_LENGTH"><code class="docutils literal notranslate"><span class="pre">MAX_PAYLOAD_LENGTH</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.websocket.OnConnectionSetupData"><code class="docutils literal notranslate"><span class="pre">OnConnectionSetupData</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.websocket.OnConnectionSetupData.exception"><code class="docutils literal notranslate"><span class="pre">exception</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.websocket.OnConnectionSetupData.websocket"><code class="docutils literal notranslate"><span class="pre">websocket</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.websocket.OnConnectionSetupData.handshake_response_status"><code class="docutils literal notranslate"><span class="pre">handshake_response_status</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.websocket.OnConnectionSetupData.handshake_response_headers"><code class="docutils literal notranslate"><span class="pre">handshake_response_headers</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.websocket.OnConnectionSetupData.handshake_response_body"><code class="docutils literal notranslate"><span class="pre">handshake_response_body</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#awscrt.websocket.OnConnectionShutdownData"><code class="docutils literal notranslate"><span class="pre">OnConnectionShutdownData</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.websocket.OnConnectionShutdownData.exception"><code class="docutils literal notranslate"><span class="pre">exception</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#awscrt.websocket.IncomingFrame"><code class="docutils literal notranslate"><span class="pre">IncomingFrame</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.websocket.IncomingFrame.opcode"><code class="docutils literal notranslate"><span class="pre">opcode</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.websocket.IncomingFrame.payload_length"><code class="docutils literal notranslate"><span class="pre">payload_length</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.websocket.IncomingFrame.fin"><code class="docutils literal notranslate"><span class="pre">fin</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.websocket.IncomingFrame.is_data_frame"><code class="docutils literal notranslate"><span class="pre">is_data_frame()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#awscrt.websocket.OnIncomingFrameBeginData"><code class="docutils literal notranslate"><span class="pre">OnIncomingFrameBeginData</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.websocket.OnIncomingFrameBeginData.frame"><code class="docutils literal notranslate"><span class="pre">frame</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#awscrt.websocket.OnIncomingFramePayloadData"><code class="docutils literal notranslate"><span class="pre">OnIncomingFramePayloadData</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.websocket.OnIncomingFramePayloadData.frame"><code class="docutils literal notranslate"><span class="pre">frame</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.websocket.OnIncomingFramePayloadData.data"><code class="docutils literal notranslate"><span class="pre">data</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#awscrt.websocket.OnIncomingFrameCompleteData"><code class="docutils literal notranslate"><span class="pre">OnIncomingFrameCompleteData</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.websocket.OnIncomingFrameCompleteData.frame"><code class="docutils literal notranslate"><span class="pre">frame</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.websocket.OnIncomingFrameCompleteData.exception"><code class="docutils literal notranslate"><span class="pre">exception</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#awscrt.websocket.OnSendFrameCompleteData"><code class="docutils literal notranslate"><span class="pre">OnSendFrameCompleteData</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.websocket.OnSendFrameCompleteData.exception"><code class="docutils literal notranslate"><span class="pre">exception</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#awscrt.websocket.WebSocket"><code class="docutils literal notranslate"><span class="pre">WebSocket</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.websocket.WebSocket.close"><code class="docutils literal notranslate"><span class="pre">close()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.websocket.WebSocket.send_frame"><code class="docutils literal notranslate"><span class="pre">send_frame()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.websocket.WebSocket.increment_read_window"><code class="docutils literal notranslate"><span class="pre">increment_read_window()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#awscrt.websocket.connect"><code class="docutils literal notranslate"><span class="pre">connect()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.websocket.create_handshake_request"><code class="docutils literal notranslate"><span class="pre">create_handshake_request()</span></code></a></li>
+</ul>
+</li>
+</ul>
+
+  </div>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="s3.html"
+                          title="previous chapter">awscrt.s3</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/api/websocket.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="s3.html" title="awscrt.s3"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">awscrt  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">awscrt.websocket</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2020, Amazon Web Services, Inc.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.2.6.
+    </div>
+  </body>
+</html>

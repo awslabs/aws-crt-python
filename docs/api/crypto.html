@@ -1,0 +1,489 @@
+
+
+<!doctype html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>awscrt.crypto &#8212; awscrt  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d75fae25" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=93be7416" />
+    
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/bizstyle.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="awscrt.exceptions" href="exceptions.html" />
+    <link rel="prev" title="awscrt.common" href="common.html" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <!--[if lt IE 9]>
+    <script src="_static/css3-mediaqueries.js"></script>
+    <![endif]-->
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="exceptions.html" title="awscrt.exceptions"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="common.html" title="awscrt.common"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">awscrt  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">awscrt.crypto</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="module-awscrt.crypto">
+<span id="awscrt-crypto"></span><h1>awscrt.crypto<a class="headerlink" href="#module-awscrt.crypto" title="Link to this heading">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.crypto.RSAEncryptionAlgorithm">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.crypto.</span></span><span class="sig-name descname"><span class="pre">RSAEncryptionAlgorithm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.crypto.RSAEncryptionAlgorithm" title="Link to this definition">¶</a></dt>
+<dd><p>RSA Encryption Algorithm</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.crypto.RSAEncryptionAlgorithm.PKCS1_5">
+<span class="sig-name descname"><span class="pre">PKCS1_5</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#awscrt.crypto.RSAEncryptionAlgorithm.PKCS1_5" title="Link to this definition">¶</a></dt>
+<dd><p>PKCSv1.5 padding</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.crypto.RSAEncryptionAlgorithm.OAEP_SHA256">
+<span class="sig-name descname"><span class="pre">OAEP_SHA256</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#awscrt.crypto.RSAEncryptionAlgorithm.OAEP_SHA256" title="Link to this definition">¶</a></dt>
+<dd><p>OAEP padding with sha256 hash function</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.crypto.RSAEncryptionAlgorithm.OAEP_SHA512">
+<span class="sig-name descname"><span class="pre">OAEP_SHA512</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></em><a class="headerlink" href="#awscrt.crypto.RSAEncryptionAlgorithm.OAEP_SHA512" title="Link to this definition">¶</a></dt>
+<dd><p>OAEP padding with sha512 hash function</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.crypto.RSASignatureAlgorithm">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.crypto.</span></span><span class="sig-name descname"><span class="pre">RSASignatureAlgorithm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.crypto.RSASignatureAlgorithm" title="Link to this definition">¶</a></dt>
+<dd><p>RSA Encryption Algorithm</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.crypto.RSASignatureAlgorithm.PKCS1_5_SHA256">
+<span class="sig-name descname"><span class="pre">PKCS1_5_SHA256</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#awscrt.crypto.RSASignatureAlgorithm.PKCS1_5_SHA256" title="Link to this definition">¶</a></dt>
+<dd><p>PKCSv1.5 padding with sha256 hash function</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.crypto.RSASignatureAlgorithm.PKCS1_5_SHA1">
+<span class="sig-name descname"><span class="pre">PKCS1_5_SHA1</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#awscrt.crypto.RSASignatureAlgorithm.PKCS1_5_SHA1" title="Link to this definition">¶</a></dt>
+<dd><p>PKCSv1.5 padding with sha1 hash function</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.crypto.RSASignatureAlgorithm.PSS_SHA256">
+<span class="sig-name descname"><span class="pre">PSS_SHA256</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></em><a class="headerlink" href="#awscrt.crypto.RSASignatureAlgorithm.PSS_SHA256" title="Link to this definition">¶</a></dt>
+<dd><p>PSS padding with sha256 hash function</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.crypto.RSA">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.crypto.</span></span><span class="sig-name descname"><span class="pre">RSA</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">binding</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.crypto.RSA" title="Link to this definition">¶</a></dt>
+<dd><dl class="py method">
+<dt class="sig sig-object py" id="awscrt.crypto.RSA.new_private_key_from_pem_data">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">new_private_key_from_pem_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pem_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.14)"><span class="pre">bytearray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.14)"><span class="pre">memoryview</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#awscrt.crypto.RSA" title="awscrt.crypto.RSA"><span class="pre">RSA</span></a></span></span><a class="headerlink" href="#awscrt.crypto.RSA.new_private_key_from_pem_data" title="Link to this definition">¶</a></dt>
+<dd><p>Creates a new instance of private RSA key pair from pem data.
+Raises ValueError if pem does not have private key object.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.crypto.RSA.new_public_key_from_pem_data">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">new_public_key_from_pem_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pem_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.14)"><span class="pre">bytearray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.14)"><span class="pre">memoryview</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#awscrt.crypto.RSA" title="awscrt.crypto.RSA"><span class="pre">RSA</span></a></span></span><a class="headerlink" href="#awscrt.crypto.RSA.new_public_key_from_pem_data" title="Link to this definition">¶</a></dt>
+<dd><p>Creates a new instance of public RSA key pair from pem data.
+Raises ValueError if pem does not have public key object.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.crypto.RSA.new_private_key_from_der_data">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">new_private_key_from_der_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">der_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.14)"><span class="pre">bytearray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.14)"><span class="pre">memoryview</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#awscrt.crypto.RSA" title="awscrt.crypto.RSA"><span class="pre">RSA</span></a></span></span><a class="headerlink" href="#awscrt.crypto.RSA.new_private_key_from_der_data" title="Link to this definition">¶</a></dt>
+<dd><p>Creates a new instance of private RSA key pair from der data.
+Expects key in PKCS1 format.
+Raises ValueError if pem does not have private key object.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.crypto.RSA.new_public_key_from_der_data">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">new_public_key_from_der_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">der_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.14)"><span class="pre">bytearray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.14)"><span class="pre">memoryview</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#awscrt.crypto.RSA" title="awscrt.crypto.RSA"><span class="pre">RSA</span></a></span></span><a class="headerlink" href="#awscrt.crypto.RSA.new_public_key_from_der_data" title="Link to this definition">¶</a></dt>
+<dd><p>Creates a new instance of public RSA key pair from der data.
+Expects key in PKCS1 format.
+Raises ValueError if pem does not have public key object.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.crypto.RSA.encrypt">
+<span class="sig-name descname"><span class="pre">encrypt</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">encryption_algorithm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#awscrt.crypto.RSAEncryptionAlgorithm" title="awscrt.crypto.RSAEncryptionAlgorithm"><span class="pre">RSAEncryptionAlgorithm</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">plaintext</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.14)"><span class="pre">bytearray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.14)"><span class="pre">memoryview</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></span><a class="headerlink" href="#awscrt.crypto.RSA.encrypt" title="Link to this definition">¶</a></dt>
+<dd><p>Encrypts data using a given algorithm.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.crypto.RSA.decrypt">
+<span class="sig-name descname"><span class="pre">decrypt</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">encryption_algorithm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#awscrt.crypto.RSAEncryptionAlgorithm" title="awscrt.crypto.RSAEncryptionAlgorithm"><span class="pre">RSAEncryptionAlgorithm</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">ciphertext</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.14)"><span class="pre">bytearray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.14)"><span class="pre">memoryview</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></span><a class="headerlink" href="#awscrt.crypto.RSA.decrypt" title="Link to this definition">¶</a></dt>
+<dd><p>Decrypts data using a given algorithm.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.crypto.RSA.sign">
+<span class="sig-name descname"><span class="pre">sign</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">signature_algorithm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#awscrt.crypto.RSASignatureAlgorithm" title="awscrt.crypto.RSASignatureAlgorithm"><span class="pre">RSASignatureAlgorithm</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">digest</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.14)"><span class="pre">bytearray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.14)"><span class="pre">memoryview</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></span><a class="headerlink" href="#awscrt.crypto.RSA.sign" title="Link to this definition">¶</a></dt>
+<dd><p>Signs data using a given algorithm.
+Note: function expects digest of the message, ex sha256</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.crypto.RSA.verify">
+<span class="sig-name descname"><span class="pre">verify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">signature_algorithm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#awscrt.crypto.RSASignatureAlgorithm" title="awscrt.crypto.RSASignatureAlgorithm"><span class="pre">RSASignatureAlgorithm</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">digest</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.14)"><span class="pre">bytearray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.14)"><span class="pre">memoryview</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">signature</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.14)"><span class="pre">bytearray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.14)"><span class="pre">memoryview</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span></span><a class="headerlink" href="#awscrt.crypto.RSA.verify" title="Link to this definition">¶</a></dt>
+<dd><p>Verifies signature against digest.
+Returns True if signature matches and False if not.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.crypto.ED25519ExportFormat">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.crypto.</span></span><span class="sig-name descname"><span class="pre">ED25519ExportFormat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.crypto.ED25519ExportFormat" title="Link to this definition">¶</a></dt>
+<dd><p>ED25519 Export format</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.crypto.ED25519ExportFormat.RAW">
+<span class="sig-name descname"><span class="pre">RAW</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#awscrt.crypto.ED25519ExportFormat.RAW" title="Link to this definition">¶</a></dt>
+<dd><p>Raw bytes.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.crypto.ED25519ExportFormat.OPENSSH_B64">
+<span class="sig-name descname"><span class="pre">OPENSSH_B64</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#awscrt.crypto.ED25519ExportFormat.OPENSSH_B64" title="Link to this definition">¶</a></dt>
+<dd><p>Base64 encoded OpenSSH format as defined in RFC 8709.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.crypto.ED25519">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.crypto.</span></span><span class="sig-name descname"><span class="pre">ED25519</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">binding</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.crypto.ED25519" title="Link to this definition">¶</a></dt>
+<dd><dl class="py method">
+<dt class="sig sig-object py" id="awscrt.crypto.ED25519.new_generate">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">new_generate</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#awscrt.crypto.ED25519" title="awscrt.crypto.ED25519"><span class="pre">ED25519</span></a></span></span><a class="headerlink" href="#awscrt.crypto.ED25519.new_generate" title="Link to this definition">¶</a></dt>
+<dd><p>Generates a new instance of ED25159 key pair.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.crypto.ED25519.export_public_key">
+<span class="sig-name descname"><span class="pre">export_public_key</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">export_format</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#awscrt.crypto.ED25519ExportFormat" title="awscrt.crypto.ED25519ExportFormat"><span class="pre">ED25519ExportFormat</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></span><a class="headerlink" href="#awscrt.crypto.ED25519.export_public_key" title="Link to this definition">¶</a></dt>
+<dd><p>Exports public part of the key in specified format.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.crypto.ED25519.export_private_key">
+<span class="sig-name descname"><span class="pre">export_private_key</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">export_format</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#awscrt.crypto.ED25519ExportFormat" title="awscrt.crypto.ED25519ExportFormat"><span class="pre">ED25519ExportFormat</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></span><a class="headerlink" href="#awscrt.crypto.ED25519.export_private_key" title="Link to this definition">¶</a></dt>
+<dd><p>Exports public part of the key in specified format.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.crypto.ECType">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.crypto.</span></span><span class="sig-name descname"><span class="pre">ECType</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.crypto.ECType" title="Link to this definition">¶</a></dt>
+<dd><p>Elliptic Curve Type</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.crypto.ECType.P_256">
+<span class="sig-name descname"><span class="pre">P_256</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#awscrt.crypto.ECType.P_256" title="Link to this definition">¶</a></dt>
+<dd><p>P-256 curve aka secp256r1</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.crypto.ECType.P_384">
+<span class="sig-name descname"><span class="pre">P_384</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#awscrt.crypto.ECType.P_384" title="Link to this definition">¶</a></dt>
+<dd><p>P-384 curve aka secp384r1</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.crypto.ECExportFormat">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.crypto.</span></span><span class="sig-name descname"><span class="pre">ECExportFormat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.crypto.ECExportFormat" title="Link to this definition">¶</a></dt>
+<dd><p>EC Export format</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.crypto.ECExportFormat.SEC1">
+<span class="sig-name descname"><span class="pre">SEC1</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#awscrt.crypto.ECExportFormat.SEC1" title="Link to this definition">¶</a></dt>
+<dd><p>Raw bytes for the private key as defined in Sec1 (“EC Private Key” in pem)</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.crypto.ECExportFormat.PKCS8">
+<span class="sig-name descname"><span class="pre">PKCS8</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#awscrt.crypto.ECExportFormat.PKCS8" title="Link to this definition">¶</a></dt>
+<dd><p>Raw bytes for the private key as defined in PKCS8 (“Private Key” in pem)</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.crypto.ECExportFormat.SPKI">
+<span class="sig-name descname"><span class="pre">SPKI</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></em><a class="headerlink" href="#awscrt.crypto.ECExportFormat.SPKI" title="Link to this definition">¶</a></dt>
+<dd><p>Raw bytes for the public key as defined in x509/SPKI (“EC Public Key” or “Public Key” in pem)</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.crypto.ECRawSignature">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.crypto.</span></span><span class="sig-name descname"><span class="pre">ECRawSignature</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">r</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">s</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.crypto.ECRawSignature" title="Link to this definition">¶</a></dt>
+<dd><dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.crypto.ECRawSignature.r">
+<span class="sig-name descname"><span class="pre">r</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></em><a class="headerlink" href="#awscrt.crypto.ECRawSignature.r" title="Link to this definition">¶</a></dt>
+<dd><p>Alias for field number 0</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.crypto.ECRawSignature.s">
+<span class="sig-name descname"><span class="pre">s</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></em><a class="headerlink" href="#awscrt.crypto.ECRawSignature.s" title="Link to this definition">¶</a></dt>
+<dd><p>Alias for field number 1</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.crypto.ECPublicCoords">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.crypto.</span></span><span class="sig-name descname"><span class="pre">ECPublicCoords</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.crypto.ECPublicCoords" title="Link to this definition">¶</a></dt>
+<dd><dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.crypto.ECPublicCoords.x">
+<span class="sig-name descname"><span class="pre">x</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></em><a class="headerlink" href="#awscrt.crypto.ECPublicCoords.x" title="Link to this definition">¶</a></dt>
+<dd><p>Alias for field number 0</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="awscrt.crypto.ECPublicCoords.y">
+<span class="sig-name descname"><span class="pre">y</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></em><a class="headerlink" href="#awscrt.crypto.ECPublicCoords.y" title="Link to this definition">¶</a></dt>
+<dd><p>Alias for field number 1</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="awscrt.crypto.EC">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">awscrt.crypto.</span></span><span class="sig-name descname"><span class="pre">EC</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">binding</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#awscrt.crypto.EC" title="Link to this definition">¶</a></dt>
+<dd><dl class="py method">
+<dt class="sig sig-object py" id="awscrt.crypto.EC.new_generate">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">new_generate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#awscrt.crypto.ECType" title="awscrt.crypto.ECType"><span class="pre">ECType</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#awscrt.crypto.EC" title="awscrt.crypto.EC"><span class="pre">EC</span></a></span></span><a class="headerlink" href="#awscrt.crypto.EC.new_generate" title="Link to this definition">¶</a></dt>
+<dd><p>Generates a new instance of EC key pair.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.crypto.EC.new_key_from_der_data">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">new_key_from_der_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">der_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.14)"><span class="pre">bytearray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.14)"><span class="pre">memoryview</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#awscrt.crypto.EC" title="awscrt.crypto.EC"><span class="pre">EC</span></a></span></span><a class="headerlink" href="#awscrt.crypto.EC.new_key_from_der_data" title="Link to this definition">¶</a></dt>
+<dd><p>Creates a new instance of EC key pair from der data.
+Will figure out what type of key it is without hint (i.e. pem header).
+Supports all formats specified in ECExportFormat.
+Expects raw bytes (i.e. strip b64 you get when reading pem).
+Raises ValueError if pem does not have private key object.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.crypto.EC.decode_der_signature">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">decode_der_signature</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">signature</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#awscrt.crypto.ECRawSignature" title="awscrt.crypto.ECRawSignature"><span class="pre">ECRawSignature</span></a></span></span><a class="headerlink" href="#awscrt.crypto.EC.decode_der_signature" title="Link to this definition">¶</a></dt>
+<dd><p>Decodes ec signature into raw r and s.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.crypto.EC.decode_der_signature_to_padded_pair">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">decode_der_signature_to_padded_pair</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">signature</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">pad_to</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></span><a class="headerlink" href="#awscrt.crypto.EC.decode_der_signature_to_padded_pair" title="Link to this definition">¶</a></dt>
+<dd><p>Decodes ec signature into padded r || s.
+Both r and s are padded to the specified value and then concatenated.
+Typical format for jwt use case.
+Note: pad_to typically should equal to coord size. e.g 32 for P256 or 48 for P384</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.crypto.EC.encode_raw_signature">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">encode_raw_signature</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">signature</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#awscrt.crypto.ECRawSignature" title="awscrt.crypto.ECRawSignature"><span class="pre">ECRawSignature</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></span><a class="headerlink" href="#awscrt.crypto.EC.encode_raw_signature" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes raw signature into der.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.crypto.EC.export_key">
+<span class="sig-name descname"><span class="pre">export_key</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">export_format</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#awscrt.crypto.ECExportFormat" title="awscrt.crypto.ECExportFormat"><span class="pre">ECExportFormat</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></span><a class="headerlink" href="#awscrt.crypto.EC.export_key" title="Link to this definition">¶</a></dt>
+<dd><p>Exports the key in specified format.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.crypto.EC.get_public_coords">
+<span class="sig-name descname"><span class="pre">get_public_coords</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#awscrt.crypto.ECPublicCoords" title="awscrt.crypto.ECPublicCoords"><span class="pre">ECPublicCoords</span></a></span></span><a class="headerlink" href="#awscrt.crypto.EC.get_public_coords" title="Link to this definition">¶</a></dt>
+<dd><p>Get public coords of the key</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.crypto.EC.sign">
+<span class="sig-name descname"><span class="pre">sign</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">digest</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.14)"><span class="pre">bytearray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.14)"><span class="pre">memoryview</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></span><a class="headerlink" href="#awscrt.crypto.EC.sign" title="Link to this definition">¶</a></dt>
+<dd><p>Signs data using a given algorithm.
+Returns DER encoded signature.
+Note: function expects digest of the message, ex sha256</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="awscrt.crypto.EC.verify">
+<span class="sig-name descname"><span class="pre">verify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">digest</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.14)"><span class="pre">bytearray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.14)"><span class="pre">memoryview</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">signature</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytearray" title="(in Python v3.14)"><span class="pre">bytearray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#memoryview" title="(in Python v3.14)"><span class="pre">memoryview</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span></span><a class="headerlink" href="#awscrt.crypto.EC.verify" title="Link to this definition">¶</a></dt>
+<dd><p>Verifies signature against digest.
+Returns True if signature matches and False if not.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div>
+    <h3><a href="../index.html">Table of Contents</a></h3>
+    <ul>
+<li><a class="reference internal" href="#">awscrt.crypto</a><ul>
+<li><a class="reference internal" href="#awscrt.crypto.RSAEncryptionAlgorithm"><code class="docutils literal notranslate"><span class="pre">RSAEncryptionAlgorithm</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.crypto.RSAEncryptionAlgorithm.PKCS1_5"><code class="docutils literal notranslate"><span class="pre">PKCS1_5</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.crypto.RSAEncryptionAlgorithm.OAEP_SHA256"><code class="docutils literal notranslate"><span class="pre">OAEP_SHA256</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.crypto.RSAEncryptionAlgorithm.OAEP_SHA512"><code class="docutils literal notranslate"><span class="pre">OAEP_SHA512</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#awscrt.crypto.RSASignatureAlgorithm"><code class="docutils literal notranslate"><span class="pre">RSASignatureAlgorithm</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.crypto.RSASignatureAlgorithm.PKCS1_5_SHA256"><code class="docutils literal notranslate"><span class="pre">PKCS1_5_SHA256</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.crypto.RSASignatureAlgorithm.PKCS1_5_SHA1"><code class="docutils literal notranslate"><span class="pre">PKCS1_5_SHA1</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.crypto.RSASignatureAlgorithm.PSS_SHA256"><code class="docutils literal notranslate"><span class="pre">PSS_SHA256</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#awscrt.crypto.RSA"><code class="docutils literal notranslate"><span class="pre">RSA</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.crypto.RSA.new_private_key_from_pem_data"><code class="docutils literal notranslate"><span class="pre">new_private_key_from_pem_data()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.crypto.RSA.new_public_key_from_pem_data"><code class="docutils literal notranslate"><span class="pre">new_public_key_from_pem_data()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.crypto.RSA.new_private_key_from_der_data"><code class="docutils literal notranslate"><span class="pre">new_private_key_from_der_data()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.crypto.RSA.new_public_key_from_der_data"><code class="docutils literal notranslate"><span class="pre">new_public_key_from_der_data()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.crypto.RSA.encrypt"><code class="docutils literal notranslate"><span class="pre">encrypt()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.crypto.RSA.decrypt"><code class="docutils literal notranslate"><span class="pre">decrypt()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.crypto.RSA.sign"><code class="docutils literal notranslate"><span class="pre">sign()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.crypto.RSA.verify"><code class="docutils literal notranslate"><span class="pre">verify()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#awscrt.crypto.ED25519ExportFormat"><code class="docutils literal notranslate"><span class="pre">ED25519ExportFormat</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.crypto.ED25519ExportFormat.RAW"><code class="docutils literal notranslate"><span class="pre">RAW</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.crypto.ED25519ExportFormat.OPENSSH_B64"><code class="docutils literal notranslate"><span class="pre">OPENSSH_B64</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#awscrt.crypto.ED25519"><code class="docutils literal notranslate"><span class="pre">ED25519</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.crypto.ED25519.new_generate"><code class="docutils literal notranslate"><span class="pre">new_generate()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.crypto.ED25519.export_public_key"><code class="docutils literal notranslate"><span class="pre">export_public_key()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.crypto.ED25519.export_private_key"><code class="docutils literal notranslate"><span class="pre">export_private_key()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#awscrt.crypto.ECType"><code class="docutils literal notranslate"><span class="pre">ECType</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.crypto.ECType.P_256"><code class="docutils literal notranslate"><span class="pre">P_256</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.crypto.ECType.P_384"><code class="docutils literal notranslate"><span class="pre">P_384</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#awscrt.crypto.ECExportFormat"><code class="docutils literal notranslate"><span class="pre">ECExportFormat</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.crypto.ECExportFormat.SEC1"><code class="docutils literal notranslate"><span class="pre">SEC1</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.crypto.ECExportFormat.PKCS8"><code class="docutils literal notranslate"><span class="pre">PKCS8</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.crypto.ECExportFormat.SPKI"><code class="docutils literal notranslate"><span class="pre">SPKI</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#awscrt.crypto.ECRawSignature"><code class="docutils literal notranslate"><span class="pre">ECRawSignature</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.crypto.ECRawSignature.r"><code class="docutils literal notranslate"><span class="pre">r</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.crypto.ECRawSignature.s"><code class="docutils literal notranslate"><span class="pre">s</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#awscrt.crypto.ECPublicCoords"><code class="docutils literal notranslate"><span class="pre">ECPublicCoords</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.crypto.ECPublicCoords.x"><code class="docutils literal notranslate"><span class="pre">x</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.crypto.ECPublicCoords.y"><code class="docutils literal notranslate"><span class="pre">y</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#awscrt.crypto.EC"><code class="docutils literal notranslate"><span class="pre">EC</span></code></a><ul>
+<li><a class="reference internal" href="#awscrt.crypto.EC.new_generate"><code class="docutils literal notranslate"><span class="pre">new_generate()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.crypto.EC.new_key_from_der_data"><code class="docutils literal notranslate"><span class="pre">new_key_from_der_data()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.crypto.EC.decode_der_signature"><code class="docutils literal notranslate"><span class="pre">decode_der_signature()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.crypto.EC.decode_der_signature_to_padded_pair"><code class="docutils literal notranslate"><span class="pre">decode_der_signature_to_padded_pair()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.crypto.EC.encode_raw_signature"><code class="docutils literal notranslate"><span class="pre">encode_raw_signature()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.crypto.EC.export_key"><code class="docutils literal notranslate"><span class="pre">export_key()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.crypto.EC.get_public_coords"><code class="docutils literal notranslate"><span class="pre">get_public_coords()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.crypto.EC.sign"><code class="docutils literal notranslate"><span class="pre">sign()</span></code></a></li>
+<li><a class="reference internal" href="#awscrt.crypto.EC.verify"><code class="docutils literal notranslate"><span class="pre">verify()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  </div>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="common.html"
+                          title="previous chapter">awscrt.common</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="exceptions.html"
+                          title="next chapter">awscrt.exceptions</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/api/crypto.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="exceptions.html" title="awscrt.exceptions"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="common.html" title="awscrt.common"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">awscrt  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">awscrt.crypto</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2020, Amazon Web Services, Inc.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.2.6.
+    </div>
+  </body>
+</html>
