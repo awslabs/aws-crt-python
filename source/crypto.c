@@ -81,6 +81,28 @@ PyObject *aws_py_sha256_new(PyObject *self, PyObject *args) {
     return capsule;
 }
 
+PyObject *aws_py_sha512_new(PyObject *self, PyObject *args) {
+    (void)self;
+    (void)args;
+
+    struct aws_allocator *allocator = aws_py_get_allocator();
+
+    struct aws_hash *sha512 = aws_sha512_new(allocator);
+
+    if (!sha512) {
+        return PyErr_AwsLastError();
+    }
+
+    PyObject *capsule = PyCapsule_New(sha512, s_capsule_name_hash, s_hash_destructor);
+
+    if (capsule == NULL) {
+        aws_hash_destroy(sha512);
+        return NULL;
+    }
+
+    return capsule;
+}
+
 PyObject *aws_py_md5_new(PyObject *self, PyObject *args) {
     (void)self;
     (void)args;
