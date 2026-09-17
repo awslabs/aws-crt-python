@@ -568,6 +568,12 @@ def awscrt_ext():
         extra_compile_args += ['/Z7']
         extra_link_args += ['/DEBUG']
 
+        if is_windows_arm64():
+            # We compile the extension with clang-cl (see awscrt_build_ext), but
+            # distutils still hands it MSVC's default "/O2 /W3 /GL /DNDEBUG /MD",
+            # and clang-cl does not implement /GL.
+            extra_compile_args += ['-Wno-unused-command-line-argument']
+
     elif sys.platform == 'darwin':
         extra_link_args += ['-framework', 'Security']
 
