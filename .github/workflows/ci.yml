@@ -335,6 +335,7 @@ jobs:
   windows-arm64-wheel:
     # Verify the wheel we'd ship is tagged for win_arm64, and that an abi3 wheel
     # built on one python installs and imports on a newer one.
+    name: windows-arm64-wheel (${{ matrix.build-python }} → ${{ matrix.test-python }})
     runs-on: windows-11-arm
     strategy:
       fail-fast: false
