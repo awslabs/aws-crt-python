@@ -212,6 +212,13 @@ def determine_generator_args(cmake_version=None, windows_sdk_version=None):
                 '-DCMAKE_ASM_COMPILER=clang-cl',
                 # The optimized ARM checksum sources do not compile with clang-cl.
                 '-DUSE_CPU_EXTENSIONS=OFF',
+                # The CRT's CMake adds /MP (parallel compilation), which clang-cl
+                # accepts and ignores, warning once per translation unit.
+                # This lands ahead of the /W4 that aws_set_common_properties() adds,
+                # which is fine: /W4 maps to -Wall -Wextra, and neither of those
+                # groups includes -Wunused-command-line-argument, so they do not
+                # turn it back on.
+                '-DCMAKE_C_FLAGS=-Wno-unused-command-line-argument',
             ]
 
         if vs_year <= 2017:
