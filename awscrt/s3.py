@@ -9,7 +9,7 @@ import _awscrt
 from concurrent.futures import Future
 from awscrt import NativeResource
 from awscrt.http import HttpRequest
-from awscrt.io import ClientBootstrap, TlsConnectionOptions
+from awscrt.io import ClientBootstrap, TlsConnectionOptions, ExponentialBackoffJitterMode
 from awscrt.auth import AwsCredentialsProvider, AwsSignatureType, AwsSignedBodyHeaderType, AwsSignedBodyValue, \
     AwsSigningAlgorithm, AwsSigningConfig
 import awscrt.exceptions
@@ -197,6 +197,43 @@ class S3FileIoOptions:
     """
 
 
+@dataclass
+class S3RetryConfig:
+    """Configuration for the S3 client's retry strategy.
+
+    All fields default to 0, which means "use S3 client default."
+
+    S3 client defaults:
+        max_retries = 5, backoff_scale_factor_ms = 500, max_backoff_secs = 20,
+        jitter_mode = FULL, initial_bucket_capacity = 500
+
+    If the S3Client is constructed with a custom retry_strategy object,
+    this configuration is ignored entirely.
+
+    Args:
+        max_retries (int): Maximum number of retries per request.
+            0 means use S3 client default (5).
+
+        backoff_scale_factor_ms (int): Base delay in milliseconds,
+            multiplied by 2^attempt for exponential backoff. 0 means use default (500).
+
+        max_backoff_secs (int): Maximum backoff delay in seconds
+            (ceiling on any single retry delay). 0 means use default (20).
+
+        jitter_mode (int): Jitter mode for retry backoff.
+            0 means use default (FULL). See :class:`~awscrt.io.ExponentialBackoffJitterMode`.
+
+        initial_bucket_capacity (int): Token bucket capacity per
+            host partition (circuit breaker). Controls how many concurrent
+            failures are tolerated before retries are rejected. 0 means use default (500).
+    """
+    max_retries: int = 0
+    backoff_scale_factor_ms: int = 0
+    max_backoff_secs: int = 0
+    jitter_mode: int = 0
+    initial_bucket_capacity: int = 0
+
+
 class S3Client(NativeResource):
     """S3 client
 
@@ -283,6 +320,9 @@ class S3Client(NativeResource):
         max_active_connections_override (Optional[int]):
             When set, this will cap the number of active connections for the meta request.
             When not set, the client will determine this value based on `throughput_target_gbps`. (Recommended)
+
+        retry_config (Optional[S3RetryConfig]): Configuration for the retry strategy.
+            See :class:`S3RetryConfig` for details. If not set, S3 client defaults are used.
     """
 
     __slots__ = ('shutdown_event', '_region')
@@ -303,7 +343,8 @@ class S3Client(NativeResource):
             memory_limit=None,
             network_interface_names: Optional[Sequence[str]] = None,
             fio_options: Optional['S3FileIoOptions'] = None,
-            max_active_connections_override: Optional[int] = None):
+            max_active_connections_override: Optional[int] = None,
+            retry_config: Optional[S3RetryConfig] = None):
         assert isinstance(bootstrap, ClientBootstrap) or bootstrap is None
         assert isinstance(region, str)
         assert isinstance(signing_config, AwsSigningConfig) or signing_config is None
@@ -360,6 +401,11 @@ class S3Client(NativeResource):
                 network_interface_names = list(network_interface_names)
         if max_active_connections_override is None:
             max_active_connections_override = 0
+
+        # Retry config: 0 means "use S3 client defaults"
+        if retry_config is None:
+            retry_config = S3RetryConfig()
+
         fio_options_set = False
         should_stream = False
         disk_throughput_gbps = 0.0
@@ -389,7 +435,12 @@ class S3Client(NativeResource):
             disk_throughput_gbps,
             direct_io,
             max_active_connections_override,
-            s3_client_core)
+            s3_client_core,
+            retry_config.max_retries,
+            retry_config.backoff_scale_factor_ms,
+            retry_config.max_backoff_secs,
+            int(retry_config.jitter_mode),
+            retry_config.initial_bucket_capacity)
 
     def make_request(
             self,

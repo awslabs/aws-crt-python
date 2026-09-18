@@ -854,3 +854,32 @@ class Pkcs11Lib(NativeResource):
             behavior = Pkcs11Lib.InitializeFinalizeBehavior.DEFAULT
 
         self._binding = _awscrt.pkcs11_lib_new(file, behavior)
+
+
+class ExponentialBackoffJitterMode(IntEnum):
+    """Controls how the retry/reconnect delay is modified in order to smooth out the distribution
+    of retry attempt timepoints for a large set of clients.
+
+    See `Exponential Backoff and Jitter <https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/>`_
+    """
+
+    DEFAULT = 0
+    """
+    Maps to Full
+    """
+
+    NONE = 1
+    """
+    Do not perform any randomization on the backoff delay
+    """
+
+    FULL = 2
+    """
+    Fully random between no delay and the current exponential backoff value.
+    """
+
+    DECORRELATED = 3
+    """
+    Backoff is taken randomly from the interval between the base backoff
+    interval and a scaling (greater than 1) of the current backoff value
+    """

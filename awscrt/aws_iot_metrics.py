@@ -4,6 +4,7 @@
 from dataclasses import dataclass
 from typing import List, Optional
 from enum import Enum
+from awscrt.io import ExponentialBackoffJitterMode
 import sys
 
 
@@ -118,7 +119,6 @@ def _retry_jitter_metrics_value(mode):
     Mapping: NONE->A, FULL->B, DECORRELATED->C.
     Returns None for DEFAULT.
     """
-    from awscrt.mqtt5 import ExponentialBackoffJitterMode
     mapping = {
         ExponentialBackoffJitterMode.NONE: "A",
         ExponentialBackoffJitterMode.FULL: "B",
