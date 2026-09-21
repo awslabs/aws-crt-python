@@ -35,6 +35,23 @@ WINDOWS_SDK_MIN_VERSION_TLS1_3_SUPPORT = "10.0.17763.0"
 # Regex to match a Windows SDK version directory name in the format of major.minor.build.revision
 SDK_VERSION_RE = re.compile(r'^(\d+)\.(\d+)\.(\d+)\.(\d+)$')
 
+# On Windows ARM64 we build with clang-cl, which accepts MSVC-only flags and then
+# ignores them, warning once per translation unit. We get /MP from the CRT's CMake
+# and /GL from distutils. Those are two independent compiler invocations that share
+# no configuration, so these have to be passed to each of them separately.
+#
+# Keep this a list, one flag per entry: extra_compile_args entries each become a
+# single argv element, so "-Wa -Wb" in one entry reaches clang-cl as one unknown
+# option and is silently ignored.
+#
+# Note these only reach the CRT build via CMAKE_C_FLAGS, which CMake emits *before*
+# a target's own options. So a flag here cannot turn off anything the CRT's /W4
+# re-enables (i.e. anything in -Wall or -Wextra) -- that has to be fixed in
+# aws-c-common's AwsCFlags.cmake instead.
+CLANG_CL_IGNORED_FLAG_WARNINGS = [
+    '-Wno-unused-command-line-argument',
+]
+
 
 def parse_version(version_string):
     return tuple(int(x) for x in version_string.split("."))
@@ -212,13 +229,14 @@ def determine_generator_args(cmake_version=None, windows_sdk_version=None):
                 '-DCMAKE_ASM_COMPILER=clang-cl',
                 # The optimized ARM checksum sources do not compile with clang-cl.
                 '-DUSE_CPU_EXTENSIONS=OFF',
-                # The CRT's CMake adds /MP (parallel compilation), which clang-cl
-                # accepts and ignores, warning once per translation unit.
-                # This lands ahead of the /W4 that aws_set_common_properties() adds,
-                # which is fine: /W4 maps to -Wall -Wextra, and neither of those
-                # groups includes -Wunused-command-line-argument, so they do not
-                # turn it back on.
-                '-DCMAKE_C_FLAGS=-Wno-unused-command-line-argument',
+                # Silences /MP, which the CRT's CMake adds. This lands ahead of the
+                # /W4 that aws_set_common_properties() adds, which is fine: /W4 maps
+                # to -Wall -Wextra, and neither group includes this warning, so they
+                # do not turn it back on.
+                # Appends to, rather than replaces, what CMake would have taken from
+                # the CFLAGS env var -- an explicit -D on the command line wins over
+                # that, and the extension half already honors CFLAGS (see awscrt_ext).
+                '-DCMAKE_C_FLAGS=' + ' '.join([os.environ.get('CFLAGS', '')] + CLANG_CL_IGNORED_FLAG_WARNINGS).strip(),
             ]
 
         if vs_year <= 2017:
@@ -576,10 +594,10 @@ def awscrt_ext():
         extra_link_args += ['/DEBUG']
 
         if is_windows_arm64():
-            # We compile the extension with clang-cl (see awscrt_build_ext), but
-            # distutils still hands it MSVC's default "/O2 /W3 /GL /DNDEBUG /MD",
-            # and clang-cl does not implement /GL.
-            extra_compile_args += ['-Wno-unused-command-line-argument']
+            # Silences /GL, which distutils hardcodes into its MSVC defaults
+            # ("/O2 /W3 /GL /DNDEBUG /MD"). This is a separate compiler invocation
+            # from the CMake one above, so it needs the flag of its own.
+            extra_compile_args += CLANG_CL_IGNORED_FLAG_WARNINGS
 
     elif sys.platform == 'darwin':
         extra_link_args += ['-framework', 'Security']
