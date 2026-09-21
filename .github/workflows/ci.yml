@@ -367,9 +367,7 @@ jobs:
         shell: pwsh
         run: |
           python -m pip install --upgrade build
-          # Bare "-m build" (not --wheel) builds the wheel from an extracted sdist,
-          # so it also proves the sdist carries the files the ARM64 build needs.
-          python -m build
+          python -m build --wheel
           $wheels = @(Get-Item dist\*.whl)
           if ($wheels.Count -ne 1) { throw "Expected exactly one wheel, got $($wheels.Count)" }
           $expected = 'Tag: ${{ matrix.expected-tag }}'
