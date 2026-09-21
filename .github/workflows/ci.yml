@@ -337,6 +337,8 @@ jobs:
     # built on one python installs and imports on a newer one.
     name: windows-arm64-wheel (${{ matrix.build-python }} → ${{ matrix.test-python }})
     runs-on: windows-11-arm
+    permissions:
+      contents: read # only needs to check out the source; no AWS creds, no OIDC
     strategy:
       fail-fast: false
       matrix:
@@ -365,7 +367,13 @@ jobs:
         shell: pwsh
         run: |
           python -m pip install --upgrade build
-          python -m build --wheel
+          # Bare "-m build", matching what the release scripts run, rather than
+          # --wheel: it builds the sdist, extracts it, and builds the wheel from
+          # the extraction, so an sdist missing files the ARM64 build needs (e.g.
+          # aws-lc's generated-src/win-aarch64 assembly) fails here instead of at
+          # release time. The Linux package-source job cannot catch that, since it
+          # only ever compiles generated-src/linux-x86_64.
+          python -m build
           $wheels = @(Get-Item dist\*.whl)
           if ($wheels.Count -ne 1) { throw "Expected exactly one wheel, got $($wheels.Count)" }
           $expected = 'Tag: ${{ matrix.expected-tag }}'
@@ -379,8 +387,20 @@ jobs:
         run: |
           python -m venv ${{ runner.temp }}\venv
           $py = "${{ runner.temp }}\venv\Scripts\python.exe"
-          & $py -m pip install @(Get-Item dist\*.whl)[0].FullName
-          & $py -c "import awscrt.io, awscrt.http, awscrt.s3; print(awscrt.__version__)"
+          $wheel = @(Get-Item dist\*.whl)[0].FullName
+          & $py -m pip install $wheel
+          if ($LASTEXITCODE -ne 0) { throw 'pip install of the wheel failed' }
+          # Run from outside the checkout. "python -c" puts the working directory
+          # first on sys.path, so from the repo root "import awscrt" would resolve
+          # the source tree and only _awscrt would come from the wheel -- which
+          # would still pass if the wheel shipped none of awscrt's python files.
+          Push-Location ${{ runner.temp }}
+          try {
+            & $py -c "import awscrt, awscrt.io, awscrt.http, awscrt.s3; print(awscrt.__version__, awscrt.__file__)"
+            if ($LASTEXITCODE -ne 0) { throw 'importing the installed wheel failed' }
+          } finally {
+            Pop-Location
+          }
 
 
   macos:
