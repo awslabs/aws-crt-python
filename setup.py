@@ -44,7 +44,7 @@ SDK_VERSION_RE = re.compile(r'^(\d+)\.(\d+)\.(\d+)\.(\d+)$')
 # single argv element, so "-Wa -Wb" in one entry reaches clang-cl as one unknown
 # option and is silently ignored.
 #
-# Note these only reach the CRT build via CMAKE_C_FLAGS, which CMake emits *before*
+# Note these only reach the CRT build via CMAKE_C_FLAGS, which CMake emits BEFORE
 # a target's own options. So a flag here cannot turn off anything the CRT's /W4
 # re-enables (i.e. anything in -Wall or -Wextra) -- that has to be fixed in
 # aws-c-common's AwsCFlags.cmake instead.
@@ -227,8 +227,6 @@ def determine_generator_args(cmake_version=None, windows_sdk_version=None):
                 '-DCMAKE_C_COMPILER=clang-cl',
                 '-DCMAKE_CXX_COMPILER=clang-cl',
                 '-DCMAKE_ASM_COMPILER=clang-cl',
-                # The optimized ARM checksum sources do not compile with clang-cl.
-                '-DUSE_CPU_EXTENSIONS=OFF',
                 # Silences /MP, which the CRT's CMake adds. This lands ahead of the
                 # /W4 that aws_set_common_properties() adds, which is fine: /W4 maps
                 # to -Wall -Wextra, and neither group includes this warning, so they
