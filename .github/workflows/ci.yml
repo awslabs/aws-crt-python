@@ -390,6 +390,16 @@ jobs:
           } finally {
             Pop-Location
           }
+      - name: Checksum throughput
+        shell: pwsh
+        run: |
+          $py = "${{ runner.temp }}\venv\Scripts\python.exe"
+          Push-Location ${{ runner.temp }}
+          try {
+            & $py -c "import time,awscrt.checksums as c; b=b'x'*(8<<20); c.crc32(b); t=time.perf_counter(); [c.crc32(b) for _ in range(8)]; print('crc32     %8.1f MB/s' % (8*len(b)/(time.perf_counter()-t)/1048576))"
+            & $py -c "import time,awscrt.checksums as c; b=b'x'*(8<<20); c.crc32c(b); t=time.perf_counter(); [c.crc32c(b) for _ in range(8)]; print('crc32c    %8.1f MB/s' % (8*len(b)/(time.perf_counter()-t)/1048576))"
+            & $py -c "import time,awscrt.checksums as c; b=b'x'*(8<<20); c.crc64nvme(b); t=time.perf_counter(); [c.crc64nvme(b) for _ in range(8)]; print('crc64nvme %8.1f MB/s' % (8*len(b)/(time.perf_counter()-t)/1048576))"
+          } finally { Pop-Location }
 
 
   macos:
