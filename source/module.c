@@ -1180,11 +1180,10 @@ AWS_STATIC_STRING_FROM_LITERAL(s_crash_handler_env_var, "AWS_CRT_CRASH_HANDLER")
  *
  * WARNING: everything this touches is process-global state (the allocator,
  * crash handler, aws-c-* library init, error tables). It must run at most once
- * per process. The single-phase PyInit path below guarantees this naturally
- * (single-phase modules are cached for the life of the process). The abi3t
- * multi-phase path can re-run exec if the module is removed from sys.modules
- * and re-imported, so this function guards itself with a static flag.
- * Python's import machinery serializes extension-module exec, so the plain
+ * per process. The single-phase PyInit path below guarantees this naturally.
+ * The abi3t multi-phase path can re-run exec if the module is removed from
+ * sys.modules and re-imported. This function guards itself with a static
+ * flag. Python's import machinery serializes extension-module exec, so the plain
  * static is not a data race.
  *
  * Returns 0 on success, -1 (with a Python exception set) on failure,
@@ -1233,9 +1232,10 @@ static int s_module_exec(PyObject *module) {
 
 /*
  * Module export hook (PEP 793) for abi3t builds: the stable ABI for
- * free-threaded Python, introduced in CPython 3.15. abi3t removes
- * PyModuleDef-based single-phase init, so the module is described by a static
- * PySlot array instead. Notes on each slot:
+ * free-threaded Python, introduced in CPython 3.15. Py_TARGET_ABI3T is
+ * defined by setup.py (awscrt_ext) for free-threaded 3.15+ builds. abi3t
+ * removes PyModuleDef-based single-phase init, so the module is described by
+ * a static PySlot array instead. Notes on each slot:
  *
  * - Py_mod_gil = Py_MOD_GIL_NOT_USED replaces the PyUnstable_Module_SetGIL()
  *   call used on the non-abi3t path (PyUnstable_* is not in any stable ABI).
