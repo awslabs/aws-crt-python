@@ -328,13 +328,20 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
     def get_ext_filename(self, ext_name):
         filename = super().get_ext_filename(ext_name)
         if FREE_THREADED_BUILD and sys.version_info[:2] >= (3, 15):
-            # abi3t extensions must be named "<module>.abi3t.so" so that both
-            # free-threaded and non-free-threaded 3.15+ interpreters will load
-            # them (see "Tagging and distribution" in the abi3t migration howto).
-            # setuptools has no native abi3t support yet, so rewrite the default
-            # per-version suffix (e.g. ".cpython-315t-x86_64-linux-gnu.so").
-            # Windows keeps its default ".pyd" suffix per the same guidance,
-            # which this condition leaves untouched.
+            # setuptools' build_ext (which this class extends) names extensions with the
+            # interpreter's EXT_SUFFIX, e.g. "_awscrt.cpython-315t-x86_64-linux-gnu.so"
+            # -- a name only a 3.15t interpreter will import. This abi3t (free-threaded
+            # stable ABI) build produces one binary for ALL 3.15+ free-threaded
+            # interpreters, so swap in ".abi3t.so", the version-agnostic suffix the
+            # import system accepts. setuptools does this automatically for classic abi3
+            # ("_awscrt.abi3.so") but doesn't know abi3t yet. Dropping the arch/OS part
+            # is safe: platform selection happens via the wheel's platform tag
+            # (e.g. manylinux2014_x86_64), never via the .so filename. Windows needs no
+            # rename (abi3t modules keep the plain ".pyd" name); the ".so" check skips it.
+            #
+            # We can remove this override once setuptools supports abi3t natively (tracked
+            # in pypa/setuptools#5205; the check makes it a harmless no-op if setuptools
+            # starts emitting ".abi3t.so" itself).
             ext_suffix = sysconfig.get_config_var('EXT_SUFFIX')
             if ext_suffix.endswith('.so') and filename.endswith(ext_suffix):
                 filename = filename[:-len(ext_suffix)] + '.abi3t.so'
@@ -520,17 +527,16 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
 class bdist_wheel_abi3(bdist_wheel):
     def get_tag(self):
         python, abi, plat = super().get_tag()
-        # on CPython, our wheels are abi3 and compatible back to 3.11
+        # Rewrite the wheel's compatibility tags to match what awscrt_ext()
+        # actually compiled against -- pip trusts these tags to pick a wheel,
+        # so each branch below MUST mirror a compile-flag branch there.
         if FREE_THREADED_BUILD:
             if python.startswith("cp") and sys.version_info >= (3, 15):
                 # Built against abi3t (see awscrt_ext), the stable ABI for
-                # free-threaded builds: one wheel serves 3.15t, 3.16t, and later.
-                #
-                # TODO(abi3t): Option B switch point. Once this wheel has proven
-                # stable for free-threaded users (no customer regressions for
-                # 1-2 release cycles), promote the ABI tag to "abi3.abi3t" so
-                # non-free-threaded 3.15+ interpreters are also served by this
-                # wheel and cp313-abi3 becomes legacy for 3.13/3.14 only.
+                # free-threaded builds. The bare "abi3t" tag is only accepted
+                # by free-threaded interpreters. If we ever want ONE wheel for
+                # all 3.15+ interpreters (free-threaded and not), we can promote
+                # this tag to "abi3.abi3t" -- cp313-abi3 would then serve 3.13/3.14 only.
                 return "cp315", "abi3t", plat
             # 3.13/3.14 free-threaded builds don't support limited API or
             # abi3t, so no stable-ABI tag (version-specific wheel)
@@ -641,12 +647,11 @@ def awscrt_ext():
     # prefer building with stable ABI, so a wheel can work with multiple major versions
     if FREE_THREADED_BUILD and sys.version_info[:2] >= (3, 15):
         # 3.15 introduces abi3t: the stable ABI for free-threaded builds.
-        # One wheel covers 3.15t, 3.16t, and later free-threaded interpreters.
-        # Py_LIMITED_API is not supported on free-threaded builds (see #760);
+        # Py_LIMITED_API is not supported on free-threaded builds as of 3.15;
         # Py_TARGET_ABI3T is the free-threaded equivalent. It requires the
         # PyModExport_* module export hook (see source/module.c).
         # https://docs.python.org/3.15/howto/abi3t-migration.html
-        define_macros.append(('Py_TARGET_ABI3T', '0x30f0000'))
+        define_macros.append(('Py_TARGET_ABI3T', '0x030F0000'))
         # setuptools' py_limited_api machinery is abi3-only; the abi3t wheel
         # tag and extension filename are handled manually in bdist_wheel_abi3
         # and awscrt_build_ext.get_ext_filename.
