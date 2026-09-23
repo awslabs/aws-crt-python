@@ -1253,8 +1253,10 @@ PyABIInfo_VAR(s_abi_info);
 
 static PySlot s_module_slots[] = {
     PySlot_STATIC_DATA(Py_mod_abi, &s_abi_info),
-    PySlot_STATIC_DATA(Py_mod_name, s_module_name),
-    PySlot_STATIC_DATA(Py_mod_doc, s_module_doc),
+    /* PySlot.sl_ptr is a plain `void *`. These two are read-only strings, so
+     * casting away const is safe: CPython never writes through the slot. */
+    PySlot_STATIC_DATA(Py_mod_name, (void *)s_module_name),
+    PySlot_STATIC_DATA(Py_mod_doc, (void *)s_module_doc),
     PySlot_STATIC_DATA(Py_mod_methods, s_module_methods),
     PySlot_DATA(Py_mod_gil, Py_MOD_GIL_NOT_USED),
     PySlot_DATA(Py_mod_multiple_interpreters, Py_MOD_MULTIPLE_INTERPRETERS_NOT_SUPPORTED),
@@ -1288,9 +1290,9 @@ PyMODINIT_FUNC PyInit__awscrt(void) {
         return NULL;
     }
 
-#ifdef Py_GIL_DISABLED
+#    ifdef Py_GIL_DISABLED
     PyUnstable_Module_SetGIL(m, Py_MOD_GIL_NOT_USED);
-#endif
+#    endif
 
     if (s_module_exec(m) != 0) {
         Py_DECREF(m);
