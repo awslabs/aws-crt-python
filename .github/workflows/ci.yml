@@ -308,6 +308,90 @@ jobs:
           python -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder.pyz')"
           python builder.pyz build -p ${{ env.PACKAGE_NAME }} --python "${{ steps.python38.outputs.python-path }}"
 
+  windows-arm64:
+    runs-on: windows-11-arm
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.11', '3.13']
+    permissions:
+      id-token: write # This is required for requesting the JWT
+    steps:
+      - uses: actions/setup-python@v5
+        id: python
+        with:
+          python-version: ${{ matrix.python }}
+          architecture: arm64
+      - name: configure AWS credentials (containers)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.CRT_CI_ROLE }}
+          aws-region: ${{ env.AWS_DEFAULT_REGION }}
+      - name: Build ${{ env.PACKAGE_NAME }} + consumers
+        run: |
+          python -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder.pyz')"
+          python builder.pyz build -p ${{ env.PACKAGE_NAME }} --python "${{ steps.python.outputs.python-path }}"
+
+  windows-arm64-wheel:
+    # Verify the wheel we'd ship is tagged for win_arm64, and that an abi3 wheel
+    # built on one python installs and imports on a newer one.
+    name: windows-arm64-wheel (${{ matrix.build-python }} → ${{ matrix.test-python }})
+    runs-on: windows-11-arm
+    permissions:
+      contents: read # only needs to check out the source; no AWS creds, no OIDC
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - build-python: '3.11'
+            test-python: '3.12'
+            expected-tag: 'cp311-abi3-win_arm64'
+          - build-python: '3.13'
+            test-python: '3.14'
+            expected-tag: 'cp313-abi3-win_arm64'
+          - build-python: '3.13t'
+            test-python: '3.13t'
+            expected-tag: 'cp313-cp313t-win_arm64'
+          - build-python: '3.14t'
+            test-python: '3.14t'
+            expected-tag: 'cp314-cp314t-win_arm64'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.build-python }}
+          architecture: arm64
+      - name: Build wheel
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade build
+          python -m build --wheel
+          $wheels = @(Get-Item dist\*.whl)
+          if ($wheels.Count -ne 1) { throw "Expected exactly one wheel, got $($wheels.Count)" }
+          $expected = 'Tag: ${{ matrix.expected-tag }}'
+          python -c "import sys, zipfile; z=zipfile.ZipFile(sys.argv[1]); w=z.read(next(n for n in z.namelist() if n.endswith('.dist-info/WHEEL'))).decode().splitlines(); assert sys.argv[2] in w, (sys.argv[2], w)" $wheels[0].FullName $expected
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.test-python }}
+          architecture: arm64
+      - name: Install wheel and import
+        shell: pwsh
+        run: |
+          python -m venv ${{ runner.temp }}\venv
+          $py = "${{ runner.temp }}\venv\Scripts\python.exe"
+          & $py -m pip install @(Get-Item dist\*.whl)[0].FullName
+          # Import from outside the checkout, else "python -c" resolves awscrt's
+          # python files from the source tree instead of the installed wheel.
+          Push-Location ${{ runner.temp }}
+          try {
+            & $py -c "import awscrt, awscrt.io, awscrt.http, awscrt.s3, awscrt.aio, awscrt.eventstream; print(awscrt.__version__, awscrt.__file__)"
+          } finally {
+            Pop-Location
+          }
+
+
   macos:
     runs-on: macos-14 # latest
     permissions:
