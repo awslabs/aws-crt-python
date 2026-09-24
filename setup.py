@@ -227,6 +227,8 @@ def determine_generator_args(cmake_version=None, windows_sdk_version=None):
                 '-DCMAKE_C_COMPILER=clang-cl',
                 '-DCMAKE_CXX_COMPILER=clang-cl',
                 '-DCMAKE_ASM_COMPILER=clang-cl',
+                # TEMP: software checksums, for A/B timing against extensions ON.
+                '-DUSE_CPU_EXTENSIONS=OFF',
                 # Silences /MP, which the CRT's CMake adds. This lands ahead of the
                 # /W4 that aws_set_common_properties() adds, which is fine: /W4 maps
                 # to -Wall -Wextra, and neither group includes this warning, so they
