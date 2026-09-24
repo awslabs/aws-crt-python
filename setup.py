@@ -347,6 +347,22 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
                 filename = filename[:-len(ext_suffix)] + '.abi3t.so'
         return filename
 
+    def get_export_symbols(self, ext):
+        symbols = super().get_export_symbols(ext)
+        if FREE_THREADED_BUILD and sys.version_info[:2] >= (3, 15):
+            # On Windows, setuptools tells the linker to export "PyInit_<name>"
+            # (/EXPORT:PyInit__awscrt). abi3t modules define "PyModExport_<name>"
+            # instead (PEP 793, see source/module.c) -- PyInit doesn't exist in
+            # that build, so the link fails with an unresolved external unless
+            # we export the right symbol. No-op on non-Windows (symbols is
+            # empty there; ELF/Mach-O don't use export lists).
+            #
+            # Like get_ext_filename above, remove this override once setuptools
+            # supports abi3t natively (pypa/setuptools#5205); the replace() is a
+            # harmless no-op if setuptools starts emitting PyModExport itself.
+            symbols = [s.replace('PyInit_', 'PyModExport_') for s in symbols]
+        return symbols
+
     def _build_dependencies_impl(self, build_dir, install_path, osx_arch=None):
         cmake = get_cmake_path()
 
