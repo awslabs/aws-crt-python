@@ -348,20 +348,20 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
         return filename
 
     def get_export_symbols(self, ext):
-        symbols = super().get_export_symbols(ext)
         if FREE_THREADED_BUILD and sys.version_info[:2] >= (3, 15):
             # On Windows, setuptools tells the linker to export "PyInit_<name>"
-            # (/EXPORT:PyInit__awscrt). abi3t modules define "PyModExport_<name>"
+            # (/EXPORT:PyInit__awscrt), but abi3t modules define "PyModExport_<name>"
             # instead (PEP 793, see source/module.c) -- PyInit doesn't exist in
-            # that build, so the link fails with an unresolved external unless
-            # we export the right symbol. No-op on non-Windows (symbols is
-            # empty there; ELF/Mach-O don't use export lists).
+            # that build, so the link fails with an unresolved external
+            # (pypa/distutils#387). The /EXPORT flag is redundant anyway:
+            # PyMODEXPORT_FUNC already declares dllexport, which puts the hook
+            # in the DLL's export table. So suppress the export list entirely.
+            # No-op on non-Windows (the list is already empty there).
             #
-            # Like get_ext_filename above, remove this override once setuptools
-            # supports abi3t natively (pypa/setuptools#5205); the replace() is a
-            # harmless no-op if setuptools starts emitting PyModExport itself.
-            symbols = [s.replace('PyInit_', 'PyModExport_') for s in symbols]
-        return symbols
+            # Like get_ext_filename above, remove this override once
+            # setuptools supports abi3t natively (pypa/setuptools#5205).
+            return []
+        return super().get_export_symbols(ext)
 
     def _build_dependencies_impl(self, build_dir, install_path, osx_arch=None):
         cmake = get_cmake_path()
