@@ -21,6 +21,7 @@ from awscrt.s3 import (
     S3ChecksumAlgorithm,
     S3ChecksumConfig,
     S3ChecksumLocation,
+    S3ChecksumValidationMode,
     S3Client,
     S3RequestType,
     S3ResponseError,
@@ -756,6 +757,16 @@ class S3RequestTest(NativeResourceTest):
         self.assertEqual(self.done_checksum_validation_algorithm, algo)
         self.assertEqual(HttpHeaders(self.response_headers).get(checksum_header_name),
                          checksum_str)
+
+        # download again, validating against a caller-provided expected checksum
+        download_request = self._get_object_request(path)
+        download_checksum_config = S3ChecksumConfig(
+            expected_checksum=checksum_str,
+            expected_checksum_algorithm=algo)
+        self._test_s3_put_get_object(download_request, S3RequestType.GET_OBJECT,
+                                     checksum_config=download_checksum_config)
+        self.assertTrue(self.done_did_validate_checksum)
+        self.assertEqual(self.done_checksum_validation_algorithm, algo)
         put_body_stream.close()
 
     def test_round_trip_with_trailing_checksum(self):
@@ -778,6 +789,58 @@ class S3RequestTest(NativeResourceTest):
 
     def test_round_trip_with_full_object_checksum_single_part_crc32(self):
         self._round_trip_with_checksums_helper(S3ChecksumAlgorithm.CRC32, mpu=False, provide_full_object_checksum=True)
+
+    def test_get_object_expected_checksum_mismatch(self):
+        # 'AAAAAA==' is a well-formed CRC32 that doesn't match the object
+        request = self._get_object_request(self.get_test_object_path)
+        checksum_config = S3ChecksumConfig(
+            expected_checksum='AAAAAA==',
+            expected_checksum_algorithm=S3ChecksumAlgorithm.CRC32)
+        self._test_s3_put_get_object(request, S3RequestType.GET_OBJECT,
+                                     exception_name='AWS_ERROR_S3_RESPONSE_CHECKSUM_MISMATCH',
+                                     checksum_config=checksum_config)
+
+    def _assert_invalid_checksum_config(self, request, request_type, checksum_config):
+        s3_client = s3_client_new(False, self.region, self.part_size)
+        with self.assertRaisesRegex(RuntimeError, 'AWS_ERROR_INVALID_ARGUMENT'):
+            s3_client.make_request(
+                request=request,
+                type=request_type,
+                checksum_config=checksum_config)
+
+    def test_expected_checksum_invalid_config(self):
+        get_request = self._get_object_request(self.get_test_object_path)
+        # algorithm missing
+        self._assert_invalid_checksum_config(
+            get_request, S3RequestType.GET_OBJECT,
+            S3ChecksumConfig(expected_checksum='AAAAAA=='))
+        # checksum missing
+        self._assert_invalid_checksum_config(
+            get_request, S3RequestType.GET_OBJECT,
+            S3ChecksumConfig(expected_checksum_algorithm=S3ChecksumAlgorithm.CRC32))
+        # wrong length for the algorithm
+        self._assert_invalid_checksum_config(
+            get_request, S3RequestType.GET_OBJECT,
+            S3ChecksumConfig(expected_checksum='AAAAAA==', expected_checksum_algorithm=S3ChecksumAlgorithm.SHA256))
+        # contradicts REQUEST_ONLY validation
+        self._assert_invalid_checksum_config(
+            get_request, S3RequestType.GET_OBJECT,
+            S3ChecksumConfig(
+                expected_checksum='AAAAAA==',
+                expected_checksum_algorithm=S3ChecksumAlgorithm.CRC32,
+                response_validation_mode=S3ChecksumValidationMode.REQUEST_ONLY))
+        # not a download
+        put_request = self._put_object_request(BytesIO(b'hello'), 5)
+        self._assert_invalid_checksum_config(
+            put_request, S3RequestType.PUT_OBJECT,
+            S3ChecksumConfig(expected_checksum='AAAAAA==', expected_checksum_algorithm=S3ChecksumAlgorithm.CRC32))
+
+    def test_get_object_request_only_validation(self):
+        request = self._get_object_request(self.get_test_object_path)
+        checksum_config = S3ChecksumConfig(
+            validate_response=True,
+            response_validation_mode=S3ChecksumValidationMode.REQUEST_ONLY)
+        self._test_s3_put_get_object(request, S3RequestType.GET_OBJECT, checksum_config=checksum_config)
 
     def _on_progress_cancel_after_first_chunk(self, progress):
         self.transferred_len += progress

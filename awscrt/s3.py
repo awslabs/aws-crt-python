@@ -137,6 +137,41 @@ class S3ChecksumLocation(IntEnum):
     """
 
 
+class S3ChecksumValidationMode(IntEnum):
+    """
+    Which checksums a download is validated against.
+
+    A download is made of one or more part responses, each of which may carry a checksum
+    of its own body, and the whole download may also be covered by a single checksum
+    (the object's, or one supplied via :attr:`S3ChecksumConfig.expected_checksum`).
+    These modes pick which of the two the client checks.
+
+    Only applies to S3RequestType.GET_OBJECT.
+    """
+
+    DEFAULT = 0
+    """Default behavior, currently the same as FULL_OBJECT."""
+
+    REQUEST_ONLY = 1
+    """
+    Validate each response against the checksum that same response reports, and nothing else.
+    When a download is split into parts, each part is validated on its own and nothing spanning
+    multiple parts is checked, which reduces durability guarantees.
+    The client makes no attempt to discover a full-object checksum.
+    Cannot be combined with :attr:`S3ChecksumConfig.expected_checksum`.
+    """
+
+    FULL_OBJECT = 2
+    """
+    Validate the whole download against a single checksum covering it, on top of validating
+    each response against its own checksum.
+    The client uses :attr:`S3ChecksumConfig.expected_checksum` if given, and otherwise discovers
+    a checksum from the service (which may cost a HeadObject request). This is best effort:
+    when the service has no checksum covering the requested bytes, the download still succeeds,
+    with `did_validate_checksum` False.
+    """
+
+
 @dataclass
 class S3ChecksumConfig:
     """Configures how the S3Client calculates and verifies checksums."""
@@ -151,7 +186,43 @@ class S3ChecksumConfig:
     """Where to put the request checksum."""
 
     validate_response: bool = False
-    """Whether to retrieve and validate response checksums."""
+    """
+    Whether to retrieve and validate response checksums.
+    Which checksums are checked is controlled by `response_validation_mode`.
+    """
+
+    expected_checksum: Optional[str] = None
+    """
+    The checksum you expect of the data this request returns, base64-encoded
+    as S3 reports checksums (e.g. "NSRBwg==").
+
+    It covers exactly the bytes the request asks for: the whole object for a plain
+    GetObject, or just the requested bytes if the request has a Range header or a partNumber.
+
+    When set, the client validates the downloaded data against this value instead of a
+    checksum reported by the service. This skips the HeadObject request that `validate_response`
+    may otherwise make, and covers cases where the service has no checksum for the requested
+    bytes (a ranged download, or an object uploaded via multipart upload with a composite checksum).
+
+    Setting this is by itself a request to validate, whether or not `validate_response` is set.
+    The request fails with AWS_ERROR_S3_RESPONSE_CHECKSUM_MISMATCH if the data does not match.
+
+    If you set this, you must also set `expected_checksum_algorithm`.
+    Only applies to downloads (S3RequestType.GET_OBJECT, or S3RequestType.DEFAULT with
+    operation_name "GetObject"). Cannot be combined with
+    `response_validation_mode` = S3ChecksumValidationMode.REQUEST_ONLY.
+    """
+
+    expected_checksum_algorithm: Optional[S3ChecksumAlgorithm] = None
+    """The algorithm of `expected_checksum`. Must be set if `expected_checksum` is set, and vice versa."""
+
+    response_validation_mode: Optional[S3ChecksumValidationMode] = None
+    """
+    Which checksums a download is validated against. See :class:`S3ChecksumValidationMode`.
+    This only refines validation already requested through `validate_response` or
+    `expected_checksum`; it does not turn validation on by itself.
+    Only applies to S3RequestType.GET_OBJECT.
+    """
 
 
 @dataclass
@@ -704,12 +775,20 @@ class S3Request(NativeResource):
         checksum_algorithm = 0
         checksum_location = 0
         validate_response_checksum = False
+        expected_checksum = None
+        expected_checksum_algorithm = 0
+        response_validation_mode = 0
         if checksum_config is not None:
             if checksum_config.algorithm is not None:
                 checksum_algorithm = checksum_config.algorithm.value
             if checksum_config.location is not None:
                 checksum_location = checksum_config.location.value
             validate_response_checksum = checksum_config.validate_response
+            expected_checksum = checksum_config.expected_checksum
+            if checksum_config.expected_checksum_algorithm is not None:
+                expected_checksum_algorithm = checksum_config.expected_checksum_algorithm.value
+            if checksum_config.response_validation_mode is not None:
+                response_validation_mode = checksum_config.response_validation_mode.value
         fio_options_set = False
         should_stream = False
         disk_throughput_gbps = 0.0
@@ -747,6 +826,9 @@ class S3Request(NativeResource):
             checksum_algorithm,
             checksum_location,
             validate_response_checksum,
+            expected_checksum,
+            expected_checksum_algorithm,
+            response_validation_mode,
             part_size,
             multipart_upload_threshold,
             fio_options_set,
