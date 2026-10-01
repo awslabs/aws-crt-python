@@ -399,6 +399,10 @@ class S3RequestTest(NativeResourceTest):
             enable_s3express=False,
             mem_limit=None,
             **kwargs):
+        # reset per-request state, so tests can make several requests
+        self.received_body_len = 0
+        self.response_headers = None
+        self.response_status_code = None
         s3_client = s3_client_new(
             False,
             self.region,
