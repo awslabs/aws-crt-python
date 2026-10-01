@@ -1175,27 +1175,28 @@ AWS_STATIC_STRING_FROM_LITERAL(s_crash_handler_env_var, "AWS_CRT_CRASH_HANDLER")
  * Module Init
  ******************************************************************************/
 
-PyMODINIT_FUNC PyInit__awscrt(void) {
-    static struct PyModuleDef s_module_def = {
-        PyModuleDef_HEAD_INIT,
-        s_module_name,
-        s_module_doc,
-        -1, /* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */
-        s_module_methods,
-        NULL, /* slots for multi-phase initialization */
-        NULL, /* traversal fn to call during GC traversal */
-        NULL, /* clear fn to call during GC clear */
-        NULL, /* fn to call during deallocation of the module object */
-    };
+/**
+ * One-time process-wide initialization, shared by both module init paths below.
+ *
+ * WARNING: everything this touches is process-global state (the allocator,
+ * crash handler, aws-c-* library init, error tables). It must run at most once
+ * per process. The single-phase PyInit path below guarantees this naturally.
+ * The abi3t multi-phase path can re-run exec if the module is removed from
+ * sys.modules and re-imported. This function guards itself with a static
+ * flag. Python's import machinery serializes extension-module exec, so the plain
+ * static is not a data race.
+ *
+ * Returns 0 on success, -1 (with a Python exception set) on failure,
+ * matching the Py_mod_exec slot contract.
+ */
+static int s_module_exec(PyObject *module) {
+    (void)module;
 
-    PyObject *m = PyModule_Create(&s_module_def);
-    if (!m) {
-        return NULL;
+    static bool s_module_initialized = false;
+    if (s_module_initialized) {
+        return 0;
     }
-
-#ifdef Py_GIL_DISABLED
-    PyUnstable_Module_SetGIL(m, Py_MOD_GIL_NOT_USED);
-#endif
+    s_module_initialized = true;
 
     s_init_allocator();
 
@@ -1224,8 +1225,84 @@ PyMODINIT_FUNC PyInit__awscrt(void) {
     aws_register_error_info(&s_error_list);
     s_error_map_init();
 
+    return 0;
+}
+
+#ifdef Py_TARGET_ABI3T
+
+/*
+ * Module export hook (PEP 793) for abi3t builds: the stable ABI for
+ * free-threaded Python, introduced in CPython 3.15. Py_TARGET_ABI3T is
+ * defined by setup.py (awscrt_ext) for free-threaded 3.15+ builds. abi3t
+ * removes PyModuleDef-based single-phase init, so the module is described by
+ * a static PySlot array instead. Notes on each slot:
+ *
+ * - Py_mod_gil = Py_MOD_GIL_NOT_USED replaces the PyUnstable_Module_SetGIL()
+ *   call used on the non-abi3t path (PyUnstable_* is not in any stable ABI).
+ * - Py_mod_multiple_interpreters = NOT_SUPPORTED is REQUIRED for correctness:
+ *   _awscrt keeps process-global state (see s_module_exec), so subinterpreter
+ *   imports must be refused by the interpreter rather than corrupting that
+ *   state with a second exec.
+ * - No Py_mod_state_size slot: the module keeps state in globals (the
+ *   equivalent of m_size = -1 in the legacy PyModuleDef).
+ *
+ * https://docs.python.org/3.15/howto/abi3t-migration.html
+ */
+
+PyABIInfo_VAR(s_abi_info);
+
+static PySlot s_module_slots[] = {
+    PySlot_STATIC_DATA(Py_mod_abi, &s_abi_info),
+    /* PySlot.sl_ptr is a plain `void *`. These two are read-only strings, so
+     * casting away const is safe: CPython never writes through the slot. */
+    PySlot_STATIC_DATA(Py_mod_name, (void *)s_module_name),
+    PySlot_STATIC_DATA(Py_mod_doc, (void *)s_module_doc),
+    PySlot_STATIC_DATA(Py_mod_methods, s_module_methods),
+    PySlot_DATA(Py_mod_gil, Py_MOD_GIL_NOT_USED),
+    PySlot_DATA(Py_mod_multiple_interpreters, Py_MOD_MULTIPLE_INTERPRETERS_NOT_SUPPORTED),
+    PySlot_FUNC(Py_mod_exec, s_module_exec),
+    PySlot_END,
+};
+
+PyMODEXPORT_FUNC PyModExport__awscrt(void) {
+    /* Must ONLY return a pointer to static data; all runtime initialization
+     * happens later in the Py_mod_exec slot (s_module_exec). */
+    return s_module_slots;
+}
+
+#else /* !Py_TARGET_ABI3T */
+
+PyMODINIT_FUNC PyInit__awscrt(void) {
+    static struct PyModuleDef s_module_def = {
+        PyModuleDef_HEAD_INIT,
+        s_module_name,
+        s_module_doc,
+        -1, /* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */
+        s_module_methods,
+        NULL, /* slots for multi-phase initialization */
+        NULL, /* traversal fn to call during GC traversal */
+        NULL, /* clear fn to call during GC clear */
+        NULL, /* fn to call during deallocation of the module object */
+    };
+
+    PyObject *m = PyModule_Create(&s_module_def);
+    if (!m) {
+        return NULL;
+    }
+
+#    ifdef Py_GIL_DISABLED
+    PyUnstable_Module_SetGIL(m, Py_MOD_GIL_NOT_USED);
+#    endif
+
+    if (s_module_exec(m) != 0) {
+        Py_DECREF(m);
+        return NULL;
+    }
+
     return m;
 }
+
+#endif /* Py_TARGET_ABI3T */
 
 /**
  * align with the the vanilla C types Python tends to use.
