@@ -270,10 +270,11 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
     uint64_t retry_max_backoff_secs;        /* K */
     int retry_jitter_mode;                  /* i */
     uint64_t retry_initial_bucket_capacity; /* K */
+    uint32_t connect_timeout_ms;            /* I */
 
     if (!PyArg_ParseTuple(
             args,
-            "OOOOOs#iKKdpKOppdpKOKKKiK",
+            "OOOOOs#iKKdpKOppdpKOKKKiKI",
             &bootstrap_py,
             &signing_config_py,
             &credential_provider_py,
@@ -298,7 +299,8 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
             &retry_backoff_scale_factor_ms,
             &retry_max_backoff_secs,
             &retry_jitter_mode,
-            &retry_initial_bucket_capacity)) {
+            &retry_initial_bucket_capacity,
+            &connect_timeout_ms)) {
         return NULL;
     }
 
@@ -423,6 +425,7 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
         /* If fio options not set, let native code to decide the default instead */
         .fio_opts = fio_options_set ? &fio_opts : NULL,
         .max_active_connections_override = max_active_connections_override,
+        .connect_timeout_ms = connect_timeout_ms,
     };
 
     s3_config.retry_config.max_retries = (size_t)retry_max_retries;

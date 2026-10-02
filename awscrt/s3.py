@@ -394,6 +394,9 @@ class S3Client(NativeResource):
 
         retry_config (Optional[S3RetryConfig]): Configuration for the retry strategy.
             See :class:`S3RetryConfig` for details. If not set, S3 client defaults are used.
+
+        connect_timeout_ms (Optional[int]): Timeout, in milliseconds, for establishing a connection.
+            If not set, the S3 client default is used.
     """
 
     __slots__ = ('shutdown_event', '_region')
@@ -415,7 +418,8 @@ class S3Client(NativeResource):
             network_interface_names: Optional[Sequence[str]] = None,
             fio_options: Optional['S3FileIoOptions'] = None,
             max_active_connections_override: Optional[int] = None,
-            retry_config: Optional[S3RetryConfig] = None):
+            retry_config: Optional[S3RetryConfig] = None,
+            connect_timeout_ms: Optional[int] = None):
         assert isinstance(bootstrap, ClientBootstrap) or bootstrap is None
         assert isinstance(region, str)
         assert isinstance(signing_config, AwsSigningConfig) or signing_config is None
@@ -431,6 +435,7 @@ class S3Client(NativeResource):
         assert isinstance(network_interface_names, Sequence) or network_interface_names is None
         assert isinstance(fio_options, S3FileIoOptions) or fio_options is None
         assert isinstance(max_active_connections_override, int) or max_active_connections_override is None
+        assert isinstance(connect_timeout_ms, int) or connect_timeout_ms is None
 
         if credential_provider and signing_config:
             raise ValueError("'credential_provider' has been deprecated in favor of 'signing_config'.  "
@@ -472,6 +477,8 @@ class S3Client(NativeResource):
                 network_interface_names = list(network_interface_names)
         if max_active_connections_override is None:
             max_active_connections_override = 0
+        if connect_timeout_ms is None:
+            connect_timeout_ms = 0
 
         # Retry config: 0 means "use S3 client defaults"
         if retry_config is None:
@@ -511,7 +518,8 @@ class S3Client(NativeResource):
             retry_config.backoff_scale_factor_ms,
             retry_config.max_backoff_secs,
             int(retry_config.jitter_mode),
-            retry_config.initial_bucket_capacity)
+            retry_config.initial_bucket_capacity,
+            connect_timeout_ms)
 
     def make_request(
             self,
