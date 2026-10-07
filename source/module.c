@@ -992,6 +992,7 @@ static PyMethodDef s_module_methods[] = {
     /* Cryptographic primitives */
     AWS_PY_METHOD_DEF(md5_new, METH_NOARGS),
     AWS_PY_METHOD_DEF(sha256_new, METH_NOARGS),
+    AWS_PY_METHOD_DEF(sha512_new, METH_NOARGS),
     AWS_PY_METHOD_DEF(sha1_new, METH_NOARGS),
     AWS_PY_METHOD_DEF(hash_update, METH_VARARGS),
     AWS_PY_METHOD_DEF(hash_digest, METH_VARARGS),
