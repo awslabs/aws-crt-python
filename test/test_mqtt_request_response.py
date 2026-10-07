@@ -394,6 +394,9 @@ class MqttRequestResponseClientTest(NativeResourceTest):
 
         assert subscribed_future.result(30)
 
+        # eventual consistency if this is an op
+        time.sleep(0.1)
+
         if isinstance(protocol_client, mqtt5.Client):
             publish = mqtt5.PublishPacket(
                 payload=payload,
