@@ -340,6 +340,30 @@ jobs:
           python -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder.pyz')"
           python builder.pyz build -p ${{ env.PACKAGE_NAME }} --python "${{ steps.python315.outputs.python-path }}"
 
+  windows-arm64:
+    runs-on: windows-11-arm
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.11', '3.13']
+    permissions:
+      id-token: write # This is required for requesting the JWT
+    steps:
+      - uses: actions/setup-python@v5
+        id: python
+        with:
+          python-version: ${{ matrix.python }}
+          architecture: arm64
+      - name: configure AWS credentials (containers)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.CRT_CI_ROLE }}
+          aws-region: ${{ env.AWS_DEFAULT_REGION }}
+      - name: Build ${{ env.PACKAGE_NAME }} + consumers
+        run: |
+          python -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder.pyz')"
+          python builder.pyz build -p ${{ env.PACKAGE_NAME }} --python "${{ steps.python.outputs.python-path }}"
+
   macos:
     runs-on: macos-14 # latest
     permissions:
