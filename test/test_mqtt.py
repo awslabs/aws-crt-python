@@ -328,6 +328,9 @@ class MqttConnectionTest(NativeResourceTest):
         subscribed, packet_id = connection.subscribe(self.TEST_TOPIC, QoS.AT_LEAST_ONCE, on_sub_message)
         subscribed.result(TIMEOUT)
 
+        # subscribe eventual consistency
+        time.sleep(0.5)
+
         # publish
         published, packet_id = connection.publish(self.TEST_TOPIC, self.TEST_MSG, QoS.AT_LEAST_ONCE)
         puback = published.result(TIMEOUT)
