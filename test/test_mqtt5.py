@@ -1234,7 +1234,7 @@ class Mqtt5ClientTest(NativeResourceTest):
         suback_packet = subscribe_future.result(TIMEOUT)
         self.assertIsInstance(suback_packet, mqtt5.SubackPacket)
 
-        # subscribe delay consistency
+        # subscribe eventual consistency
         time.sleep(0.5)
 
         disconnect_packet = mqtt5.DisconnectPacket(reason_code=mqtt5.DisconnectReasonCode.DISCONNECT_WITH_WILL_MESSAGE)
