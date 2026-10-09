@@ -1074,6 +1074,8 @@ class Mqtt5ClientTest(NativeResourceTest):
         subscribe_future = client.subscribe(subscribe_packet=subscribe_packet)
         suback_packet = subscribe_future.result(TIMEOUT)
         self.assertIsInstance(suback_packet, mqtt5.SubackPacket)
+        # subscribe eventual consistency
+        time.sleep(0.5)
 
         publish_packet = mqtt5.PublishPacket(
             payload=payload,
@@ -1093,6 +1095,8 @@ class Mqtt5ClientTest(NativeResourceTest):
         unsubscribe_future = client.unsubscribe(unsubscribe_packet)
         unsuback_packet = unsubscribe_future.result(TIMEOUT)
         self.assertIsInstance(unsuback_packet, mqtt5.UnsubackPacket)
+        # unsubscribe eventual consistency
+        time.sleep(0.5)
 
         publish_future = client.publish(publish_packet=publish_packet)
         publish_completion_data = publish_future.result(TIMEOUT)
@@ -1230,6 +1234,9 @@ class Mqtt5ClientTest(NativeResourceTest):
         suback_packet = subscribe_future.result(TIMEOUT)
         self.assertIsInstance(suback_packet, mqtt5.SubackPacket)
 
+        # subscribe eventual consistency
+        time.sleep(0.5)
+
         disconnect_packet = mqtt5.DisconnectPacket(reason_code=mqtt5.DisconnectReasonCode.DISCONNECT_WITH_WILL_MESSAGE)
         client1.stop(disconnect_packet=disconnect_packet)
         callbacks1.future_stopped.result(TIMEOUT)
@@ -1310,6 +1317,8 @@ class Mqtt5ClientTest(NativeResourceTest):
         subscribe_future = client.subscribe(subscribe_packet=subscribe_packet)
         suback_packet = subscribe_future.result(TIMEOUT)
         self.assertIsInstance(suback_packet, mqtt5.SubackPacket)
+        # subscribe eventual consistency
+        time.sleep(0.5)
 
         publish_packet = mqtt5.PublishPacket(
             payload=payload,
@@ -1331,6 +1340,8 @@ class Mqtt5ClientTest(NativeResourceTest):
         unsubscribe_future = client.unsubscribe(unsubscribe_packet)
         unsuback_packet = unsubscribe_future.result(TIMEOUT)
         self.assertIsInstance(unsuback_packet, mqtt5.UnsubackPacket)
+        # unsubscribe eventual consistency
+        time.sleep(0.5)
 
         publish_future = client.publish(publish_packet=publish_packet)
         publish_completion_data = publish_future.result(TIMEOUT)
@@ -1376,6 +1387,8 @@ class Mqtt5ClientTest(NativeResourceTest):
         subscribe_future = client.subscribe(subscribe_packet=subscribe_packet)
         suback_packet = subscribe_future.result(TIMEOUT)
         self.assertIsInstance(suback_packet, mqtt5.SubackPacket)
+        # subscribe eventual consistency
+        time.sleep(0.5)
 
         publish_packet = mqtt5.PublishPacket(
             payload=payload,
@@ -1586,6 +1599,8 @@ class Mqtt5ClientTest(NativeResourceTest):
         subscribe_future = client2.subscribe(subscribe_packet=subscribe_packet)
         suback_packet = subscribe_future.result(TIMEOUT)
         self.assertIsInstance(suback_packet, mqtt5.SubackPacket)
+        # subscribe eventual consistency
+        time.sleep(0.5)
 
         publishes = 10
 
@@ -1665,6 +1680,8 @@ class Mqtt5ClientTest(NativeResourceTest):
         subscribe_future = client.subscribe(subscribe_packet=subscribe_packet)
         suback_packet = subscribe_future.result(TIMEOUT)
         self.assertIsInstance(suback_packet, mqtt5.SubackPacket)
+        # subscribe eventual consistency
+        time.sleep(0.5)
 
         # Publish a QoS 1 message with a unique UUID payload
         publish_packet = mqtt5.PublishPacket(
@@ -1748,6 +1765,8 @@ class Mqtt5ClientTest(NativeResourceTest):
         subscribe_future = client.subscribe(subscribe_packet=subscribe_packet)
         suback_packet = subscribe_future.result(TIMEOUT)
         self.assertIsInstance(suback_packet, mqtt5.SubackPacket)
+        # subscribe eventual consistency
+        time.sleep(0.5)
 
         # Publish a QoS 1 message with a unique UUID payload
         publish_packet = mqtt5.PublishPacket(
@@ -1835,6 +1854,8 @@ class Mqtt5ClientTest(NativeResourceTest):
         subscriptions = [mqtt5.Subscription(topic_filter=topic_filter, qos=mqtt5.QoS.AT_LEAST_ONCE)]
         subscribe_future = client.subscribe(mqtt5.SubscribePacket(subscriptions=subscriptions))
         subscribe_future.result(TIMEOUT)
+        # subscribe eventual consistency
+        time.sleep(0.5)
 
         publish_future = client.publish(mqtt5.PublishPacket(
             payload=payload, topic=topic_filter, qos=mqtt5.QoS.AT_LEAST_ONCE))
@@ -1886,6 +1907,8 @@ class Mqtt5ClientTest(NativeResourceTest):
         subscriptions = [mqtt5.Subscription(topic_filter=topic_filter, qos=mqtt5.QoS.AT_LEAST_ONCE)]
         subscribe_future = client.subscribe(mqtt5.SubscribePacket(subscriptions=subscriptions))
         subscribe_future.result(TIMEOUT)
+        # subscribe eventual consistency
+        time.sleep(0.5)
 
         publish_future = client.publish(mqtt5.PublishPacket(
             payload=payload, topic=topic_filter, qos=mqtt5.QoS.AT_LEAST_ONCE))
@@ -1940,6 +1963,8 @@ class Mqtt5ClientTest(NativeResourceTest):
         subscriptions = [mqtt5.Subscription(topic_filter=topic_filter, qos=mqtt5.QoS.AT_LEAST_ONCE)]
         subscribe_future = client.subscribe(mqtt5.SubscribePacket(subscriptions=subscriptions))
         subscribe_future.result(TIMEOUT)
+        # subscribe eventual consistency
+        time.sleep(0.5)
 
         # Publish at QoS 0, there's no PUBACK involved
         publish_future = client.publish(mqtt5.PublishPacket(
@@ -2008,6 +2033,8 @@ class Mqtt5ClientTest(NativeResourceTest):
         subscribe_future = client.subscribe(subscribe_packet=subscribe_packet)
         suback_packet = subscribe_future.result(TIMEOUT)
         self.assertIsInstance(suback_packet, mqtt5.SubackPacket)
+        # subscribe eventual consistency
+        time.sleep(0.5)
 
         # Publish a QoS 1 message with a unique UUID payload
         publish_packet = mqtt5.PublishPacket(
