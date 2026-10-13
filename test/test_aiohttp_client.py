@@ -925,9 +925,8 @@ class AIOHttp2RemoteEndStreamTest(AsyncMockServerTestBase):
         """Test that on_h2_remote_end_stream fires before on_complete when server finishes first"""
         connection = await self._new_mock_h2_connection()
 
-        request = HttpRequest('POST', self.mock_server_url.path)
+        request = HttpRequest('POST', '/this-path-does-not-exist-deliberately-404')
         request.headers.add('host', self.mock_server_url.hostname)
-        request.headers.add('x-respond-immediately', 'true')
 
         complete_success = asyncio.Event()
         remote_finished = asyncio.Event()
