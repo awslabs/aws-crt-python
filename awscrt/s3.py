@@ -297,12 +297,17 @@ class S3RetryConfig:
         initial_bucket_capacity (int): Token bucket capacity per
             host partition (circuit breaker). Controls how many concurrent
             failures are tolerated before retries are rejected. 0 means use default (500).
+
+        disable_retries (bool): If True, retries are disabled entirely: each request is
+            attempted exactly once. Overrides all other fields in this
+            config. Ignored if the S3Client is constructed with a custom retry_strategy.
     """
     max_retries: int = 0
     backoff_scale_factor_ms: int = 0
     max_backoff_secs: int = 0
     jitter_mode: int = 0
     initial_bucket_capacity: int = 0
+    disable_retries: bool = False
 
 
 class S3Client(NativeResource):
@@ -519,6 +524,7 @@ class S3Client(NativeResource):
             retry_config.max_backoff_secs,
             int(retry_config.jitter_mode),
             retry_config.initial_bucket_capacity,
+            retry_config.disable_retries,
             connect_timeout_ms)
 
     def make_request(
