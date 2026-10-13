@@ -912,8 +912,14 @@ class Http2RemoteEndStreamTest(MockServerTestBase):
         """Test that on_h2_remote_end_stream fires before on_complete when server finishes first"""
         connection = self._new_mock_h2_connection()
 
-        request = HttpRequest('POST', '/this-path-does-not-exist-deliberately-404')
+        # The mock server responds immediately (404 + END_STREAM) as soon as it
+        # receives the request headers, before the client finishes sending its
+        # request body. This deterministically reproduces the "server finishes
+        # first" ordering (previously relied on httpbin.org returning an
+        # immediate 404, which was flaky).
+        request = HttpRequest('POST', self.mock_server_url.path)
         request.headers.add('host', self.mock_server_url.hostname)
+        request.headers.add('x-respond-immediately', 'true')
         response = Response()
 
         stream = connection.request(request, response.on_response, response.on_body, manual_write=True)
