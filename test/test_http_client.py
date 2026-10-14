@@ -914,7 +914,7 @@ class Http2RemoteEndStreamTest(MockServerTestBase):
 
         # POST to the mock server's early-response path: the server returns 404
         # as soon as the request headers arrive, before the client finishes
-        # sending its body. 
+        # sending its body.
         request = HttpRequest('POST', '/respond-immediately')
         request.headers.add('host', self.mock_server_url.hostname)
         response = Response()
