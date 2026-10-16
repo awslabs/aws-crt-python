@@ -903,37 +903,20 @@ class FlowControlH2Test(MockServerTestBase):
         self.assertEqual(None, connection.close().result(self.timeout))
 
 
-class Http2RemoteEndStreamTest(NativeResourceTest):
+@unittest.skipUnless(os.environ.get('AWS_TEST_LOCALHOST'), 'set env var to run test: AWS_TEST_LOCALHOST')
+class Http2RemoteEndStreamTest(MockServerTestBase):
     """Test suite for HTTP/2 on_h2_remote_end_stream callback"""
     timeout = 10  # seconds
 
-    def _new_httpbin_h2_connection(self):
-        """Create HTTP/2 connection to httpbin.org"""
-        event_loop_group = EventLoopGroup()
-        host_resolver = DefaultHostResolver(event_loop_group)
-        bootstrap = ClientBootstrap(event_loop_group, host_resolver)
-
-        tls_ctx_options = TlsContextOptions()
-        tls_ctx = ClientTlsContext(tls_ctx_options)
-        tls_conn_opt = tls_ctx.new_connection_options()
-        tls_conn_opt.set_server_name("httpbin.org")
-        tls_conn_opt.set_alpn_list(["h2"])
-
-        connection_future = Http2ClientConnection.new(
-            host_name="httpbin.org",
-            port=443,
-            bootstrap=bootstrap,
-            tls_connection_options=tls_conn_opt)
-
-        return connection_future.result(self.timeout)
-
     def test_h2_remote_end_stream_ordering(self):
         """Test that on_h2_remote_end_stream fires before on_complete when server finishes first"""
-        connection = self._new_httpbin_h2_connection()
+        connection = self._new_mock_h2_connection()
 
-        # Use httpbin.org 404 path - server responds immediately
-        request = HttpRequest('POST', '/this-path-does-not-exist-deliberately-404')
-        request.headers.add('host', 'httpbin.org')
+        # POST to the mock server's early-response path: the server returns 404
+        # as soon as the request headers arrive, before the client finishes
+        # sending its body.
+        request = HttpRequest('POST', '/respond-immediately')
+        request.headers.add('host', self.mock_server_url.hostname)
         response = Response()
 
         stream = connection.request(request, response.on_response, response.on_body, manual_write=True)
