@@ -268,6 +268,29 @@ class S3FileIoOptions:
     """
 
 
+class S3RetryMode(IntEnum):
+    """Retry mode used by the S3 client."""
+
+    STANDARD = 0
+    """Standard retry strategy. Exponential backoff with a retry token bucket (default)."""
+
+    ADAPTIVE = 1
+    """Standard retry strategy plus client-side rate limiting.
+
+    There is one rate limiter per client, so throttling on one bucket slows requests to all buckets.
+    """
+
+    EXPONENTIAL_BACKOFF = 2
+    """Exponential backoff without the retry token bucket.
+
+    Each request gets all of its `max_retries`, even when other requests to the same host are failing.
+    `initial_bucket_capacity` is ignored in this mode.
+    """
+
+    NONE = 3
+    """No retries. Each request is attempted exactly once."""
+
+
 @dataclass
 class S3RetryConfig:
     """Configuration for the S3 client's retry strategy.
@@ -283,7 +306,7 @@ class S3RetryConfig:
 
     Args:
         max_retries (int): Maximum number of retries per request.
-            0 means use S3 client default (5).
+            0 means use S3 client default (5). To disable retries, set `retry_mode` to :attr:`S3RetryMode.NONE`.
 
         backoff_scale_factor_ms (int): Base delay in milliseconds,
             multiplied by 2^attempt for exponential backoff. 0 means use default (500).
@@ -297,12 +320,20 @@ class S3RetryConfig:
         initial_bucket_capacity (int): Token bucket capacity per
             host partition (circuit breaker). Controls how many concurrent
             failures are tolerated before retries are rejected. 0 means use default (500).
+
+        retry_mode (S3RetryMode): Which retry strategy the client uses.
+            Default is :attr:`S3RetryMode.STANDARD`. Use :attr:`S3RetryMode.NONE` to disable retries.
+
+        fast_fail_if_no_token (bool): :attr:`S3RetryMode.ADAPTIVE` only. If True, fail the request
+            instead of waiting when the rate limiter has no send token. Default is False.
     """
     max_retries: int = 0
     backoff_scale_factor_ms: int = 0
     max_backoff_secs: int = 0
     jitter_mode: int = 0
     initial_bucket_capacity: int = 0
+    retry_mode: S3RetryMode = S3RetryMode.STANDARD
+    fast_fail_if_no_token: bool = False
 
 
 class S3Client(NativeResource):
@@ -519,6 +550,8 @@ class S3Client(NativeResource):
             retry_config.max_backoff_secs,
             int(retry_config.jitter_mode),
             retry_config.initial_bucket_capacity,
+            int(retry_config.retry_mode),
+            retry_config.fast_fail_if_no_token,
             connect_timeout_ms)
 
     def make_request(

@@ -25,6 +25,8 @@ from awscrt.s3 import (
     S3Client,
     S3RequestType,
     S3ResponseError,
+    S3RetryConfig,
+    S3RetryMode,
     CrossProcessLock,
     S3FileIoOptions,
     create_default_s3_signing_config,
@@ -193,7 +195,8 @@ def s3_client_new(
         enable_s3express=False,
         mem_limit=None,
         network_interface_names=None,
-        connect_timeout_ms=None):
+        connect_timeout_ms=None,
+        retry_config=None):
 
     if is_cancel_test:
         # for cancellation tests, make things slow, so it's less likely that
@@ -225,7 +228,8 @@ def s3_client_new(
         enable_s3express=enable_s3express,
         memory_limit=mem_limit,
         network_interface_names=network_interface_names,
-        connect_timeout_ms=connect_timeout_ms)
+        connect_timeout_ms=connect_timeout_ms,
+        retry_config=retry_config)
     return s3_client
 
 
@@ -263,6 +267,16 @@ class S3ClientTest(NativeResourceTest):
 
     def test_sanity_connect_timeout_ms(self):
         s3_client = s3_client_new(True, self.region, connect_timeout_ms=3000)
+        self.assertIsNotNone(s3_client)
+
+    def test_sanity_retry_mode(self):
+        # Sanity test that each retry mode is passed through and the client is created.
+        for mode in S3RetryMode:
+            s3_client = s3_client_new(False, self.region, retry_config=S3RetryConfig(retry_mode=mode))
+            self.assertIsNotNone(s3_client)
+        # Adaptive with fast-fail enabled.
+        retry_config = S3RetryConfig(retry_mode=S3RetryMode.ADAPTIVE, fast_fail_if_no_token=True)
+        s3_client = s3_client_new(False, self.region, retry_config=retry_config)
         self.assertIsNotNone(s3_client)
 
     def test_wait_shutdown(self):
