@@ -270,11 +270,13 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
     uint64_t retry_max_backoff_secs;        /* K */
     int retry_jitter_mode;                  /* i */
     uint64_t retry_initial_bucket_capacity; /* K */
+    int retry_mode;                         /* i */
+    int retry_fast_fail_if_no_token;        /* p - boolean predicate */
     uint32_t connect_timeout_ms;            /* I */
 
     if (!PyArg_ParseTuple(
             args,
-            "OOOOOs#iKKdpKOppdpKOKKKiKI",
+            "OOOOOs#iKKdpKOppdpKOKKKiKipI",
             &bootstrap_py,
             &signing_config_py,
             &credential_provider_py,
@@ -300,6 +302,8 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
             &retry_max_backoff_secs,
             &retry_jitter_mode,
             &retry_initial_bucket_capacity,
+            &retry_mode,
+            &retry_fast_fail_if_no_token,
             &connect_timeout_ms)) {
         return NULL;
     }
@@ -433,6 +437,8 @@ PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
     s3_config.retry_config.max_backoff_secs = (uint32_t)retry_max_backoff_secs;
     s3_config.retry_config.jitter_mode = (enum aws_exponential_backoff_jitter_mode)retry_jitter_mode;
     s3_config.retry_config.initial_bucket_capacity = (size_t)retry_initial_bucket_capacity;
+    s3_config.retry_config.retry_mode = (enum aws_s3_retry_mode)retry_mode;
+    s3_config.retry_config.fast_fail_if_no_token = retry_fast_fail_if_no_token;
 
     s3_client->native = aws_s3_client_new(allocator, &s3_config);
     if (s3_client->native == NULL) {
