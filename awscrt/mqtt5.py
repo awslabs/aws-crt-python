@@ -497,13 +497,6 @@ def _try_puback_reason_code(value):
         return None
 
 
-def _try_manual_puback_result(value):
-    try:
-        return ManualPubackResult(value)
-    except Exception:
-        return None
-
-
 class SubackReasonCode(IntEnum):
     """Reason code inside SUBACK packet payloads.
 
@@ -716,9 +709,10 @@ class RetainHandlingType(IntEnum):
 
 
 class RetainAndHandlingType(IntEnum):
-    """DEPRECATED.
+    """Retain handling type.
 
-    `RetainAndHandlingType` is deprecated, please use `RetainHandlingType`
+    .. deprecated:: 0.20.0
+        Use :class:`RetainHandlingType` instead.
     """
     SEND_ON_SUBSCRIBE = 0
     """
@@ -947,7 +941,7 @@ class ConnackPacket:
         wildcard_subscriptions_available (bool): Indicates whether the server supports wildcard subscriptions.  If None, wildcard subscriptions are supported.
         subscription_identifiers_available (bool): Indicates whether the server supports subscription identifiers.  If None, subscription identifiers are supported.
         shared_subscription_available (bool): Indicates whether the server supports shared subscription topic filters.  If None, shared subscriptions are supported.
-        server_keep_alive (int) : DEPRECATED. Please use `server_keep_alive_sec`.
+        server_keep_alive (int): Deprecated since 0.20.0, use `server_keep_alive_sec` instead.
         server_keep_alive_sec (int): Server-requested override of the keep alive interval, in seconds.  If None, the keep alive value sent by the client should be used.
         response_information (str): A value that can be used in the creation of a response topic associated with this connection. MQTT5-based request/response is outside the purview of the MQTT5 spec and this client.
         server_reference (str): Property indicating an alternate server that the client may temporarily or permanently attempt to connect to instead of the configured endpoint.  Will only be set if the reason code indicates another server may be used (ServerMoved, UseAnotherServer).
@@ -1084,7 +1078,7 @@ class PublishPacket:
         message_expiry_interval_sec (int): Sent publishes - indicates the maximum amount of time allowed to elapse for message delivery before the server should instead delete the message (relative to a recipient). Received publishes - indicates the remaining amount of time (from the server's perspective) before the message would have been deleted relative to the subscribing client. If left None, indicates no expiration timeout.
         topic_alias (int): An integer value that is used to identify the Topic instead of using the Topic Name.  On outbound publishes, this will only be used if the outbound topic aliasing behavior has been set to Manual.
         response_topic (str): Opaque topic string intended to assist with request/response implementations.  Not internally meaningful to MQTT5 or this client.
-        correlation_data (Optional[Union[bytes, str]]): Deprecated, use `correlation_data_bytes` instead.  Opaque binary data used to correlate between publish messages, as a potential method for request-response implementation.  Not internally meaningful to MQTT5.  For incoming publishes, this will be a utf8 string (if correlation data exists and it's convertible to utf-8) or None (either it didn't exist, or did but wasn't convertible)
+        correlation_data (Optional[Union[bytes, str]]): Deprecated since 0.20.10, use `correlation_data_bytes` instead.  Opaque binary data used to correlate between publish messages, as a potential method for request-response implementation.  Not internally meaningful to MQTT5.  For incoming publishes, this will be a utf8 string (if correlation data exists and it's convertible to utf-8) or None (either it didn't exist, or did but wasn't convertible)
         correlation_data_bytes (Optional[Union[bytes, str]]): Opaque binary data used to correlate between publish messages, as a potential method for request-response implementation.  Not internally meaningful to MQTT5.  For outbound publishes, this field takes priority over `correlation_data`.  For incoming publishes, this will be binary data if correlation data is set, otherwise it will be None.
         subscription_identifiers (Sequence[int]): The subscription identifiers of all the subscriptions this message matched.  This field is ignored on outbound publishes (setting it is a protocol error).
         content_type (str): Property specifying the content type of the payload.  Not internally meaningful to MQTT5.
@@ -1284,7 +1278,7 @@ class LifecycleConnectFailureData:
 
     Args:
         connack_packet (ConnackPacket):  Data model of an `MQTT5 CONNACK <https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901074>`_ packet.
-        error_code (int): (:class:`awscrt.exceptions.AwsCrtError`): Exception which caused connection failure.
+        exception (Exception): Exception (usually :class:`awscrt.exceptions.AwsCrtError`) which caused connection failure.
     """
     connack_packet: ConnackPacket = None
     exception: Exception = None
@@ -1296,7 +1290,7 @@ class LifecycleDisconnectData:
 
     Args:
         disconnect_packet (DisconnectPacket): Data model of an `MQTT5 DISCONNECT <https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901205>`_ packet.
-        error_code (int): (:class:`awscrt.exceptions.AwsCrtError`): Exception which caused disconnection.
+        exception (Exception): Exception (usually :class:`awscrt.exceptions.AwsCrtError`) which caused disconnection.
     """
     disconnect_packet: DisconnectPacket = None
     exception: Exception = None
@@ -1464,7 +1458,7 @@ class _ClientCore:
             publish_packet.topic_alias = topic_alias
         publish_packet.response_topic = response_topic
 
-        # hacky workaround to maintain behavioral backwards compatibility with deprecated parameter
+        # maintain behavioral backwards compatibility with the deprecated `correlation_data` field
         if correlation_data is not None:
             # `correlation_data_bytes` always has the correlation data, as binary data
             publish_packet.correlation_data_bytes = correlation_data

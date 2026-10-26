@@ -228,8 +228,8 @@ class S3ChecksumConfig:
 @dataclass
 class S3FileIoOptions:
     """
-    WARNING: experimental/unstable, the default behavior is subjected to change in the future.
-    Controls how client performance file I/O operations.
+    WARNING: experimental/unstable, the default behavior is subject to change in the future.
+    Controls how the client performs file I/O operations.
     Only applies to the file based workload.
     Notes: only applies when `send_filepath` is set from the request.
     """
@@ -340,7 +340,7 @@ class S3Client(NativeResource):
                     credentials that are used in the signing process.
                 2. Client may make modifications to signing config before passing it on to signer.
 
-        credential_provider (Optional[AwsCredentialsProvider]): Deprecated, prefer `signing_config` instead.
+        credential_provider (Optional[AwsCredentialsProvider]): Deprecated since 0.16.24, use `signing_config` instead.
             Credentials providers source the :class:`~awscrt.auth.AwsCredentials` needed to sign an authenticated AWS request.
             If None is provided, the request will not be signed.
 
@@ -370,7 +370,7 @@ class S3Client(NativeResource):
 
         memory_limit (Optional[int]): Memory limit, in bytes, of how much memory
             client can use for buffering data for requests.
-            If not set, client will try to pick up from environment variable before chose the default.
+            If not set, client will try to pick up from environment variable before choosing the default.
             Default values scale with target throughput and are currently
             between 2GiB and 24GiB (may change in future)
 
@@ -540,8 +540,8 @@ class S3Client(NativeResource):
             on_body=None,
             on_done=None,
             on_progress=None):
-        """Create the Request to the the S3 server,
-        :attr:`~S3RequestType.GET_OBJECT`/:attr:`~S3RequestType.PUT_OBJECT` requests are split it into multi-part
+        """Create the Request to the S3 server,
+        :attr:`~S3RequestType.GET_OBJECT`/:attr:`~S3RequestType.PUT_OBJECT` requests are split into multi-part
         requests under the hood for acceleration.
 
         Keyword Args:
@@ -596,7 +596,7 @@ class S3Client(NativeResource):
                         credentials that are used in the signing process.
                     2. Client may make modifications to signing config before passing it on to signer.
 
-            credential_provider (Optional[AwsCredentialsProvider]):  Deprecated, prefer `signing_config` instead.
+            credential_provider (Optional[AwsCredentialsProvider]): Deprecated since 0.16.24, use `signing_config` instead.
                 Credentials providers source the :class:`~awscrt.auth.AwsCredentials` needed to sign an authenticated AWS request, for this request only.
                 If None is provided, the client configuration will be used.
 

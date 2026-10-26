@@ -34,6 +34,6 @@ dev = [
   "build>=1.2.2",                                # for building wheels
   "sphinx>=7.2.6,<7.3; python_version >= '3.9'", # for building docs
   "websockets>=13.1",                            # for tests
-  # for tests, restrict to exact version for test_http_client/TestClientMockServer/_on_remote_settings_changed that relies on the implementation details. Also, this is no needs to update this package.
+  # for tests, restrict to exact version for test_http_client/TestClientMockServer/_on_remote_settings_changed that relies on the implementation details. Do not update this pin.
   "h2==4.1.0",
 ]

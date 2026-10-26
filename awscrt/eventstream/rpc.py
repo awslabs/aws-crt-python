@@ -72,12 +72,12 @@ class MessageType(IntEnum):
 class MessageFlag:
     """Flags for messages in the event-stream RPC protocol.
 
-    Flags may be XORed together.
+    Flags may be ORed together.
     Not all flags can be used with all message types, consult documentation.
     """
-    # TODO: when python 3.5 is dropped this class should inherit from IntFlag.
-    # When doing this, be sure to update type-hints and callbacks to pass
-    # MessageFlag instead of plain int.
+    # Note: this could inherit from IntFlag in a future major version.
+    # Doing so would change callback types (MessageFlag instead of plain int),
+    # so it is a breaking change.
 
     NONE = 0
     """No flags"""
@@ -563,12 +563,10 @@ class ClientContinuation(NativeResource):
         Use the returned future, or the `on_flush` callback, to be informed
         when the message is successfully written to the wire, or fails to send.
 
-        Note that the the first message on a stream-id must be sent with activate(),
+        Note that the first message on a stream-id must be sent with activate(),
         send_message() is for all messages that follow.
 
         Keyword Args:
-            operation: Operation name for this stream.
-
             headers: Message headers.
 
             payload: Binary message payload.

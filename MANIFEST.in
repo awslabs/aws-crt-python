@@ -2,8 +2,6 @@ graft source
 graft crt
 global-exclude .git*
 global-exclude .git*/**
-global-exclude .travis*
-global-exclude .travis/**
 global-exclude .builder/**
 global-exclude format-check.py
 global-exclude builder.json
@@ -14,7 +12,6 @@ global-exclude crt/*/verification/**
 global-exclude crt/*/docs/**
 global-exclude crt/*/bin/**
 global-exclude crt/*/scripts/**
-global-exclude docker-images/**
 global-exclude crt/aws-lc/**/test/**
 global-exclude crt/aws-lc/**/crypto_test_data*
 # aws-lc includes some files from tests during build

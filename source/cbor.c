@@ -640,7 +640,7 @@ static PyObject *s_cbor_decoder_pop_next_tag_to_pyobject(struct decoder_binding 
     if (aws_cbor_decoder_pop_next_tag_val(decoder, &out_tag_val)) {
         return PyErr_AwsLastError();
     }
-    /* TODO: implement those tags */
+    /* Only epoch time is converted; other tags (bignum, decimal fraction, ...) are not supported yet. */
     switch (out_tag_val) {
         case AWS_CBOR_TAG_EPOCH_TIME: {
             enum aws_cbor_type out_type = AWS_CBOR_TYPE_UNKNOWN;
