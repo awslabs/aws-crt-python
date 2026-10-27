@@ -1,6 +1,10 @@
 """
 Cross-platform library for `awscrt`.
 """
+
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0.
+
 import _awscrt
 
 
@@ -28,7 +32,7 @@ def join_all_native_threads(*, timeout_sec: float = -1.0) -> bool:
     This call may be required for native memory usage to reach zero.
 
     Args:
-        timeout_sec (float): Number of seconds to wait before a timeout exception is raised.
+        timeout_sec (float): Number of seconds to wait before giving up and returning False.
             By default the wait is unbounded.
 
     Returns:
