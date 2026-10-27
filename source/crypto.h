@@ -17,6 +17,7 @@ extern const char *s_capsule_name_ed25519;
 
 PyObject *aws_py_sha1_new(PyObject *self, PyObject *args);
 PyObject *aws_py_sha256_new(PyObject *self, PyObject *args);
+PyObject *aws_py_sha512_new(PyObject *self, PyObject *args);
 PyObject *aws_py_md5_new(PyObject *self, PyObject *args);
 
 PyObject *aws_py_hash_update(PyObject *self, PyObject *args);
