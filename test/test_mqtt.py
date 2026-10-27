@@ -136,6 +136,9 @@ class MqttConnectionTest(NativeResourceTest):
         self.assertEqual(self.TEST_TOPIC, suback['topic'])
         self.assertIs(QoS.AT_LEAST_ONCE, suback['qos'])
 
+        # subscribe eventual consistency
+        time.sleep(0.5)
+
         # publish
         published, packet_id = connection.publish(self.TEST_TOPIC, self.TEST_MSG, QoS.AT_LEAST_ONCE)
         puback = published.result(TIMEOUT)
@@ -275,6 +278,9 @@ class MqttConnectionTest(NativeResourceTest):
         subscribed, packet_id = connection.subscribe(self.TEST_TOPIC, QoS.AT_LEAST_ONCE)
         subscribed.result(TIMEOUT)
 
+        # subscribe eventual consistency
+        time.sleep(0.5)
+
         # publish
         published, packet_id = connection.publish(self.TEST_TOPIC, self.TEST_MSG, QoS.AT_LEAST_ONCE)
         puback = published.result(TIMEOUT)
@@ -321,6 +327,9 @@ class MqttConnectionTest(NativeResourceTest):
         # subscribe without callback
         subscribed, packet_id = connection.subscribe(self.TEST_TOPIC, QoS.AT_LEAST_ONCE, on_sub_message)
         subscribed.result(TIMEOUT)
+
+        # subscribe eventual consistency
+        time.sleep(0.5)
 
         # publish
         published, packet_id = connection.publish(self.TEST_TOPIC, self.TEST_MSG, QoS.AT_LEAST_ONCE)

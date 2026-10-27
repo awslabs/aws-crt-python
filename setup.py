@@ -35,6 +35,23 @@ WINDOWS_SDK_MIN_VERSION_TLS1_3_SUPPORT = "10.0.17763.0"
 # Regex to match a Windows SDK version directory name in the format of major.minor.build.revision
 SDK_VERSION_RE = re.compile(r'^(\d+)\.(\d+)\.(\d+)\.(\d+)$')
 
+# On Windows ARM64 we build with clang-cl, which accepts MSVC-only flags and then
+# ignores them, warning once per translation unit. We get /MP from the CRT's CMake
+# and /GL from distutils. Those are two independent compiler invocations that share
+# no configuration, so these have to be passed to each of them separately.
+#
+# Keep this a list, one flag per entry: extra_compile_args entries each become a
+# single argv element, so "-Wa -Wb" in one entry reaches clang-cl as one unknown
+# option and is silently ignored.
+#
+# Note these only reach the CRT build via CMAKE_C_FLAGS, which CMake emits *before*
+# a target's own options. So a flag here cannot turn off anything the CRT's /W4
+# re-enables (i.e. anything in -Wall or -Wextra) -- that has to be fixed in
+# aws-c-common's AwsCFlags.cmake instead.
+CLANG_CL_IGNORED_FLAG_WARNINGS = [
+    '-Wno-unused-command-line-argument',
+]
+
 
 def parse_version(version_string):
     return tuple(int(x) for x in version_string.split("."))
@@ -46,6 +63,10 @@ def is_64bit():
 
 def is_32bit():
     return is_64bit() == False
+
+
+def is_windows_arm64():
+    return sys.platform == 'win32' and sysconfig.get_platform() == 'win-arm64'
 
 
 # TODO: Fix this. Since adding pyproject.toml, it always returns False
@@ -196,6 +217,26 @@ def determine_generator_args(cmake_version=None, windows_sdk_version=None):
 
         print('Using Visual Studio', vs_version, vs_year)
 
+        if is_windows_arm64():
+            if not shutil.which('clang-cl'):
+                raise RuntimeError('clang-cl is required to build for Windows ARM64')
+            print('Using Ninja and clang-cl for Windows ARM64')
+            return [
+                '-G', 'Ninja',
+                f'-DCMAKE_SYSTEM_VERSION={windows_sdk_version}',
+                '-DCMAKE_C_COMPILER=clang-cl',
+                '-DCMAKE_CXX_COMPILER=clang-cl',
+                '-DCMAKE_ASM_COMPILER=clang-cl',
+                # Silences /MP, which the CRT's CMake adds. This lands ahead of the
+                # /W4 that aws_set_common_properties() adds, which is fine: /W4 maps
+                # to -Wall -Wextra, and neither group includes this warning, so they
+                # do not turn it back on.
+                # Appends to, rather than replaces, what CMake would have taken from
+                # the CFLAGS env var -- an explicit -D on the command line wins over
+                # that, and the extension half already honors CFLAGS (see awscrt_ext).
+                '-DCMAKE_C_FLAGS=' + ' '.join([os.environ.get('CFLAGS', '')] + CLANG_CL_IGNORED_FLAG_WARNINGS).strip(),
+            ]
+
         if vs_year <= 2017:
             # For VS2017 and earlier, architecture goes at end of generator string
             if is_64bit():
@@ -325,6 +366,54 @@ VERSION_RE = re.compile(r""".*__version__ = ["'](.*?)['"]""", re.S)
 
 
 class awscrt_build_ext(setuptools.command.build_ext.build_ext):
+    def build_extensions(self):
+        if is_windows_arm64():
+            if not self.compiler.initialized:
+                self.compiler.initialize()
+            clang_cl = shutil.which('clang-cl')
+            if not clang_cl:
+                raise RuntimeError('clang-cl is required to build for Windows ARM64')
+            self.compiler.cc = clang_cl
+        super().build_extensions()
+
+    def get_ext_filename(self, ext_name):
+        filename = super().get_ext_filename(ext_name)
+        if FREE_THREADED_BUILD and sys.version_info[:2] >= (3, 15):
+            # setuptools' build_ext (which this class extends) names extensions with the
+            # interpreter's EXT_SUFFIX, e.g. "_awscrt.cpython-315t-x86_64-linux-gnu.so"
+            # -- a name only a 3.15t interpreter will import. This abi3t (free-threaded
+            # stable ABI) build produces one binary for ALL 3.15+ free-threaded
+            # interpreters, so swap in ".abi3t.so", the version-agnostic suffix the
+            # import system accepts. setuptools does this automatically for classic abi3
+            # ("_awscrt.abi3.so") but doesn't know abi3t yet. Dropping the arch/OS part
+            # is safe: platform selection happens via the wheel's platform tag
+            # (e.g. manylinux2014_x86_64), never via the .so filename. Windows needs no
+            # rename (abi3t modules keep the plain ".pyd" name); the ".so" check skips it.
+            #
+            # We can remove this override once setuptools supports abi3t natively (tracked
+            # in pypa/setuptools#5205; the check makes it a harmless no-op if setuptools
+            # starts emitting ".abi3t.so" itself).
+            ext_suffix = sysconfig.get_config_var('EXT_SUFFIX')
+            if ext_suffix.endswith('.so') and filename.endswith(ext_suffix):
+                filename = filename[:-len(ext_suffix)] + '.abi3t.so'
+        return filename
+
+    def get_export_symbols(self, ext):
+        if FREE_THREADED_BUILD and sys.version_info[:2] >= (3, 15):
+            # On Windows, setuptools tells the linker to export "PyInit_<name>"
+            # (/EXPORT:PyInit__awscrt), but abi3t modules define "PyModExport_<name>"
+            # instead (PEP 793, see source/module.c) -- PyInit doesn't exist in
+            # that build, so the link fails with an unresolved external
+            # (pypa/distutils#387). The /EXPORT flag is redundant anyway:
+            # PyMODEXPORT_FUNC already declares dllexport, which puts the hook
+            # in the DLL's export table. So suppress the export list entirely.
+            # No-op on non-Windows (the list is already empty there).
+            #
+            # Like get_ext_filename above, remove this override once
+            # setuptools supports abi3t natively (pypa/setuptools#5205).
+            return []
+        return super().get_export_symbols(ext)
+
     def _build_dependencies_impl(self, build_dir, install_path, osx_arch=None):
         cmake = get_cmake_path()
 
@@ -505,9 +594,19 @@ class awscrt_build_ext(setuptools.command.build_ext.build_ext):
 class bdist_wheel_abi3(bdist_wheel):
     def get_tag(self):
         python, abi, plat = super().get_tag()
-        # on CPython, our wheels are abi3 and compatible back to 3.11
+        # Rewrite the wheel's compatibility tags to match what awscrt_ext()
+        # actually compiled against -- pip trusts these tags to pick a wheel,
+        # so each branch below MUST mirror a compile-flag branch there.
         if FREE_THREADED_BUILD:
-            # free-threaded builds don't use limited API, so skip abi3 tag
+            if python.startswith("cp") and sys.version_info >= (3, 15):
+                # Built against abi3t (see awscrt_ext), the stable ABI for
+                # free-threaded builds. The bare "abi3t" tag is only accepted
+                # by free-threaded interpreters. If we ever want ONE wheel for
+                # all 3.15+ interpreters (free-threaded and not), we can promote
+                # this tag to "abi3.abi3t" -- cp313-abi3 would then serve 3.13/3.14 only.
+                return "cp315", "abi3t", plat
+            # 3.13/3.14 free-threaded builds don't support limited API or
+            # abi3t, so no stable-ABI tag (version-specific wheel)
             return python, abi, plat
         elif python.startswith("cp") and sys.version_info >= (3, 13):
             # 3.13 deprecates PyWeakref_GetObject(), adds alternative
@@ -539,6 +638,12 @@ def awscrt_ext():
         # stack traces and dumps are useful
         extra_compile_args += ['/Z7']
         extra_link_args += ['/DEBUG']
+
+        if is_windows_arm64():
+            # Silences /GL, which distutils hardcodes into its MSVC defaults
+            # ("/O2 /W3 /GL /DNDEBUG /MD"). This is a separate compiler invocation
+            # from the CMake one above, so it needs the flag of its own.
+            extra_compile_args += CLANG_CL_IGNORED_FLAG_WARNINGS
 
     elif sys.platform == 'darwin':
         extra_link_args += ['-framework', 'Security']
@@ -613,9 +718,20 @@ def awscrt_ext():
                     extra_link_args += ['-Wl,--fatal-warnings']
 
     # prefer building with stable ABI, so a wheel can work with multiple major versions
-    if FREE_THREADED_BUILD and sys.version_info[:2] <= (3, 14):
-        # 3.14 free threaded (aka no gil) does not support limited api.
-        # disable it for now. 3.15 promises to support limited api + free threading combo
+    if FREE_THREADED_BUILD and sys.version_info[:2] >= (3, 15):
+        # 3.15 introduces abi3t: the stable ABI for free-threaded builds.
+        # Py_LIMITED_API is not supported on free-threaded builds as of 3.15;
+        # Py_TARGET_ABI3T is the free-threaded equivalent. It requires the
+        # PyModExport_* module export hook (see source/module.c).
+        # https://docs.python.org/3.15/howto/abi3t-migration.html
+        define_macros.append(('Py_TARGET_ABI3T', '0x030F0000'))
+        # setuptools' py_limited_api machinery is abi3-only; the abi3t wheel
+        # tag and extension filename are handled manually in bdist_wheel_abi3
+        # and awscrt_build_ext.get_ext_filename.
+        py_limited_api = False
+    elif FREE_THREADED_BUILD:
+        # 3.13/3.14 free threaded (aka no gil) support neither limited api
+        # nor abi3t. Build version-specific wheels (cp313t/cp314t).
         py_limited_api = False
     elif sys.version_info >= (3, 13):
         # 3.13 deprecates PyWeakref_GetObject(), adds alternative

@@ -317,30 +317,33 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
 
     struct aws_allocator *allocator = aws_py_get_allocator();
 
-    PyObject *py_s3_request;                           /* O */
-    PyObject *s3_client_py;                            /* O */
-    PyObject *http_request_py;                         /* O */
-    int type;                                          /* i */
-    const char *operation_name;                        /* z */
-    PyObject *signing_config_py;                       /* O */
-    PyObject *credential_provider_py;                  /* O */
-    const char *recv_filepath;                         /* z */
-    const char *send_filepath;                         /* z */
-    struct aws_byte_cursor region;                     /* s# */
-    enum aws_s3_checksum_algorithm checksum_algorithm; /* i */
-    enum aws_s3_checksum_location checksum_location;   /* i */
-    int validate_response_checksum;                    /* p - boolean predicate */
-    uint64_t part_size;                                /* K */
-    uint64_t multipart_upload_threshold;               /* K */
-    int fio_options_set;                               /* p - boolean predicate */
-    int should_stream;                                 /* p - boolean predicate */
-    double disk_throughput_gbps;                       /* d */
-    int direct_io;                                     /* p - boolean predicate */
-    uint64_t max_active_connections_override;          /* K */
-    PyObject *py_core;                                 /* O */
+    PyObject *py_s3_request;                                                /* O */
+    PyObject *s3_client_py;                                                 /* O */
+    PyObject *http_request_py;                                              /* O */
+    int type;                                                               /* i */
+    const char *operation_name;                                             /* z */
+    PyObject *signing_config_py;                                            /* O */
+    PyObject *credential_provider_py;                                       /* O */
+    const char *recv_filepath;                                              /* z */
+    const char *send_filepath;                                              /* z */
+    struct aws_byte_cursor region;                                          /* s# */
+    enum aws_s3_checksum_algorithm checksum_algorithm;                      /* i */
+    enum aws_s3_checksum_location checksum_location;                        /* i */
+    int validate_response_checksum;                                         /* p - boolean predicate */
+    struct aws_byte_cursor expected_checksum;                               /* z# */
+    enum aws_s3_checksum_algorithm expected_checksum_algorithm;             /* i */
+    enum aws_s3_checksum_validation_mode response_checksum_validation_mode; /* i */
+    uint64_t part_size;                                                     /* K */
+    uint64_t multipart_upload_threshold;                                    /* K */
+    int fio_options_set;                                                    /* p - boolean predicate */
+    int should_stream;                                                      /* p - boolean predicate */
+    double disk_throughput_gbps;                                            /* d */
+    int direct_io;                                                          /* p - boolean predicate */
+    uint64_t max_active_connections_override;                               /* K */
+    PyObject *py_core;                                                      /* O */
     if (!PyArg_ParseTuple(
             args,
-            "OOOizOOzzs#iipKKppdpKO",
+            "OOOizOOzzs#iipz#iiKKppdpKO",
             &py_s3_request,
             &s3_client_py,
             &http_request_py,
@@ -355,6 +358,10 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
             &checksum_algorithm,
             &checksum_location,
             &validate_response_checksum,
+            &expected_checksum.ptr,
+            &expected_checksum.len,
+            &expected_checksum_algorithm,
+            &response_checksum_validation_mode,
             &part_size,
             &multipart_upload_threshold,
             &fio_options_set,
@@ -402,6 +409,9 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
         .checksum_algorithm = checksum_algorithm,
         .location = checksum_location,
         .validate_response_checksum = validate_response_checksum != 0,
+        .expected_checksum = expected_checksum,
+        .expected_checksum_algorithm = expected_checksum_algorithm,
+        .response_checksum_validation_mode = response_checksum_validation_mode,
     };
 
     struct s3_meta_request_binding *meta_request = aws_mem_calloc(allocator, 1, sizeof(struct s3_meta_request_binding));

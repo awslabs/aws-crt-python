@@ -6,6 +6,7 @@ from awscrt import mqtt5, io, http, exceptions
 from awscrt.mqtt import Connection, ConnectReturnCode, OnConnectionSuccessData, OnConnectionFailureData, OnConnectionClosedData, QoS
 from test import test_retry_wrapper, NativeResourceTest
 from test.test_mqtt5 import Mqtt5TestCallbacks, _get_env_variable, create_client_id
+import time
 import unittest
 import uuid
 
@@ -363,6 +364,9 @@ class Mqtt5to3AdapterTest(NativeResourceTest):
         # subscribe
         subscribed, packet_id = connection.subscribe(TEST_TOPIC, QoS.AT_LEAST_ONCE, mqtt311_callbacks.on_message)
         suback = subscribed.result(TIMEOUT)
+        # subscribe eventual consistency
+        time.sleep(0.5)
+
         self.assertEqual(packet_id, suback['packet_id'])
         self.assertEqual(TEST_TOPIC, suback['topic'])
         self.assertIs(QoS.AT_LEAST_ONCE, suback['qos'])
@@ -383,6 +387,9 @@ class Mqtt5to3AdapterTest(NativeResourceTest):
         # unsubscribe
         unsubscribed, packet_id = connection.unsubscribe(TEST_TOPIC)
         unsuback = unsubscribed.result(TIMEOUT)
+        # unsubscribe eventual consistency
+        time.sleep(0.5)
+
         self.assertEqual(packet_id, unsuback['packet_id'])
 
         # publish
@@ -529,6 +536,8 @@ class Mqtt5to3AdapterTest(NativeResourceTest):
         subscribed, packet_id = connection3.subscribe(
             TEST_TOPIC3, QoS.AT_LEAST_ONCE, mqtt311_callbacks3.on_message)
         suback = subscribed.result(TIMEOUT)
+        # subscribe eventual consistency
+        time.sleep(0.5)
 
         # publish on topic1
         publish_packet = mqtt5.PublishPacket(
