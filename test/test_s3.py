@@ -30,6 +30,7 @@ from awscrt.s3 import (
     CrossProcessLock,
     S3FileIoOptions,
     create_default_s3_signing_config,
+    client_bootstrap_default,
     get_optimized_platforms,
 )
 from awscrt.io import (
@@ -258,6 +259,17 @@ class S3ClientTest(NativeResourceTest):
 
     def test_sanity_secure(self):
         s3_client = s3_client_new(True, self.region)
+        self.assertIsNotNone(s3_client)
+
+    def test_sanity_default_bootstrap(self):
+        s3_client = S3Client(region=self.region)
+        self.assertIsNotNone(s3_client)
+
+    def test_client_bootstrap_default(self):
+        bootstrap = client_bootstrap_default()
+        self.assertIsNone(bootstrap.shutdown_event)
+        bootstrap = client_bootstrap_default(event_loop_count=2, host_resolver_max_entries=4)
+        s3_client = S3Client(bootstrap=bootstrap, region=self.region)
         self.assertIsNotNone(s3_client)
 
     def test_sanity_network_interface_names(self):

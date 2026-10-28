@@ -13,6 +13,7 @@ PyObject *aws_py_s3_get_recommended_throughput_target_gbps(PyObject *self, PyObj
 PyObject *aws_py_s3_get_optimized_platforms(PyObject *self, PyObject *args);
 
 PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args);
+PyObject *aws_py_s3_client_bootstrap_default(PyObject *self, PyObject *args);
 PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args);
 
 PyObject *aws_py_s3_meta_request_cancel(PyObject *self, PyObject *args);

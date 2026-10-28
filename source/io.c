@@ -323,6 +323,10 @@ static void s_client_bootstrap_capsule_destructor(PyObject *bootstrap_capsule) {
         PyCapsule_GetPointer(bootstrap_capsule, s_capsule_name_client_bootstrap);
 
     aws_client_bootstrap_release(bootstrap->native);
+    if (!bootstrap->shutdown_complete) {
+        /* No shutdown callback will fire to free the binding (see aws_py_client_bootstrap_capsule_new). */
+        aws_mem_release(aws_py_get_allocator(), bootstrap);
+    }
 }
 
 PyObject *aws_py_client_bootstrap_new(PyObject *self, PyObject *args) {
@@ -394,6 +398,21 @@ error:
         aws_mem_release(allocator, bootstrap);
     }
     return NULL;
+}
+
+/* Wraps an existing native bootstrap. There is no shutdown callback to free the binding, so the capsule frees it. */
+PyObject *aws_py_client_bootstrap_capsule_new(struct aws_client_bootstrap *native) {
+    struct aws_allocator *allocator = aws_py_get_allocator();
+    struct client_bootstrap_binding *bootstrap = aws_mem_calloc(allocator, 1, sizeof(struct client_bootstrap_binding));
+    bootstrap->native = native;
+
+    PyObject *capsule =
+        PyCapsule_New(bootstrap, s_capsule_name_client_bootstrap, s_client_bootstrap_capsule_destructor);
+    if (!capsule) {
+        aws_client_bootstrap_release(native);
+        aws_mem_release(allocator, bootstrap);
+    }
+    return capsule;
 }
 
 struct aws_client_bootstrap *aws_py_get_client_bootstrap(PyObject *client_bootstrap) {
