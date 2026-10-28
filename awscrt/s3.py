@@ -51,6 +51,26 @@ class CrossProcessLock(NativeResource):
         self.release()
 
 
+def client_bootstrap_default(event_loop_count=0, host_resolver_max_entries=0):
+    """Create a ClientBootstrap with aws-c-s3's default event loop group and host resolver.
+
+    By default the event loop group has one event loop per logical CPU, up to 96.
+
+    Args:
+        event_loop_count (int): Number of event loops. 0 selects the default.
+            A count above 96 is used as given.
+        host_resolver_max_entries (int): Maximum host names to cache. 0 selects the default.
+
+    Returns:
+        ClientBootstrap: Its `shutdown_event` is None, because there is no shutdown signal for it.
+    """
+    bootstrap = ClientBootstrap.__new__(ClientBootstrap)
+    NativeResource.__init__(bootstrap)
+    bootstrap.shutdown_event = None
+    bootstrap._binding = _awscrt.s3_client_bootstrap_default(event_loop_count, host_resolver_max_entries)
+    return bootstrap
+
+
 class S3RequestType(IntEnum):
     """The type of the AWS S3 request"""
 
@@ -341,6 +361,7 @@ class S3Client(NativeResource):
 
     Keyword Args:
         bootstrap (Optional [ClientBootstrap]): Client bootstrap to use when initiating socket connection.
+            If None, a bootstrap is created with :func:`client_bootstrap_default`.
             If None is provided, the default singleton is used.
 
         region (str): Region that the S3 bucket lives in.
@@ -483,7 +504,7 @@ class S3Client(NativeResource):
         self.shutdown_event = shutdown_event
 
         if not bootstrap:
-            bootstrap = ClientBootstrap.get_or_create_static_default()
+            bootstrap = client_bootstrap_default()
 
         s3_client_core = _S3ClientCore(
             bootstrap,

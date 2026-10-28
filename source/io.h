@@ -81,6 +81,9 @@ PyObject *aws_py_pkcs11_lib_new(PyObject *self, PyObject *args);
 struct aws_event_loop_group *aws_py_get_event_loop_group(PyObject *event_loop_group);
 struct aws_host_resolver *aws_py_get_host_resolver(PyObject *host_resolver);
 struct aws_client_bootstrap *aws_py_get_client_bootstrap(PyObject *client_bootstrap);
+
+/* Creates a ClientBootstrap capsule that takes ownership of a native bootstrap. Returns NULL with an error set. */
+PyObject *aws_py_client_bootstrap_capsule_new(struct aws_client_bootstrap *native);
 struct aws_tls_ctx *aws_py_get_tls_ctx(PyObject *tls_ctx);
 struct aws_tls_connection_options *aws_py_get_tls_connection_options(PyObject *tls_connection_options);
 struct aws_input_stream *aws_py_get_input_stream(PyObject *input_stream);

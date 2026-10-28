@@ -240,6 +240,26 @@ struct aws_s3_client *aws_py_get_s3_client(PyObject *client) {
     AWS_PY_RETURN_NATIVE_FROM_BINDING(client, s_capsule_name_s3_client, "S3Client", s3_client_binding);
 }
 
+PyObject *aws_py_s3_client_bootstrap_default(PyObject *self, PyObject *args) {
+    (void)self;
+
+    unsigned short event_loop_count;
+    unsigned long long host_resolver_max_entries;
+    if (!PyArg_ParseTuple(args, "HK", &event_loop_count, &host_resolver_max_entries)) {
+        return NULL;
+    }
+
+    struct aws_s3_client_bootstrap_options options = {
+        .event_loop_count = event_loop_count,
+        .host_resolver_max_entries = (size_t)host_resolver_max_entries,
+    };
+    struct aws_client_bootstrap *native = aws_s3_client_bootstrap_default(aws_py_get_allocator(), &options);
+    if (!native) {
+        return PyErr_AwsLastError();
+    }
+    return aws_py_client_bootstrap_capsule_new(native);
+}
+
 PyObject *aws_py_s3_client_new(PyObject *self, PyObject *args) {
     (void)self;
 
