@@ -508,10 +508,10 @@ jobs:
           submodules: true
 
       - name: Build ${{ env.PACKAGE_NAME }} + consumers
-        uses: cross-platform-actions/action@v1.7.0
+        uses: cross-platform-actions/action@v1.3.0
         with:
           operating_system: freebsd
-          version: '15.1'
+          version: '14.1'
           cpu_count: 4
           memory: 8G
           shell: bash
