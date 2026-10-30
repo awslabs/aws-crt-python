@@ -15,6 +15,9 @@
 "C:\Program Files (x86)\Python313-32\python3.13t.exe" -m build || goto error
 "C:\Program Files (x86)\Python314-32\python3.14t.exe" -m build || goto error
 
+:: We are using the Python 3.15t stable ABI from Python 3.15t onwards for free-threaded python
+"C:\Program Files (x86)\Python315-32\python3.15t.exe" -m build || goto error
+
 goto :EOF
 
 :error

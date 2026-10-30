@@ -19,4 +19,7 @@ set -ex
 /Library/Frameworks/PythonT.framework/Versions/3.13/bin/python3.13t -m build
 /Library/Frameworks/PythonT.framework/Versions/3.14/bin/python3.14t -m build
 
+# We are using the Python 3.15t stable ABI from Python 3.15t onwards for free-threaded python
+/Library/Frameworks/PythonT.framework/Versions/3.15/bin/python3.15t -m build
+
 #now you just need to run twine (that's in a different script)
