@@ -365,7 +365,7 @@ jobs:
           python builder.pyz build -p ${{ env.PACKAGE_NAME }} --python "${{ steps.python.outputs.python-path }}"
 
   macos:
-    runs-on: macos-14 # latest
+    runs-on: macos-15 # latest
     permissions:
       id-token: write # This is required for requesting the JWT
     steps:
@@ -383,7 +383,7 @@ jobs:
   macos-315:
     # Python 3.15 (standard and free-threaded). Free-threaded exercises the
     # abi3t build path (Py_TARGET_ABI3T / PyModExport, see setup.py).
-    runs-on: macos-14 # latest
+    runs-on: macos-15 # latest
     strategy:
       fail-fast: false
       matrix:
@@ -409,7 +409,7 @@ jobs:
           ./builder build -p ${{ env.PACKAGE_NAME }} --python "${{ steps.python315.outputs.python-path }}"
 
   macos-x64:
-    runs-on: macos-14-large # latest
+    runs-on: macos-15-large # latest
     permissions:
       id-token: write # This is required for requesting the JWT
     steps:
@@ -425,7 +425,7 @@ jobs:
           ./builder build -p ${{ env.PACKAGE_NAME }}
 
   macos-s2n:
-    runs-on: macos-14 # latest
+    runs-on: macos-15 # latest
     env:
       AWS_CRT_USE_NON_FIPS_TLS_13: 1
     permissions:
@@ -443,7 +443,7 @@ jobs:
           ./builder build -p ${{ env.PACKAGE_NAME }}
 
   macos-x64-s2n:
-    runs-on: macos-14-large # latest
+    runs-on: macos-15-large # latest
     env:
       AWS_CRT_USE_NON_FIPS_TLS_13: 1
     permissions:
@@ -520,7 +520,7 @@ jobs:
             export ASSUME_ALWAYS_YES=yes
             sudo -E pkg bootstrap -f
             sudo -E pkg update -f
-            sudo -E pkg install -y python3 devel/py-pip net/py-urllib3 devel/py-awscli cmake
+            sudo -E pkg install -y python3 devel/py-pip net/py-urllib3 devel/py-awscli devel/cmake-core
             python3 -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz', 'builder')"
             chmod a+x builder
             ./builder build -p ${{ env.PACKAGE_NAME }}

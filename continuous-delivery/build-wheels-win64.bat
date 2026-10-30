@@ -10,9 +10,12 @@
 :: We are using the 3.13 stable ABI from 3.13 onwards because of deprecated functions.
 "C:\Program Files\Python313\python.exe" -m build || goto error
 
-:: The free-threaded build does not currently support the Limited C API or the stable ABI. Built them separately
+:: Python3.13t and Python3.14t build does not support the Limited C API or the stable ABI. Built them separately
 "C:\Program Files\Python-313\python3.13t.exe" -m build || goto error
 "C:\Program Files\Python314\python3.14t.exe" -m build || goto error
+
+:: We are using the Python 3.15t stable ABI from Python 3.15t onwards for free-threaded python
+"C:\Program Files\Python315\python3.15t.exe" -m build || goto error
 
 goto :EOF
 
