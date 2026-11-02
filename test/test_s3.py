@@ -265,12 +265,10 @@ class S3ClientTest(NativeResourceTest):
         s3_client = S3Client(region=self.region)
         self.assertIsNotNone(s3_client)
 
-    def test_client_bootstrap_default(self):
+    def test_client_bootstrap_default_is_shared(self):
         bootstrap = client_bootstrap_default()
         self.assertIsNone(bootstrap.shutdown_event)
-        bootstrap = client_bootstrap_default(event_loop_count=2, host_resolver_max_entries=4)
-        s3_client = S3Client(bootstrap=bootstrap, region=self.region)
-        self.assertIsNotNone(s3_client)
+        self.assertIs(bootstrap, client_bootstrap_default())
 
     def test_sanity_network_interface_names(self):
         # This is just a sanity test to ensure that we are passing the parameter correctly.

@@ -51,24 +51,35 @@ class CrossProcessLock(NativeResource):
         self.release()
 
 
-def client_bootstrap_default(event_loop_count=0, host_resolver_max_entries=0):
-    """Create a ClientBootstrap with aws-c-s3's default event loop group and host resolver.
+_static_client_bootstrap_default = None
+_static_client_bootstrap_default_lock = threading.Lock()
 
-    By default the event loop group has one event loop per logical CPU, up to 96.
 
-    Args:
-        event_loop_count (int): Number of event loops. 0 selects the default.
-            A count above 96 is used as given.
-        host_resolver_max_entries (int): Maximum host names to cache. 0 selects the default.
+def client_bootstrap_default():
+    """Get the ClientBootstrap that aws-c-s3 recommends for S3 work.
+
+    The first call creates it, with its own event loop group and host resolver.
+    Every call after that returns the same one. It has one event loop per logical CPU, up to 96.
 
     Returns:
         ClientBootstrap: Its `shutdown_event` is None, because there is no shutdown signal for it.
     """
-    bootstrap = ClientBootstrap.__new__(ClientBootstrap)
-    NativeResource.__init__(bootstrap)
-    bootstrap.shutdown_event = None
-    bootstrap._binding = _awscrt.s3_client_bootstrap_default(event_loop_count, host_resolver_max_entries)
-    return bootstrap
+    global _static_client_bootstrap_default
+    with _static_client_bootstrap_default_lock:
+        if _static_client_bootstrap_default is None:
+            bootstrap = ClientBootstrap.__new__(ClientBootstrap)
+            NativeResource.__init__(bootstrap)
+            bootstrap.shutdown_event = None
+            bootstrap._binding = _awscrt.s3_client_bootstrap_default()
+            _static_client_bootstrap_default = bootstrap
+        return _static_client_bootstrap_default
+
+
+def _release_static_client_bootstrap_default():
+    # Lets the test leak check see the bootstrap freed.
+    global _static_client_bootstrap_default
+    with _static_client_bootstrap_default_lock:
+        _static_client_bootstrap_default = None
 
 
 class S3RequestType(IntEnum):

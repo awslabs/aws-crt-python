@@ -242,18 +242,9 @@ struct aws_s3_client *aws_py_get_s3_client(PyObject *client) {
 
 PyObject *aws_py_s3_client_bootstrap_default(PyObject *self, PyObject *args) {
     (void)self;
+    (void)args;
 
-    unsigned short event_loop_count;
-    unsigned long long host_resolver_max_entries;
-    if (!PyArg_ParseTuple(args, "HK", &event_loop_count, &host_resolver_max_entries)) {
-        return NULL;
-    }
-
-    struct aws_s3_client_bootstrap_options options = {
-        .event_loop_count = event_loop_count,
-        .host_resolver_max_entries = (size_t)host_resolver_max_entries,
-    };
-    struct aws_client_bootstrap *native = aws_s3_client_bootstrap_default(aws_py_get_allocator(), &options);
+    struct aws_client_bootstrap *native = aws_s3_client_bootstrap_default(aws_py_get_allocator(), NULL);
     if (!native) {
         return PyErr_AwsLastError();
     }

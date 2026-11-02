@@ -12,6 +12,7 @@ import time
 import types
 
 from awscrt.io import ClientBootstrap, DefaultHostResolver, EventLoopGroup
+from awscrt.s3 import _release_static_client_bootstrap_default
 
 
 def native_memory_usage() -> int:
@@ -66,6 +67,7 @@ def check_for_leaks(*, timeout_sec=10.0):
             if the test results will be made public as it may result in secrets
             being leaked.
     """
+    _release_static_client_bootstrap_default()
     ClientBootstrap.release_static_default()
     EventLoopGroup.release_static_default()
     DefaultHostResolver.release_static_default()
