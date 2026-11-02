@@ -19,9 +19,13 @@ auditwheel repair --plat manylinux2014_x86_64 dist/awscrt-*cp311*.whl
 /opt/python/cp313-cp313/bin/python -m build
 auditwheel repair --plat manylinux2014_x86_64 dist/awscrt-*cp313*.whl
 
-# The free-threaded build does not currently support the Limited C API or the stable ABI. Built them separately
+# Python3.14t build does not support the Limited C API or the stable ABI. Built them separately
 /opt/python/cp314-cp314t/bin/python -m build
 auditwheel repair --plat manylinux2014_x86_64 dist/awscrt-*cp314t*.whl
+
+# We are using the Python 3.15t stable ABI from Python 3.15t onwards for free-threaded python
+/opt/python/cp315-cp315t/bin/python -m build
+auditwheel repair --plat manylinux2014_x86_64 dist/awscrt-*cp315*.whl
 
 rm dist/*.whl
 cp -rv wheelhouse/* dist/
