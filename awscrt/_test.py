@@ -1,6 +1,10 @@
 """
 Private utilities for testing
 """
+
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0.
+
 import _awscrt
 from awscrt import NativeResource
 from awscrt.common import join_all_native_threads

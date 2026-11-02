@@ -40,7 +40,7 @@ aws-crt-python uses background threads. This makes [os.fork()](https://docs.pyth
 
 Unfortunately, Python's [multiprocessing](https://docs.python.org/3/library/multiprocessing.html) module defaults to using fork when it creates child processes (on POSIX systems except macOS, in Python versions 3.13 and earlier). `multiprocessing` is used under the hood by many tools that do work in parallel, including [concurrent.futures.ProcessPoolExecutor](https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ProcessPoolExecutor), and [pytorch.multiprocessing](https://pytorch.org/docs/stable/multiprocessing.html).
 
-If you need to use `multiprocessing` with aws-crt-python, set it to use "spawn" or "forkserver" instead of "fork" ([see docs](https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods)). The Python community agrees, and `multiprocessing` will changes its default from "fork" to "spawn" in 3.14. It already uses "spawn" by default on macOS (because system libraries may start threads) and on Windows (because fork does not exist).
+If you need to use `multiprocessing` with aws-crt-python, set it to use "spawn" or "forkserver" instead of "fork" ([see docs](https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods)). The Python community agrees, and `multiprocessing` changed its default away from "fork" on POSIX in 3.14. It already uses "spawn" by default on macOS (because system libraries may start threads) and on Windows (because fork does not exist).
 
 If you **must** use fork with aws-crt-python, you may be able to avoid hangs and crashes if you manage your threads very carefully:
 
@@ -75,7 +75,7 @@ the environment variable selects which one is used.
 
 ### Keychain Behavior
 
-Please note that on Mac, once a private key is used with a certificate, that certificate-key pair is imported into the Mac Keychain.  All subsequent uses of that certificate will use the stored private key and ignore anything passed in programmatically.  Beginning in v0.6.2, when a stored private key from the Keychain is used, the following will be logged at the "info" log level:
+Please note that on Mac, once a private key is used with a certificate, that certificate-key pair is imported into the Mac Keychain.  All subsequent uses of that certificate will use the stored private key and ignore anything passed in programmatically.  When a stored private key from the Keychain is used, the following will be logged at the "info" log level:
 
 ```
 static: certificate has an existing certificate-key pair that was previously imported into the Keychain. Using key from Keychain instead of the one provided.
@@ -135,7 +135,7 @@ You can enable the crash handler by setting the environment variable `AWS_CRT_CR
 
 aws-crt-python does not use OpenSSL for TLS.
 On Windows, the OS's default TLS library (Schannel) is used.
-On Apple (macOS), both Secure Transport and s2n-tls are compiled in; the backend is selected at runtime (see [macOS TLS Configuration](#macos-tls-configuration) below).
+On Apple (macOS), both Secure Transport and s2n-tls are compiled in; the backend is selected at runtime (see [macOS TLS Configuration](#macos-tls-configuration) above).
 On other Unix devices, [s2n-tls](https://github.com/aws/s2n-tls) is used.
 But s2n-tls uses libcrypto, the cryptography math library bundled with OpenSSL.
 
@@ -215,7 +215,7 @@ AWS_EXTRA_LIB_DIR=C:\path\to\libs;D:\another\path python3 -m pip install .
 
 ### Windows SDK Version
 
-aws-crt-python builds against windows sdk version `10.0.17763.0` . This is the minimal version required for TLS  1.3 support on Windows. If you need a different Windows SDK version, you can set environment variable `AWS_CRT_WINDOWS_SDK_VERSION=<version>` while building from source:
+aws-crt-python builds against windows sdk version `10.0.17763.0` . This is the minimal version required for TLS 1.3 support on Windows. If you need a different Windows SDK version, you can set environment variable `AWS_CRT_WINDOWS_SDK_VERSION=<version>` while building from source:
 
-### Attribution
+## Attribution
 This library exposes native XXHash implementation (https://github.com/Cyan4973/xxHash).
