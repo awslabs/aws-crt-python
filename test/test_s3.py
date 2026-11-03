@@ -298,12 +298,15 @@ class S3ClientTest(NativeResourceTest):
     def test_recv_buffer_invalid_options(self):
         s3_client = s3_client_new(False, self.region)
         buf = bytearray(1024)
-        with self.assertRaises(ValueError):
+        # Rejected by aws-c-s3 (which error it reports is up to aws-c-s3). These cover the binding releasing the
+        # buffer when the native request can't be created.
+        with self.assertRaises(RuntimeError):
             s3_client.make_request(request=self._recv_buffer_request(), type=S3RequestType.PUT_OBJECT,
                                    recv_buffer=buf)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(RuntimeError):
             s3_client.make_request(request=self._recv_buffer_request(), type=S3RequestType.GET_OBJECT,
                                    recv_buffer=buf, recv_filepath="recv_buffer_test.out")
+        # Rejected by the binding, since aws-c-s3 never sees on_body.
         with self.assertRaises(ValueError):
             s3_client.make_request(request=self._recv_buffer_request(), type=S3RequestType.GET_OBJECT,
                                    recv_buffer=buf, on_body=lambda **kwargs: None)
@@ -341,11 +344,13 @@ class S3ClientTest(NativeResourceTest):
             request = kwargs.pop("request", None) or HttpRequest("PUT", "/key", HttpHeaders([("host", "localhost")]))
             return s3_client.make_request(request=request, **kwargs)
 
-        with self.assertRaises(ValueError):
+        # Rejected by aws-c-s3 (which error it reports is up to aws-c-s3). These cover the binding releasing the
+        # buffer when the native request can't be created.
+        with self.assertRaises(RuntimeError):
             put(type=S3RequestType.GET_OBJECT, send_buffer=data)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(RuntimeError):
             put(type=S3RequestType.PUT_OBJECT, send_buffer=data, send_filepath="send_buffer_test.in")
-        with self.assertRaises(ValueError):
+        with self.assertRaises(RuntimeError):
             put(type=S3RequestType.PUT_OBJECT, send_buffer=data,
                 request=HttpRequest("PUT", "/key", HttpHeaders([("host", "localhost")]), BytesIO(b'body')))
         # Not contiguous (a view of another bytearray, since a live view would also lock `data`).

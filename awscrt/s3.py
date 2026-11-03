@@ -846,21 +846,10 @@ class S3Request(NativeResource):
         if type == S3RequestType.DEFAULT and not operation_name:
             raise ValueError("'operation_name' must be set when using S3RequestType.DEFAULT")
 
-        if recv_buffer is not None:
-            if type != S3RequestType.GET_OBJECT:
-                raise ValueError("'recv_buffer' is only supported for S3RequestType.GET_OBJECT")
-            if recv_filepath is not None:
-                raise ValueError("'recv_buffer' cannot be combined with 'recv_filepath'")
-            if on_body is not None:
-                raise ValueError("'on_body' is not invoked when 'recv_buffer' is set, so it cannot be combined")
-
-        if send_buffer is not None:
-            if type not in (S3RequestType.PUT_OBJECT, S3RequestType.DEFAULT):
-                raise ValueError("'send_buffer' is only supported for S3RequestType.PUT_OBJECT and DEFAULT")
-            if send_filepath is not None:
-                raise ValueError("'send_buffer' cannot be combined with 'send_filepath'")
-            if request.body_stream is not None:
-                raise ValueError("'send_buffer' cannot be combined with a 'body_stream' on the request")
+        # aws-c-s3 rejects the other invalid combinations itself. This one it can't see: with recv_buffer, the
+        # native body callback isn't installed at all, so on_body would silently never be invoked.
+        if recv_buffer is not None and on_body is not None:
+            raise ValueError("'on_body' is not invoked when 'recv_buffer' is set, so it cannot be combined")
 
         super().__init__()
 
