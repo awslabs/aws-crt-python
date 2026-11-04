@@ -191,6 +191,50 @@ elg_init_failed:
     return NULL;
 }
 
+PyObject *aws_py_event_loop_group_new_static_default(PyObject *self, PyObject *args) {
+    (void)self;
+
+    struct aws_allocator *allocator = aws_py_get_allocator();
+
+    PyObject *shutdown_complete_py;
+    if (!PyArg_ParseTuple(args, "O", &shutdown_complete_py)) {
+        return NULL;
+    }
+
+    struct event_loop_group_binding *binding = aws_mem_calloc(allocator, 1, sizeof(struct event_loop_group_binding));
+    if (!binding) {
+        return PyErr_AwsLastError();
+    }
+
+    struct aws_shutdown_callback_options shutdown_options = {
+        .shutdown_callback_fn = s_elg_native_cleanup_complete,
+        .shutdown_callback_user_data = binding,
+    };
+
+    binding->native = aws_event_loop_group_new_static_default(allocator, &shutdown_options);
+    if (binding->native == NULL) {
+        PyErr_SetAwsLastError();
+        goto elg_init_failed;
+    }
+
+    PyObject *capsule = PyCapsule_New(binding, s_capsule_name_elg, s_elg_capsule_destructor);
+    if (!capsule) {
+        goto capsule_new_failed;
+    }
+
+    AWS_FATAL_ASSERT(shutdown_complete_py != Py_None);
+    binding->shutdown_complete = shutdown_complete_py;
+    Py_INCREF(binding->shutdown_complete);
+
+    return capsule;
+
+capsule_new_failed:
+    aws_event_loop_group_release(binding->native);
+elg_init_failed:
+    aws_mem_release(allocator, binding);
+    return NULL;
+}
+
 struct aws_event_loop_group *aws_py_get_event_loop_group(PyObject *event_loop_group) {
     AWS_PY_RETURN_NATIVE_FROM_BINDING(event_loop_group, s_capsule_name_elg, "EventLoopGroup", event_loop_group_binding);
 }

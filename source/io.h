@@ -43,6 +43,7 @@ PyObject *aws_py_is_tls_cipher_supported(PyObject *self, PyObject *args);
  * Create a new event_loop_group to be managed by a Python Capsule.
  */
 PyObject *aws_py_event_loop_group_new(PyObject *self, PyObject *args);
+PyObject *aws_py_event_loop_group_new_static_default(PyObject *self, PyObject *args);
 
 /**
  * Create a new default host_resolver to be managed by a Python Capsule.
