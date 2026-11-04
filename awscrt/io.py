@@ -113,9 +113,18 @@ class EventLoopGroup(NativeResource):
 
     @staticmethod
     def get_or_create_static_default():
+        """Get the shared default EventLoopGroup, creating it on first use.
+
+        It has the default number of event-loops, capped at AWS_EVENT_LOOP_GROUP_STATIC_DEFAULT_MAX_LOOPS.
+        """
         with EventLoopGroup._static_event_loop_group_lock:
             if EventLoopGroup._static_event_loop_group is None:
-                EventLoopGroup._static_event_loop_group = EventLoopGroup()
+                shutdown_event = threading.Event()
+                group = EventLoopGroup.__new__(EventLoopGroup)
+                NativeResource.__init__(group)
+                group.shutdown_event = shutdown_event
+                group._binding = _awscrt.event_loop_group_new_static_default(shutdown_event.set)
+                EventLoopGroup._static_event_loop_group = group
             return EventLoopGroup._static_event_loop_group
 
     @staticmethod
