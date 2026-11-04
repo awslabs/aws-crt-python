@@ -107,6 +107,8 @@ logging.getLogger('awscrt').setLevel(logging.WARNING)
 logging.getLogger('awscrt.io').setLevel(logging.DEBUG)
 ```
 
+`logging.DEBUG` maps to the CRT's Debug level. For the CRT's more verbose Trace logs (emitted at `logging.DEBUG`), call `awscrt.logging.enable_trace_logs()`; `disable_trace_logs()` restores the previous level.
+
 ### Option 2: Direct file/stdout logging
 
 Write CRT log output directly to a file, stdout, or stderr. This bypasses Python's logging module and is useful for quick debugging.
