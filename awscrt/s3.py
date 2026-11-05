@@ -562,6 +562,8 @@ class S3Client(NativeResource):
             operation_name=None,
             recv_filepath=None,
             send_filepath=None,
+            recv_buffer=None,
+            send_buffer=None,
             signing_config=None,
             credential_provider=None,
             checksum_config=None,
@@ -613,6 +615,41 @@ class S3Client(NativeResource):
                 request body is read directly from a file and the
                 request's `body_stream` is ignored. This should give better
                 performance than reading a file from a stream.
+
+            recv_buffer (Optional[buffer]): Optional writable, C-contiguous buffer
+                (e.g. `bytearray`, `memoryview`, `mmap`, `array.array`, a NumPy array).
+                Only for :attr:`~S3RequestType.GET_OBJECT`, and not together with
+                `recv_filepath` or `on_body`. If set, the response body is written
+                straight into this buffer by the client's threads, with no copy and
+                without taking the GIL, and the `on_body` callback is not invoked.
+                The first byte of the requested range lands at index 0; to use part
+                of a buffer, pass a `memoryview` slice of it.
+
+                On success, :attr:`S3Request.finished_future` resolves to the number
+                of bytes written, so the data is `recv_buffer[:n]` and the rest of
+                the buffer is untouched. On failure, the buffer's contents are undefined.
+
+                The buffer must hold the whole requested range, otherwise the
+                request fails with AWS_ERROR_SHORT_BUFFER. The request holds the
+                buffer until it shuts down, so its memory stays valid, and a
+                `bytearray` can't be resized (or an `mmap` closed) until then.
+                Don't read or write the buffer until the request finishes, and
+                don't give the same or overlapping memory to two requests in flight.
+
+            send_buffer (Optional[buffer]): Optional C-contiguous buffer (e.g. `bytes`,
+                `bytearray`, `memoryview`, `mmap`, a NumPy array); read-only is fine.
+                Only for :attr:`~S3RequestType.PUT_OBJECT` and :attr:`~S3RequestType.DEFAULT`,
+                and not together with `send_filepath` or a `body_stream` on the request.
+                If set, the request body is sent straight from this buffer by the
+                client's threads, with no copy and without taking the GIL. Above the
+                multipart threshold, parts are sent from it in parallel.
+
+                The request doesn't need a Content-Length header: the client uses the
+                buffer's length, and fails the request with
+                AWS_ERROR_S3_INCORRECT_CONTENT_LENGTH if a header doesn't match it.
+                The request holds the buffer until it shuts down, so its memory stays
+                valid, and a `bytearray` can't be resized (or an `mmap` closed) until
+                then. Don't change the buffer's contents until the request finishes.
 
             signing_config (Optional[AwsSigningConfig]): Configuration for signing of the request to override the configuration from client.
                 Use :func:`create_default_s3_signing_config()` to create the default config.
@@ -739,6 +776,8 @@ class S3Client(NativeResource):
             operation_name=operation_name,
             recv_filepath=recv_filepath,
             send_filepath=send_filepath,
+            recv_buffer=recv_buffer,
+            send_buffer=send_buffer,
             signing_config=signing_config,
             credential_provider=credential_provider,
             checksum_config=checksum_config,
@@ -761,7 +800,9 @@ class S3Request(NativeResource):
         finished_future (concurrent.futures.Future): Future that will
             resolve when the s3 request has finished successfully.
             If the error happens, the Future will contain an exception
-            indicating why it failed. Note: Future will set before on_done invoked
+            indicating why it failed. Note: Future will set before on_done invoked.
+            Its result is the number of bytes written for a request made with
+            `recv_buffer`, and None otherwise.
 
         shutdown_event (threading.Event): Signals when underlying threads and
             structures have all finished shutting down. Shutdown begins when the
@@ -778,6 +819,8 @@ class S3Request(NativeResource):
             operation_name=None,
             recv_filepath=None,
             send_filepath=None,
+            recv_buffer=None,
+            send_buffer=None,
             signing_config=None,
             credential_provider=None,
             checksum_config=None,
@@ -802,6 +845,11 @@ class S3Request(NativeResource):
 
         if type == S3RequestType.DEFAULT and not operation_name:
             raise ValueError("'operation_name' must be set when using S3RequestType.DEFAULT")
+
+        # aws-c-s3 rejects the other invalid combinations itself. This one it can't see: with recv_buffer, the
+        # native body callback isn't installed at all, so on_body would silently never be invoked.
+        if recv_buffer is not None and on_body is not None:
+            raise ValueError("'on_body' is not invoked when 'recv_buffer' is set, so it cannot be combined")
 
         super().__init__()
 
@@ -877,6 +925,8 @@ class S3Request(NativeResource):
             disk_throughput_gbps,
             direct_io,
             max_active_connections_override,
+            recv_buffer,
+            send_buffer,
             s3_request_core)
 
     @property
@@ -998,7 +1048,9 @@ class _S3RequestCore:
             error_body,
             error_operation_name,
             did_validate_checksum,
-            checksum_validation_algorithm):
+            checksum_validation_algorithm,
+            bytes_received):
+        # bytes_received is the count written into recv_buffer, or None if the request has no recv_buffer.
         # If C layer gives status_code 0, that means "unknown"
         if status_code == 0:
             status_code = None
@@ -1024,7 +1076,7 @@ class _S3RequestCore:
                         operation_name=error_operation_name)
             self._finished_future.set_exception(error)
         else:
-            self._finished_future.set_result(None)
+            self._finished_future.set_result(bytes_received)
 
         if checksum_validation_algorithm:
             checksum_validation_algorithm = S3ChecksumAlgorithm(checksum_validation_algorithm)

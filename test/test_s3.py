@@ -292,6 +292,73 @@ class S3ClientTest(NativeResourceTest):
         self.assertTrue(len(platform_list) > 0)
         self.assertTrue("p4d.24xlarge" in platform_list)
 
+    def _recv_buffer_request(self):
+        return HttpRequest("GET", "/key", HttpHeaders([("host", "localhost")]))
+
+    def test_recv_buffer_invalid_options(self):
+        s3_client = s3_client_new(False, self.region)
+        buf = bytearray(1024)
+        # Rejected by aws-c-s3 (which error it reports is up to aws-c-s3). These cover the binding releasing the
+        # buffer when the native request can't be created.
+        with self.assertRaises(RuntimeError):
+            s3_client.make_request(request=self._recv_buffer_request(), type=S3RequestType.PUT_OBJECT,
+                                   recv_buffer=buf)
+        with self.assertRaises(RuntimeError):
+            s3_client.make_request(request=self._recv_buffer_request(), type=S3RequestType.GET_OBJECT,
+                                   recv_buffer=buf, recv_filepath="recv_buffer_test.out")
+        # Rejected by the binding, since aws-c-s3 never sees on_body.
+        with self.assertRaises(ValueError):
+            s3_client.make_request(request=self._recv_buffer_request(), type=S3RequestType.GET_OBJECT,
+                                   recv_buffer=buf, on_body=lambda **kwargs: None)
+        # Read-only, and not contiguous (a view of another bytearray, since a live view would also lock `buf`).
+        for bad in (bytes(1024), memoryview(bytearray(1024))[::2]):
+            with self.assertRaises(BufferError):
+                s3_client.make_request(request=self._recv_buffer_request(), type=S3RequestType.GET_OBJECT,
+                                       recv_buffer=bad)
+        # A failed request doesn't keep holding the buffer.
+        buf.append(0)
+
+    def test_recv_buffer_cancel(self):
+        s3_client = s3_client_new(False, self.region)
+        buf = bytearray(b'\xab' * 1024)
+        s3_request = s3_client.make_request(request=self._recv_buffer_request(), type=S3RequestType.GET_OBJECT,
+                                            recv_buffer=buf)
+        # The request holds the buffer, so it can't be resized while the request is alive.
+        with self.assertRaises(BufferError):
+            buf.append(0)
+        s3_request.cancel()
+        finished_future = s3_request.finished_future
+        shutdown_event = s3_request.shutdown_event
+        self.assertIsNotNone(finished_future.exception(self.timeout))
+        del s3_request
+        self.assertTrue(shutdown_event.wait(self.timeout))
+        self.assertEqual(b'\xab' * 1024, bytes(buf))
+        # Released at shutdown.
+        buf.append(0)
+
+    def test_send_buffer_invalid_options(self):
+        s3_client = s3_client_new(False, self.region)
+        data = bytearray(1024)
+
+        def put(**kwargs):
+            request = kwargs.pop("request", None) or HttpRequest("PUT", "/key", HttpHeaders([("host", "localhost")]))
+            return s3_client.make_request(request=request, **kwargs)
+
+        # Rejected by aws-c-s3 (which error it reports is up to aws-c-s3). These cover the binding releasing the
+        # buffer when the native request can't be created.
+        with self.assertRaises(RuntimeError):
+            put(type=S3RequestType.GET_OBJECT, send_buffer=data)
+        with self.assertRaises(RuntimeError):
+            put(type=S3RequestType.PUT_OBJECT, send_buffer=data, send_filepath="send_buffer_test.in")
+        with self.assertRaises(RuntimeError):
+            put(type=S3RequestType.PUT_OBJECT, send_buffer=data,
+                request=HttpRequest("PUT", "/key", HttpHeaders([("host", "localhost")]), BytesIO(b'body')))
+        # Not contiguous (a view of another bytearray, since a live view would also lock `data`).
+        with self.assertRaises(BufferError):
+            put(type=S3RequestType.PUT_OBJECT, send_buffer=memoryview(bytearray(1024))[::2])
+        # A failed request doesn't keep holding the buffer.
+        data.append(0)
+
 
 @unittest.skipUnless(os.environ.get('AWS_TEST_S3'), 'set env var to run test: AWS_TEST_S3')
 class S3RequestTest(NativeResourceTest):
@@ -610,6 +677,150 @@ class S3RequestTest(NativeResourceTest):
             self.assertEqual(self.response_status_code, 200, "status code is not 200")
             # TODO verify the content of written file
             os.remove(file.name)
+
+    def _get_object_bytes(self, s3_client, request):
+        """GETs through on_body and returns the bytes, to compare a recv_buffer download against."""
+        body = bytearray()
+
+        def on_body(chunk, offset, **kwargs):
+            # GET_OBJECT delivers the body in order; offset is the object offset, so it isn't used here.
+            body.extend(chunk)
+
+        s3_client.make_request(request=request, type=S3RequestType.GET_OBJECT,
+                               on_body=on_body).finished_future.result(self.timeout)
+        return bytes(body)
+
+    def _get_object_into(self, s3_client, request, recv_buffer):
+        """GETs into recv_buffer and waits for the request to shut down. Returns its finished future."""
+        s3_request = s3_client.make_request(request=request, type=S3RequestType.GET_OBJECT, recv_buffer=recv_buffer)
+        finished_future = s3_request.finished_future
+        shutdown_event = s3_request.shutdown_event
+        del s3_request
+        finished_future.exception(self.timeout)
+        self.assertTrue(shutdown_event.wait(self.timeout))
+        return finished_future
+
+    def test_get_object_recv_buffer(self):
+        s3_client = s3_client_new(False, self.region, 5 * MB)
+        expected = self._get_object_bytes(s3_client, self._get_object_request(self.get_test_object_path))
+
+        # Bigger than the object: only the object's bytes are written, the rest is untouched.
+        marker = b'\xab'
+        buf = bytearray(marker * (len(expected) + 100))
+        finished_future = self._get_object_into(
+            s3_client, self._get_object_request(self.get_test_object_path), buf)
+        self.assertEqual(len(expected), finished_future.result())
+        self.assertEqual(expected, bytes(buf[:len(expected)]))
+        self.assertEqual(marker * 100, bytes(buf[len(expected):]))
+
+        # The request released the buffer when it shut down, so it can be resized again.
+        buf.append(0)
+
+    def test_get_object_recv_buffer_range(self):
+        s3_client = s3_client_new(False, self.region, 5 * MB)
+        # Crosses part boundaries.
+        range_header = ("Range", "bytes=1000-9000999")
+        request = self._get_object_request(self.get_test_object_path)
+        request.headers.add(*range_header)
+        expected = self._get_object_bytes(s3_client, request)
+        self.assertEqual(9000000, len(expected))
+
+        # Into a memoryview slice at a non-zero offset, with a guard on each side.
+        offset = 7
+        buf = bytearray(b'\xab' * (offset + len(expected) + 3))
+        request = self._get_object_request(self.get_test_object_path)
+        request.headers.add(*range_header)
+        finished_future = self._get_object_into(
+            s3_client, request, memoryview(buf)[offset:offset + len(expected)])
+        self.assertEqual(len(expected), finished_future.result())
+        self.assertEqual(expected, bytes(buf[offset:offset + len(expected)]))
+        self.assertEqual(b'\xab' * offset, bytes(buf[:offset]))
+        self.assertEqual(b'\xab' * 3, bytes(buf[offset + len(expected):]))
+
+    def test_get_object_recv_buffer_too_small(self):
+        s3_client = s3_client_new(False, self.region, 5 * MB)
+        finished_future = self._get_object_into(
+            s3_client, self._get_object_request(self.get_test_object_path), bytearray(1 * MB))
+        self.assertEqual("AWS_ERROR_SHORT_BUFFER", finished_future.exception().name)
+
+    def test_get_object_recv_buffer_mmap(self):
+        import mmap
+        s3_client = s3_client_new(False, self.region, 5 * MB)
+        expected = self._get_object_bytes(s3_client, self._get_object_request(self.get_test_object_path))
+        with mmap.mmap(-1, len(expected)) as buf:
+            finished_future = self._get_object_into(
+                s3_client, self._get_object_request(self.get_test_object_path), buf)
+            self.assertEqual(len(expected), finished_future.result())
+            self.assertEqual(expected, buf[:])
+
+    def test_get_object_recv_buffer_kept_alive(self):
+        import weakref
+
+        class WeakrefableBytearray(bytearray):
+            pass
+
+        s3_client = s3_client_new(False, self.region, 5 * MB)
+        expected = self._get_object_bytes(s3_client, self._get_object_request(self.get_test_object_path))
+        buf = WeakrefableBytearray(len(expected))
+        buf_ref = weakref.ref(buf)
+        s3_request = s3_client.make_request(
+            request=self._get_object_request(self.get_test_object_path),
+            type=S3RequestType.GET_OBJECT,
+            recv_buffer=buf)
+        finished_future = s3_request.finished_future
+        shutdown_event = s3_request.shutdown_event
+
+        # Drop the only Python reference to the buffer: the request must keep it alive until it shuts down.
+        del buf
+        gc.collect()
+        self.assertEqual(len(expected), finished_future.result(self.timeout))
+        data = buf_ref()
+        self.assertIsNotNone(data)
+        self.assertEqual(expected, bytes(data))
+
+        # Once the request shuts down and the last reference goes, the buffer is freed.
+        del data
+        del s3_request
+        self.assertTrue(shutdown_event.wait(self.timeout))
+        gc.collect()
+        self.assertIsNone(buf_ref())
+
+    def test_put_object_send_buffer(self):
+        import uuid
+        s3_client = s3_client_new(False, self.region, 5 * MB)
+        path = "/crt-python-zero-copy-test/" + str(uuid.uuid4())
+        host = self._build_endpoint_string(self.region, self.bucket_name)
+        try:
+            # No Content-Length header: the client takes it from the buffer. Multipart from a bytearray, then a
+            # single PUT from (read-only) bytes.
+            for data in (bytearray(b'\x5c' * (20 * MB)), b'\x5c' * 1000):
+                s3_request = s3_client.make_request(
+                    request=HttpRequest("PUT", path, HttpHeaders([("host", host)])),
+                    type=S3RequestType.PUT_OBJECT,
+                    send_buffer=data)
+                if isinstance(data, bytearray):
+                    # The request holds the buffer, so it can't be resized while the request is alive.
+                    with self.assertRaises(BufferError):
+                        data.append(0)
+                finished_future = s3_request.finished_future
+                shutdown_event = s3_request.shutdown_event
+                del s3_request
+                self.assertIsNone(finished_future.result(self.timeout))
+                self.assertTrue(shutdown_event.wait(self.timeout))
+                if isinstance(data, bytearray):
+                    # Released at shutdown.
+                    data.append(0)
+                    del data[-1]
+
+                buf = bytearray(len(data))
+                finished_future = self._get_object_into(s3_client, self._get_object_request(path), buf)
+                self.assertEqual(len(data), finished_future.result())
+                self.assertEqual(bytes(data), bytes(buf))
+        finally:
+            s3_client.make_request(
+                request=HttpRequest("DELETE", path, HttpHeaders([("host", host)])),
+                type=S3RequestType.DEFAULT,
+                operation_name="DeleteObject").finished_future.result(self.timeout)
 
     def test_put_object_filepath(self):
         content_length = os.stat(self.temp_put_obj_file_path).st_size

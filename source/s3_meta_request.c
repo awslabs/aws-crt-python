@@ -28,6 +28,16 @@ struct s3_meta_request_binding {
     uint64_t size_transferred;
     /* The time stamp when the progress reported */
     uint64_t last_sampled_time;
+
+    /* For a download into a recv_buffer: the caller's buffer, held (so it stays alive and can't be resized) until
+     * shutdown, and the aws_byte_buf viewing it that aws-c-s3 keeps a pointer to and sets the len of at finish. */
+    bool has_recv_buffer;
+    Py_buffer recv_py_buffer;
+    struct aws_byte_buf recv_buffer;
+
+    /* For an upload from a send_buffer: the caller's buffer, held until shutdown. aws-c-s3 copies the cursor to it. */
+    bool has_send_buffer;
+    Py_buffer send_py_buffer;
 };
 
 struct aws_s3_meta_request *aws_py_get_s3_meta_request(PyObject *meta_request) {
@@ -36,6 +46,12 @@ struct aws_s3_meta_request *aws_py_get_s3_meta_request(PyObject *meta_request) {
 }
 
 static void s_destroy(struct s3_meta_request_binding *meta_request) {
+    if (meta_request->has_recv_buffer) {
+        PyBuffer_Release(&meta_request->recv_py_buffer);
+    }
+    if (meta_request->has_send_buffer) {
+        PyBuffer_Release(&meta_request->send_py_buffer);
+    }
     Py_XDECREF(meta_request->py_core);
     aws_mem_release(aws_py_get_allocator(), meta_request);
 }
@@ -216,10 +232,20 @@ static void s_s3_request_on_finish(
         operation_name = aws_string_c_str(meta_request_result->error_response_operation_name);
     }
 
+    /* The bytes written into recv_buffer (aws-c-s3 sets len just before this callback, on success), or None. */
+    PyObject *bytes_received = NULL;
+    if (request_binding->has_recv_buffer) {
+        bytes_received = PyLong_FromSize_t(request_binding->recv_buffer.len);
+        if (!bytes_received) {
+            PyErr_WriteUnraisable(request_binding->py_core);
+            /* We MUST keep going and invoke the final callback */
+        }
+    }
+
     result = PyObject_CallMethod(
         request_binding->py_core,
         "_on_finish",
-        "(iiOy#sOi)",
+        "(iiOy#sOiO)",
         error_code,
         meta_request_result->response_status,
         header_list ? header_list : Py_None,
@@ -227,7 +253,8 @@ static void s_s3_request_on_finish(
         (Py_ssize_t)error_body.len,
         operation_name,
         meta_request_result->did_validate ? Py_True : Py_False,
-        (int)meta_request_result->validation_algorithm);
+        (int)meta_request_result->validation_algorithm,
+        bytes_received ? bytes_received : Py_None);
 
     if (result) {
         Py_DECREF(result);
@@ -236,6 +263,7 @@ static void s_s3_request_on_finish(
         PyErr_WriteUnraisable(request_binding->py_core);
     }
 
+    Py_XDECREF(bytes_received);
     Py_XDECREF(header_list);
     PyGILState_Release(state);
     /*************** GIL RELEASE ***************/
@@ -340,10 +368,12 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     double disk_throughput_gbps;                                            /* d */
     int direct_io;                                                          /* p - boolean predicate */
     uint64_t max_active_connections_override;                               /* K */
+    PyObject *recv_buffer_py;                                               /* O */
+    PyObject *send_buffer_py;                                               /* O */
     PyObject *py_core;                                                      /* O */
     if (!PyArg_ParseTuple(
             args,
-            "OOOizOOzzs#iipz#iiKKppdpKO",
+            "OOOizOOzzs#iipz#iiKKppdpKOOO",
             &py_s3_request,
             &s3_client_py,
             &http_request_py,
@@ -369,6 +399,8 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
             &disk_throughput_gbps,
             &direct_io,
             &max_active_connections_override,
+            &recv_buffer_py,
+            &send_buffer_py,
             &py_core)) {
         return NULL;
     }
@@ -436,6 +468,29 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
     meta_request->py_core = py_core;
     Py_INCREF(meta_request->py_core);
 
+    if (recv_buffer_py != Py_None) {
+        /* Raises BufferError or TypeError if it isn't a writable, C-contiguous buffer. Holding the Py_buffer keeps a
+         * reference to the object and stops it being resized until s_destroy releases it. */
+        if (PyObject_GetBuffer(recv_buffer_py, &meta_request->recv_py_buffer, PyBUF_WRITABLE | PyBUF_C_CONTIGUOUS)) {
+            goto error;
+        }
+        meta_request->has_recv_buffer = true;
+        meta_request->recv_buffer =
+            aws_byte_buf_from_empty_array(meta_request->recv_py_buffer.buf, (size_t)meta_request->recv_py_buffer.len);
+    }
+
+    struct aws_byte_cursor request_body;
+    AWS_ZERO_STRUCT(request_body);
+    if (send_buffer_py != Py_None) {
+        /* Raises BufferError or TypeError if it isn't a C-contiguous buffer (read-only is fine). */
+        if (PyObject_GetBuffer(send_buffer_py, &meta_request->send_py_buffer, PyBUF_C_CONTIGUOUS)) {
+            goto error;
+        }
+        meta_request->has_send_buffer = true;
+        request_body =
+            aws_byte_cursor_from_array(meta_request->send_py_buffer.buf, (size_t)meta_request->send_py_buffer.len);
+    }
+
     struct aws_s3_meta_request_options s3_meta_request_opt = {
         .type = type,
         .operation_name = aws_byte_cursor_from_c_str(operation_name),
@@ -444,8 +499,11 @@ PyObject *aws_py_s3_client_make_meta_request(PyObject *self, PyObject *args) {
         .checksum_config = &checksum_config,
         .send_filepath = aws_byte_cursor_from_c_str(send_filepath),
         .recv_filepath = aws_byte_cursor_from_c_str(recv_filepath),
+        .recv_buffer = meta_request->has_recv_buffer ? &meta_request->recv_buffer : NULL,
+        .request_body = request_body,
         .headers_callback = s_s3_request_on_headers,
-        .body_callback = s_s3_request_on_body,
+        /* aws-c-s3 delivers the body into recv_buffer itself, and rejects a body callback with it */
+        .body_callback = meta_request->has_recv_buffer ? NULL : s_s3_request_on_body,
         .finish_callback = s_s3_request_on_finish,
         .shutdown_callback = s_s3_request_on_shutdown,
         .progress_callback = s_s3_request_on_progress,
