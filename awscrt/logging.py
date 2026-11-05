@@ -10,7 +10,8 @@ from enum import IntEnum
 import _awscrt
 from awscrt.io import LogLevel
 
-__all__ = ['init_logging', 'set_log_level', 'logf', 'LogSubject', 'CRT_LOG_FORMAT']
+__all__ = ['init_logging', 'set_log_level', 'enable_trace_logs', 'disable_trace_logs', 'logf', 'LogSubject',
+           'CRT_LOG_FORMAT']
 
 _CRT_TO_PY_LEVEL = {
     0: logging.NOTSET,
@@ -28,8 +29,11 @@ _PY_TO_CRT_LEVEL = {
     logging.ERROR: LogLevel.Error,
     logging.WARNING: LogLevel.Warn,
     logging.INFO: LogLevel.Info,
-    logging.DEBUG: LogLevel.Trace,
+    logging.DEBUG: LogLevel.Debug,
 }
+
+# Last level set via init_logging() or set_log_level(), restored by disable_trace_logs().
+_level = logging.NOTSET
 
 # Default Format supported by native loggers.
 CRT_LOG_FORMAT = '%(asctime)s [%(threadName)s] %(levelname)s %(name)s - %(message)s'
@@ -160,6 +164,7 @@ def init_logging(level: int = logging.DEBUG):
     Raises:
         RuntimeError: If CRT logging has already been initialized.
     """
+    global _level
     root_logger = logging.getLogger('awscrt')
 
     try:
@@ -171,6 +176,7 @@ def init_logging(level: int = logging.DEBUG):
         root_logger.setLevel(_CRT_TO_PY_LEVEL.get(int(crt_level), logging.DEBUG))
 
     _awscrt.init_python_logging(int(crt_level), _python_logging_callback)
+    _level = level
 
 
 def set_log_level(level: int):
@@ -183,11 +189,25 @@ def set_log_level(level: int):
         level (int): Python logging level (e.g. ``logging.DEBUG``,
             ``logging.WARNING``).
     """
+    global _level
     try:
         crt_level = _PY_TO_CRT_LEVEL[level]
     except KeyError:
         raise ValueError(f"Invalid log level: {level}. Use logging.DEBUG, INFO, WARNING, ERROR, or CRITICAL")
     _awscrt.set_log_level(int(crt_level))
+    _level = level
+
+
+def enable_trace_logs():
+    """Enable the CRT's most verbose native logs (Trace), emitted at ``logging.DEBUG``.
+    :func:`init_logging` must have been called first.
+    """
+    _awscrt.set_log_level(int(LogLevel.Trace))
+
+
+def disable_trace_logs():
+    """Restore the level last set by :func:`init_logging` or :func:`set_log_level`."""
+    _awscrt.set_log_level(int(_PY_TO_CRT_LEVEL[_level]))
 
 
 def log(level: int, subject: LogSubject, message: str):

@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0.
 
 from awscrt.io import *
-from awscrt.logging import init_logging, set_log_level, log, LogSubject
+from awscrt.logging import init_logging, set_log_level, enable_trace_logs, disable_trace_logs, log, LogSubject
+import _awscrt
 from test import NativeResourceTest, TIMEOUT
 import io
 import logging
@@ -387,6 +388,35 @@ class PythonLoggingTest(NativeResourceTest):
             logging.getLogger('awscrt.http').setLevel(logging.NOTSET)
             logging.getLogger('awscrt.s3').setLevel(logging.NOTSET)
             root.removeHandler(handler)
+
+    def test_trace_logs(self):
+        handler = logging.Handler()
+        handler.records = []
+        handler.emit = lambda record: handler.records.append(record)
+
+        logger = logging.getLogger('awscrt')
+        logger.setLevel(logging.DEBUG)
+        logger.addHandler(handler)
+
+        def emit_trace():
+            _awscrt.logger_log(int(LogLevel.Trace), int(LogSubject.COMMON_GENERAL), "trace test")
+
+        try:
+            emit_trace()
+            self.assertEqual(len(handler.records), 0)
+
+            enable_trace_logs()
+            emit_trace()
+            self.assertEqual(len(handler.records), 1)
+            self.assertEqual(handler.records[0].levelno, logging.DEBUG)
+            handler.records.clear()
+
+            disable_trace_logs()
+            emit_trace()
+            self.assertEqual(len(handler.records), 0)
+        finally:
+            disable_trace_logs()
+            logger.removeHandler(handler)
 
     @classmethod
     def tearDownClass(cls):
