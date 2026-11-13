@@ -9,6 +9,8 @@ import unittest
 import threading
 import subprocess
 import concurrent.futures
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 from urllib.parse import urlparse
 from test import NativeResourceTest
 import ssl
@@ -19,8 +21,30 @@ from http.server import HTTPServer, SimpleHTTPRequestHandler
 from awscrt import io
 from awscrt.io import ClientBootstrap, ClientTlsContext, DefaultHostResolver, EventLoopGroup, TlsContextOptions, TlsCipherPref
 from awscrt.http import HttpHeaders, HttpRequest, HttpVersion, Http2Setting, Http2SettingID
-from awscrt.aio.http import AIOHttpClientConnection, AIOHttp2ClientConnection
+from awscrt.aio.http import AIOHttpClientConnection, AIOHttp2ClientConnection, AIOHttp2ClientStream
 import threading
+
+
+class TestAsyncRequestBody(unittest.IsolatedAsyncioTestCase):
+    async def test_cancelled_completion_waiter_still_ends_body(self):
+        stream = SimpleNamespace(
+            _loop=asyncio.get_running_loop(),
+            _completion_future=concurrent.futures.Future(),
+            _stream_completed=False,
+            _write_data=AsyncMock())
+        waiter = asyncio.create_task(AIOHttp2ClientStream.wait_for_completion(stream))
+        await asyncio.sleep(0)
+        waiter.cancel()
+        with self.assertRaises(asyncio.CancelledError):
+            await waiter
+        self.assertTrue(stream._completion_future.cancelled())
+
+        async def empty_body():
+            for chunk in ():
+                yield chunk
+
+        await AIOHttp2ClientStream._set_request_body_generator(stream, empty_body())
+        stream._write_data.assert_awaited_once_with(None, True)
 
 
 class Response:

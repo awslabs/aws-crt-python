@@ -405,6 +405,7 @@ class AIOHttpClientStreamUnified(HttpClientStreamBase):
 
     def _on_complete(self, error_code: int) -> None:
         """Set the completion status of the stream."""
+        self._stream_completed = True
         if error_code == 0:
             self._completion_future.set_result(self._status_code)
         else:
@@ -530,5 +531,5 @@ class AIOHttp2ClientStream(AIOHttpClientStreamUnified):
                 await self._write_data(BytesIO(chunk), False)
         finally:
             # The stream may complete while the body iterator is waiting.
-            if not self._completion_future.done():
+            if not self._stream_completed:
                 await self._write_data(None, True)
