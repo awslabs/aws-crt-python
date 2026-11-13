@@ -704,6 +704,38 @@ class TestAsyncClientMockServer(AsyncMockServerTestBase):
     def test_h2_mock_server_settings(self):
         asyncio.run(self._test_h2_mock_server_settings())
 
+    async def _test_h2_mock_server_body_finishes_after_connection_close(self):
+        connection = await self._new_mock_h2_connection()
+        entered = asyncio.Event()
+        finish = asyncio.Event()
+
+        class EmptyBody:
+            def __aiter__(self):
+                return self
+
+            async def __anext__(self):
+                entered.set()
+                await finish.wait()
+                raise StopAsyncIteration
+
+        request = HttpRequest('POST', self.mock_server_url.path)
+        request.headers.add('host', self.mock_server_url.hostname)
+        stream = connection.request(request, request_body_generator=EmptyBody())
+        try:
+            await asyncio.wait_for(entered.wait(), self.timeout)
+            await connection.close()
+            self.assertTrue(stream._completion_future.done())
+            stream._completion_future.exception()
+            finish.set()
+            await asyncio.wait_for(stream._writer, self.timeout)
+        finally:
+            finish.set()
+            await connection.close()
+            await asyncio.gather(stream._writer, return_exceptions=True)
+
+    def test_h2_mock_server_body_finishes_after_connection_close(self):
+        asyncio.run(self._test_h2_mock_server_body_finishes_after_connection_close())
+
 
 class AIOFlowControlTest(AsyncLocalServerTestBase):
     """HTTP/1.1 async flow control tests using local server"""

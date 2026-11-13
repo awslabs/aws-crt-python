@@ -529,4 +529,6 @@ class AIOHttp2ClientStream(AIOHttpClientStreamUnified):
             async for chunk in body_iterator:
                 await self._write_data(BytesIO(chunk), False)
         finally:
-            await self._write_data(None, True)
+            # The stream may complete while the body iterator is waiting.
+            if not self._completion_future.done():
+                await self._write_data(None, True)
