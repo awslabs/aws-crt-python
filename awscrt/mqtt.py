@@ -312,10 +312,11 @@ class Connection(NativeResource):
 
         socket_options (Optional[awscrt.io.SocketOptions]): Optional socket options.
 
-        use_websocket (bool): If true, connect to MQTT over websockets.
+        use_websockets (bool): If true, connect to MQTT over websockets.
 
         websocket_proxy_options (Optional[awscrt.http.HttpProxyOptions]):
-            Optional proxy options for websocket connections.  Deprecated, use `proxy_options` instead.
+            Optional proxy options for websocket connections.
+            Deprecated since 0.11.20, use `proxy_options` instead.
 
         websocket_handshake_transform: Optional function to transform websocket handshake request.
             If provided, function is called each time a websocket connection is attempted.
@@ -400,7 +401,7 @@ class Connection(NativeResource):
         self._on_connection_failure_cb = on_connection_failure
         self._on_connection_closed_cb = on_connection_closed
 
-        # may be changed at runtime, take effect the the next time connect/reconnect occurs
+        # may be changed at runtime, take effect the next time connect/reconnect occurs
         self.client_id = client_id
         self.host_name = host_name
         self.port = port
@@ -545,9 +546,11 @@ class Connection(NativeResource):
         return future
 
     def reconnect(self):
-        """DEPRECATED.
+        """Reconnect.
 
-        awscrt.mqtt.ClientConnection automatically reconnects.
+        .. deprecated:: 0.5.18
+            Not needed; :class:`Connection` automatically reconnects.
+
         To cease reconnect attempts, call disconnect().
         To resume the connection, call connect().
         """

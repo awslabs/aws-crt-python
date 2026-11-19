@@ -251,6 +251,6 @@ and need to do interactive debugging, your best bet is cloning that external pro
 build it in Debug, and step through its tests.
 
 # TODO
-*   more about git submodules (latest-submodules.py and working from branches)
+*   more about git submodules (updating them and working from branches)
 *   more about logging. consider easy way to turn on logging in tests
 

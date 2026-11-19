@@ -591,6 +591,9 @@ def connect(
         socket_options: Socket options.
             If not specified, default options are used.
 
+        tls_connection_options: TLS options for a secure (wss) connection.
+            If not specified, the connection is not encrypted (ws).
+
         proxy_options: HTTP Proxy options.
             If not specified, no proxy is used.
 

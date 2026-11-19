@@ -27,10 +27,6 @@ PyObject *aws_py_sha256_hmac_new(PyObject *self, PyObject *args);
 PyObject *aws_py_hmac_update(PyObject *self, PyObject *args);
 PyObject *aws_py_hmac_digest(PyObject *self, PyObject *args);
 
-PyObject *aws_py_sha256_compute(PyObject *self, PyObject *args);
-PyObject *aws_py_md5_compute(PyObject *self, PyObject *args);
-PyObject *aws_py_sha256_hmac_compute(PyObject *self, PyObject *args);
-
 PyObject *aws_py_rsa_private_key_from_pem_data(PyObject *self, PyObject *args);
 PyObject *aws_py_rsa_public_key_from_pem_data(PyObject *self, PyObject *args);
 
