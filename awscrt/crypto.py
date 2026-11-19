@@ -30,6 +30,13 @@ class Hash:
         return Hash(native_handle=_awscrt.sha256_new())
 
     @staticmethod
+    def sha512_new():
+        """
+        Creates a new instance of Hash, using the sha512 algorithm
+        """
+        return Hash(native_handle=_awscrt.sha512_new())
+
+    @staticmethod
     def md5_new():
         """
         Creates a new instance of Hash, using the md5 algorithm.
